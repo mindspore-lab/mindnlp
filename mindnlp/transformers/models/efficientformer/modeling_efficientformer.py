@@ -13,22 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """MindSpore EfficientFormer model."""
-# pylint: disable=consider-using-in
+
 import itertools
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
-from mindspore.common.initializer import Normal, initializer
+from mindnlp.core import nn, ops, no_grad
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindnlp.utils import logging, ModelOutput
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, ImageClassifierOutput
 from ...modeling_utils import PreTrainedModel
-
+from ....utils import (
+    ModelOutput,
+    logging,
+)
 from .configuration_efficientformer import EfficientFormerConfig
 
 
@@ -45,10 +45,6 @@ _EXPECTED_OUTPUT_SHAPE = [1, 49, 448]
 _IMAGE_CLASS_CHECKPOINT = "snap-research/efficientformer-l1-300"
 _IMAGE_CLASS_EXPECTED_OUTPUT = "Egyptian cat"
 
-EFFICIENTFORMER_PRETRAINED_MODEL_ARCHIVE_LIST = [
-    "snap-research/efficientformer-l1-300",
-    # See all EfficientFormer models at https://huggingface.co/models?filter=efficientformer
-]
 
 class EfficientFormerPatchEmbeddings(nn.Module):
     """
@@ -106,28 +102,35 @@ class EfficientFormerSelfAttention(nn.Module):
                 if offset not in attention_offsets:
                     attention_offsets[offset] = len(attention_offsets)
                 idxs.append(attention_offsets[offset])
-        self.attention_biases = Parameter(ops.zeros(num_heads, len(attention_offsets)))
-        self.attention_bias_idxs = mindspore.Tensor(idxs).view(num_points, num_points)
+        self.attention_biases = nn.Parameter(ops.zeros(num_heads, len(attention_offsets)))
+        self.register_buffer("attention_bias_idxs", mindspore.tensor(idxs).view(num_points, num_points))
+
+    @no_grad()
+    def train(self, mode=True):
+        super().train(mode)
+        if mode and hasattr(self, "ab"):
+            del self.ab
+        else:
+            self.ab = self.attention_biases[:, self.attention_bias_idxs]
 
     def forward(self, hidden_states: mindspore.Tensor, output_attentions: bool = False) -> Tuple[mindspore.Tensor]:
         batch_size, sequence_length, num_channels = hidden_states.shape
         qkv = self.qkv(hidden_states)
-        query_layer, key_layer, value_layer = qkv.reshape(batch_size, sequence_length, self.num_heads, -1).split(
-            [self.key_dim, self.key_dim, self.expanded_key_dim], axis=3
+        query_layer, key_layer, value_layer = ops.split(
+            qkv.reshape(batch_size, sequence_length, self.num_heads, -1),
+            [self.key_dim, self.key_dim, self.expanded_key_dim], dim=3
         )
         query_layer = query_layer.permute(0, 2, 1, 3)
         key_layer = key_layer.permute(0, 2, 1, 3)
         value_layer = value_layer.permute(0, 2, 1, 3)
 
-        # set `model.to(torch_device)` won't change `self.ab.device`, if there is no follow-up `train` or `eval` call.
-        # Let's do it manually here, so users won't have to do this everytime.
-        attention_probs = (ops.matmul(query_layer, key_layer.swapaxes(-2, -1))) * self.scale + (
-            self.attention_biases[:, self.attention_bias_idxs]
+        attention_probs = (ops.matmul(query_layer, ops.transpose(key_layer, -2, -1))) * self.scale + (
+            self.attention_biases[:, self.attention_bias_idxs] if self.training else self.ab
         )
 
-        attention_probs = ops.softmax(attention_probs,dim=-1)
+        attention_probs = ops.softmax(attention_probs, dim=-1)
 
-        context_layer = ops.matmul(attention_probs, value_layer).swapaxes(1, 2)
+        context_layer = ops.transpose(ops.matmul(attention_probs, value_layer), 1, 2)
         context_layer = context_layer.reshape(batch_size, sequence_length, self.total_expanded_key_dim)
         context_layer = self.projection(context_layer)
 
@@ -181,7 +184,7 @@ class EfficientFormerDenseMlp(nn.Module):
 
         self.linear_in = nn.Linear(in_features, hidden_features)
         self.activation = ACT2FN[config.hidden_act]
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.linear_out = nn.Linear(hidden_features, out_features)
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
@@ -207,10 +210,10 @@ class EfficientFormerConvMlp(nn.Module):
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
 
-        self.convolution1 = nn.Conv2d(in_features, hidden_features, 1, bias=True)
+        self.convolution1 = nn.Conv2d(in_features, hidden_features, 1)
         self.activation = ACT2FN[config.hidden_act]
-        self.convolution2 = nn.Conv2d(hidden_features, out_features, 1, bias=True)
-        self.dropout = nn.Dropout(p=drop)
+        self.convolution2 = nn.Conv2d(hidden_features, out_features, 1)
+        self.dropout = nn.Dropout(drop)
 
         self.batchnorm_before = nn.BatchNorm2d(hidden_features, eps=config.batch_norm_eps)
         self.batchnorm_after = nn.BatchNorm2d(out_features, eps=config.batch_norm_eps)
@@ -244,7 +247,7 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
     keep_prob = 1 - drop_prob
     shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
     random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
-    random_tensor.floor()  # binarize
+    random_tensor = random_tensor.floor()  # binarize
     output = input.div(keep_prob) * random_tensor
     return output
 
@@ -265,7 +268,7 @@ class EfficientFormerDropPath(nn.Module):
 
 class EfficientFormerFlat(nn.Module):
     def forward(self, hidden_states: mindspore.Tensor) -> Tuple[mindspore.Tensor]:
-        hidden_states = ops.flatten(hidden_states, start_dim=2).swapaxes(1, 2)
+        hidden_states = ops.transpose(ops.flatten(hidden_states, 2), 1, 2)
         return hidden_states
 
 
@@ -281,8 +284,8 @@ class EfficientFormerMeta3D(nn.Module):
             resolution=config.resolution,
         )
 
-        self.layernorm1 = nn.LayerNorm([dim], eps=config.layer_norm_eps)
-        self.layernorm2 = nn.LayerNorm([dim], eps=config.layer_norm_eps)
+        self.layernorm1 = nn.LayerNorm(dim, eps=config.layer_norm_eps)
+        self.layernorm2 = nn.LayerNorm(dim, eps=config.layer_norm_eps)
 
         mlp_hidden_dim = int(dim * config.mlp_expansion_ratio)
         self.mlp = EfficientFormerDenseMlp(config, in_features=dim, hidden_features=mlp_hidden_dim)
@@ -290,8 +293,8 @@ class EfficientFormerMeta3D(nn.Module):
         self.drop_path = EfficientFormerDropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         self.use_layer_scale = config.use_layer_scale
         if config.use_layer_scale:
-            self.layer_scale_1 = Parameter(config.layer_scale_init_value * ops.ones((dim)), requires_grad=True)
-            self.layer_scale_2 = Parameter(config.layer_scale_init_value * ops.ones((dim)), requires_grad=True)
+            self.layer_scale_1 = nn.Parameter(config.layer_scale_init_value * ops.ones((dim)), requires_grad=True)
+            self.layer_scale_2 = nn.Parameter(config.layer_scale_init_value * ops.ones((dim)), requires_grad=True)
 
     def forward(self, hidden_states: mindspore.Tensor, output_attentions: bool = False) -> Tuple[mindspore.Tensor]:
         self_attention_outputs = self.token_mixer(self.layernorm1(hidden_states), output_attentions)
@@ -357,8 +360,8 @@ class EfficientFormerMeta4D(nn.Module):
         self.drop_path = EfficientFormerDropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         self.use_layer_scale = config.use_layer_scale
         if config.use_layer_scale:
-            self.layer_scale_1 = Parameter(config.layer_scale_init_value * ops.ones((dim)), requires_grad=True)
-            self.layer_scale_2 = Parameter(config.layer_scale_init_value * ops.ones((dim)), requires_grad=True)
+            self.layer_scale_1 = nn.Parameter(config.layer_scale_init_value * ops.ones((dim)), requires_grad=True)
+            self.layer_scale_2 = nn.Parameter(config.layer_scale_init_value * ops.ones((dim)), requires_grad=True)
 
     def forward(self, hidden_states: mindspore.Tensor) -> Tuple[mindspore.Tensor]:
         outputs = self.token_mixer(hidden_states)
@@ -492,16 +495,15 @@ class EfficientFormerPreTrainedModel(PreTrainedModel):
     main_input_name = "pixel_values"
     supports_gradient_checkpointing = False
 
-    def _init_weights(self, cell: nn.Module):
+    def _init_weights(self, module: nn.Module):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv2d)):
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
 
 class EfficientFormerModel(EfficientFormerPreTrainedModel):
@@ -512,7 +514,7 @@ class EfficientFormerModel(EfficientFormerPreTrainedModel):
 
         self.patch_embed = EfficientFormerConvStem(config, config.hidden_sizes[0])
         self.encoder = EfficientFormerEncoder(config)
-        self.layernorm = nn.LayerNorm([config.hidden_sizes[-1]], eps=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_sizes[-1], eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -552,7 +554,6 @@ class EfficientFormerModel(EfficientFormerPreTrainedModel):
         )
 
 
-
 class EfficientFormerForImageClassification(EfficientFormerPreTrainedModel):
     def __init__(self, config: EfficientFormerConfig):
         super().__init__(config)
@@ -568,7 +569,6 @@ class EfficientFormerForImageClassification(EfficientFormerPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-
     def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
@@ -578,11 +578,10 @@ class EfficientFormerForImageClassification(EfficientFormerPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, ImageClassifierOutput]:
         r"""
-        Args:
-            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -602,20 +601,23 @@ class EfficientFormerForImageClassification(EfficientFormerPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = F.mse_loss(logits, labels)
+                    loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = F.cross_entropy(logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -658,6 +660,7 @@ class EfficientFormerForImageClassificationWithTeacherOutput(ModelOutput):
     distillation_logits: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
     attentions: Optional[Tuple[mindspore.Tensor]] = None
+
 
 class EfficientFormerForImageClassificationWithTeacher(EfficientFormerPreTrainedModel):
     def __init__(self, config: EfficientFormerConfig):
@@ -710,10 +713,9 @@ class EfficientFormerForImageClassificationWithTeacher(EfficientFormerPreTrained
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
-
 __all__ = [
-        "EfficientFormerForImageClassification",
-        "EfficientFormerForImageClassificationWithTeacher",
-        "EfficientFormerModel",
-        "EfficientFormerPreTrainedModel",
-           ]
+    "EfficientFormerForImageClassification",
+    "EfficientFormerForImageClassificationWithTeacher",
+    "EfficientFormerModel",
+    "EfficientFormerPreTrainedModel",
+]

@@ -249,9 +249,9 @@ class _DynamicLSTMCPUGPU(Module):
                     w_ih.view(-1, 1, 1),
                     w_hh.view(-1, 1, 1)
                 ))
-                bias = False
+                has_bias = False
             else:
-                bias = True
+                has_bias = True
                 if self.is_gpu:
                     weights = ops.concat((
                         w_ih.view(-1, 1, 1),
@@ -266,7 +266,7 @@ class _DynamicLSTMCPUGPU(Module):
                         w_hh.view(-1, 1, 1),
                         bias.view(-1, 1, 1)
                     ))
-            _lstm = _get_cache_prim(LSTMOP)(input_size, hidden_size, 1, bias, False, 0.0)
+            _lstm = _get_cache_prim(LSTMOP)(input_size, hidden_size, 1, has_bias, False, 0.0)
             output, h_n, c_n, _, _ = _lstm(
                 x,
                 h_0[0].unsqueeze(0),

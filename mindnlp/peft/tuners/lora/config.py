@@ -13,7 +13,7 @@
 # limitations under the License.
 """lora config"""
 from __future__ import annotations
-
+import warnings
 from dataclasses import dataclass, field
 from typing import Optional, Union
 try:
@@ -21,6 +21,7 @@ try:
 except:
     from typing_extensions import Literal
 
+from mindnlp.core import nn
 from ...config import PeftConfig
 from ...utils import PeftType
 
@@ -51,14 +52,14 @@ class LoraConfig(PeftConfig):
     Args:
         r (`int`):
             Lora attention dimension (the "rank").
-        target_cells (`Optional[Union[List[str], str]]`):
-            The names of the cells to apply the adapter to. If this is specified, only the cells with the specified
+        target_modules (`Optional[Union[List[str], str]]`):
+            The names of the modules to apply the adapter to. If this is specified, only the modules with the specified
             names will be replaced. When passing a string, a regex match will be performed. When passing a list of
-            strings, either an exact match will be performed or it is checked if the name of the cell ends with any
-            of the passed strings. If this is specified as 'all-linear', then all linear/Conv1D cells are chosen,
-            excluding the output layer. If this is not specified, cells will be chosen according to the model
+            strings, either an exact match will be performed or it is checked if the name of the module ends with any
+            of the passed strings. If this is specified as 'all-linear', then all linear/Conv1D modules are chosen,
+            excluding the output layer. If this is not specified, modules will be chosen according to the model
             architecture. If the architecture is not known, an error will be raised -- in this case, you should specify
-            the target cells manually.
+            the target modules manually.
         lora_alpha (`int`):
             The alpha parameter for Lora scaling.
         lora_dropout (`float`):
@@ -74,13 +75,21 @@ class LoraConfig(PeftConfig):
             When set to True, uses <a href='https://doi.org/10.48550/arXiv.2312.03732'>Rank-Stabilized LoRA</a> which
             sets the adapter scaling factor to `lora_alpha/math.sqrt(r)`, since it was proven to work better.
             Otherwise, it will use the original default value of `lora_alpha/r`.
-        cells_to_save (`List[str]`):
-            List of cells apart from adapter layers to be set as trainable and saved in the final checkpoint.
-        init_lora_weights (`bool` | `Literal["gaussian", "loftq"]`):
+        modules_to_save (`List[str]`):
+            List of modules apart from adapter layers to be set as trainable and saved in the final checkpoint.
+        init_lora_weights (`bool` | `Literal["gaussian", "olora", "pissa", "pissa_niter_[number of iters]", "loftq"]`):
             How to initialize the weights of the adapter layers. Passing True (default) results in the default
             initialization from the reference implementation from Microsoft. Passing 'gaussian' results in Gaussian
             initialization scaled by the LoRA rank for linear and layers. Setting the initialization to False leads to
-            completely random initialization and is discouraged. Pass `'loftq'` to use LoftQ initialization.
+            completely random initialization and is discouraged. Pass `'loftq'` to use LoftQ initialization. Pass
+            `'olora'` to use OLoRA initialization. Passing `'pissa'` results in the initialization of <a
+            href='https://arxiv.org/abs/2404.02948'>Principal Singular values and Singular vectors Adaptation
+            (PiSSA)</a>, which converges more rapidly than LoRA and ultimately achieves superior performance. Moreover,
+            PiSSA reduces the quantization error compared to QLoRA, leading to further enhancements. Passing
+            `'pissa_niter_[number of iters]'` initiates Fast-SVD-based PiSSA initialization, where `[number of iters]`
+            indicates the number of subspace iterations to perform FSVD, and must be a nonnegative integer. When
+            `[number of iters]` is set to 16, it can complete the initialization of a 7B model within seconds, and the
+            training effect is approximately equivalent to using SVD.
         layers_to_transform (`Union[List[int], int]`):
             The layer indices to transform. If a list of ints is passed, it will apply the adapter to the layer indices
             that are specified in this list. If a single integer is passed, it will apply the transformations on the
@@ -99,7 +108,7 @@ class LoraConfig(PeftConfig):
             The arguments will be used to initialize the TransformerConfig of Megatron. You need to specify this
             parameter when you want to apply LoRA to the ColumnParallelLinear and RowParallelLinear layers of megatron.
         megatron_core (`Optional[str]`):
-            The core cell from Megatron to use, defaults to `"megatron.core"`.
+            The core module from Megatron to use, defaults to `"megatron.core"`.
         loftq_config (`Optional[LoftQConfig]`):
             The configuration of LoftQ. If this is not None, then LoftQ will be used to quantize the backbone weights
             and initialize Lora layers. Also pass `init_lora_weights='loftq'`. Note that you should not pass a
@@ -116,16 +125,17 @@ class LoraConfig(PeftConfig):
             allows expanding (or shrinking) the model without duplicating the base model weights. The new layers will
             all have separate LoRA adapters attached to them.
     """
+
     r: int = field(default=8, metadata={"help": "Lora attention dimension"})
-    target_cells: Optional[Union[list[str], str]] = field(
+    target_modules: Optional[Union[list[str], str]] = field(
         default=None,
         metadata={
             "help": (
-                "List of cell names or regex expression of the cell names to replace with LoRA."
+                "List of module names or regex expression of the module names to replace with LoRA."
                 "For example, ['q', 'v'] or '.*decoder.*(SelfAttention|EncDecAttention).*(q|v)$'."
                 "This can also be a wildcard 'all-linear' which matches all linear/Conv1D layers except the output layer."
-                "If not specified, cells will be chosen according to the model architecture, If the architecture is "
-                "not known, an error will be raised -- in this case, you should specify the target cells manually."
+                "If not specified, modules will be chosen according to the model architecture, If the architecture is "
+                "not known, an error will be raised -- in this case, you should specify the target modules manually."
             ),
         },
     )
@@ -142,29 +152,33 @@ class LoraConfig(PeftConfig):
         default=False,
         metadata={
             "help": (
-                "When set to True, uses Rank-Stabilized LoRA doi.org/10.48550/arXiv.2312.03732"
+                "When set to True, uses <a href='https://doi.org/10.48550/arXiv.2312.03732'>Rank-Stabilized LoRA</a>"
                 " which sets the adapter scaling factor to `lora_alpha/math.sqrt(r)`, since it"
                 " was proven to work better. Otherwise, it will use the original default"
                 " value of `lora_alpha/r`."
             )
         },
     )
-    cells_to_save: Optional[list[str]] = field(
+    modules_to_save: Optional[list[str]] = field(
         default=None,
         metadata={
-            "help": "List of cells apart from LoRA layers to be set as trainable and saved in the final checkpoint. "
+            "help": "List of modules apart from LoRA layers to be set as trainable and saved in the final checkpoint. "
             "For example, in Sequence Classification or Token Classification tasks, "
             "the final layer `classifier/score` are randomly initialized and as such need to be trainable and saved."
         },
     )
-    init_lora_weights: bool | Literal["gaussian", "loftq"] = field(
+    init_lora_weights: bool | Literal["gaussian", "olora", "pissa", "pissa_niter_[number of iters]", "loftq"] = field(
         default=True,
         metadata={
             "help": (
-                "How to initialize the weights of the LoRA layers. Passing True (default) results in the default "
-                "initialization from the reference implementation from Microsoft. Passing 'gaussian' results "
+                "How to initialize the weights of the LoRA layers. Passing `'True'` (default) results in the default "
+                "initialization from the reference implementation from Microsoft. Passing `'gaussian'` results "
                 "in Gaussian initialization scaled by the LoRA rank for linear and layers. Setting the initialization "
-                "to False leads to completely random initialization and is discouraged."
+                "to `'False'` leads to completely random initialization and *is discouraged.*"
+                "Passing `'olora'` results in OLoRA initialization."
+                "Passing `'pissa'` results in PiSSA initialization."
+                "Passing `'pissa_niter_[number of iters]'` initiates Fast-SVD-based PiSSA initialization, "
+                "where [number of iters] indicates the number of subspace iterations to perform fsvd, and must be a nonnegative integer."
                 "Pass `'loftq'` to use LoftQ initialization"
             ),
         },
@@ -172,16 +186,16 @@ class LoraConfig(PeftConfig):
     layers_to_transform: Optional[Union[list[int], int]] = field(
         default=None,
         metadata={
-            "help": "The layer indexes to transform, is this argument is specified, PEFT will transform only the layers indexes that are specified inside this list. "
-            "If a single integer is passed, PEFT will transform only the layer at this index. "
-            "This only works when target_cells is a list of str."
+            "help": "The layer indexes to transform, is this argument is specified, PEFT will transform only the layers indexes that are specified inside this list. " \
+                    "If a single integer is passed, PEFT will transform only the layer at this index. "
+            "This only works when target_modules is a list of str."
         },
     )
     layers_pattern: Optional[Union[list[str], str]] = field(
         default=None,
         metadata={
             "help": "The layer pattern name, used only if `layers_to_transform` is different to None and if the layer pattern is not in the common layers pattern."
-            "This only works when target_cells is a list of str."
+            "This only works when target_modules is a list of str."
         },
     )
     rank_pattern: Optional[dict] = field(
@@ -222,8 +236,8 @@ class LoraConfig(PeftConfig):
         default="megatron.core",
         metadata={
             "help": (
-                "The core cell from Megatron, it is used to create LoRA's parallel linear layer. "
-                "It only needs to be passed in when you need to use your own modified megatron core cell. "
+                "The core module from Megatron, it is used to create LoRA's parallel linear layer. "
+                "It only needs to be passed in when you need to use your own modified megatron core module. "
                 "Otherwise, it will use the default value `megatron.core`. "
             )
         },
@@ -242,12 +256,11 @@ class LoraConfig(PeftConfig):
         default=False,
         metadata={
             "help": (
-                "Enable 'Weight-Decomposed Low-Rank Adaptation' (DoRA). This technique decomposes the updates of the "
+                "Enable <a href='https://arxiv.org/abs/2402.09353'>'Weight-Decomposed Low-Rank Adaptation' (DoRA)</a>. This technique decomposes the updates of the "
                 "weights into two parts, magnitude and direction. Direction is handled by normal LoRA, whereas the "
                 "magnitude is handled by a separate learnable parameter. This can improve the performance of LoRA, "
                 "especially at low ranks. Right now, DoRA only supports linear and Conv2D layers. DoRA introduces a bigger"
-                "overhead than pure LoRA, so it is recommended to merge weights for inference. For more information, "
-                "see  https://arxiv.org/abs/2402.09353."
+                "overhead than pure LoRA, so it is recommended to merge weights for inference."
             )
         },
     )
@@ -258,7 +271,7 @@ class LoraConfig(PeftConfig):
             "help": (
                 "This enables using LoRA to effectively expand a transformer model to a larger size by repeating some layers. "
                 "The transformation handles models (currently Llama, Bert or Falcon compatible architectures) with "
-                "a cell list in the model which it modifies to expand the number of cells. "
+                "a module list in the model which it modifies to expand the number of modules. "
                 "Base weights are shared so the memory usage is close to the original model. The intended use is these base weights "
                 "remain fixed during finetuning but each layer has a separate LoRA adapter so the layers can be specialed via "
                 "the adapter layers fit during fine tuning."
@@ -272,34 +285,26 @@ class LoraConfig(PeftConfig):
         },
     )
 
-    def __post_init__(self):
+    def to_dict(self):
         """
-        Performs post-initialization operations for the LoraConfig class.
-        
-        Args:
-            self (LoraConfig): The instance of LoraConfig to be initialized.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            ValueError: If `layers_to_transform` cannot be used when `target_cells` is a string.
-            ValueError: If `layers_pattern` cannot be used when `target_cells` is a string.
-            ValueError: If DoRA does not support megatron_core and `use_dora` is set to True.
-            ValueError: If `loftq_config` must be specified when `init_lora_weights` is 'loftq'.
-            ImportError: If the required package 'scipy' is not installed.
+        Returns the configuration for your adapter model as a dictionary. Removes runtime configurations.
         """
-        self.peft_type = PeftType.LORA
-        self.target_cells = (
-            set(self.target_cells) if isinstance(self.target_cells, list) else self.target_cells
-        )
-        # if target_cells is a regex expression, then layers_to_transform should be None
-        if isinstance(self.target_cells, str) and self.layers_to_transform is not None:
-            raise ValueError("`layers_to_transform` cannot be used when `target_cells` is a str.")
+        rv = super().to_dict()
+        rv.pop("runtime_config")
+        return rv
 
-        # if target_cells is a regex expression, then layers_pattern should be None
-        if isinstance(self.target_cells, str) and self.layers_pattern is not None:
-            raise ValueError("`layers_pattern` cannot be used when `target_cells` is a str.")
+    def __post_init__(self):
+        self.peft_type = PeftType.LORA
+        self.target_modules = (
+            set(self.target_modules) if isinstance(self.target_modules, list) else self.target_modules
+        )
+        # if target_modules is a regex expression, then layers_to_transform should be None
+        if isinstance(self.target_modules, str) and self.layers_to_transform is not None:
+            raise ValueError("`layers_to_transform` cannot be used when `target_modules` is a str.")
+
+        # if target_modules is a regex expression, then layers_pattern should be None
+        if isinstance(self.target_modules, str) and self.layers_pattern is not None:
+            raise ValueError("`layers_pattern` cannot be used when `target_modules` is a str.")
 
         if self.use_dora and self.megatron_config:
             raise ValueError("DoRA does not support megatron_core, please set `use_dora=False`.")
@@ -313,6 +318,47 @@ class LoraConfig(PeftConfig):
             if self.loftq_config is None:
                 raise ValueError("`loftq_config` must be specified when `init_lora_weights` is 'loftq'.")
 
+        # Using post training conversion of modified base weights to restore their initial values (PiSSA, OLoRA) cannot
+        # be correctly done when using rslora + rank_pattern/alpha_pattern. We can't really know if the user intends
+        # this when they'll eventually call save_pretrained (i.e. if they'll pass
+        # path_initial_model_for_weight_conversionl). Therefore, we only warn but don't raise an error here.
+        if (
+            self.use_rslora
+            and (self.rank_pattern or self.alpha_pattern)
+            and (
+                (isinstance(self.init_lora_weights, str) and (self.init_lora_weights.startswith("pissa")))
+                or (self.init_lora_weights == "olora")
+            )
+        ):
+            msg = (
+                "Using Rank-Stabilized LoRA with rank_pattern/alpha_pattern and post-training conversion of modified "
+                "base weights (PiSSA, OLoRA) means that you won't be able to pass "
+                "`path_initial_model_for_weight_conversion` to `save_pretrained` to restore the initial values of the "
+                "base weights; if you intend to do this, please ensure not to use rslora or rank_pattern/alpha_pattern."
+            )
+            warnings.warn(msg)
+
         # convert loftq_config to dict
         if self.loftq_config and not isinstance(self.loftq_config, dict):
             self.loftq_config = vars(self.loftq_config)
+
+        self._custom_modules: Optional[dict[type[nn.Mmodule], type[nn.Module]]] = None
+
+    def _register_custom_module(self, mapping: dict[type[nn.Mmodule], type[nn.Module]]) -> None:
+        """
+        Experimental API to support providing custom LoRA layers.
+
+        This API is subject to change, you should carefully read the docs before deciding to use it:
+
+        https://huggingface.co/docs/peft/developer_guides/custom_models
+
+        To register custom LoRA module types, call this method with a `mapping` argument that is a dict that maps from
+        the target layer type to the custom LoRA layer type. The dict can contain multiple items if you wish to target
+        multiple layer types. The target layer type can be any nn.Module that we currently don't support in PEFT,
+        whether that is an official PyTorch layer type or a custom layer type. The custom LoRA module class has to be
+        implemented by the user and follow the PEFT conventions for LoRA layers.
+
+        """
+        if self._custom_modules is None:
+            self._custom_modules = {}
+        self._custom_modules.update(mapping)
