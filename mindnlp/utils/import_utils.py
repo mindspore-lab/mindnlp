@@ -71,6 +71,7 @@ def _is_package_available(
     return package_exists
 
 
+_sacremoses_available = _is_package_available("sacremoses")
 _ftfy_available = _is_package_available("ftfy")
 _einops_available = _is_package_available('einops')
 _tiktoken_available = _is_package_available('tiktoken')
@@ -133,6 +134,10 @@ def is_levenshtein_available():
 
 def is_nltk_available():
     return _nltk_available
+
+
+def is_sacremoses_available():
+    return _sacremoses_available
 
 
 def is_einops_available():
