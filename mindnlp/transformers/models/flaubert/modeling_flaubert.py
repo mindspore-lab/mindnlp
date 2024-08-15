@@ -23,15 +23,6 @@ import mindspore
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-from ...activations import gelu
-from ...modeling_outputs import (
-    BaseModelOutput,
-    MaskedLMOutput,
-    MultipleChoiceModelOutput,
-    QuestionAnsweringModelOutput,
-    SequenceClassifierOutput,
-    TokenClassifierOutput,
-)
 from mindnlp.transformers.ms_utils import (
     apply_chunking_to_forward,
     find_pruneable_heads_and_indices,
@@ -41,6 +32,17 @@ from mindnlp.utils import (
     ModelOutput,
     logging,
 )
+
+from ...activations import gelu
+from ...modeling_outputs import (
+    BaseModelOutput,
+    MaskedLMOutput,
+    MultipleChoiceModelOutput,
+    QuestionAnsweringModelOutput,
+    SequenceClassifierOutput,
+    TokenClassifierOutput,
+)
+
 from ...modeling_utils import PreTrainedModel, SequenceSummary, SQuADHead
 from .configuration_flaubert import FlaubertConfig
 
