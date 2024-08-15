@@ -221,6 +221,7 @@ from . import (
     vit_mae,
     vit_msn,
     vitdet,
+    vits,
     vivit,
     wav2vec2,
     wav2vec2_conformer,
@@ -444,6 +445,7 @@ from .vit_hybrid import *
 from .vit_mae import *
 from .vit_msn import *
 from .vitdet import *
+from .vits import *
 from .vivit import *
 from .whisper import *
 from .wav2vec2 import *
@@ -667,6 +669,7 @@ __all__.extend(vit_hybrid.__all__)
 __all__.extend(vit_mae.__all__)
 __all__.extend(vit_msn.__all__)
 __all__.extend(vitdet.__all__)
+__all__.extend(vits.__all__)
 __all__.extend(vivit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
