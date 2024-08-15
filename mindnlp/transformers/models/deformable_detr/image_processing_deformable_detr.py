@@ -68,7 +68,7 @@ from ...image_utils import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn
+    # from mindspore import nn
 
 
 if is_vision_available():
