@@ -31,4 +31,3 @@ bs4
 tiktoken
 faiss_cpu
 git+https://github.com/lvyufeng/einops
-sacremoses

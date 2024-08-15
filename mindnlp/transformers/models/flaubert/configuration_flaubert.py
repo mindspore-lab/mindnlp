@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Flaubert configuration"""
-from ...configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
-
+from ...configuration_utils import PretrainedConfig
 
 logger = logging.get_logger(__name__)
 

@@ -32,16 +32,16 @@ from ...modeling_outputs import (
     SequenceClassifierOutput,
     TokenClassifierOutput,
 )
-from ...modeling_utils import PreTrainedModel, SequenceSummary, SQuADHead
 from mindnlp.transformers.ms_utils import (
-    apply_chunking_to_forward, 
-    find_pruneable_heads_and_indices, 
+    apply_chunking_to_forward,
+    find_pruneable_heads_and_indices,
     prune_linear_layer
 )
 from mindnlp.utils import (
     ModelOutput,
     logging,
 )
+from ...modeling_utils import PreTrainedModel, SequenceSummary, SQuADHead
 from .configuration_flaubert import FlaubertConfig
 
 
@@ -333,8 +333,6 @@ class FlaubertPreTrainedModel(PreTrainedModel):
     load_tf_weights = None
     base_model_prefix = "transformer"
 
-    def __init__(self, *inputs, **kwargs):
-        super().__init__(*inputs, **kwargs)
 
     @property
     def dummy_inputs(self):
@@ -763,7 +761,7 @@ class FlaubertForSequenceClassification(FlaubertPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and (labels.dtype in (mindspore.int64, mindspore.int32)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
