@@ -1418,7 +1418,7 @@ def gathertap(values, index, name="segmented_gather"):
     indices = index.indices
     # first, check whether the indices of the index represent scalar values (i.e. not vectorized)
     if len(values.shape[index.batch_dims :]) < 2:
-        return mindspore.ops.gather_elements(
+        return ops.gather(
             values,
             index.batch_dims,
             indices.view(
