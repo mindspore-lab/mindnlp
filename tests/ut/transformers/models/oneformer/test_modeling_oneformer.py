@@ -13,34 +13,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Testing suite for the MindSpore OneFormer model."""
-# pylint: disable=not-callable
 
+import copy
 import inspect
 import unittest
 
 import numpy as np
-import mindspore
-from mindspore import Tensor
-from mindnlp.core import ops
-from mindnlp.transformers import OneFormerConfig, OneFormerForUniversalSegmentation, OneFormerModel
-from mindnlp.utils import is_vision_available, is_mindspore_available
-from mindnlp.utils.testing_utils import(
+
+from ...test_modeling_common import floats_tensor
+from mindnlp.transformers import OneFormerConfig
+from mindnlp.utils.testing_utils import (
     require_mindspore,
-    slow,
     require_vision,
+    slow,
 )
-from mindnlp.utils import cached_property
+from mindnlp.utils import cached_property, is_mindspore_available, is_vision_available
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin
 # from ...test_pipeline_mixin import PipelineTesterMixin
 
 
-if is_vision_available():
-    from mindnlp.transformers.models.oneformer.processing_oneformer import OneFormerProcessor
+if is_mindspore_available():
+    import mindspore
+    from mindnlp.core import ops, no_grad
+
+    from mindnlp.transformers import OneFormerForUniversalSegmentation, OneFormerModel
+
+    if is_vision_available():
+        from mindnlp.transformers import OneFormerProcessor
 
 if is_vision_available():
     from PIL import Image
+
+
+def _config_zero_init(config):
+    configs_no_init = copy.deepcopy(config)
+    for key in configs_no_init.__dict__.keys():
+        if "_range" in key or "_std" in key or "initializer_factor" in key or "layer_scale" in key:
+            setattr(configs_no_init, key, 1e-10)
+    return configs_no_init
 
 
 class OneFormerModelTester:
@@ -75,22 +87,25 @@ class OneFormerModelTester:
         self.n_ctx = n_ctx
 
     def prepare_config_and_inputs(self):
-        pixel_values = ops.zeros([self.batch_size, self.num_channels, self.min_size, self.max_size])
+        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.min_size, self.max_size])
+
         task_inputs = (
-            ops.randint(high=self.vocab_size,low=0, size=(self.batch_size, self.sequence_length)).long()
+            ops.randint(high=self.vocab_size, size=(self.batch_size, self.sequence_length)).long()
         )
 
         pixel_mask = ops.ones([self.batch_size, self.min_size, self.max_size])
 
         text_inputs = (
             ops.randint(
-                high=self.vocab_size, low=0, size=(self.batch_size, self.num_queries - self.n_ctx, self.sequence_length)
-            ).long()
+                high=self.vocab_size, size=(self.batch_size, self.num_queries - self.n_ctx, self.sequence_length)
+            )
+            .long()
         )
+
         mask_labels = (
-            ops.rand(self.batch_size, self.num_labels, self.min_size, self.max_size) > 0.5
+            ops.rand([self.batch_size, self.num_labels, self.min_size, self.max_size]) > 0.5
         ).float()
-        class_labels = (ops.rand(self.batch_size, self.num_labels) > 0.5).long()
+        class_labels = (ops.rand((self.batch_size, self.num_labels)) > 0.5).long()
 
         config = self.get_config()
         return config, pixel_values, task_inputs, text_inputs, pixel_mask, mask_labels, class_labels
@@ -143,11 +158,12 @@ class OneFormerModelTester:
     def create_and_check_oneformer_model(
         self, config, pixel_values, task_inputs, pixel_mask, output_hidden_states=False
     ):
-        model = OneFormerModel(config=config)
-        model.set_train(False)
+        with no_grad():
+            model = OneFormerModel(config=config)
+            model.eval()
 
-        output = model(pixel_values=pixel_values, task_inputs=task_inputs, pixel_mask=pixel_mask)
-        output = model(pixel_values, task_inputs=task_inputs, output_hidden_states=True)
+            output = model(pixel_values=pixel_values, task_inputs=task_inputs, pixel_mask=pixel_mask)
+            output = model(pixel_values, task_inputs=task_inputs, output_hidden_states=True)
         # the correct shape of output.transformer_decoder_hidden_states ensure the correcteness of the
         # encoder and pixel decoder
         self.parent.assertEqual(
@@ -165,7 +181,7 @@ class OneFormerModelTester:
         self, config, pixel_values, task_inputs, text_inputs, pixel_mask, mask_labels, class_labels
     ):
         model = OneFormerForUniversalSegmentation(config=config)
-        model.set_train(False)
+        model.eval()
 
         def comm_check_on_output(result):
             # let's still check that all the required stuff is there
@@ -183,28 +199,30 @@ class OneFormerModelTester:
                 result.class_queries_logits.shape, (self.batch_size, self.num_queries, self.num_labels + 1)
             )
 
-        result = model(pixel_values=pixel_values, task_inputs=task_inputs, pixel_mask=pixel_mask)
-        result = model(pixel_values, task_inputs)
+        with no_grad():
+            result = model(pixel_values=pixel_values, task_inputs=task_inputs, pixel_mask=pixel_mask)
+            result = model(pixel_values, task_inputs)
 
-        comm_check_on_output(result)
+            comm_check_on_output(result)
 
         config.is_training = True
         model = OneFormerForUniversalSegmentation(config=config)
-        model.set_train(False)
+        model.eval()
 
-        result = model(
-            pixel_values=pixel_values,
-            task_inputs=task_inputs,
-            pixel_mask=pixel_mask,
-            mask_labels=mask_labels,
-            class_labels=class_labels,
-            text_inputs=text_inputs,
-        )
+        with no_grad():
+            result = model(
+                pixel_values=pixel_values,
+                task_inputs=task_inputs,
+                pixel_mask=pixel_mask,
+                mask_labels=mask_labels,
+                class_labels=class_labels,
+                text_inputs=text_inputs,
+            )
 
         comm_check_on_output(result)
 
         self.parent.assertTrue(result.loss is not None)
-        self.parent.assertEqual(result.loss.shape, tuple([1]))
+        self.parent.assertEqual(result.loss.shape, (1,))
 
 
 @require_mindspore
@@ -265,7 +283,7 @@ class OneFormerModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="OneFormer does not have a get_input_embeddings method")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(reason="OneFormer is not a generative model")
@@ -274,13 +292,6 @@ class OneFormerModelTest(ModelTesterMixin, unittest.TestCase):
 
     @unittest.skip(reason="OneFormer does not use token embeddings")
     def test_resize_tokens_embeddings(self):
-        pass
-
-    # @require_mindspore_multi_gpu
-    @unittest.skip(
-        reason="OneFormer has some layers using `add_module` which doesn't work well with `nn.DataParallel`"
-    )
-    def test_multi_gpu_data_parallel_forward(self):
         pass
 
     def test_forward_signature(self):
@@ -305,9 +316,9 @@ class OneFormerModelTest(ModelTesterMixin, unittest.TestCase):
         size = (self.model_tester.min_size,) * 2
         inputs = {
             "pixel_values": ops.randn((2, 3, *size)),
-            "task_inputs": ops.randint(high=self.model_tester.vocab_size,low=0, size=(2, 77)).long(),
+            "task_inputs": ops.randint(high=self.model_tester.vocab_size, size=(2, 77)).long(),
             "text_inputs": ops.randint(
-                high=self.model_tester.vocab_size,low=0, size=(2, 6, 77)
+                high=self.model_tester.vocab_size, size=(2, 6, 77)
             ).long(),
             "mask_labels": ops.randn((2, 150, *size)),
             "class_labels": ops.zeros(2, 150).long(),
@@ -332,14 +343,24 @@ class OneFormerModelTest(ModelTesterMixin, unittest.TestCase):
             outputs = model(**inputs, output_attentions=True)
             self.assertTrue(outputs.attentions is not None)
 
-    @unittest.skip("ignore due to the difference for default bias initialization between mindspore.nn.Dense and torch.nn.Linear")
     def test_initialization(self):
-        pass
+        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+        config.contrastive_temperature = 1
 
-    @unittest.skip('ski training')
+        configs_no_init = _config_zero_init(config)
+        for model_class in self.all_model_classes:
+            model = model_class(config=configs_no_init)
+            for name, param in model.named_parameters():
+                if param.requires_grad:
+                    self.assertIn(
+                        ((ops.mean(param) * 1e9).round() / 1e9).item(),
+                        [0.0, 1.0],
+                        msg=f"Parameter {name} of model {model_class} seems not properly initialized",
+                    )
+
     def test_training(self):
         if not self.model_tester.is_training:
-            return
+            self.skipTest(reason="model_tester.is_training is set to False")
         # only OneFormerForUniversalSegmentation has the loss
         model_class = self.all_model_classes[1]
         (
@@ -354,59 +375,12 @@ class OneFormerModelTest(ModelTesterMixin, unittest.TestCase):
         config.is_training = True
 
         model = model_class(config)
-        model.set_train(True)
+        model.train()
 
         loss = model(
             pixel_values, task_inputs, text_inputs=text_inputs, mask_labels=mask_labels, class_labels=class_labels
         ).loss
         loss.backward()
-
-    @unittest.skip('Mindspore has no retain_grad')
-    def test_retain_grad_hidden_states_attentions(self):
-        # only OneFormerForUniversalSegmentation has the loss
-        model_class = self.all_model_classes[1]
-        (
-            config,
-            pixel_values,
-            task_inputs,
-            text_inputs,
-            pixel_mask,
-            mask_labels,
-            class_labels,
-        ) = self.model_tester.prepare_config_and_inputs()
-        config.output_hidden_states = True
-        config.output_attentions = True
-        config.is_training = True
-
-        model = model_class(config)
-        model.set_train(True)
-
-        outputs = model(
-            pixel_values, task_inputs, text_inputs=text_inputs, mask_labels=mask_labels, class_labels=class_labels
-        )
-
-        encoder_hidden_states = outputs.encoder_hidden_states[0]
-        encoder_hidden_states.retain_grad()
-
-        pixel_decoder_hidden_states = outputs.pixel_decoder_hidden_states[0]
-        pixel_decoder_hidden_states.retain_grad()
-
-        transformer_decoder_class_predictions = outputs.transformer_decoder_class_predictions
-        transformer_decoder_class_predictions.retain_grad()
-
-        transformer_decoder_mask_predictions = outputs.transformer_decoder_mask_predictions
-        transformer_decoder_mask_predictions.retain_grad()
-
-        attentions = outputs.attentions[0][0]
-        attentions.retain_grad()
-
-        outputs.loss.backward(retain_graph=True)
-
-        self.assertIsNotNone(encoder_hidden_states.grad)
-        self.assertIsNotNone(pixel_decoder_hidden_states.grad)
-        self.assertIsNotNone(transformer_decoder_class_predictions.grad)
-        self.assertIsNotNone(transformer_decoder_mask_predictions.grad)
-        self.assertIsNotNone(attentions.grad)
 
 
 TOLERANCE = 1e-4
@@ -442,14 +416,15 @@ class OneFormerModelIntegrationTest(unittest.TestCase):
         # check size
         self.assertEqual(task_inputs_shape, (1, 77))
 
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
 
         expected_slice_hidden_state = mindspore.tensor(
             [[0.2723, 0.8280, 0.6026], [1.2699, 1.1257, 1.1444], [1.1344, 0.6153, 0.4177]]
         )
         self.assertTrue(
-            np.allclose(
-                outputs.encoder_hidden_states[-1][0, 0, :3, :3].numpy(), expected_slice_hidden_state.numpy(), atol=TOLERANCE
+            ops.allclose(
+                outputs.encoder_hidden_states[-1][0, 0, :3, :3], expected_slice_hidden_state, atol=TOLERANCE
             )
         )
 
@@ -457,8 +432,8 @@ class OneFormerModelIntegrationTest(unittest.TestCase):
             [[1.0581, 1.2276, 1.2003], [1.1903, 1.2925, 1.2862], [1.158, 1.2559, 1.3216]]
         )
         self.assertTrue(
-            np.allclose(
-                outputs.pixel_decoder_hidden_states[0][0, 0, :3, :3].numpy(), expected_slice_hidden_state.numpy(), atol=TOLERANCE
+            ops.allclose(
+                outputs.pixel_decoder_hidden_states[0][0, 0, :3, :3], expected_slice_hidden_state, atol=TOLERANCE
             )
         )
 
@@ -466,13 +441,13 @@ class OneFormerModelIntegrationTest(unittest.TestCase):
             [[3.0668, -1.1833, -5.1103], [3.344, -3.362, -5.1101], [2.6017, -4.3613, -4.1444]]
         )
         self.assertTrue(
-            np.allclose(
-                outputs.transformer_decoder_class_predictions[0, :3, :3].numpy(), expected_slice_hidden_state.numpy(), atol=TOLERANCE
+            ops.allclose(
+                outputs.transformer_decoder_class_predictions[0, :3, :3], expected_slice_hidden_state, atol=TOLERANCE
             )
         )
 
     def test_inference_universal_segmentation_head(self):
-        model = OneFormerForUniversalSegmentation.from_pretrained(self.model_checkpoints).set_train(False)
+        model = OneFormerForUniversalSegmentation.from_pretrained(self.model_checkpoints).eval()
         processor = self.default_processor
         image = prepare_img()
         inputs = processor(image, ["semantic"], return_tensors="ms")
@@ -480,7 +455,8 @@ class OneFormerModelIntegrationTest(unittest.TestCase):
         # check size
         self.assertEqual(inputs_shape, (1, 3, 512, 682))
 
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
 
         # masks_queries_logits
         masks_queries_logits = outputs.masks_queries_logits
@@ -489,36 +465,38 @@ class OneFormerModelIntegrationTest(unittest.TestCase):
             (1, model.config.num_queries, inputs_shape[-2] // 4, (inputs_shape[-1] + 2) // 4),
         )
         expected_slice = [[[3.1848, 4.2141, 4.1993], [2.9000, 3.5721, 3.6603], [2.5358, 3.0883, 3.6168]]]
-        expected_slice = Tensor(expected_slice)
-        self.assertTrue(np.allclose(masks_queries_logits[0, 0, :3, :3].numpy(), expected_slice.numpy(), atol=TOLERANCE))
+        expected_slice = mindspore.tensor(expected_slice)
+        self.assertTrue(ops.allclose(masks_queries_logits[0, 0, :3, :3], expected_slice, atol=TOLERANCE))
         # class_queries_logits
         class_queries_logits = outputs.class_queries_logits
         self.assertEqual(
             class_queries_logits.shape,
             (1, model.config.num_queries, model.config.num_labels + 1),
         )
-        expected_slice = Tensor(
+        expected_slice = mindspore.tensor(
             [[3.0668, -1.1833, -5.1103], [3.3440, -3.3620, -5.1101], [2.6017, -4.3613, -4.1444]]
         )
-        self.assertTrue(np.allclose(class_queries_logits[0, :3, :3].numpy(), expected_slice.numpy(), atol=TOLERANCE))
+        self.assertTrue(ops.allclose(class_queries_logits[0, :3, :3], expected_slice, atol=TOLERANCE))
 
     def test_inference_fp16(self):
         model = (
             OneFormerForUniversalSegmentation.from_pretrained(self.model_checkpoints)
-            .set_train(False)
+            .to(mindspore.float16)
+            .eval()
         )
         processor = self.default_processor
         image = prepare_img()
-        inputs = processor(image, ["semantic"], return_tensors="ms")
+        inputs = processor(image, ["semantic"], return_tensors="ms").to(mindspore.float16)
 
-        _ = model(**inputs)
+        with no_grad():
+            _ = model(**inputs)
 
     def test_with_segmentation_maps_and_loss(self):
         dummy_model = OneFormerForUniversalSegmentation.from_pretrained(self.model_checkpoints)
         processor = self.default_processor
         processor.image_processor.num_text = dummy_model.config.num_queries - dummy_model.config.text_encoder_n_ctx
         dummy_model.config.is_training = True
-        model = OneFormerForUniversalSegmentation(dummy_model.config).set_train(False)
+        model = OneFormerForUniversalSegmentation(dummy_model.config).eval()
         del dummy_model
 
         inputs = processor(
@@ -531,9 +509,10 @@ class OneFormerModelIntegrationTest(unittest.TestCase):
         inputs["pixel_values"] = inputs["pixel_values"]
         inputs["task_inputs"] = inputs["task_inputs"]
         inputs["text_inputs"] = inputs["text_inputs"]
-        inputs["mask_labels"] = inputs["mask_labels"]
-        inputs["class_labels"] = inputs["class_labels"]
+        inputs["mask_labels"] = [el for el in inputs["mask_labels"]]
+        inputs["class_labels"] = [el for el in inputs["class_labels"]]
 
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
 
         self.assertTrue(outputs.loss is not None)
