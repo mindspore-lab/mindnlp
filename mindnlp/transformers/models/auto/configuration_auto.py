@@ -91,6 +91,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("ernie_m", "ErnieMConfig"),
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),
+        ("flaubert", "FlaubertConfig"),
         ("flava", "FlavaConfig"),
         ("florence2", "Florence2Config"),
         ("fnet", "FNetConfig"),
