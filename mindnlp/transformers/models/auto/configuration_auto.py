@@ -201,6 +201,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("vipllava", "VipLlavaConfig"),
         ("visual_bert", "VisualBertConfig"),
         ("vitdet", "VitDetConfig"),
+        ("vits", "VitsConfig"),
         ("wav2vec2", "Wav2Vec2Config"),
         ("wavlm", "WavLMConfig"),
         ("wav2vec2-bert", "Wav2Vec2BertConfig"),
