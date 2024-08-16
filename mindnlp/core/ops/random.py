@@ -54,6 +54,8 @@ def normal(mean=0.0, std=1.0, size=None):
 def rand(*size, dtype=None):
     if size[0] == []:
         size = ()
+    elif isinstance(size[0], (tuple, list)):
+        size = size[0]
     if dtype is None:
         dtype = get_default_dtype()
     if USE_PYBOOST:
@@ -67,7 +69,7 @@ def rand_like(input, *, dtype=None):
     return ops.rand_like(input, dtype=dtype)
 
 # randint
-def randint(low, high, size, *, dtype=None):
+def randint(low=0, high=None, size=None, *, dtype=None):
     return ops.randint(low, high, size, dtype=dtype)
 
 # randint_like

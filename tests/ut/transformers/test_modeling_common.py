@@ -711,6 +711,7 @@ class ModelTesterMixin:
             model_name = model_class.__name__
             if hasattr(self.model_tester, "prepare_config_and_inputs_for_model_class"):
                 config, batched_input = self.model_tester.prepare_config_and_inputs_for_model_class(model_class)
+
             batched_input_prepared = self._prepare_for_class(batched_input, model_class)
             model = model_class(config).eval()
 
