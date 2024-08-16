@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the Mindspore InstructBLIP model."""
+"""Testing suite for the PyTorch InstructBLIP model."""
 
 import inspect
 import tempfile
@@ -20,8 +20,7 @@ import unittest
 
 import numpy as np
 import requests
-import mindspore
-from mindnlp.core import nn, ops
+
 from mindnlp.transformers import (
     CONFIG_MAPPING,
     InstructBlipConfig,
@@ -29,18 +28,10 @@ from mindnlp.transformers import (
     InstructBlipQFormerConfig,
     InstructBlipVisionConfig,
 )
-
 from mindnlp.utils.testing_utils import (
     require_mindspore,
     require_vision,
     slow,
-)
-
-from ...test_modeling_common import (
-    ModelTesterMixin,
-    floats_tensor,
-    ids_tensor,
-    random_attention_mask,
 )
 from mindnlp.utils import is_mindspore_available, is_vision_available
 
@@ -54,8 +45,10 @@ from ...test_modeling_common import (
 )
 
 
-if is_vision_available():
-    from PIL import Image
+if is_mindspore_available():
+    import mindspore
+    from mindnlp.core import nn, ops, no_grad
+
     from mindnlp.transformers import InstructBlipForConditionalGeneration, InstructBlipVisionModel
 
 
@@ -125,8 +118,9 @@ class InstructBlipVisionModelTester:
 
     def create_and_check_model(self, config, pixel_values):
         model = InstructBlipVisionModel(config=config)
-        model.set_train(False)
-        result = model(pixel_values)
+        model.eval()
+        with no_grad():
+            result = model(pixel_values)
         # expected sequence length = num_patches + 1 (we add 1 for the [CLS] token)
         image_size = (self.image_size, self.image_size)
         patch_size = (self.patch_size, self.patch_size)
@@ -167,7 +161,7 @@ class InstructBlipVisionModelTest(ModelTesterMixin, unittest.TestCase):
     def test_inputs_embeds(self):
         pass
 
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
@@ -276,12 +270,13 @@ class InstructBlipQFormerModelTester:
         if self.use_input_mask:
             input_mask = random_attention_mask([self.batch_size, self.seq_length])
             qformer_attention_mask = ids_tensor([self.batch_size, self.seq_length], vocab_size=2)
+
         if input_mask is not None:
             batch_size, seq_length = input_mask.shape
             rnd_start_indices = np.random.randint(1, seq_length - 1, size=(batch_size,))
             for batch_idx, start_index in enumerate(rnd_start_indices):
-                input_mask[int(batch_idx), :int(start_index)] = 1
-                input_mask[int(batch_idx), int(start_index):] = 0
+                input_mask[batch_idx, :int(start_index)] = 1
+                input_mask[batch_idx, int(start_index):] = 0
 
         config = self.get_config()
 
@@ -422,9 +417,9 @@ class InstructBlipForConditionalGenerationDecoderOnlyModelTester:
     def create_and_check_for_conditional_generation(
         self, config, input_ids, attention_mask, qformer_input_ids, qformer_attention_mask, pixel_values
     ):
-        model = InstructBlipForConditionalGeneration(config).set_train(False)
-
-        result = model(
+        model = InstructBlipForConditionalGeneration(config).eval()
+        with no_grad():
+            result = model(
                 pixel_values,
                 input_ids=input_ids,
                 attention_mask=attention_mask,
@@ -542,54 +537,57 @@ def prepare_img():
 @require_mindspore
 @slow
 class InstructBlipModelIntegrationTest(unittest.TestCase):
-    def test_inference_vicuna_7b(self):
-        processor = InstructBlipProcessor.from_pretrained("Salesforce/instructblip-vicuna-7b")
-        model = InstructBlipForConditionalGeneration.from_pretrained(
-            "Salesforce/instructblip-vicuna-7b", load_in_8bit=True, low_cpu_mem_usage=True
-        )
+    # @require_bitsandbytes
+    # @require_accelerate
+    # def test_inference_vicuna_7b(self):
+    #     processor = InstructBlipProcessor.from_pretrained("Salesforce/instructblip-vicuna-7b")
+    #     model = InstructBlipForConditionalGeneration.from_pretrained(
+    #         "Salesforce/instructblip-vicuna-7b", load_in_8bit=True, low_cpu_mem_usage=True
+    #     )
 
-        url = "https://raw.githubusercontent.com/salesforce/LAVIS/main/docs/_static/Confusing-Pictures.jpg"
-        image = Image.open(requests.get(url, stream=True).raw).convert("RGB")
-        prompt = "What is unusual about this image?"
-        inputs = processor(images=image, text=prompt, return_tensors="ms")
+    #     url = "https://raw.githubusercontent.com/salesforce/LAVIS/main/docs/_static/Confusing-Pictures.jpg"
+    #     image = Image.open(requests.get(url, stream=True).raw).convert("RGB")
+    #     prompt = "What is unusual about this image?"
+    #     inputs = processor(images=image, text=prompt, return_tensors="pt").to(mindspore.float16)
 
-        # verify logits
-        logits = model(**inputs).logits
+    #     # verify logits
+    #     with no_grad():
+    #         logits = model(**inputs).logits
 
-        expected_slice = mindspore.tensor(
-            [[-3.3926, -12.2969, 8.4922], [-5.0195, -11.9531, 8.1406], [-4.0039, -13.3594, 9.2578]],
-        )
+    #     expected_slice = mindspore.tensor(
+    #         [[-3.3926, -12.2969, 8.4922], [-5.0195, -11.9531, 8.1406], [-4.0039, -13.3594, 9.2578]],
+    #     )
 
-        self.assertTrue(np.allclose(logits[0, :3, :3].float(), expected_slice, atol=1e-3))
+    #     self.assertTrue(ops.allclose(logits[0, :3, :3].float(), expected_slice, atol=1e-3))
 
-        # verify generation
-        outputs = model.generate(**inputs, max_new_tokens=30)
-        generated_text = processor.batch_decode(outputs, skip_special_tokens=True)[0].strip()
+    #     # verify generation
+    #     outputs = model.generate(**inputs, max_new_tokens=30)
+    #     generated_text = processor.batch_decode(outputs, skip_special_tokens=True)[0].strip()
 
-        expected_outputs = [2, 450, 22910, 9565, 310, 445, 1967, 338, 393, 263, 767, 338, 13977, 292, 22095, 373, 278, 1250, 310, 263, 13328, 20134, 29963, 1550, 372, 338, 19500, 1623, 263, 19587, 4272]  # fmt: off
+    #     expected_outputs = [2, 450, 22910, 9565, 310, 445, 1967, 338, 393, 263, 767, 338, 13977, 292, 22095, 373, 278, 1250, 310, 263, 13328, 20134, 29963, 1550, 372, 338, 19500, 1623, 263, 19587, 4272]  # fmt: off
 
-        self.assertEqual(outputs[0].tolist(), expected_outputs)
-        self.assertEqual(
-            generated_text,
-            "The unusual aspect of this image is that a man is ironing clothes on the back of a yellow SUV while it is driving down a busy city",
-        )
+    #     self.assertEqual(outputs[0].tolist(), expected_outputs)
+    #     self.assertEqual(
+    #         generated_text,
+    #         "The unusual aspect of this image is that a man is ironing clothes on the back of a yellow SUV while it is driving down a busy city",
+    #     )
 
     def test_inference_flant5_xl(self):
         processor = InstructBlipProcessor.from_pretrained("Salesforce/instructblip-flan-t5-xl")
         model = InstructBlipForConditionalGeneration.from_pretrained(
             "Salesforce/instructblip-flan-t5-xl",
-            ms_dtype=mindspore.float16,
+            ms_dtype=mindspore.bfloat16,
             low_cpu_mem_usage=True,
         )
 
         url = "https://raw.githubusercontent.com/salesforce/LAVIS/main/docs/_static/Confusing-Pictures.jpg"
         image = Image.open(requests.get(url, stream=True).raw).convert("RGB")
         prompt = "What is unusual about this image?"
-        inputs = processor(images=image, text=prompt, return_tensors="ms")
+        inputs = processor(images=image, text=prompt, return_tensors="pt")
 
         for k, v in inputs.items():
             if ops.is_floating_point(v):
-                inputs[k] = v.to(mindspore.float16)
+                inputs[k] = v.to(mindspore.bfloat16)
 
         outputs = model.generate(
             **inputs,
@@ -618,14 +616,14 @@ class InstructBlipModelIntegrationTest(unittest.TestCase):
         processor = InstructBlipProcessor.from_pretrained("Salesforce/instructblip-flan-t5-xl")
         model = InstructBlipForConditionalGeneration.from_pretrained(
             "Salesforce/instructblip-flan-t5-xl",
-            ms_dtype=mindspore.float16,
+            ms_dtype=mindspore.bfloat16,
             low_cpu_mem_usage=True,
         )
         processor.image_processor.size = {"height": 500, "width": 500}
 
         image = prepare_img()
         prompt = "What's in the image?"
-        inputs = processor(images=image, text=prompt, return_tensors="ms")
+        inputs = processor(images=image, text=prompt, return_tensors="pt")
 
         predictions = model.generate(**inputs, interpolate_pos_encoding=True)
         generated_text = processor.batch_decode(predictions, skip_special_tokens=True)[0].strip()
@@ -634,3 +632,35 @@ class InstructBlipModelIntegrationTest(unittest.TestCase):
             predictions[0].tolist(), [0, 37, 1023, 753, 3, 9, 2335, 3823, 30, 8, 2608, 28, 3, 9, 1782, 5, 1]
         )
         self.assertEqual(generated_text, "The image features a woman sitting on the beach with a dog.")
+
+    def test_expansion_in_processing(self):
+        processor = InstructBlipProcessor.from_pretrained("Salesforce/instructblip-flan-t5-xl")
+        model = InstructBlipForConditionalGeneration.from_pretrained(
+            "Salesforce/instructblip-flan-t5-xl",
+            ms_dtype=mindspore.bfloat16,
+            low_cpu_mem_usage=True,
+        )
+
+        image = prepare_img()
+        prompt = "What's in the image?"
+
+        # Make sure we will go the legacy path by setting these args to None
+        processor.num_query_tokens = None
+        model.config.image_token_index = None
+        inputs = processor(images=image, text=prompt, return_tensors="pt").to(dtype=mindspore.float16)
+
+        predictions = model.generate(**inputs, do_sample=False, max_new_tokens=15)
+        generated_text = processor.batch_decode(predictions, skip_special_tokens=True)[0].strip()
+
+        # Add args to the config to trigger new logic when inputs are expanded in processing file
+        processor.num_query_tokens = model.config.num_query_tokens
+        processor.tokenizer.add_special_tokens({"additional_special_tokens": ["<image>"]})
+        model.config.image_token_index = len(processor.tokenizer) - 1
+        model.resize_token_embeddings(processor.tokenizer.vocab_size, pad_to_multiple_of=64)
+
+        # Generate again with new inputs
+        inputs = processor(images=image, text=prompt, return_tensors="pt").to(dtype=mindspore.float16)
+        predictions_expanded = model.generate(**inputs, do_sample=False, max_new_tokens=15)
+        generated_text_expanded = processor.batch_decode(predictions_expanded, skip_special_tokens=True)[0].strip()
+
+        self.assertTrue(generated_text_expanded == generated_text)

@@ -91,6 +91,7 @@ from . import (
     chatglm3,
     chatglm4,
     flava,
+    flaubert,
     florence2,
     focalnet,
     fnet,
@@ -158,6 +159,7 @@ from . import (
     openelm,
     opt,
     owlvit,
+    patchtst,
     pegasus,
     pegasus_x,
     perceiver,
@@ -314,6 +316,7 @@ from .chatglm2 import *
 from .chatglm3 import *
 from .falcon import *
 from .flava import *
+from .flaubert import *
 from .florence2 import *
 from .focalnet import *
 from .fnet import *
@@ -382,6 +385,7 @@ from .oneformer import *
 from .openelm import *
 from .opt import *
 from .owlvit import *
+from .patchtst import *
 from .pegasus import *
 from .pegasus_x import *
 from .perceiver import *
@@ -536,6 +540,7 @@ __all__.extend(chatglm.__all__)
 __all__.extend(chatglm4.__all__)
 __all__.extend(falcon.__all__)
 __all__.extend(flava.__all__)
+__all__.extend(flaubert.__all__)
 __all__.extend(florence2.__all__)
 __all__.extend(fnet.__all__)
 __all__.extend(focalnet.__all__)
@@ -606,6 +611,7 @@ __all__.extend(oneformer.__all__)
 __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(owlvit.__all__)
+__all__.extend(patchtst.__all__)
 __all__.extend(pegasus.__all__)
 __all__.extend(pegasus_x.__all__)
 __all__.extend(perceiver.__all__)

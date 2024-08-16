@@ -1,39 +1,41 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2022 Google AI and The HuggingFace Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================
-"""MindSpore OwlViT model."""
+"""MindSpore OWL-ViT model."""
 
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Dict, Optional, Tuple, Union
 
-import mindspore as ms
+import mindspore
 from mindspore import Tensor
-
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _create_4d_causal_attention_mask, _prepare_4d_attention_mask
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling
 from ...modeling_utils import PreTrainedModel
-from ...modeling_outputs import ModelOutput
-from ....utils import is_vision_available, logging
+from ....utils import (
+    ModelOutput,
+    is_vision_available,
+    logging,
+)
 from .configuration_owlvit import OwlViTConfig, OwlViTTextConfig, OwlViTVisionConfig
 
 
 if is_vision_available():
-    from ...image_transforms import center_to_corners_format
+    from mindnlp.transformers.image_transforms import center_to_corners_format
 
 
 logger = logging.get_logger(__name__)
@@ -44,12 +46,12 @@ _CHECKPOINT_FOR_DOC = "google/owlvit-base-patch32"
 
 
 # Copied from transformers.models.clip.modeling_clip.contrastive_loss with clip->owlvit
-def contrastive_loss(logits: ms.Tensor) -> ms.Tensor:
-    return F.cross_entropy(logits, ops.arange(len(logits)))
+def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
+    return nn.functional.cross_entropy(logits, ops.arange(len(logits)))
 
 
 # Copied from transformers.models.clip.modeling_clip.clip_loss with clip->owlvit
-def owlvit_loss(similarity: ms.Tensor) -> ms.Tensor:
+def owlvit_loss(similarity: mindspore.Tensor) -> mindspore.Tensor:
     caption_loss = contrastive_loss(similarity)
     image_loss = contrastive_loss(similarity.t())
     return (caption_loss + image_loss) / 2.0
@@ -59,17 +61,17 @@ def owlvit_loss(similarity: ms.Tensor) -> ms.Tensor:
 class OwlViTOutput(ModelOutput):
     """
     Args:
-        loss (`ms.Tensor` of shape `(1,)`, *optional*, returned when `return_loss` is `True`):
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `return_loss` is `True`):
             Contrastive loss for image-text similarity.
-        logits_per_image (`ms.Tensor` of shape `(image_batch_size, text_batch_size)`):
+        logits_per_image (`mindspore.Tensor` of shape `(image_batch_size, text_batch_size)`):
             The scaled dot product scores between `image_embeds` and `text_embeds`. This represents the image-text
             similarity scores.
-        logits_per_text (`ms.Tensor` of shape `(text_batch_size, image_batch_size)`):
+        logits_per_text (`mindspore.Tensor` of shape `(text_batch_size, image_batch_size)`):
             The scaled dot product scores between `text_embeds` and `image_embeds`. This represents the text-image
             similarity scores.
-        text_embeds (`ms.Tensor` of shape `(batch_size * num_max_text_queries, output_dim`):
+        text_embeds (`mindspore.Tensor` of shape `(batch_size * num_max_text_queries, output_dim`):
             The text embeddings obtained by applying the projection layer to the pooled output of [`OwlViTTextModel`].
-        image_embeds (`ms.Tensor` of shape `(batch_size, output_dim`):
+        image_embeds (`mindspore.Tensor` of shape `(batch_size, output_dim`):
             The image embeddings obtained by applying the projection layer to the pooled output of
             [`OwlViTVisionModel`].
         text_model_output (Tuple[`BaseModelOutputWithPooling`]):
@@ -78,18 +80,17 @@ class OwlViTOutput(ModelOutput):
             The output of the [`OwlViTVisionModel`].
     """
 
-    loss: Optional[ms.Tensor] = None
-    logits_per_image: ms.Tensor = None
-    logits_per_text: ms.Tensor = None
-    text_embeds: ms.Tensor = None
-    image_embeds: ms.Tensor = None
+    loss: Optional[mindspore.Tensor] = None
+    logits_per_image: mindspore.Tensor = None
+    logits_per_text: mindspore.Tensor = None
+    text_embeds: mindspore.Tensor = None
+    image_embeds: mindspore.Tensor = None
     text_model_output: BaseModelOutputWithPooling = None
     vision_model_output: BaseModelOutputWithPooling = None
 
     def to_tuple(self) -> Tuple[Any]:
         return tuple(
-            self[k] if k not in ["text_model_output",
-                                 "vision_model_output"] else getattr(self, k).to_tuple()
+            self[k] if k not in ["text_model_output", "vision_model_output"] else getattr(self, k).to_tuple()
             for k in self.keys()
         )
 
@@ -98,9 +99,9 @@ class OwlViTOutput(ModelOutput):
 def _upcast(t: Tensor) -> Tensor:
     # Protects from numerical overflows in multiplications by upcasting to the equivalent higher type
     if t.is_floating_point():
-        return t if t.dtype in (ms.float32, ms.float64) else t.astype(ms.float32)
+        return t if t.dtype in (mindspore.float32, mindspore.float64) else t.float()
     else:
-        return t if t.dtype in (ms.int32, ms.int64) else t.astype(ms.int32)
+        return t if t.dtype in (mindspore.int32, mindspore.int64) else t.int()
 
 
 # Copied from transformers.models.detr.modeling_detr.box_area
@@ -109,12 +110,12 @@ def box_area(boxes: Tensor) -> Tensor:
     Computes the area of a set of bounding boxes, which are specified by its (x1, y1, x2, y2) coordinates.
 
     Args:
-        boxes (`ms.Tensor` of shape `(number_of_boxes, 4)`):
+        boxes (`mindspore.Tensor` of shape `(number_of_boxes, 4)`):
             Boxes for which the area will be computed. They are expected to be in (x1, y1, x2, y2) format with `0 <= x1
             < x2` and `0 <= y1 < y2`.
 
     Returns:
-        `ms.Tensor`: a tensor containing the area for each box.
+        `mindspore.Tensor`: a tensor containing the area for each box.
     """
     boxes = _upcast(boxes)
     return (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
@@ -125,8 +126,8 @@ def box_iou(boxes1, boxes2):
     area1 = box_area(boxes1)
     area2 = box_area(boxes2)
 
-    left_top = ops.maximum(boxes1[:, None, :2], boxes2[:, :2])  # [N,M,2]
-    right_bottom = ops.minimum(boxes1[:, None, 2:], boxes2[:, 2:])  # [N,M,2]
+    left_top = ops.max(boxes1[:, None, :2], boxes2[:, :2])  # [N,M,2]
+    right_bottom = ops.min(boxes1[:, None, 2:], boxes2[:, 2:])  # [N,M,2]
 
     width_height = (right_bottom - left_top).clamp(min=0)  # [N,M,2]
     inter = width_height[:, :, 0] * width_height[:, :, 1]  # [N,M]
@@ -143,20 +144,18 @@ def generalized_box_iou(boxes1, boxes2):
     Generalized IoU from https://giou.stanford.edu/. The boxes should be in [x0, y0, x1, y1] (corner) format.
 
     Returns:
-        `ms.Tensor`: a [N, M] pairwise matrix, where N = len(boxes1) and M = len(boxes2)
+        `mindspore.Tensor`: a [N, M] pairwise matrix, where N = len(boxes1) and M = len(boxes2)
     """
     # degenerate boxes gives inf / nan results
     # so do an early check
     if not (boxes1[:, 2:] >= boxes1[:, :2]).all():
-        raise ValueError(
-            f"boxes1 must be in [x0, y0, x1, y1] (corner) format, but got {boxes1}")
+        raise ValueError(f"boxes1 must be in [x0, y0, x1, y1] (corner) format, but got {boxes1}")
     if not (boxes2[:, 2:] >= boxes2[:, :2]).all():
-        raise ValueError(
-            f"boxes2 must be in [x0, y0, x1, y1] (corner) format, but got {boxes2}")
+        raise ValueError(f"boxes2 must be in [x0, y0, x1, y1] (corner) format, but got {boxes2}")
     iou, union = box_iou(boxes1, boxes2)
 
-    top_left = ops.minimum(boxes1[:, None, :2], boxes2[:, :2])
-    bottom_right = ops.maximum(boxes1[:, None, 2:], boxes2[:, 2:])
+    top_left = ops.min(boxes1[:, None, :2], boxes2[:, :2])
+    bottom_right = ops.max(boxes1[:, None, 2:], boxes2[:, 2:])
 
     width_height = (bottom_right - top_left).clamp(min=0)  # [N,M,2]
     area = width_height[:, :, 0] * width_height[:, :, 1]
@@ -170,25 +169,25 @@ class OwlViTObjectDetectionOutput(ModelOutput):
     Output type of [`OwlViTForObjectDetection`].
 
     Args:
-        loss (`ms.Tensor` of shape `(1,)`, *optional*, returned when `labels` are provided)):
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` are provided)):
             Total loss as a linear combination of a negative log-likehood (cross-entropy) for class prediction and a
             bounding box loss. The latter is defined as a linear combination of the L1 loss and the generalized
             scale-invariant IoU loss.
         loss_dict (`Dict`, *optional*):
             A dictionary containing the individual losses. Useful for logging.
-        logits (`ms.Tensor` of shape `(batch_size, num_patches, num_queries)`):
+        logits (`mindspore.Tensor` of shape `(batch_size, num_patches, num_queries)`):
             Classification logits (including no-object) for all queries.
-        pred_boxes (`ms.Tensor` of shape `(batch_size, num_patches, 4)`):
+        pred_boxes (`mindspore.Tensor` of shape `(batch_size, num_patches, 4)`):
             Normalized boxes coordinates for all queries, represented as (center_x, center_y, width, height). These
             values are normalized in [0, 1], relative to the size of each individual image in the batch (disregarding
             possible padding). You can use [`~OwlViTImageProcessor.post_process_object_detection`] to retrieve the
             unnormalized bounding boxes.
-        text_embeds (`ms.Tensor` of shape `(batch_size, num_max_text_queries, output_dim`):
+        text_embeds (`mindspore.Tensor` of shape `(batch_size, num_max_text_queries, output_dim`):
             The text embeddings obtained by applying the projection layer to the pooled output of [`OwlViTTextModel`].
-        image_embeds (`ms.Tensor` of shape `(batch_size, patch_size, patch_size, output_dim`):
+        image_embeds (`mindspore.Tensor` of shape `(batch_size, patch_size, patch_size, output_dim`):
             Pooled output of [`OwlViTVisionModel`]. OWL-ViT represents images as a set of image patches and computes
             image embeddings for each patch.
-        class_embeds (`ms.Tensor` of shape `(batch_size, num_patches, hidden_size)`):
+        class_embeds (`mindspore.Tensor` of shape `(batch_size, num_patches, hidden_size)`):
             Class embeddings of all image patches. OWL-ViT represents images as a set of image patches where the total
             number of patches is (image_size / patch_size)**2.
         text_model_output (Tuple[`BaseModelOutputWithPooling`]):
@@ -197,20 +196,19 @@ class OwlViTObjectDetectionOutput(ModelOutput):
             The output of the [`OwlViTVisionModel`].
     """
 
-    loss: Optional[ms.Tensor] = None
+    loss: Optional[mindspore.Tensor] = None
     loss_dict: Optional[Dict] = None
-    logits: ms.Tensor = None
-    pred_boxes: ms.Tensor = None
-    text_embeds: ms.Tensor = None
-    image_embeds: ms.Tensor = None
-    class_embeds: ms.Tensor = None
+    logits: mindspore.Tensor = None
+    pred_boxes: mindspore.Tensor = None
+    text_embeds: mindspore.Tensor = None
+    image_embeds: mindspore.Tensor = None
+    class_embeds: mindspore.Tensor = None
     text_model_output: BaseModelOutputWithPooling = None
     vision_model_output: BaseModelOutputWithPooling = None
 
     def to_tuple(self) -> Tuple[Any]:
         return tuple(
-            self[k] if k not in ["text_model_output",
-                                 "vision_model_output"] else getattr(self, k).to_tuple()
+            self[k] if k not in ["text_model_output", "vision_model_output"] else getattr(self, k).to_tuple()
             for k in self.keys()
         )
 
@@ -221,25 +219,25 @@ class OwlViTImageGuidedObjectDetectionOutput(ModelOutput):
     Output type of [`OwlViTForObjectDetection.image_guided_detection`].
 
     Args:
-        logits (`ms.Tensor` of shape `(batch_size, num_patches, num_queries)`):
+        logits (`mindspore.Tensor` of shape `(batch_size, num_patches, num_queries)`):
             Classification logits (including no-object) for all queries.
-        target_pred_boxes (`ms.Tensor` of shape `(batch_size, num_patches, 4)`):
+        target_pred_boxes (`mindspore.Tensor` of shape `(batch_size, num_patches, 4)`):
             Normalized boxes coordinates for all queries, represented as (center_x, center_y, width, height). These
             values are normalized in [0, 1], relative to the size of each individual target image in the batch
             (disregarding possible padding). You can use [`~OwlViTImageProcessor.post_process_object_detection`] to
             retrieve the unnormalized bounding boxes.
-        query_pred_boxes (`ms.Tensor` of shape `(batch_size, num_patches, 4)`):
+        query_pred_boxes (`mindspore.Tensor` of shape `(batch_size, num_patches, 4)`):
             Normalized boxes coordinates for all queries, represented as (center_x, center_y, width, height). These
             values are normalized in [0, 1], relative to the size of each individual query image in the batch
             (disregarding possible padding). You can use [`~OwlViTImageProcessor.post_process_object_detection`] to
             retrieve the unnormalized bounding boxes.
-        image_embeds (`ms.Tensor` of shape `(batch_size, patch_size, patch_size, output_dim`):
+        image_embeds (`mindspore.Tensor` of shape `(batch_size, patch_size, patch_size, output_dim`):
             Pooled output of [`OwlViTVisionModel`]. OWL-ViT represents images as a set of image patches and computes
             image embeddings for each patch.
-        query_image_embeds (`ms.Tensor` of shape `(batch_size, patch_size, patch_size, output_dim`):
+        query_image_embeds (`mindspore.Tensor` of shape `(batch_size, patch_size, patch_size, output_dim`):
             Pooled output of [`OwlViTVisionModel`]. OWL-ViT represents images as a set of image patches and computes
             image embeddings for each patch.
-        class_embeds (`ms.Tensor` of shape `(batch_size, num_patches, hidden_size)`):
+        class_embeds (`mindspore.Tensor` of shape `(batch_size, num_patches, hidden_size)`):
             Class embeddings of all image patches. OWL-ViT represents images as a set of image patches where the total
             number of patches is (image_size / patch_size)**2.
         text_model_output (Tuple[`BaseModelOutputWithPooling`]):
@@ -248,19 +246,18 @@ class OwlViTImageGuidedObjectDetectionOutput(ModelOutput):
             The output of the [`OwlViTVisionModel`].
     """
 
-    logits: ms.Tensor = None
-    image_embeds: ms.Tensor = None
-    query_image_embeds: ms.Tensor = None
-    target_pred_boxes: ms.Tensor = None
-    query_pred_boxes: ms.Tensor = None
-    class_embeds: ms.Tensor = None
+    logits: mindspore.Tensor = None
+    image_embeds: mindspore.Tensor = None
+    query_image_embeds: mindspore.Tensor = None
+    target_pred_boxes: mindspore.Tensor = None
+    query_pred_boxes: mindspore.Tensor = None
+    class_embeds: mindspore.Tensor = None
     text_model_output: BaseModelOutputWithPooling = None
     vision_model_output: BaseModelOutputWithPooling = None
 
     def to_tuple(self) -> Tuple[Any]:
         return tuple(
-            self[k] if k not in ["text_model_output",
-                                 "vision_model_output"] else getattr(self, k).to_tuple()
+            self[k] if k not in ["text_model_output", "vision_model_output"] else getattr(self, k).to_tuple()
             for k in self.keys()
         )
 
@@ -270,7 +267,7 @@ class OwlViTVisionEmbeddings(nn.Module):
         super().__init__()
         self.config = config
         self.embed_dim = config.hidden_size
-        self.class_embedding = ms.Parameter(ops.randn(config.hidden_size))
+        self.class_embedding = nn.Parameter(ops.randn(config.hidden_size))
 
         self.patch_embedding = nn.Conv2d(
             in_channels=config.num_channels,
@@ -282,16 +279,13 @@ class OwlViTVisionEmbeddings(nn.Module):
 
         self.num_patches = (config.image_size // config.patch_size) ** 2
         self.num_positions = self.num_patches + 1
-        self.position_embedding = nn.Embedding(
-            self.num_positions, self.embed_dim)
-        self.position_ids = ops.arange(
-            self.num_positions).broadcast_to((1, -1))
+        self.position_embedding = nn.Embedding(self.num_positions, self.embed_dim)
+        self.register_buffer("position_ids", ops.arange(self.num_positions).broadcast_to((1, -1)), persistent=False)
 
-    def forward(self, pixel_values: ms.Tensor) -> ms.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         batch_size = pixel_values.shape[0]
-        # shape = [batch_size, num_channels, height, width]
-        patch_embeds = self.patch_embedding(pixel_values)
-        patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
+        patch_embeds = self.patch_embedding(pixel_values)  # shape = [batch_size, num_channels, height, width]
+        patch_embeds = ops.transpose(ops.flatten(patch_embeds, 2), 1, 2)
 
         class_embeds = self.class_embedding.broadcast_to((batch_size, 1, -1))
         embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
@@ -303,20 +297,20 @@ class OwlViTVisionEmbeddings(nn.Module):
 class OwlViTTextEmbeddings(nn.Module):
     def __init__(self, config: OwlViTTextConfig):
         super().__init__()
-        self.token_embedding = nn.Embedding(
-            config.vocab_size, config.hidden_size)
-        self.position_embedding = nn.Embedding(
-            config.max_position_embeddings, config.hidden_size)
+        self.token_embedding = nn.Embedding(config.vocab_size, config.hidden_size)
+        self.position_embedding = nn.Embedding(config.max_position_embeddings, config.hidden_size)
 
-        self.position_ids = ops.arange(
-            config.max_position_embeddings).broadcast_to((1, -1))
+        # position_ids (1, len position emb) is contiguous in memory and exported when serialized
+        self.register_buffer(
+            "position_ids", ops.arange(config.max_position_embeddings).broadcast_to((1, -1)), persistent=False
+        )
 
     def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-    ) -> ms.Tensor:
+        input_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+    ) -> mindspore.Tensor:
         seq_length = input_ids.shape[-1] if input_ids is not None else inputs_embeds.shape[-2]
 
         if position_ids is None:
@@ -353,16 +347,16 @@ class OwlViTAttention(nn.Module):
         self.q_proj = nn.Linear(self.embed_dim, self.embed_dim)
         self.out_proj = nn.Linear(self.embed_dim, self.embed_dim)
 
-    def _shape(self, tensor: ms.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+    def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
+        return ops.transpose(tensor.view(bsz, seq_len, self.num_heads, self.head_dim), 1, 2)
 
     def forward(
         self,
-        hidden_states: ms.Tensor,
-        attention_mask: Optional[ms.Tensor] = None,
-        causal_attention_mask: Optional[ms.Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        causal_attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = False,
-    ) -> Tuple[ms.Tensor, Optional[ms.Tensor], Optional[Tuple[ms.Tensor]]]:
+    ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
 
         bsz, tgt_len, embed_dim = hidden_states.shape
@@ -373,13 +367,12 @@ class OwlViTAttention(nn.Module):
         value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
 
         proj_shape = (bsz * self.num_heads, -1, self.head_dim)
-        query_states = self._shape(
-            query_states, tgt_len, bsz).view(*proj_shape)
+        query_states = self._shape(query_states, tgt_len, bsz).view(*proj_shape)
         key_states = key_states.view(*proj_shape)
         value_states = value_states.view(*proj_shape)
 
         src_len = key_states.shape[1]
-        attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
+        attn_weights = ops.bmm(query_states, ops.transpose(key_states, 1, 2))
 
         if attn_weights.shape != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
@@ -394,37 +387,30 @@ class OwlViTAttention(nn.Module):
                     f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is"
                     f" {causal_attention_mask.shape}"
                 )
-            attn_weights = attn_weights.view(
-                bsz, self.num_heads, tgt_len, src_len) + causal_attention_mask
-            attn_weights = attn_weights.view(
-                bsz * self.num_heads, tgt_len, src_len)
+            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + causal_attention_mask
+            attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         if attention_mask is not None:
             if attention_mask.shape != (bsz, 1, tgt_len, src_len):
                 raise ValueError(
                     f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.shape}"
                 )
-            attn_weights = attn_weights.view(
-                bsz, self.num_heads, tgt_len, src_len) + attention_mask
-            attn_weights = attn_weights.view(
-                bsz * self.num_heads, tgt_len, src_len)
+            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
+            attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, dim=-1)
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit akward, but it's required to
             # make sure that attn_weights keeps its gradient.
             # In order to do so, attn_weights have to reshaped
             # twice and have to be reused in the following
-            attn_weights_reshaped = attn_weights.view(
-                bsz, self.num_heads, tgt_len, src_len)
-            attn_weights = attn_weights_reshaped.view(
-                bsz * self.num_heads, tgt_len, src_len)
+            attn_weights_reshaped = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
+            attn_weights = attn_weights_reshaped.view(bsz * self.num_heads, tgt_len, src_len)
         else:
             attn_weights_reshaped = None
 
-        attn_probs = F.dropout(
-            attn_weights, p=self.dropout, training=self.training)
+        attn_probs = nn.functional.dropout(attn_weights, p=self.dropout, training=self.training)
 
         # For int8 compatibility, sometimes the `attn_probs` are in `fp32`
         attn_probs = attn_probs.to(value_states.dtype)
@@ -437,9 +423,8 @@ class OwlViTAttention(nn.Module):
                 f" {attn_output.shape}"
             )
 
-        attn_output = attn_output.view(
-            bsz, self.num_heads, tgt_len, self.head_dim)
-        attn_output = attn_output.swapaxes(1, 2)
+        attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
+        attn_output = ops.transpose(attn_output, 1, 2)
         attn_output = attn_output.reshape(bsz, tgt_len, embed_dim)
 
         attn_output = self.out_proj(attn_output)
@@ -456,36 +441,34 @@ class OwlViTMLP(nn.Module):
         self.fc1 = nn.Linear(config.hidden_size, config.intermediate_size)
         self.fc2 = nn.Linear(config.intermediate_size, config.hidden_size)
 
-    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
         hidden_states = self.fc2(hidden_states)
         return hidden_states
 
 
-# Copied from transformers.models.clip.modeling_clip.CLIPEncoderLayer with CLIP->OwlViT
+# Copied from transformers.models.altclip.modeling_altclip.AltCLIPEncoderLayer with AltCLIP->OwlViT
 class OwlViTEncoderLayer(nn.Module):
     def __init__(self, config: OwlViTConfig):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = OwlViTAttention(config)
-        self.layer_norm1 = nn.LayerNorm(
-            self.embed_dim, eps=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = OwlViTMLP(config)
-        self.layer_norm2 = nn.LayerNorm(
-            self.embed_dim, eps=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
     def forward(
         self,
-        hidden_states: ms.Tensor,
-        attention_mask: ms.Tensor,
-        causal_attention_mask: ms.Tensor,
+        hidden_states: mindspore.Tensor,
+        attention_mask: mindspore.Tensor,
+        causal_attention_mask: mindspore.Tensor,
         output_attentions: Optional[bool] = False,
-    ) -> Tuple[ms.Tensor]:
+    ) -> Tuple[mindspore.Tensor]:
         """
         Args:
-            hidden_states (`ms.Tensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
-            attention_mask (`ms.Tensor`): attention mask of size
+            hidden_states (`mindspore.Tensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
+            attention_mask (`mindspore.Tensor`): attention mask of size
                 `(batch, 1, tgt_len, src_len)` where padding elements are indicated by very large negative values.
                 `(config.encoder_attention_heads,)`.
             output_attentions (`bool`, *optional*):
@@ -567,124 +550,6 @@ class OwlViTPreTrainedModel(PreTrainedModel):
         if isinstance(module, nn.Linear) and module.bias is not None:
             nn.init.zeros_(module.bias)
 
-OWLVIT_START_DOCSTRING = r"""
-
-    This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
-    library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
-    etc.)
-
-    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
-    Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
-    and behavior.
-
-    Parameters:
-        config ([`OwlViTConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-OWLVIT_TEXT_INPUTS_DOCSTRING = r"""
-    Args:
-        input_ids (`ms.Tensor` of shape `(batch_size * num_max_text_queries, sequence_length)`):
-            Indices of input sequence tokens in the vocabulary. Indices can be obtained using [`AutoTokenizer`]. See
-            [`PreTrainedTokenizer.encode`] and [`PreTrainedTokenizer.__call__`] for details. [What are input
-            IDs?](../glossary#input-ids)
-        attention_mask (`ms.Tensor` of shape `(batch_size, num_max_text_queries, sequence_length)`, *optional*):
-            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-            
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-            
-            [What are attention masks?](../glossary#attention-mask)
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
-
-OWLVIT_VISION_INPUTS_DOCSTRING = r"""
-    Args:
-        pixel_values (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`):
-            Pixel values.
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
-
-OWLVIT_INPUTS_DOCSTRING = r"""
-    Args:
-        input_ids (`ms.Tensor` of shape `(batch_size, sequence_length)`):
-            Indices of input sequence tokens in the vocabulary. Indices can be obtained using [`AutoTokenizer`]. See
-            [`PreTrainedTokenizer.encode`] and [`PreTrainedTokenizer.__call__`] for details. [What are input
-            IDs?](../glossary#input-ids)
-        attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-            
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-            
-            [What are attention masks?](../glossary#attention-mask)
-        pixel_values (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`):
-            Pixel values.
-        return_loss (`bool`, *optional*):
-            Whether or not to return the contrastive loss.
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
-
-OWLVIT_OBJECT_DETECTION_INPUTS_DOCSTRING = r"""
-    Args:
-        pixel_values (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`):
-            Pixel values.
-        input_ids (`ms.Tensor` of shape `(batch_size * num_max_text_queries, sequence_length)`, *optional*):
-            Indices of input sequence tokens in the vocabulary. Indices can be obtained using [`AutoTokenizer`]. See
-            [`PreTrainedTokenizer.encode`] and [`PreTrainedTokenizer.__call__`] for details. [What are input
-            IDs?](../glossary#input-ids).
-        attention_mask (`ms.Tensor` of shape `(batch_size, num_max_text_queries, sequence_length)`, *optional*):
-            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-            
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-            
-            [What are attention masks?](../glossary#attention-mask)
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the last hidden state. See `text_model_last_hidden_state` and
-            `vision_model_last_hidden_state` under returned tensors for more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
-
-OWLVIT_IMAGE_GUIDED_OBJECT_DETECTION_INPUTS_DOCSTRING = r"""
-    Args:
-        pixel_values (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`):
-            Pixel values.
-        query_pixel_values (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`):
-            Pixel values of query image(s) to be detected. Pass in one query image per target image.
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
-
 
 class OwlViTEncoder(nn.Module):
     """
@@ -697,35 +562,30 @@ class OwlViTEncoder(nn.Module):
 
     def __init__(self, config: OwlViTConfig):
         super().__init__()
-        self.layers = nn.ModuleList([OwlViTEncoderLayer(config)
-                                  for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([OwlViTEncoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
     def forward(
         self,
         inputs_embeds,
-        attention_mask: Optional[ms.Tensor] = None,
-        causal_attention_mask: Optional[ms.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        causal_attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutput]:
         r"""
         Args:
-            inputs_embeds (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`).
-            attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`).
+            attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
-
                 [What are attention masks?](../glossary#attention-mask)
-            causal_attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            causal_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Causal mask for the text model. Mask values selected in `[0, 1]`:
-
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
-
                 [What are attention masks?](../glossary#attention-mask)
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
@@ -787,22 +647,19 @@ class OwlViTTextTransformer(nn.Module):
         embed_dim = config.hidden_size
         self.embeddings = OwlViTTextEmbeddings(config)
         self.encoder = OwlViTEncoder(config)
-        self.final_layer_norm = nn.LayerNorm(
-            embed_dim, eps=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
 
     def forward(
         self,
-        input_ids: ms.Tensor,
-        attention_mask: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
+        input_ids: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
-
         Returns:
-            `Union[Tuple, BaseModelOutputWithPooling]`
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -812,8 +669,7 @@ class OwlViTTextTransformer(nn.Module):
 
         input_shape = input_ids.shape
         input_ids = input_ids.view(-1, input_shape[-1])
-        hidden_states = self.embeddings(
-            input_ids=input_ids, position_ids=position_ids)
+        hidden_states = self.embeddings(input_ids=input_ids, position_ids=position_ids)
 
         # num_samples, seq_len = input_shape  where num_samples = batch_size * num_max_text_queries
         # OWLVIT's text model uses causal mask, prepare it here.
@@ -824,8 +680,7 @@ class OwlViTTextTransformer(nn.Module):
         # expand attention_mask
         if attention_mask is not None:
             # [num_samples, seq_len] -> [num_samples, 1, tgt_seq_len, src_seq_len]
-            attention_mask = _prepare_4d_attention_mask(
-                attention_mask, hidden_states.dtype)
+            attention_mask = _prepare_4d_attention_mask(attention_mask, hidden_states.dtype)
 
         encoder_outputs = self.encoder(
             inputs_embeds=hidden_states,
@@ -839,11 +694,9 @@ class OwlViTTextTransformer(nn.Module):
         last_hidden_state = encoder_outputs[0]
         last_hidden_state = self.final_layer_norm(last_hidden_state)
 
-        # take features from the end of tokens embedding (end of token is the highest number in each sequence)
-        # casting to torch.int for onnx compatibility: argmax doesn't support int64 inputs with opset 14
         pooled_output = last_hidden_state[
             ops.arange(last_hidden_state.shape[0]),
-            input_ids.astype(ms.int32).argmax(axis=-1),
+            ops.argmax(input_ids.to(mindspore.int32), dim=-1),
         ]
 
         if not return_dict:
@@ -874,30 +727,28 @@ class OwlViTTextModel(OwlViTPreTrainedModel):
 
     def forward(
         self,
-        input_ids: ms.Tensor,
-        attention_mask: Optional[ms.Tensor] = None,
+        input_ids: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
-            `Union[Tuple, BaseModelOutputWithPooling]`
 
-        Example:
-            ```python
-            >>> from transformers import AutoProcessor, OwlViTTextModel
-            ...
-            >>> model = OwlViTTextModel.from_pretrained("google/owlvit-base-patch32")
-            >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
-            >>> inputs = processor(
-            ...     text=[["a photo of a cat", "a photo of a dog"], ["photo of a astranaut"]], return_tensors="pt"
-            ... )
-            >>> outputs = model(**inputs)
-            >>> last_hidden_state = outputs.last_hidden_state
-            >>> pooled_output = outputs.pooler_output  # pooled (EOS token) states
-            ```
-        """
+        Examples:
+        ```python
+        >>> from transformers import AutoProcessor, OwlViTTextModel
+
+        >>> model = OwlViTTextModel.from_pretrained("google/owlvit-base-patch32")
+        >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
+        >>> inputs = processor(
+        ...     text=[["a photo of a cat", "a photo of a dog"], ["photo of a astranaut"]], return_tensors="pt"
+        ... )
+        >>> outputs = model(**inputs)
+        >>> last_hidden_state = outputs.last_hidden_state
+        >>> pooled_output = outputs.pooler_output  # pooled (EOS token) states
+        ```"""
 
         # Get embeddings for all text queries in all batch samples
         return self.text_model(
@@ -915,23 +766,19 @@ class OwlViTVisionTransformer(nn.Module):
         self.config = config
 
         self.embeddings = OwlViTVisionEmbeddings(config)
-        self.pre_layernorm = nn.LayerNorm(
-            config.hidden_size, eps=config.layer_norm_eps)
+        self.pre_layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.encoder = OwlViTEncoder(config)
-        self.post_layernorm = nn.LayerNorm(
-            config.hidden_size, eps=config.layer_norm_eps)
+        self.post_layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(
         self,
-        pixel_values: ms.Tensor,
+        pixel_values: mindspore.Tensor,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
-
         Returns:
-            `Union[Tuple, BaseModelOutputWithPooling]`
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -984,33 +831,31 @@ class OwlViTVisionModel(OwlViTPreTrainedModel):
 
     def forward(
         self,
-        pixel_values: Optional[ms.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
-            `Union[Tuple, BaseModelOutputWithPooling]`
 
-        Example:
-            ```python
-            >>> from PIL import Image
-            >>> import requests
-            >>> from transformers import AutoProcessor, OwlViTVisionModel
-            ...
-            >>> model = OwlViTVisionModel.from_pretrained("google/owlvit-base-patch32")
-            >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
-            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-            >>> image = Image.open(requests.get(url, stream=True).raw)
-            ...
-            >>> inputs = processor(images=image, return_tensors="pt")
-            ...
-            >>> outputs = model(**inputs)
-            >>> last_hidden_state = outputs.last_hidden_state
-            >>> pooled_output = outputs.pooler_output  # pooled CLS states
-            ```
-        """
+        Examples:
+        ```python
+        >>> from PIL import Image
+        >>> import requests
+        >>> from transformers import AutoProcessor, OwlViTVisionModel
+
+        >>> model = OwlViTVisionModel.from_pretrained("google/owlvit-base-patch32")
+        >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+
+        >>> inputs = processor(images=image, return_tensors="pt")
+
+        >>> outputs = model(**inputs)
+        >>> last_hidden_state = outputs.last_hidden_state
+        >>> pooled_output = outputs.pooler_output  # pooled CLS states
+        ```"""
         return self.vision_model(
             pixel_values=pixel_values,
             output_attentions=output_attentions,
@@ -1026,13 +871,13 @@ class OwlViTModel(OwlViTPreTrainedModel):
         super().__init__(config)
 
         if not isinstance(config.text_config, OwlViTTextConfig):
-            raise ValueError(
+            raise TypeError(
                 "config.text_config is expected to be of type OwlViTTextConfig but is of type"
                 f" {type(config.text_config)}."
             )
 
         if not isinstance(config.vision_config, OwlViTVisionConfig):
-            raise ValueError(
+            raise TypeError(
                 "config.vision_config is expected to be of type OwlViTVisionConfig but is of type"
                 f" {type(config.vision_config)}."
             )
@@ -1047,47 +892,42 @@ class OwlViTModel(OwlViTPreTrainedModel):
         self.text_model = OwlViTTextTransformer(text_config)
         self.vision_model = OwlViTVisionTransformer(vision_config)
 
-        self.visual_projection = nn.Linear(
-            self.vision_embed_dim, self.projection_dim, bias=False)
-        self.text_projection = nn.Linear(
-            self.text_embed_dim, self.projection_dim, bias=False)
-        self.logit_scale = ms.Parameter(
-            ms.Tensor(config.logit_scale_init_value))
+        self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, bias=False)
+        self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, bias=False)
+        self.logit_scale = nn.Parameter(mindspore.tensor(config.logit_scale_init_value))
 
         # Initialize weights and apply final processing
         self.post_init()
 
     def get_text_features(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        attention_mask: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> ms.Tensor:
+    ) -> mindspore.Tensor:
         r"""
         Returns:
-            text_features (`ms.Tensor` of shape `(batch_size, output_dim`): The text embeddings obtained by
-                applying the projection layer to the pooled output of [`OwlViTTextModel`].
+            text_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The text embeddings obtained by
+            applying the projection layer to the pooled output of [`OwlViTTextModel`].
 
-        Example:
-            ```python
-            >>> from transformers import AutoProcessor, OwlViTModel
-            ...
-            >>> model = OwlViTModel.from_pretrained("google/owlvit-base-patch32")
-            >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
-            >>> inputs = processor(
-            ...     text=[["a photo of a cat", "a photo of a dog"], ["photo of a astranaut"]], return_tensors="pt"
-            ... )
-            >>> text_features = model.get_text_features(**inputs)
-            ```
-        """
+        Examples:
+        ```python
+        >>> from transformers import AutoProcessor, OwlViTModel
+
+        >>> model = OwlViTModel.from_pretrained("google/owlvit-base-patch32")
+        >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
+        >>> inputs = processor(
+        ...     text=[["a photo of a cat", "a photo of a dog"], ["photo of a astranaut"]], return_tensors="pt"
+        ... )
+        >>> text_features = model.get_text_features(**inputs)
+        ```"""
         # Use OWL-ViT model's config for some fields (if specified) instead of those of vision & text components.
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # Get embeddings for all text queries in all batch samples
-        text_output = self.text_model(
-            input_ids=input_ids, attention_mask=attention_mask, return_dict=return_dict)
+        text_output = self.text_model(input_ids=input_ids, attention_mask=attention_mask, return_dict=return_dict)
         pooled_output = text_output[1]
         text_features = self.text_projection(pooled_output)
 
@@ -1095,30 +935,29 @@ class OwlViTModel(OwlViTPreTrainedModel):
 
     def get_image_features(
         self,
-        pixel_values: Optional[ms.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> ms.Tensor:
+    ) -> mindspore.Tensor:
         r"""
         Returns:
-            image_features (`ms.Tensor` of shape `(batch_size, output_dim`): The image embeddings obtained by
-                applying the projection layer to the pooled output of [`OwlViTVisionModel`].
+            image_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The image embeddings obtained by
+            applying the projection layer to the pooled output of [`OwlViTVisionModel`].
 
-        Example:
-            ```python
-            >>> from PIL import Image
-            >>> import requests
-            >>> from transformers import AutoProcessor, OwlViTModel
-            ...
-            >>> model = OwlViTModel.from_pretrained("google/owlvit-base-patch32")
-            >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
-            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-            >>> image = Image.open(requests.get(url, stream=True).raw)
-            >>> inputs = processor(images=image, return_tensors="pt")
-            >>> image_features = model.get_image_features(**inputs)
-            ```
-        """
+        Examples:
+        ```python
+        >>> from PIL import Image
+        >>> import requests
+        >>> from transformers import AutoProcessor, OwlViTModel
+
+        >>> model = OwlViTModel.from_pretrained("google/owlvit-base-patch32")
+        >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> image_features = model.get_image_features(**inputs)
+        ```"""
         # Use OWL-ViT model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1140,9 +979,9 @@ class OwlViTModel(OwlViTPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        pixel_values: Optional[ms.Tensor] = None,
-        attention_mask: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
         return_loss: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
@@ -1151,24 +990,22 @@ class OwlViTModel(OwlViTPreTrainedModel):
     ) -> Union[Tuple, OwlViTOutput]:
         r"""
         Returns:
-            `Union[Tuple, OwlViTOutput]`
 
-        Example:
-            ```python
-            >>> from PIL import Image
-            >>> import requests
-            >>> from transformers import AutoProcessor, OwlViTModel
-            ...
-            >>> model = OwlViTModel.from_pretrained("google/owlvit-base-patch32")
-            >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
-            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-            >>> image = Image.open(requests.get(url, stream=True).raw)
-            >>> inputs = processor(text=[["a photo of a cat", "a photo of a dog"]], images=image, return_tensors="pt")
-            >>> outputs = model(**inputs)
-            >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
-            >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
-            ```
-        """
+        Examples:
+        ```python
+        >>> from PIL import Image
+        >>> import requests
+        >>> from transformers import AutoProcessor, OwlViTModel
+
+        >>> model = OwlViTModel.from_pretrained("google/owlvit-base-patch32")
+        >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+        >>> inputs = processor(text=[["a photo of a cat", "a photo of a dog"]], images=image, return_tensors="pt")
+        >>> outputs = model(**inputs)
+        >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
+        >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
+        ```"""
         # Use OWL-ViT model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1201,11 +1038,9 @@ class OwlViTModel(OwlViTPreTrainedModel):
         image_embeds = image_embeds / ops.norm(image_embeds, p=2, dim=-1, keepdim=True)
         text_embeds_norm = text_embeds / ops.norm(text_embeds, p=2, dim=-1, keepdim=True)
 
-        # cosine similarity as logits and set it on the correct device
         logit_scale = self.logit_scale.exp()
 
-        logits_per_text = ops.matmul(
-            text_embeds_norm, image_embeds.t()) * logit_scale
+        logits_per_text = ops.matmul(text_embeds_norm, image_embeds.t()) * logit_scale
         logits_per_image = logits_per_text.t()
 
         loss = None
@@ -1215,8 +1050,7 @@ class OwlViTModel(OwlViTPreTrainedModel):
         text_embeds = text_embeds_norm
 
         if not return_dict:
-            output = (logits_per_image, logits_per_text, text_embeds,
-                      image_embeds, text_outputs, vision_outputs)
+            output = (logits_per_image, logits_per_text, text_embeds, image_embeds, text_outputs, vision_outputs)
             return ((loss,) + output) if loss is not None else output
 
         return OwlViTOutput(
@@ -1240,7 +1074,7 @@ class OwlViTBoxPredictionHead(nn.Module):
         self.gelu = nn.GELU()
         self.dense2 = nn.Linear(width, out_dim)
 
-    def forward(self, image_features: ms.Tensor) -> ms.Tensor:
+    def forward(self, image_features: mindspore.Tensor) -> mindspore.Tensor:
         output = self.dense0(image_features)
         output = self.gelu(output)
         output = self.dense1(output)
@@ -1263,10 +1097,10 @@ class OwlViTClassPredictionHead(nn.Module):
 
     def forward(
         self,
-        image_embeds: ms.Tensor,
-        query_embeds: Optional[ms.Tensor],
-        query_mask: Optional[ms.Tensor],
-    ) -> Tuple[ms.Tensor]:
+        image_embeds: mindspore.Tensor,
+        query_embeds: Optional[mindspore.Tensor],
+        query_mask: Optional[mindspore.Tensor],
+    ) -> Tuple[mindspore.Tensor]:
         image_class_embeds = self.dense0(image_embeds)
         if query_embeds is None:
             batch_size, num_patches = image_class_embeds.shape[:2]
@@ -1278,8 +1112,7 @@ class OwlViTClassPredictionHead(nn.Module):
         query_embeds = query_embeds / (ops.norm(query_embeds, p=2, dim=-1, keepdim=True) + 1e-6)
 
         # Get class predictions
-        pred_logits = ops.einsum("...pd,...qd->...pq",
-                                 image_class_embeds, query_embeds)
+        pred_logits = ops.einsum("...pd,...qd->...pq", image_class_embeds, query_embeds)
 
         # Apply a learnable shift and scale to logits
         logit_shift = self.logit_shift(image_embeds)
@@ -1291,8 +1124,8 @@ class OwlViTClassPredictionHead(nn.Module):
             if query_mask.ndim > 1:
                 query_mask = ops.unsqueeze(query_mask, dim=-2)
 
-            pred_logits = ops.where(query_mask == 0, -1e6, pred_logits)
-            pred_logits = pred_logits.astype(ms.float32)
+            pred_logits = ops.where(query_mask == 0, float(ops.finfo(pred_logits.dtype).min), pred_logits)
+            pred_logits = pred_logits.to(mindspore.float32)
 
         return (pred_logits, image_class_embeds)
 
@@ -1307,18 +1140,17 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
         self.class_head = OwlViTClassPredictionHead(config)
         self.box_head = OwlViTBoxPredictionHead(config)
 
-        self.layer_norm = nn.LayerNorm(
-            config.vision_config.hidden_size, eps=config.vision_config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.vision_config.hidden_size, eps=config.vision_config.layer_norm_eps)
         self.sigmoid = nn.Sigmoid()
 
         self.sqrt_num_patches = config.vision_config.image_size // config.vision_config.patch_size
         self.box_bias = self.compute_box_bias(self.sqrt_num_patches)
 
     @staticmethod
-    def normalize_grid_corner_coordinates(num_patches: int) -> ms.Tensor:
+    def normalize_grid_corner_coordinates(num_patches: int) -> mindspore.Tensor:
         # Create grid coordinates using torch
-        x_coordinates = ops.arange(1, num_patches + 1, dtype=ms.float32)
-        y_coordinates = ops.arange(1, num_patches + 1, dtype=ms.float32)
+        x_coordinates = ops.arange(1, num_patches + 1, dtype=mindspore.float32)
+        y_coordinates = ops.arange(1, num_patches + 1, dtype=mindspore.float32)
         xx, yy = ops.meshgrid(x_coordinates, y_coordinates, indexing="xy")
 
         # Stack the coordinates and divide by num_patches
@@ -1331,17 +1163,15 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
         return box_coordinates
 
     @lru_cache(maxsize=2)
-    def compute_box_bias(self, num_patches: int, feature_map: Optional[ms.Tensor] = None) -> ms.Tensor:
+    def compute_box_bias(self, num_patches: int, feature_map: Optional[mindspore.Tensor] = None) -> mindspore.Tensor:
         if feature_map is not None:
-            raise ValueError(
-                "feature_map has been deprecated as an input. Please pass in num_patches instead")
+            raise ValueError("feature_map has been deprecated as an input. Please pass in num_patches instead")
         # The box center is biased to its position on the feature grid
         box_coordinates = self.normalize_grid_corner_coordinates(num_patches)
-        box_coordinates = ops.clamp(box_coordinates, 0.0, 1.0)
+        box_coordinates = ops.clip(box_coordinates, 0.0, 1.0)
 
         # Unnormalize xy
-        box_coord_bias = ops.log(box_coordinates + 1e-4) - \
-            ops.log1p(-box_coordinates + 1e-4)
+        box_coord_bias = ops.log(box_coordinates + 1e-4) - ops.log1p(-box_coordinates + 1e-4)
 
         # The box size is biased to the patch size
         box_size = ops.full_like(box_coord_bias, 1.0 / num_patches)
@@ -1353,16 +1183,15 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
 
     def box_predictor(
         self,
-        image_feats: ms.Tensor,
-        feature_map: ms.Tensor,
-    ) -> ms.Tensor:
+        image_feats: mindspore.Tensor,
+        feature_map: mindspore.Tensor,
+    ) -> mindspore.Tensor:
         """
         Args:
             image_feats:
                 Features extracted from the image, returned by the `image_text_embedder` method.
             feature_map:
                 A spatial re-arrangement of image_features, also returned by the `image_text_embedder` method.
-
         Returns:
             pred_boxes:
                 List of predicted boxes (cxcywh normalized to 0, 1) nested within a dictionary.
@@ -1378,10 +1207,10 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
 
     def class_predictor(
         self,
-        image_feats: ms.Tensor,
-        query_embeds: Optional[ms.Tensor] = None,
-        query_mask: Optional[ms.Tensor] = None,
-    ) -> Tuple[ms.Tensor]:
+        image_feats: mindspore.Tensor,
+        query_embeds: Optional[mindspore.Tensor] = None,
+        query_mask: Optional[mindspore.Tensor] = None,
+    ) -> Tuple[mindspore.Tensor]:
         """
         Args:
             image_feats:
@@ -1391,19 +1220,18 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
             query_mask:
                 Must be provided with query_embeddings. A mask indicating which query embeddings are valid.
         """
-        (pred_logits, image_class_embeds) = self.class_head(
-            image_feats, query_embeds, query_mask)
+        (pred_logits, image_class_embeds) = self.class_head(image_feats, query_embeds, query_mask)
 
         return (pred_logits, image_class_embeds)
 
     def image_text_embedder(
         self,
-        input_ids: ms.Tensor,
-        pixel_values: ms.Tensor,
-        attention_mask: ms.Tensor,
+        input_ids: mindspore.Tensor,
+        pixel_values: mindspore.Tensor,
+        attention_mask: mindspore.Tensor,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-    ) -> Tuple[ms.Tensor]:
+    ) -> Tuple[mindspore.Tensor]:
         # Encode text and image
         outputs = self.owlvit(
             pixel_values=pixel_values,
@@ -1416,12 +1244,10 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
 
         # Get image embeddings
         last_hidden_state = outputs.vision_model_output[0]
-        image_embeds = self.owlvit.vision_model.post_layernorm(
-            last_hidden_state)
+        image_embeds = self.owlvit.vision_model.post_layernorm(last_hidden_state)
 
         # Resize class token
-        class_token_out = ops.broadcast_to(
-            image_embeds[:, :1, :], image_embeds[:, :-1].shape)
+        class_token_out = ops.broadcast_to(image_embeds[:, :1, :], image_embeds[:, :-1].shape)
 
         # Merge image embedding with class tokens
         image_embeds = image_embeds[:, 1:, :] * class_token_out
@@ -1441,22 +1267,19 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
 
     def image_embedder(
         self,
-        pixel_values: ms.Tensor,
+        pixel_values: mindspore.Tensor,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-    ) -> Tuple[ms.Tensor]:
+    ) -> Tuple[mindspore.Tensor]:
         # Get OwlViTModel vision embeddings (same as CLIP)
-        vision_outputs = self.owlvit.vision_model(
-            pixel_values=pixel_values, return_dict=True)
+        vision_outputs = self.owlvit.vision_model(pixel_values=pixel_values, return_dict=True)
 
         # Apply post_layernorm to last_hidden_state, return non-projected output
         last_hidden_state = vision_outputs[0]
-        image_embeds = self.owlvit.vision_model.post_layernorm(
-            last_hidden_state)
+        image_embeds = self.owlvit.vision_model.post_layernorm(last_hidden_state)
 
         # Resize class token
-        class_token_out = ops.broadcast_to(
-            image_embeds[:, :1, :], image_embeds[:, :-1].shape)
+        class_token_out = ops.broadcast_to(image_embeds[:, :1, :], image_embeds[:, :-1].shape)
 
         # Merge image embedding with class tokens
         image_embeds = image_embeds[:, 1:, :] * class_token_out
@@ -1474,11 +1297,10 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
         return (image_embeds, vision_outputs)
 
     def embed_image_query(
-        self, query_image_features: ms.Tensor, query_feature_map: ms.Tensor
-    ) -> ms.Tensor:
+        self, query_image_features: mindspore.Tensor, query_feature_map: mindspore.Tensor
+    ) -> mindspore.Tensor:
         _, class_embeds = self.class_predictor(query_image_features)
-        pred_boxes = self.box_predictor(
-            query_image_features, query_feature_map)
+        pred_boxes = self.box_predictor(query_image_features, query_feature_map)
         pred_boxes_as_corners = center_to_corners_format(pred_boxes)
 
         # Loop over query images
@@ -1486,24 +1308,22 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
         best_box_indices = []
 
         for i in range(query_image_features.shape[0]):
-            each_query_box = ms.Tensor([[0, 0, 1, 1]])
+            each_query_box = mindspore.tensor([[0, 0, 1, 1]])
             each_query_pred_boxes = pred_boxes_as_corners[i]
             ious, _ = box_iou(each_query_box, each_query_pred_boxes)
 
             # If there are no overlapping boxes, fall back to generalized IoU
             if ops.all(ious[0] == 0.0):
-                ious = generalized_box_iou(
-                    each_query_box, each_query_pred_boxes)
+                ious = generalized_box_iou(each_query_box, each_query_pred_boxes)
 
             # Use an adaptive threshold to include all boxes within 80% of the best IoU
-            iou_threshold = ops.max(ious)[0] * 0.8
+            iou_threshold = ops.max(ious) * 0.8
 
             selected_inds = (ious[0] >= iou_threshold).nonzero()
             if selected_inds.numel():
                 selected_embeddings = class_embeds[i][selected_inds.squeeze(1)]
                 mean_embeds = ops.mean(class_embeds[i], dim=0)
-                mean_sim = ops.einsum(
-                    "d,id->i", mean_embeds, selected_embeddings)
+                mean_sim = ops.einsum("d,id->i", mean_embeds, selected_embeddings)
                 best_box_ind = selected_inds[ops.argmin(mean_sim)]
                 best_class_embeds.append(class_embeds[i][best_box_ind])
                 best_box_indices.append(best_box_ind)
@@ -1518,48 +1338,45 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
 
     def image_guided_detection(
         self,
-        pixel_values: ms.Tensor,
-        query_pixel_values: Optional[ms.Tensor] = None,
+        pixel_values: mindspore.Tensor,
+        query_pixel_values: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> OwlViTImageGuidedObjectDetectionOutput:
         r"""
-
         Returns:
-            `OwlViTImageGuidedObjectDetectionOutput`
 
-        Example:
-            ```python
-            >>> import requests
-            >>> from PIL import Image
-            >>> import torch
-            >>> from transformers import AutoProcessor, OwlViTForObjectDetection
-            ...
-            >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch16")
-            >>> model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch16")
-            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-            >>> image = Image.open(requests.get(url, stream=True).raw)
-            >>> query_url = "http://images.cocodataset.org/val2017/000000001675.jpg"
-            >>> query_image = Image.open(requests.get(query_url, stream=True).raw)
-            >>> inputs = processor(images=image, query_images=query_image, return_tensors="pt")
-            >>> with torch.no_grad():
-            ...     outputs = model.image_guided_detection(**inputs)
-            >>> # Target image sizes (height, width) to rescale box predictions [batch_size, 2]
-            >>> target_sizes = ms.Tensor([image.size[::-1]])
-            >>> # Convert outputs (bounding boxes and class logits) to Pascal VOC format (xmin, ymin, xmax, ymax)
-            >>> results = processor.post_process_image_guided_detection(
-            ...     outputs=outputs, threshold=0.6, nms_threshold=0.3, target_sizes=target_sizes
-            ... )
-            >>> i = 0  # Retrieve predictions for the first image
-            >>> boxes, scores = results[i]["boxes"], results[i]["scores"]
-            >>> for box, score in zip(boxes, scores):
-            ...     box = [round(i, 2) for i in box.tolist()]
-            ...     print(f"Detected similar object with confidence {round(score.item(), 3)} at location {box}")
-            Detected similar object with confidence 0.856 at location [10.94, 50.4, 315.8, 471.39]
-            Detected similar object with confidence 1.0 at location [334.84, 25.33, 636.16, 374.71]
-            ```
-        """
+        Examples:
+        ```python
+        >>> import requests
+        >>> from PIL import Image
+        >>> import torch
+        >>> from transformers import AutoProcessor, OwlViTForObjectDetection
+
+        >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch16")
+        >>> model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch16")
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+        >>> query_url = "http://images.cocodataset.org/val2017/000000001675.jpg"
+        >>> query_image = Image.open(requests.get(query_url, stream=True).raw)
+        >>> inputs = processor(images=image, query_images=query_image, return_tensors="pt")
+        >>> with no_grad():
+        ...     outputs = model.image_guided_detection(**inputs)
+        >>> # Target image sizes (height, width) to rescale box predictions [batch_size, 2]
+        >>> target_sizes = mindspore.Tensor([image.size[::-1]])
+        >>> # Convert outputs (bounding boxes and class logits) to Pascal VOC format (xmin, ymin, xmax, ymax)
+        >>> results = processor.post_process_image_guided_detection(
+        ...     outputs=outputs, threshold=0.6, nms_threshold=0.3, target_sizes=target_sizes
+        ... )
+        >>> i = 0  # Retrieve predictions for the first image
+        >>> boxes, scores = results[i]["boxes"], results[i]["scores"]
+        >>> for box, score in zip(boxes, scores):
+        ...     box = [round(i, 2) for i in box.tolist()]
+        ...     print(f"Detected similar object with confidence {round(score.item(), 3)} at location {box}")
+        Detected similar object with confidence 0.856 at location [10.94, 50.4, 315.8, 471.39]
+        Detected similar object with confidence 1.0 at location [334.84, 25.33, 636.16, 374.71]
+        ```"""
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1567,28 +1384,23 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.return_dict
 
         # Compute feature maps for the input and query images
-        query_feature_map = self.image_embedder(
-            pixel_values=query_pixel_values)[0]
+        query_feature_map = self.image_embedder(pixel_values=query_pixel_values)[0]
         feature_map, vision_outputs = self.image_embedder(
             pixel_values=pixel_values,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
         )
 
-        batch_size, _, num_patches, hidden_dim = feature_map.shape
-        image_feats = ops.reshape(
-            feature_map, (batch_size, num_patches * num_patches, hidden_dim))
+        batch_size, num_patches, _, hidden_dim = feature_map.shape
+        image_feats = ops.reshape(feature_map, (batch_size, num_patches * num_patches, hidden_dim))
 
-        batch_size, _, num_patches, hidden_dim = query_feature_map.shape
-        query_image_feats = ops.reshape(
-            query_feature_map, (batch_size, num_patches * num_patches, hidden_dim))
+        batch_size, num_patches, _, hidden_dim = query_feature_map.shape
+        query_image_feats = ops.reshape(query_feature_map, (batch_size, num_patches * num_patches, hidden_dim))
         # Get top class embedding and best box index for each query image in batch
-        query_embeds, best_box_indices, query_pred_boxes = self.embed_image_query(
-            query_image_feats, query_feature_map)
+        query_embeds, best_box_indices, query_pred_boxes = self.embed_image_query(query_image_feats, query_feature_map)
 
         # Predict object classes [batch_size, num_patches, num_queries+1]
-        (pred_logits, class_embeds) = self.class_predictor(
-            image_feats=image_feats, query_embeds=query_embeds)
+        (pred_logits, class_embeds) = self.class_predictor(image_feats=image_feats, query_embeds=query_embeds)
 
         # Predict object boxes
         target_pred_boxes = self.box_predictor(image_feats, feature_map)
@@ -1619,51 +1431,49 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
 
     def forward(
         self,
-        input_ids: ms.Tensor,
-        pixel_values: ms.Tensor,
-        attention_mask: Optional[ms.Tensor] = None,
+        input_ids: mindspore.Tensor,
+        pixel_values: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> OwlViTObjectDetectionOutput:
         r"""
         Returns:
-            `OwlViTObjectDetectionOutput`
 
-        Example:
-            ```python
-            >>> import requests
-            >>> from PIL import Image
-            >>> import torch
-            >>> from transformers import AutoProcessor, OwlViTForObjectDetection
-            ...
-            >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
-            >>> model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch32")
-            ...
-            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-            >>> image = Image.open(requests.get(url, stream=True).raw)
-            >>> texts = [["a photo of a cat", "a photo of a dog"]]
-            >>> inputs = processor(text=texts, images=image, return_tensors="pt")
-            >>> outputs = model(**inputs)
-            ...
-            >>> # Target image sizes (height, width) to rescale box predictions [batch_size, 2]
-            >>> target_sizes = ms.Tensor([image.size[::-1]])
-            >>> # Convert outputs (bounding boxes and class logits) to final bounding boxes and scores
-            >>> results = processor.post_process_object_detection(
-            ...     outputs=outputs, threshold=0.1, target_sizes=target_sizes
-            ... )
-            ...
-            >>> i = 0  # Retrieve predictions for the first image for the corresponding text queries
-            >>> text = texts[i]
-            >>> boxes, scores, labels = results[i]["boxes"], results[i]["scores"], results[i]["labels"]
-            ...
-            >>> for box, score, label in zip(boxes, scores, labels):
-            ...     box = [round(i, 2) for i in box.tolist()]
-            ...     print(f"Detected {text[label]} with confidence {round(score.item(), 3)} at location {box}")
-            Detected a photo of a cat with confidence 0.707 at location [324.97, 20.44, 640.58, 373.29]
-            Detected a photo of a cat with confidence 0.717 at location [1.46, 55.26, 315.55, 472.17]
-            ```
-        """
+        Examples:
+        ```python
+        >>> import requests
+        >>> from PIL import Image
+        >>> import torch
+        >>> from transformers import AutoProcessor, OwlViTForObjectDetection
+
+        >>> processor = AutoProcessor.from_pretrained("google/owlvit-base-patch32")
+        >>> model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch32")
+
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+        >>> texts = [["a photo of a cat", "a photo of a dog"]]
+        >>> inputs = processor(text=texts, images=image, return_tensors="pt")
+        >>> outputs = model(**inputs)
+
+        >>> # Target image sizes (height, width) to rescale box predictions [batch_size, 2]
+        >>> target_sizes = mindspore.Tensor([image.size[::-1]])
+        >>> # Convert outputs (bounding boxes and class logits) to final bounding boxes and scores
+        >>> results = processor.post_process_object_detection(
+        ...     outputs=outputs, threshold=0.1, target_sizes=target_sizes
+        ... )
+
+        >>> i = 0  # Retrieve predictions for the first image for the corresponding text queries
+        >>> text = texts[i]
+        >>> boxes, scores, labels = results[i]["boxes"], results[i]["scores"], results[i]["labels"]
+
+        >>> for box, score, label in zip(boxes, scores, labels):
+        ...     box = [round(i, 2) for i in box.tolist()]
+        ...     print(f"Detected {text[label]} with confidence {round(score.item(), 3)} at location {box}")
+        Detected a photo of a cat with confidence 0.707 at location [324.97, 20.44, 640.58, 373.29]
+        Detected a photo of a cat with confidence 0.717 at location [1.46, 55.26, 315.55, 472.17]
+        ```"""
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1683,23 +1493,19 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
         text_outputs = outputs.text_model_output
         vision_outputs = outputs.vision_model_output
 
-        batch_size, _, num_patches, hidden_dim = feature_map.shape
-        image_feats = ops.reshape(
-            feature_map, (batch_size, num_patches * num_patches, hidden_dim))
+        batch_size, num_patches, _, hidden_dim = feature_map.shape
+        image_feats = ops.reshape(feature_map, (batch_size, num_patches * num_patches, hidden_dim))
 
         # Reshape from [batch_size * max_text_queries, hidden_dim] -> [batch_size, max_text_queries, hidden_dim]
         max_text_queries = input_ids.shape[0] // batch_size
-        query_embeds = query_embeds.reshape(
-            batch_size, max_text_queries, query_embeds.shape[-1])
+        query_embeds = query_embeds.reshape(batch_size, max_text_queries, query_embeds.shape[-1])
 
         # If first token is 0, then this is a padded query [batch_size, num_queries].
-        input_ids = input_ids.reshape(
-            batch_size, max_text_queries, input_ids.shape[-1])
+        input_ids = input_ids.reshape(batch_size, max_text_queries, input_ids.shape[-1])
         query_mask = input_ids[..., 0] > 0
 
         # Predict object classes [batch_size, num_patches, num_queries+1]
-        (pred_logits, class_embeds) = self.class_predictor(
-            image_feats, query_embeds, query_mask)
+        (pred_logits, class_embeds) = self.class_predictor(image_feats, query_embeds, query_mask)
 
         # Predict object boxes
         pred_boxes = self.box_predictor(image_feats, feature_map)
@@ -1726,7 +1532,6 @@ class OwlViTForObjectDetection(OwlViTPreTrainedModel):
             text_model_output=text_outputs,
             vision_model_output=vision_outputs,
         )
-
 
 __all__ = [
     "OwlViTForObjectDetection",

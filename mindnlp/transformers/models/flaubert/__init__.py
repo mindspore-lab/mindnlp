@@ -13,14 +13,17 @@
 # limitations under the License.
 # ============================================================================
 """
-T5 Model init
+Flava Model.
 """
-from . import configuration_mt5, modeling_mt5, tokenization_mt5
-from .configuration_mt5 import *
-from .modeling_mt5 import *
-from .tokenization_mt5 import *
+
+from . import modeling_flaubert, tokenization_flaubert, configuration_flaubert
+
+from .modeling_flaubert import *
+from .configuration_flaubert import *
+from .tokenization_flaubert import *
+
 
 __all__ = []
-__all__.extend(modeling_mt5.__all__)
-__all__.extend(configuration_mt5.__all__)
-__all__.extend(tokenization_mt5.__all__)
+__all__.extend(modeling_flaubert.__all__)
+__all__.extend(configuration_flaubert.__all__)
+__all__.extend(tokenization_flaubert.__all__)

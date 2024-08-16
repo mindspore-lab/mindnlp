@@ -135,11 +135,11 @@ class QuantAct(nn.Module):
         self.percentile = False
 
         if not self.per_channel:
-            self.register_buffer("x_min", ops.zeros(1))
-            self.register_buffer("x_max", ops.zeros(1))
+            self.register_buffer("x_min", ops.zeros(1) - 1e-5)
+            self.register_buffer("x_max", ops.zeros(1) + 1e-5)
             self.register_buffer("act_scaling_factor", ops.zeros(1))
-            self.x_min -= 1e-5
-            self.x_max += 1e-5
+            # self.x_min -= 1e-5
+            # self.x_max += 1e-5
         else:
             raise NotImplementedError("per-channel mode is not currently supported for activation.")
 
