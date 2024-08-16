@@ -21,11 +21,11 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
-
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     is_scipy_available,
@@ -132,7 +132,7 @@ class YolosEmbeddings(nn.Module):
         # add the [CLS] and detection tokens to the embedded patch tokens
         cls_tokens = self.cls_token.broadcast_to((batch_size, -1, -1))
         detection_tokens = self.detection_tokens.broadcast_to((batch_size, -1, -1))
-        embeddings = ops.cat((cls_tokens, embeddings, detection_tokens), axis=1)
+        embeddings = ops.cat((cls_tokens, embeddings, detection_tokens), dim=1)
 
         # add positional encoding to each token
         # this might require interpolation of the existing position embeddings
@@ -163,11 +163,11 @@ class InterpolateInitialPositionEmbeddings(nn.Module):
         patch_pos_embed = patch_pos_embed.view(batch_size, hidden_size, patch_height, patch_width)
         height, width = img_size
         new_patch_heigth, new_patch_width = height // self.config.patch_size, width // self.config.patch_size
-        patch_pos_embed = ops.interpolate(
+        patch_pos_embed = F.interpolate(
             patch_pos_embed, size=(new_patch_heigth, new_patch_width), mode="bicubic", align_corners=False
         )
         patch_pos_embed = patch_pos_embed.flatten(start_dim=2).swapaxes(1, 2)
-        scale_pos_embed = ops.cat((cls_pos_embed, patch_pos_embed, det_pos_embed), axis=1)
+        scale_pos_embed = ops.cat((cls_pos_embed, patch_pos_embed, det_pos_embed), dim=1)
         return scale_pos_embed
 
 
@@ -191,7 +191,7 @@ class InterpolateMidPositionEmbeddings(nn.Module):
         patch_pos_embed = patch_pos_embed.view(depth * batch_size, hidden_size, patch_height, patch_width)
         height, width = img_size
         new_patch_height, new_patch_width = height // self.config.patch_size, width // self.config.patch_size
-        patch_pos_embed = ops.interpolate(
+        patch_pos_embed = F.interpolate(
             patch_pos_embed, size=(new_patch_height, new_patch_width), mode="bicubic", align_corners=False
         )
         patch_pos_embed = (
@@ -199,7 +199,7 @@ class InterpolateMidPositionEmbeddings(nn.Module):
             .swapaxes(1, 2)
             .view(depth, batch_size, new_patch_height * new_patch_width, hidden_size)
         )
-        scale_pos_embed = ops.cat((cls_pos_embed, patch_pos_embed, det_pos_embed), axis=2)
+        scale_pos_embed = ops.cat((cls_pos_embed, patch_pos_embed, det_pos_embed), dim=2)
         return scale_pos_embed
 
 
@@ -223,7 +223,7 @@ class YolosPatchEmbeddings(nn.Module):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True)
 
 
     def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
@@ -278,7 +278,7 @@ class YolosSelfAttention(nn.Module):
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -826,7 +826,7 @@ def sigmoid_focal_loss(inputs, targets, num_boxes, alpha: float = 0.25, gamma: f
         Loss tensor
     """
     prob = inputs.sigmoid()
-    ce_loss = ops.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
+    ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
     # add modulating factor
     p_t = prob * targets + (1 - prob) * (1 - targets)
     loss = ce_loss * ((1 - p_t) ** gamma)
@@ -891,7 +891,7 @@ class YolosLoss(nn.Module):
         )
         target_classes[idx] = target_classes_o
 
-        loss_ce = ops.cross_entropy(source_logits.swapaxes(1, 2), target_classes, self.empty_weight)
+        loss_ce = F.cross_entropy(source_logits.swapaxes(1, 2), target_classes, self.empty_weight)
         losses = {"loss_ce": loss_ce}
 
         return losses
@@ -922,7 +922,7 @@ class YolosLoss(nn.Module):
             raise KeyError("No predicted boxes found in outputs")
         idx = self._get_source_permutation_idx(indices)
         source_boxes = outputs["pred_boxes"][idx]
-        target_boxes = ops.cat([t["boxes"][i] for t, (_, i) in zip(targets, indices)], axis=0)
+        target_boxes = ops.cat([t["boxes"][i] for t, (_, i) in zip(targets, indices)], dim=0)
 
         loss_bbox = ops.l1_loss(source_boxes, target_boxes, reduction="none")
 
@@ -955,7 +955,7 @@ class YolosLoss(nn.Module):
         target_masks = target_masks[target_idx]
 
         # upsample predictions to the target size
-        source_masks = ops.interpolate(
+        source_masks = F.interpolate(
             source_masks[:, None], size=target_masks.shape[-2:], mode="bilinear", align_corners=False
         )
         source_masks = source_masks[:, 0].flatten(start_dim=1)
@@ -1107,7 +1107,7 @@ class YolosHungarianMatcher(nn.Module):
         batch_size, num_queries = outputs["logits"].shape[:2]
 
         # We flatten to compute the cost matrices in a batch
-        out_prob = ops.softmax(outputs["logits"].flatten(start_dim=0, end_dim=1), axis=-1)
+        out_prob = ops.softmax(outputs["logits"].flatten(start_dim=0, end_dim=1), dim=-1)
         out_bbox = outputs["pred_boxes"].flatten(start_dim=0, end_dim=1)  # [batch_size * num_queries, 4]
 
         # Also concat the target labels and boxes

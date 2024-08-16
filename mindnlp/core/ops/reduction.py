@@ -1,7 +1,8 @@
 """reduction op"""
 import mindspore
 from mindspore import ops
-from mindnlp.configs import USE_PYBOOST
+from mindspore.ops._primitive_cache import _get_cache_prim
+from mindnlp.configs import USE_PYBOOST, DEVICE_TARGET
 
 # argmax
 def argmax(input, dim=None, keepdim=False):
@@ -60,9 +61,11 @@ def min(input, dim=None, keepdim=False):
 # dist
 
 # logsumexp
+def logsumexp(input, dim, keepdim=False):
+    return ops.logsumexp(input, dim, keepdim)
 
 # mean
-def mean(input, dim, keepdim=False, *, dtype=None):
+def mean(input, dim=None, keepdim=False, *, dtype=None):
     if USE_PYBOOST:
         return mindspore.mint.mean(input, dim, keepdim, dtype=dtype)
     out = ops.mean(input, dim, keepdim)
@@ -89,10 +92,11 @@ def norm(input, p='fro', dim=None, keepdim=False, dtype=None):
     return ops.norm(input, p, dim, keepdim, dtype=dtype)
 
 # nansum
-
+def nansum(input, dim=None, keepdim=False, *, dtype=None):
+    return ops.nansum(input, dim, keepdim, dtype=dtype)
 
 # prod
-def prod(input, dim, keepdim=False, *, dtype=None):
+def prod(input, dim=None, keepdim=False, *, dtype=None):
     if USE_PYBOOST:
         return mindspore.mint.prod(input, dim, keepdim, dtype=dtype)
     return ops.prod(input, dim, keepdim).to(dtype)
@@ -107,6 +111,15 @@ def nanquantile(input, q, dim=None, keepdim=False, *, interpolation='linear'):
 
 # std
 def std(input, dim=None, *, correction=1, keepdim=False):
+    if DEVICE_TARGET == 'GPU':
+        unbiased = bool(correction)
+        if dim is None:
+            dim = ()
+        if isinstance(dim, int):
+            dim = (dim,)
+        _std = _get_cache_prim(ops.ReduceStd)(dim, unbiased, keepdim)
+        _std.set_device('CPU')
+        return _std(input)[0]
     return ops.std(input, dim, correction, keepdim)
 
 # std_mean
@@ -122,7 +135,9 @@ def sum(input, dim=None, keepdim=False, *, dtype=None):
 
 # unique
 def unique(input, sorted=True, return_inverse=False, return_counts=False, dim=None):
-    pass
+    if USE_PYBOOST:
+        return mindspore.mint.unique(input, sorted, return_inverse, return_counts, dim)
+    return ops.unique(input)
 
 # unique_consecutive
 def unique_consecutive(input, return_inverse=False, return_counts=False, dim=None):
@@ -139,4 +154,6 @@ def var_mean(input, dim=None, *, correction=1, keepdim=False):
 
 # count_nonzero
 def count_nonzero(input, dim=None):
+    if dim is None:
+        dim = ()
     return ops.count_nonzero(input, dim)

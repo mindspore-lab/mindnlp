@@ -19,9 +19,10 @@ from typing import List, Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import Normal, initializer
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -296,8 +297,8 @@ class RoCBertSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -362,7 +363,7 @@ class RoCBertSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -798,7 +799,7 @@ class RoCBertPreTrainedModel(PreTrainedModel):
                     cell.weight.dtype,
                 )
             )
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
@@ -1158,7 +1159,7 @@ class RoCBertForPreTraining(RoCBertPreTrainedModel):
         loss = None
         if labels_input_ids is not None:
             # -100 index = padding token
-            masked_lm_loss = ops.cross_entropy(
+            masked_lm_loss = F.cross_entropy(
                 prediction_scores.view(-1, self.config.vocab_size),
                 labels_input_ids.view(-1),
             )
@@ -1189,12 +1190,12 @@ class RoCBertForPreTraining(RoCBertPreTrainedModel):
                 labels_pooled_output = labels_output[1]
                 attack_pooled_output = attack_output[1]
 
-                pooled_output_norm = ops.norm(pooled_output, dim=-1, keepdim=True)
+                pooled_output_norm = ops.norm(pooled_output, p=2, dim=-1, keepdim=True)
                 labels_pooled_output_norm = ops.norm(
-                    labels_pooled_output, dim=-1, keepdim=True
+                    labels_pooled_output, p=2, dim=-1, keepdim=True
                 )
                 attack_pooled_output_norm = ops.norm(
-                    attack_pooled_output, dim=-1, keepdim=True
+                    attack_pooled_output, p=2, dim=-1, keepdim=True
                 )
 
                 sim_matrix = ops.matmul(
@@ -1205,11 +1206,11 @@ class RoCBertForPreTraining(RoCBertPreTrainedModel):
                 )
                 batch_labels = mindspore.Tensor(list(range(batch_size)))
                 contrastive_loss = (
-                    ops.cross_entropy(
+                    F.cross_entropy(
                         100 * sim_matrix.view(batch_size, -1),
                         batch_labels.reshape(-1, 1),
                     )
-                    + ops.cross_entropy(
+                    + F.cross_entropy(
                         100 * sim_matrix_target.view(batch_size, -1),
                         batch_labels.reshape(-1, 1),
                     )
@@ -1302,7 +1303,7 @@ class RoCBertForMaskedLM(RoCBertPreTrainedModel):
             >>> # retrieve index of {mask}
             >>> mask_token_index = (inputs.input_ids == tokenizer.mask_token_id)[0].nonzero(as_tuple=True)[0]
             ...
-            >>> predicted_token_id = logits[0, mask_token_index].argmax(axis=-1)
+            >>> predicted_token_id = logits[0, mask_token_index].argmax(dim=-1)
             >>> tokenizer.decode(predicted_token_id)
             '.'
             ```
@@ -1332,7 +1333,7 @@ class RoCBertForMaskedLM(RoCBertPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(
+            masked_lm_loss = F.cross_entropy(
                 prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
             )
 
@@ -1366,17 +1367,17 @@ class RoCBertForMaskedLM(RoCBertPreTrainedModel):
 
         attention_mask = ops.cat(
             [attention_mask, attention_mask.new_zeros(attention_mask.shape[0], 1)],
-            axis=-1,
+            dim=-1,
         )
         dummy_token = ops.full(
             (effective_batch_size, 1), self.config.pad_token_id, dtype=mindspore.int64
         )
-        input_ids = ops.cat([input_ids, dummy_token], axis=1)
+        input_ids = ops.cat([input_ids, dummy_token], dim=1)
         if input_shape_ids is not None:
-            input_shape_ids = ops.cat([input_shape_ids, dummy_token], axis=1)
+            input_shape_ids = ops.cat([input_shape_ids, dummy_token], dim=1)
         if input_pronunciation_ids is not None:
             input_pronunciation_ids = ops.cat(
-                [input_pronunciation_ids, dummy_token], axis=1
+                [input_pronunciation_ids, dummy_token], dim=1
             )
 
         return {
@@ -1516,7 +1517,7 @@ class RoCBertForCausalLM(RoCBertPreTrainedModel):
             # we are doing next-token prediction; shift prediction scores and input ids by one
             shifted_prediction_scores = prediction_scores[:, :-1, :]
             labels = labels[:, 1:]
-            lm_loss = ops.cross_entropy(
+            lm_loss = F.cross_entropy(
                 shifted_prediction_scores.view(-1, self.config.vocab_size),
                 labels.view(-1),
             )
@@ -1665,15 +1666,15 @@ class RoCBertForSequenceClassification(RoCBertPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(
+                loss = F.cross_entropy(
                     logits.view(-1, self.num_labels), labels.view(-1)
                 )
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -1788,7 +1789,7 @@ class RoCBertForMultipleChoice(RoCBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss = F.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1865,7 +1866,7 @@ class RoCBertForTokenClassification(RoCBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1955,10 +1956,10 @@ class RoCBertForQuestionAnswering(RoCBertPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(
+            start_loss = F.cross_entropy(
                 start_logits, start_positions, ignore_index=ignored_index
             )
-            end_loss = ops.cross_entropy(
+            end_loss = F.cross_entropy(
                 end_logits, end_positions, ignore_index=ignored_index
             )
             total_loss = (start_loss + end_loss) / 2

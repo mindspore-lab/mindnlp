@@ -12,17 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch MPT model."""
-# pylint: disable=W0235
-# pylint: disable=E1123
-
+"""MindSpore MPT model."""
 import math
 from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...modeling_utils import PreTrainedModel
 from .configuration_mpt import MptConfig, MPT_PRETRAINED_MODEL_ARCHIVE_LIST
@@ -59,7 +58,7 @@ def build_mpt_alibi_tensor(num_heads, sequence_length, alibi_bias_max=8):
     slopes = slopes.view(1, num_heads_power_of_2, 1, 1)
 
     if num_heads_power_of_2 != num_heads:
-        slopes = ops.concat([slopes[:, 1::2, ...], slopes[:, ::2, ...]], axis=1)[:, :num_heads, ...]
+        slopes = ops.concat([slopes[:, 1::2, ...], slopes[:, ::2, ...]], dim=1)[:, :num_heads, ...]
 
     alibi = alibi * slopes
     return alibi.squeeze(0)
@@ -167,8 +166,8 @@ class MptAttention(nn.Module):
 
         if past_key_value is not None:
             if len(past_key_value) != 0:
-                key_states = ops.cat([past_key_value[0], key_states], axis=2)
-                value_states = ops.cat([past_key_value[1], value_states], axis=2)
+                key_states = ops.cat([past_key_value[0], key_states], dim=2)
+                value_states = ops.cat([past_key_value[1], value_states], dim=2)
             past_key_value = (key_states, value_states)
         else:
             past_key_value = (key_states, value_states)
@@ -190,11 +189,11 @@ class MptAttention(nn.Module):
             attention_scores = attention_scores + position_bias
 
         if attention_mask is not None:
-            attention_scores = attention_scores.masked_fill(attention_mask, finfo(query_states.dtype, 'min'))
+            attention_scores = attention_scores.masked_fill(attention_mask, float(ops.finfo(query_states.dtype).min))
 
         # (batch_size, n_heads, seq_length, key_length)
-        attn_weights = ops.softmax(attention_scores.float(), axis=-1).to(dtype=value_states.dtype)
-        attn_weights = ops.dropout(attn_weights, p=self.attn_dropout_p, training=self.training)
+        attn_weights = ops.softmax(attention_scores.float(), dim=-1).to(dtype=value_states.dtype)
+        attn_weights = F.dropout(attn_weights, p=self.attn_dropout_p, training=self.training)
 
         context_states = ops.matmul(attn_weights, value_states)
         context_states = context_states.permute(0, 2, 1, 3).view(batch_size, seq_length, -1)
@@ -239,7 +238,7 @@ class MptMLP(nn.Module):
         hidden_size = config.hidden_size
 
         self.up_proj = nn.Linear(hidden_size, 4 * hidden_size, bias=False)
-        self.act = nn.GELU(approximate=False)
+        self.act = nn.GELU()
         self.down_proj = nn.Linear(4 * hidden_size, hidden_size, bias=False)
         self.hidden_dropout = config.attn_config.attn_pdrop
 
@@ -263,7 +262,7 @@ class MptMLP(nn.Module):
 
         intermediate_output = self.down_proj(hidden_states)
 
-        output = ops.dropout(intermediate_output, p=self.hidden_dropout, training=self.training)
+        output = F.dropout(intermediate_output, p=self.hidden_dropout, training=self.training)
         output = output + residual
 
         return output
@@ -415,33 +414,13 @@ class MptPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["MptBlock"]
     _keys_to_ignore_on_load_missing = [r"lm_head.*."]
 
-    def __init__(self, *inputs, **kwargs):
-        """
-        Initializes a new instance of the MptPreTrainedModel class.
-
-        Args:
-            self:
-                The object itself.
-
-                - Type: MptPreTrainedModel
-                - Purpose: Represents the current instance of the MptPreTrainedModel class.
-                - Restrictions: None
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
-        super().__init__(*inputs, **kwargs)
-
     def _init_weights(self, cell):
         """Initialize the weights."""
         if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -451,7 +430,7 @@ class MptPreTrainedModel(PreTrainedModel):
             cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
     @staticmethod
@@ -919,7 +898,7 @@ class MptForCausalLM(MptPreTrainedModel):
             shift_labels = labels[..., 1:]
             batch_size, seq_length, vocab_size = shift_logits.shape
             # Flatten the tokens
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 shift_logits.view(batch_size * seq_length, vocab_size), shift_labels.view(batch_size * seq_length)
             )
 
@@ -1080,13 +1059,13 @@ class MptForSequenceClassification(MptPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits, labels)
+                loss = F.cross_entropy(pooled_logits, labels)
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1213,7 +1192,7 @@ class MptForTokenClassification(MptPreTrainedModel):
         loss = None
         if labels is not None:
             batch_size, seq_length = labels.shape
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 logits.view(batch_size * seq_length, self.num_labels), labels.view(batch_size * seq_length)
             )
 
@@ -1319,8 +1298,8 @@ class MptForQuestionAnswering(MptPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss =ops.cross_entropy(start_logits,start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions,ignore_index=ignored_index)
+            start_loss =F.cross_entropy(start_logits,start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions,ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

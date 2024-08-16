@@ -20,13 +20,13 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
-
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.utils import logging
+
+from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
+from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 from ...modeling_utils import PreTrainedModel
@@ -952,7 +952,7 @@ class CpmAntSegmentPositionEmbedding(nn.Module):
         )
         relative_position_bucket = ops.where(
             (key_segment == query_segment),
-            absolute_position_bucket[None, :, :],
+            absolute_position_bucket[None, :, :].to(relative_position_bucket.dtype),
             relative_position_bucket,
         )
 
@@ -1013,7 +1013,7 @@ class CpmAntSegmentPositionEmbedding(nn.Module):
             relative_postion_if_large,
             ops.full_like(relative_postion_if_large, num_buckets - 1),
         )
-        relative_buckets += ops.where(is_small, relative_position.to(mindspore.int32), relative_postion_if_large)
+        relative_buckets += ops.where(is_small, relative_position.to(relative_postion_if_large.dtype), relative_postion_if_large)
         return relative_buckets
 
 

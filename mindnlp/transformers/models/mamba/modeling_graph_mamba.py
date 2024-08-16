@@ -20,10 +20,11 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from addict import Dict as ADDict
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, Uniform, HeUniform
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -135,9 +136,8 @@ class MSMambaMixer(nn.Module):
             out_channels=self.intermediate_size,
             bias=config.use_conv_bias,
             kernel_size=config.conv_kernel,
-            group=self.intermediate_size,
+            groups=self.intermediate_size,
             padding=config.conv_kernel - 1,
-            pad_mode='pad'
         )
 
         self.activation = config.hidden_act
@@ -188,7 +188,7 @@ class MSMambaMixer(nn.Module):
             ssm_state = cache_params.ssm_states[self.layer_idx]
             if cache_params.seqlen_offset > 0:
                 conv_state = cache_params.conv_states[self.layer_idx]                   # [batch, intermediate_size, conv_kernel_size]
-                conv_state = mindspore.numpy.roll(conv_state, shift=-1, axis=-1)
+                conv_state = ops.roll(conv_state, shifts=-1, dims=-1)
                 conv_state[:, :, -1] = hidden_states[:, :, 0]
                 cache_params.conv_states[self.layer_idx] = conv_state
                 hidden_states = ops.sum(conv_state * self.conv1d.weight[:, 0, :], dim=-1)
@@ -212,7 +212,7 @@ class MSMambaMixer(nn.Module):
         # 3.a. Selection:  [batch, seq_len, self.time_step_rank + self.ssm_state_size * 2]
         ssm_parameters = self.x_proj(hidden_states.swapaxes(1, 2))
         time_step, B, C = ops.split(
-            ssm_parameters, [self.time_step_rank, self.ssm_state_size, self.ssm_state_size], axis=-1
+            ssm_parameters, [self.time_step_rank, self.ssm_state_size, self.ssm_state_size], dim=-1
         )
         discrete_time_step = self.dt_proj(time_step)                                    # [batch, seq_len, intermediate_size]
         discrete_time_step = ops.softplus(discrete_time_step).swapaxes(1, 2) # [batch, intermediate_size, seq_len]
@@ -229,7 +229,7 @@ class MSMambaMixer(nn.Module):
             ssm_state = discrete_A[:, :, i, :] * ssm_state + deltaB_u[:, :, i, :]      # [batch, intermediade_size, ssm_state]
             scan_output = ops.matmul(ssm_state.to(dtype), C[:, i, :].unsqueeze(-1))  # [batch, intermediade_size, 1]
             scan_outputs.append(scan_output[:, :, 0])
-        scan_output = ops.stack(scan_outputs, axis=-1)                                # [batch, seq_len, intermediade_size]
+        scan_output = ops.stack(scan_outputs, dim=-1)                                # [batch, seq_len, intermediade_size]
         scan_output = scan_output + (hidden_states * self.D[None, :, None])
         scan_output = scan_output * self.act(gate)
 
@@ -888,7 +888,7 @@ class MSMambaForCausalLM(MSMambaPreTrainedModel):
             shift_logits = logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         if not return_dict:
             output = (logits,) + mamba_outputs[1:]

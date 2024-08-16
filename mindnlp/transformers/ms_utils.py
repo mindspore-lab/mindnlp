@@ -18,8 +18,9 @@ import inspect
 from typing import Union, Optional, List, Tuple
 
 import mindspore
-from mindspore import ops, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
+from mindnlp.core import ops
 
 from mindnlp.core import nn
 
@@ -59,7 +60,7 @@ class Conv1D(nn.Module):
         
         Args:
             self (Conv1D): An instance of the Conv1D class.
-            x (torch.Tensor): The input tensor on which the convolution operation is applied. 
+            x (mindspore.Tensor): The input tensor on which the convolution operation is applied. 
                 Should have a shape of (batch_size, sequence_length, input_channels).
                 
         Returns:
@@ -99,10 +100,10 @@ def prune_conv1d_layer(layer, index, dim=1):
     new_size[dim] = len(index)
     new_layer = Conv1D(new_size[1], new_size[0])
     new_layer.weight.requires_grad = False
-    new_layer.weight = gama_l.copy()
+    new_layer.weight.set_data(gama_l)
     new_layer.weight.requires_grad = True
     new_layer.bias.requires_grad = False
-    new_layer.bias = beta_l.copy()
+    new_layer.bias.set_data(beta_l)
     new_layer.bias.requires_grad = True
     return new_layer
 
@@ -214,7 +215,7 @@ def apply_chunking_to_forward(forward_fn, chunk_size, chunk_axis, *input_tensors
         # apply forward fn to every tuple
         output_chunks = tuple(forward_fn(*input_tensors_chunk) for input_tensors_chunk in zip(*input_tensors_chunks))
         # concatenate output at same dimension
-        return ops.cat(output_chunks, axis=chunk_axis)
+        return ops.cat(output_chunks, dim=chunk_axis)
 
     return forward_fn(*input_tensors)
 
@@ -241,4 +242,4 @@ def meshgrid(
 
     Reference: https://pytorch.org/docs/1.13/generated/torch.meshgrid.html
     """
-    return ops.meshgrid(*list(*tensors), indexing=indexing)
+    return ops.meshgrid(*tensors, indexing=indexing)

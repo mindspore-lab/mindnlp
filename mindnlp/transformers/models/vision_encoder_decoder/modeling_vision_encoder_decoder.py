@@ -17,7 +17,8 @@
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
+from mindnlp.core import nn
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...configuration_utils import PretrainedConfig
@@ -42,7 +43,7 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     if pad_token_id is None:
         raise ValueError("Make sure to set the pad_token_id attribute of the model's configuration.")
     # replace possible -100 values in labels by `pad_token_id`
-    shifted_input_ids.masked_fill_(shifted_input_ids == -100, pad_token_id)
+    shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
 
     return shifted_input_ids
 
@@ -181,9 +182,9 @@ class VisionEncoderDecoderModel(PreTrainedModel):
     @classmethod
     def from_encoder_decoder_pretrained(
         cls,
-        *model_args,
         encoder_pretrained_model_name_or_path: str = None,
         decoder_pretrained_model_name_or_path: str = None,
+        *model_args, # pylint: disable=keyword-arg-before-vararg
         **kwargs,
     ) -> PreTrainedModel:
         r"""
@@ -436,7 +437,7 @@ class VisionEncoderDecoderModel(PreTrainedModel):
         loss = None
         if labels is not None:
             logits = decoder_outputs.logits if return_dict else decoder_outputs[0]
-            loss = ops.cross_entropy(logits.reshape(-1, self.decoder.config.vocab_size), labels.reshape(-1))
+            loss = F.cross_entropy(logits.reshape(-1, self.decoder.config.vocab_size), labels.reshape(-1))
 
         if not return_dict:
             if loss is not None:

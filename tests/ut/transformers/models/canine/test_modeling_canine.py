@@ -38,7 +38,6 @@ if is_mindspore_available():
     )
 
 
-
 class CanineModelTester:
     def __init__(
         self,
@@ -392,7 +391,6 @@ class CanineModelTest(ModelTesterMixin, unittest.TestCase): # PipelineTesterMixi
             recursive_check(tuple_output, dict_output)
 
         for model_class in self.all_model_classes:
-            print(model_class)
             model = model_class(config)
             model.eval()
 
@@ -426,6 +424,9 @@ class CanineModelTest(ModelTesterMixin, unittest.TestCase): # PipelineTesterMixi
                 model, tuple_inputs, dict_inputs, {"output_hidden_states": True, "output_attentions": True}
             )
 
+    @unittest.skip(
+        reason="mindspore do not use loss.backward"
+    )
     def test_headmasking(self):
         if not self.test_head_masking:
             self.skipTest(reason="test_head_masking is set to False")
@@ -496,6 +497,10 @@ class CanineModelTest(ModelTesterMixin, unittest.TestCase): # PipelineTesterMixi
 
     @unittest.skip(reason="CANINE does not have a get_input_embeddings() method.")
     def test_model_get_set_embeddings(self):
+        pass
+
+    @unittest.skip(reason="CANINE does not have a get_input_embeddings() method.")
+    def test_model_common_attributes(self):
         pass
 
     @unittest.skip(

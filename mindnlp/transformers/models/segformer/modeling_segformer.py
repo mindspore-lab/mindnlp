@@ -18,10 +18,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, ImageClassifierOutput, SemanticSegmenterOutput
 from ...modeling_utils import PreTrainedModel
@@ -179,7 +180,6 @@ class SegformerOverlapPatchEmbeddings(nn.Module):
             kernel_size=patch_size,
             stride=stride,
             padding=patch_size // 2,
-            pad_mode='pad',
             bias=True
         )
 
@@ -263,7 +263,7 @@ class SegformerEfficientSelfAttention(nn.Module):
         self.sr_ratio = sequence_reduction_ratio
         if sequence_reduction_ratio > 1:
             self.sr = nn.Conv2d(
-                hidden_size, hidden_size, kernel_size=sequence_reduction_ratio, stride=sequence_reduction_ratio, pad_mode='valid', bias=True
+                hidden_size, hidden_size, kernel_size=sequence_reduction_ratio, stride=sequence_reduction_ratio, bias=True
             )
             self.layer_norm = nn.LayerNorm(hidden_size)
 
@@ -336,7 +336,7 @@ class SegformerEfficientSelfAttention(nn.Module):
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -611,7 +611,7 @@ class SegformerDWConv(nn.Module):
             RuntimeError: If an error occurs during the initialization process.
         """
         super().__init__()
-        self.dwconv = nn.Conv2d(dim, dim, 3, 1, pad_mode='pad', padding=1, bias=True, group=dim)
+        self.dwconv = nn.Conv2d(dim, dim, 3, 1, padding=1, bias=True, groups=dim)
 
     def forward(self, hidden_states, height, width):
         """
@@ -1244,13 +1244,13 @@ class SegformerForImageClassification(SegformerPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1380,13 +1380,12 @@ class SegformerDecodeHead(SegformerPreTrainedModel):
             out_channels=config.decoder_hidden_size,
             kernel_size=1,
             bias=False,
-            pad_mode='valid'
         )
         self.batch_norm = nn.BatchNorm2d(config.decoder_hidden_size)
         self.activation = nn.ReLU()
 
         self.dropout = nn.Dropout(p=config.classifier_dropout_prob)
-        self.classifier = nn.Conv2d(config.decoder_hidden_size, config.num_labels, kernel_size=1, pad_mode='valid', bias=True)
+        self.classifier = nn.Conv2d(config.decoder_hidden_size, config.num_labels, kernel_size=1, bias=True)
 
         self.config = config
 
@@ -1435,7 +1434,7 @@ class SegformerDecodeHead(SegformerPreTrainedModel):
             )
             all_hidden_states += (encoder_hidden_state,)
 
-        hidden_states = self.linear_fuse(ops.cat(all_hidden_states[::-1], axis=1))
+        hidden_states = self.linear_fuse(ops.cat(all_hidden_states[::-1], dim=1))
         hidden_states = self.batch_norm(hidden_states)
         hidden_states = self.activation(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -1591,10 +1590,10 @@ class SegformerForSemanticSegmentation(SegformerPreTrainedModel):
                 logits, size=labels.shape[-2:], mode="bilinear", align_corners=False
             )
             if self.config.num_labels > 1:
-                loss = ops.cross_entropy(upsampled_logits, labels, ignore_index=self.config.semantic_loss_ignore_index)
+                loss = F.cross_entropy(upsampled_logits, labels, ignore_index=self.config.semantic_loss_ignore_index)
             elif self.config.num_labels == 1:
                 valid_mask = ((labels >= 0) & (labels != self.config.semantic_loss_ignore_index)).float()
-                loss = ops.binary_cross_entropy_with_logits(upsampled_logits.squeeze(1), labels.float(), reduction="none")
+                loss = F.binary_cross_entropy_with_logits(upsampled_logits.squeeze(1), labels.float(), reduction="none")
                 loss = (loss * valid_mask).mean()
             else:
                 raise ValueError(f"Number of labels should be >=0: {self.config.num_labels}")

@@ -26,7 +26,7 @@ from mindspore import ops
 from mindnlp.transformers import XCLIPConfig, XCLIPTextConfig, XCLIPVisionConfig
 from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow
 from mindnlp.utils import is_mindspore_available, is_vision_available
-from mindnlp.utils.serialization import safe_load_file, safe_save_file
+from mindnlp.core.serialization import safe_load_file, safe_save_file
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_tensor, ids_tensor, random_attention_mask
@@ -222,9 +222,6 @@ class XCLIPVisionModelTest(ModelTesterMixin, unittest.TestCase):
         for model_class in self.all_model_classes:
             if not model_class.supports_gradient_checkpointing:
                 continue
-
-            print("Model class:", model_class)
-
             config.gradient_checkpointing = True
             model = model_class(config)
             self.assertTrue(model.is_gradient_checkpointing)

@@ -20,12 +20,12 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.utils import logging
-from mindnlp.utils import ModelOutput
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
+from mindnlp.utils import logging, ModelOutput
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
 from ...modeling_outputs import (
@@ -166,9 +166,9 @@ class GitSelfAttention(nn.Module):
         if past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([key_layer[:, :, :cutoff, :], past_key_value[0], key_layer[:, :, -1:, :]], axis=2)
+            key_layer = ops.cat([key_layer[:, :, :cutoff, :], past_key_value[0], key_layer[:, :, -1:, :]], dim=2)
             value_layer = ops.cat(
-                [value_layer[:, :, :cutoff, :], past_key_value[1], value_layer[:, :, -1:, :]], axis=2
+                [value_layer[:, :, :cutoff, :], past_key_value[1], value_layer[:, :, -1:, :]], dim=2
             )
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
@@ -221,7 +221,7 @@ class GitSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -503,7 +503,7 @@ class GitPreTrainedModel(PreTrainedModel):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
@@ -545,7 +545,7 @@ class GitVisionEmbeddings(nn.Module):
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
         class_embeds = self.class_embedding.broadcast_to((batch_size, 1, -1))
-        embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
+        embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
         embeddings = embeddings + self.position_embedding(self.position_ids)
         return embeddings
 
@@ -640,7 +640,7 @@ class GitVisionAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit akward, but it's required to
@@ -652,7 +652,7 @@ class GitVisionAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -934,7 +934,7 @@ class GitProjection(nn.Module):
     def __init__(self, config: GitConfig):
         super().__init__()
         self.config = config
-        self.visual_projection = nn.SequentialCell(
+        self.visual_projection = nn.Sequential(
             nn.Linear(config.vision_config.hidden_size, config.hidden_size),
             nn.LayerNorm([config.hidden_size], eps=config.vision_config.layer_norm_eps),
         )
@@ -1004,10 +1004,10 @@ class GitModel(GitPreTrainedModel):
                 dtype=dtype,
             )
 
-        left = ops.cat((top_left, bottom_left), axis=0)
-        right = ops.cat((top_right, tgt_mask.astype(dtype)), axis=0)
+        left = ops.cat((top_left, bottom_left), dim=0)
+        right = ops.cat((top_right, tgt_mask.astype(dtype)), dim=0)
 
-        full_attention_mask = ops.cat((left, right), axis=1)[None, :]
+        full_attention_mask = ops.cat((left, right), dim=1)[None, :]
 
         if memory_key_padding_mask is None:
             if memory.shape[1] == 0:
@@ -1131,7 +1131,7 @@ class GitModel(GitPreTrainedModel):
                     visual_features.append(visual_features_frame)
 
                 # finally, concatenate all features along sequence dimension
-                visual_features = ops.cat(visual_features, axis=1)
+                visual_features = ops.cat(visual_features, dim=1)
 
             else:
                 raise ValueError("pixel_values must be of rank 4 or 5")
@@ -1152,12 +1152,12 @@ class GitModel(GitPreTrainedModel):
             )
 
         # Repeat visual features to match embedding batch size.
-        projected_visual_features = projected_visual_features.repeat(
-            embedding_output.shape[0] // projected_visual_features.shape[0], 1, 1
+        projected_visual_features = projected_visual_features.tile(
+            (embedding_output.shape[0] // projected_visual_features.shape[0], 1, 1)
         )
 
         # concatenate patch token and text token embeddings
-        hidden_states = ops.cat((projected_visual_features, embedding_output), axis=1)
+        hidden_states = ops.cat((projected_visual_features, embedding_output), dim=1)
 
         # By default, an additive causal mask is created
         # for masking the future (one direction).
@@ -1409,7 +1409,7 @@ class GitForCausalLM(GitPreTrainedModel):
             num_image_tokens = self.git.encoder.layer[0].attention.self.image_patch_tokens
             shifted_logits = logits[:, num_image_tokens:-1, :]
             labels = labels[:, 1:]
-            loss = ops.cross_entropy(shifted_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss = F.cross_entropy(shifted_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]

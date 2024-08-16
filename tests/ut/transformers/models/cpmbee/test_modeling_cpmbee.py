@@ -34,7 +34,6 @@ if is_mindspore_available():
         CpmBeeTokenizer,
     )
 
-
 @require_mindspore
 class CpmBeeModelTester:
     def __init__(

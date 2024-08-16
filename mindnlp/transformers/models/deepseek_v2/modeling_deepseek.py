@@ -24,12 +24,11 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.transformers.activations import ACT2FN
 from mindnlp.transformers.cache_utils import Cache, DynamicCache
 from mindnlp.transformers.modeling_attn_mask_utils import (
@@ -63,7 +62,7 @@ def _get_unpad_data(attention_mask):
     indices = ops.nonzero(attention_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
     cu_seqlens = ops.pad(
-        ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0)
+        ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0)
     )
     return (
         indices,
@@ -118,7 +117,7 @@ class DeepseekV2RotaryEmbedding(nn.Module):
         freqs = ops.outer(t, self.inv_freq)
         """Different from paper, but it uses a different permutation 
            in order to obtain the same calculation"""
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
@@ -152,7 +151,7 @@ class DeepseekV2LinearScalingRotaryEmbedding(DeepseekV2RotaryEmbedding):
         t = ops.arange(start=0, end=self.max_seq_len_cached, dtype=self.inv_freq.dtype)
         t = t / self.scaling_factor
         freqs = ops.outer(t, self.inv_freq)
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
@@ -187,7 +186,7 @@ class DeepseekV2DynamicNTKScalingRotaryEmbedding(DeepseekV2RotaryEmbedding):
         t = ops.arange(start=0, end=self.max_seq_len_cached, dtype=self.inv_freq.dtype)
 
         freqs = ops.outer(t, self.inv_freq)
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
@@ -285,7 +284,7 @@ class DeepseekV2YarnRotaryEmbedding(DeepseekV2RotaryEmbedding):
             / yarn_get_mscale(int(self.scaling_factor), self.mscale_all_dim)
         )
 
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = (emb.cos() * _mscale).to(dtype)
         self.sin_cached = (emb.sin() * _mscale).to(dtype)
 
@@ -295,7 +294,7 @@ def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
     x2 = x[..., x.shape[-1] // 2:]
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 # Copied from transformers.models.llama.modeling_llama.apply_rotary_pos_emb
@@ -386,7 +385,7 @@ class MoEGate(nn.Module):
             hidden_states.type(mindspore.float32), self.weight.type(mindspore.float32), None
         )
         if self.scoring_func == "softmax":
-            scores = ops.softmax(logits, axis=-1, dtype=mindspore.float32)
+            scores = ops.softmax(logits, dim=-1, dtype=mindspore.float32)
         else:
             raise NotImplementedError(
                 f"insupportable scoring function for MoE gating: {self.scoring_func}"
@@ -668,12 +667,12 @@ class DeepseekV2Attention(nn.Module):
             q = self.q_b_proj(self.q_a_layernorm(self.q_a_proj(hidden_states)))
         q = q.view(bsz, q_len, self.num_heads, self.q_head_dim).swapaxes(1, 2)
         q_nope, q_pe = ops.split(
-            q, [self.qk_nope_head_dim, self.qk_rope_head_dim], axis=-1
+            q, [self.qk_nope_head_dim, self.qk_rope_head_dim], dim=-1
         )
 
         compressed_kv = self.kv_a_proj_with_mqa(hidden_states)
         compressed_kv, k_pe = ops.split(
-            compressed_kv, [self.kv_lora_rank, self.qk_rope_head_dim], axis=-1
+            compressed_kv, [self.kv_lora_rank, self.qk_rope_head_dim], dim=-1
         )
         k_pe = k_pe.view(bsz, q_len, 1, self.qk_rope_head_dim).swapaxes(1, 2)
         kv = (
@@ -683,7 +682,7 @@ class DeepseekV2Attention(nn.Module):
         )
 
         k_nope, value_states = ops.split(
-            kv, [self.qk_nope_head_dim, self.v_head_dim], axis=-1
+            kv, [self.qk_nope_head_dim, self.v_head_dim], dim=-1
         )
         kv_seq_len = value_states.shape[-2]
         if past_key_value is not None:
@@ -735,9 +734,9 @@ class DeepseekV2Attention(nn.Module):
 
         # upcast attention to fp32
         attn_weights = ops.softmax(
-            attn_weights, axis=-1, dtype=mindspore.float32
+            attn_weights, dim=-1, dtype=mindspore.float32
         ).to(query_states.dtype)
-        attn_weights = ops.dropout(
+        attn_weights = F.dropout(
             attn_weights, p=self.attention_dropout, training=self.training
         )
         attn_output = ops.matmul(attn_weights, value_states)
@@ -885,7 +884,7 @@ class DeepseekV2PreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             embedding_table = np.random.normal(0.0, self.config.initializer_range, cell.embedding_table)
@@ -1233,7 +1232,7 @@ class DeepseekV2ForCausalLM(DeepseekV2PreTrainedModel):
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Enable model parallelism
-            loss = ops.cross_entropy(shift_logits, shift_labels)
+            loss = F.cross_entropy(shift_logits, shift_labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -1412,16 +1411,16 @@ class DeepseekV2ForSequenceClassification(DeepseekV2PreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
 
-                loss = ops.cross_entropy(
+                loss = F.cross_entropy(
                     pooled_logits.view(-1, self.num_labels), labels.view(-1)
                 )
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output

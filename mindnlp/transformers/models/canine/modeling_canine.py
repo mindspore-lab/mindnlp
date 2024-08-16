@@ -218,7 +218,6 @@ class CharactersToMolecules(nn.Module):
         # text buffer). This is important in order to maintain alignment on TPUs
         # (i.e. a multiple of 128).
         downsampled_truncated = downsampled[:, 0:-1, :]
-
         # We also keep [CLS] as a separate sequence position since we always
         # want to reserve a position (and the model capacity that goes along
         # with that) in the deep BERT stack.
@@ -307,7 +306,7 @@ class CanineSelfAttention(nn.Module):
 
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
+        if self.position_embedding_type in ('relative_key', 'relative_key_query'):
             self.max_position_embeddings = config.max_position_embeddings
             self.distance_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
 
@@ -338,7 +337,7 @@ class CanineSelfAttention(nn.Module):
         # Take the dot product between "query" and "key" to get the raw attention scores.
         attention_scores = ops.matmul(query_layer, ops.transpose(key_layer, -1, -2))
 
-        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
+        if self.position_embedding_type in ('relative_key', 'relative_key_query'):
             seq_length = from_tensor.shape[1]
             position_ids_l = ops.arange(seq_length, dtype=mindspore.int64).view(-1, 1)
             position_ids_r = ops.arange(seq_length, dtype=mindspore.int64).view(1, -1)
@@ -537,7 +536,6 @@ class CanineAttention(nn.Module):
                     attention_probs_chunks.append(attention_outputs_chunk[1])
 
             attention_output = ops.cat(attention_output_chunks, dim=1)
-
         attention_output = self.output(attention_output, hidden_states)
         outputs = (attention_output,)
         if not self.local:
@@ -618,7 +616,6 @@ class CanineLayer(nn.Module):
             output_attentions=output_attentions,
         )
         attention_output = self_attention_outputs[0]
-
         outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
 
         layer_output = apply_chunking_to_forward(
@@ -893,21 +890,24 @@ class CanineModel(CaninePreTrainedModel):
 
         molecules_without_extra_cls = molecules[:, 1:, :]
         # `repeated`: [batch_size, almost_char_seq_len, molecule_hidden_size]
-        repeated = ops.repeat_interleave(molecules_without_extra_cls, repeats=rate, dim=-2)
+        if 0 not in molecules_without_extra_cls.shape:
+            repeated = ops.repeat_interleave(molecules_without_extra_cls, repeats=rate, dim=-2)
 
         # So far, we've repeated the elements sufficient for any `char_seq_length`
         # that's a multiple of `downsampling_rate`. Now we account for the last
         # n elements (n < `downsampling_rate`), i.e. the remainder of floor
         # division. We do this by repeating the last molecule a few extra times.
         last_molecule = molecules[:, -1:, :]
-        remainder_length = ops.fmod(mindspore.tensor(char_seq_length), mindspore.tensor(rate)).item()
+        remainder_length = ops.fmod(mindspore.tensor(char_seq_length, dtype=mindspore.int32),
+                                    mindspore.tensor(rate, dtype=mindspore.int32)).item()
         remainder_repeated = ops.repeat_interleave(
             last_molecule,
             # +1 molecule to compensate for truncation.
             repeats=remainder_length + rate,
             dim=-2,
         )
-
+        if 0 in molecules_without_extra_cls.shape:
+            return remainder_repeated
         # `repeated`: [batch_size, char_seq_len, molecule_hidden_size]
         return ops.cat([repeated, remainder_repeated], dim=-2)
 
@@ -1002,7 +1002,6 @@ class CanineModel(CaninePreTrainedModel):
         # this, it seems that molecules and characters require a very different
         # feature space; intuitively, this makes sense.
         init_molecule_encoding = self.chars_to_molecules(input_char_encoding)
-
         # Deep BERT encoder
         # `molecule_sequence_output`: shape (batch_size, mol_seq_len, mol_dim)
         encoder_outputs = self.encoder(
@@ -1124,7 +1123,7 @@ class CanineForSequenceClassification(CaninePreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == ops.int):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"

@@ -8,10 +8,12 @@ except:
 import math
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
-from mindspore.dataset import transforms,vision
+from mindspore.dataset import transforms, vision
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...modeling_utils import PreTrainedModel
 from ...tokenization_utils import PreTrainedTokenizer
 from ...activations import ACT2FN
@@ -34,13 +36,13 @@ def _make_causal_mask(
     Make causal mask used for bi-directional self-attention.
     """
     bsz, tgt_len = input_ids_shape
-    mask = ops.full((tgt_len, tgt_len),finfo(dtype=dtype,attr='min'),dtype=dtype)
+    mask = ops.full((tgt_len, tgt_len), float(ops.finfo(dtype).min), dtype=dtype)
     mask_cond = ops.arange(mask.shape[-1])
     mask = mask.masked_fill(mask_cond < (mask_cond + 1).view(mask.shape[-1], 1), 0)
     mask = mask.to(dtype)
 
     if past_key_values_length > 0:
-        mask = ops.cat([ops.zeros((tgt_len, past_key_values_length), dtype=dtype), mask], axis=-1)
+        mask = ops.cat([ops.zeros((tgt_len, past_key_values_length), dtype=dtype), mask], dim=-1)
     return mask[None, None, :, :].expand(bsz, 1, tgt_len, tgt_len + past_key_values_length)
 
 
@@ -53,7 +55,7 @@ def _expand_mask(mask: mindspore.Tensor, dtype: mindspore.dtype, tgt_len: Option
     tgt_len = tgt_len if tgt_len is not None else src_len
     expanded_mask = mask[:, None, None, :].expand(bsz, 1, tgt_len, src_len).to(dtype)
     inverted_mask = 1.0 - expanded_mask
-    return inverted_mask.masked_fill(inverted_mask.to(mindspore.bool_), finfo(dtype=dtype,attr='min'))
+    return inverted_mask.masked_fill(inverted_mask.to(mindspore.bool_), float(ops.finfo(dtype).min))
 
 
 class RMSNorm(nn.Module):
@@ -343,19 +345,19 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
     if is_causal:
         assert attn_mask is None
         temp_mask = ops.ones((L, S), dtype=mindspore.bool_).tril(diagonal=0)
-        attn_bias = attn_bias.masked_fill(temp_mask.logical_not(), finfo(dtype=query.dtype,attr='min'))
+        attn_bias = attn_bias.masked_fill(temp_mask.logical_not(), float(ops.finfo(query.dtype).min))
         attn_bias.to(query.dtype)
 
     if attn_mask is not None:
         if attn_mask.dtype == mindspore.bool_:
-            attn_bias=  attn_bias.masked_fill_(attn_mask.logical_not(), finfo(dtype=query.dtype,attr='min'))
+            attn_bias=  attn_bias.masked_fill_(attn_mask.logical_not(), float(ops.finfo(query.dtype).min))
         else:
             attn_bias += attn_mask
 
     attn_weight = query @ key.swapaxes(-2, -1) * scale_factor
     attn_weight += attn_bias
-    attn_weight = ops.softmax(attn_weight, axis=-1)
-    attn_weight = ops.dropout(attn_weight, dropout_p)
+    attn_weight = ops.softmax(attn_weight, dim=-1)
+    attn_weight = F.dropout(attn_weight, dropout_p)
     return attn_weight @ value
 
 
@@ -402,7 +404,7 @@ def attention_fn(
         query_layer = query_layer / math.sqrt(query_layer.shape[-1])
     attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
     attention_scores = attention_scores + attention_mask
-    attention_scores = ops.softmax(attention_scores, axis=-1, dtype=mindspore.float32).to(query_layer.dtype)
+    attention_scores = ops.softmax(attention_scores, dim=-1, dtype=mindspore.float32).to(query_layer.dtype)
     if attention_dropout is not None:
         attention_scores = attention_dropout(attention_scores)
     context_layer = ops.matmul(attention_scores, value_layer)
@@ -531,7 +533,7 @@ class RotaryEmbedding(nn.Module):
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
         freqs = ops.einsum("i,j->ij", t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos()[:, None, :].to(dtype)
         self.sin_cached = emb.sin()[:, None, :].to(dtype)
 
@@ -584,7 +586,7 @@ def rotate_half(x):
         None.
     """
     x1, x2 = x[..., :x.shape[-1] // 2], x[..., x.shape[-1] // 2:]
-    return ops.cat((-x2, x1), axis=x1.ndim - 1)
+    return ops.cat((-x2, x1), dim=x1.ndim - 1)
 
 
 def apply_rotary_pos_emb_index_bhs(q, k, cos, sin, position_id,unsqueeze_dim=1):
@@ -729,7 +731,7 @@ class VisionExpertAttention(nn.Module):
         mixed_raw_layer = ops.zeros(shape,dtype=hidden_states.dtype)
         mixed_raw_layer[vision_token_mask] = self.vision_expert_query_key_value(hidden_states[vision_token_mask])
         mixed_raw_layer[language_token_mask] = self.language_expert_query_key_value(hidden_states[language_token_mask])
-        query_states, key_states, value_states = ops.split(mixed_raw_layer, self.hidden_size, axis=-1)
+        query_states, key_states, value_states = ops.split(mixed_raw_layer, self.hidden_size, dim=-1)
 
         query_states = self._swapaxes_for_scores(query_states)  # B, H, L, HD
         key_states = self._swapaxes_for_scores(key_states)  # B, H, L, HD
@@ -744,8 +746,8 @@ class VisionExpertAttention(nn.Module):
 
         query_states, key_states = apply_rotary_pos_emb_index_bhs(query_states, key_states, cos, sin, position_ids)
         if past_key_value is not None:
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         past_key_value = (key_states, value_states) if use_cache else None
         context_layer = attention_fn(
             query_layer=query_states, key_layer=key_states, value_layer=value_states, attention_mask=attention_mask,
@@ -919,7 +921,7 @@ class CogVLMPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(mean=0,sigma=self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -1612,7 +1614,7 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
             shift_logits = logits[..., :-1, :].contiguous()
             shift_labels = labels[..., 1:].contiguous()
             # Flatten the tokens
-            loss_fct = ops.cross_entropy#CrossEntropyLoss()
+            loss_fct = F.cross_entropy#CrossEntropyLoss()
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Enable model parallelism
@@ -1751,7 +1753,7 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
         '''
         # update past_key_values
         model_kwargs["past_key_values"] = self._extract_past_from_model_output(
-            outputs, standardize_cache_format=standardize_cache_format
+            outputs
         )
         if getattr(outputs, "state", None) is not None:
             model_kwargs["state"] = outputs.state
@@ -1761,14 +1763,14 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
             token_type_ids = model_kwargs["token_type_ids"]
             new_token_type_ids = ops.ones((token_type_ids.shape[0], 1), dtype=token_type_ids.dtype,
                                             ) * LANGUAGE_TOKEN_TYPE
-            model_kwargs["token_type_ids"] = ops.cat([token_type_ids, new_token_type_ids], axis=-1)
+            model_kwargs["token_type_ids"] = ops.cat([token_type_ids, new_token_type_ids], dim=-1)
 
         if not is_encoder_decoder:
             # update attention mask
             if "attention_mask" in model_kwargs:
                 attention_mask = model_kwargs["attention_mask"]
                 model_kwargs["attention_mask"] = ops.cat(
-                    [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], axis=-1
+                    [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], dim=-1
                 )
         else:
             # update decoder attention mask
@@ -1776,7 +1778,7 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
                 decoder_attention_mask = model_kwargs["decoder_attention_mask"]
                 model_kwargs["decoder_attention_mask"] = ops.cat(
                     [decoder_attention_mask, decoder_attention_mask.new_ones((decoder_attention_mask.shape[0], 1))],
-                    axis=-1,
+                    dim=-1,
                 )
 
         return model_kwargs

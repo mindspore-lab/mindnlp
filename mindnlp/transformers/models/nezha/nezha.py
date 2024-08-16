@@ -16,12 +16,12 @@
 """nezha model"""
 import math
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
 
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from .nezha_config import NezhaConfig
 from ...modeling_utils import PreTrainedModel
@@ -82,8 +82,8 @@ class NezhaRelativePositionsEncoding(nn.Module):
 
         flat_relative_positions_matrix = final_mat.view(-1)
         on_value, off_value = Tensor(1.0, mindspore.float32), Tensor(0.0, mindspore.float32)
-        one_hot_relative_positions_matrix = ops.one_hot(
-            flat_relative_positions_matrix, vocab_size, on_value, off_value, axis=-1
+        one_hot_relative_positions_matrix = F.one_hot(
+            flat_relative_positions_matrix, vocab_size
         ).astype(mindspore.float32)
         positions_encoding = ops.matmul(one_hot_relative_positions_matrix, embeddings_table)
         my_shape = list(final_mat.shape)
@@ -305,8 +305,8 @@ class NezhaSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -338,7 +338,7 @@ class NezhaSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -1169,7 +1169,7 @@ class NezhaPreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = initializer(Normal(self.config.initializer_range),
@@ -1637,11 +1637,11 @@ class NezhaForMaskedLM(NezhaPreTrainedModel):
         if self.config.pad_token_id is None:
             raise ValueError("The PAD token should be defined for generation")
 
-        attention_mask = ops.cat([attention_mask, attention_mask.new_zeros((attention_mask.shape[0], 1))], axis=-1)
+        attention_mask = ops.cat([attention_mask, attention_mask.new_zeros((attention_mask.shape[0], 1))], dim=-1)
         dummy_token = ops.full(
             (effective_batch_size, 1), self.config.pad_token_id, dtype=mindspore.int64
         )
-        input_ids = ops.cat([input_ids, dummy_token], axis=1)
+        input_ids = ops.cat([input_ids, dummy_token], dim=1)
 
         return {"input_ids": input_ids, "attention_mask": attention_mask}
 

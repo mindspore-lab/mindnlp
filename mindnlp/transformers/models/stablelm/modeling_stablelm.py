@@ -24,10 +24,11 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import Normal
 
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
@@ -38,7 +39,7 @@ from ...modeling_outputs import (
     TokenClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from ....utils import logging, get_default_dtype
+from ....utils import logging
 from .configuration_stablelm import StableLmConfig
 
 
@@ -52,7 +53,7 @@ def _get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(dim=-1, dtype=mindspore.int32)
     indices = ops.nonzero(attention_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
@@ -81,7 +82,7 @@ class StableLmRotaryEmbedding(nn.Module):
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
@@ -111,7 +112,7 @@ class StableLmLinearScalingRotaryEmbedding(StableLmRotaryEmbedding):
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
@@ -138,7 +139,7 @@ class StableLmDynamicNTKScalingRotaryEmbedding(StableLmRotaryEmbedding):
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
@@ -148,7 +149,7 @@ def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
     x2 = x[..., x.shape[-1] // 2 :]
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 # Copied from transformers.models.mixtral.modeling_mixtral.apply_rotary_pos_emb
@@ -203,14 +204,14 @@ class StableLmLayerNormPerHead(nn.Module):
         super().__init__()
         self.dim = dim
         self.num_heads = num_heads
-        self.norms = nn.ModuleList([nn.LayerNorm(dim, eps=epsilon) for _ in range(self.num_heads)])
+        self.norms = nn.ModuleList([nn.LayerNorm(dim, eps=eps) for _ in range(self.num_heads)])
 
     def forward(self, hidden_states: mindspore.Tensor):
         # Split along the num_heads axis to get per-head inputs
         # [batch_size, num_heads, seq_len, head_dim] -> [batch_size, 1, seq_len, head_dim] * num_heads
-        states_per_heads = ops.split(hidden_states, 1, axis=1)
+        states_per_heads = ops.split(hidden_states, 1, dim=1)
         # Normalize and merge the heads back together
-        return ops.cat([norm(hidden_states) for norm, hidden_states in zip(self.norms, states_per_heads)], axis=1)
+        return ops.cat([norm(hidden_states) for norm, hidden_states in zip(self.norms, states_per_heads)], dim=1)
 
 
 # Copied from transformers.models.llama.modeling_llama.repeat_kv
@@ -345,8 +346,8 @@ class StableLmAttention(nn.Module):
         query_rot, key_rot = apply_rotary_pos_emb(query_rot, key_rot, cos, sin, position_ids)
 
         # [batch_size, seq_length, num_heads, head_dim]
-        query_states = ops.cat((query_rot, query_pass), axis=-1)
-        key_states = ops.cat((key_rot, key_pass), axis=-1)
+        query_states = ops.cat((query_rot, query_pass), dim=-1)
+        key_states = ops.cat((key_rot, key_pass), dim=-1)
 
         if past_key_value is not None:
             # Specific to RoPE models with partial rotation
@@ -373,7 +374,7 @@ class StableLmAttention(nn.Module):
             attn_weights = attn_weights + attention_mask
 
         # upcast attention to fp32
-        attn_weights = ops.softmax(attn_weights, dtype=mindspore.float32, axis=-1).to(query_states.dtype)
+        attn_weights = ops.softmax(attn_weights, dtype=mindspore.float32, dim=-1).to(query_states.dtype)
         attn_weights = self.attention_dropout(attn_weights)
 
         attn_output = ops.matmul(attn_weights, value_states)
@@ -766,7 +767,7 @@ class StableLmForCausalLM(StableLmPreTrainedModel):
             # Flatten the tokens
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
-            loss = ops.cross_entropy(shift_logits, shift_labels)
+            loss = F.cross_entropy(shift_logits, shift_labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -930,13 +931,13 @@ class StableLmForSequenceClassification(StableLmPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1013,7 +1014,7 @@ class StableLmForTokenClassification(StableLmPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]

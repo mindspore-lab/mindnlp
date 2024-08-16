@@ -29,10 +29,10 @@ try:
 except:
     from typing_extensions import Literal
 
-import mindspore
-from mindnlp.core import nn, ops
 from tqdm import tqdm
+import mindspore
 
+from mindnlp.core import nn, ops
 from ..tuners_utils import (
     BaseTuner,
     BaseTunerLayer,
@@ -130,7 +130,7 @@ class LoraModel(BaseTuner):
         ...     pad_token_id=tokenizer.eos_token_id,
         ...     use_cache=False,
         ...     device_map={"": rank},
-        ...     torch_dtype=torch.float16,
+        ...     ms_dtype=torch.float16,
         ...     quantization_config=quantization_config,
         ... )
         >>> model = prepare_model_for_kbit_training(model)
@@ -804,8 +804,8 @@ class LoraModel(BaseTuner):
 
                     if len(loras_A) == 0:
                         raise ValueError("No matching LoRAs found. Please raise an issue on GitHub.")
-                    loras_A = ops.cat(loras_A, axis=0)
-                    loras_B = ops.cat(loras_B, axis=1)
+                    loras_A = ops.cat(loras_A, dim=0)
+                    loras_B = ops.cat(loras_B, dim=1)
                     target_lora_A.data[: loras_A.shape[0], :] = loras_A
                     target_lora_B.data[:, : loras_B.shape[1]] = loras_B
                 elif combination_type in [

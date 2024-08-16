@@ -22,9 +22,11 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -317,7 +319,7 @@ class FlavaImageEmbeddings(nn.Module):
                 f"shape of position embedding ({patch_pos_embed.shape[-2], patch_pos_embed.shape[-1]})"
             )
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
-        return ops.cat([class_pos_embed.unsqueeze(0), patch_pos_embed], axis=1)
+        return ops.cat([class_pos_embed.unsqueeze(0), patch_pos_embed], dim=1)
 
     def forward(
         self,
@@ -336,12 +338,12 @@ class FlavaImageEmbeddings(nn.Module):
                 bool_masked_pos = bool_masked_pos.view(bool_masked_pos.shape[0], -1)
             # replace the masked visual tokens by mask_tokens
             mask = bool_masked_pos.unsqueeze(-1)
-            mask = ops.Cast()(mask, mask_tokens.dtype)
+            mask = mask.to(mask_tokens.dtype)
             embeddings = embeddings * (1.0 - mask) + mask_tokens * mask
 
         # add the [CLS] token to the embedded patch tokens
         cls_tokens = self.cls_token.broadcast_to((batch_size, -1, -1))
-        embeddings = ops.cat((cls_tokens, embeddings), axis=1)
+        embeddings = ops.cat((cls_tokens, embeddings), dim=1)
 
         # add positional encoding to each token
         if interpolate_pos_encoding:
@@ -378,7 +380,7 @@ class PatchEmbeddings(nn.Module):
         self.patch_size = patch_size
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size, pad_mode="valid", bias=True)
+        self.projection = nn.Conv2d(num_channels, embed_dim, kernel_size=patch_size, stride=patch_size)
 
     def forward(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
@@ -491,9 +493,9 @@ class FlavaSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -733,7 +735,7 @@ class FlavaPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -975,7 +977,7 @@ class FlavaMultimodalModel(FlavaPreTrainedModel):
 
         if self.use_cls_token:
             cls_tokens = self.cls_token.broadcast_to((batch_size, -1, -1))
-            hidden_states = ops.cat([cls_tokens, hidden_states], axis=1)
+            hidden_states = ops.cat([cls_tokens, hidden_states], dim=1)
             seq_length += 1
 
         if attention_mask is None:
@@ -1250,18 +1252,13 @@ class FlavaModel(FlavaPreTrainedModel):
                 if self.multimodal_model.use_cls_token:
                     seq_len += 1
                 attention_mask_image = ops.ones((batch_size, seq_len))
-                attention_multimodal = ops.cat([ops.cast(attention_mask_image, mindspore.int64), attention_mask], axis=1)
-                # mindspore.Tensor(np.concatenate((attention_mask_image.asnumpy(), attention_mask.asnumpy()), axis=1))
+                attention_multimodal = ops.cat([attention_mask_image.to(mindspore.int64), attention_mask], dim=1)
             else:
                 attention_multimodal = None
-            multimodal_input = ops.cat([image_mm_projection, text_mm_projection], axis=1)
+            multimodal_input = ops.cat([image_mm_projection, text_mm_projection], dim=1)
             multimodal_output = self.multimodal_model(
                 multimodal_input, attention_mask=attention_multimodal, return_dict=return_dict
             )
-            # multimodal_input = ops.concat([image_mm_projection, text_mm_projection], axis=1)
-            # multimodal_output = self.multimodal_model(
-            #     ops.concat([image_mm_projection, text_mm_projection], axis=1), attention_mask=attention_multimodal, return_dict=return_dict
-            # )
 
             multimodal_embeddings = multimodal_output[0]
 
@@ -1292,15 +1289,15 @@ class FlavaImageCodebookResPath(nn.Module):
 
         path = OrderedDict()
         path["relu_1"] = nn.ReLU()
-        path["conv_1"] = nn.Conv2d(in_size, hid_size, kernel_size=3, padding=1, pad_mode="pad", bias=True)
+        path["conv_1"] = nn.Conv2d(in_size, hid_size, kernel_size=3, padding=1)
         path["relu_2"] = nn.ReLU()
-        path["conv_2"] = nn.Conv2d(hid_size, hid_size, kernel_size=3, padding=1, pad_mode="pad", bias=True)
+        path["conv_2"] = nn.Conv2d(hid_size, hid_size, kernel_size=3, padding=1)
         path["relu_3"] = nn.ReLU()
-        path["conv_3"] = nn.Conv2d(hid_size, hid_size, kernel_size=3, padding=1, pad_mode="pad", bias=True)
+        path["conv_3"] = nn.Conv2d(hid_size, hid_size, kernel_size=3, padding=1)
         path["relu_4"] = nn.ReLU()
-        path["conv_4"] = nn.Conv2d(hid_size, out_size, kernel_size=1, padding=0, pad_mode="valid", bias=True)
+        path["conv_4"] = nn.Conv2d(hid_size, out_size, kernel_size=1, padding=0)
 
-        self.path = nn.SequentialCell(path)
+        self.path = nn.Sequential(path)
 
     def forward(self, x: mindspore.Tensor) -> mindspore.Tensor:
         return self.path(x)
@@ -1313,7 +1310,7 @@ class FlavaImageCodebookBlock(nn.Module):
         self.post_gain = 1 / (num_layers**2)
 
         if in_size != out_size:
-            self.id_path = nn.Conv2d(in_size, out_size, kernel_size=1, padding=0, pad_mode="valid", bias=True)
+            self.id_path = nn.Conv2d(in_size, out_size, kernel_size=1, padding=0)
         else:
             self.id_path = nn.Identity()
 
@@ -1336,7 +1333,7 @@ class FlavaImageCodebookLayerGroup(nn.Module):
         if use_pool:
             blocks["pool"] = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        self.group = nn.SequentialCell(blocks)
+        self.group = nn.Sequential(blocks)
 
     def forward(self, x: mindspore.Tensor) -> mindspore.Tensor:
         return self.group(x)
@@ -1366,10 +1363,10 @@ class FlavaImageCodebook(FlavaPreTrainedModel):
 
         output_blocks = OrderedDict()
         output_blocks["relu"] = nn.ReLU()
-        output_blocks["conv"] = nn.Conv2d(8 * self.hidden_size, self.vocab_size, kernel_size=1, padding=0, pad_mode="valid", bias=True)
+        output_blocks["conv"] = nn.Conv2d(8 * self.hidden_size, self.vocab_size, kernel_size=1, padding=0)
 
         blocks = OrderedDict()
-        blocks["input"] = nn.Conv2d(self.input_channels, 1 * self.hidden_size, kernel_size=7, padding=3, pad_mode='pad', bias=True)
+        blocks["input"] = nn.Conv2d(self.input_channels, 1 * self.hidden_size, kernel_size=7, padding=3)
         blocks["group_1"] = FlavaImageCodebookLayerGroup(
             self.num_blocks_per_group, num_layers, 1 * self.hidden_size, 1 * self.hidden_size
         )
@@ -1382,9 +1379,9 @@ class FlavaImageCodebook(FlavaPreTrainedModel):
         blocks["group_4"] = FlavaImageCodebookLayerGroup(
             self.num_blocks_per_group, num_layers, 4 * self.hidden_size, 8 * self.hidden_size, use_pool=False
         )
-        blocks["output"] = nn.SequentialCell(output_blocks)
+        blocks["output"] = nn.Sequential(output_blocks)
 
-        self.blocks = nn.SequentialCell(blocks)
+        self.blocks = nn.Sequential(blocks)
 
         self.post_init()
 
@@ -1422,7 +1419,7 @@ class FlavaImageCodebook(FlavaPreTrainedModel):
 
     def get_codebook_probs(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         z_logits = self.blocks(pixel_values)
-        return nn.Softmax(axis=1)(z_logits)
+        return nn.Softmax(dim=1)(z_logits)
 
     def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         """
@@ -1718,7 +1715,7 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
                 sequence_for_image = mindspore.Tensor(sequence_for_image.asnumpy()[masked_tokens.asnumpy(), :], mindspore.float32)
                 mim_logits = self.mim_head(sequence_for_image)
                 if return_loss:
-                    mim_loss = ops.cross_entropy(
+                    mim_loss = F.cross_entropy(
                         mim_logits.view(-1, self.image_vocab_size), mim_labels_filtered.view(-1)
                     )
                     mim_loss *= self.mim_weight
@@ -1737,7 +1734,7 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
                 sequence_for_text = mindspore.Tensor(sequence_for_text.asnumpy()[masked_tokens.asnumpy(), :], mindspore.float32)
                 mlm_logits = self.mlm_head(sequence_for_text)
                 if return_loss:
-                    mlm_loss = ops.cross_entropy(
+                    mlm_loss = F.cross_entropy(
                         mlm_logits.view(-1, self.text_vocab_size), mlm_labels_filtered.view(-1)
                     )
                     mlm_loss *= self.mlm_weight
@@ -1753,7 +1750,7 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
                 # pos_mask = ops.where(pos_pairs.any(), pos_pairs, pos_pairs.new([True]))
                 pos_mask = ops.where(pos_pairs.any(), pos_pairs, mindspore.Tensor([True], dtype=pos_pairs.dtype))
                 if return_loss:
-                    itm_loss = ops.cross_entropy(itm_logits, ops.cast(itm_labels, mindspore.int32))
+                    itm_loss = F.cross_entropy(itm_logits, itm_labels.to(mindspore.int32))
                     itm_loss *= self.itm_weight
 
                 if multimodal_masked_embeddings is not None:
@@ -1787,7 +1784,7 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
                 # sequence_for_image = sequence_for_image[masked_tokens, :]
                 mmm_image_logits = self.mmm_image_head(sequence_for_image)
                 if return_loss:
-                    mmm_image_loss = ops.cross_entropy(
+                    mmm_image_loss = F.cross_entropy(
                         mmm_image_logits.view(-1, self.image_vocab_size), mim_labels_filtered.view(-1)
                     )
                     mmm_image_loss *= self.mmm_image_weight
@@ -1807,7 +1804,7 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
                 # sequence_for_text = sequence_for_text[masked_tokens, :]
                 mmm_text_logits = self.mmm_text_head(sequence_for_text)
                 if return_loss:
-                    mmm_text_loss = ops.cross_entropy(
+                    mmm_text_loss = F.cross_entropy(
                         mmm_text_logits.view(-1, self.text_vocab_size), mlm_labels_filtered.view(-1)
                     )
                     mmm_text_loss *= self.mmm_text_weight
@@ -1817,14 +1814,12 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
         # Global Contrastive Loss
         if image_embeddings is not None and text_embeddings is not None and self.global_contrastive_weight > 0:
             text_embedding = self.flava.text_projection(text_embeddings[:, 0, :])
-            # text_embedding = ops.normalize(text_embedding, dim=-1)
-            text_embedding = ops.L2Normalize(axis=-1)(text_embedding)
+            text_embedding = nn.functional.normalize(text_embedding, dim=-1)
 
             image_embedding = self.flava.image_projection(image_embeddings[:, 0, :])
-            # image_embedding = ops.normalize(image_embedding, dim=-1)
-            image_embedding = ops.L2Normalize(axis=-1)(image_embedding)
+            image_embedding = nn.functional.normalize(image_embedding, dim=-1)
 
-            self.flava.logit_scale.data.clamp(LOGIT_SCALE_CLAMP_MIN, LOGIT_SCALE_CLAMP_MAX)
+            self.flava.logit_scale.assign_value(self.flava.logit_scale.clamp(LOGIT_SCALE_CLAMP_MIN, LOGIT_SCALE_CLAMP_MAX))
 
             logits_per_image, logits_per_text, gc_labels = self.global_contrastive_head(
                 image_embedding, text_embedding, self.flava.logit_scale
@@ -1837,8 +1832,8 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
                 gc_labels = gc_labels[pos_mask]
 
             if return_loss:
-                gc_loss_image = ops.cross_entropy(logits_per_image, gc_labels)
-                gc_loss_text = ops.cross_entropy(logits_per_text, gc_labels)
+                gc_loss_image = F.cross_entropy(logits_per_image, gc_labels)
+                gc_loss_text = F.cross_entropy(logits_per_text, gc_labels)
                 gc_loss = (gc_loss_image + gc_loss_text) / 2
                 gc_loss *= self.global_contrastive_weight
 

@@ -20,9 +20,10 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
+from mindspore.common.initializer import initializer, Normal
+
 from mindnlp.core import nn, ops
-from mindspore.common.initializer import (initializer, Normal)
-from mindspore.ops import cross_entropy
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -53,7 +54,7 @@ class TrOCRLearnedPositionalEmbedding(nn.Embedding):
         bsz, seq_len = ids.shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
-        ).expand(bsz, -1)
+        ).broadcast_to((bsz, -1))
 
         return super().forward(positions + self.offset)
 
@@ -95,10 +96,10 @@ class TrOCRSinusoidalPositionalEmbedding(nn.Module):
         emb = ops.exp(ops.arange(half_dim, dtype=mindspore.int64).float() * -emb)
         emb = ops.arange(num_embeddings, dtype=mindspore.int64).\
                   float().unsqueeze(1) * emb.unsqueeze(0)
-        emb = ops.cat([ops.sin(emb), ops.cos(emb)], axis=1).view(num_embeddings, -1)
+        emb = ops.cat([ops.sin(emb), ops.cos(emb)], dim=1).view(num_embeddings, -1)
         if embedding_dim % 2 == 1:
             # zero pad
-            emb = ops.cat([emb, ops.zeros((num_embeddings, 1))], axis=1)
+            emb = ops.cat([emb, ops.zeros((num_embeddings, 1))], dim=1)
         if padding_idx is not None:
             emb[padding_idx, :] = 0
 
@@ -134,7 +135,7 @@ class TrOCRSinusoidalPositionalEmbedding(nn.Module):
         # The series of casts and type-conversions here
         # are carefully balanced to both work with ONNX export and XLA.
         mask = input_ids.ne(padding_idx).int()
-        incremental_indices = (ops.cumsum(mask, axis=1).
+        incremental_indices = (ops.cumsum(mask, dim=1).
                                type_as(mask) + past_key_values_length) * mask
         return incremental_indices.long() + padding_idx
 
@@ -210,8 +211,8 @@ class TrOCRAttention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -257,7 +258,7 @@ class TrOCRAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -279,7 +280,7 @@ class TrOCRAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -390,7 +391,7 @@ class TrOCRDecoderLayer(nn.Module):
             output_attentions=output_attentions,
         )
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
@@ -412,7 +413,7 @@ class TrOCRDecoderLayer(nn.Module):
                 output_attentions=output_attentions,
             )
 
-            hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states = self.encoder_attn_layer_norm(hidden_states)
 
@@ -422,11 +423,11 @@ class TrOCRDecoderLayer(nn.Module):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states,
+        hidden_states = F.dropout(hidden_states,
                                     p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
@@ -452,7 +453,7 @@ class TrOCRPreTrainedModel(PreTrainedModel):
         if isinstance(module, (nn.Linear, nn.Conv1d)):
             module.weight.set_data(initializer(
                 Normal(sigma=std, mean=0.0), module.weight.shape, module.weight.dtype))
-            if module.bias:
+            if module.bias is not None:
                 module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))
         elif isinstance(module, nn.Embedding):
             emb_weight = np.random.normal(0, std, module.weight.shape)
@@ -656,7 +657,7 @@ class TrOCRDecoder(TrOCRPreTrainedModel):
         if self.layernorm_embedding is not None:
             hidden_states = self.layernorm_embedding(hidden_states)
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         input_shape = input.shape
 
@@ -989,7 +990,7 @@ class TrOCRForCausalLM(TrOCRPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]

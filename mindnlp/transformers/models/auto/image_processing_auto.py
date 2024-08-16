@@ -66,11 +66,11 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("efficientnet", "EfficientNetImageProcessor"),
         ("flava", "FlavaImageProcessor"),
         ("focalnet", "BitImageProcessor"),
-        # ("fuyu", "FuyuImageProcessor"),
+        ("fuyu", "FuyuImageProcessor"),
         ("git", "CLIPImageProcessor"),
         # ("glpn", "GLPNImageProcessor"),
         ("groupvit", "CLIPImageProcessor"),
-        # ("idefics", "IdeficsImageProcessor"),
+        ("idefics", ("IdeficsImageProcessor",)),
         ("imagegpt", "ImageGPTImageProcessor"),
         # ("instructblip", "BlipImageProcessor"),
         ("kosmos-2", "CLIPImageProcessor"),
@@ -91,7 +91,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         # ("owlv2", "Owlv2ImageProcessor"),
         ("owlvit", "OwlViTImageProcessor"),
         ("perceiver", "PerceiverImageProcessor"),
-        # ("pix2struct", "Pix2StructImageProcessor"),
+        ("pix2struct", "Pix2StructImageProcessor"),
         ("poolformer", "PoolFormerImageProcessor"),
         # ("pvt", "PvtImageProcessor"),
         # ("pvt_v2", "PvtImageProcessor"),
@@ -107,7 +107,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         # ("swinv2", "ViTImageProcessor"),
         ("table-transformer", "DetrImageProcessor"),
         ("timesformer", "VideoMAEImageProcessor"),
-        # ("tvlt", "TvltImageProcessor"),
+        ("tvlt", "TvltImageProcessor"),
         # ("tvp", "TvpImageProcessor"),
         ("udop", "LayoutLMv3ImageProcessor"),
         # ("upernet", "SegformerImageProcessor"),
@@ -406,7 +406,6 @@ class AutoImageProcessor:
                     "`AutoFeatureExtractor`. This warning will be removed in v4.40."
                 )
 
-        print(image_processor_class)
         # If we don't find the image processor class in the image processor config, let's try the model config.
         if image_processor_class is None and image_processor_auto_map is None:
             if not isinstance(config, PretrainedConfig):

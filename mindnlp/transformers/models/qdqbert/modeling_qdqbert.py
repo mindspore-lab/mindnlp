@@ -13,14 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch QDQBERT model."""
-
+"""MindSpore QDQBERT model."""
 import math
 import warnings
 from typing import Dict, List, Optional, Tuple, Union
 from mindspore.common.initializer import initializer, Normal
 import mindspore as ms
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -108,7 +108,7 @@ class QDQBertEmbeddings(nn.Module):
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
                 buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to(
-                    input_shape[0], seq_length
+                    (input_shape[0], seq_length)
                 )
                 token_type_ids = buffered_token_type_ids_expanded
             else:
@@ -208,8 +208,8 @@ class QDQBertSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -268,7 +268,7 @@ class QDQBertSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = nn.Softmax(axis=-1)(attention_scores)
+        attention_probs = nn.Softmax(dim=-1)(attention_scores)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -951,8 +951,8 @@ class QDQBertModel(QDQBertPreTrainedModel):
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
                 buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(
-                    batch_size, seq_length
+                buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to(
+                    (batch_size, seq_length)
                 )
                 token_type_ids = buffered_token_type_ids_expanded
             else:
@@ -1134,7 +1134,7 @@ class QDQBertLMHeadModel(QDQBertPreTrainedModel):
             # we are doing next-token prediction; shift prediction scores and input ids by one
             shifted_prediction_scores = prediction_scores[:, :-1, :]
             labels = labels[:, 1:]
-            lm_loss = ops.cross_entropy(
+            lm_loss = F.cross_entropy(
                 shifted_prediction_scores.view(-1, self.config.vocab_size),
                 labels.view(-1),
             )
@@ -1264,7 +1264,7 @@ class QDQBertForMaskedLM(QDQBertPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(
+            masked_lm_loss = F.cross_entropy(
                 prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
             )
 
@@ -1296,14 +1296,14 @@ class QDQBertForMaskedLM(QDQBertPreTrainedModel):
 
         attention_mask = ops.cat(
             [attention_mask, attention_mask.new_zeros((attention_mask.shape[0], 1))],
-            axis=-1,
+            dim=-1,
         )
         dummy_token = ops.full(
             (effective_batch_size, 1),
             self.config.pad_token_id,
             dtype=ms.int64,
         )
-        input_ids = ops.cat([input_ids, dummy_token], axis=1)
+        input_ids = ops.cat([input_ids, dummy_token], dim=1)
 
         return {"input_ids": input_ids, "attention_mask": attention_mask}
 
@@ -1390,7 +1390,7 @@ class QDQBertForNextSentencePrediction(QDQBertPreTrainedModel):
 
         next_sentence_loss = None
         if labels is not None:
-            next_sentence_loss = ops.cross_entropy(
+            next_sentence_loss = F.cross_entropy(
                 seq_relationship_scores.view(-1, 2), labels.view(-1)
             )
 
@@ -1474,15 +1474,15 @@ class QDQBertForSequenceClassification(QDQBertPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(
+                loss = F.cross_entropy(
                     logits.view(-1, self.num_labels), labels.view(-1)
                 )
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -1576,7 +1576,7 @@ class QDQBertForMultipleChoice(QDQBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss = F.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1642,7 +1642,7 @@ class QDQBertForTokenClassification(QDQBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1726,10 +1726,10 @@ class QDQBertForQuestionAnswering(QDQBertPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(
+            start_loss = F.cross_entropy(
                 start_logits, start_positions, ignore_index=ignored_index
             )
-            end_loss = ops.cross_entropy(
+            end_loss = F.cross_entropy(
                 end_logits, end_positions, ignore_index=ignored_index
             )
             total_loss = (start_loss + end_loss) / 2

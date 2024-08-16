@@ -12,17 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Funnel Transformer model."""
+"""MindSpore Funnel Transformer model."""
 
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -109,7 +108,7 @@ class FunnelAttentionStructure(nn.Module):
         position_embeds = self.get_position_embeds(seq_len, inputs_embeds.dtype)
         token_type_mat = self.token_type_ids_to_mat(token_type_ids) if token_type_ids is not None else None
         cls_mask = (
-            ops.pad(inputs_embeds.new_ones([seq_len - 1, seq_len - 1]), (1, 0, 1, 0))
+            F.pad(inputs_embeds.new_ones([seq_len - 1, seq_len - 1]), (1, 0, 1, 0))
             if self.config.separate_cls
             else None
         )
@@ -120,8 +119,8 @@ class FunnelAttentionStructure(nn.Module):
         token_type_mat = token_type_ids[:, :, None] == token_type_ids[:, None]
         # Treat <cls> as in the same segment as both A & B
         cls_ids = token_type_ids == self.cls_token_type_id
-        cls_mat = cls_ids[:, :, None] | cls_ids[:, None]
-        return cls_mat | token_type_mat
+        cls_mat = cls_ids[:, :, None].int() | cls_ids[:, None].int()
+        return (cls_mat | token_type_mat.int()).bool()
 
     def get_position_embeds(
         self, seq_len: int, dtype: mindspore.dtype
@@ -151,10 +150,10 @@ class FunnelAttentionStructure(nn.Module):
             cos_embed = ops.cos(sinusoid)
             cos_embed_d = self.cos_dropout(cos_embed)
             # This is different from the formula on the paper...
-            phi = ops.cat([sin_embed_d, sin_embed_d], axis=-1)
-            psi = ops.cat([cos_embed, sin_embed], axis=-1)
-            pi = ops.cat([cos_embed_d, cos_embed_d], axis=-1)
-            omega = ops.cat([-sin_embed, cos_embed], axis=-1)
+            phi = ops.cat([sin_embed_d, sin_embed_d], dim=-1)
+            psi = ops.cat([cos_embed, sin_embed], dim=-1)
+            pi = ops.cat([cos_embed_d, cos_embed_d], dim=-1)
+            omega = ops.cat([-sin_embed, cos_embed], dim=-1)
             return (phi, pi, psi, omega)
         else:
             # Notations from the paper, appending A.2.1, final formula.
@@ -167,7 +166,7 @@ class FunnelAttentionStructure(nn.Module):
             sinusoid = rel_pos_id[:, None] * inv_freq[None]
             sin_embed = self.sin_dropout(ops.sin(sinusoid))
             cos_embed = self.cos_dropout(ops.cos(sinusoid))
-            pos_embed = ops.cat([sin_embed, cos_embed], axis=-1)
+            pos_embed = ops.cat([sin_embed, cos_embed], dim=-1)
 
             pos = ops.arange(0, seq_len, dtype=mindspore.int64).to(dtype)
             pooled_pos = pos
@@ -190,7 +189,7 @@ class FunnelAttentionStructure(nn.Module):
                     rel_pos = rel_pos[:, None] + zero_offset
                     # rel_pos = rel_pos.expand(rel_pos.shape[0], d_model)
                     rel_pos = rel_pos.broadcast_to((rel_pos.shape[0], d_model))
-                    position_embeds_pooling = ops.gather_elements(pos_embed, 0, rel_pos)
+                    position_embeds_pooling = ops.gather(pos_embed, 0, rel_pos)
 
                 # Second type
                 pos = pooled_pos
@@ -200,7 +199,7 @@ class FunnelAttentionStructure(nn.Module):
                 rel_pos = rel_pos[:, None] + zero_offset
                 # rel_pos = rel_pos.expand(rel_pos.shape[0], d_model)
                 rel_pos = rel_pos.broadcast_to((rel_pos.shape[0], d_model))
-                position_embeds_no_pooling = ops.gather_elements(pos_embed, 0, rel_pos)
+                position_embeds_no_pooling = ops.gather(pos_embed, 0, rel_pos)
 
                 position_embeds_list.append([position_embeds_no_pooling, position_embeds_pooling])
             return position_embeds_list
@@ -217,7 +216,7 @@ class FunnelAttentionStructure(nn.Module):
             # cls_pos = pos_id.new_tensor([-(2**block_index) + 1])
             cls_pos = mindspore.Tensor([-(2**block_index) + 1], dtype=pos_id.dtype)
             pooled_pos_id = pos_id[1:-1] if self.config.truncate_seq else pos_id[1:]
-            return ops.cat([cls_pos, pooled_pos_id[::2]], axis=0)
+            return ops.cat([cls_pos, pooled_pos_id[::2]], dim=0)
         else:
             return pos_id[::2]
 
@@ -233,7 +232,7 @@ class FunnelAttentionStructure(nn.Module):
         max_dist = ref_point + num_remove * stride
         min_dist = pooled_pos[0] - pos[-1]
 
-        return ops.arange(max_dist, min_dist - 1, -stride, dtype=mindspore.int64)
+        return ops.arange(max_dist.item(), min_dist.item() - 1, -stride, dtype=mindspore.int64)
 
     def stride_pool(
         self,
@@ -265,7 +264,7 @@ class FunnelAttentionStructure(nn.Module):
         enc_slice = [slice(None)] * axis + [axis_slice]
         if self.config.separate_cls:
             cls_slice = [slice(None)] * axis + [slice(None, 1)]
-            tensor = ops.cat([tensor[cls_slice], tensor], axis=axis)
+            tensor = ops.cat([tensor[cls_slice], tensor], dim=axis)
         return tensor[enc_slice]
 
     def pool_tensor(
@@ -281,7 +280,7 @@ class FunnelAttentionStructure(nn.Module):
 
         if self.config.separate_cls:
             suffix = tensor[:, :-1] if self.config.truncate_seq else tensor
-            tensor = ops.cat([tensor[:, :1], suffix], axis=1)
+            tensor = ops.cat([tensor[:, :1], suffix], dim=1)
 
         ndim = tensor.ndim
         if ndim == 2:
@@ -292,11 +291,11 @@ class FunnelAttentionStructure(nn.Module):
         stride = (stride, 1)
 
         if mode == "mean":
-            tensor = ops.avg_pool2d(tensor, stride, stride=stride, ceil_mode=True)
+            tensor = F.avg_pool2d(tensor, stride, stride=stride, ceil_mode=True)
         elif mode == "max":
-            tensor = ops.max_pool2d(tensor, stride, stride=stride, ceil_mode=True)
+            tensor = F.max_pool2d(tensor, stride, stride=stride, ceil_mode=True)
         elif mode == "min":
-            tensor = -ops.max_pool2d(-tensor, stride, stride=stride, ceil_mode=True)
+            tensor = -F.max_pool2d(-tensor, stride, stride=stride, ceil_mode=True)
         else:
             raise NotImplementedError("The supported modes are 'mean', 'max' and 'min'.")
 
@@ -372,11 +371,11 @@ class FunnelRelMultiheadAttention(nn.Module):
         self.k_head = nn.Linear(d_model, n_head * d_head)
         self.v_head = nn.Linear(d_model, n_head * d_head)
 
-        self.r_w_bias = mindspore.Parameter(ops.zeros([n_head, d_head]))
-        self.r_r_bias = mindspore.Parameter(ops.zeros([n_head, d_head]))
-        self.r_kernel = mindspore.Parameter(ops.zeros([d_model, n_head, d_head]))
-        self.r_s_bias = mindspore.Parameter(ops.zeros([n_head, d_head]))
-        self.seg_embed = mindspore.Parameter(ops.zeros([2, n_head, d_head]))
+        self.r_w_bias = mindspore.Parameter(ops.zeros(n_head, d_head))
+        self.r_r_bias = mindspore.Parameter(ops.zeros(n_head, d_head))
+        self.r_kernel = mindspore.Parameter(ops.zeros(d_model, n_head, d_head))
+        self.r_s_bias = mindspore.Parameter(ops.zeros(n_head, d_head))
+        self.seg_embed = mindspore.Parameter(ops.zeros(2, n_head, d_head))
 
         self.post_proj = nn.Linear(n_head * d_head, d_model)
         self.layer_norm = nn.LayerNorm([d_model], eps=config.layer_norm_eps)
@@ -438,7 +437,7 @@ class FunnelRelMultiheadAttention(nn.Module):
         # Shape batch_size x n_head x seq_len x context_len
         token_type_mat = token_type_mat[:, None].broadcast_to((batch_size, q_head.shape[2], seq_len, context_len))
         # Shapes batch_size x n_head x seq_len
-        diff_token_type, same_token_type = ops.split(token_type_bias, 1, axis=-1)
+        diff_token_type, same_token_type = ops.split(token_type_bias, 1, dim=-1)
         # Shape batch_size x n_head x seq_len x context_len
         # ops.Print(token_type_mat)
         token_type_mat = token_type_mat.astype(mindspore.bool_)
@@ -490,7 +489,7 @@ class FunnelRelMultiheadAttention(nn.Module):
         if attention_mask is not None:
             attn_score = attn_score - INF * (1 - attention_mask[:, None, None].float())
         # attention probability
-        attn_prob = ops.softmax(attn_score, axis=-1, dtype=dtype)
+        attn_prob = ops.softmax(attn_score, dim=-1, dtype=dtype)
         attn_prob = self.attention_dropout(attn_prob)
 
         # attention output, shape batch_size x seq_len x n_head x d_head
@@ -615,12 +614,12 @@ def upsample(
     if separate_cls:
         cls = x[:, :1]
         x = x[:, 1:]
-    output = ops.repeat_interleave(x, repeats=stride, axis=1)
+    output = ops.repeat_interleave(x, repeats=stride, dim=1)
     if separate_cls:
         if truncate_seq:
             output = ops.pad(output, (0, 0, 0, stride - 1, 0, 0))
         output = output[:, : target_len - 1]
-        output = ops.cat([cls, output], axis=1)
+        output = ops.cat([cls, output], dim=1)
     else:
         output = output[:, :target_len]
     return output
@@ -700,34 +699,29 @@ class FunnelPreTrainedModel(PreTrainedModel):
     config_class = FunnelConfig
     base_model_prefix = "funnel"
 
-    def _init_weights(self, cell):
-        classname = cell.__class__.__name__
-        if classname.find("Dense") != -1:
-            if getattr(cell, "weight", None) is not None:
+    def _init_weights(self, module):
+        classname = module.__class__.__name__
+        if classname.find("Linear") != -1:
+            if getattr(module, "weight", None) is not None:
                 if self.config.initializer_std is None:
-                    fan_out, fan_in = cell.weight.shape
+                    fan_out, fan_in = module.weight.shape
                     std = np.sqrt(1.0 / float(fan_in + fan_out))
                 else:
                     std = self.config.initializer_std
-                cell.weight.set_data(initializer(Normal(std),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if getattr(cell, "bias", None) is not None:
-                cell.bias[:] = 0.0
+                nn.init.normal_(module.weight, std=std)
+            if getattr(module, "bias", None) is not None:
+                nn.init.constant_(module.bias, 0.0)
         elif classname == "FunnelRelMultiheadAttention":
-            minval = Tensor(0.0, mindspore.float32)
-            maxval = Tensor(self.config.initializer_range, mindspore.float32)
-            cell.r_w_bias = ops.uniform(cell.r_w_bias.shape, minval, maxval)
-            cell.r_r_bias = ops.uniform(cell.r_r_bias.shape, minval, maxval)
-            cell.r_kernel = ops.uniform(cell.r_kernel.shape, minval, maxval)
-            cell.r_s_bias = ops.uniform(cell.r_s_bias.shape, minval, maxval)
-            cell.seg_embed = ops.uniform(cell.seg_embed.shape, minval, maxval)
+            nn.init.uniform_(module.r_w_bias, b=self.config.initializer_range)
+            nn.init.uniform_(module.r_r_bias, b=self.config.initializer_range)
+            nn.init.uniform_(module.r_kernel, b=self.config.initializer_range)
+            nn.init.uniform_(module.r_s_bias, b=self.config.initializer_range)
+            nn.init.uniform_(module.seg_embed, b=self.config.initializer_range)
         elif classname == "FunnelEmbeddings":
             std = 1.0 if self.config.initializer_std is None else self.config.initializer_std
-            # nn.init.normal_(cell.word_embeddings.weight, std=std)
-            cell.word_embeddings.weight.set_data(initializer(Normal(std),
-                                                    cell.word_embeddings.weight.shape, cell.word_embeddings.weight.dtype))
-            if cell.word_embeddings.padding_idx is not None:
-                cell.word_embeddings.weight.data[cell.padding_idx].zero_()
+            nn.init.normal_(module.word_embeddings.weight, std=std)
+            if module.word_embeddings.padding_idx is not None:
+                module.word_embeddings.weight.data[module.padding_idx] = 0
 
 
 class FunnelClassificationHead(nn.Module):

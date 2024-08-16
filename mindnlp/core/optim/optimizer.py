@@ -17,7 +17,6 @@ from typing import (
     Iterable,
     List,
     Optional,
-    overload,
     Set,
     Tuple,
     TypeVar,
@@ -27,7 +26,8 @@ from typing_extensions import ParamSpec, Self, TypeAlias
 
 import mindspore
 from mindspore import Parameter
-from ..utils import hooks
+from .. import ops
+from ..utils import get_default_dtype, hooks
 from ..utils.hooks import RemovableHandle
 
 Args: TypeAlias = Tuple[Any, ...]
@@ -108,105 +108,22 @@ def _disable_dynamo_if_unsupported(single_tensor_fn=None):
     return wrapper
 
 
-# For any optimizer with a faster implementation, we attempt to default to the
-# fastest + stablest whenever possible. For foreach, the requirements are to have
-# native params all on CUDA. For fused, there's currently the additional requirement
-# that the tensors' dtypes must be floating point. Neither alternative supports
-# torch.jit.script nor differentiable, so we fall back to the single tensor
-# implementation in those cases.
-def _default_to_fused_or_foreach(
-    params: List[mindspore.Tensor], differentiable: bool, use_fused: bool = False
-) -> Tuple[bool, bool]:
-    if torch.jit.is_scripting() or differentiable:
-        return False, False
-
-    fused_supported_devices = _get_fused_kernels_supported_devices()
-    foreach_supported_devices = _get_foreach_kernels_supported_devices()
-    fused = use_fused and all(
-        p is None
-        or (
-            type(p) in _foreach_supported_types
-            and p.device.type in fused_supported_devices
-            and torch.is_floating_point(p)
-        )
-        for p in params
-    )
-    foreach = not fused and all(
-        p is None
-        or (
-            type(p) in _foreach_supported_types
-            and p.device.type in foreach_supported_devices
-        )
-        for p in params
-    )
-    return fused, foreach
-
 
 def _view_as_real(params, *state_and_grads):
     for i, p in enumerate(params):
-        if torch.is_complex(p):
-            params[i] = torch.view_as_real(params[i])
+        if ops.is_complex(p):
+            params[i] = ops.view_as_real(params[i])
             for s in state_and_grads:
-                s[i] = torch.view_as_real(s[i])
+                s[i] = ops.view_as_real(s[i])
 
 
 def _get_scalar_dtype(is_fused=None):
     if is_fused:
-        return torch.float32
+        return mindspore.float32
     return (
-        torch.float64 if torch.get_default_dtype() == torch.float64 else torch.float32
+        mindspore.float64 if get_default_dtype() == mindspore.float64 else mindspore.float32
     )
 
-
-def _get_capturable_supported_devices(supports_xla: bool = True) -> List[str]:
-    r"""Return the device type list that supports capturable optimizer."""
-    capturable_supported_devices = ["cuda"]
-    if not torch.jit.is_scripting():
-        capturable_supported_devices.append(torch._C._get_privateuse1_backend_name())
-    if supports_xla:
-        capturable_supported_devices.append("xla")
-    return capturable_supported_devices
-
-
-# Common doc strings among optimizers
-_foreach_doc = r"""foreach (bool, optional): whether foreach implementation of optimizer
-            is used. If unspecified by the user (so foreach is None), we will try to use
-            foreach over the for-loop implementation on CUDA, since it is usually
-            significantly more performant. Note that the foreach implementation uses
-            ~ sizeof(params) more peak memory than the for-loop version due to the intermediates
-            being a tensorlist vs just one tensor. If memory is prohibitive, batch fewer
-            parameters through the optimizer at a time or switch this flag to False (default: None)"""
-
-_fused_doc = r"""fused (bool, optional): whether the fused implementation is used.
-            Currently, `torch.float64`, `torch.float32`, `torch.float16`, and `torch.bfloat16`
-            are supported. (default: None)
-
-    .. note:: The foreach and fused implementations are typically faster than the for-loop,
-              single-tensor implementation. Thus, if the user has not specified BOTH flags
-              (i.e., when foreach = fused = None), we will attempt defaulting to the foreach
-              implementation when the tensors are all on CUDA. For example, if the user specifies
-              True for fused but nothing for foreach, we will run the fused implementation. If
-              the user specifies False for foreach but nothing for fused (or False for fused but
-              nothing for foreach), we will run the for-loop implementation. If the user specifies
-              True for both foreach and fused, we will prioritize fused over foreach, as it is
-              typically faster. We attempt to use the fastest, so the hierarchy goes fused ->
-              foreach -> for-loop. HOWEVER, since the fused implementation is relatively new,
-              we want to give it sufficient bake-in time, so we default to foreach and NOT
-              fused when the user has not specified either flag."""
-
-_capturable_doc = r"""capturable (bool, optional): whether this instance is safe to
-            capture in a CUDA graph. Passing True can impair ungraphed performance,
-            so if you don't intend to graph capture this instance, leave it False
-            (default: False)"""
-
-_differentiable_doc = r"""differentiable (bool, optional): whether autograd should
-            occur through the optimizer step in training. Otherwise, the step()
-            function runs in a torch.no_grad() context. Setting to True can impair
-            performance, so leave it False if you don't intend to run autograd
-            through this instance (default: False)"""
-
-_maximize_doc = r"""maximize (bool, optional): maximize the objective with respect to the
-            params, instead of minimizing (default: False)"""
 
 
 def register_optimizer_step_pre_hook(hook: GlobalOptimizerPreHook) -> RemovableHandle:
@@ -290,8 +207,6 @@ class Optimizer:
         self._optimizer_load_state_dict_pre_hooks = OrderedDict()
         self._optimizer_load_state_dict_post_hooks = OrderedDict()
 
-        self._patch_step_function()
-
         if isinstance(params, mindspore.Tensor):
             raise TypeError(
                 "params argument given to the optimizer should be "
@@ -336,7 +251,6 @@ class Optimizer:
             self._optimizer_load_state_dict_pre_hooks = OrderedDict()
         if "_optimizer_load_state_dict_post_hooks" not in self.__dict__:
             self._optimizer_load_state_dict_post_hooks = OrderedDict()
-        self._patch_step_function()  # To support multiprocessing pickle/unpickle
         self.defaults.setdefault("differentiable", False)
 
     def __repr__(self) -> str:  # noqa: D105
@@ -350,46 +264,6 @@ class Optimizer:
         format_string += ")"
         return format_string
 
-    # Currently needed by Adam and AdamW
-    def _cuda_graph_capture_health_check(self) -> None:
-        # Note [torch.compile x capturable]
-        # If we are compiling, we try to take the capturable path automatically by
-        # setting the flag to True during tracing. Due to this, we skip all the checks
-        # normally required for determining whether we can use CUDA graphs and
-        # shunt the responsibility to torch.inductor. This saves time during tracing
-        # since the checks are slow without sacrificing UX since inductor will warn
-        # later if CUDA graphs cannot be enabled, e.g.,
-        # https://github.com/pytorch/pytorch/blob/d3ba8901d8640eb16f88b2bfef9df7fa383d4b47/torch/_inductor/compile_fx.py#L390.
-        # Thus, when compiling, inductor will determine if cudagraphs
-        # can be enabled based on whether there is input mutation or CPU tensors.
-        if (
-            not is_compiling()
-            and torch.backends.cuda.is_built()
-            and torch.cuda.is_available()
-        ):
-            capturing = torch.cuda.is_current_stream_capturing()
-
-            if capturing and not all(
-                group["capturable"] for group in self.param_groups
-            ):
-                raise RuntimeError(
-                    "Attempting CUDA graph capture of step() for an instance of "
-                    + self.__class__.__name__
-                    + " but param_groups' capturable is False."
-                )
-
-            if (
-                (not getattr(self, "_warned_capturable_if_run_uncaptured", False))
-                and all(group["capturable"] for group in self.param_groups)
-                and (not capturing)
-            ):
-                warnings.warn(
-                    "This instance was constructed with capturable=True or some of all the param_groups came with capturable=True, "
-                    "but step() is running without CUDA graph capture. If you never intend to graph-capture this "
-                    "instance, capturable=True can impair performance, and you should set capturable=False."
-                )
-                self._warned_capturable_if_run_uncaptured = True
-
     def _optimizer_step_code(self) -> None:
         """Entry point for `torch.profile.profiler`.
 
@@ -401,66 +275,6 @@ class Optimizer:
         This is a workaround due to lack of a proper step hook on the optimizer,
         and will be removed if it exists.
         """
-        pass
-
-    @staticmethod
-    def profile_hook_step(func: Callable[_P, R]) -> Callable[_P, R]:  # noqa: D102
-        @functools.wraps(func)
-        def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> R:
-            self, *_ = args
-            self = cast(Optimizer, self)
-            profile_name = f"Optimizer.step#{self.__class__.__name__}.step"
-            with torch.autograd.profiler.record_function(profile_name):
-                # call optimizer step pre hooks
-                for pre_hook in chain(
-                    _global_optimizer_pre_hooks.values(),
-                    self._optimizer_step_pre_hooks.values(),
-                ):
-                    result = pre_hook(self, args, kwargs)
-                    if result is not None:
-                        if isinstance(result, tuple) and len(result) == 2:
-                            args, kwargs = result  # type: ignore[assignment]
-                        else:
-                            raise RuntimeError(
-                                f"{func} must return None or a tuple of (new_args, new_kwargs), but got {result}."
-                            )
-
-                out = func(*args, **kwargs)
-                self._optimizer_step_code()
-
-                # call optimizer step post hooks
-                for post_hook in chain(
-                    self._optimizer_step_post_hooks.values(),
-                    _global_optimizer_post_hooks.values(),
-                ):
-                    post_hook(self, args, kwargs)
-
-                return out
-
-        return wrapper
-
-    @staticmethod
-    def _group_tensors_by_device_and_dtype(
-        tensorlistlist: TensorListList,
-        with_indices: bool = False,
-    ):
-        """Group a list of lists of tensors by device and dtype.
-
-        Skips this step if we are compiling since this will occur during inductor lowering.
-        """
-        if is_compiling():
-            return {(None, None): (tensorlistlist, list(range(len(tensorlistlist[0]))))}
-        else:
-            return _group_tensors_by_device_and_dtype(tensorlistlist, with_indices)  # type: ignore[return-value, arg-type]
-
-    def _patch_step_function(self) -> None:
-        self._zero_grad_profile_name = (
-            f"Optimizer.zero_grad#{self.__class__.__name__}.zero_grad"
-        )
-        hooked = getattr(self.__class__.step, "hooked", None)
-        if not hooked:
-            self.__class__.step = self.profile_hook_step(self.__class__.step)  # type: ignore[assignment]
-            self.__class__.step.hooked = True  # type: ignore[attr-defined]
 
     def register_step_pre_hook(self, hook: OptimizerPreHook) -> RemovableHandle:
         r"""Register an optimizer step pre hook which will be called before optimizer step.
@@ -682,14 +496,14 @@ class Optimizer:
                 break
         if key == "step":
             if capturable or fused:
-                return value.to(dtype=torch.float32, device=param.device)
+                return value.to(dtype=mindspore.float32)
             else:
                 return value
         else:
             if param.is_floating_point():
-                return value.to(dtype=param.dtype, device=param.device)
+                return value.to(dtype=param.dtype)
             else:
-                return value.to(device=param.device)
+                return value
 
     def register_load_state_dict_pre_hook(
         self,
@@ -787,7 +601,7 @@ class Optimizer:
 
         if len(groups) != len(saved_groups):
             raise ValueError(
-                "loaded state dict has a different number of " "parameter groups"
+                "loaded state dict has a different number of parameter groups"
             )
         param_lens = (len(g["params"]) for g in groups)
         saved_lens = (len(g["params"]) for g in saved_groups)
@@ -849,67 +663,6 @@ class Optimizer:
         for post_hook in self._optimizer_load_state_dict_post_hooks.values():
             post_hook(self)
 
-    def zero_grad(self, set_to_none: bool = True) -> None:
-        r"""Reset the gradients of all optimized :class:`mindspore.Tensor` s.
-
-        Args:
-            set_to_none (bool): instead of setting to zero, set the grads to None.
-                This will in general have lower memory footprint, and can modestly improve performance.
-                However, it changes certain behaviors. For example:
-                1. When the user tries to access a gradient and perform manual ops on it,
-                a None attribute or a Tensor full of 0s will behave differently.
-                2. If the user requests ``zero_grad(set_to_none=True)`` followed by a backward pass, ``.grad``\ s
-                are guaranteed to be None for params that did not receive a gradient.
-                3. ``torch.optim`` optimizers have a different behavior if the gradient is 0 or None
-                (in one case it does the step with a gradient of 0 and in the other it skips
-                the step altogether).
-        """
-        foreach = self.defaults.get("foreach", False) or self.defaults.get(
-            "fused", False
-        )
-
-        if not hasattr(self, "_zero_grad_profile_name"):
-            self._patch_step_function()
-
-        per_device_and_dtype_grads: Optional[
-            DefaultDict[torch.device, DefaultDict[torch.dtype, List[mindspore.Tensor]]]
-        ]
-        if foreach:
-            per_device_and_dtype_grads = defaultdict(lambda: defaultdict(list))
-        else:
-            per_device_and_dtype_grads = None
-
-        with torch.autograd.profiler.record_function(self._zero_grad_profile_name):
-            for group in self.param_groups:
-                for p in group["params"]:
-                    if p.grad is not None:
-                        if set_to_none:
-                            p.grad = None
-                        else:
-                            if p.grad.grad_fn is not None:
-                                p.grad.detach_()
-                            else:
-                                p.grad.requires_grad_(False)
-                            if not foreach or p.grad.is_sparse:
-                                p.grad.zero_()
-                            else:
-                                assert per_device_and_dtype_grads is not None
-                                per_device_and_dtype_grads[p.grad.device][
-                                    p.grad.dtype
-                                ].append(p.grad)
-            if foreach:
-                assert per_device_and_dtype_grads is not None
-                for per_dtype_grads in per_device_and_dtype_grads.values():
-                    for grads in per_dtype_grads.values():
-                        torch._foreach_zero_(grads)
-
-    @overload
-    def step(self, closure: None = ...) -> None:
-        ...
-
-    @overload
-    def step(self, closure: Callable[[], float]) -> float:
-        ...
 
     def step(self, closure: Optional[Callable[[], float]] = None) -> Optional[float]:
         r"""Perform a single optimization step to update parameter.
@@ -954,11 +707,6 @@ class Optimizer:
                     "optimizer can only optimize Tensors, "
                     "but one of the params is " + type(param)
                 )
-            if not self.defaults.get("differentiable", None) and not (
-                param.is_leaf or param.retains_grad
-            ):
-                raise ValueError("can't optimize a non-leaf Tensor")
-
         for name, default in self.defaults.items():
             if default is required and name not in param_group:
                 raise ValueError(

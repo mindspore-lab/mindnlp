@@ -47,7 +47,7 @@ def _get_unpad_data(attention_mask):
     indices = ops.nonzero(attention_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
     cu_seqlens = ops.pad(
-        ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0)
+        ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0)
     )
     return (
         indices,
@@ -197,7 +197,6 @@ class SEWNoLayerNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode="pad",
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -220,7 +219,6 @@ class SEWLayerNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode="pad",
         )
         self.layer_norm = nn.LayerNorm([self.out_conv_dim])
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -249,7 +247,6 @@ class SEWGroupNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode="pad",
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -272,12 +269,11 @@ class SEWPositionalConvEmbedding(nn.Module):
             out_channels=config.hidden_size,
             kernel_size=config.num_conv_pos_embeddings,
             padding=config.num_conv_pos_embeddings // 2,
-            group=config.num_conv_pos_embedding_groups,
+            groups=config.num_conv_pos_embedding_groups,
             stride=config.squeeze_factor,
-            pad_mode="pad",
             bias=True,
         )
-        self.conv = weight_norm(self.conv, dim=2)
+        self.conv = nn.utils.weight_norm(self.conv, dim=2)
 
         self.padding = SEWSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -467,8 +463,8 @@ class SEWAttention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -509,7 +505,7 @@ class SEWAttention(nn.Module):
             )
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -536,7 +532,7 @@ class SEWAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -617,8 +613,8 @@ class SEWSdpaAttention(SEWAttention):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -797,9 +793,7 @@ class SEWEncoder(nn.Module):
                 attention_mask = 1.0 - attention_mask[:, None, None, :].to(
                     dtype=hidden_states.dtype
                 )
-                attention_mask = attention_mask * mindspore.tensor(
-                    finfo(hidden_states.dtype, 'min')
-                )
+                attention_mask = attention_mask * float(ops.finfo(hidden_states.dtype).min)
                 attention_mask = attention_mask.broadcast_to(
                     (
                         attention_mask.shape[0],
@@ -1254,9 +1248,9 @@ class SEWForCTC(SEWPreTrainedModel):
             target_lengths = labels_mask.sum(-1)
 
             # ctc_loss doesn't support fp16
-            log_probs = ops.log_softmax(logits, axis=-1).swapaxes(0, 1)
+            log_probs = F.log_softmax(logits, dim=-1).swapaxes(0, 1)
 
-            loss = ops.ctc_loss(
+            loss = F.ctc_loss(
                 log_probs,
                 labels,
                 input_lengths,
@@ -1359,8 +1353,8 @@ class SEWForSequenceClassification(SEWPreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = ops.stack(hidden_states, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(hidden_states, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
@@ -1381,7 +1375,7 @@ class SEWForSequenceClassification(SEWPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 logits.view(-1, self.config.num_labels), labels.view(-1)
             )
 

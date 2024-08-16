@@ -18,10 +18,11 @@ from typing import Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import Normal, initializer
 
-from mindnlp.utils import get_default_dtype, logging
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import functional as F
+from mindnlp.utils import logging
 
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
@@ -55,7 +56,7 @@ class GPTNeoXJapanesePreTrainedModel(PreTrainedModel):
                     dtype=cell.weight.dtype,
                 )
             )
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
@@ -145,15 +146,15 @@ class GPTNeoXJapaneseAttention(nn.Module):
             seq_len += offset
         cos, sin = self.rotary_emb(value, seq_len=seq_len)
         query, key = apply_rotary_pos_emb(query_rot, key_rot, cos, sin, offset=offset)
-        query = ops.cat((query, query_pass), axis=-1)
-        key = ops.cat((key, key_pass), axis=-1)
+        query = ops.cat((query, query_pass), dim=-1)
+        key = ops.cat((key, key_pass), dim=-1)
 
         # Cache QKV values
         if has_layer_past:
             past_key = layer_past[0]
             past_value = layer_past[1]
-            key = ops.cat((past_key, key), axis=-2)
-            value = ops.cat((past_value, value), axis=-2)
+            key = ops.cat((past_key, key), dim=-2)
+            value = ops.cat((past_value, value), dim=-2)
         present = (key, value) if use_cache else None
 
         # Compute attention
@@ -203,15 +204,15 @@ class GPTNeoXJapaneseAttention(nn.Module):
     def _create_causal_mask(self, key_length, query_length):
         causal_mask = ops.tril(
             ops.ones(
-                (self.max_positions, self.max_positions), dtype=mindspore.bool_
+                (self.max_positions, self.max_positions), dtype=mindspore.int32
             ).reshape(1, 1, self.max_positions, self.max_positions)
-        )
+        ).to(mindspore.bool_)
         return causal_mask[:, :, key_length - query_length : key_length, :key_length]
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
         # q, k, v: [bs, num_attention_heads, seq_len, attn_head_size]
         # compute causal mask from causal mask buffer
-        batch_size, num_attention_heads, query_length, attn_head_size = query.shape
+        batch_size, num_attention_heads, query_length, attn_head_size = query.asnumpy().shape
         key_length = key.shape[-2]
 
         causal_mask = self._create_causal_mask(key_length, query_length)
@@ -247,7 +248,7 @@ class GPTNeoXJapaneseAttention(nn.Module):
             # Apply the attention mask
             attn_scores = attn_scores + attention_mask
 
-        attn_weights = ops.softmax(attn_scores, axis=-1)
+        attn_weights = ops.softmax(attn_scores, dim=-1)
         attn_weights = self.attention_dropout(attn_weights)
         attn_weights = attn_weights.to(value.dtype)
 
@@ -288,7 +289,7 @@ class RotaryEmbedding(nn.Module):
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos()
         self.sin_cached = emb.sin()
 
@@ -305,9 +306,10 @@ class RotaryEmbedding(nn.Module):
 
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
-    x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2 :]
-    return ops.cat((-x2, x1), axis=-1)
+    # x1 = x[..., : x.shape[-1] // 2]
+    # x2 = x[..., x.shape[-1] // 2 :]
+    x1, x2 = ops.split(x, x.shape[-1] // 2, dim=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 def apply_rotary_pos_emb(q, k, cos, sin, offset: int = 0):
@@ -339,7 +341,7 @@ def bias_dropout_add(
     """
     if bias is not None:
         x = x + bias
-    out = ops.dropout(input=x, p=prob, training=training)
+    out = F.dropout(input=x, p=prob, training=training)
     if residual is not None:
         out = residual + out
     return out
@@ -704,7 +706,7 @@ class GPTNeoXJapaneseForCausalLM(GPTNeoXJapanesePreTrainedModel):
             # we are doing next-token prediction; shift prediction scores and input ids by one
             shift_logits = lm_logits[:, :-1, :]
             labels = labels[:, 1:]
-            lm_loss = ops.cross_entropy(
+            lm_loss = F.cross_entropy(
                 shift_logits.reshape(
                     -1,
                     shift_logits.shape[-1],

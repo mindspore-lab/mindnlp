@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================
-"""PyTorch MobileNetV1 model."""
+"""MindSpore MobileNetV1 model."""
 
 from typing import Optional, Union
 
 import mindspore as ms
-from mindnlp.core import nn, ops
-
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithPoolingAndNoAttention, ImageClassifierOutputWithNoAttention
 from ...modeling_utils import PreTrainedModel
@@ -88,18 +88,17 @@ class MobileNetV1ConvLayer(nn.Module):
             kernel_size=kernel_size,
             stride=stride,
             padding=padding,
-            group=groups,
+            groups=groups,
             bias=bias,
-            pad_mode="pad",
         )
 
         if use_normalization:
             self.normalization = nn.BatchNorm2d(
                 num_features=out_channels,
                 eps=config.layer_norm_eps,
-                use_batch_statistics = None,
-                momentum=1 - 0.9997,
-                affine=True
+                momentum=0.9997,
+                affine=True,
+                track_running_stats=True,
             )
         else:
             self.normalization = None
@@ -298,13 +297,13 @@ class MobileNetV1ForImageClassification(MobileNetV1PreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]

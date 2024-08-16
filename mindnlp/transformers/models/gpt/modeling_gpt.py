@@ -21,9 +21,10 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -43,6 +44,7 @@ OPENAI_GPT_PRETRAINED_MODEL_ARCHIVE_LIST = [
     # See all OpenAI GPT models at https://hf-mirror.com/models?filter=openai-gpt
 ]
 
+ACT_FNS = {"relu": nn.ReLU(), "silu": silu, "gelu": gelu_new, "swish": silu}
 
 class Attention(nn.Module):
 
@@ -194,7 +196,7 @@ class Attention(nn.Module):
             # Apply the attention mask
             w = w + attention_mask
 
-        w = ops.softmax(w, axis=-1)
+        w = ops.softmax(w, dim=-1)
         w = self.attn_dropout(w)
 
         # Mask heads if we want to
@@ -909,7 +911,7 @@ class GPTLMHeadModel(GPTPreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + transformer_outputs[1:]
@@ -1109,11 +1111,11 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
 
         lm_loss, mc_loss = None, None
         if mc_labels is not None:
-            mc_loss = ops.cross_entropy(mc_logits.view(-1, mc_logits.shape[-1]), mc_labels.view(-1))
+            mc_loss = F.cross_entropy(mc_logits.view(-1, mc_logits.shape[-1]), mc_labels.view(-1))
         if labels is not None:
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
-            lm_loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            lm_loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         if not return_dict:
             output = (lm_logits, mc_logits) + transformer_outputs[1:]
@@ -1271,10 +1273,7 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
                     "unexpected if using padding tokens in conjunction with `inputs_embeds.`"
                 )
 
-        if isinstance(sequence_lengths, int):
-            pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
-        else:
-            pooled_logits = ops.gather(logits, sequence_lengths, 1, 1)
+        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
 
         loss = None
         if labels is not None:
@@ -1288,13 +1287,13 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output

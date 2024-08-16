@@ -21,10 +21,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -447,7 +448,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx):
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = ops.cumsum(mask, axis=1).astype(mask.dtype) * mask
+    incremental_indices = ops.cumsum(mask, dim=1).astype(mask.dtype) * mask
     return incremental_indices.long() + padding_idx
 
 
@@ -728,13 +729,13 @@ class LongformerSelfAttention(nn.Module):
             )
             # concat to local_attn_probs
             # (batch_size, seq_len, num_heads, extra attention count + 2*window+1)
-            attn_scores = ops.cat((global_key_attn_scores, attn_scores), axis=-1)
+            attn_scores = ops.cat((global_key_attn_scores, attn_scores), dim=-1)
 
             # free memory
             del global_key_attn_scores
 
         attn_probs = ops.softmax(
-            attn_scores, axis=-1, dtype=mindspore.float32
+            attn_scores, dim=-1, dtype=mindspore.float32
         )  # use fp32 for numerical stability
 
         if layer_head_mask is not None:
@@ -751,7 +752,7 @@ class LongformerSelfAttention(nn.Module):
         del attn_scores
 
         # apply dropout
-        attn_probs = ops.dropout(attn_probs, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_probs, p=self.dropout, training=self.training)
 
         value_vectors = value_vectors.view(seq_len, batch_size, self.num_heads, self.head_dim).swapaxes(0, 1)
 
@@ -883,7 +884,7 @@ class LongformerSelfAttention(nn.Module):
 
             chunk_stride = list(hidden_states.stride())
             chunk_stride[1] = chunk_stride[1] // 2
-            return hidden_states.as_strided(size=chunk_size, stride=chunk_stride)
+            return ops.as_strided(hidden_states, size=chunk_size, stride=chunk_stride)
 
         # When exporting to ONNX, use this separate logic
         # have to use slow implementation since as_strided, unfold and 2d-tensor indexing aren't supported (yet) in ONNX export
@@ -1045,7 +1046,7 @@ class LongformerSelfAttention(nn.Module):
             chunked_value_stride[1],
             chunked_value_stride[2],
         )
-        chunked_value = padded_value.as_strided(size=chunked_value_size, stride=chunked_value_stride)
+        chunked_value = ops.as_strided(padded_value, size=chunked_value_size, stride=chunked_value_stride)
 
         chunked_attn_probs = self._pad_and_diagonalize(chunked_attn_probs)
 
@@ -1285,7 +1286,7 @@ class LongformerSelfAttention(nn.Module):
 
         # compute global attn probs
         global_attn_probs_float = ops.softmax(
-            global_attn_scores, axis=-1, dtype=mindspore.float32
+            global_attn_scores, dim=-1, dtype=mindspore.float32
         )  # use fp32 for numerical stability
 
         # apply layer head masking
@@ -1300,7 +1301,7 @@ class LongformerSelfAttention(nn.Module):
                 batch_size * self.num_heads, max_num_global_attn_indices, seq_len
             )
 
-        global_attn_probs = ops.dropout(
+        global_attn_probs = F.dropout(
             global_attn_probs_float.astype(global_attn_scores.dtype), p=self.dropout, training=self.training
         )
 
@@ -2106,7 +2107,7 @@ class LongformerPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -2261,7 +2262,7 @@ class LongformerModel(LongformerPreTrainedModel):
                     dtype=mindspore.int64,
                 )
                 inputs_embeds_padding = self.embeddings(input_ids_padding)
-                inputs_embeds = ops.cat([inputs_embeds, inputs_embeds_padding], axis=-2)
+                inputs_embeds = ops.cat([inputs_embeds, inputs_embeds_padding], dim=-2)
 
             attention_mask = ops.pad(
                 attention_mask, (0, padding_len), value=0
@@ -2557,7 +2558,7 @@ class LongformerForMaskedLM(LongformerPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
@@ -2676,13 +2677,13 @@ class LongformerForSequenceClassification(LongformerPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -2902,8 +2903,8 @@ class LongformerForQuestionAnswering(LongformerPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
@@ -3012,7 +3013,7 @@ class LongformerForTokenClassification(LongformerPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -3102,7 +3103,7 @@ class LongformerForMultipleChoice(LongformerPreTrainedModel):
                     _compute_global_attention_mask(input_ids[:, i], self.config.sep_token_id, before_sep_token=False)
                     for i in range(num_choices)
                 ],
-                axis=1,
+                dim=1,
             )
 
         flat_input_ids = input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None
@@ -3140,7 +3141,7 @@ class LongformerForMultipleChoice(LongformerPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss = F.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]

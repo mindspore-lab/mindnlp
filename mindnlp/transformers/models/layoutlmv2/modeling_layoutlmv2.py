@@ -19,15 +19,14 @@ from typing import Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 
 from mindspore.common.initializer import Normal, initializer, Constant
-from mindspore.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
 
-from mindnlp.transformers.ms_utils import apply_chunking_to_forward
-from mindnlp.utils import logging
-
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
+from ...ms_utils import apply_chunking_to_forward
+from ....utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -133,7 +132,7 @@ class LayoutLMv2Embeddings(nn.Module):
                 h_position_embeddings,
                 w_position_embeddings,
             ],
-            axis=-1,
+            dim=-1,
         )
         return spatial_position_embeddings
 
@@ -223,7 +222,7 @@ class LayoutLMv2SelfAttention(nn.Module):
         """
         if self.fast_qkv:
             qkv = self.qkv_linear(hidden_states)
-            q, k, v = ops.chunk(qkv, 3, axis=-1)
+            q, k, v = ops.chunk(qkv, 3, dim=-1)
             if q.ndimension() == self.q_bias.ndimension():
                 q = q + self.q_bias
                 v = v + self.v_bias
@@ -294,7 +293,7 @@ class LayoutLMv2SelfAttention(nn.Module):
             attention_scores.astype(mindspore.float32), ops.stop_gradient(attention_mask.astype(mindspore.bool_)),
             float("-1e10")
         )
-        attention_probs = ops.softmax(attention_scores, axis=-1, dtype=mindspore.float32).type_as(value_layer)
+        attention_probs = ops.softmax(attention_scores, dim=-1, dtype=mindspore.float32).type_as(value_layer)
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
         attention_probs = self.dropout(attention_probs)
@@ -893,7 +892,7 @@ class LayoutLMv2PreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -933,49 +932,30 @@ class LayoutLMv2VisualBackbone(nn.Module):
             )
         num_channels = len(self.cfg.MODEL.PIXEL_MEAN)
 
-        self.pixel_mean = Parameter(
-            mindspore.Tensor(self.cfg.MODEL.PIXEL_MEAN).reshape((num_channels, 1, 1)),
-            name="pixel_mean",
-            requires_grad=False,
+        self.register_buffer(
+            "pixel_mean",
+            mindspore.Tensor(self.cfg.MODEL.PIXEL_MEAN).view(num_channels, 1, 1),
+            persistent=False,
         )
-        self.pixel_std = Parameter(
-            mindspore.Tensor(self.cfg.MODEL.PIXEL_STD).reshape((num_channels, 1, 1)),
-            name="pixel_std",
-            requires_grad=False,
+        self.register_buffer(
+            "pixel_std", mindspore.Tensor(self.cfg.MODEL.PIXEL_STD).view(num_channels, 1, 1), persistent=False
         )
-
         self.out_feature_key = "p2"
-        self.pool_shape = tuple(config.image_feature_pool_shape[:2])  # (7,7)
+        # if torch.are_deterministic_algorithms_enabled():
+        #     logger.warning("using `AvgPool2d` instead of `AdaptiveAvgPool2d`")
+        #     input_shape = (224, 224)
+        #     backbone_stride = self.backbone.output_shape()[self.out_feature_key].stride
+        #     self.pool = nn.AvgPool2d(
+        #         (
+        #             math.ceil(math.ceil(input_shape[0] / backbone_stride) / config.image_feature_pool_shape[0]),
+        #             math.ceil(math.ceil(input_shape[1] / backbone_stride) / config.image_feature_pool_shape[1]),
+        #         )
+        #     )
+        # else:
+        self.pool = nn.AdaptiveAvgPool2d(tuple(config.image_feature_pool_shape[:2]))
         if len(config.image_feature_pool_shape) == 2:
-            config.image_feature_pool_shape.append(
-                self.backbone.output_shape()[self.out_feature_key].channels
-            )
-
-        input_shape = (224, 224)
-        outsize = config.image_feature_pool_shape[0]  # (7,7)
-        insize = (input_shape[0] + 4 - 1) // 4
-        shape_info = self.backbone.output_shape()[self.out_feature_key]
-        channels = shape_info.channels
-        stride = insize // outsize
-        kernel = insize - (outsize - 1) * stride
-
-        self.weight = mindspore.Tensor(np.ones([channels, 1, kernel, kernel]), dtype=mindspore.float32) / (
-                kernel * kernel)
-        self.conv2d = ops.Conv2D(channels, kernel, stride=stride, group=channels)
-
-    def pool(self, features):
-        """
-        To enhance performance, customize the AdaptiveAvgPool2d layer
-        """
-        features = self.conv2d(features, self.weight)
-        return features
-
-    def freeze(self):
-        """
-        Freeze parameters
-        """
-        for param in self.trainable_params():
-            param.requires_grad = False
+            config.image_feature_pool_shape.append(self.backbone.output_shape()[self.out_feature_key].channels)
+        assert self.backbone.output_shape()[self.out_feature_key].channels == config.image_feature_pool_shape[2]
 
     def forward(self, images):
         """
@@ -1261,8 +1241,8 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
                 visual_bbox_x[1:].broadcast_to(expand_shape),
                 visual_bbox_y[1:].broadcast_to(expand_shape[::-1]).transpose((1, 0)),
             ],
-            axis=-1,
-        ).reshape((expand_shape[0] * expand_shape[1], ops.shape(bbox)[-1]))
+            dim=-1,
+        ).reshape((expand_shape[0] * expand_shape[1], bbox.shape[-1]))
         visual_bbox = visual_bbox.broadcast_to(
             (visual_shape[0], visual_bbox.shape[0], visual_bbox.shape[1])
         )
@@ -1363,14 +1343,14 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         # final_shape = ops.Size(final_shape)
 
         visual_bbox = self._calc_visual_bbox(self.config.image_feature_pool_shape, bbox, final_shape)
-        final_bbox = ops.cat([bbox, visual_bbox], axis=1)
+        final_bbox = ops.cat([bbox, visual_bbox], dim=1)
 
         if attention_mask is None:
             attention_mask = ops.ones(input_shape)
 
         visual_attention_mask = ops.ones(tuple(visual_shape), dtype=mindspore.float32)
         attention_mask = attention_mask.astype(visual_attention_mask.dtype)
-        final_attention_mask = ops.cat([attention_mask, visual_attention_mask], axis=1)
+        final_attention_mask = ops.cat([attention_mask, visual_attention_mask], dim=1)
 
         if token_type_ids is None:
             token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
@@ -1384,7 +1364,7 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
             (input_shape[0], visual_shape[1])
         )
         position_ids = position_ids.astype(visual_position_ids.dtype)
-        final_position_ids = ops.cat([position_ids, visual_position_ids], axis=1)
+        final_position_ids = ops.cat([position_ids, visual_position_ids], dim=1)
 
         if bbox is None:
             bbox = ops.zeros(tuple(list(input_shape) + [4]), dtype=mindspore.int64)
@@ -1402,19 +1382,18 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
             bbox=visual_bbox,
             position_ids=visual_position_ids,
         )
-        final_emb = ops.cat([text_layout_emb, visual_emb], axis=1)
+        final_emb = ops.cat([text_layout_emb, visual_emb], dim=1)
 
         extended_attention_mask = final_attention_mask.unsqueeze(1).unsqueeze(2)
 
         extended_attention_mask = extended_attention_mask.to(dtype=self.dtype)
-        extended_attention_mask = (1.0 - extended_attention_mask) * mindspore.tensor(
-            np.finfo(mindspore.dtype_to_nptype(self.dtype)).min)
+        extended_attention_mask = (1.0 - extended_attention_mask) * float(ops.finfo(self.dtype).min)
 
         if head_mask is not None:
-            if head_mask.dim() == 1:
+            if head_mask.ndim == 1:
                 head_mask = head_mask.unsqueeze(0).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
                 head_mask = head_mask.broadcast_to(self.config.num_hidden_layers, -1, -1, -1, -1)
-            elif head_mask.dim() == 2:
+            elif head_mask.ndim == 2:
                 head_mask = head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
             head_mask_dtype = next(iter(self.parameters_dict().items()))[1].dtype
             head_mask = head_mask.to(dtype=head_mask_dtype)
@@ -1543,7 +1522,7 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
             >>> outputs = model(**encoding, labels=sequence_label)
             ...
             >>> loss, logits = outputs.loss, outputs.logits
-            >>> predicted_idx = logits.argmax(axis=-1).item()
+            >>> predicted_idx = logits.argmax(dim=-1).item()
             >>> predicted_answer = dataset.info.features["label"].names[4]
             >>> predicted_idx, predicted_answer
             (4, 'advertisement')
@@ -1570,8 +1549,8 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
             self.config.image_feature_pool_shape, bbox, final_shape
         )
 
-        visual_position_ids = ops.arange(0, visual_shape[1], dtype=mindspore.int64).repeat(
-            input_shape[0], 1
+        visual_position_ids = ops.arange(0, visual_shape[1], dtype=mindspore.int64).tile(
+            (input_shape[0], 1)
         )
 
         initial_image_embeddings = self.layoutlmv2._calc_img_embeddings(
@@ -1608,7 +1587,7 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
         pooled_final_image_embeddings = final_image_embeddings.mean(axis=1)
         # concatenate with cls_final_output
         sequence_output = ops.cat(
-            [cls_final_output, pooled_initial_image_embeddings, pooled_final_image_embeddings], axis=1
+            [cls_final_output, pooled_initial_image_embeddings, pooled_final_image_embeddings], dim=1
         )
         sequence_output = self.dropout(sequence_output)
         logits = self.classifier(sequence_output)

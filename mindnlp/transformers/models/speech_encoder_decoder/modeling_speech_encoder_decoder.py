@@ -16,15 +16,10 @@
 
 from typing import Optional, Tuple, Union
 
-# import torch
-# from torch import nn
-# from torch.nn import CrossEntropyLoss
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
+from mindnlp.core import nn
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-
 from ...configuration_utils import PretrainedConfig
 from ...modeling_outputs import BaseModelOutput, Seq2SeqLMOutput
 from ...modeling_utils import PreTrainedModel
@@ -553,7 +548,7 @@ class SpeechEncoderDecoderModel(PreTrainedModel):
         loss = None
         if labels is not None:
             logits = decoder_outputs.logits if return_dict else decoder_outputs[0]
-            loss = ops.cross_entropy(logits.reshape(-1, self.decoder.config.vocab_size), labels.reshape(-1))
+            loss = F.cross_entropy(logits.reshape(-1, self.decoder.config.vocab_size), labels.reshape(-1))
 
         if not return_dict:
             if loss is not None:

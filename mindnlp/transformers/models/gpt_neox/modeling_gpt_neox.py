@@ -12,17 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" MindNLP  GPTNeoX model."""
-
+""" MindNLP GPTNeoX model."""
 from typing import Optional, Tuple, Union
 
 from functools import partial
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.utils import logging, get_default_dtype
+from mindnlp.utils import logging
 
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import functional as F
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
@@ -69,7 +69,7 @@ def _get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
     indices = mindspore.nonzero(attention_mask.flatten(), as_tuple=False).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
@@ -95,7 +95,7 @@ class GPTNeoXPreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range, mean=0.0),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = initializer(Normal(sigma=self.config.initializer_range, mean=0.0),
@@ -311,15 +311,15 @@ class GPTNeoXAttention(nn.Module):
             seq_len += layer_past[0].shape[-2]
         cos, sin = self.rotary_emb(value, seq_len=seq_len)
         query, key = apply_rotary_pos_emb(query_rot, key_rot, cos, sin, position_ids)
-        query = ops.cat((query, query_pass.type_as(query)), axis=-1)
-        key = ops.cat((key, key_pass.type_as(key)), axis=-1)
+        query = ops.cat((query, query_pass.type_as(query)), dim=-1)
+        key = ops.cat((key, key_pass.type_as(key)), dim=-1)
 
         # Cache QKV values
         if has_layer_past:
             past_key = layer_past[0]
             past_value = layer_past[1]
-            key = ops.cat((past_key, key), axis=-2)
-            value = ops.cat((past_value, value), axis=-2)
+            key = ops.cat((past_key, key), dim=-2)
+            value = ops.cat((past_value, value), dim=-2)
         present = (key, value) if use_cache else None
 
         # Compute attention
@@ -416,7 +416,7 @@ class GPTNeoXAttention(nn.Module):
             # Apply the attention mask
             attn_scores = attn_scores + attention_mask
 
-        attn_weights = ops.softmax(attn_scores, axis=-1)
+        attn_weights = ops.softmax(attn_scores, dim=-1)
         attn_weights = attn_weights.to(value.dtype)
 
         # Mask heads if we want to
@@ -487,7 +487,7 @@ class GPTNeoXRotaryEmbedding(nn.Module):
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos()
         self.sin_cached = emb.sin()
 
@@ -594,7 +594,7 @@ class GPTNeoXLinearScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos()
         self.sin_cached = emb.sin()
 
@@ -657,7 +657,7 @@ class GPTNeoXDynamicNTKScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos()
         self.sin_cached = emb.sin()
 
@@ -667,7 +667,7 @@ def rotate_half(x):
     # x1 = x[..., : x.shape[-1] // 2]
     # x2 = x[..., x.shape[-1] // 2:]
     x1, x2 = x.tensor_split(2, -1)
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 # Copied from transformers.models.llama.modeling_llama.apply_rotary_pos_emb
@@ -1162,7 +1162,7 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
             # we are doing next-token prediction; shift prediction scores and input ids by one
             shift_logits = lm_logits[:, :-1, :]
             labels = labels[:, 1:]
-            lm_loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), labels.view(-1))
+            lm_loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]
@@ -1218,7 +1218,7 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
         position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1]:]
@@ -1368,13 +1368,13 @@ class GPTNeoXForSequenceClassification(GPTNeoXPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1464,7 +1464,7 @@ class GPTNeoXForTokenClassification(GPTNeoXPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1562,8 +1562,8 @@ class GPTNeoXForQuestionAnswering(GPTNeoXPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions)
-            end_loss = ops.cross_entropy(end_logits, end_positions)
+            start_loss = F.cross_entropy(start_logits, start_positions)
+            end_loss = F.cross_entropy(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

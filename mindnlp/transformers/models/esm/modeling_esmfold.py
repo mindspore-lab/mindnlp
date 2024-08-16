@@ -22,10 +22,10 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, XavierUniform, HeNormal
 
+from mindnlp.core import nn, ops
 from mindnlp.utils import (
     ContextManagers,
     is_scipy_available,
@@ -321,78 +321,26 @@ class EsmFoldLinear(nn.Linear):
 
 
 class EsmFoldLayerNorm(nn.Module):
-
-    """
-    EsmFoldLayerNorm represents a custom layer normalization module with additional trainable parameters for weight and bias.
-    This class inherits from nn.Module and implements the Layer Normalization operation with custom weight and bias parameters.
-
-    Attributes:
-        c_in (int): Number of input channels for the layer normalization operation.
-        eps (float): Epsilon value used in the normalization operation.
-        weight (Parameter): Trainable parameter representing the weights for the normalization operation.
-        bias (Parameter): Trainable parameter representing the bias for the normalization operation.
-        layer_norm (ops.LayerNorm): Layer normalization operation with custom weight and bias parameters.
-
-    Methods:
-        __init__:
-            Initializes the EsmFoldLayerNorm instance with the specified input channels and epsilon value.
-
-        forward:
-            Applies the layer normalization operation with custom weight and bias parameters to the input tensor x.
-
-    Returns:
-        Tensor: The normalized output tensor after applying the layer normalization operation with custom parameters.
-    """
     def __init__(self, c_in, eps=1e-5):
-        """
-        Initialize the EsmFoldLayerNorm class.
-
-        Args:
-            self: The instance of the EsmFoldLayerNorm class.
-            c_in (int): The number of input channels for the layer normalization. Must be a positive integer.
-            eps (float, optional): The epsilon value for numerical stability in layer normalization. Default is 1e-05.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If c_in is not a positive integer.
-            ValueError: If eps is not a valid epsilon value (not a float).
-        """
         super().__init__()
 
         self.c_in = (c_in,)
         self.eps = eps
 
-        self.weight = Parameter(ops.ones(c_in))
-        self.bias = Parameter(ops.zeros(c_in))
-        self.layer_norm = ops.LayerNorm(begin_norm_axis=-1,
-                                        begin_params_axis=-1,
-                                        epsilon=eps)
+        self.weight = nn.Parameter(ops.ones(c_in))
+        self.bias = nn.Parameter(ops.zeros(c_in))
+
     def forward(self, x):
-        """
-        Constructs a normalized layer using the EsmFold algorithm.
-
-        Args:
-            self (EsmFoldLayerNorm): An instance of the EsmFoldLayerNorm class.
-            x: The input tensor to be normalized. Should have shape (batch_size, features).
-
-        Returns:
-            None: This method does not return a value.
-                The normalized layer is stored within the instance of the EsmFoldLayerNorm class.
-
-        Raises:
-            None.
-        """
-        y, _, _ = self.layer_norm(x, self.weight, self.bias)
-        return y
+        d = x.dtype
+        out = nn.functional.layer_norm(x, self.c_in, self.weight, self.bias, self.eps)
+        return out
 
 
 def softmax_no_cast(t: mindspore.Tensor, dim: int = -1) -> mindspore.Tensor:
     """
     Softmax, but without automatic casting to fp32 when the input is of type bfloat16
     """
-    s = ops.softmax(t, axis=dim)
+    s = ops.softmax(t, dim=dim)
 
     return s
 
@@ -1105,7 +1053,7 @@ class EsmFoldPreTrainedModel(EsmPreTrainedModel):
                 cell.weight.set_data(initializer(XavierUniform(), cell.weight.shape, cell.weight.dtype))
             elif cell.init == "gating":
                 cell.weight[:] = 0
-                if cell.bias:
+                if cell.bias is not None:
                     cell.bias[:] = 1
             elif cell.init == "normal":
                 cell.weight.set_data(initializer(HeNormal(nonlinearity="linear"), cell.weight.shape, cell.weight.dtype))
@@ -1240,7 +1188,7 @@ class EsmFoldSelfAttention(nn.Module):
             mask = mask[:, None, None]
             a = a.masked_fill(mask == False, -np.inf)
 
-        a = ops.softmax(a, axis=-1)
+        a = ops.softmax(a, dim=-1)
 
         y = ops.einsum("...hqk,...hkc->...qhc", a, v)
         y = y.reshape(*y.shape[:2], -1)
@@ -1387,7 +1335,7 @@ class EsmFoldSequenceToPair(nn.Module):
         prod = q[:, None, :, :] * k[:, :, None, :]
         diff = q[:, None, :, :] - k[:, :, None, :]
 
-        x = ops.cat([prod, diff], axis=-1)
+        x = ops.cat([prod, diff], dim=-1)
         x = self.o_proj(x)
 
         return x
@@ -1517,7 +1465,7 @@ class EsmFoldResidueMLP(nn.Module):
         """
         super().__init__()
 
-        self.mlp = nn.SequentialCell(
+        self.mlp = nn.Sequential(
             nn.LayerNorm(embed_dim),
             nn.Linear(embed_dim, inner_dim),
             nn.ReLU(),
@@ -1838,7 +1786,7 @@ def get_axial_mask(mask):
     if len(mask.shape) != 2:
         raise ValueError(f"`mask` should be a 2d-tensor, got {len(mask.shape)} dims.")
     batch_dim, seq_dim = mask.shape
-    m = mask.unsqueeze(1).expand(batch_dim, seq_dim, seq_dim)
+    m = mask.unsqueeze(1).broadcast_to((batch_dim, seq_dim, seq_dim))
     m = m.reshape(batch_dim * seq_dim, seq_dim)
     return m
 
@@ -2152,8 +2100,8 @@ class EsmFoldInvariantPointAttention(nn.Module):
         concat_out_dim = config.num_heads_ipa * (c_z + config.ipa_dim + config.num_v_points * 4)
         self.linear_out = EsmFoldLinear(concat_out_dim, c_s, init="final")
 
-        self.softmax = nn.Softmax(axis=-1)
-        self.softplus = ops.softplus
+        self.softmax = nn.Softmax(dim=-1)
+        self.softplus = nn.Softplus()
 
     def forward(
         self,
@@ -2191,15 +2139,15 @@ class EsmFoldInvariantPointAttention(nn.Module):
         kv = kv.view(kv.shape[:-1] + (self.num_heads, -1))
 
         # [*, N_res, H, C_hidden]
-        k, v = ops.split(kv, self.hidden_dim, axis=-1)
+        k, v = ops.split(kv, self.hidden_dim, dim=-1)
 
         # [*, N_res, H * P_q * 3]
         q_pts = self.linear_q_points(s)
 
         # This is kind of clunky, but it's how the original does it
         # [*, N_res, H * P_q, 3]
-        q_pts = ops.split(q_pts, q_pts.shape[-1] // 3, axis=-1)
-        q_pts = ops.stack(q_pts, axis=-1)
+        q_pts = ops.split(q_pts, q_pts.shape[-1] // 3, dim=-1)
+        q_pts = ops.stack(q_pts, dim=-1)
         q_pts = r[..., None].apply(q_pts)
 
         # [*, N_res, H, P_q, 3]
@@ -2209,15 +2157,15 @@ class EsmFoldInvariantPointAttention(nn.Module):
         kv_pts = self.linear_kv_points(s)
 
         # [*, N_res, H * (P_q + P_v), 3]
-        kv_pts = ops.split(kv_pts, kv_pts.shape[-1] // 3, axis=-1)
-        kv_pts = ops.stack(kv_pts, axis=-1)
+        kv_pts = ops.split(kv_pts, kv_pts.shape[-1] // 3, dim=-1)
+        kv_pts = ops.stack(kv_pts, dim=-1)
         kv_pts = r[..., None].apply(kv_pts)
 
         # [*, N_res, H, (P_q + P_v), 3]
         kv_pts = kv_pts.view(kv_pts.shape[:-2] + (self.num_heads, -1, 3))
 
         # [*, N_res, H, P_q/P_v, 3]
-        k_pts, v_pts = ops.split(kv_pts, [self.num_qk_points, self.num_v_points], axis=-2)
+        k_pts, v_pts = ops.split(kv_pts, [self.num_qk_points, self.num_v_points], dim=-2)
 
         ##########################
         # Compute attention scores
@@ -2289,7 +2237,7 @@ class EsmFoldInvariantPointAttention(nn.Module):
 
         # [*, N_res, C_s]
         s = self.linear_out(
-            ops.cat((o, *ops.unbind(o_pt, dim=-1), o_pt_norm, o_pair), axis=-1).to(dtype=z[0].dtype)
+            ops.cat((o, *ops.unbind(o_pt, dim=-1), o_pt_norm, o_pair), dim=-1).to(dtype=z[0].dtype)
         )
 
         return s
@@ -2993,7 +2941,7 @@ class EsmForProteinFolding(EsmPreTrainedModel):
         trunk_config = self.config.esmfold_config.trunk
         c_s = trunk_config.sequence_state_dim
         c_z = trunk_config.pairwise_state_dim
-        self.esm_s_mlp = nn.SequentialCell(
+        self.esm_s_mlp = nn.Sequential(
             nn.LayerNorm(self.esm_feats),
             nn.Linear(self.esm_feats, c_s),
             nn.ReLU(),
@@ -3019,7 +2967,7 @@ class EsmForProteinFolding(EsmPreTrainedModel):
         self.lm_head = nn.Linear(c_s, self.n_tokens_embed)
         self.lddt_bins = 50
         structure_module_config = trunk_config.structure_module
-        self.lddt_head = nn.SequentialCell(
+        self.lddt_head = nn.Sequential(
             nn.LayerNorm(structure_module_config.sequence_dim),
             nn.Linear(structure_module_config.sequence_dim, self.config.esmfold_config.lddt_head_hid_dim),
             nn.Linear(self.config.esmfold_config.lddt_head_hid_dim, self.config.esmfold_config.lddt_head_hid_dim),
@@ -3233,9 +3181,9 @@ class EsmForProteinFolding(EsmPreTrainedModel):
             return esm_s
 
         bosi, eosi = self.esm_dict_cls_idx, self.esm_dict_eos_idx
-        bos = esmaa.new_ones((B, 1)) * bosi
-        eos = esmaa.new_ones((B, 1)) * self.esm_dict_padding_idx
-        esmaa = ops.cat([bos, esmaa, eos], axis=1)
+        bos = ops.ones((B, 1), dtype=esmaa.dtype) * bosi
+        eos = ops.ones((B, 1), dtype=esmaa.dtype) * self.esm_dict_padding_idx
+        esmaa = ops.cat([bos, esmaa, eos], dim=1)
         # Use the first padding index as eos during inference.
         esmaa[ops.arange(B), (esmaa != 1).sum(1)] = eosi
 
@@ -3243,7 +3191,7 @@ class EsmForProteinFolding(EsmPreTrainedModel):
         # Because we do not support use_esm_attn_map in the HF port as it is not used in any public models,
         # esm_z is always None
         esm_hidden_states = self.esm(esmaa, attention_mask=esmaa != 1, output_hidden_states=True)["hidden_states"]
-        esm_s = ops.stack(esm_hidden_states, axis=2)
+        esm_s = ops.stack(esm_hidden_states, dim=2)
 
         esm_s = esm_s[:, 1:-1]  # B, L, nLayers, C
 
@@ -3317,7 +3265,7 @@ class EsmForProteinFolding(EsmPreTrainedModel):
         )  # B=1 x L
         mask = collate_dense_tensors([aatype.new_ones(len(seq)) for seq in lst])
         position_ids = (
-            ops.arange(aatype.shape[1]).expand(len(lst), -1)
+            ops.arange(aatype.shape[1]).broadcast_to((len(lst), -1))
             if position_ids is None
             else position_ids
         )

@@ -19,11 +19,11 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Optional, Tuple, Union
 
-import mindspore as ms
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
+import mindspore
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ....utils import is_scipy_available
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -58,7 +58,7 @@ def _two_dim_matmul(x, matrix_dim_one, matrix_dim_two):
     """Applies 2D matrix multiplication to 3D input arrays."""
     seq_length = x.shape[1]
     matrix_dim_one = matrix_dim_one[:seq_length, :seq_length]
-    x = x.type(ms.complex64)
+    x = x.type(mindspore.complex64)
     return ops.einsum("bij,jk,ni->bnk", x, matrix_dim_two, matrix_dim_one)
 
 
@@ -113,7 +113,7 @@ class FNetEmbeddings(nn.Module):
             (1, -1)
         )
 
-        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=ms.int64)
+        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
 
     def forward(
         self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None
@@ -135,11 +135,11 @@ class FNetEmbeddings(nn.Module):
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
                 buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to(
-                    input_shape[0], seq_length
+                    (input_shape[0], seq_length)
                 )
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=ms.int64)
+                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -165,11 +165,11 @@ class FNetBasicFourierTransform(nn.Module):
             self.fourier_transform = partial(ops.fftn, dim=(1, 2))
         elif config.max_position_embeddings <= 4096:
             if is_scipy_available():
-                self.dft_mat_hidden = ms.tensor(
-                    linalg.dft(config.hidden_size), dtype=ms.complex64
+                self.dft_mat_hidden = mindspore.tensor(
+                    linalg.dft(config.hidden_size), dtype=mindspore.complex64
                 )
-                self.dft_mat_seq = ms.tensor(
-                    linalg.dft(config.tpu_short_seq_length), dtype=ms.complex64
+                self.dft_mat_seq = mindspore.tensor(
+                    linalg.dft(config.tpu_short_seq_length), dtype=mindspore.complex64
                 )
                 self.fourier_transform = partial(
                     two_dim_matmul,
@@ -190,7 +190,7 @@ class FNetBasicFourierTransform(nn.Module):
         # Interested users can modify the code to use vmap from the nightly versions, getting the vmap from here:
         # https://pytorch.org/docs/master/generated/torch.vmap.html. Note that fourier transform methods will need
         # change accordingly.
-        hidden_states = hidden_states.astype(ms.complex64)
+        hidden_states = hidden_states.astype(mindspore.complex64)
         outputs = self.fourier_transform(hidden_states)
         return (outputs,)
 
@@ -215,7 +215,7 @@ class FNetFourierTransform(nn.Module):
 
     def forward(self, hidden_states):
         self_outputs = self.self(hidden_states)
-        fourier_output = self.output(self_outputs[0].astype(ms.float32), hidden_states)
+        fourier_output = self.output(self_outputs[0].astype(mindspore.float32), hidden_states)
         # print("1111111111111", hidden_states)
         outputs = (fourier_output,)
         return outputs
@@ -231,7 +231,7 @@ class FNetIntermediate(nn.Module):
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
@@ -247,7 +247,7 @@ class FNetOutput(nn.Module):
         )
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
@@ -327,7 +327,7 @@ class FNetPooler(nn.Module):
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -349,7 +349,7 @@ class FNetPredictionHeadTransform(nn.Module):
             [config.hidden_size], eps=config.layer_norm_eps
         )
 
-    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
@@ -365,7 +365,7 @@ class FNetLMPredictionHead(nn.Module):
         # an output-only bias for each token.
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
 
-        self.bias = ms.Parameter(ops.zeros(config.vocab_size))
+        self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
         self.decoder.bias = self.bias
 
     def forward(self, hidden_states):
@@ -454,8 +454,8 @@ class FNetPreTrainedModel(PreTrainedModel):
                     module.weight.dtype,
                 )
         elif isinstance(module, nn.LayerNorm):
-            module.bias.initialize("zeros")
-            module.weight.data.fill(1.0)
+            ops.initialize(module.bias, "zeros")
+            ops.initialize(module.weight, "ones")
 
 
 @dataclass
@@ -464,24 +464,24 @@ class FNetForPreTrainingOutput(ModelOutput):
     Output type of [`FNetForPreTraining`].
 
     Args:
-        loss (*optional*, returned when `labels` is provided, `ms.Tensor` of shape `(1,)`):
+        loss (*optional*, returned when `labels` is provided, `mindspore.Tensor` of shape `(1,)`):
             Total loss as the sum of the masked language modeling loss and the next sequence prediction
             (classification) loss.
-        prediction_logits (`ms.Tensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
+        prediction_logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
             Prediction scores of the language modeling head (scores for each vocabulary token before SoftMax).
-        seq_relationship_logits (`ms.Tensor` of shape `(batch_size, 2)`):
+        seq_relationship_logits (`mindspore.Tensor` of shape `(batch_size, 2)`):
             Prediction scores of the next sequence prediction (classification) head (scores of True/False continuation
             before SoftMax).
-        hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `ms.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the model at the output of each layer
             plus the initial embedding outputs.
     """
 
-    loss: Optional[ms.Tensor] = None
-    prediction_logits: ms.Tensor = None
-    seq_relationship_logits: ms.Tensor = None
-    hidden_states: Optional[Tuple[ms.Tensor]] = None
+    loss: Optional[mindspore.Tensor] = None
+    prediction_logits: mindspore.Tensor = None
+    seq_relationship_logits: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
 
 
 FNET_START_DOCSTRING = r"""
@@ -497,14 +497,14 @@ FNET_START_DOCSTRING = r"""
 
 FNET_INPUTS_DOCSTRING = r"""
     Args:
-        input_ids (`ms.Tensor` of shape `({0})`):
+        input_ids (`mindspore.Tensor` of shape `({0})`):
             Indices of input sequence tokens in the vocabulary.
 
             Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
             [`PreTrainedTokenizer.__call__`] for details.
 
             [What are input IDs?](../glossary#input-ids)
-        token_type_ids (`ms.Tensor` of shape `({0})`, *optional*):
+        token_type_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
             Segment token indices to indicate first and second portions of the inputs. Indices are selected in `[0,
             1]`:
 
@@ -512,13 +512,13 @@ FNET_INPUTS_DOCSTRING = r"""
             - 1 corresponds to a *sentence B* token.
 
             [What are token type IDs?](../glossary#token-type-ids)
-        position_ids (`ms.Tensor` of shape `({0})`, *optional*):
+        position_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
             Indices of positions of each input sequence tokens in the position embeddings. Selected in the range `[0,
             config.max_position_embeddings - 1]`.
 
             [What are position IDs?](../glossary#position-ids)
 
-        inputs_embeds (`ms.Tensor` of shape `({0}, hidden_size)`, *optional*):
+        inputs_embeds (`mindspore.Tensor` of shape `({0}, hidden_size)`, *optional*):
             Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation. This
             is useful if you want more control over how to convert *input_ids* indices into associated vectors than the
             model's internal embedding lookup matrix.
@@ -558,10 +558,10 @@ class FNetModel(FNetPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, BaseModelOutput]:
@@ -600,12 +600,12 @@ class FNetModel(FNetPreTrainedModel):
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
                 buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(
-                    batch_size, seq_length
+                buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to(
+                    (batch_size, seq_length)
                 )
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = ops.zeros(input_shape, dtype=ms.int64)
+                token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
         embedding_output = self.embeddings(
             input_ids=input_ids,
@@ -658,21 +658,21 @@ class FNetForPreTraining(FNetPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
-        next_sentence_label: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        next_sentence_label: Optional[mindspore.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, FNetForPreTrainingOutput]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
             config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
-        next_sentence_label (`ms.Tensor` of shape `(batch_size,)`, *optional*):
+        next_sentence_label (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the next sequence prediction (classification) loss. Input should be a sequence pair
             (see `input_ids` docstring) Indices should be in `[0, 1]`:
 
@@ -716,10 +716,10 @@ class FNetForPreTraining(FNetPreTrainedModel):
 
         total_loss = None
         if labels is not None and next_sentence_label is not None:
-            masked_lm_loss = ops.cross_entropy(
+            masked_lm_loss = F.cross_entropy(
                 prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
             )
-            next_sentence_loss = ops.cross_entropy(
+            next_sentence_loss = F.cross_entropy(
                 seq_relationship_score.view(-1, 2), next_sentence_label.view(-1)
             )
             total_loss = masked_lm_loss + next_sentence_loss
@@ -760,16 +760,16 @@ class FNetForMaskedLM(FNetPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MaskedLMOutput]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
             config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
@@ -792,7 +792,7 @@ class FNetForMaskedLM(FNetPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(
+            masked_lm_loss = F.cross_entropy(
                 prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
             )
 
@@ -821,17 +821,17 @@ class FNetForNextSentencePrediction(FNetPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         **kwargs,
     ) -> Union[Tuple, NextSentencePredictorOutput]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the next sequence prediction (classification) loss. Input should be a sequence pair
             (see `input_ids` docstring). Indices should be in `[0, 1]`:
 
@@ -851,7 +851,7 @@ class FNetForNextSentencePrediction(FNetPreTrainedModel):
         >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
         >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
         >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
-        >>> outputs = model(**encoding, labels=ms.Tensor([1]))
+        >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
         >>> logits = outputs.logits
         >>> assert logits[0, 0] < logits[0, 1]  # next sentence was random
         ```"""
@@ -883,7 +883,7 @@ class FNetForNextSentencePrediction(FNetPreTrainedModel):
 
         next_sentence_loss = None
         if labels is not None:
-            next_sentence_loss = ops.cross_entropy(
+            next_sentence_loss = F.cross_entropy(
                 seq_relationship_scores.view(-1, 2), labels.view(-1)
             )
 
@@ -916,16 +916,16 @@ class FNetForSequenceClassification(FNetPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
@@ -952,22 +952,22 @@ class FNetForSequenceClassification(FNetPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype in (ms.int64, ms.int32)):
+                elif self.num_labels > 1 and (labels.dtype in (mindspore.int64, mindspore.int32)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(
+                loss = F.cross_entropy(
                     logits.view(-1, self.num_labels), labels.view(-1)
                 )
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -990,16 +990,16 @@ class FNetForMultipleChoice(FNetPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MultipleChoiceModelOutput]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
             num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
             `input_ids` above)
@@ -1047,7 +1047,7 @@ class FNetForMultipleChoice(FNetPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss = F.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1073,16 +1073,16 @@ class FNetForTokenClassification(FNetPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = (
@@ -1106,7 +1106,7 @@ class FNetForTokenClassification(FNetPreTrainedModel):
         loss = None
         if labels is not None:
             # Only keep active parts of the loss
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1131,21 +1131,21 @@ class FNetForQuestionAnswering(FNetPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        start_positions: Optional[ms.Tensor] = None,
-        end_positions: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        start_positions: Optional[mindspore.Tensor] = None,
+        end_positions: Optional[mindspore.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`ms.Tensor` of shape `(batch_size,)`, *optional*):
+        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for position (index) of the start of the labelled span for computing the token classification loss.
             Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
             are not taken into account for computing the loss.
-        end_positions (`ms.Tensor` of shape `(batch_size,)`, *optional*):
+        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for position (index) of the end of the labelled span for computing the token classification loss.
             Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
             are not taken into account for computing the loss.
@@ -1182,10 +1182,10 @@ class FNetForQuestionAnswering(FNetPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(
+            start_loss = F.cross_entropy(
                 start_logits, start_positions, ignore_index=ignored_index
             )
-            end_loss = ops.cross_entropy(
+            end_loss = F.cross_entropy(
                 end_logits, end_positions, ignore_index=ignored_index
             )
             total_loss = (start_loss + end_loss) / 2

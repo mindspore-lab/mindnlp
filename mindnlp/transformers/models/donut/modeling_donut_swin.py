@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Donut Swin Transformer model.
+"""MindSpore Donut Swin Transformer model.
 
 This implementation is identical to a regular Swin Transformer, without final layer norm on top of the final hidden
 states."""
@@ -23,10 +23,10 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, meshgrid, prune_linear_layer
@@ -195,7 +195,7 @@ class DonutSwinEmbeddings(nn.Module):
             recompute_scale_factor=True
         )
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
-        return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), axis=1)
+        return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), dim=1)
 
     def forward(
         self,
@@ -442,7 +442,7 @@ class DonutSwinSelfAttention(nn.Module):
             attention_scores = attention_scores.view(-1, self.num_attention_heads, dim, dim)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -626,7 +626,7 @@ class DonutSwinLayer(nn.Module):
         _, height_pad, width_pad, _ = hidden_states.shape
         # cyclic shift
         if self.shift_size > 0:
-            shifted_hidden_states = ms.Tensor(ms.numpy.roll(hidden_states, shift=(-self.shift_size, -self.shift_size), axis=(1, 2)))
+            shifted_hidden_states = ops.roll(hidden_states, shifts=(-self.shift_size, -self.shift_size), dims=(1, 2))
         else:
             shifted_hidden_states = hidden_states
 
@@ -649,7 +649,7 @@ class DonutSwinLayer(nn.Module):
         # reverse cyclic shift
         if self.shift_size > 0:
             # attention_windows = torch.roll(shifted_windows, shifts=(self.shift_size, self.shift_size), dims=(1, 2))4
-            attention_windows = ms.Tensor(ms.numpy.roll(shifted_windows, shift=(self.shift_size, self.shift_size), axis=(1, 2)))
+            attention_windows = ops.roll(shifted_windows, shifts=(self.shift_size, self.shift_size), dims=(1, 2))
         else:
             attention_windows = shifted_windows
 

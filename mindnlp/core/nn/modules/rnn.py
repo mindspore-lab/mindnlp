@@ -15,10 +15,9 @@
 """RNN operators module, include RNN, GRU."""
 import math
 import warnings
-import numpy as np
 
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.operations._rl_inner_ops import CudnnGRU
 from mindspore.ops import DynamicGRUV2, DynamicRNN, ReverseV2, ReverseSequence
@@ -28,6 +27,7 @@ from mindspore.nn.layer.rnn_cells import _rnn_relu_cell, _rnn_tanh_cell, _gru_ce
 from .module import Module
 from .dropout import Dropout
 from ... import ops
+from .. import init
 
 
 __all__ = ['LSTM', 'GRU', 'RNN']
@@ -249,9 +249,9 @@ class _DynamicLSTMCPUGPU(Module):
                     w_ih.view(-1, 1, 1),
                     w_hh.view(-1, 1, 1)
                 ))
-                bias = False
+                has_bias = False
             else:
-                bias = True
+                has_bias = True
                 if self.is_gpu:
                     weights = ops.concat((
                         w_ih.view(-1, 1, 1),
@@ -266,7 +266,7 @@ class _DynamicLSTMCPUGPU(Module):
                         w_hh.view(-1, 1, 1),
                         bias.view(-1, 1, 1)
                     ))
-            _lstm = _get_cache_prim(LSTMOP)(input_size, hidden_size, 1, bias, False, 0.0)
+            _lstm = _get_cache_prim(LSTMOP)(input_size, hidden_size, 1, has_bias, False, 0.0)
             output, h_n, c_n, _, _ = _lstm(
                 x,
                 h_0[0].unsqueeze(0),
@@ -320,7 +320,8 @@ class _RNNBase(Module):
     '''Basic class for RNN operators'''
 
     def __init__(self, mode, input_size, hidden_size, num_layers=1, bias=True,
-                 batch_first=False, dropout=0., bidirectional=False, dtype=mindspore.float32):
+                 batch_first=False, dropout=0., bidirectional=False, dtype=None):
+        factory_kwargs = {'dtype': dtype}
         super().__init__()
 
         if not 0 <= dropout < 1:
@@ -375,21 +376,15 @@ class _RNNBase(Module):
                 layer_input_size = input_size if layer == 0 else hidden_size * num_directions
                 suffix = '_reverse' if direction == 1 else ''
 
-                w_ih = Parameter(
-                    Tensor(np.random.uniform(-stdv, stdv, (gate_size, layer_input_size)).astype(np.float32),
-                           dtype=dtype), name='weight_ih_l{}{}'.format(layer, suffix))
-                w_hh = Parameter(
-                    Tensor(np.random.uniform(-stdv, stdv, (gate_size, hidden_size)).astype(np.float32),
-                           dtype=dtype), name='weight_hh_l{}{}'.format(layer, suffix))
+                w_ih = Parameter(ops.empty((gate_size, layer_input_size), **factory_kwargs))
+                w_hh = Parameter(ops.empty((gate_size, hidden_size), **factory_kwargs))
                 self.w_ih_list.append(w_ih)
                 self.w_hh_list.append(w_hh)
                 if bias:
-                    b_ih = Parameter(
-                        Tensor(np.random.uniform(-stdv, stdv, (gate_size)).astype(np.float32), dtype=dtype),
-                        name='bias_ih_l{}{}'.format(layer, suffix))
-                    b_hh = Parameter(
-                        Tensor(np.random.uniform(-stdv, stdv, (gate_size)).astype(np.float32), dtype=dtype),
-                        name='bias_hh_l{}{}'.format(layer, suffix))
+                    b_ih = Parameter(ops.empty(gate_size, **factory_kwargs))
+                    # Second bias vector included for CuDNN compatibility. Only one
+                    # bias vector is needed in standard definition.
+                    b_hh = Parameter(ops.empty(gate_size, **factory_kwargs))
                     self.b_ih_list.append(b_ih)
                     self.b_hh_list.append(b_hh)
 
@@ -406,7 +401,12 @@ class _RNNBase(Module):
 
                 for name, param in zip(param_names, layer_params):
                     setattr(self, name, param)
+        self.reset_parameters()
 
+    def reset_parameters(self) -> None:
+        stdv = 1.0 / math.sqrt(self.hidden_size) if self.hidden_size > 0 else 0
+        for weight in self.parameters():
+            init.uniform_(weight, -stdv, stdv)
 
     def _stacked_bi_dynamic_rnn(self, x, h, seq_length):
         """stacked bidirectional dynamic_rnn"""

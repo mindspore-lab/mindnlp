@@ -1,9 +1,11 @@
 """sparse"""
 from typing import Optional
-import numpy as np
-import mindspore
-from mindspore import ops, Tensor, Parameter
+from mindspore import Tensor, Parameter
 from .module import Module
+from .. import functional as F
+from .. import init
+from ... import ops
+
 
 class Embedding(Module):
     r"""A simple lookup table that stores embeddings of a fixed dictionary and size.
@@ -29,7 +31,8 @@ class Embedding(Module):
     def __init__(self, num_embeddings: int, embedding_dim: int, padding_idx: Optional[int] = None,
                  max_norm: Optional[float] = None, norm_type: float = 2., scale_grad_by_freq: bool = False,
                  sparse: bool = False, _weight: Optional[Tensor] = None, _freeze: bool = False,
-                 device=None, dtype=None) -> None:
+                 dtype=None) -> None:
+        factory_kwargs = {'dtype': dtype}
         super().__init__()
         self.num_embeddings = num_embeddings
         self.embedding_dim = embedding_dim
@@ -44,24 +47,28 @@ class Embedding(Module):
         self.norm_type = norm_type
         self.scale_grad_by_freq = scale_grad_by_freq
         if _weight is None:
-            weight_np = np.random.normal(0.0, 1.0, size=(num_embeddings, embedding_dim))
-            # fill_padding_idx_with_zero
-            weight_np[self.padding_idx] = 0
-
-            self.weight = Parameter(Tensor(weight_np, mindspore.float32), requires_grad=not _freeze)
+            self.weight = Parameter(ops.empty((num_embeddings, embedding_dim), **factory_kwargs),
+                                    requires_grad=not _freeze)
+            self.reset_parameters()
         else:
             assert list(_weight.shape) == [num_embeddings, embedding_dim], \
                 'Shape of weight does not match num_embeddings and embedding_dim'
             self.weight = Parameter(_weight, requires_grad=not _freeze)
 
         self.sparse = sparse
-        self.gather = ops.Gather()
-        self.embedding = getattr(ops, 'embedding', None)
+
+    def reset_parameters(self) -> None:
+        init.normal_(self.weight)
+        self._fill_padding_idx_with_zero()
+
+    def _fill_padding_idx_with_zero(self) -> None:
+        if self.padding_idx is not None:
+            self.weight[self.padding_idx] = 0
 
     def forward(self, input: Tensor) -> Tensor:
-        if self.embedding is not None:
-            return self.embedding(input, self.weight, self.padding_idx, self.max_norm, self.norm_type, self.scale_grad_by_freq)
-        return ops.gather(self.weight, input, 0)
+        return F.embedding(
+            input, self.weight, self.padding_idx, self.max_norm,
+            self.norm_type, self.scale_grad_by_freq)
 
     def extra_repr(self) -> str:
         s = '{num_embeddings}, {embedding_dim}'

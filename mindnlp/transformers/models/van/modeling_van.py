@@ -19,9 +19,10 @@ from collections import OrderedDict
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutputWithNoAttention,
@@ -235,7 +236,7 @@ class VanMlpLayer(nn.Module):
         """
         super().__init__()
         self.in_dense = nn.Conv2d(in_channels, hidden_size, kernel_size=1)
-        self.depth_wise = nn.Conv2d(hidden_size, hidden_size, kernel_size=3, padding=1, group=hidden_size)
+        self.depth_wise = nn.Conv2d(hidden_size, hidden_size, kernel_size=3, padding=1, groups=hidden_size)
         self.activation = ACT2FN[hidden_act]
         self.dropout1 = nn.Dropout(dropout_rate)
         self.out_dense = nn.Conv2d(hidden_size, out_channels, kernel_size=1)
@@ -284,9 +285,9 @@ class VanLargeKernelAttention(nn.Module):
             None.
         """
         super().__init__()
-        self.depth_wise = nn.Conv2d(hidden_size, hidden_size, kernel_size=5, padding=2, group=hidden_size)
+        self.depth_wise = nn.Conv2d(hidden_size, hidden_size, kernel_size=5, padding=2, groups=hidden_size)
         self.depth_wise_dilated = nn.Conv2d(
-            hidden_size, hidden_size, kernel_size=7, dilation=3, padding=9, group=hidden_size
+            hidden_size, hidden_size, kernel_size=7, dilation=3, padding=9, groups=hidden_size
         )
         self.point_wise = nn.Conv2d(hidden_size, hidden_size, kernel_size=1)
 
@@ -718,10 +719,10 @@ class VanPreTrainedModel(PreTrainedModel):
             nn.init.constant_(module.weight, 1.0)
         elif isinstance(module, nn.Conv2d):
             fan_out = module.kernel_size[0] * module.kernel_size[1] * module.out_channels
-            fan_out //= module.group
-            module.weight.data.normal_(0, math.sqrt(2.0 / fan_out))
+            fan_out //= module.groups
+            nn.init.normal_(module.weight, 0, math.sqrt(2.0 / fan_out))
             if module.bias is not None:
-                module.bias.data.zero_()
+                nn.init.zeros_(module.bias)
 
 
 class VanModel(VanPreTrainedModel):
@@ -913,13 +914,13 @@ class VanForImageClassification(VanPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.config.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]

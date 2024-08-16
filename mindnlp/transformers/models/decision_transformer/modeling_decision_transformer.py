@@ -19,8 +19,9 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
 from mindnlp.utils import (
     ModelOutput,
     logging
@@ -41,7 +42,7 @@ class DecisionTransformerGPT2Attention(nn.Module):
         super().__init__()
 
         max_positions = config.max_position_embeddings
-        self.bias = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.bool_)).view(
+        self.bias = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.int32)).to(mindspore.bool_).view(
                 1, 1, max_positions, max_positions
             )
         self.masked_bias = mindspore.Tensor(-1e4)
@@ -116,7 +117,7 @@ class DecisionTransformerGPT2Attention(nn.Module):
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         # Downcast (if necessary) back to V's dtype (if in mixed-precision) -- No-Op otherwise
         attn_weights = attn_weights.astype(value.dtype)
@@ -183,7 +184,7 @@ class DecisionTransformerGPT2Attention(nn.Module):
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         # Downcast (if necessary) back to V's dtype (if in mixed-precision) -- No-Op if otherwise
         if attn_weights.dtype != mindspore.float32:
@@ -245,8 +246,8 @@ class DecisionTransformerGPT2Attention(nn.Module):
 
         if layer_past is not None:
             past_key, past_value = layer_past
-            key = ops.cat((past_key, key), axis=-2)
-            value = ops.cat((past_value, value), axis=-2)
+            key = ops.cat((past_key, key), dim=-2)
+            value = ops.cat((past_value, value), dim=-2)
 
         if use_cache is True:
             present = (key, value)
@@ -657,7 +658,7 @@ class DecisionTransformerModel(DecisionTransformerPreTrainedModel):
 
         # note: we don't predict states or returns for the paper
         self.predict_state = nn.Linear(config.hidden_size, config.state_dim)
-        self.predict_action = nn.SequentialCell(
+        self.predict_action = nn.Sequential(
             *([nn.Linear(config.hidden_size, config.act_dim)] + ([nn.Tanh()] if config.action_tanh else []))
         )
         self.predict_return = nn.Linear(config.hidden_size, 1)
@@ -743,7 +744,7 @@ class DecisionTransformerModel(DecisionTransformerPreTrainedModel):
         # this makes the sequence look like (R_1, s_1, a_1, R_2, s_2, a_2, ...)
         # which works nice in an autoregressive sense since states predict actions
         stacked_inputs = (
-            ops.stack((returns_embeddings, state_embeddings, action_embeddings), axis=1)
+            ops.stack((returns_embeddings, state_embeddings, action_embeddings), dim=1)
             .permute(0, 2, 1, 3)
             .reshape((batch_size, 3 * seq_length, self.hidden_size))
         )
@@ -751,7 +752,7 @@ class DecisionTransformerModel(DecisionTransformerPreTrainedModel):
 
         # to make the attention mask fit the stacked inputs, have to stack it as well
         stacked_attention_mask = (
-            ops.stack((attention_mask, attention_mask, attention_mask), axis=1)
+            ops.stack((attention_mask, attention_mask, attention_mask), dim=1)
             .permute(0, 2, 1)
             .reshape((batch_size, 3 * seq_length))
         )

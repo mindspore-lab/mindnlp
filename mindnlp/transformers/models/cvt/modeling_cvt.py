@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import TruncatedNormal
 
 from mindnlp.core import nn, ops

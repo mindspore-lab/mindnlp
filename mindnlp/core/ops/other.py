@@ -3,6 +3,9 @@ import copy
 import numpy as np
 import mindspore
 from mindspore import ops
+from mindspore.common.initializer import initializer
+from mindspore.ops._primitive_cache import _get_cache_prim
+
 from mindnlp.configs import USE_PYBOOST
 from .reduction import any
 from .comparison import eq
@@ -38,6 +41,8 @@ def broadcast_to(input, shape):
 
 
 # cdist
+def cdist(x1, x2, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary'):
+    return ops.cdist(x1, x2, float(p))
 
 # clone
 def clone(input):
@@ -69,6 +74,8 @@ def cumsum(input, dim, dtype=None):
     return ops.cumsum(input, dim, dtype)
 
 # diag
+def diag(input):
+    return ops.diag(input)
 
 # diag_embed
 
@@ -88,12 +95,12 @@ def cumsum(input, dim, dtype=None):
 def einsum_label_to_index(label):
     """
     Args:
-        label (str): The label representing a dimension in an Einstein sum. 
+        label (str): The label representing a dimension in an Einstein sum.
             It should be a single character from the alphabet (upper or lower case) or '.'.
-            
+
     Returns:
         NoneType: This function returns None.
-    
+
     Raises:
         None.
     """
@@ -106,20 +113,20 @@ def einsum_label_to_index(label):
 def maybe_wrap_dim(dim: int, dim_post_expr: int, wrap_scalar: bool = True):
     r"""
     This function takes three parameters: dim, dim_post_expr, and wrap_scalar.
-    
+
     Args:
         - dim (int): Represents the dimension to be wrapped.
         - dim_post_expr (int): Represents the value used to wrap the dimension.
         - wrap_scalar (bool, optional): Specifies whether a scalar value should be wrapped. Default is True.
-    
+
     Returns:
         None: This function does not return a value directly.
-    
+
     Raises:
         AssertionError: Raised if the value of dim_post_expr is less than or equal to 0 and wrap_scalar is False.
         AssertionError: Raised if the value of dim is less than the minimum or greater than the maximum allowed range.
         AssertionError: Raised if the value of dim is negative and cannot be wrapped due to invalid dim_post_expr.
-    
+
     """
     if dim_post_expr <= 0:
         assert wrap_scalar
@@ -135,14 +142,14 @@ def maybe_wrap_dim(dim: int, dim_post_expr: int, wrap_scalar: bool = True):
 def dim_list_to_bitset(opt_dims, ndims):
     r"""
     Converts a list of optional dimensions to a bitset representation.
-    
+
     Args:
         opt_dims (List[int]): The list of optional dimensions to be converted to a bitset representation.
         ndims (int): The total number of dimensions.
-    
+
     Returns:
         List[bool]: A list representing the bitset, where True indicates the presence of the dimension and False indicates its absence.
-    
+
     Raises:
         None
     """
@@ -159,16 +166,16 @@ def dim_list_to_bitset(opt_dims, ndims):
 def sumproduct_pair(left_, right_, sum_dims_, keep_dim_):
     """
     Calculate the sum-product pair of two arrays along specified dimensions.
-    
+
     Args:
         left_ (array): The left input array.
         right_ (array): The right input array.
         sum_dims_ (list): A list of dimensions along which to calculate the sum-product pair.
         keep_dim_ (bool): A flag indicating whether to keep the dimensions in the result.
-    
+
     Returns:
         None. The function performs the sum-product pair calculation and returns None.
-    
+
     Raises:
         AssertionError: If the number of dimensions of the input arrays do not match,
                        or if non-broadcast dimensions do not match.
@@ -268,10 +275,10 @@ def einsum(equation, *operands):
             The equation should follow the Einstein summation convention with subscripts in [a-zA-Z],
             commas separating operands, and '->' indicating the output structure.
             It must include at least one operand. An ellipsis '...' can be used to represent multiple dimensions.
-            
+
     Returns:
         None: This function does not return a value.
-    
+
     Raises:
         AssertionError: If the function is called without providing at least one operand.
         AssertionError: If an invalid subscript is given in the equation string.
@@ -511,7 +518,10 @@ def flatten(input, start_dim=1, end_dim=-1):
     return ops.reshape(input, new_shape)
 
 # flip
-
+def flip(input, dims):
+    if USE_PYBOOST:
+        return mindspore.mint.flip(input, dims)
+    return ops.flip(input, dims)
 
 # fliplr
 
@@ -539,7 +549,11 @@ def flatten(input, start_dim=1, end_dim=-1):
 
 # meshgrid
 def meshgrid(*tensors, indexing=None):
-    return ops.meshgrid(*tensors, indexing)
+    if isinstance(tensors[0], (list, tuple)):
+        tensors = tensors[0]
+    if indexing is None:
+        indexing = 'ij'
+    return ops.meshgrid(*tensors, indexing=indexing)
 
 # lcm
 
@@ -554,7 +568,10 @@ def meshgrid(*tensors, indexing=None):
 
 # repeat_interleave
 def repeat_interleave(input, repeats, dim=None):
-    return ops.repeat_elements(input, repeats, dim)
+    if input.dtype == mindspore.bool_:
+        input = input.int()
+        return input.repeat(repeats, dim).bool()
+    return input.repeat(repeats, dim)
 
 # roll
 def roll(input, shifts, dims=None):
@@ -601,20 +618,24 @@ def unflatten(x, dim, sizes):
 # resolve_neg
 
 def masked_fill(input, mask, value):
-    return ops.masked_fill(input, mask, value)
+    masked_fill_ = _get_cache_prim(ops.MaskedFill)()
+    return masked_fill_(input, mask, mindspore.tensor(value, dtype=input.dtype))
 
 def finfo(dtype):
     return np.finfo(mindspore.dtype_to_nptype(dtype))
+
+def iinfo(dtype):
+    return np.iinfo(mindspore.dtype_to_nptype(dtype))
 
 def contains(self, key):
     r"""
     Args:
         self (object): The object instance on which the method is called.
         key (object): The key to be checked for containment in the object.
-        
+
     Returns:
         None: This function returns None, indicating whether the key is contained in the object.
-        
+
     Raises:
         None
     """
@@ -625,7 +646,7 @@ def contains(self, key):
 def initialize(self, init_method):
     r"""
     Initializes the object with the given initialization method.
-    
+
     Args:
         self (object): The instance of the class.
         init_method (str): The method used for initialization.
@@ -635,14 +656,36 @@ def initialize(self, init_method):
                 - "zeros": Initializes the data with zeros.
                 - "ones": Initializes the data with ones.
             Default value is "random".
-    
+
     Returns:
         None. This function does not return any value.
-    
+
     Raises:
         None.
-    
+
     Note:
         This function sets the data of the object using the specified `init_method` and the object's shape and data type.
     """
     self.set_data(initializer(init_method, self.shape, self.dtype))
+
+_stop_gradient = ops.StopGradient()
+def stop_gradient(input):
+    return _stop_gradient(input)
+
+
+def _get_unfold_indices(input_shape, dimension, size, step):
+    if dimension < 0:
+        dimension += len(input_shape)
+    indices = []
+    for i in range(0, input_shape[dimension] - size + 1, step):
+        indices.append(list(range(i, i + size)))
+
+    return indices, dimension
+
+def unfold(input, dimension, size, step):
+    _indices, _dimension = _get_unfold_indices(input.shape, dimension, size, step)
+    indices = mindspore.Tensor(_indices).astype(mindspore.int32)
+    output = ops.gather(input, indices, axis=_dimension)
+    output = ops.moveaxis(output, _dimension + 1, -1)
+
+    return output

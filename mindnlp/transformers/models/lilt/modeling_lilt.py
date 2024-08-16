@@ -19,9 +19,10 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -128,7 +129,7 @@ class LiltTextEmbeddings(nn.Module):
         """
         # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
         mask = input_ids.ne(padding_idx).int()
-        incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask)) * mask
+        incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask)) * mask
         return incremental_indices.long() + padding_idx
 
     def create_position_ids_from_inputs_embeds(self, inputs_embeds):
@@ -174,12 +175,12 @@ class LiltLayoutEmbeddings(nn.Module):
             padding_idx=self.padding_idx,
         )
         self.box_linear_embeddings = nn.Linear(
-            in_channels=config.hidden_size,
-            out_channels=config.hidden_size // config.channel_shrink_ratio,
+            config.hidden_size,
+            config.hidden_size // config.channel_shrink_ratio,
         )
         self.LayerNorm = nn.LayerNorm(
             [config.hidden_size // config.channel_shrink_ratio],
-            epsilon=config.layer_norm_eps,
+            eps=config.layer_norm_eps,
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
@@ -210,7 +211,7 @@ class LiltLayoutEmbeddings(nn.Module):
                 h_position_embeddings,
                 w_position_embeddings,
             ],
-            axis=-1,
+            dim=-1,
         )
         spatial_position_embeddings = self.box_linear_embeddings(
             spatial_position_embeddings
@@ -350,7 +351,7 @@ class LiltSelfAttention(nn.Module):
             layout_attention_scores = layout_attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        layout_attention_probs = nn.Softmax(axis=-1)(layout_attention_scores)
+        layout_attention_probs = nn.Softmax(dim=-1)(layout_attention_scores)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -373,7 +374,7 @@ class LiltSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = nn.Softmax(axis=-1)(attention_scores)
+        attention_probs = nn.Softmax(dim=-1)(attention_scores)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -694,7 +695,7 @@ class LiltPreTrainedModel(PreTrainedModel):
                     cell.weight.dtype,
                 )
             )
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
@@ -956,15 +957,15 @@ class LiltForSequenceClassification(LiltPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(
+                loss = F.cross_entropy(
                     logits.view(-1, self.num_labels), labels.view(-1)
                 )
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1059,7 +1060,7 @@ class LiltForTokenClassification(LiltPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1197,8 +1198,8 @@ class LiltForQuestionAnswering(LiltPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions)
-            end_loss = ops.cross_entropy(end_logits, end_positions)
+            start_loss = F.cross_entropy(start_logits, start_positions)
+            end_loss = F.cross_entropy(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

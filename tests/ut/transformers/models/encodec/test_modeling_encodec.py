@@ -4,7 +4,6 @@ import copy
 import inspect
 import unittest
 from typing import Dict, List, Tuple
-
 import numpy as np
 
 
@@ -29,8 +28,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
-
+    from mindnlp.core import ops
 
 
 def prepare_inputs_dict(
@@ -194,7 +192,7 @@ class EncodecModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip("The EncodecModel is not transformers based, thus it does not have `inputs_embeds` logics")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip("The EncodecModel is not transformers based, thus it does not have the usual `attention` logic")
@@ -218,7 +216,7 @@ class EncodecModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             model.set_train(False)
             inputs = self._prepare_for_class(inputs_dict, model_class)
-            inputs["input_values"] = inputs["input_values"].repeat(1, 1, 10)
+            inputs["input_values"] = ops.tile(inputs["input_values"], (1, 1, 10))
 
             hidden_states_no_chunk = model(**inputs)[0]
 

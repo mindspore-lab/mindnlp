@@ -16,11 +16,11 @@
 
 from typing import Optional, Tuple, Union
 import mindspore as ms
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
-
-from mindspore.nn import CrossEntropyLoss
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import CrossEntropyLoss
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -112,7 +112,7 @@ class MSConvBertEmbeddings(nn.Module):
 
         embeddings = inputs_embeds + position_embeddings + token_type_embeddings
         embeddings = self.LayerNorm(embeddings)
-        embeddings = ops.dropout(embeddings, p=self.dropout_p)
+        embeddings = F.dropout(embeddings, p=self.dropout_p)
         return embeddings
 
 
@@ -187,8 +187,7 @@ class SeparableConv1D(nn.Module):
             input_filters,
             input_filters,
             kernel_size=kernel_size,
-            group=input_filters,
-            pad_mode="pad",
+            groups=input_filters,
             padding=kernel_size // 2,
             bias=False,
         )
@@ -300,10 +299,7 @@ class MSConvBertSelfAttention(nn.Module):
         )
         self.conv_out_layer = nn.Linear(config.hidden_size, self.all_head_size)
         self.unfold = nn.Unfold(
-            ksizes=[1, self.conv_kernel_size, 1, 1],
-            rates=[1, 1, 1, 1],
-            strides=[1, 1, 1, 1],
-            padding="same",
+            kernel_size=[self.conv_kernel_size, 1], padding=[int((self.conv_kernel_size - 1) / 2), 0]
         )
         self.dropout_p = config.attention_probs_dropout_prob
 
@@ -361,14 +357,14 @@ class MSConvBertSelfAttention(nn.Module):
         conv_kernel_layer = ops.reshape(
             conv_kernel_layer, [-1, self.conv_kernel_size, 1]
         )
-        conv_kernel_layer = ops.softmax(conv_kernel_layer, axis=1)
+        conv_kernel_layer = ops.softmax(conv_kernel_layer, dim=1)
 
         conv_out_layer = self.conv_out_layer(hidden_states)
         conv_out_layer = ops.reshape(
             conv_out_layer, [batch_size, -1, self.all_head_size]
         )
         conv_out_layer = conv_out_layer.swapaxes(1, 2).unsqueeze(-1)
-        conv_out_layer = ops.unfold(
+        conv_out_layer = F.unfold(
             conv_out_layer,
             kernel_size=[self.conv_kernel_size, 1],
             dilation=1,
@@ -394,11 +390,11 @@ class MSConvBertSelfAttention(nn.Module):
         attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
-        attention_probs = ops.dropout(attention_probs, p=self.dropout_p)
+        attention_probs = F.dropout(attention_probs, p=self.dropout_p)
 
         context_layer = ops.matmul(attention_probs, value_layer)
         context_layer = context_layer.permute(0, 2, 1, 3)
@@ -464,7 +460,7 @@ class MSConvBertSelfOutput(nn.Module):
             None.
         '''
         hidden_states = self.dense(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout_p)
+        hidden_states = F.dropout(hidden_states, p=self.dropout_p)
         hidden_states = hidden_states + input_tensor
         hidden_states = self.LayerNorm(hidden_states)
         return hidden_states
@@ -652,7 +648,7 @@ class MSConvBertOutput(nn.Module):
             RuntimeError: If there are issues during the tensor processing or combination steps.
         """
         hidden_states = self.dense(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout_p)
+        hidden_states = F.dropout(hidden_states, p=self.dropout_p)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 

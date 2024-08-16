@@ -19,10 +19,11 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -169,7 +170,7 @@ class VisualBertEmbeddings(nn.Module):
 
             visual_embeddings = visual_embeds + visual_position_embeddings + visual_token_type_embeddings
 
-            embeddings = ops.cat((embeddings, visual_embeddings), axis=1)
+            embeddings = ops.cat((embeddings, visual_embeddings), dim=1)
 
         embeddings = self.LayerNorm(embeddings)
         embeddings = self.dropout(embeddings)
@@ -223,7 +224,7 @@ class VisualBertSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -676,7 +677,7 @@ class VisualBertModel(VisualBertPreTrainedModel):
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
         if visual_embeds is not None:
-            combined_attention_mask = ops.cat((attention_mask, visual_attention_mask), axis=-1)
+            combined_attention_mask = ops.cat((attention_mask, visual_attention_mask), dim=-1)
             extended_attention_mask: mindspore.Tensor = self.get_extended_attention_mask(
                 combined_attention_mask, (batch_size, input_shape + visual_input_shape)
             )
@@ -718,7 +719,7 @@ class VisualBertModel(VisualBertPreTrainedModel):
                 return_dict=return_dict,
             )
             sequence_output = encoded_outputs[0]
-            concatenated_input = ops.cat((sequence_output, visual_embedding_output), axis=1)
+            concatenated_input = ops.cat((sequence_output, visual_embedding_output), dim=1)
             sequence_output = self.additional_layer(concatenated_input, extended_attention_mask)
             pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
 
@@ -861,8 +862,8 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
                     f"Found labels with sequence length {labels.shape[-1]}, expected {total_size}."
                 )
 
-            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
-            sentence_image_loss = ops.cross_entropy(seq_relationship_score.view(-1, 2), sentence_image_labels.view(-1))
+            masked_lm_loss = F.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            sentence_image_loss = F.cross_entropy(seq_relationship_score.view(-1, 2), sentence_image_labels.view(-1))
             total_loss = masked_lm_loss + sentence_image_loss
 
         if labels is not None and sentence_image_labels is None:
@@ -873,7 +874,7 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
                     f"Found labels with sequence length {labels.shape[-1]}, expected {total_size}."
                 )
 
-            total_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            total_loss = F.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores, seq_relationship_score) + outputs[2:]
@@ -1016,7 +1017,7 @@ class VisualBertForMultipleChoice(VisualBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss = F.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1134,8 +1135,8 @@ class VisualBertForQuestionAnswering(VisualBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = ops.KLDivLoss(reduction="batchmean")
-            reshaped_logits = ops.log_softmax(reshaped_logits,axis=-1)
+            loss_fct = nn.KLDivLoss(reduction="batchmean")
+            reshaped_logits = F.log_softmax(reshaped_logits, dim=-1)
             loss = loss_fct(reshaped_logits, labels)
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1242,7 +1243,7 @@ class VisualBertForVisualReasoning(VisualBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels.view(-1).astype(mindspore.int32))
+            loss = F.cross_entropy(reshaped_logits, labels.view(-1).astype(mindspore.int32))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1282,7 +1283,7 @@ class VisualBertRegionToPhraseAttention(nn.Module):
     def forward(self, query, key, attention_mask):
         attention_mask = attention_mask.to(query.dtype)
         attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
-        attention_mask = (1.0 - attention_mask) * finfo(query.dtype,"min")
+        attention_mask = (1.0 - attention_mask) * float(ops.finfo(query.dtype).min)
 
         mixed_query_layer = self.query(query)
         mixed_key_layer = self.key(key)
@@ -1428,9 +1429,8 @@ class VisualBertForRegionToPhraseAlignment(VisualBertPreTrainedModel):
             # scores = batch x selected position x visual_feature
             # scores = selected_positions.bmm(visual_features.transpose(1,2))
             # label = batch x selected_postion x needed position
-            loss_fct = ops.KLDivLoss(reduction="batchmean")
-            scores = ops.log_softmax(logits,axis=-1)
-            labels = labels.contiguous()
+            loss_fct = F.kl_div(reduction="batchmean")
+            scores = F.log_softmax(logits, dim=-1)
             loss = loss_fct(scores, labels)
 
         if not return_dict:

@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch WavLM model."""
+"""MindSpore WavLM model."""
 
 import math
 import warnings
@@ -20,10 +20,10 @@ from typing import Optional, Tuple, Union, List
 
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
-
 from mindspore.common.initializer import initializer, Normal, TruncatedNormal, Uniform, HeNormal
+
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from .configuration_wavlm import WavLMConfig
@@ -73,7 +73,7 @@ def _canonical_mask(
 ) -> Optional[mindspore.Tensor]:
     if mask is not None:
         _mask_dtype = mask.dtype
-        _mask_is_float = is_floating_point(mask)
+        _mask_is_float = ops.is_floating_point(mask)
         if _mask_dtype != mindspore.bool_ and not _mask_is_float:
             raise AssertionError(
                 f"only bool and floating types of {mask_name} are supported")
@@ -302,7 +302,6 @@ class WavLMNoLayerNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode='valid'
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -325,7 +324,6 @@ class WavLMLayerNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode='valid'
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -354,7 +352,6 @@ class WavLMGroupNormConvLayer(nn.Module):
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
-            pad_mode='valid'
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
@@ -376,17 +373,11 @@ class WavLMPositionalConvEmbedding(nn.Module):
             config.hidden_size,
             kernel_size=config.num_conv_pos_embeddings,
             padding=config.num_conv_pos_embeddings // 2,
-            group=config.num_conv_pos_embedding_groups,
-            pad_mode='pad',
+            groups=config.num_conv_pos_embedding_groups,
             bias=True
         )
 
-        weight_norm = mindnlp.modules.weight_norm.weight_norm
-        # if hasattr(nn.utils.parametrizations, "weight_norm"):
-        #     weight_norm = nn.utils.parametrizations.weight_norm
-
-
-        self.conv = weight_norm(self.conv, name="weight", dim=2)
+        self.conv = nn.utils.weight_norm(self.conv, name="weight", dim=2)
 
         self.padding = WavLMSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -584,293 +575,9 @@ class WavLMAttention(nn.Module):
         add_zero_attn = False
 
 
-        def multi_head_attention_forward(
-                query: mindspore.Tensor,
-                key: mindspore.Tensor,
-                value: mindspore.Tensor,
-                embed_dim_to_check: int,
-                num_heads: int,
-                in_proj_weight: Optional[mindspore.Tensor],
-                in_proj_bias: Optional[mindspore.Tensor],
-                bias_k: Optional[mindspore.Tensor],
-                bias_v: Optional[mindspore.Tensor],
-                add_zero_attn: bool,
-                dropout_p: float,
-                out_proj_weight: mindspore.Tensor,
-                out_proj_bias: Optional[mindspore.Tensor],
-                training: bool = True,
-                key_padding_mask: Optional[mindspore.Tensor] = None,
-                need_weights: bool = True,
-                attn_mask: Optional[mindspore.Tensor] = None,
-                use_separate_proj_weight: bool = False,
-                q_proj_weight: Optional[mindspore.Tensor] = None,
-                k_proj_weight: Optional[mindspore.Tensor] = None,
-                v_proj_weight: Optional[mindspore.Tensor] = None,
-                static_k: Optional[mindspore.Tensor] = None,
-                static_v: Optional[mindspore.Tensor] = None,
-                average_attn_weights: bool = True,
-                is_causal: bool = False,
-        ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]:
-            # tens_ops = (query, key, value, in_proj_weight, in_proj_bias, bias_k, bias_v, out_proj_weight, out_proj_bias)
-            # if has_torch_function(tens_ops):
-            #     return handle_torch_function(
-            #         multi_head_attention_forward,
-            #         tens_ops,
-            #         query,
-            #         key,
-            #         value,
-            #         embed_dim_to_check,
-            #         num_heads,
-            #         in_proj_weight,
-            #         in_proj_bias,
-            #         bias_k,
-            #         bias_v,
-            #         add_zero_attn,
-            #         dropout_p,
-            #         out_proj_weight,
-            #         out_proj_bias,
-            #         training=training,
-            #         key_padding_mask=key_padding_mask,
-            #         need_weights=need_weights,
-            #         attn_mask=attn_mask,
-            #         is_causal=is_causal,
-            #         use_separate_proj_weight=use_separate_proj_weight,
-            #         q_proj_weight=q_proj_weight,
-            #         k_proj_weight=k_proj_weight,
-            #         v_proj_weight=v_proj_weight,
-            #         static_k=static_k,
-            #         static_v=static_v,
-            #         average_attn_weights=average_attn_weights,
-            #     )
-
-            is_batched = _mha_shape_check(query, key, value, key_padding_mask, attn_mask, num_heads)
-
-            # For unbatched input, we unsqueeze at the expected batch-dim to pretend that the input
-            # is batched, run the computation and before returning squeeze the
-            # batch dimension so that the output doesn't carry this temporary batch dimension.
-            if not is_batched:
-                # unsqueeze if the input is unbatched
-                query = query.unsqueeze(1)
-                key = key.unsqueeze(1)
-                value = value.unsqueeze(1)
-                if key_padding_mask is not None:
-                    key_padding_mask = key_padding_mask.unsqueeze(0)
-
-            # set up shape vars
-            tgt_len, bsz, embed_dim = query.shape
-            src_len, _, _ = key.shape
-
-            key_padding_mask = _canonical_mask(
-                mask=key_padding_mask,
-                mask_name="key_padding_mask",
-                other_type=_none_or_dtype(attn_mask),
-                other_name="attn_mask",
-                target_type=query.dtype
-            )
-
-            if is_causal and attn_mask is None:
-                raise RuntimeError(
-                    "Need attn_mask if specifying the is_causal hint. "
-                    "You may use the Transformer module method "
-                    "`generate_square_subsequent_mask` to create this mask."
-                )
-
-            if is_causal and key_padding_mask is None and not need_weights:
-                # when we have a kpm or need weights, we need attn_mask
-                # Otherwise, we use the is_causal hint go as is_causal
-                # indicator to SDPA.
-                attn_mask = None
-            else:
-                attn_mask = _canonical_mask(
-                    mask=attn_mask,
-                    mask_name="attn_mask",
-                    other_type=None,
-                    other_name="",
-                    target_type=query.dtype,
-                    check_other=False,
-                )
-
-                if key_padding_mask is not None:
-                    # We have the attn_mask, and use that to merge kpm into it.
-                    # Turn off use of is_causal hint, as the merged mask is no
-                    # longer causal.
-                    is_causal = False
-
-            assert embed_dim == embed_dim_to_check, \
-                f"was expecting embedding dimension of {embed_dim_to_check}, but got {embed_dim}"
-            if isinstance(embed_dim, mindspore.Tensor):
-                # embed_dim can be a tensor when JIT tracing
-                head_dim = embed_dim.div(num_heads, rounding_mode='trunc')
-            else:
-                head_dim = embed_dim // num_heads
-            assert head_dim * num_heads == embed_dim, f"embed_dim {embed_dim} not divisible by num_heads {num_heads}"
-            if use_separate_proj_weight:
-                # allow MHA to have different embedding dimensions when separate projection weights are used
-                assert key.shape[:2] == value.shape[:2], \
-                    f"key's sequence and batch dims {key.shape[:2]} do not match value's {value.shape[:2]}"
-            else:
-                assert key.shape == value.shape, f"key shape {key.shape} does not match value shape {value.shape}"
-
-            #
-            # compute in-projection
-            #
-            if not use_separate_proj_weight:
-                assert in_proj_weight is not None, "use_separate_proj_weight is False but in_proj_weight is None"
-                q, k, v = _in_projection_packed(query, key, value, in_proj_weight, in_proj_bias)
-            else:
-                assert q_proj_weight is not None, "use_separate_proj_weight is True but q_proj_weight is None"
-                assert k_proj_weight is not None, "use_separate_proj_weight is True but k_proj_weight is None"
-                assert v_proj_weight is not None, "use_separate_proj_weight is True but v_proj_weight is None"
-                if in_proj_bias is None:
-                    b_q = b_k = b_v = None
-                else:
-                    b_q, b_k, b_v = in_proj_bias.chunk(3)
-                q, k, v = _in_projection(query, key, value, q_proj_weight, k_proj_weight, v_proj_weight, b_q, b_k, b_v)
-
-            # prep attention mask
-
-            if attn_mask is not None:
-                # ensure attn_mask's dim is 3
-                if attn_mask.ndim == 2:
-                    correct_2d_size = (tgt_len, src_len)
-                    if attn_mask.shape != correct_2d_size:
-                        raise RuntimeError(
-                            f"The shape of the 2D attn_mask is {attn_mask.shape}, but should be {correct_2d_size}.")
-                    attn_mask = attn_mask.unsqueeze(0)
-                elif attn_mask.ndim == 3:
-                    correct_3d_size = (bsz * num_heads, tgt_len, src_len)
-                    if attn_mask.shape != correct_3d_size:
-                        raise RuntimeError(
-                            f"The shape of the 3D attn_mask is {attn_mask.shape}, but should be {correct_3d_size}.")
-                else:
-                    raise RuntimeError(f"attn_mask's dimension {attn_mask.ndim} is not supported")
-
-            # add bias along batch dimension (currently second)
-            if bias_k is not None and bias_v is not None:
-                assert static_k is None, "bias cannot be added to static key."
-                assert static_v is None, "bias cannot be added to static value."
-                k = ops.cat([k, bias_k.repeat(1, bsz, 1)])
-                v = ops.cat([v, bias_v.repeat(1, bsz, 1)])
-                if attn_mask is not None:
-                    attn_mask = ops.pad(attn_mask, (0, 1))
-                if key_padding_mask is not None:
-                    key_padding_mask = ops.pad(key_padding_mask, (0, 1))
-            else:
-                assert bias_k is None
-                assert bias_v is None
-
-            #
-            # reshape q, k, v for multihead attention and make em batch first
-            #
-            q = q.view(tgt_len, bsz * num_heads, head_dim).swapaxes(0, 1)
-            if static_k is None:
-                k = k.view(k.shape[0], bsz * num_heads, head_dim).swapaxes(0, 1)
-            else:
-                # TODO finish disentangling control flow so we don't do in-projections when statics are passed
-                assert static_k.shape[0] == bsz * num_heads, \
-                    f"expecting static_k.size(0) of {bsz * num_heads}, but got {static_k.shape[0]}"
-                assert static_k.shape[2] == head_dim, \
-                    f"expecting static_k.size(2) of {head_dim}, but got {static_k.shape[2]}"
-                k = static_k
-            if static_v is None:
-                v = v.view(v.shape[0], bsz * num_heads, head_dim).swapaxes(0, 1)
-            else:
-                # TODO finish disentangling control flow so we don't do in-projections when statics are passed
-                assert static_v.shape[0] == bsz * num_heads, \
-                    f"expecting static_v.size(0) of {bsz * num_heads}, but got {static_v.shape[0]}"
-                assert static_v.shape[2] == head_dim, \
-                    f"expecting static_v.size(2) of {head_dim}, but got {static_v.shape[2]}"
-                v = static_v
-
-            # add zero attention along batch dimension (now first)
-            if add_zero_attn:
-                zero_attn_shape = (bsz * num_heads, 1, head_dim)
-                k = ops.cat([k, ops.zeros(zero_attn_shape, dtype=k.dtype)], axis=1)
-                v = ops.cat([v, ops.zeros(zero_attn_shape, dtype=v.dtype)], axis=1)
-                if attn_mask is not None:
-                    attn_mask = ops.pad(attn_mask, (0, 1))
-                if key_padding_mask is not None:
-                    key_padding_mask = ops.pad(key_padding_mask, (0, 1))
-
-            # update source sequence length after adjustments
-            src_len = k.shape[1]
-
-            # merge key padding and attention masks
-            if key_padding_mask is not None:
-                assert key_padding_mask.shape == (bsz, src_len), \
-                    f"expecting key_padding_mask shape of {(bsz, src_len)}, but got {key_padding_mask.shape}"
-                key_padding_mask = key_padding_mask.view(bsz, 1, 1, src_len). \
-                    expand(-1, num_heads, -1, -1).reshape(bsz * num_heads, 1, src_len)
-                if attn_mask is None:
-                    attn_mask = key_padding_mask
-                else:
-                    attn_mask = attn_mask + key_padding_mask
-
-            # adjust dropout probability
-            if not training:
-                dropout_p = 0.0
-
-            #
-            # (deep breath) calculate attention and out projection
-            #
-
-            if need_weights:
-                B, Nt, E = q.shape
-                q_scaled = q * math.sqrt(1.0 / float(E))
-
-                assert not (is_causal and attn_mask is None), "FIXME: is_causal not implemented for need_weights"
-
-                if attn_mask is not None:
-                    attn_output_weights = ops.baddbmm(attn_mask, q_scaled, k.swapaxes(-2, -1))
-                else:
-                    attn_output_weights = ops.bmm(q_scaled, k.swapaxes(-2, -1))
-                attn_output_weights = ops.softmax(attn_output_weights, axis=-1)
-                if dropout_p > 0.0:
-                    attn_output_weights = ops.dropout(attn_output_weights, p=dropout_p)
-
-                attn_output = ops.bmm(attn_output_weights, v)
-
-                attn_output = attn_output.swapaxes(0, 1).view(tgt_len * bsz, embed_dim)
-                attn_output = linear(attn_output, out_proj_weight, out_proj_bias)
-                attn_output = attn_output.view(tgt_len, bsz, attn_output.shape[1])
-
-                # optionally average attention weights over heads
-                attn_output_weights = attn_output_weights.view(bsz, num_heads, tgt_len, src_len)
-                if average_attn_weights:
-                    attn_output_weights = attn_output_weights.mean(axis=1)
-
-                if not is_batched:
-                    # squeeze the output if input was unbatched
-                    attn_output = attn_output.squeeze(1)
-                    attn_output_weights = attn_output_weights.squeeze(0)
-                return attn_output, attn_output_weights
-            else:
-                # attn_mask can be either (L,S) or (N*num_heads, L, S)
-                # if attn_mask's shape is (1, L, S) we need to unsqueeze to (1, 1, L, S)
-                # in order to match the input for SDPA of (N, num_heads, L, S)
-                if attn_mask is not None:
-                    if attn_mask.shape[0] == 1 and attn_mask.ndim == 3:
-                        attn_mask = attn_mask.unsqueeze(0)
-                    else:
-                        attn_mask = attn_mask.view(bsz, num_heads, -1, src_len)
-
-                q = q.view(bsz, num_heads, tgt_len, head_dim)
-                k = k.view(bsz, num_heads, src_len, head_dim)
-                v = v.view(bsz, num_heads, src_len, head_dim)
-
-                attn_output = _scaled_dot_product_attention(q, k, v, attn_mask, dropout_p, is_causal, training)
-                attn_output = attn_output.permute(2, 0, 1, 3).view(bsz * tgt_len, embed_dim)
-
-                attn_output = linear(attn_output, out_proj_weight, out_proj_bias)
-                attn_output = attn_output.view(tgt_len, bsz, attn_output.shape[1])
-                if not is_batched:
-                    # squeeze the output if input was unbatched
-                    attn_output = attn_output.squeeze(1)
-                return attn_output, None
-
         # PyTorch 1.3.0 has F.multi_head_attention_forward defined
         # so no problem with backwards compatibility
-        attn_output, attn_weights = multi_head_attention_forward(
+        attn_output, attn_weights = F.multi_head_attention_forward(
             query,
             key,
             value,
@@ -1259,7 +966,7 @@ class WavLMGumbelVectorQuantizer(nn.Module):
 
             # compute perplexity
             codevector_soft_dist = ops.softmax(
-                hidden_states.view(batch_size * sequence_length, self.num_groups, -1).float(), axis=-1
+                hidden_states.view(batch_size * sequence_length, self.num_groups, -1).float(), dim=-1
             )
             perplexity = self._compute_perplexity(codevector_soft_dist)
         else:
@@ -1324,12 +1031,11 @@ class WavLMAdapterLayer(nn.Module):
             config.adapter_kernel_size,
             stride=config.adapter_stride,
             padding=1,
-            pad_mode='pad'
         )
 
     def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
-        hidden_states = ops.glu(hidden_states, axis=1)
+        hidden_states = F.glu(hidden_states, dim=1)
 
         return hidden_states
 
@@ -1388,7 +1094,7 @@ class WavLMPreTrainedModel(PreTrainedModel):
             #     module.bias.data.zero_()
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
             # module.bias.data.zero_()
@@ -1403,7 +1109,7 @@ class WavLMPreTrainedModel(PreTrainedModel):
             #     nn.init.uniform_(module.bias, a=-k, b=k)
             cell.weight.set_data(
                 initializer(HeNormal(),cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 k = math.sqrt(cell.group / (cell.in_channels * cell.kernel_size[0]))
                 cell.bias.set_data(initializer(Uniform(scale=k),
                                                     cell.bias.shape, cell.bias.dtype))
@@ -1867,10 +1573,10 @@ class WavLMForCTC(WavLMPreTrainedModel):
             flattened_targets = labels.masked_select(labels_mask)
 
             # ctc_loss doesn't support fp16
-            log_probs = ops.log_softmax(logits.astype(mindspore.float32), axis=-1).swapaxes(0, 1)
+            log_probs = F.log_softmax(logits.astype(mindspore.float32), dim=-1).swapaxes(0, 1)
 
             # with torch.backends.cudnn.flags(enabled=False):
-            loss = ops.ctc_loss(
+            loss = F.ctc_loss(
                 log_probs,
                 labels,
                 input_lengths,
@@ -1969,8 +1675,8 @@ class WavLMForSequenceClassification(WavLMPreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = ops.stack(hidden_states, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(hidden_states, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
@@ -1987,7 +1693,7 @@ class WavLMForSequenceClassification(WavLMPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]
@@ -2075,8 +1781,8 @@ class WavLMForAudioFrameClassification(WavLMPreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = ops.stack(hidden_states, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(hidden_states, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
@@ -2085,7 +1791,7 @@ class WavLMForAudioFrameClassification(WavLMPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), ops.argmax(labels.view(-1, self.num_labels), dim=1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), ops.argmax(labels.view(-1, self.num_labels), dim=1))
 
 
         if not return_dict:
@@ -2112,14 +1818,14 @@ class AMSoftmaxLoss(nn.Module):
 
     def forward(self, hidden_states, labels):
         labels = labels.flatten()
-        weight = mindnlp.modules.functional.normalize(self.weight, dim=0)
-        hidden_states = mindnlp.modules.functional.normalize(hidden_states, dim=1)
+        weight = F.normalize(self.weight, dim=0)
+        hidden_states = F.normalize(hidden_states, dim=1)
         cos_theta = ops.mm(hidden_states, weight)
         psi = cos_theta - self.margin
 
-        onehot = ops.one_hot(labels, self.num_labels)
+        onehot = F.one_hot(labels, self.num_labels)
         logits = self.scale * ops.where(onehot.bool(), psi, cos_theta)
-        loss = ops.cross_entropy(logits, labels)
+        loss = F.cross_entropy(logits, labels)
 
         return loss
 
@@ -2249,8 +1955,8 @@ class WavLMForXVector(WavLMPreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = ops.stack(hidden_states, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(hidden_states, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
@@ -2263,8 +1969,7 @@ class WavLMForXVector(WavLMPreTrainedModel):
         # Statistic Pooling
         if attention_mask is None:
             mean_features = hidden_states.mean(axis=1)
-            # std_features = hidden_states.std(axis=1)
-            std_features = ops.std(hidden_states, axis=1, keepdims=True)[:,0,:]
+            std_features = ops.std(hidden_states, dim=1)
         else:
             feat_extract_output_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(axis=1))
             tdnn_output_lengths = self._get_tdnn_output_lengths(feat_extract_output_lengths)
@@ -2272,11 +1977,10 @@ class WavLMForXVector(WavLMPreTrainedModel):
             std_features = []
             for i, length in enumerate(tdnn_output_lengths):
                 mean_features.append(hidden_states[i, :length].mean(axis=0))
-                # std_features.append(hidden_states[i, :length].std(axis=0))
-                std_features.append(ops.std(hidden_states[i, :length], axis=0, keepdims=True)[0,:])
+                std_features.append(ops.std(hidden_states[i, :length], dim=0))
             mean_features = ops.stack(mean_features)
             std_features = ops.stack(std_features)
-        statistic_pooling = ops.cat([mean_features, std_features], axis=-1)
+        statistic_pooling = ops.cat([mean_features, std_features], dim=-1)
 
         output_embeddings = self.feature_extractor(statistic_pooling)
         logits = self.classifier(output_embeddings)

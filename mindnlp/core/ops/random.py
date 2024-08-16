@@ -1,14 +1,21 @@
 """random op"""
 import mindspore
 from mindspore import ops
-from mindnlp.configs import USE_PYBOOST
+from mindspore.ops._primitive_cache import _get_cache_prim
+from mindnlp.configs import USE_PYBOOST, DEVICE_TARGET, GENERATOR_SEED
 from .other import cumsum, searchsorted
 from .comparison import topk
 from .pointwise import div, log
+from ..utils import get_default_dtype
 
 # bernoulli
-def bernoulli(input):
-    return ops.bernoulli(input)
+def bernoulli(input, p=0.5):
+    if DEVICE_TARGET == 'Ascend':
+        random_numbers = rand(*input.shape, dtype=input.dtype)
+        samples = random_numbers < p
+        samples = samples.int()
+        return samples
+    return ops.bernoulli(input, p)
 
 # multinomial
 def multinomial(input, num_samples, replacement=False):
@@ -47,6 +54,10 @@ def normal(mean=0.0, std=1.0, size=None):
 def rand(*size, dtype=None):
     if size[0] == []:
         size = ()
+    elif isinstance(size[0], (tuple, list)):
+        size = size[0]
+    if dtype is None:
+        dtype = get_default_dtype()
     if USE_PYBOOST:
         return mindspore.mint.rand(*size, dtype=dtype)
     return ops.rand(*size, dtype=dtype)
@@ -58,7 +69,7 @@ def rand_like(input, *, dtype=None):
     return ops.rand_like(input, dtype=dtype)
 
 # randint
-def randint(low, high, size, *, dtype=None):
+def randint(low=0, high=None, size=None, *, dtype=None):
     return ops.randint(low, high, size, dtype=dtype)
 
 # randint_like
@@ -69,6 +80,8 @@ def ranint_like(input, low, high, *, dtype=None):
 
 # randn
 def randn(*size, dtype=None):
+    if dtype is None:
+        dtype = get_default_dtype()
     return ops.randn(*size, dtype=dtype)
 
 # randn_like
@@ -76,3 +89,15 @@ def randn_like(input, *, dtype):
     return ops.randn_like(input, dtype=dtype)
 
 # randperm
+def randperm(n, seed=0, offset=0, dtype=mindspore.int64):
+    """randperm"""
+    if DEVICE_TARGET == 'CPU':
+        if GENERATOR_SEED:
+            randperm_v2_op = _get_cache_prim(ops.RandpermV2)(seed, offset, dtype)
+            return randperm_v2_op(n)
+        else:
+            randperm_v2_op = _get_cache_prim(ops.RandpermV2)(dtype)
+            return randperm_v2_op(mindspore.tensor([n]), seed, offset)
+
+    randperm_op = _get_cache_prim(ops.Randperm)(max_length=n, dtype=dtype)
+    return randperm_op(mindspore.tensor([n]))

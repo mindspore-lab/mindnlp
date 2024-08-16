@@ -21,12 +21,12 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
-
 from mindspore.common.initializer import initializer, Normal, XavierUniform
-from mindnlp.utils import requires_backends, is_scipy_available
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
+from mindnlp.utils import requires_backends, is_scipy_available
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithCrossAttentions
 from ...modeling_utils import PreTrainedModel
@@ -257,7 +257,7 @@ def sample_point(
         point_coordinates = point_coordinates.unsqueeze(2)
 
     # use nn.function.grid_sample to get features for points in `point_coordinates` via bilinear interpolation
-    point_features = ops.grid_sample(input_features, 2.0 * point_coordinates - 1.0, **kwargs)
+    point_features = F.grid_sample(input_features, 2.0 * point_coordinates - 1.0, **kwargs)
     if add_dim:
         point_features = point_features.squeeze(3)
 
@@ -443,10 +443,10 @@ class Mask2FormerHungarianMatcher(nn.Module):
             # Sample ground truth and predicted masks
             point_coordinates = ops.rand(1, self.num_points, 2)
 
-            target_coordinates = point_coordinates.repeat(target_mask.shape[0], 1, 1)
+            target_coordinates = point_coordinates.tile((target_mask.shape[0], 1, 1))
             target_mask = sample_point(target_mask, target_coordinates, align_corners=False).squeeze(1)
 
-            pred_coordinates = point_coordinates.repeat(pred_mask.shape[0], 1, 1)
+            pred_coordinates = point_coordinates.tile((pred_mask.shape[0], 1, 1))
             pred_mask = sample_point(pred_mask, pred_coordinates, align_corners=False).squeeze(1)
 
             # compute the cross entropy loss between each mask pairs -> shape (num_queries, num_labels)
@@ -627,13 +627,13 @@ class Mask2FormerLoss(nn.Module):
 
     def _get_predictions_permutation_indices(self, indices):
         # Permute predictions following indices
-        batch_indices = ops.cat([ops.full_like(src, i) for i, (src, _) in enumerate(indices)])
+        batch_indices = ops.cat([ops.full_like(src, i, dtype=mindspore.int64) for i, (src, _) in enumerate(indices)])
         predictions_indices = ops.cat([src for (src, _) in indices])
         return batch_indices, predictions_indices
 
     def _get_targets_permutation_indices(self, indices):
         # Permute labels following indices
-        batch_indices = ops.cat([ops.full_like(tgt, i) for i, (_, tgt) in enumerate(indices)])
+        batch_indices = ops.cat([ops.full_like(tgt, i, dtype=mindspore.int64) for i, (_, tgt) in enumerate(indices)])
         target_indices = ops.cat([tgt for (_, tgt) in indices])
         return batch_indices, target_indices
 
@@ -705,7 +705,7 @@ class Mask2FormerLoss(nn.Module):
         if num_random_points > 0:
             point_coordinates = ops.cat(
                 [point_coordinates, ops.rand(num_boxes, num_random_points, 2)],
-                axis=1,
+                dim=1,
             )
         return point_coordinates
 
@@ -801,7 +801,7 @@ def multi_scale_deformable_attention(
         B, H, *others = tmp.shape
         sampling_grid_l_ = tmp.reshape([B*H, *others])
         # batch_size*num_heads, hidden_dim, num_queries, num_points
-        sampling_value_l_ = ops.grid_sample(
+        sampling_value_l_ = F.grid_sample(
             value_l_, sampling_grid_l_, mode="bilinear", padding_mode="zeros", align_corners=False
         )
         sampling_value_list.append(sampling_value_l_)
@@ -812,7 +812,7 @@ def multi_scale_deformable_attention(
         batch_size * num_heads, 1, num_queries, num_levels * num_points
     )
     output = (
-        (ops.stack(sampling_value_list, axis=-2).flatten(start_dim=-2) * attention_weights)
+        (ops.stack(sampling_value_list, dim=-2).flatten(start_dim=-2) * attention_weights)
         .sum(-1)
         .view(batch_size, num_heads * hidden_dim, num_queries)
     )
@@ -853,9 +853,9 @@ class Mask2FormerSinePositionEmbedding(nn.Module):
 
         pos_x = x_embed[:, :, :, None] / dim_t
         pos_y = y_embed[:, :, :, None] / dim_t
-        pos_x = ops.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), axis=4).flatten(start_dim=3)
-        pos_y = ops.stack((pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), axis=4).flatten(start_dim=3)
-        pos = ops.cat((pos_y, pos_x), axis=3).permute(0, 3, 1, 2)
+        pos_x = ops.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), dim=4).flatten(start_dim=3)
+        pos_y = ops.stack((pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), dim=4).flatten(start_dim=3)
+        pos = ops.cat((pos_y, pos_x), dim=3).permute(0, 3, 1, 2)
         return pos
 
 
@@ -966,7 +966,7 @@ class Mask2FormerPixelDecoderEncoderLayer(nn.Module):
 
         self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         self.dropout = config.dropout
-        self.activation_fn = ops.relu
+        self.activation_fn = F.relu
         self.activation_dropout = config.dropout
         self.fc1 = nn.Linear(self.embed_dim, config.encoder_feedforward_dim)
         self.fc2 = nn.Linear(config.encoder_feedforward_dim, self.embed_dim)
@@ -1015,23 +1015,23 @@ class Mask2FormerPixelDecoderEncoderLayer(nn.Module):
             output_attentions=output_attentions,
         )
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
 
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
         if self.training:
             if ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any():
-                clamp_value = finfo(hidden_states.dtype, 'max') - 1000
+                clamp_value = ops.finfo(hidden_states.dtype).max - 1000
                 hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -1077,6 +1077,7 @@ class Mask2FormerPixelDecoderEncoderOnly(nn.Module):
         """
         reference_points_list = []
         for lvl, (height, width) in enumerate(spatial_shapes):
+            height, width = height.item(), width.item()
             ref_y, ref_x = ops.meshgrid(
                 ops.linspace(0.5, height - 0.5, height),
                 ops.linspace(0.5, width - 0.5, width),
@@ -1193,7 +1194,7 @@ class Mask2FormerPixelDecoder(nn.Module):
             input_projections_list = []
             for in_channels in transformer_in_channels[::-1]:
                 input_projections_list.append(
-                    nn.SequentialCell(
+                    nn.Sequential(
                         nn.Conv2d(in_channels, feature_dim, kernel_size=1, bias=True),
                         nn.GroupNorm(32, feature_dim),
                     )
@@ -1202,7 +1203,7 @@ class Mask2FormerPixelDecoder(nn.Module):
         else:
             self.input_projections = nn.ModuleList(
                 [
-                    nn.SequentialCell(
+                    nn.Sequential(
                         nn.Conv2d(transformer_in_channels[-1], feature_dim, kernel_size=1, bias=True),
                         nn.GroupNorm(32, feature_dim),
                     )
@@ -1221,18 +1222,18 @@ class Mask2FormerPixelDecoder(nn.Module):
         output_convs = []
 
         for idx, in_channels in enumerate(self.feature_channels[: self.num_fpn_levels]):
-            lateral_conv = nn.SequentialCell(
+            lateral_conv = nn.Sequential(
                 nn.Conv2d(in_channels, feature_dim, kernel_size=1, bias=False),
                 nn.GroupNorm(32, feature_dim),
             )
 
-            output_conv = nn.SequentialCell(
-                nn.Conv2d(feature_dim, feature_dim, kernel_size=3, stride=1, pad_mode='pad', padding=1, bias=False),
+            output_conv = nn.Sequential(
+                nn.Conv2d(feature_dim, feature_dim, kernel_size=3, stride=1, padding=1, bias=False),
                 nn.GroupNorm(32, feature_dim),
                 nn.ReLU(),
             )
-            self.insert_child_to_cell("adapter_{}".format(idx + 1), lateral_conv)
-            self.insert_child_to_cell("layer_{}".format(idx + 1), output_conv)
+            self.add_module("adapter_{}".format(idx + 1), lateral_conv)
+            self.add_module("layer_{}".format(idx + 1), output_conv)
 
             lateral_convs.append(lateral_conv)
             output_convs.append(output_conv)
@@ -1280,13 +1281,13 @@ class Mask2FormerPixelDecoder(nn.Module):
         spatial_shapes = [(embed.shape[2], embed.shape[3]) for embed in input_embeds]
         input_embeds_flat = ops.cat([embed.flatten(start_dim=2).swapaxes(1, 2) for embed in input_embeds], 1)
         spatial_shapes = Tensor(spatial_shapes, dtype=mindspore.int64)
-        masks_flat = ops.cat([mask.flatten(start_dim=1) for mask in masks], 1)
+        masks_flat = ops.cat([ops.flatten(mask, start_dim=1) for mask in masks], 1)
 
         position_embeddings = [embed.flatten(start_dim=2).swapaxes(1, 2) for embed in position_embeddings]
         level_pos_embed_flat = [x + self.level_embed[i].view(1, 1, -1) for i, x in enumerate(position_embeddings)]
         level_pos_embed_flat = ops.cat(level_pos_embed_flat, 1)
 
-        level_start_index = ops.cat((spatial_shapes.new_zeros((1,)), spatial_shapes.prod(1).cumsum(0)[:-1]))
+        level_start_index = ops.cat((spatial_shapes.new_zeros((1,), dtype=mindspore.int32), spatial_shapes.prod(1).int().cumsum(0)[:-1]))
         valid_ratios = ops.stack([self.get_valid_ratio(mask, dtype=input_embeds_flat.dtype) for mask in masks], 1)
 
         # Send input_embeds_flat + masks_flat + level_pos_embed_flat (backbone + proj layer output) through encoder
@@ -1313,7 +1314,7 @@ class Mask2FormerPixelDecoder(nn.Module):
             else:
                 split_sizes[i] = last_hidden_state.shape[1] - level_start_index[i]
 
-        encoder_output = ops.split(last_hidden_state, [size.item() for size in split_sizes], axis=1)
+        encoder_output = ops.split(last_hidden_state, [size.item() for size in split_sizes], dim=1)
 
         # Compute final features
         outputs = [
@@ -1328,7 +1329,7 @@ class Mask2FormerPixelDecoder(nn.Module):
             current_fpn = lateral_conv(feature)
 
             # Following FPN implementation, we use nearest upsampling here
-            out = current_fpn + ops.interpolate(
+            out = current_fpn + F.interpolate(
                 outputs[-1], size=current_fpn.shape[-2:], mode="bilinear", align_corners=False
             )
             out = output_conv(out)
@@ -1483,7 +1484,7 @@ class Mask2FormerAttention(nn.Module):
                 )
             attn_weights += attention_mask
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit awkward, but it's required to
@@ -1495,7 +1496,7 @@ class Mask2FormerAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -1579,7 +1580,7 @@ class Mask2FormerMaskedAttentionDecoderLayer(nn.Module):
             key_padding_mask=None,
         )
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.cross_attn_layer_norm(hidden_states)
 
@@ -1593,16 +1594,16 @@ class Mask2FormerMaskedAttentionDecoderLayer(nn.Module):
             output_attentions=True,
         )
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
@@ -1640,7 +1641,7 @@ class Mask2FormerMaskedAttentionDecoderLayer(nn.Module):
             key_padding_mask=None,
         )
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         # Self Attention Block
@@ -1655,16 +1656,16 @@ class Mask2FormerMaskedAttentionDecoderLayer(nn.Module):
             output_attentions=True,
         )
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         # Fully Connected
         residual = hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         outputs = (hidden_states,)
@@ -1906,7 +1907,7 @@ class Mask2FormerPredictionBlock(nn.Module):
         self.layers = [nn.Linear(in_dim, out_dim), activation]
         # Maintain submodule indexing as if part of a Sequential block
         for i, layer in enumerate(self.layers):
-            self.insert_child_to_cell(str(i), layer)
+            self.add_module(str(i), layer)
 
     def forward(self, input: mindspore.Tensor) -> mindspore.Tensor:
         hidden_state = input
@@ -1945,7 +1946,7 @@ class Mask2FormerMLPPredictionHead(nn.Module):
             # self.my_layer_name = Layer()
             # We can't give instance attributes integer names i.e. self.0 is not permitted and so need to register
             # explicitly
-            self.insert_child_to_cell(str(i), layer)
+            self.add_module(str(i), layer)
 
     def forward(self, input: mindspore.Tensor) -> mindspore.Tensor:
         hidden_state = input
@@ -1981,12 +1982,12 @@ class Mask2FormerMaskPredictor(nn.Module):
 
         outputs_mask = ops.einsum("bqc, bchw -> bqhw", mask_embeddings, pixel_embeddings)
 
-        attention_mask = ops.interpolate(
+        attention_mask = F.interpolate(
             outputs_mask, size=attention_mask_target_size, mode="bilinear", align_corners=False
         )
 
         # [B, Q, H, W]
-        attention_mask = attention_mask.sigmoid().flatten(start_dim=2).unsqueeze(1).repeat(1, self.num_heads, 1, 1)
+        attention_mask = attention_mask.sigmoid().flatten(start_dim=2).unsqueeze(1).tile((1, self.num_heads, 1, 1))
         B, Q, H, W = attention_mask.shape
         attention_mask = attention_mask.reshape([B*Q, H, W])
         attention_mask = (attention_mask < 0.5).bool()
@@ -2012,7 +2013,7 @@ class Mask2FormerTransformerModule(nn.Module):
             if in_features != hidden_dim or config.enforce_input_projection:
                 self.input_projections.append(nn.Conv2d(in_features, hidden_dim, kernel_size=1))
             else:
-                self.input_projections.append(nn.SequentialCell())
+                self.input_projections.append(nn.Sequential())
 
         self.decoder = Mask2FormerMaskedAttentionDecoder(config=config)
         self.level_embed = nn.Embedding(self.num_feature_levels, hidden_dim)
@@ -2043,8 +2044,8 @@ class Mask2FormerTransformerModule(nn.Module):
         _, batch_size, _ = multi_stage_features[0].shape
 
         # [num_queries, batch_size, num_channels]
-        query_embeddings = self.queries_embedder.weight.unsqueeze(1).repeat(1, batch_size, 1)
-        query_features = self.queries_features.weight.unsqueeze(1).repeat(1, batch_size, 1)
+        query_embeddings = self.queries_embedder.weight.unsqueeze(1).tile((1, batch_size, 1))
+        query_features = self.queries_features.weight.unsqueeze(1).tile((1, batch_size, 1))
 
         decoder_output = self.decoder(
             inputs_embeds=query_features,
@@ -2073,7 +2074,7 @@ class Mask2FormerPreTrainedModel(PreTrainedModel):
         if isinstance(cell, Mask2FormerTransformerModule):
             if cell.input_projections is not None:
                 for input_projection in cell.input_projections:
-                    if not isinstance(input_projection, nn.SequentialCell):
+                    if not isinstance(input_projection, nn.Sequential):
                         input_projection.weight.set_data(initializer(XavierUniform(xavier_std), input_projection.weight.shape, input_projection.weight.dtype))
                         input_projection.bias.set_data(initializer('zeros', input_projection.bias.shape, input_projection.bias.dtype))
 
@@ -2084,7 +2085,7 @@ class Mask2FormerPreTrainedModel(PreTrainedModel):
             grid_init = (
                 (grid_init / grid_init.abs().max(-1, keepdims=True)[0])
                 .view(cell.n_heads, 1, 1, 2)
-                .repeat(1, cell.n_levels, cell.n_points, 1)
+                .tile((1, cell.n_levels, cell.n_points, 1))
             )
             for i in range(cell.n_points):
                 grid_init[:, :, i, :] *= i + 1

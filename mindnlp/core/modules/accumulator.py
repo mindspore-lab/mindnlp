@@ -15,9 +15,9 @@
 """gradient accumulator"""
 
 import mindspore
-from mindspore import ops, Tensor, Parameter
 from mindspore import jit_class
-
+from mindspore import Tensor, Parameter
+from mindnlp.core import ops
 
 @jit_class
 class Accumulator():
@@ -44,7 +44,6 @@ class Accumulator():
         self.counter = Parameter(Tensor(1, mindspore.int32), 'counter_')
         assert accumulate_step > 0
         self.accumulate_step = accumulate_step
-        self.map = ops.HyperMap()
 
     def __call__(self, grads):
         r"""

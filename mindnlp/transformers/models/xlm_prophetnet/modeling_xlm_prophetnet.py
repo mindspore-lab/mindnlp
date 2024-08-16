@@ -23,10 +23,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -47,9 +48,9 @@ _CONFIG_FOR_DOC = "XLMProphetNetConfig"
 # Copied from transformers.models.prophetnet.modeling_prophetnet.softmax
 def softmax(hidden_state, dim, onnx_trace=False):
     if onnx_trace:
-        return ops.softmax(hidden_state.float(), axis=dim)
+        return ops.softmax(hidden_state.float(), dim=dim)
     else:
-        return ops.softmax(hidden_state, axis=dim, dtype=mindspore.float32)
+        return ops.softmax(hidden_state, dim=dim, dtype=mindspore.float32)
 
 
 # Copied from transformers.models.prophetnet.modeling_prophetnet.ngram_attention_bias
@@ -68,7 +69,7 @@ def ngram_attention_bias(sequence_length, ngram, dtype):
         left_block[stream_idx].triu(-stream_idx + 1)
 
     left_block[:, :, 0] = 0
-    return ops.cat([left_block, right_block], axis=2)
+    return ops.cat([left_block, right_block], dim=2)
 
 
 # Copied from transformers.models.prophetnet.modeling_prophetnet.compute_relative_buckets
@@ -108,7 +109,7 @@ def compute_all_stream_relative_buckets(num_buckets, max_distance, position_ids)
     main_stream_relative_positions = main_stream_relative_positions - position_ids.unsqueeze(-1)
 
     # predicting stream
-    predicting_stream_relative_positions = ops.cat((position_ids - 1, position_ids), axis=-1).unsqueeze(1)
+    predicting_stream_relative_positions = ops.cat((position_ids - 1, position_ids), dim=-1).unsqueeze(1)
     predicting_stream_relative_positions = predicting_stream_relative_positions.repeat(1, position_ids.shape[-1], 1)
     predicting_stream_relative_positions = predicting_stream_relative_positions - position_ids.unsqueeze(-1)
 
@@ -279,7 +280,7 @@ class XLMProphetNetPositionalEmbeddings(nn.Embedding):
 
                 # retrieve position_ids from input_ids / attention_mask
                 position_ids = (
-                    ops.cumsum(attention_mask, axis=1).type_as(attention_mask) * attention_mask
+                    ops.cumsum(attention_mask, dim=1).type_as(attention_mask) * attention_mask
                 ).long() + self.padding_idx
 
                 # make sure position_ids are not bigger then max_length
@@ -390,7 +391,7 @@ class XLMProphetNetAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             assert layer_head_mask.shape == (self.num_attn_heads,), (
@@ -404,7 +405,7 @@ class XLMProphetNetAttention(nn.Module):
             # apply head_mask also on attn_weights_reshaped which is used for n-gram attention inside the model
             attn_weights_reshaped = layer_head_mask.view(1, -1, 1, 1) * attn_weights_reshaped
 
-        attn_probs = ops.dropout(
+        attn_probs = F.dropout(
             attn_weights,
             p=self.attention_dropout,
             training=self.training,
@@ -417,7 +418,7 @@ class XLMProphetNetAttention(nn.Module):
         attn_output = attn_output.swapaxes(1, 2).reshape(batch_size, tgt_len, hidden_size)
         attn_output = self.out_proj(attn_output)
 
-        attn_output = ops.dropout(attn_output, p=self.dropout, training=self.training)
+        attn_output = F.dropout(attn_output, p=self.dropout, training=self.training)
         return attn_output, attn_weights_reshaped, past_key_value
 
 
@@ -439,9 +440,9 @@ class XLMProphetNetFeedForward(nn.Module):
         hidden_states = self.intermediate(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
 
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.output(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         return hidden_states
 
 
@@ -531,9 +532,9 @@ class XLMProphetNetNgramSelfAttention(nn.Module):
         # saved states are stored with shape (batch_size, num_attn_heads, seq_len, head_dim)
         if past_key_value is not None:
             prev_main_key_states = past_key_value[0]
-            main_key_states = ops.cat((prev_main_key_states, main_key_states), axis=2)
+            main_key_states = ops.cat((prev_main_key_states, main_key_states), dim=2)
             prev_main_value_states = past_key_value[1]
-            main_value_states = ops.cat((prev_main_value_states, main_value_states), axis=2)
+            main_value_states = ops.cat((prev_main_value_states, main_value_states), dim=2)
 
         # Update cache
         past_key_value = (main_key_states, main_value_states)
@@ -573,7 +574,7 @@ class XLMProphetNetNgramSelfAttention(nn.Module):
                 batch_size, self.num_attn_heads, -1, sequence_length
             )
 
-        main_attn_probs = ops.dropout(main_attn_probs, p=self.attention_dropout, training=self.training)
+        main_attn_probs = F.dropout(main_attn_probs, p=self.attention_dropout, training=self.training)
         # project to attn_output
         # [batch_size, number_heads, sequence_length, sequence_length]
         # x [batch_size, number_heads, sequence_length, head_dimesion]
@@ -593,7 +594,7 @@ class XLMProphetNetNgramSelfAttention(nn.Module):
         predict_key_states = ops.stack([ops.cat([main_key_states, key], 2) for key in predict_key_states_list], 1)
 
         # [batch_size, sequence_length, ngram, hidden_size]
-        predict_hidden_states = ops.stack(hidden_states_predict_list, axis=2)
+        predict_hidden_states = ops.stack(hidden_states_predict_list, dim=2)
 
         # [batch_size, number_heads, ngram, 2*sequence_length, head_dimesion]
         predict_value_states = ops.cat(
@@ -633,7 +634,7 @@ class XLMProphetNetNgramSelfAttention(nn.Module):
             )
             predict_attn_probs = layer_head_mask.view(1, 1, -1, 1, 1) * predict_attn_probs
 
-        predict_attn_probs = ops.dropout(
+        predict_attn_probs = F.dropout(
             predict_attn_probs, p=self.attention_dropout, training=self.training
         )
         # project to attention output
@@ -656,7 +657,7 @@ class XLMProphetNetNgramSelfAttention(nn.Module):
         # reshape into better form for `config.output_attentions`
         main_attn_probs = main_attn_probs.view(batch_size, self.num_attn_heads, sequence_length, -1)
 
-        attn_output = ops.dropout(attn_output, p=self.dropout, training=self.training)
+        attn_output = F.dropout(attn_output, p=self.dropout, training=self.training)
 
         return attn_output, main_attn_probs, predict_attn_probs, past_key_value
 
@@ -953,7 +954,7 @@ class XLMProphetNetEncoder(XLMProphetNetPreTrainedModel):
 
         hidden_states = inputs_embeds + position_embeddings
         hidden_states = self.embeddings_layer_norm(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.config.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.config.dropout, training=self.training)
 
         encoder_hidden_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
@@ -1111,7 +1112,7 @@ class XLMProphetNetDecoder(XLMProphetNetPreTrainedModel):
 
         if self.embeddings_layer_norm:
             hidden_states = self.embeddings_layer_norm(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         # init attentions, hidden_states and cache with empty tuples
         all_main_stream_hidden_states = () if output_hidden_states else None
         all_ngram_stream_hidden_states = () if output_hidden_states and self.config.ngram > 0 else None
@@ -1283,7 +1284,7 @@ class XLMProphetNetDecoder(XLMProphetNetPreTrainedModel):
                     :, :seq_length, self.max_target_positions : self.max_target_positions + seq_length
                 ],
             ],
-            axis=-1,
+            dim=-1,
         )
         extended_predict_causal_mask = predict_causal_mask[None, None, :, :, :].expand(
             (batch_size, self.config.num_decoder_attention_heads) + predict_causal_mask.shape
@@ -1297,7 +1298,7 @@ class XLMProphetNetDecoder(XLMProphetNetPreTrainedModel):
             )
             # predicted stream attention_mask should always be 0
             extended_attention_mask = ops.cat(
-                [extended_attention_mask, ops.zeros_like(extended_attention_mask)], axis=-1
+                [extended_attention_mask, ops.zeros_like(extended_attention_mask)], dim=-1
             )
             extended_predict_attention_mask = extended_predict_causal_mask + extended_attention_mask
         else:
@@ -1522,9 +1523,9 @@ class XLMProphetNetForConditionalGeneration(XLMProphetNetPreTrainedModel):
             expend_targets[i, :, :] = labels
 
         logits = logits.swapaxes(0, 1)
-        lprobs = ops.log_softmax(
+        lprobs = F.log_softmax(
             logits.view(-1, logits.shape[-1]),
-            axis=-1,
+            dim=-1,
         )
 
         loss = ops.nll_loss(lprobs, expend_targets.view(-1), reduction="mean")
@@ -1707,9 +1708,9 @@ class XLMProphetNetForCausalLM(XLMProphetNetPreTrainedModel):
             expend_targets[i, :, :] = labels
 
         logits = logits.swapaxes(0, 1)
-        lprobs = ops.log_softmax(
+        lprobs = F.log_softmax(
             logits.view(-1, logits.shape[-1]),
-            axis=-1,
+            dim=-1,
         )
 
         loss = ops.nll_loss(lprobs, expend_targets.view(-1), reduction="mean")

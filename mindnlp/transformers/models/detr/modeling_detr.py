@@ -13,18 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """ MindSpore DETR model."""
-# pylint: disable=fixme
 
 import math
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
-
 from mindspore.common.initializer import initializer, Uniform, HeUniform, XavierUniform, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
@@ -50,12 +49,6 @@ if is_vision_available():
     from mindnlp.transformers.image_transforms import center_to_corners_format
 
 logger = logging.get_logger(__name__)
-
-
-def flatten_01(x:Tensor) -> Tensor:
-    '''implement flatten(start_dim=0, end_dim=1)'''
-    B, C, *others = x.shape
-    return x.reshape([B * C, *others])
 
 
 @dataclass
@@ -273,10 +266,10 @@ class DetrFrozenBatchNorm2d(nn.Module):
 
     def __init__(self, n):
         super().__init__()
-        self.weight = ops.ones(n)
-        self.bias = ops.zeros(n)
-        self.running_mean = ops.zeros(n)
-        self.running_var = ops.ones(n)
+        self.register_buffer("weight", ops.ones(n))
+        self.register_buffer("bias", ops.zeros(n))
+        self.register_buffer("running_mean", ops.zeros(n))
+        self.register_buffer("running_var", ops.ones(n))
 
     def _load_from_state_dict(
         self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs
@@ -317,14 +310,12 @@ def replace_batch_norm(model: nn.Module):
         if isinstance(cell, nn.BatchNorm2d):
             new_cell = DetrFrozenBatchNorm2d(cell.num_features)
 
-            new_cell.weight.data = cell.weight.copy()
-            new_cell.bias.data = cell.bias.copy()
-            new_cell.running_mean.data = cell.running_mean.copy()
-            new_cell.running_var.data = cell.running_var.copy()
+            new_cell.weight.assign_value(cell.weight)
+            new_cell.bias.assign_value(cell.bias)
+            new_cell.running_mean.assign_value(cell.running_mean)
+            new_cell.running_var.assign_value(cell.running_var)
 
-            model._cells[name] = new_cell
-
-        if len(list(cell.cells())) > 0:
+        if len(list(cell.children())) > 0:
             replace_batch_norm(cell)
 
 
@@ -364,7 +355,6 @@ class DetrConvEncoder(nn.Module):
                     **kwargs,
                 )
             else:
-                # FIXME: so far MindNLP does not depend on timm, try fallback to AutoBackbone
                 from ..auto import CONFIG_MAPPING
                 # Backwards compatibility (copy from DetrConfig)
                 backbone_config = config.backbone_config
@@ -407,7 +397,7 @@ class DetrConvEncoder(nn.Module):
         out = []
         for feature_map in features:
             # downsample pixel_mask to match shape of corresponding feature_map
-            mask = ops.interpolate(pixel_mask[None].float(), size=feature_map.shape[-2:]).to(mindspore.bool_)[0]
+            mask = F.interpolate(pixel_mask[None].float(), size=feature_map.shape[-2:]).to(mindspore.bool_)[0]
             out.append((feature_map, mask))
         return out
 
@@ -464,9 +454,9 @@ class DetrSinePositionEmbedding(nn.Module):
 
         pos_x = x_embed[:, :, :, None] / dim_t
         pos_y = y_embed[:, :, :, None] / dim_t
-        pos_x = ops.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), axis=4).flatten(start_dim=3)
-        pos_y = ops.stack((pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), axis=4).flatten(start_dim=3)
-        pos = ops.cat((pos_y, pos_x), axis=3).permute(0, 3, 1, 2)
+        pos_x = ops.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), dim=4).flatten(start_dim=3)
+        pos_y = ops.stack((pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), dim=4).flatten(start_dim=3)
+        pos = ops.cat((pos_y, pos_x), dim=3).permute(0, 3, 1, 2)
         return pos
 
 
@@ -486,10 +476,10 @@ class DetrLearnedPositionEmbedding(nn.Module):
         height_values = ops.arange(height)
         x_emb = self.column_embeddings(width_values)
         y_emb = self.row_embeddings(height_values)
-        pos = ops.cat([x_emb.unsqueeze(0).repeat(height, 1, 1), y_emb.unsqueeze(1).repeat(1, width, 1)], axis=-1)
+        pos = ops.cat([ops.tile(x_emb.unsqueeze(0), (height, 1, 1)), ops.tile(y_emb.unsqueeze(1), (1, width, 1))], dim=-1)
         pos = pos.permute(2, 0, 1)
         pos = pos.unsqueeze(0)
-        pos = pos.repeat(pixel_values.shape[0], 1, 1, 1)
+        pos = ops.tile(pos, (pixel_values.shape[0], 1, 1, 1))
         return pos
 
 
@@ -604,7 +594,7 @@ class DetrAttention(nn.Module):
             attn_weights = attn_weights.view(batch_size, self.num_heads, target_len, source_len) + attention_mask
             attn_weights = attn_weights.view(batch_size * self.num_heads, target_len, source_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit awkward, but it's required to
@@ -616,7 +606,7 @@ class DetrAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -679,23 +669,23 @@ class DetrEncoderLayer(nn.Module):
             output_attentions=output_attentions,
         )
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
 
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
         if self.training:
             if ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any():
-                clamp_value = finfo(hidden_states.dtype, 'max') - 1000
+                clamp_value = ops.finfo(hidden_states.dtype).max - 1000
                 hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -772,7 +762,7 @@ class DetrDecoderLayer(nn.Module):
             output_attentions=output_attentions,
         )
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
@@ -790,16 +780,16 @@ class DetrDecoderLayer(nn.Module):
                 output_attentions=output_attentions,
             )
 
-            hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states = self.encoder_attn_layer_norm(hidden_states)
 
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
@@ -910,7 +900,7 @@ class DetrEncoder(DetrPreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         hidden_states = inputs_embeds
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
@@ -1235,7 +1225,7 @@ class DetrModel(DetrPreTrainedModel):
         flattened_features = projected_feature_map.flatten(start_dim=2).permute(0, 2, 1)
         object_queries = object_queries_list[-1].flatten(start_dim=2).permute(0, 2, 1)
 
-        flattened_mask = mask.flatten(start_dim=1)
+        flattened_mask = ops.flatten(mask, start_dim=1)
 
         # Fourth, sent flattened_features + flattened_mask + position embeddings through encoder
         # flattened_features is a Tensor of shape (batch_size, heigth*width, hidden_size)
@@ -1258,7 +1248,7 @@ class DetrModel(DetrPreTrainedModel):
             )
 
         # Fifth, sent query embeddings + object_queries through the decoder (which is conditioned on the encoder output)
-        query_position_embeddings = self.query_position_embeddings.weight.unsqueeze(0).repeat(batch_size, 1, 1)
+        query_position_embeddings = ops.tile(self.query_position_embeddings.weight.unsqueeze(0), (batch_size, 1, 1))
         queries = ops.zeros_like(query_position_embeddings)
 
         # decoder outputs consists of (dec_features, dec_hidden, dec_attn)
@@ -1551,7 +1541,7 @@ class DetrForSegmentation(DetrPreTrainedModel):
         flattened_features = projected_feature_map.flatten(start_dim=2).permute(0, 2, 1)
         object_queries = object_queries_list[-1].flatten(start_dim=2).permute(0, 2, 1)
 
-        flattened_mask = mask.flatten(start_dim=1)
+        flattened_mask = ops.flatten(mask, start_dim=1)
 
         # Fourth, sent flattened_features + flattened_mask + position embeddings through encoder
         # flattened_features is a Tensor of shape (batch_size, heigth*width, hidden_size)
@@ -1574,8 +1564,9 @@ class DetrForSegmentation(DetrPreTrainedModel):
             )
 
         # Fifth, sent query embeddings + position embeddings through the decoder (which is conditioned on the encoder output)
-        query_position_embeddings = self.detr.model.query_position_embeddings.weight.unsqueeze(0).repeat(
-            batch_size, 1, 1
+        query_position_embeddings = ops.tile(
+            self.detr.model.query_position_embeddings.weight.unsqueeze(0),
+            (batch_size, 1, 1)
         )
         queries = ops.zeros_like(query_position_embeddings)
 
@@ -1601,7 +1592,6 @@ class DetrForSegmentation(DetrPreTrainedModel):
         memory = encoder_outputs[0].permute(0, 2, 1).view(batch_size, self.config.d_model, height, width)
         mask = flattened_mask.view(batch_size, height, width)
 
-        # FIXME h_boxes takes the last one computed, keep this in mind
         # important: we need to reverse the mask, since in the original implementation the mask works reversed
         # bbox_mask is of shape (batch_size, num_queries, number_of_attention_heads in bbox_attention, height/32, width/32)
         bbox_mask = self.bbox_attention(sequence_output, memory, mask=~mask)
@@ -1674,7 +1664,7 @@ class DetrForSegmentation(DetrPreTrainedModel):
 
 
 def _expand(tensor, length: int):
-    return flatten_01(tensor.unsqueeze(1).repeat(1, int(length), 1, 1, 1))
+    return ops.flatten(ops.tile(tensor.unsqueeze(1), (1, int(length), 1, 1, 1)), 0, 1)
 
 
 # taken from https://github.com/facebookresearch/detr/blob/master/models/segmentation.py
@@ -1694,17 +1684,17 @@ class DetrMaskHeadSmallConv(nn.Module):
 
         inter_dims = [dim, context_dim // 2, context_dim // 4, context_dim // 8, context_dim // 16, context_dim // 64]
 
-        self.lay1 = nn.Conv2d(dim, dim, 3, pad_mode='pad', padding=1, bias=True)
+        self.lay1 = nn.Conv2d(dim, dim, 3, padding=1)
         self.gn1 = nn.GroupNorm(8, dim)
-        self.lay2 = nn.Conv2d(dim, inter_dims[1], 3, pad_mode='pad', padding=1, bias=True)
+        self.lay2 = nn.Conv2d(dim, inter_dims[1], 3, padding=1)
         self.gn2 = nn.GroupNorm(min(8, inter_dims[1]), inter_dims[1])
-        self.lay3 = nn.Conv2d(inter_dims[1], inter_dims[2], 3, pad_mode='pad', padding=1, bias=True)
+        self.lay3 = nn.Conv2d(inter_dims[1], inter_dims[2], 3, padding=1)
         self.gn3 = nn.GroupNorm(min(8, inter_dims[2]), inter_dims[2])
-        self.lay4 = nn.Conv2d(inter_dims[2], inter_dims[3], 3, pad_mode='pad', padding=1, bias=True)
+        self.lay4 = nn.Conv2d(inter_dims[2], inter_dims[3], 3, padding=1)
         self.gn4 = nn.GroupNorm(min(8, inter_dims[3]), inter_dims[3])
-        self.lay5 = nn.Conv2d(inter_dims[3], inter_dims[4], 3, pad_mode='pad', padding=1, bias=True)
+        self.lay5 = nn.Conv2d(inter_dims[3], inter_dims[4], 3, padding=1)
         self.gn5 = nn.GroupNorm(min(8, inter_dims[4]), inter_dims[4])
-        self.out_lay = nn.Conv2d(inter_dims[4], 1, 3, pad_mode='pad', padding=1, bias=True)
+        self.out_lay = nn.Conv2d(inter_dims[4], 1, 3, padding=1)
 
         self.dim = dim
 
@@ -1712,7 +1702,7 @@ class DetrMaskHeadSmallConv(nn.Module):
         self.adapter2 = nn.Conv2d(fpn_dims[1], inter_dims[2], 1, bias=True)
         self.adapter3 = nn.Conv2d(fpn_dims[2], inter_dims[3], 1, bias=True)
 
-        for m in self.cells():
+        for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 m.weight.set_data(Parameter(initializer(HeUniform(), m.weight.shape, m.weight.dtype)))
                 m.bias.set_data(Parameter(initializer('zeros', m.bias.shape, m.bias.dtype)))
@@ -1722,38 +1712,38 @@ class DetrMaskHeadSmallConv(nn.Module):
         # the bbox_mask = the attention maps of shape (batch_size, n_queries, n_heads, height/32, width/32).
         # We expand the projected feature map to match the number of heads.
         # TODO: impl flatten01
-        x = ops.cat([_expand(x, bbox_mask.shape[1]), flatten_01(bbox_mask)], 1)
+        x = ops.cat([_expand(x, bbox_mask.shape[1]), ops.flatten(bbox_mask, 0, 1)], 1)
 
         x = self.lay1(x)
         x = self.gn1(x)
-        x = ops.relu(x)
+        x = F.relu(x)
         x = self.lay2(x)
         x = self.gn2(x)
-        x = ops.relu(x)
+        x = F.relu(x)
 
         cur_fpn = self.adapter1(fpns[0])
         if cur_fpn.shape[0] != x.shape[0]:
             cur_fpn = _expand(cur_fpn, x.shape[0] // cur_fpn.shape[0])
-        x = cur_fpn + ops.interpolate(x, size=cur_fpn.shape[-2:], mode="nearest")
+        x = cur_fpn + F.interpolate(x, size=cur_fpn.shape[-2:], mode="nearest")
         x = self.lay3(x)
         x = self.gn3(x)
-        x = ops.relu(x)
+        x = F.relu(x)
 
         cur_fpn = self.adapter2(fpns[1])
         if cur_fpn.shape[0] != x.shape[0]:
             cur_fpn = _expand(cur_fpn, x.shape[0] // cur_fpn.shape[0])
-        x = cur_fpn + ops.interpolate(x, size=cur_fpn.shape[-2:], mode="nearest")
+        x = cur_fpn + F.interpolate(x, size=cur_fpn.shape[-2:], mode="nearest")
         x = self.lay4(x)
         x = self.gn4(x)
-        x = ops.relu(x)
+        x = F.relu(x)
 
         cur_fpn = self.adapter3(fpns[2])
         if cur_fpn.shape[0] != x.shape[0]:
             cur_fpn = _expand(cur_fpn, x.shape[0] // cur_fpn.shape[0])
-        x = cur_fpn + ops.interpolate(x, size=cur_fpn.shape[-2:], mode="nearest")
+        x = cur_fpn + F.interpolate(x, size=cur_fpn.shape[-2:], mode="nearest")
         x = self.lay5(x)
         x = self.gn5(x)
-        x = ops.relu(x)
+        x = F.relu(x)
 
         x = self.out_lay(x)
         return x
@@ -1775,14 +1765,14 @@ class DetrMHAttentionMap(nn.Module):
 
     def forward(self, q, k, mask: Optional[Tensor] = None):
         q = self.q_linear(q)
-        k = ops.conv2d(k, self.k_linear.weight.unsqueeze(-1).unsqueeze(-1), self.k_linear.bias)
+        k = F.conv2d(k, self.k_linear.weight.unsqueeze(-1).unsqueeze(-1), self.k_linear.bias)
         queries_per_head = q.view(q.shape[0], q.shape[1], self.num_heads, self.hidden_dim // self.num_heads)
         keys_per_head = k.view(k.shape[0], self.num_heads, self.hidden_dim // self.num_heads, k.shape[-2], k.shape[-1])
         weights = ops.einsum("bqnc,bnchw->bqnhw", queries_per_head * self.normalize_fact, keys_per_head)
 
         if mask is not None:
-            weights = ops.masked_fill(weights, mask.unsqueeze(1).unsqueeze(1), finfo(weights.dtype, 'min'))
-        weights = ops.softmax(weights.flatten(start_dim=2), axis=-1).view(weights.shape)
+            weights = ops.masked_fill(weights, mask.unsqueeze(1).unsqueeze(1), float(ops.finfo(weights.dtype).min))
+        weights = ops.softmax(weights.flatten(start_dim=2), dim=-1).view(weights.shape)
         weights = self.dropout(weights)
         return weights
 
@@ -1825,7 +1815,7 @@ def sigmoid_focal_loss(inputs, targets, num_boxes, alpha: float = 0.25, gamma: f
         Loss tensor
     """
     prob = inputs.sigmoid()
-    ce_loss = ops.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
+    ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
     # add modulating factor
     p_t = prob * targets + (1 - prob) * (1 - targets)
     loss = ce_loss * ((1 - p_t) ** gamma)
@@ -1890,7 +1880,7 @@ class DetrLoss(nn.Module):
         )
         target_classes[idx] = target_classes_o
 
-        loss_ce = ops.cross_entropy(source_logits.swapaxes(1, 2), target_classes, self.empty_weight)
+        loss_ce = F.cross_entropy(source_logits.swapaxes(1, 2), target_classes, self.empty_weight)
         losses = {"loss_ce": loss_ce}
 
         return losses
@@ -1905,7 +1895,7 @@ class DetrLoss(nn.Module):
         target_lengths = Tensor([len(v["class_labels"]) for v in targets])
         # Count the number of predictions that are NOT "no-object" (which is the last class)
         card_pred = (logits.argmax(-1) != logits.shape[-1] - 1).sum(1)
-        card_err = ops.l1_loss(card_pred.float(), target_lengths.float())
+        card_err = F.l1_loss(card_pred.float(), target_lengths.float())
         losses = {"cardinality_error": card_err}
         return losses
 
@@ -1920,9 +1910,9 @@ class DetrLoss(nn.Module):
             raise KeyError("No predicted boxes found in outputs")
         idx = self._get_source_permutation_idx(indices)
         source_boxes = outputs["pred_boxes"][idx]
-        target_boxes = ops.cat([t["boxes"][i] for t, (_, i) in zip(targets, indices)], axis=0)
+        target_boxes = ops.cat([t["boxes"][i] for t, (_, i) in zip(targets, indices)], dim=0)
 
-        loss_bbox = ops.l1_loss(source_boxes, target_boxes, reduction="none")
+        loss_bbox = F.l1_loss(source_boxes, target_boxes, reduction="none")
 
         losses = {}
         losses["loss_bbox"] = loss_bbox.sum() / num_boxes
@@ -1953,7 +1943,7 @@ class DetrLoss(nn.Module):
         target_masks = target_masks[target_idx]
 
         # upsample predictions to the target size
-        source_masks = ops.interpolate(
+        source_masks = F.interpolate(
             source_masks[:, None], size=target_masks.shape[-2:], mode="bilinear", align_corners=False
         )
         source_masks = source_masks[:, 0].flatten(start_dim=1)
@@ -1968,13 +1958,13 @@ class DetrLoss(nn.Module):
 
     def _get_source_permutation_idx(self, indices):
         # permute predictions following indices
-        batch_idx = ops.cat([ops.full_like(source, i) for i, (source, _) in enumerate(indices)])
+        batch_idx = ops.cat([ops.full_like(source, i, dtype=mindspore.int64) for i, (source, _) in enumerate(indices)])
         source_idx = ops.cat([source for (source, _) in indices])
         return batch_idx, source_idx
 
     def _get_target_permutation_idx(self, indices):
         # permute targets following indices
-        batch_idx = ops.cat([ops.full_like(target, i) for i, (_, target) in enumerate(indices)])
+        batch_idx = ops.cat([ops.full_like(target, i, dtype=mindspore.int64) for i, (_, target) in enumerate(indices)])
         target_idx = ops.cat([target for (_, target) in indices])
         return batch_idx, target_idx
 
@@ -2049,7 +2039,7 @@ class DetrMLPPredictionHead(nn.Module):
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
-            x = ops.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
+            x = F.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
         return x
 
 
@@ -2104,8 +2094,8 @@ class DetrHungarianMatcher(nn.Module):
         batch_size, num_queries = outputs["logits"].shape[:2]
 
         # We flatten to compute the cost matrices in a batch
-        out_prob = ops.softmax(flatten_01(outputs["logits"]), -1)  # [batch_size * num_queries, num_classes]
-        out_bbox = flatten_01(outputs["pred_boxes"])               # [batch_size * num_queries, 4]
+        out_prob = ops.softmax(ops.flatten(outputs["logits"], 0, 1), -1)  # [batch_size * num_queries, num_classes]
+        out_bbox = ops.flatten(outputs["pred_boxes"], 0, 1)               # [batch_size * num_queries, 4]
 
         # Also concat the target labels and boxes
         target_ids = ops.cat([v["class_labels"] for v in targets])
@@ -2234,7 +2224,7 @@ def nested_tensor_from_tensor_list(tensor_list: List[Tensor]):
         batch_shape = [len(tensor_list)] + max_size
         batch_size, num_channels, height, width = batch_shape
         dtype = tensor_list[0].dtype
-        tensor = ops.zeros(batch_shape, dtype=dtype)
+        tensor = ops.zeros(tuple(batch_shape), dtype=dtype)
         mask = ops.ones((batch_size, height, width), dtype=mindspore.bool_)
         for img, pad_img, m in zip(tensor_list, tensor, mask):
             pad_img[: img.shape[0], : img.shape[1], : img.shape[2]] = img.copy()

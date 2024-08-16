@@ -73,7 +73,7 @@ def auto_white_list(network, white_list=None):
         else:
             auto_white_list(subcell, white_list)
 
-    if isinstance(network, nn.SequentialCell) and change:
+    if isinstance(network, nn.Sequential) and change:
         network.cell_list = list(network.cells())
 
 def auto_black_list(network, black_list=None):
@@ -93,7 +93,7 @@ def auto_black_list(network, black_list=None):
         else:
             auto_black_list(subcell, black_list)
 
-    if isinstance(network, nn.SequentialCell) and change:
+    if isinstance(network, nn.Sequential) and change:
         network.cell_list = list(network.cells())
 
 # For Loss Scaler

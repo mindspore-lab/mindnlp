@@ -18,11 +18,11 @@ import math
 from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithPastAndCrossAttentions, CausalLMOutputWithCrossAttentions
@@ -978,7 +978,7 @@ class BertGenerationEmbeddings(nn.Module):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
+        self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
 
     def forward(self, input_ids=None, position_ids=None, inputs_embeds=None, past_key_values_length=0):
         """

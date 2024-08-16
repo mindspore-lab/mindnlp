@@ -21,10 +21,11 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
-
 from mindspore.common.initializer import Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput
@@ -146,7 +147,7 @@ class SamPatchEmbeddings(nn.Module):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, pad_mode='valid', bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True)
 
     def forward(self, pixel_values):
         """
@@ -254,71 +255,29 @@ class SamLayerNorm(nn.Module):
     The ordering of the dimensions in the inputs. channels_last corresponds to inputs with shape (batch_size, height,
     width, channels) while channels_first corresponds to inputs with shape (batch_size, channels, height, width).
     """
+
     def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
-        """
-        Initializes a new instance of the SamLayerNorm class.
-
-        Args:
-            self: The object itself.
-            normalized_shape (tuple): The shape of the input tensor, indicating the size of each dimension.
-            eps (float, optional): A small value to prevent division by zero when normalizing the input tensor.
-                Defaults to 1e-06.
-            data_format (str, optional): The format of the input tensor. Accepted values are 'channels_last' and
-                'channels_first'. Defaults to 'channels_last'.
-
-        Returns:
-            None
-
-        Raises:
-            NotImplementedError: If the specified data format is not supported.
-
-        This method initializes the SamLayerNorm object with the provided parameters. It sets the weight and bias
-        parameters as trainable variables, initializes the epsilon value for numerical stability, and validates the
-        data format. The normalized_shape parameter represents the size of each dimension of the input tensor.
-        The eps parameter is used to avoid division by zero when normalizing the input tensor. The data_format parameter
-        specifies the layout of the input tensor, which can be either 'channels_last' or 'channels_first'.
-        If an unsupported data format is provided, a NotImplementedError is raised.
-        """
         super().__init__()
-        self.weight = Parameter(ops.ones(normalized_shape))
-        self.bias = Parameter(ops.zeros(normalized_shape))
+        self.weight = nn.Parameter(ops.ones(normalized_shape))
+        self.bias = nn.Parameter(ops.zeros(normalized_shape))
         self.eps = eps
         self.data_format = data_format
         if self.data_format not in ["channels_last", "channels_first"]:
             raise NotImplementedError(f"Unsupported data format: {self.data_format}")
         self.normalized_shape = (normalized_shape,)
-        self.layer_norm = ops.LayerNorm(begin_norm_axis=-1,
-                                      begin_params_axis=-1,
-                                      epsilon=self.eps)
 
     def forward(self, x: mindspore.Tensor) -> mindspore.Tensor:
-        """
-        Constructs a layer normalization operation for the SamLayerNorm class.
-
-        Args:
-            self (SamLayerNorm): The instance of the SamLayerNorm class.
-            x (mindspore.Tensor): The input tensor to be normalized.
-
-        Returns:
-            mindspore.Tensor: A normalized tensor based on the input tensor 'x'.
-
-        Raises:
-            ValueError: If the data format is not supported.
-            TypeError: If the input tensor 'x' is of an unsupported type.
-            RuntimeError: If any runtime error occurs during the normalization process.
-        """
         if self.data_format == "channels_last":
-            x, _, _ = self.layer_norm(x, self.weight, self.bias)
+            x = nn.functional.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
         elif self.data_format == "channels_first":
             input_dtype = x.dtype
             x = x.float()
-            u = x.mean(1, keep_dims=True)
-            s = (x - u).pow(2).mean(1, keep_dims=True)
+            u = ops.mean(x, 1, keepdim=True)
+            s = ops.mean((x - u).pow(2), 1, keepdim=True)
             x = (x - u) / ops.sqrt(s + self.eps)
             x = x.to(dtype=input_dtype)
             x = self.weight[:, None, None] * x + self.bias[:, None, None]
         return x
-
 
 class SamAttention(nn.Module):
     """
@@ -444,11 +403,11 @@ class SamAttention(nn.Module):
         _, _, _, c_per_head = query.shape
         attn = query @ key.permute(0, 1, 3, 2)  # batch_size * point_batch_size  x N_heads x N_tokens x N_tokens
         attn = attn / math.sqrt(c_per_head)
-        attn = ops.softmax(attn, axis=-1)
+        attn = ops.softmax(attn, dim=-1)
 
         if attention_similarity is not None:
             attn = attn + attention_similarity
-            attn = ops.softmax(attn, axis=-1)
+            attn = ops.softmax(attn, dim=-1)
 
         # Get output
         out = attn @ value
@@ -896,8 +855,8 @@ class SamMaskDecoder(nn.Module):
         self.transformer = SamTwoWayTransformer(config)
 
         # should we create a new class for this?
-        self.upscale_conv1 = nn.Conv2dTranspose(self.hidden_size, self.hidden_size // 4, kernel_size=2, stride=2, pad_mode='valid', bias=True)
-        self.upscale_conv2 = nn.Conv2dTranspose(self.hidden_size // 4, self.hidden_size // 8, kernel_size=2, stride=2, pad_mode='valid', bias=True)
+        self.upscale_conv1 = nn.Conv2dTranspose(self.hidden_size, self.hidden_size // 4, kernel_size=2, stride=2, bias=True)
+        self.upscale_conv2 = nn.Conv2dTranspose(self.hidden_size // 4, self.hidden_size // 8, kernel_size=2, stride=2, bias=True)
         self.upscale_layer_norm = SamLayerNorm(self.hidden_size // 4, data_format="channels_first")
         self.activation = nn.GELU()
 
@@ -941,11 +900,11 @@ class SamMaskDecoder(nn.Module):
         batch_size, num_channels, height, width = image_embeddings.shape
         point_batch_size = sparse_prompt_embeddings.shape[1]
         # Concatenate output tokens
-        output_tokens = ops.cat([self.iou_token.weight, self.mask_tokens.weight], axis=0)
+        output_tokens = ops.cat([self.iou_token.weight, self.mask_tokens.weight], dim=0)
         output_tokens = output_tokens.repeat(batch_size, point_batch_size, 1, 1)
 
         if sparse_prompt_embeddings.sum().item() != 0:
-            tokens = ops.cat((output_tokens, sparse_prompt_embeddings), axis=2)
+            tokens = ops.cat((output_tokens, sparse_prompt_embeddings), dim=2)
         else:
             tokens = output_tokens
         point_embeddings = tokens.to(self.iou_token.weight.dtype)
@@ -980,7 +939,7 @@ class SamMaskDecoder(nn.Module):
         for i in range(self.num_mask_tokens):
             current_mlp = self.output_hypernetworks_mlps[i]
             hyper_in_list += [current_mlp(mask_tokens_out[:, :, i, :])]
-        hyper_in = ops.stack(hyper_in_list, axis=2)
+        hyper_in = ops.stack(hyper_in_list, dim=2)
 
         _, num_channels, height, width = upscaled_embedding.shape
         upscaled_embedding = upscaled_embedding.reshape(batch_size, point_batch_size, num_channels, height * width)
@@ -1055,7 +1014,7 @@ class SamPositionalEmbedding(nn.Module):
         coordinates = coordinates @ self.positional_embedding
         coordinates = 2 * np.pi * coordinates
         # outputs d_1 x ... x d_n x channel shape
-        return ops.cat([ops.sin(coordinates), ops.cos(coordinates)], axis=-1)
+        return ops.cat([ops.sin(coordinates), ops.cos(coordinates)], dim=-1)
 
 
 class SamMaskEmbedding(nn.Module):
@@ -1096,9 +1055,9 @@ class SamMaskEmbedding(nn.Module):
         super().__init__()
         self.mask_input_channels = config.mask_input_channels // 4
         self.activation = ACT2FN[config.hidden_act]
-        self.conv1 = nn.Conv2d(1, self.mask_input_channels, kernel_size=2, stride=2, pad_mode='valid', bias=True)
-        self.conv2 = nn.Conv2d(self.mask_input_channels, config.mask_input_channels, kernel_size=2, stride=2, pad_mode='valid', bias=True)
-        self.conv3 = nn.Conv2d(config.mask_input_channels, config.hidden_size, kernel_size=1, pad_mode='valid', bias=True)
+        self.conv1 = nn.Conv2d(1, self.mask_input_channels, kernel_size=2, stride=2, bias=True)
+        self.conv2 = nn.Conv2d(self.mask_input_channels, config.mask_input_channels, kernel_size=2, stride=2, bias=True)
+        self.conv3 = nn.Conv2d(config.mask_input_channels, config.hidden_size, kernel_size=1, bias=True)
         self.layer_norm1 = SamLayerNorm(
             self.mask_input_channels, eps=config.layer_norm_eps, data_format="channels_first"
         )
@@ -1214,8 +1173,8 @@ class SamPromptEncoder(nn.Module):
             target_labels_shape = (points.shape[0], points.shape[1], 1)
             padding_point = ops.zeros(target_point_shape)
             padding_label = -ops.ones(target_labels_shape)
-            points = ops.cat([points, padding_point], axis=2)
-            labels = ops.cat([labels, padding_label.type_as(labels)], axis=2)
+            points = ops.cat([points, padding_point], dim=2)
+            labels = ops.cat([labels, padding_label.type_as(labels)], dim=2)
         input_shape = (self.input_image_size, self.input_image_size)
         point_embedding = self.shared_embedding(points, input_shape)
 
@@ -1288,7 +1247,7 @@ class SamPromptEncoder(nn.Module):
             if sparse_embeddings is None:
                 sparse_embeddings = box_embeddings
             else:
-                sparse_embeddings = ops.cat([sparse_embeddings, box_embeddings], axis=2)
+                sparse_embeddings = ops.cat([sparse_embeddings, box_embeddings], dim=2)
 
         if input_masks is not None:
             dense_embeddings = self.mask_embed(input_masks)
@@ -1460,9 +1419,9 @@ class SamVisionAttention(nn.Module):
                 attn_weights, query, self.rel_pos_h, self.rel_pos_w, (height, width), (height, width)
             )
 
-        attn_weights = ops.softmax(attn_weights, dtype=mindspore.float32, axis=-1).to(query.dtype)
+        attn_weights = ops.softmax(attn_weights, dtype=mindspore.float32, dim=-1).to(query.dtype)
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = (attn_probs @ value).reshape(batch_size, self.num_attention_heads, height, width, -1)
         attn_output = attn_output.permute(0, 2, 3, 1, 4).reshape(batch_size, height, width, -1)
@@ -1688,9 +1647,9 @@ class SamVisionNeck(nn.Module):
         super().__init__()
         self.config = config
 
-        self.conv1 = nn.Conv2d(config.hidden_size, config.output_channels, kernel_size=1, bias=False, pad_mode='valid')
+        self.conv1 = nn.Conv2d(config.hidden_size, config.output_channels, kernel_size=1, bias=False)
         self.layer_norm1 = SamLayerNorm(config.output_channels, data_format="channels_first")
-        self.conv2 = nn.Conv2d(config.output_channels, config.output_channels, kernel_size=3, padding=1, bias=False, pad_mode='pad')
+        self.conv2 = nn.Conv2d(config.output_channels, config.output_channels, kernel_size=3, padding=1, bias=False)
         self.layer_norm2 = SamLayerNorm(config.output_channels, data_format="channels_first")
 
     def forward(self, hidden_states):
@@ -2030,7 +1989,7 @@ class SamModel(SamPreTrainedModel):
         y_embed = y_embed / size
         x_embed = x_embed / size
 
-        positional_embedding = self.shared_image_embedding(ops.stack([x_embed, y_embed], axis=-1))
+        positional_embedding = self.shared_image_embedding(ops.stack([x_embed, y_embed], dim=-1))
         return positional_embedding.permute(2, 0, 1).unsqueeze(0)  # channel x height x width
 
     def get_image_embeddings(

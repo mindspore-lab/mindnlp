@@ -132,13 +132,12 @@ class WeightStandardizedConv2d(nn.Conv2d):
         if self.pad is not None:
             hidden_state = self.pad(hidden_state)
         weight = nn.functional.batch_norm(
-            self.weight.reshape(1, self.out_channels, -1), ops.ones(self.out_channels), ops.zeros(self.out_channels), training=True, momentum=0.0, eps=self.eps
+            self.weight.reshape(1, self.out_channels, -1), None, None, training=True, momentum=0.0, eps=self.eps
         ).reshape_as(self.weight)
         hidden_state = nn.functional.conv2d(
             hidden_state, weight, self.bias, self.stride, self.padding, self.dilation, self.groups
         )
         return hidden_state
-
 
 class BitGroupNormActivation(nn.GroupNorm):
     r"""

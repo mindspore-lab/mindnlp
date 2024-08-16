@@ -7,11 +7,11 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import Normal
-from mindspore.ops.function.nn_func import _scaled_dot_product_attention
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, StaticCache
@@ -162,7 +162,7 @@ def _rotate_half(x: Tensor) -> Tensor:
         If the number of elements is odd, the behavior is undefined.
     """
     x1, x2 = x.chunk(2, axis=-1)
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 def _apply_rotary_pos_emb(x: Tensor, pos_sin: Tensor, pos_cos: Tensor) -> Tensor:
@@ -287,7 +287,7 @@ class OpenELMRotaryEmbedding(nn.Module):
             # The shape of 'pos_index_theta' is [number of key tokens, model dimension]
             pos_index_theta = ops.einsum("i,j->ij", pos_index, self.inv_freq)
             # The shape of 'emb' is [number of key tokens, model dimension]
-            emb = ops.cat((pos_index_theta, pos_index_theta), axis=-1)
+            emb = ops.cat((pos_index_theta, pos_index_theta), dim=-1)
 
             # the shape of cos and sin embeddings is [number of key tokens, model_dim]
             cos_emb = emb.cos().to(dtype=key_dtype)
@@ -404,8 +404,8 @@ class OpenELMMultiHeadCausalAttention(nn.Module):
         v_heads = config.num_kv_heads[layer_idx]
 
         self.qkv_proj = nn.Linear(
-            in_channels=config.model_dim,
-            out_channels=(q_heads + k_heads + v_heads) * head_dim,
+            config.model_dim,
+            (q_heads + k_heads + v_heads) * head_dim,
             bias=False,
         )
 
@@ -427,8 +427,8 @@ class OpenELMMultiHeadCausalAttention(nn.Module):
             self.k_norm = None
 
         self.out_proj = nn.Linear(
-            in_channels=q_heads * head_dim,
-            out_channels=config.model_dim,
+            q_heads * head_dim,
+            config.model_dim,
             bias=False,
         )
 
@@ -524,23 +524,21 @@ class OpenELMMultiHeadCausalAttention(nn.Module):
         if self.num_groups != 1:
             # GQA
             # [B, k_h, S, h] --> [B, q_h, S, h]
-            keys = keys.repeat_interleave(self.num_groups, dim=1)
+            keys = ops.repeat_interleave(keys, self.num_groups, dim=1)
             # [B, v_h, S, h] --> [B, q_h, S, h]
-            values = values.repeat_interleave(self.num_groups, dim=1)
+            values = ops.repeat_interleave(values, self.num_groups, dim=1)
 
         causal_mask = attention_mask
         if attention_mask is not None and cache_position is not None:
             causal_mask = causal_mask[:, :, cache_position, : keys.shape[-2]]
 
-        attn_output, _ = _scaled_dot_product_attention(
+        attn_output = F.scaled_dot_product_attention(
             queries,
             keys,
             values,
             attn_mask=causal_mask,
             dropout_p=0.,
             is_causal=False,
-            is_training=self.training,
-            dtype=queries.dtype
         )
 
         attn_output = attn_output.swapaxes(1, 2)
@@ -598,26 +596,26 @@ class OpenELMFeedForwardNetwork(nn.Module):
         if config.ffn_with_glu:
             # FFN with Gated linear unit, as described in https://arxiv.org/abs/2002.05202v1.
             self.proj_1 = nn.Linear(
-                in_channels=config.model_dim,
-                out_channels=2 * intermediate_dim,
+                config.model_dim,
+                2 * intermediate_dim,
                 bias=False,
             )
             self.proj_2 = nn.Linear(
-                in_channels=intermediate_dim,
-                out_channels=config.model_dim,
+                intermediate_dim,
+                config.model_dim,
                 bias=False,
             )
             self.ffn_with_glu = True
         else:
             # Standard FFN, as described in https://arxiv.org/abs/1706.03762
             self.proj_1 = nn.Linear(
-                in_channels=config.model_dim,
-                out_channels=intermediate_dim,
+                config.model_dim,
+                intermediate_dim,
                 bias=False,
             )
             self.proj_2 = nn.Linear(
-                in_channels=intermediate_dim,
-                out_channels=config.model_dim,
+                intermediate_dim,
+                config.model_dim,
                 bias=False,
             )
             self.ffn_with_glu = False
@@ -806,10 +804,7 @@ class OpenELMModel(OpenELMPreTrainedModel):
         super().__init__(config)
         self.config = config
 
-        self.token_embeddings = nn.Embedding(
-            embedding_size=config.model_dim,
-            vocab_size=config.vocab_size,
-        )
+        self.token_embeddings = nn.Embedding(config.model_dim, config.vocab_size)
 
         self.layers = nn.ModuleList([
             OpenELMDecoderLayer(config=config, layer_idx=layer_idx)
@@ -820,8 +815,8 @@ class OpenELMModel(OpenELMPreTrainedModel):
             self.classifier = None
         else:
             self.classifier = nn.Linear(
-                in_channels=config.model_dim,
-                out_channels=config.vocab_size,
+                config.model_dim,
+                config.vocab_size,
                 bias=False,
             )
         self.num_transformer_layers = config.num_transformer_layers
@@ -1063,9 +1058,9 @@ class OpenELMModel(OpenELMPreTrainedModel):
             self.causal_mask = ops.triu(causal_mask, diagonal=1)
 
         # We use the current dtype to avoid any overflows
-        min_dtype = finfo(dtype, 'min')
+        min_dtype = ops.finfo(dtype).min
         causal_mask = (
-            self.causal_mask[None, None, :, :].repeat(batch_size, 1, 1, 1).to(dtype)
+            self.causal_mask[None, None, :, :].tile((batch_size, 1, 1, 1)).to(dtype)
             * min_dtype
         )
 
@@ -1318,7 +1313,7 @@ class OpenELMForCausalLM(OpenELMPreTrainedModel):
             # Flatten the tokens
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
-            loss = ops.cross_entropy(shift_logits, shift_labels)
+            loss = F.cross_entropy(shift_logits, shift_labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]

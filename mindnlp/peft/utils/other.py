@@ -18,11 +18,10 @@ from contextlib import nullcontext
 from typing import Optional, List
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Tensor, Parameter
-
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
 from mindnlp.core.nn import ParameterDict
 
 def _get_batch_size(input_ids: Optional[Tensor], inputs_embeds: Optional[Tensor]) -> int:
@@ -308,9 +307,9 @@ def _set_trainable(model, adapter_name):
                 setattr(parent, target_name, warp_cell)
 
                 # TODO:the implemtation of mindspore, __setitem__ is not consistent with __setattr__ here.
-                # self.cell_list is not set correctly if __setattr__'s value type is SequentialCell.
+                # self.cell_list is not set correctly if __setattr__'s value type is Sequential.
                 # Thus we set it apparently here. This line may be removed later.
-                if isinstance(parent, nn.SequentialCell):
+                if isinstance(parent, nn.Sequential):
                     parent.cell_list = list(parent._cells.values())
 
     for n, p in model.parameters_and_names():

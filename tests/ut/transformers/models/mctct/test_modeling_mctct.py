@@ -204,10 +204,10 @@ class MCTCTModelTester:
             input_features[i, input_lengths[i] :] = 0.0
             attention_mask[i, input_lengths[i] :] = 0
         model.config.ctc_loss_reduction = "sum"
-        sum_loss = model(input_features, attention_mask=attention_mask, labels=labels).loss[0].item()
+        sum_loss = model(input_features, attention_mask=attention_mask, labels=labels).loss.item()
 
         model.config.ctc_loss_reduction = "mean"
-        mean_loss = model(input_features, attention_mask=attention_mask, labels=labels).loss[0].item()
+        mean_loss = model(input_features, attention_mask=attention_mask, labels=labels).loss.item()
 
         self.parent.assertTrue(isinstance(sum_loss, float))
         self.parent.assertTrue(isinstance(mean_loss, float))
@@ -233,7 +233,7 @@ class MCTCTModelTester:
                 labels[i, max_length_labels[i] - 1 :] = -100
 
         loss = model(input_features, labels=labels).loss
-        self.parent.assertFalse(ops.isinf(loss[0]).item())
+        self.parent.assertFalse(ops.isinf(loss).item())
 
         # loss.backward()
 

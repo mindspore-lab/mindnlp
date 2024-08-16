@@ -21,11 +21,11 @@ import re
 from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 
 import mindspore
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 
-from mindnlp.utils import logging
+from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
+from mindnlp.utils import logging
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
@@ -122,7 +122,7 @@ class PrefixEncoder(nn.Module):
         if self.prefix_projection:
             # Use a two-layer MLP to encode the prefix
             self.embedding = nn.Embedding(config.pre_seq_len, config.hidden_size)
-            self.trans = nn.SequentialCell(
+            self.trans = nn.Sequential(
                 nn.Linear(config.hidden_size, config.hidden_size),
                 nn.Tanh(),
                 nn.Linear(config.hidden_size, config.num_layers * config.hidden_size * 2)
@@ -269,7 +269,7 @@ class RotaryEmbedding(nn.Module):
             t = ops.arange(seq_len, dtype=self.inv_freq.dtype)
             freqs = ops.einsum('i,j->ij', t, self.inv_freq)
             # Different from paper, but it uses a different permutation in order to obtain the same calculation
-            emb = ops.cat((freqs, freqs), axis=-1)
+            emb = ops.cat((freqs, freqs), dim=-1)
             if self.precision == mindspore.bfloat16:
                 emb = emb.float()
 
@@ -321,7 +321,7 @@ def rotate_half(x):
         TypeError: If the input is not an array-like object.
     """
     x1, x2 = x[..., :x.shape[-1] // 2], x[..., x.shape[-1] // 2:]
-    return ops.cat((-x2, x1), axis=x1.ndim - 1)  # dim=-1 triggers a bug in earlier torch versions
+    return ops.cat((-x2, x1), dim=x1.ndim - 1)  # dim=-1 triggers a bug in earlier torch versions
 
 
 def apply_rotary_pos_emb_index(q, k, cos, sin, position_id):
@@ -342,8 +342,8 @@ def apply_rotary_pos_emb_index(q, k, cos, sin, position_id):
         None.
     """
     # position_id: [sq, b], q, k: [sq, b, np, hn], cos: [sq, 1, hn] -> [sq, b, 1, hn]
-    cos, sin = embedding(position_id, cos.squeeze(1)).unsqueeze(2), \
-        embedding(position_id, sin.squeeze(1)).unsqueeze(2)
+    cos, sin = F.embedding(position_id, cos.squeeze(1)).unsqueeze(2), \
+        F.embedding(position_id, sin.squeeze(1)).unsqueeze(2)
     q, k = (q * cos) + (rotate_half(q) * sin), (k * cos) + (rotate_half(k) * sin)
     return q, k
 
@@ -382,8 +382,8 @@ def attention_fn(
     """
     if layer_past is not None:
         past_key, past_value = layer_past[0], layer_past[1]
-        key_layer = ops.cat((past_key, key_layer), axis=0)
-        value_layer = ops.cat((past_value, value_layer), axis=0)
+        key_layer = ops.cat((past_key, key_layer), dim=0)
+        value_layer = ops.cat((past_value, value_layer), dim=0)
 
     # seqlen, batch, num_attention_heads, hidden_size_per_attention_head
     _, _, _, hidden_size = key_layer.shape
@@ -430,7 +430,7 @@ def attention_fn(
         # attention_scores = ops.select(ops.isinf(attention_scores), -10000.00, attention_scores.float())
         # if ops.isinf(attention_scores).any():
         #     exit()
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
         attention_probs = attention_probs.astype(dtype)
     # =========================
     # Context layer. [sq, b, hp]
@@ -597,7 +597,7 @@ class SelfAttention(nn.Module):
         last_dim = tensor.ndim - 1
         last_dim_size = tensor.shape[last_dim] // num_partitions
         # Split.
-        tensor_list = ops.split(tensor, last_dim_size, axis=last_dim)
+        tensor_list = ops.split(tensor, last_dim_size, dim=last_dim)
         # Note: torch.split does not create contiguous tensors by default.
         if contiguous_split_chunks:
             return tuple(chunk for chunk in tensor_list)
@@ -639,8 +639,8 @@ class SelfAttention(nn.Module):
                 position_ids[:, 1, :].swapaxes(0, 1)
             q1, k1 = apply_rotary_pos_emb_index(q1, k1, cos, sin, position_ids)
             q2, k2 = apply_rotary_pos_emb_index(q2, k2, cos, sin, block_position_ids)
-            query_layer = ops.concat([q1, q2], axis=(q1.ndim - 1))
-            key_layer = ops.concat([k1, k2], axis=(k1.ndim - 1))
+            query_layer = ops.concat([q1, q2], dim=(q1.ndim - 1))
+            key_layer = ops.concat([k1, k2], dim=(k1.ndim - 1))
         else:
             position_ids = position_ids.swapaxes(0, 1)
             cos, sin = self.rotary_emb(value_layer, seq_len=position_ids.max() + 1)
@@ -1037,8 +1037,8 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
                 ops.zeros(context_length, dtype=mindspore.int64),
                 ops.arange(seq_length - context_length, dtype=mindspore.int64) + 1
             )) for context_length in context_lengths]
-            block_position_ids = ops.stack(block_position_ids, axis=0)
-            position_ids = ops.stack((position_ids, block_position_ids), axis=1)
+            block_position_ids = ops.stack(block_position_ids, dim=0)
+            position_ids = ops.stack((position_ids, block_position_ids), dim=1)
         else:
             position_ids = ops.arange(seq_length, dtype=mindspore.int64).unsqueeze(0).tile((batch_size, 1))
             for i, context_length in enumerate(context_lengths):
@@ -1307,7 +1307,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         if self.pre_seq_len is not None and attention_mask is not None:
             prefix_attention_mask = ops.ones((batch_size, 1, input_ids.shape[-1], self.pre_seq_len))
             prefix_attention_mask = (prefix_attention_mask < 0.5).bool()
-            attention_mask = ops.cat((prefix_attention_mask, attention_mask), axis=3)
+            attention_mask = ops.cat((prefix_attention_mask, attention_mask), dim=3)
 
         # [seq_len, batch, hidden_size]
         hidden_states = inputs_embeds.swapaxes(0, 1)
@@ -1482,7 +1482,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         """
         # update past_key_values
         model_kwargs["past_key_values"] = self._extract_past_from_model_output(
-            outputs, standardize_cache_format=standardize_cache_format
+            outputs
         )
 
         # update attention mask
@@ -1490,11 +1490,11 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             attention_mask = model_kwargs["attention_mask"]
             if attention_mask is not None and attention_mask.dtype == mindspore.bool_:
                 attention_mask = ops.cat(
-                    [attention_mask, attention_mask.new_ones((*attention_mask.shape[:3], 1))], axis=3)
+                    [attention_mask, attention_mask.new_ones((*attention_mask.shape[:3], 1))], dim=3)
                 new_attention_mask = attention_mask[:, :, -1:].copy()
                 new_attention_mask[..., -1] = False
                 model_kwargs["attention_mask"] = ops.cat(
-                    [attention_mask, new_attention_mask], axis=2
+                    [attention_mask, new_attention_mask], dim=2
                 )
 
         # update position ids
@@ -1503,7 +1503,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             new_position_id = position_ids[..., -1:].copy()
             new_position_id[:, 1, :] += 1
             model_kwargs["position_ids"] = ops.cat(
-                [position_ids, new_position_id], axis=-1
+                [position_ids, new_position_id], dim=-1
             )
 
         return model_kwargs
@@ -1664,7 +1664,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1), ignore_index=-100)
+            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1), ignore_index=-100)
 
             lm_logits = lm_logits.to(hidden_states.dtype)
             loss = loss.to(hidden_states.dtype)
@@ -1932,14 +1932,14 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             next_token_scores = logits_warper(input_ids, next_token_scores)
 
             # sample
-            probs = ops.softmax(next_token_scores, axis=-1)
+            probs = ops.softmax(next_token_scores, dim=-1)
             if generation_config.do_sample:
                 next_tokens = ops.multinomial(probs, num_samples=1).squeeze(1)
             else:
                 next_tokens = ops.argmax(probs, dim=-1)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            input_ids = ops.cat([input_ids, next_tokens[:, None]], dim=-1)
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
             )

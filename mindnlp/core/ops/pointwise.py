@@ -2,7 +2,6 @@
 import mindspore
 from mindspore import ops
 from mindnlp.configs import USE_PYBOOST
-from mindspore.common.initializer import initializer
 
 # abs
 def abs(input):
@@ -127,7 +126,8 @@ def clamp(input, min=None, max=None):
     return ops.clamp(input, min, max)
 
 # clip
-
+def clip(input, min=None, max=None):
+    return clamp(input, min, max)
 
 # conj_physical
 
@@ -182,7 +182,7 @@ def erfinv(input):
 # exp
 def exp(input):
     if USE_PYBOOST:
-        return mindspore.mint.exp
+        return mindspore.mint.exp(input)
     return ops.exp(input)
 
 # exp2
@@ -255,7 +255,8 @@ def log1p(input):
     return ops.log1p(input)
 
 # log2
-
+def log2(input):
+    return ops.log2(input)
 
 # logaddexp
 
@@ -270,10 +271,10 @@ def logical_and(input, other):
     return ops.logical_and(input, other)
 
 # logical_not
-def logical_not(input, other):
+def logical_not(input):
     if USE_PYBOOST:
-        return mindspore.mint.logical_not(input, other)
-    return ops.logical_not(input, other)
+        return mindspore.mint.logical_not(input)
+    return ops.logical_not(input)
 
 # logical_or
 def logical_or(input, other):

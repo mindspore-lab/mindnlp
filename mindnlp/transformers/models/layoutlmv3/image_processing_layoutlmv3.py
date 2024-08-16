@@ -13,12 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Image processor class for LayoutLMv3."""
+
 from typing import Dict, Iterable, Optional, Union
-import pytesseract
+
 import numpy as np
-from mindnlp.utils import TensorType, is_vision_available, logging
+
 from ...image_processing_utils import BaseImageProcessor, BatchFeature, get_size_dict
 from ...image_transforms import resize, to_channel_dimension_format, to_pil_image
+from ....configs import IMAGENET_STANDARD_MEAN, IMAGENET_STANDARD_STD
 from ...image_utils import (
     ChannelDimension,
     ImageInput,
@@ -28,16 +30,24 @@ from ...image_utils import (
     make_list_of_images,
     to_numpy_array,
     valid_images,
-    validate_kwargs,
     validate_preprocess_arguments,
 )
+from ....utils import (
+    TensorType,
+    is_pytesseract_available,
+    is_vision_available,
+    logging,
+    requires_backends,
+)
+
 
 if is_vision_available():
     import PIL
 
 # soft dependency
-IMAGENET_STANDARD_MEAN = [0.485, 0.456, 0.406]
-IMAGENET_STANDARD_STD = [0.229, 0.224, 0.225]
+if is_pytesseract_available():
+    import pytesseract
+
 logger = logging.get_logger(__name__)
 
 
@@ -159,23 +169,6 @@ class LayoutLMv3ImageProcessor(BaseImageProcessor):
         self.apply_ocr = apply_ocr
         self.ocr_lang = ocr_lang
         self.tesseract_config = tesseract_config
-        self._valid_processor_keys = [
-            "images",
-            "do_resize",
-            "size",
-            "resample",
-            "do_rescale",
-            "rescale_factor",
-            "do_normalize",
-            "image_mean",
-            "image_std",
-            "apply_ocr",
-            "ocr_lang",
-            "tesseract_config",
-            "return_tensors",
-            "data_format",
-            "input_data_format",
-        ]
 
     # Copied from transformers.models.vit.image_processing_vit.ViTImageProcessor.resize
     def resize(
@@ -243,7 +236,6 @@ class LayoutLMv3ImageProcessor(BaseImageProcessor):
         return_tensors: Optional[Union[str, TensorType]] = None,
         data_format: ChannelDimension = ChannelDimension.FIRST,
         input_data_format: Optional[Union[str, ChannelDimension]] = None,
-        **kwargs,
     ) -> PIL.Image.Image:
         """
         Preprocess an image or batch of images.
@@ -310,8 +302,6 @@ class LayoutLMv3ImageProcessor(BaseImageProcessor):
         tesseract_config = tesseract_config if tesseract_config is not None else self.tesseract_config
         images = make_list_of_images(images)
 
-        validate_kwargs(captured_kwargs=kwargs.keys(), valid_processor_keys=self._valid_processor_keys)
-
         if not valid_images(images):
             raise ValueError(
                 "Invalid image type. Must be of type PIL.Image.Image, numpy.ndarray, "
@@ -343,7 +333,7 @@ class LayoutLMv3ImageProcessor(BaseImageProcessor):
 
         # Tesseract OCR to get words + normalized bounding boxes
         if apply_ocr:
-            #requires_backends(self, "pytesseract")
+            requires_backends(self, "pytesseract")
             words_batch = []
             boxes_batch = []
             for image in images:
@@ -379,4 +369,5 @@ class LayoutLMv3ImageProcessor(BaseImageProcessor):
             data["words"] = words_batch
             data["boxes"] = boxes_batch
         return data
-__all__ = ["LayoutLMv3ImageProcessor"]
+
+__all__ = ['LayoutLMv3ImageProcessor']

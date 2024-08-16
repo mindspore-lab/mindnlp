@@ -21,8 +21,10 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling, MaskedLMOutput, SequenceClassifierOutput
 from ...modeling_utils import PreTrainedModel
@@ -208,8 +210,8 @@ class TapasSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -227,7 +229,7 @@ class TapasSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -582,7 +584,7 @@ class TapasPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             cell.weight.initialize(Normal(self.config.initializer_range))
@@ -870,7 +872,7 @@ class TapasForMaskedLM(TapasPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy  # -100 index = padding token
+            loss_fct = F.cross_entropy  # -100 index = padding token
             masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.reshape(-1))
 
         if not return_dict:
@@ -1102,7 +1104,7 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
                 logits_per_cell, _ = reduce_mean(logits, cell_index)
                 logits = gathertap(logits_per_cell, cell_index)
 
-            probs = mindspore.ops.log_softmax(logits,axis=-1)
+            probs = F.log_softmax(logits, dim=-1)
             probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
             dist_per_token = nn.probability.distribution.Bernoulli(probs=probs)
             # Compute cell selection loss per example.
@@ -1121,7 +1123,7 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
                 selection_loss_per_example, logits = _single_column_cell_selection_loss(
                     logits, column_logits, labels, cell_index, col_index, cell_mask
                 )
-                probs = mindspore.ops.log_softmax(logits,axis=-1)
+                probs = F.log_softmax(logits, dim=-1)
                 probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
 
                 dist_per_token = nn.probability.distribution.Bernoulli(probs=probs)
@@ -1294,16 +1296,16 @@ class TapasForSequenceClassification(TapasPreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
-                loss_fct = ops.mse_loss
+                loss_fct = F.mse_loss
                 if self.num_labels == 1:
                     loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss_fct = ops.cross_entropy
+                loss_fct = F.cross_entropy
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss_fct = ops.binary_cross_entropy_with_logits
+                loss_fct = F.binary_cross_entropy_with_logits
                 loss = loss_fct(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1481,13 +1483,13 @@ def range_index_map(batch_shape, num_segments, name="range_index_map"):
     )  # create a rank 1 vector with num_segments elements
     new_tensor = ops.cat(
         [ops.ones_like(batch_shape, dtype=mindspore.int64), num_segments.unsqueeze(dim=0)],
-        axis=0,
+        dim=0,
     )
     # new_tensor is just a vector of [1 64] for example (assuming only 1 batch dimension)
     new_shape = [int(x) for x in new_tensor.tolist()]
     indices = indices.reshape(new_shape)
 
-    multiples = ops.cat([batch_shape, mindspore.Tensor([1])], axis=0)
+    multiples = ops.cat([batch_shape, mindspore.Tensor([1])], dim=0)
     #indices = indices.repeat(multiples.tolist())
     # equivalent (in Numpy:)
     indices = mindspore.Tensor(np.tile(indices.numpy(), multiples.tolist()))
@@ -1516,7 +1518,7 @@ def _segment_reduce(values, index, segment_reduce_fn, name):
     flat_index = flatten(index)
     vector_shape = values.shape[len(index.indices.shape) :]  # ops.Size object
     flattened_shape = ops.cat(
-        [mindspore.Tensor([-1], dtype=mindspore.int64), mindspore.Tensor(vector_shape, dtype=mindspore.int64)], axis=0
+        [mindspore.Tensor([-1], dtype=mindspore.int64), mindspore.Tensor(vector_shape, dtype=mindspore.int64)], dim=0
     )
     # changed "view" by "reshape" in the following line
     flat_values = values.view(-1)[:flat_index.indices.shape[0]] #mindspore ops.tensor_scatter_xxx要求index,value shape相同
@@ -1536,7 +1538,7 @@ def _segment_reduce(values, index, segment_reduce_fn, name):
 
     #ops.tensor_scatter_xxx需要二维以上，所以下面变换成二维tensor再处理
     out = out.view(1, -1)
-    indices_tmp = ops.stack([ops.zeros_like(flat_index.indices.long()), flat_index.indices.long()], axis = -1)
+    indices_tmp = ops.stack([ops.zeros_like(flat_index.indices.long()), flat_index.indices.long()], dim= -1)
     segment_means = scatter_fun(out, indices_tmp, flat_values.float())
     segment_means = segment_means.view(-1)
 
@@ -1558,7 +1560,7 @@ def _segment_reduce(values, index, segment_reduce_fn, name):
             mindspore.Tensor([int(index.num_segments)], dtype=mindspore.int64),
             mindspore.Tensor(vector_shape, dtype=mindspore.int64),
         ],
-        axis=0,
+        dim=0,
     )
     output_values = segment_means.reshape(new_shape.tolist()).to(values.dtype)
     output_index = range_index_map(index.batch_shape(), int(index.num_segments))
@@ -1736,7 +1738,7 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
     # Check if there are no selected cells in the column. In that case the model
     # should predict the special column id 0, which means "select nothing".
     no_cell_selected = ops.eq(
-        ops.max(labels_per_column, axis=-1)[0], 0
+        ops.max(labels_per_column, dim=-1)[0], 0
     )  # no_cell_selected is of shape (batch_size,) and equals True
     # if an example of the batch has no cells selected (i.e. if there are no labels set to 1 for that example)
     column_label = ops.where(
@@ -1746,8 +1748,8 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
     logits_max = column_logits.max(axis=1, keepdims=True)[0]
     column_logits_shifted = column_logits - logits_max
     column_logits_shifted = column_logits_shifted.float()
-    column_probs = ops.softmax(column_logits_shifted, axis=1)
-    column_label_one_hot =ops.one_hot(column_label, depth=column_probs.shape[1])
+    column_probs = ops.softmax(column_logits_shifted, dim=1)
+    column_label_one_hot = F.one_hot(column_label, column_probs.shape[1])
     column_prob_per_example = ops.sum(column_probs * column_label_one_hot, dim=1)
     column_loss_per_example = -ops.log(column_prob_per_example+ 1e-40)
 
@@ -1768,7 +1770,7 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
 
     # Compute the log-likelihood for cells, but only for the selected column.
 
-    probs = mindspore.ops.softmax(logits_per_cell,axis=-1)
+    probs = F.softmax(logits_per_cell, dim=-1)
     probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
 
     cell_dist = nn.probability.distribution.Bernoulli(probs=probs)  # shape (batch_size, 64*32)
@@ -1849,7 +1851,7 @@ def _calculate_aggregate_mask(answer, pooled_output, cell_selection_preference, 
     # mindspore.Tensor(batch_size,)
     aggregate_mask_init = ops.logical_not(ops.isnan(answer))#.type(mindspore.Tensor)
     logits_aggregation = aggregation_classifier(pooled_output)
-    probs = mindspore.ops.softmax(logits_aggregation,axis=-1)
+    probs = F.softmax(logits_aggregation, dim=-1)
     probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
 
     dist_aggregation = nn.probability.distribution.Categorical(probs=probs)
@@ -1906,8 +1908,8 @@ def _calculate_aggregation_loss_known(
         # Use aggregation supervision as the target.
         target_aggregation = aggregation_labels
 
-    one_hot_labels = ops.one_hot(target_aggregation, depth=num_aggregation_labels, on_value=1.0, off_value=0.0).type(mindspore.float32)
-    log_probs = ops.log_softmax(logits_aggregation, axis=-1)
+    one_hot_labels = F.one_hot(target_aggregation, num_aggregation_labels).type(mindspore.float32)
+    log_probs = F.log_softmax(logits_aggregation, dim=-1)
 
     # mindspore.Tensor[batch_size]
     per_example_aggregation_intermediate = -ops.sum(one_hot_labels * log_probs, dim=-1)
@@ -1931,7 +1933,7 @@ def _calculate_aggregation_loss_unknown(logits_aggregation, aggregate_mask):
         aggregation_loss_unknown (`mindspore.Tensor` of shape `(batch_size,)`): Aggregation loss (in case of answer
         supervision) per example.
     """
-    probs = mindspore.ops.softmax(logits_aggregation,axis=-1)
+    probs = F.softmax(logits_aggregation, dim=-1)
     probs = ops.clamp(probs, min=1e-7, max=1 - 1e-7)
     dist_aggregation = nn.probability.distribution.Categorical(probs=probs)
     # Index 0 corresponds to "no aggregation".
@@ -2045,17 +2047,15 @@ def _calculate_expected_result(
         temperature = config.aggregation_temperature
         gumbel_noise = -ops.log(-ops.log(ops.rand_like(logits_aggregation[:, 1:])))
         relaxed_logits = logits_aggregation[:, 1:] + gumbel_noise
-        softmax_probs = ops.softmax(relaxed_logits / temperature, axis=-1)
+        softmax_probs = ops.softmax(relaxed_logits / temperature, dim=-1)
         sampled_indices = ops.multinomial(softmax_probs, num_samples=1,replacement=False)
         depth = logits_aggregation[:, 1:].shape[1]
-        on_value = mindspore.Tensor(1.0, mindspore.float32)
-        off_value = mindspore.Tensor(0.0, mindspore.float32)
-        aggregation_op_only_probs = ops.one_hot(sampled_indices, depth, on_value, off_value, axis=-1)
-        aggregation_op_only_probs = ops.squeeze(aggregation_op_only_probs,axis=1)
+        aggregation_op_only_probs = F.one_hot(sampled_indices, depth)
+        aggregation_op_only_probs = ops.squeeze(aggregation_op_only_probs, dim=1)
     else:
         # <float32>[batch_size, num_aggregation_labels - 1]
         aggregation_op_only_probs = ops.softmax(
-            logits_aggregation[:, 1:] / config.aggregation_temperature, axis=-1
+            logits_aggregation[:, 1:] / config.aggregation_temperature, dim=-1
         )
     all_results = ops.cat(
         [
@@ -2063,7 +2063,7 @@ def _calculate_expected_result(
             ops.unsqueeze(average_result, dim=1),
             ops.unsqueeze(count_result, dim=1),
         ],
-        axis=1,
+        dim=1,
     )
 
     expected_result = ops.sum(all_results * aggregation_op_only_probs, dim=1)

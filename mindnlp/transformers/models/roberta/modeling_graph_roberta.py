@@ -15,11 +15,11 @@
 
 """roberta model, base on bert."""
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
-from mindnlp._legacy.nn import Dropout
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from .configuration_roberta import RobertaConfig
 from ..bert.modeling_bert import BertModel, BertPreTrainedModel
 
@@ -257,8 +257,8 @@ class MSRobertaClassificationHead(nn.Module):
             None.
         """
         super().__init__()
-        self.dense = nn.Linear(config.hidden_size, config.hidden_size, activation='tanh')
-        self.dropout = Dropout(p=1-config.hidden_dropout_prob)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
     def forward(self, features):
@@ -280,6 +280,7 @@ class MSRobertaClassificationHead(nn.Module):
         x = features[:, 0, :]
         x = self.dropout(x)
         x = self.dense(x)
+        x = ops.tanh(x)
         x = self.dropout(x)
         x = self.out_proj(x)
         return x
@@ -383,7 +384,7 @@ class MSRobertaForMaskedLM(MSRobertaPreTrainedModel):
         outputs = (prediction_scores,) + outputs[2:]  # Add hidden states and attention if they are here
 
         if masked_lm_labels is not None:
-            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.vocab_size),
+            masked_lm_loss = F.cross_entropy(prediction_scores.view(-1, self.vocab_size),
                                                masked_lm_labels.view(-1), ignore_index=-1)
             outputs = (masked_lm_loss,) + outputs
 
@@ -460,9 +461,9 @@ class MSRobertaForSequenceClassification(MSRobertaPreTrainedModel):
         if labels is not None:
             if self.num_labels == 1:
                 #  We are doing regression
-                loss = ops.mse_loss(logits.view(-1), labels.view(-1))
+                loss = F.mse_loss(logits.view(-1), labels.view(-1))
             else:
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             outputs = (loss,) + outputs
 
         return outputs  # (loss), logits, (hidden_states), (attentions)
@@ -485,7 +486,7 @@ class MSRobertaForMultipleChoice(MSRobertaPreTrainedModel):
         """
         super().__init__(config, *args, **kwargs)
         self.roberta = MSRobertaModel(config)
-        self.dropout = Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.classifier = nn.Linear(config.hidden_size, 1)
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None,
@@ -544,7 +545,7 @@ class MSRobertaForMultipleChoice(MSRobertaPreTrainedModel):
         outputs = (reshaped_logits,) + outputs[2:]  # add hidden states and attention if they are here
 
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss = F.cross_entropy(reshaped_logits, labels)
             outputs = (loss,) + outputs
 
         return outputs  # (loss), reshaped_logits, (hidden_states), (attentions)
@@ -562,7 +563,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).astype(mask.dtype) + past_key_values_length) * mask
+    incremental_indices = (ops.cumsum(mask, dim=1).astype(mask.dtype) + past_key_values_length) * mask
     return incremental_indices.long() + padding_idx
 
 

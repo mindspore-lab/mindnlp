@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch DETA model."""
+"""Testing suite for the MindSpore DETA model."""
 
 import collections
 import inspect
@@ -38,8 +38,8 @@ from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_tensor
 
 if is_mindspore_available():
-    import mindspore as ms
-    from mindspore import ops
+    import mindspore
+    from mindnlp.core import ops
     from mindnlp.transformers import DetaForObjectDetection, DetaModel
 
 
@@ -47,7 +47,6 @@ if is_vision_available():
     from PIL import Image
 
     from mindnlp.transformers import AutoImageProcessor
-
 
 class DetaModelTester:
     def __init__(
@@ -114,7 +113,7 @@ class DetaModelTester:
             [self.batch_size, self.num_channels, self.image_size, self.image_size]
         )
 
-        pixel_mask = ops.ones([self.batch_size, self.image_size, self.image_size])
+        pixel_mask = ops.ones(self.batch_size, self.image_size, self.image_size)
 
         labels = None
         if self.use_labels:
@@ -287,18 +286,18 @@ class DetaModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
                     target = {}
                     target["class_labels"] = ops.ones(
                         (self.model_tester.n_targets,),
-                        dtype=ms.int64,
+                        dtype=mindspore.int64,
                     )
                     target["boxes"] = ops.ones(
                         self.model_tester.n_targets,
                         4,
-                        dtype=ms.float32,
+                        dtype=mindspore.float32,
                     )
                     target["masks"] = ops.ones(
                         self.model_tester.n_targets,
                         self.model_tester.image_size,
                         self.model_tester.image_size,
-                        dtype=ms.float32,
+                        dtype=mindspore.float32,
                     )
                     labels.append(target)
                 inputs_dict["labels"] = labels
@@ -576,7 +575,7 @@ class DetaModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
                     ):
                         continue
                     self.assertIn(
-                        ((param.data.mean() * 1e9).round() / 1e9).item(),
+                        ((param.mean() * 1e9).round() / 1e9).item(),
                         [0.0, 1.0],
                         msg=f"Parameter {name} of model {model_class} seems not properly initialized",
                     )
@@ -679,14 +678,14 @@ class DetaModelIntegrationTests(unittest.TestCase):
         expected_shape_logits = (1, 300, model.config.num_labels)
         self.assertEqual(outputs.logits.shape, expected_shape_logits)
 
-        expected_logits = ms.Tensor(
+        expected_logits = mindspore.Tensor(
             [
                 [-7.3978, -2.5406, -4.1668],
                 [-8.2684, -3.9933, -3.8096],
                 [-7.0515, -3.7973, -5.8516],
             ]
         )
-        expected_boxes = ms.Tensor(
+        expected_boxes = mindspore.Tensor(
             [
                 [0.5043, 0.4973, 0.9998],
                 [0.2542, 0.5489, 0.4748],
@@ -716,9 +715,9 @@ class DetaModelIntegrationTests(unittest.TestCase):
         results = image_processor.post_process_object_detection(
             outputs, threshold=0.3, target_sizes=[image.size[::-1]]
         )[0]
-        expected_scores = ms.Tensor([0.6392, 0.6276, 0.5546, 0.5260, 0.4706])
+        expected_scores = mindspore.Tensor([0.6392, 0.6276, 0.5546, 0.5260, 0.4706])
         expected_labels = [75, 17, 17, 75, 63]
-        expected_slice_boxes = ms.Tensor([40.5866, 73.2107, 176.1421, 117.1751])
+        expected_slice_boxes = mindspore.Tensor([40.5866, 73.2107, 176.1421, 117.1751])
         self.assertTrue(
             np.allclose(
                 results["scores"].asnumpy(), expected_scores.asnumpy(), atol=1e-4
@@ -746,14 +745,14 @@ class DetaModelIntegrationTests(unittest.TestCase):
         expected_shape_logits = (1, 300, model.config.num_labels)
         self.assertEqual(outputs.logits.shape, expected_shape_logits)
 
-        expected_logits = ms.Tensor(
+        expected_logits = mindspore.Tensor(
             [
                 [-7.6308, -2.8485, -5.3737],
                 [-7.2037, -4.5505, -4.8027],
                 [-7.2943, -4.2611, -4.6617],
             ]
         )
-        expected_boxes = ms.Tensor(
+        expected_boxes = mindspore.Tensor(
             [
                 [0.4987, 0.4969, 0.9999],
                 [0.2549, 0.5498, 0.4805],
@@ -793,9 +792,9 @@ class DetaModelIntegrationTests(unittest.TestCase):
             outputs, threshold=0.3, target_sizes=[image.size[::-1]]
         )[0]
 
-        expected_scores = ms.Tensor([0.6831, 0.6826, 0.5684, 0.5464, 0.4392])
+        expected_scores = mindspore.Tensor([0.6831, 0.6826, 0.5684, 0.5464, 0.4392])
         expected_labels = [17, 17, 75, 75, 63]
-        expected_slice_boxes = ms.Tensor([345.8478, 23.6754, 639.8562, 372.8265])
+        expected_slice_boxes = mindspore.Tensor([345.8478, 23.6754, 639.8562, 372.8265])
 
         self.assertTrue(
             np.allclose(
@@ -811,7 +810,7 @@ class DetaModelIntegrationTests(unittest.TestCase):
 
 
 @unittest.skip("No attribute storage")
-def storage_ptr(tensor: ms.Tensor) -> int:
+def storage_ptr(tensor: mindspore.Tensor) -> int:
     try:
         return tensor.untyped_storage().data_ptr()
     except Exception:
@@ -823,25 +822,25 @@ def storage_ptr(tensor: ms.Tensor) -> int:
             return 0
 
 
-_float8_e4m3fn = getattr(ms, "float8_e4m3fn", None)
-_float8_e5m2 = getattr(ms, "float8_e5m2", None)
+_float8_e4m3fn = getattr(mindspore, "float8_e4m3fn", None)
+_float8_e5m2 = getattr(mindspore, "float8_e5m2", None)
 _SIZE = {
-    ms.int64: 8,
-    ms.float32: 4,
-    ms.int32: 4,
-    ms.bfloat16: 2,
-    ms.float16: 2,
-    ms.int16: 2,
-    ms.uint8: 1,
-    ms.int8: 1,
-    ms.bool_: 1,
-    ms.float64: 8,
+    mindspore.int64: 8,
+    mindspore.float32: 4,
+    mindspore.int32: 4,
+    mindspore.bfloat16: 2,
+    mindspore.float16: 2,
+    mindspore.int16: 2,
+    mindspore.uint8: 1,
+    mindspore.int8: 1,
+    mindspore.bool_: 1,
+    mindspore.float64: 8,
     _float8_e4m3fn: 1,
     _float8_e5m2: 1,
 }
 
 
-def storage_size(tensor: ms.Tensor) -> int:
+def storage_size(tensor: mindspore.Tensor) -> int:
     try:
         return tensor.untyped_storage().nbytes()
     except AttributeError:
@@ -854,7 +853,7 @@ def storage_size(tensor: ms.Tensor) -> int:
             return tensor.nelement() * _SIZE[tensor.dtype]
 
 
-def id_tensor_storage(tensor: ms.Tensor):
+def id_tensor_storage(tensor: mindspore.Tensor):
     """
     Unique identifier to a tensor storage. Multiple different tensors can share the same underlying storage. For
     example, "meta" tensors all share the same storage, and thus their identifier will all be equal. This identifier is

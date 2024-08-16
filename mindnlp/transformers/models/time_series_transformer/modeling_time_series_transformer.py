@@ -20,8 +20,10 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindnlp.core import nn, ops
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
@@ -65,7 +67,7 @@ class TimeSeriesFeatureEmbedder(nn.Module):
             # we slice the last dimension, giving an array of length
             # self.num_features with shape (N,T) or (N)
             cat_feature_slices = ops.chunk(
-                features, self.num_features, axis=-1)
+                features, self.num_features, dim=-1)
         else:
             cat_feature_slices = [features]
 
@@ -74,7 +76,7 @@ class TimeSeriesFeatureEmbedder(nn.Module):
                 embed(cat_feature_slice.squeeze(-1))
                 for embed, cat_feature_slice in zip(self.embedders, cat_feature_slices)
             ],
-            axis=-1,
+            dim=-1,
         )
 
 
@@ -163,7 +165,7 @@ class TimeSeriesMeanScaler(nn.Module):
         scaled_data = data / scale
 
         if not self.keepdim:
-            scale = ops.squeeze(scale, axis=self.dim)
+            scale = ops.squeeze(scale, dim=self.dim)
 
         return scaled_data, ops.zeros_like(scale), scale
 
@@ -267,7 +269,7 @@ class TimeSeriesValueEmbedding(nn.Module):
     def __init__(self, feature_size, d_model):
         super().__init__()
         self.value_projection = nn.Linear(
-            in_channels=feature_size, out_channels=d_model, bias=False)
+            feature_size, d_model, bias=False)
 
     def forward(self, x):
         return self.value_projection(x)
@@ -337,8 +339,8 @@ class TimeSeriesTransformerAttention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -378,7 +380,7 @@ class TimeSeriesTransformerAttention(nn.Module):
             attn_weights = attn_weights.view(
                 bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -403,7 +405,7 @@ class TimeSeriesTransformerAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(
+        attn_probs = F.dropout(
             attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
@@ -472,17 +474,17 @@ class TimeSeriesTransformerEncoderLayer(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
@@ -582,7 +584,7 @@ class TimeSeriesTransformerDecoderLayer(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
@@ -604,7 +606,7 @@ class TimeSeriesTransformerDecoderLayer(nn.Module):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = ops.dropout(
+            hidden_states = F.dropout(
                 hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states = self.encoder_attn_layer_norm(hidden_states)
@@ -615,10 +617,10 @@ class TimeSeriesTransformerDecoderLayer(nn.Module):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
@@ -645,7 +647,7 @@ class TimeSeriesTransformerPreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(
                 Normal(sigma=std, mean=0), cell.weight.shape, cell.weight.dtype))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer(
                     'zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, TimeSeriesSinusoidalPositionalEmbedding):
@@ -913,7 +915,7 @@ class TimeSeriesTransformerEncoder(TimeSeriesTransformerPreTrainedModel):
         embed_pos = self.embed_positions(inputs_embeds.shape)
 
         hidden_states = self.layernorm_embedding(hidden_states + embed_pos)
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
@@ -1106,7 +1108,7 @@ class TimeSeriesTransformerDecoder(TimeSeriesTransformerPreTrainedModel):
         embed_pos = self.embed_positions(
             inputs_embeds.shape, past_key_values_length=self.config.context_length)
         hidden_states = self.layernorm_embedding(hidden_states + embed_pos)
-        hidden_states = ops.dropout(
+        hidden_states = F.dropout(
             hidden_states, p=self.dropout, training=self.training)
 
         if self.gradient_checkpointing and self.training:
@@ -1259,7 +1261,7 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
             begin_index = -lag_index - subsequences_length
             end_index = -lag_index if lag_index > 0 else None
             lagged_values.append(sequence[:, begin_index:end_index, ...])
-        return ops.stack(lagged_values, axis=-1)
+        return ops.stack(lagged_values, dim=-1)
 
     def create_network_inputs(
             self,
@@ -1279,7 +1281,7 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
                                        self.config.context_length:, ...],
                     future_time_features,
                 ),
-                axis=1,
+                dim=1,
             )
             if future_values is not None
             else past_time_features[:, self._past_length - self.config.context_length:, ...]
@@ -1294,7 +1296,7 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
         _, loc, scale = self.scaler(context, observed_context)
 
         inputs = (
-            (ops.cat((past_values, future_values), axis=1) - loc) / scale
+            (ops.cat((past_values, future_values), dim=1) - loc) / scale
             if future_values is not None
             else (past_values - loc) / scale
         )
@@ -1303,17 +1305,17 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
         log_abs_loc = loc.abs().log1p(
         ) if self.config.input_size == 1 else loc.squeeze(1).abs().log1p()
         log_scale = scale.log() if self.config.input_size == 1 else scale.squeeze(1).log()
-        static_feat = ops.cat((log_abs_loc, log_scale), axis=1)
+        static_feat = ops.cat((log_abs_loc, log_scale), dim=1)
 
         if static_real_features is not None:
-            static_feat = ops.cat((static_real_features, static_feat), axis=1)
+            static_feat = ops.cat((static_real_features, static_feat), dim=1)
         if static_categorical_features is not None:
             embedded_cat = self.embedder(static_categorical_features)
-            static_feat = ops.cat((embedded_cat, static_feat), axis=1)
+            static_feat = ops.cat((embedded_cat, static_feat), dim=1)
         expanded_static_feat = static_feat.unsqueeze(
             1).broadcast_to((-1, time_feat.shape[1], -1))
         # all features
-        features = ops.cat((expanded_static_feat, time_feat), axis=-1)
+        features = ops.cat((expanded_static_feat, time_feat), dim=-1)
 
         # lagged features
         subsequences_length = (
@@ -1334,7 +1336,7 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
 
         # transformer inputs
         transformer_inputs = ops.cat(
-            (reshaped_lagged_sequence, features), axis=-1)
+            (reshaped_lagged_sequence, features), dim=-1)
 
         return transformer_inputs, loc, scale, static_feat
 
@@ -1773,7 +1775,7 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
         expanded_static_feat = static_feat.unsqueeze(
             1).broadcast_to((-1, future_time_features.shape[1], -1))
         features = ops.cat(
-            (expanded_static_feat, future_time_features), axis=-1)
+            (expanded_static_feat, future_time_features), dim=-1)
         repeated_features = features.repeat_interleave(repeats=num_parallel_samples, dim=0)
 
         repeated_enc_last_hidden = enc_last_hidden.repeat_interleave(repeats=num_parallel_samples, dim=0)
@@ -1792,7 +1794,7 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
                 lags_shape[0], lags_shape[1], -1)
 
             decoder_input = ops.cat(
-                (reshaped_lagged_sequence, repeated_features[:, : k + 1]), axis=-1)
+                (reshaped_lagged_sequence, repeated_features[:, : k + 1]), dim=-1)
 
             dec_output = decoder(inputs_embeds=decoder_input,
                                  encoder_hidden_states=repeated_enc_last_hidden)
@@ -1804,11 +1806,11 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
             next_sample = distr.sample()
 
             repeated_past_values = ops.cat(
-                (repeated_past_values, (next_sample - repeated_loc) / repeated_scale), axis=1
+                (repeated_past_values, (next_sample - repeated_loc) / repeated_scale), dim=1
             )
             future_samples.append(next_sample)
 
-        concat_future_samples = ops.cat(future_samples, axis=1)
+        concat_future_samples = ops.cat(future_samples, dim=1)
 
         return SampleTSPredictionOutput(
             sequences=concat_future_samples.reshape(

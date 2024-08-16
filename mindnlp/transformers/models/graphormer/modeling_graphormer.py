@@ -21,13 +21,13 @@ import logging
 from typing import Iterable, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
-import mindspore as ms
+import mindspore
 
-from mindnlp.core import nn, ops
-from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindspore import Parameter, Tensor
 from mindspore.common.initializer import Uniform
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutputWithNoAttention,
@@ -198,7 +198,7 @@ class LayerDropModuleList(nn.ModuleList):
         Raises:
             None.
         """
-        dropout_probs = Tensor(shape=(len(self)), dtype=ms.float32, init=Uniform())
+        dropout_probs = Tensor(shape=(len(self)), dtype=mindspore.float32, init=Uniform())
         for i, cell in enumerate(super().__iter__()):
             if not self.training or (dropout_probs[i] > self.p_drop):
                 yield cell
@@ -218,7 +218,7 @@ class GraphormerGraphNodeFeature(nn.Module):
                 An instance of GraphormerConfig containing the configuration parameters.
 
                 - num_attention_heads (int): Number of attention heads.
-                - num_atoms (int): Number of atoms.
+                - num_atoms (int): Number of atomindspore.
                 - num_in_degree (int): Number of in-degrees.
                 - num_out_degree (int): Number of out-degrees.
                 - hidden_size (int): Size of the hidden layers.
@@ -279,7 +279,7 @@ class GraphormerGraphNodeFeature(nn.Module):
 
         graph_token_feature = self.graph_token.weight.unsqueeze(0).tile((n_graph, 1, 1))
 
-        graph_node_feature = ops.cat([graph_token_feature, node_feature], axis=1)
+        graph_node_feature = ops.cat([graph_token_feature, node_feature], dim=1)
 
         return graph_node_feature
 
@@ -593,7 +593,7 @@ class GraphormerMultiheadAttention(nn.Module):
         if before_softmax:
             return attn_weights, vproj
 
-        attn_weights_float = ops.softmax(attn_weights, axis=-1)
+        attn_weights_float = ops.softmax(attn_weights, dim=-1)
         attn_weights = attn_weights_float.type_as(attn_weights)
         attn_probs = self.attention_dropout_module(attn_weights)
 
@@ -867,7 +867,7 @@ class GraphormerGraphEncoder(nn.Module):
         n_graph, _ = data_x.shape[:2]
         padding_mask = (data_x[:, :, 0]).eq(0)
         padding_mask_cls = ops.zeros((n_graph, 1), dtype=padding_mask.dtype)
-        padding_mask = ops.cat((padding_mask_cls, padding_mask), axis=1)
+        padding_mask = ops.cat((padding_mask_cls, padding_mask), dim=1)
 
         attn_bias = self.graph_attn_bias(input_nodes, attn_bias, spatial_pos, input_edges, attn_edge_type)
 
@@ -1002,7 +1002,7 @@ class GraphormerPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # We might be missing part of the Linear init, dependant on the layer num
             cell.weight.set_data(init_normal(cell.weight, sigma=0.02, mean=0.0))
-            if cell.bias:
+            if cell.bias is not None:
                 cell.bias.set_data(init_zero(cell.bias))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(loc=0.0, scale=0.02, size=cell.weight.shape)
@@ -1285,7 +1285,7 @@ class GraphormerForGraphClassification(GraphormerPreTrainedModel):
 
         loss = None
         if labels is not None:
-            mask = 1 - ops.isnan(labels) # invert True and False
+            mask = 1 - ops.isnan(labels.to(mindspore.float32)) # invert True and False
 
             if self.num_classes == 1:  # regression
                 loss_fct = MSELoss()

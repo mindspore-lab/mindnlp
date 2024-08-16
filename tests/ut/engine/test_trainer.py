@@ -46,7 +46,7 @@ from mindnlp.transformers import (
 )
 from mindnlp.modules.optimization import get_polynomial_decay_schedule_with_warmup
 from mindnlp.utils import is_mindspore_available, logging
-from mindnlp.utils.serialization import safe_load_file, safe_save_file
+from mindnlp.core.serialization import safe_load_file, safe_save_file
 from mindnlp.utils.testing_utils import (
     # ENDPOINT_STAGING,
     # TOKEN,
@@ -1991,7 +1991,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         self.assertAlmostEqual(bf16_eval, fp32_init / 2, delta=5_000)
 
     def test_no_wd_param_group(self):
-        model = nn.SequentialCell(TstLayer(128), nn.ModuleList([TstLayer(128), TstLayer(128)]))
+        model = nn.Sequential(TstLayer(128), nn.ModuleList([TstLayer(128), TstLayer(128)]))
         trainer = Trainer(model=model)
         trainer.create_optimizer_and_scheduler(10)
         wd_names = ['0.linear1.weight', '0.linear2.weight', '1.0.linear1.weight', '1.0.linear2.weight', '1.1.linear1.weight', '1.1.linear2.weight']  # fmt: skip

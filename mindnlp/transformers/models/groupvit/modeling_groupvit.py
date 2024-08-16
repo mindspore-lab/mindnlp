@@ -22,8 +22,10 @@ from typing import Any, Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindspore.common.initializer import initializer, Normal
+from mindspore import Parameter
+
 from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -44,7 +46,7 @@ _CHECKPOINT_FOR_DOC = "nvidia/groupvit-gcc-yfcc"
 # contrastive loss function, adapted from
 # https://sachinruk.github.io/blog/pytorch/pytorch%20lightning/loss%20function/gpu/2021/03/07/CLIP.html
 def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
-    return ops.cross_entropy(logits, ops.arange(len(logits)))
+    return F.cross_entropy(logits, ops.arange(len(logits)))
 
 
 # Copied from transformers.models.clip.modeling_clip.clip_loss with clip->groupvit
@@ -55,10 +57,10 @@ def groupvit_loss(similarity: mindspore.Tensor) -> mindspore.Tensor:
 
 
 def hard_softmax(logits: mindspore.Tensor, dim: int):
-    y_soft = ops.softmax(logits,axis=dim)
+    y_soft = ops.softmax(logits,dim=dim)
     # Straight through.
     index = y_soft.max(dim, keepdims=True, return_indices=True)[1]
-    y_hard = ops.tensor_scatter_elements(ops.zeros_like(logits,dtype=mindspore.float32), index, ops.ones_like(index,dtype=mindspore.float32), dim)
+    y_hard = ops.scatter(ops.zeros_like(logits,dtype=mindspore.float32), dim, index, ops.ones_like(index,dtype=mindspore.float32))
     y_soft = ops.stop_gradient(y_soft)
     ret = y_hard - y_soft + y_soft
 
@@ -74,12 +76,12 @@ def gumbel_softmax(logits: mindspore.Tensor, tau: float = 1, hard: bool = False,
     gumbels = gumbel_dist.sample(logits.shape)
 
     gumbels = (logits + gumbels) / tau  # ~Gumbel(logits,tau)
-    y_soft = ops.softmax(gumbels,axis=dim)
+    y_soft = ops.softmax(gumbels,dim=dim)
 
     if hard:
         # Straight through.
         index = y_soft.max(dim, keepdims=True, return_indices=True)[1]
-        y_hard = ops.tensor_scatter_elements(ops.zeros_like(logits,dtype=mindspore.float32), index, ops.ones_like(index,dtype=mindspore.float32), dim)
+        y_hard = ops.scatter(ops.zeros_like(logits,dtype=mindspore.float32), dim, index, ops.ones_like(index,dtype=mindspore.float32))
         y_soft = ops.stop_gradient(y_soft)
         ret = y_hard - y_soft + y_soft
     else:
@@ -112,7 +114,7 @@ def resize_attention_map(attentions, height, width, align_corners=False):
     groups = attentions.shape[1]  # number of group token
     # [batch_size, groups, height*width, groups] -> [batch_size, groups, height, width]
     attentions = attentions.reshape(batch_size, groups, feat_height, feat_width)
-    attentions = ops.interpolate(
+    attentions = F.interpolate(
         attentions, size=(height, width), mode="bilinear", align_corners=align_corners
     )
     return attentions
@@ -181,7 +183,7 @@ class GroupViTAssignAttention(nn.Module):
             if hard:
                 attn = hard_softmax(attn, dim=-2)
             else:
-                attn = ops.softmax(attn, axis=-2)
+                attn = ops.softmax(attn, dim=-2)
 
         return attn
 
@@ -392,7 +394,7 @@ class GroupViTVisionEmbeddings(nn.Module):
             0, 3, 1, 2
         )
         scale_factor = (feat_height / original_height, feat_width / original_width)
-        patch_pos_embed = ops.interpolate(
+        patch_pos_embed = F.interpolate(
             reshaped_patch_pos_embed,
             scale_factor=scale_factor,
             mode="bicubic",
@@ -482,10 +484,10 @@ class GroupViTStage(nn.Module):
             self.downsample = None
 
         if num_prev_group_token > 0 and num_group_token > 0:
-            self.group_projector = nn.SequentialCell([
-                nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps),
+            self.group_projector = nn.Sequential(
+                nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps),
                 GroupViTMixerMLP(config, num_prev_group_token, config.hidden_size // 2, num_group_token),
-            ])
+            )
         else:
             self.group_projector = None
 
@@ -502,7 +504,7 @@ class GroupViTStage(nn.Module):
     def concat_x(self, x: mindspore.Tensor, group_token: Optional[mindspore.Tensor] = None) -> mindspore.Tensor:
         if group_token is None:
             return x
-        return ops.cat((x, group_token), axis=1)
+        return ops.cat((x, group_token), dim=1)
 
     def forward(
         self,
@@ -655,7 +657,7 @@ class GroupViTAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit akward, but it's required to
@@ -667,7 +669,7 @@ class GroupViTAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -1231,13 +1233,13 @@ class GroupViTModel(GroupViTPreTrainedModel):
         self.text_model = GroupViTTextTransformer(text_config)
         self.vision_model = GroupViTVisionTransformer(vision_config)
 
-        self.visual_projection = nn.SequentialCell(
+        self.visual_projection = nn.Sequential(
             nn.Linear(self.vision_embed_dim, self.projection_intermediate_dim, bias=True),
             nn.BatchNorm1d(self.projection_intermediate_dim),
             nn.ReLU(),
             nn.Linear(self.projection_intermediate_dim, self.projection_dim, bias=True),
         )
-        self.text_projection = nn.SequentialCell(
+        self.text_projection = nn.Sequential(
             nn.Linear(self.text_embed_dim, self.projection_intermediate_dim, bias=True),
             nn.BatchNorm1d(self.projection_intermediate_dim),
             nn.ReLU(),

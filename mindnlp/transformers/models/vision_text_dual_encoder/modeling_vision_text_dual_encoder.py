@@ -17,9 +17,10 @@
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindnlp.core import nn, ops
-from mindspore import Tensor, Parameter
+from mindspore import Parameter
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...modeling_utils import PreTrainedModel
 from ....utils import logging
 from ..auto.configuration_auto import AutoConfig
@@ -35,7 +36,7 @@ _CONFIG_FOR_DOC = "VisionTextDualEncoderConfig"
 
 # Copied from transformers.models.clip.modeling_clip.contrastive_loss
 def contrastive_loss(logits: ms.Tensor) -> ms.Tensor:
-    return ops.cross_entropy(logits, ops.arange(len(logits)))
+    return F.cross_entropy(logits, ops.arange(len(logits)))
 
 
 # Copied from transformers.models.clip.modeling_clip.clip_loss

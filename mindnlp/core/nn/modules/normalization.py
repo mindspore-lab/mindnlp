@@ -1,10 +1,12 @@
 """normalization"""
 import numbers
 from mindspore import Parameter
-from mindspore.common.initializer import initializer
 
 from .module import Module
 from ..functional import group_norm, layer_norm
+from .. import init
+from ... import ops
+
 
 class LayerNorm(Module):
     r"""Applies Layer Normalization over a mini-batch of inputs as described in
@@ -62,15 +64,31 @@ class LayerNorm(Module):
 
     .. _`Layer Normalization`: https://arxiv.org/abs/1607.06450
     """
-    def __init__(self, normalized_shape, eps=1e-5, elementwise_affine=True):
+    def __init__(self, normalized_shape, eps=1e-5, elementwise_affine=True, bias: bool = True,dtype=None):
+        factory_kwargs = {'dtype': dtype}
         super(LayerNorm, self).__init__()
         if isinstance(normalized_shape, numbers.Integral):
             normalized_shape = (normalized_shape,)
         self.normalized_shape = tuple(normalized_shape)
         self.eps = eps
         self.elementwise_affine = elementwise_affine
-        self.weight = Parameter(initializer('ones', normalized_shape), 'weight', elementwise_affine)
-        self.bias = Parameter(initializer('zeros', normalized_shape), 'bias', elementwise_affine)
+        if self.elementwise_affine:
+            self.weight = Parameter(ops.empty(self.normalized_shape, **factory_kwargs))
+            if bias:
+                self.bias = Parameter(ops.empty(self.normalized_shape, **factory_kwargs))
+            else:
+                self.register_parameter('bias', None)
+        else:
+            self.register_parameter('weight', None)
+            self.register_parameter('bias', None)
+
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        if self.elementwise_affine:
+            init.ones_(self.weight)
+            if self.bias is not None:
+                init.zeros_(self.bias)
 
     def forward(self, input):
         return layer_norm(input, self.normalized_shape, self.weight, self.bias, self.eps)
@@ -121,14 +139,15 @@ class GroupNorm(Module):
 
     .. _`Group Normalization`: https://arxiv.org/abs/1803.08494
     """
-    def __init__(self, num_groups, num_channels, eps=1e-5, affine=True):
+    def __init__(self, num_groups, num_channels, eps=1e-5, affine=True, dtype=None):
+        factory_kwargs = {'dtype': dtype}
         super(GroupNorm, self).__init__()
         self.num_groups = num_groups
         self.num_channels = num_channels
         self.eps = eps
         self.affine = affine
-        self.weight = Parameter(initializer('ones', (num_channels, )), 'weight', affine)
-        self.bias = Parameter(initializer('zeros', (num_channels, )), 'bias', affine)
+        self.weight = Parameter(ops.empty(num_channels, **factory_kwargs), 'weight', affine)
+        self.bias = Parameter(ops.empty(num_channels, **factory_kwargs),  'bias', affine)
 
     def forward(self, input):
         return group_norm(input, self.num_groups, self.weight, self.bias, self.eps)

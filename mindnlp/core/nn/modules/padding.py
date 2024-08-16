@@ -5,7 +5,7 @@ from mindspore import ops, Tensor
 
 from mindnlp.configs import USE_PYBOOST
 from .module import Module
-from .utils import _pair, _quadruple, _ntuple
+from ._utils import _pair, _quadruple, _ntuple
 from ..common_types import _size_2_t, _size_4_t, _size_6_t
 
 class _ConstantPadNd(Module):

@@ -10,7 +10,7 @@ def allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
 
 # argsort
 def argsort(input, dim=-1, descending=False, stable=False):
-    return sort(input, dim, descending, stable)[1]
+    return sort(input, dim=dim, descending=descending, stable=stable)[1]
 
 # eq
 def eq(input, other):
@@ -40,7 +40,7 @@ def greater(input, other):
 def isclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
     if USE_PYBOOST:
         return mindspore.mint.isclose(input, other, rtol, atol, equal_nan)
-    return np.isclose(input.numpy(), other.numpy(), rtol, atol, equal_nan)
+    return mindspore.tensor(np.isclose(input.numpy(), other.numpy(), rtol, atol, equal_nan))
 
 # isfinite
 def isfinite(input):
@@ -49,6 +49,11 @@ def isfinite(input):
     return ops.isfinite(input)
 
 # isin
+def isin(elements, test_elements):
+    elements = elements.asnumpy()
+    test_elements = test_elements.asnumpy()
+    mask = np.in1d(elements, test_elements).reshape(elements.shape)
+    return mindspore.tensor(mask)
 
 # isinf
 def isinf(input):
