@@ -52,8 +52,10 @@ from . import (
     clap,
     clip,
     clipseg,
+    clvp,
     codegen,
     cohere,
+    conditional_detr,
     cogvlm,
     convbert,
     convnext,
@@ -170,7 +172,6 @@ from . import (
     plbart,
     poolformer,
     pop2piano,
-    prophetnet,
     qdqbert,
     qwen2,
     qwen2_moe,
@@ -202,7 +203,6 @@ from . import (
     swin2sr,
     t5,
     tapas,
-    tapex,
     time_series_transformer,
     timesformer,
     tinybert,
@@ -279,8 +279,10 @@ from .chatglm4 import *
 from .clap import *
 from .clip import *
 from .clipseg import *
+from .clvp import *
 from .codegen import *
 from .cohere import *
+from .conditional_detr import *
 from .cogvlm import *
 from .convbert import *
 from .convnext import *
@@ -396,7 +398,6 @@ from .pix2struct import *
 from .plbart import *
 from .poolformer import *
 from .pop2piano import *
-from .prophetnet import *
 from .qdqbert import *
 from .qwen2 import *
 from .qwen2_moe import *
@@ -429,7 +430,6 @@ from .swin2sr import *
 from .tinybert import *
 from .t5 import *
 from .tapas import *
-from .tapex import *
 from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
@@ -504,8 +504,10 @@ __all__.extend(canine.__all__)
 __all__.extend(clap.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(clipseg.__all__)
+__all__.extend(clvp.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cohere.__all__)
+__all__.extend(conditional_detr.__all__)
 __all__.extend(cogvlm.__all__)
 __all__.extend(convbert.__all__)
 __all__.extend(convnext.__all__)
@@ -622,7 +624,6 @@ __all__.extend(pix2struct.__all__)
 __all__.extend(plbart.__all__)
 __all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)
-__all__.extend(prophetnet.__all__)
 __all__.extend(qdqbert.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
@@ -654,7 +655,6 @@ __all__.extend(switch_transformers.__all__)
 __all__.extend(swin2sr.__all__)
 __all__.extend(superpoint.__all__)
 __all__.extend(t5.__all__)
-__all__.extend(tapex.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
