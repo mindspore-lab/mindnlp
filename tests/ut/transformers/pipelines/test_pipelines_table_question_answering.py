@@ -21,7 +21,6 @@ from mindnlp.transformers import (
 )
 
 from mindnlp.transformers.pipelines.table_question_answering import (
-    TableQuestionAnsweringArgumentHandler,
     TableQuestionAnsweringPipeline
 )
 
@@ -34,7 +33,6 @@ class TQAPipelineTests(unittest.TestCase):
     # which are needed to generate automatic tests
     model_mapping = MODEL_FOR_TABLE_QUESTION_ANSWERING_MAPPING
 
-    # @unittest.skipIf(not is_torch_greater_or_equal_than_1_12, reason="Tapas is only available in torch v1.12+")
     @require_mindspore
     def test_small_model(self):
         model_id = "lysandre/tiny-tapas-random-wtq"
@@ -137,7 +135,6 @@ class TQAPipelineTests(unittest.TestCase):
                 },
             )
 
-    # @unittest.skipIf(not is_torch_greater_or_equal_than_1_12, reason="Tapas is only available in torch v1.12+")
     @require_mindspore
     def test_slow_tokenizer_sqa(self):
         model_id = "lysandre/tiny-tapas-random-sqa"
@@ -258,8 +255,7 @@ class TQAPipelineTests(unittest.TestCase):
                 },
             )
 
-    # @unittest.skipIf(not is_torch_greater_or_equal_than_1_12, reason="Tapas is only available in torch v1.12+")
-    # @slow
+    @slow
     @require_mindspore
     def test_integration_wtq(self):
         table_querier = pipeline("table-question-answering", model="google/tapas-base-finetuned-wtq")
@@ -304,8 +300,7 @@ class TQAPipelineTests(unittest.TestCase):
         ]
         self.assertListEqual(results[0], expected_results)
 
-    # @unittest.skipIf(not is_torch_greater_or_equal_than_1_12, reason="Tapas is only available in torch v1.12+")
-    # @slow
+    @slow
     @require_mindspore
     def test_integration_sqa(self):
         table_querier = pipeline(
