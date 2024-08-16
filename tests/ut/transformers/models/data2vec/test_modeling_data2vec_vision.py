@@ -262,7 +262,7 @@ class Data2VecVisionModelTest(ModelTesterMixin, unittest.TestCase):
             elif model_class.__name__ == "Data2VecVisionForSemanticSegmentation":
                 batch_size, num_channels, height, width = inputs_dict["pixel_values"].shape
                 inputs_dict["labels"] = ops.zeros(
-                    [self.model_tester.batch_size, height, width], device=torch_device
+                    [self.model_tester.batch_size, height, width]
                 ).long()
             model = model_class(config)
             model.gradient_checkpointing_enable()
