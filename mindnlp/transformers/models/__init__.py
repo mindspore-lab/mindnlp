@@ -224,6 +224,7 @@ from . import (
     vit_mae,
     vit_msn,
     vitdet,
+    vits,
     vivit,
     wav2vec2,
     wav2vec2_conformer,
@@ -446,6 +447,7 @@ from .vision_encoder_decoder import *
 from .vision_text_dual_encoder import *
 from .visual_bert import *
 from .vit import *
+from .vits import *
 from .vit_hybrid import *
 from .vit_mae import *
 from .vit_msn import *
@@ -672,6 +674,7 @@ __all__.extend(vision_encoder_decoder.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
+__all__.extend(vits.__all__)
 __all__.extend(vit_hybrid.__all__)
 __all__.extend(vit_mae.__all__)
 __all__.extend(vit_msn.__all__)
