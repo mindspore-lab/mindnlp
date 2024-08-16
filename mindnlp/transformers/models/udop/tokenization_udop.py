@@ -21,7 +21,7 @@ from shutil import copyfile
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import sentencepiece as spm
-from mindnlp.utils import PaddingStrategy, TensorType, logging
+
 from ...tokenization_utils import PreTrainedTokenizer
 from ...tokenization_utils_base import (
     AddedToken,
@@ -32,25 +32,17 @@ from ...tokenization_utils_base import (
     TextInputPair,
     TruncationStrategy,
 )
+from ....utils import PaddingStrategy, TensorType, logging
 
 
 logger = logging.get_logger(__name__)
 
 
 SPIECE_UNDERLINE = "▁"
-VOCAB_FILES_NAMES = {"vocab_file": "spiece.model", "tokenizer_file": "tokenizer_config.json"}
-PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    "microsoft/udop-large": 1024,
-}
-PRETRAINED_VOCAB_FILES_MAP={
-    "vocab_file": {"microsoft/udop-large":"https://hf-mirror.com/microsoft/udop-large/blob/main/spiece.model"
-    },
-    "tokenizer_config_file": {
-        "microsoft/udop-large": (
-            "https://hf-mirror.com/microsoft/udop-large/blob/main/tokenizer_config.json"
-        ),
-    },
-}
+
+
+VOCAB_FILES_NAMES = {"vocab_file": "spiece.model", "tokenizer_file": "tokenizer.json"}
+
 
 class UdopTokenizer(PreTrainedTokenizer):
     """
@@ -144,8 +136,6 @@ class UdopTokenizer(PreTrainedTokenizer):
     """
 
     vocab_files_names = VOCAB_FILES_NAMES
-    max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
-    pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     model_input_names = ["input_ids", "attention_mask"]
 
     def __init__(
@@ -353,9 +343,8 @@ class UdopTokenizer(PreTrainedTokenizer):
         `unk_token`. Here is an example with `unk_token = "<unk>"` and `unk_token_length = 4`.
         `self.tokenizer.sp_model.encode("<unk> Hey", out_type = str)[4:]`.
         """
-        tokens = self.sp_model.encode(text, out_type=str)
         if self.legacy or not text.startswith((SPIECE_UNDERLINE, " ")):
-            return tokens
+            return self.sp_model.encode(text, out_type=str)
 
         # 1. Encode string + prefix ex: "<unk> Hey"
         tokens = self.sp_model.encode(self.unk_token + text, out_type=str)
@@ -741,7 +730,7 @@ class UdopTokenizer(PreTrainedTokenizer):
         </Tip>
 
         Args:
-            text (`str`, `List[str]` or `List[int]` (the latter only for not-fast tokenizers)):
+            text (`str`, `List[str]` or (for non-fast tokenizers) `List[int]`):
                 The first sequence to be encoded. This can be a string, a list of strings (tokenized string using the
                 `tokenize` method) or a list of integers (tokenized string ids using the `convert_tokens_to_ids`
                 method).
@@ -1368,4 +1357,5 @@ class UdopTokenizer(PreTrainedTokenizer):
                 raise ValueError("Invalid padding strategy:" + str(self.padding_side))
 
         return encoded_inputs
+
 __all__ = ["UdopTokenizer"]

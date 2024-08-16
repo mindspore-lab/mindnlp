@@ -91,7 +91,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         # ("owlv2", "Owlv2ImageProcessor"),
         ("owlvit", "OwlViTImageProcessor"),
         ("perceiver", "PerceiverImageProcessor"),
-        # ("pix2struct", "Pix2StructImageProcessor"),
+        ("pix2struct", "Pix2StructImageProcessor"),
         ("poolformer", "PoolFormerImageProcessor"),
         # ("pvt", "PvtImageProcessor"),
         # ("pvt_v2", "PvtImageProcessor"),

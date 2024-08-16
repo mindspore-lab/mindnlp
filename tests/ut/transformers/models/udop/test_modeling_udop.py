@@ -16,10 +16,9 @@
 import copy
 import inspect
 import unittest
-import mindspore.context as context
+
 from huggingface_hub import hf_hub_download
-from mindnlp.utils import is_mindspore_available, is_vision_available
-from mindnlp.transformers import UdopEncoderModel
+
 from mindnlp.transformers import UdopConfig
 from mindnlp.utils.testing_utils import (
     require_sentencepiece,
@@ -28,15 +27,17 @@ from mindnlp.utils.testing_utils import (
     require_vision,
     slow,
 )
-from mindnlp.utils import cached_property
+from mindnlp.utils import cached_property, is_mindspore_available, is_vision_available
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, ids_tensor
+# from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops, nn, no_grad
+    from mindnlp.engine import set_seed
 
     from mindnlp.transformers import UdopEncoderModel, UdopForConditionalGeneration, UdopModel, UdopProcessor
 
@@ -162,7 +163,7 @@ class UdopModelTester:
         lm_labels,
     ):
         model = UdopModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids=input_ids,
             bbox=bbox,
@@ -192,7 +193,7 @@ class UdopModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = UdopForConditionalGeneration(config=config).set_train(False)
+        model = UdopForConditionalGeneration(config=config).eval()
         outputs = model(
             input_ids=input_ids,
             bbox=bbox,
@@ -214,12 +215,12 @@ class UdopModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = UdopForConditionalGeneration(config=config).set_train(False)
-        mindspore.set_seed(0)
+        model = UdopForConditionalGeneration(config=config).eval()
+        set_seed(0)
         output_without_past_cache = model.generate(
             input_ids[:1], bbox=bbox[:1, :, :], num_beams=2, max_length=5, do_sample=True, use_cache=False
         )
-        mindspore.set_seed(0)
+        set_seed(0)
         output_with_past_cache = model.generate(
             input_ids[:1], bbox=bbox[:1, :, :], num_beams=2, max_length=5, do_sample=True
         )
@@ -235,7 +236,7 @@ class UdopModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = UdopForConditionalGeneration(config=config).half().set_train(False)
+        model = UdopForConditionalGeneration(config=config).half().eval()
         output = model(input_ids, bbox=bbox, attention_mask=attention_mask, decoder_input_ids=decoder_input_ids).logits
         self.parent.assertFalse(ops.isnan(output).any().item())
 
@@ -263,7 +264,7 @@ class UdopModelTester:
 
 
 @require_mindspore
-class UdopModelTest(ModelTesterMixin,unittest.TestCase):
+class UdopModelTest(ModelTesterMixin, unittest.TestCase):
     all_model_classes = (
         (
             UdopModel,
@@ -314,7 +315,6 @@ class UdopModelTest(ModelTesterMixin,unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_generate_with_past_key_values(*config_and_inputs)
 
-    @unittest.skipIf( context.get_context("device_target") == "CPU","Cant do half precision")
     def test_model_fp16_forward(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model_fp16_forward(*config_and_inputs)
@@ -490,7 +490,7 @@ class UdopEncoderOnlyModelTester:
         attention_mask,
     ):
         model = UdopEncoderModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids=input_ids,
             bbox=bbox,
@@ -507,7 +507,7 @@ class UdopEncoderOnlyModelTester:
         bbox,
         attention_mask,
     ):
-        model = UdopEncoderModel(config=config).half().set_train(False)
+        model = UdopEncoderModel(config=config).half().eval()
         output = model(input_ids, bbox=bbox, attention_mask=attention_mask)["last_hidden_state"]
         self.parent.assertFalse(ops.isnan(output).any().item())
 

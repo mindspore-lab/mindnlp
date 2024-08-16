@@ -145,7 +145,7 @@ class AttentionMaskConverter:
         Make causal mask used for bi-directional self-attention.
         """
         bsz, tgt_len = input_ids_shape
-        mask = ops.full((tgt_len, tgt_len), mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
+        mask = ops.full((tgt_len, tgt_len), mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min), dtype=dtype)
         mask_cond = ops.arange(mask.shape[-1])
         mask = mask.masked_fill(mask_cond < (mask_cond + 1).view(mask.shape[-1], 1), 0)
 

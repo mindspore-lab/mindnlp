@@ -41,7 +41,6 @@ if is_mindspore_available():
         RealmTokenizer,
     )
 
-# mindspore.set_context(device_target="CPU")
 
 class RealmModelTester:
     def __init__(

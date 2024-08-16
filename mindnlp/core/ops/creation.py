@@ -33,12 +33,12 @@ def from_numpy(ndarray):
 # zeros
 _zeros = ops.Zeros()
 def zeros(*size, dtype=None):
+    if dtype is None:
+        dtype = get_default_dtype()
     if isinstance(size[0], (tuple, list)):
         size = size[0]
     if USE_PYBOOST:
         return mindspore.mint.zeros(size, dtype=dtype)
-    if dtype is None:
-        dtype = get_default_dtype()
     return _zeros(size, dtype)
 
 # zeros_like

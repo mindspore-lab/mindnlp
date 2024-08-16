@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""PyTorch I-BERT model."""
+"""MindSpore I-BERT model."""
 
 import math
 from typing import Optional, Tuple, Union

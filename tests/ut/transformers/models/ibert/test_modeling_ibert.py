@@ -1,33 +1,33 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2020 The HuggingFace Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
 
 
 import copy
 import unittest
-import numpy as np
 
 from mindnlp.transformers import IBertConfig
 from mindnlp.utils.testing_utils import require_mindspore, slow, is_mindspore_available
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask
+# from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import nn, ops
+    from mindnlp.core import nn, ops, no_grad
 
     from mindnlp.transformers import (
         IBertForMaskedLM,
@@ -47,6 +47,7 @@ if is_mindspore_available():
         QuantLinear,
         create_position_ids_from_input_ids,
     )
+
 
 class IBertModelTester:
     def __init__(
@@ -145,7 +146,7 @@ class IBertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = IBertModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids)
         result = model(input_ids, token_type_ids=token_type_ids)
         result = model(input_ids)
@@ -157,7 +158,7 @@ class IBertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = IBertForMaskedLM(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
@@ -166,7 +167,7 @@ class IBertModelTester:
     ):
         config.num_labels = self.num_labels
         model = IBertForTokenClassification(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.num_labels))
 
@@ -175,7 +176,7 @@ class IBertModelTester:
     ):
         config.num_choices = self.num_choices
         model = IBertForMultipleChoice(config=config)
-        model.set_train(False)
+        model.eval()
         multiple_choice_inputs_ids = input_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
         multiple_choice_token_type_ids = token_type_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
         multiple_choice_input_mask = input_mask.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
@@ -191,7 +192,7 @@ class IBertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = IBertForQuestionAnswering(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -227,10 +228,11 @@ class IBertModelTest(ModelTesterMixin, unittest.TestCase):
     all_model_classes = (
         (
             IBertForMaskedLM,
+            IBertModel,
             IBertForSequenceClassification,
-            IBertForQuestionAnswering,
-            IBertForMultipleChoice,
             IBertForTokenClassification,
+            IBertForMultipleChoice,
+            IBertForQuestionAnswering,
         )
         if is_mindspore_available()
         else ()
@@ -254,6 +256,10 @@ class IBertModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_config(self):
         self.config_tester.run_common_tests()
+
+    @unittest.skip
+    def test_tie_model_weights():
+        pass
 
     def test_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -285,12 +291,11 @@ class IBertModelTest(ModelTesterMixin, unittest.TestCase):
     @slow
     def test_model_from_pretrained(self):
         model_name = "kssteven/ibert-roberta-base"
-        model = IBertModel.from_pretrained(model_name, from_pt=True)
+        model = IBertModel.from_pretrained(model_name)
         self.assertIsNotNone(model)
 
     def test_create_position_ids_respects_padding_index(self):
-        """Ensure that the default position ids only assign a sequential . This is a regression
-        test for https://github.com/huggingface/transformers/issues/1761
+        """This is a regression test for https://github.com/huggingface/transformers/issues/1761
 
         The position ids should be masked with the embedding object's padding index. Therefore, the
         first available non-padding position index is IBertEmbeddings.padding_idx + 1
@@ -298,8 +303,8 @@ class IBertModelTest(ModelTesterMixin, unittest.TestCase):
         config = self.model_tester.prepare_config_and_inputs()[0]
         model = IBertEmbeddings(config=config)
 
-        input_ids = mindspore.Tensor([[12, 31, 13, model.padding_idx]])
-        expected_positions = mindspore.Tensor(
+        input_ids = ops.as_tensor([[12, 31, 13, model.padding_idx]])
+        expected_positions = ops.as_tensor(
             [[0 + model.padding_idx + 1, 1 + model.padding_idx + 1, 2 + model.padding_idx + 1, model.padding_idx]]
         )
 
@@ -308,29 +313,27 @@ class IBertModelTest(ModelTesterMixin, unittest.TestCase):
         self.assertTrue(ops.all(ops.eq(position_ids, expected_positions)))
 
     def test_create_position_ids_from_inputs_embeds(self):
-        """Ensure that the default position ids only assign a sequential . This is a regression
-        test for https://github.com/huggingface/transformers/issues/1761
-
+        """This is a regression test for https://github.com/huggingface/transformers/issues/1761
         The position ids should be masked with the embedding object's padding index. Therefore, the
         first available non-padding position index is IBertEmbeddings.padding_idx + 1
         """
         config = self.model_tester.prepare_config_and_inputs()[0]
         embeddings = IBertEmbeddings(config=config)
 
-        inputs_embeds = mindspore.numpy.empty((2, 4, 30))
+        inputs_embeds = ops.empty(2, 4, 30)
         expected_single_positions = [
             0 + embeddings.padding_idx + 1,
             1 + embeddings.padding_idx + 1,
             2 + embeddings.padding_idx + 1,
             3 + embeddings.padding_idx + 1,
         ]
-        expected_positions = mindspore.Tensor([expected_single_positions, expected_single_positions])
+        expected_positions = ops.as_tensor([expected_single_positions, expected_single_positions])
         position_ids = embeddings.create_position_ids_from_inputs_embeds(inputs_embeds)
         self.assertEqual(position_ids.shape, expected_positions.shape)
         self.assertTrue(ops.all(ops.eq(position_ids, expected_positions)))
 
     # Override
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
@@ -350,7 +353,7 @@ class IBertModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
             inputs = copy.deepcopy(self._prepare_for_class(inputs_dict, model_class))
 
@@ -371,9 +374,10 @@ class IBertModelTest(ModelTesterMixin, unittest.TestCase):
                 inputs["inputs_embeds"] = wte(encoder_input_ids)
                 inputs["decoder_inputs_embeds"] = wte(decoder_input_ids)
 
-            model(**inputs)[0]
+            with no_grad():
+                model(**inputs)[0]
 
-    @unittest.skip("ibert overrides scaling to None if inputs_embeds")
+    @unittest.skip(reason="ibert overrides scaling to None if inputs_embeds")
     def test_inputs_embeds_matches_input_ids(self):
         pass
 
@@ -384,27 +388,26 @@ class IBertModelIntegrationTest(unittest.TestCase):
         weight_bit = 8
         embedding = QuantEmbedding(2, 4, quant_mode=True, weight_bit=weight_bit)
         embedding_weight = mindspore.tensor([[-1.0, -2.0, -3.0, -4.0], [5.0, 6.0, 7.0, 8.0]])
-        embedding.weight = mindspore.Parameter(embedding_weight, 'weight')
+        embedding.weight = nn.Parameter(embedding_weight)
 
-        expected_scaling_factor = embedding_weight.abs().max() / (2 ** (weight_bit - 1) - 1)
+        expected_scaling_factor = (embedding_weight.abs().max() / (2 ** (weight_bit - 1) - 1))
         x, x_scaling_factor = embedding(mindspore.tensor(0))
         y, y_scaling_factor = embedding(mindspore.tensor(1))
 
         # scaling factor should follow the symmetric quantization rule
-        self.assertTrue(np.allclose(x_scaling_factor.asnumpy(), expected_scaling_factor.asnumpy(), atol=1e-4))
-        self.assertTrue(np.allclose(x_scaling_factor.asnumpy(), expected_scaling_factor.asnumpy(), atol=1e-4))
-        self.assertTrue(np.allclose(y_scaling_factor.asnumpy(), expected_scaling_factor.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(x_scaling_factor, expected_scaling_factor, atol=1e-4))
+        self.assertTrue(ops.allclose(x_scaling_factor, expected_scaling_factor, atol=1e-4))
+        self.assertTrue(ops.allclose(y_scaling_factor, expected_scaling_factor, atol=1e-4))
 
         # quantization error should not exceed the scaling factor
-        self.assertTrue(np.allclose(x.asnumpy(), embedding_weight[0].asnumpy(), atol=expected_scaling_factor.asnumpy()))
-        self.assertTrue(np.allclose(y.asnumpy(), embedding_weight[1].asnumpy(), atol=expected_scaling_factor.asnumpy()))
+        self.assertTrue(ops.allclose(x, embedding_weight[0], atol=expected_scaling_factor.item()))
+        self.assertTrue(ops.allclose(y, embedding_weight[1], atol=expected_scaling_factor.item()))
 
     def test_quant_act(self):
         def _test_range():
             act = QuantAct(activation_bit, act_range_momentum, quant_mode=True)
 
             # First pass
-            act.set_train()
             x = mindspore.tensor([[-1.0, -2.0, -3.0, -4.0], [5.0, 6.0, 7.0, 8.0]])
             x_scaling_factor = mindspore.tensor(1.0)
             y, y_scaling_factor = act(x, x_scaling_factor)
@@ -412,19 +415,19 @@ class IBertModelIntegrationTest(unittest.TestCase):
 
             # After the first pass, x_min and x_max should be initialized with x.min() and x.max()
             expected_x_min, expected_x_max = x.min(), x.max()
-            self.assertTrue(np.allclose(act.x_min.asnumpy(), expected_x_min.asnumpy(), atol=1e-4))
-            self.assertTrue(np.allclose(act.x_max.asnumpy(), expected_x_max.asnumpy(), atol=1e-4))
+            self.assertTrue(ops.allclose(act.x_min, expected_x_min, atol=1e-4))
+            self.assertTrue(ops.allclose(act.x_max, expected_x_max, atol=1e-4))
 
             # scaling factor should follow the symmetric quantization rule
             expected_range = ops.maximum(expected_x_min.abs(), expected_x_max.abs())
             expected_scaling_factor = expected_range / (2 ** (activation_bit - 1) - 1)
-            self.assertTrue(np.allclose(y_scaling_factor.asnumpy(), expected_scaling_factor.asnumpy(), atol=1e-4))
+            self.assertTrue(ops.allclose(y_scaling_factor, expected_scaling_factor, atol=1e-4))
 
             # quantization error should not exceed the scaling factor
-            self.assertTrue(np.allclose(x.asnumpy(), y.asnumpy(), atol=expected_scaling_factor.asnumpy()))
+            self.assertTrue(ops.allclose(x, y, atol=expected_scaling_factor.item()))
 
             # output should be integer
-            self.assertTrue(np.allclose(y_int.asnumpy(), y_int.round().asnumpy(), atol=1e-4))
+            self.assertTrue(ops.allclose(y_int, y_int.round(), atol=1e-4))
 
             # Second Pass
             x = mindspore.tensor([[-1.0, -2.0, -3.0, -4.0], [5.0, 6.0, 7.0, 8.0]]) * 2
@@ -435,29 +438,29 @@ class IBertModelIntegrationTest(unittest.TestCase):
             # From the second pass, x_min and x_max should be updated with moving average
             expected_x_min = expected_x_min * act_range_momentum + x.min() * (1 - act_range_momentum)
             expected_x_max = expected_x_max * act_range_momentum + x.max() * (1 - act_range_momentum)
-            self.assertTrue(np.allclose(act.x_min.asnumpy(), expected_x_min.asnumpy(), atol=1e-4))
-            self.assertTrue(np.allclose(act.x_max.asnumpy(), expected_x_max.asnumpy(), atol=1e-4))
+            self.assertTrue(ops.allclose(act.x_min, expected_x_min, atol=1e-4))
+            self.assertTrue(ops.allclose(act.x_max, expected_x_max, atol=1e-4))
 
             # scaling factor should follow the symmetric quantization rule
             expected_range = ops.maximum(expected_x_min.abs(), expected_x_max.abs())
             expected_scaling_factor = expected_range / (2 ** (activation_bit - 1) - 1)
-            self.assertTrue(np.allclose(y_scaling_factor.asnumpy(), expected_scaling_factor.asnumpy(), atol=1e-4))
+            self.assertTrue(ops.allclose(y_scaling_factor, expected_scaling_factor, atol=1e-4))
 
             # quantization error should not exceed the scaling factor
             x = x.clamp(min=-expected_range, max=expected_range)
-            self.assertTrue(np.allclose(x.asnumpy(), y.asnumpy(), atol=expected_scaling_factor.asnumpy()))
+            self.assertTrue(ops.allclose(x, y, atol=expected_scaling_factor.item()))
 
             # output should be integer
-            self.assertTrue(np.allclose(y_int.asnumpy(), y_int.asnumpy().round(), atol=1e-4))
+            self.assertTrue(ops.allclose(y_int, y_int.round(), atol=1e-4))
 
             # Third pass, with eval()
-            act.set_train(False)
+            act.eval()
             x = mindspore.tensor([[-1.0, -2.0, -3.0, -4.0], [5.0, 6.0, 7.0, 8.0]]) * 3
 
             # In eval mode, min/max and scaling factor must be fixed
-            self.assertTrue(np.allclose(act.x_min.asnumpy(), expected_x_min.asnumpy(), atol=1e-4))
-            self.assertTrue(np.allclose(act.x_max.asnumpy(), expected_x_max.asnumpy(), atol=1e-4))
-            self.assertTrue(np.allclose(y_scaling_factor.asnumpy(), expected_scaling_factor.asnumpy(), atol=1e-4))
+            self.assertTrue(ops.allclose(act.x_min, expected_x_min, atol=1e-4))
+            self.assertTrue(ops.allclose(act.x_max, expected_x_max, atol=1e-4))
+            self.assertTrue(ops.allclose(y_scaling_factor, expected_scaling_factor, atol=1e-4))
 
         def _test_identity():
             # test if identity and identity_scaling_factor are given
@@ -467,11 +470,10 @@ class IBertModelIntegrationTest(unittest.TestCase):
             y = mindspore.tensor([[6.0, -7.0, 1.0, -2.0], [3.0, -4.0, -8.0, 5.0]])
             x_scaling_factor = mindspore.tensor(1.0)
             y_scaling_factor = mindspore.tensor(0.5)
-            act.set_train()
             z, z_scaling_factor = act(x, x_scaling_factor, y, y_scaling_factor)
             z_int = z / z_scaling_factor
-            self.assertTrue(np.allclose((x + y).asnumpy(), z.asnumpy(), atol=0.1))
-            self.assertTrue(np.allclose(z_int.asnumpy(), z_int.round().asnumpy(), atol=1e-4))
+            self.assertTrue(ops.allclose(x + y, z, atol=0.1))
+            self.assertTrue(ops.allclose(z_int, z_int.round(), atol=1e-4))
 
         activation_bit = 8
         act_range_momentum = 0.95
@@ -483,27 +485,27 @@ class IBertModelIntegrationTest(unittest.TestCase):
             linear_q = QuantLinear(2, 4, quant_mode=True, per_channel=per_channel, weight_bit=weight_bit)
             linear_dq = QuantLinear(2, 4, quant_mode=False, per_channel=per_channel, weight_bit=weight_bit)
             linear_weight = mindspore.tensor([[-1.0, 2.0, 3.0, -4.0], [5.0, -6.0, -7.0, 8.0]]).T
-            linear_q.weight = mindspore.Parameter(linear_weight, 'weight')
-            linear_dq.weight = mindspore.Parameter(linear_weight, 'weight')
+            linear_q.weight = nn.Parameter(linear_weight)
+            linear_dq.weight = nn.Parameter(linear_weight)
 
             q, q_scaling_factor = linear_q(x, x_scaling_factor)
             q_int = q / q_scaling_factor
             dq, dq_scaling_factor = linear_dq(x, x_scaling_factor)
 
             if per_channel:
-                q_max = linear_weight.abs().max(axis=1)
+                q_max = ops.max(linear_weight.abs(), dim=1)[0]
             else:
                 q_max = linear_weight.abs().max()
             expected_scaling_factor = q_max / (2 ** (weight_bit - 1) - 1)
 
             # scaling factor should follow the symmetric quantization rule
-            self.assertTrue(np.allclose(linear_q.fc_scaling_factor.asnumpy(), expected_scaling_factor.asnumpy(), atol=1e-4))
+            self.assertTrue(ops.allclose(linear_q.fc_scaling_factor, expected_scaling_factor, atol=1e-4))
 
             # output of the normal linear layer and the quantized linear layer should be similar
-            self.assertTrue(np.allclose(q.asnumpy(), dq.asnumpy(), atol=0.5))
+            self.assertTrue(ops.allclose(q, dq, atol=0.5))
 
             # output of the quantized linear layer should be integer
-            self.assertTrue(np.allclose(q_int.asnumpy(), q_int.round().asnumpy(), atol=1e-4))
+            self.assertTrue(ops.allclose(q_int, q_int.round(), atol=1e-4))
 
         weight_bit = 8
         x = mindspore.tensor([[2.0, -5.0], [-3.0, 4.0]])
@@ -524,10 +526,10 @@ class IBertModelIntegrationTest(unittest.TestCase):
         dq = gelu_dq(x)
 
         # output of the normal GELU and the quantized GELU should be similar
-        self.assertTrue(np.allclose(q.asnumpy(), dq.asnumpy(), atol=0.5))
+        self.assertTrue(ops.allclose(q, dq, atol=0.5))
 
         # output of the quantized GELU layer should be integer
-        self.assertTrue(np.allclose(q_int.asnumpy(), q_int.round().asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(q_int, q_int.round(), atol=1e-4))
 
     def test_force_dequant_gelu(self):
         x_int = ops.arange(-10000, 10001, 1)
@@ -552,9 +554,9 @@ class IBertModelIntegrationTest(unittest.TestCase):
             for gelu_fdq in gelu_fdqs:
                 q, q_scaling_factor = gelu_fdq(x, x_scaling_factor)
                 if label:
-                    self.assertTrue(np.allclose(q.asnumpy(), dq.asnumpy(), atol=1e-4))
+                    self.assertTrue(ops.allclose(q, dq, atol=1e-4))
                 else:
-                    self.assertFalse(np.allclose(q.asnumpy(), dq.asnumpy(), atol=1e-4))
+                    self.assertFalse(ops.allclose(q, dq, atol=1e-4))
 
     def test_int_softmax(self):
         output_bit = 8
@@ -566,16 +568,15 @@ class IBertModelIntegrationTest(unittest.TestCase):
             x_scaling_factor = mindspore.tensor(0.1)
             x = x_int * x_scaling_factor
 
-            softmax_q.set_train()
             q, q_scaling_factor = softmax_q(x, x_scaling_factor)
             q_int = q / q_scaling_factor
             dq = softmax_dq(x)
 
             # output of the normal Softmax and the quantized Softmax should be similar
-            self.assertTrue(np.allclose(q.asnumpy(), dq.asnumpy(), atol=0.5))
+            self.assertTrue(ops.allclose(q, dq, atol=0.5))
 
             # output of the quantized GELU layer should be integer
-            self.assertTrue(np.allclose(q_int.asnumpy(), q_int.round().asnumpy(), atol=1e-4))
+            self.assertTrue(ops.allclose(q_int, q_int.round(), atol=1e-4))
 
             # Output of the quantize Softmax should not exceed the output_bit
             self.assertTrue(q.abs().max() < 2**output_bit)
@@ -612,9 +613,9 @@ class IBertModelIntegrationTest(unittest.TestCase):
             for softmax_fdq in softmax_fdqs:
                 q, q_scaling_factor = softmax_fdq(x, x_scaling_factor)
                 if label:
-                    self.assertTrue(np.allclose(q.asnumpy(), dq.asnumpy(), atol=1e-4))
+                    self.assertTrue(ops.allclose(q, dq, atol=1e-4))
                 else:
-                    self.assertFalse(np.allclose(q.asnumpy(), dq.asnumpy(), atol=1e-4))
+                    self.assertFalse(ops.allclose(q, dq, atol=1e-4))
 
     def test_int_layernorm(self):
         output_bit = 8
@@ -626,22 +627,22 @@ class IBertModelIntegrationTest(unittest.TestCase):
         x = x_int * x_scaling_factor
 
         ln_q = IntLayerNorm(x.shape[1:], 1e-5, quant_mode=True, output_bit=output_bit)
-        ln_dq = nn.LayerNorm(x.shape[1:], eps=1e-5)
+        ln_dq = nn.LayerNorm(x.shape[1:], 1e-5)
 
-        ln_q.weight = mindspore.Parameter(ops.ones(x.shape[1:]), 'weight')
-        ln_q.bias = mindspore.Parameter(ops.ones(x.shape[1:]), 'bias')
-        ln_dq.weight = mindspore.Parameter(ops.ones(x.shape[1:]), 'weight')
-        ln_dq.bias = mindspore.Parameter(ops.ones(x.shape[1:]), 'bias')
+        ln_q.weight = nn.Parameter(ops.ones(x.shape[1:]))
+        ln_q.bias = nn.Parameter(ops.ones(x.shape[1:]))
+        ln_dq.weight = nn.Parameter(ops.ones(x.shape[1:]))
+        ln_dq.bias = nn.Parameter(ops.ones(x.shape[1:]))
 
         q, q_scaling_factor = ln_q(x, x_scaling_factor)
         q_int = q / q_scaling_factor
         dq = ln_dq(x)
 
         # output of the normal LN and the quantized LN should be similar
-        self.assertTrue(np.allclose(q.asnumpy(), dq.asnumpy(), atol=0.5))
+        self.assertTrue(ops.allclose(q, dq, atol=0.5))
 
         # output of the quantized GELU layer should be integer
-        self.assertTrue(np.allclose(q_int.asnumpy(), q_int.round().asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(q_int, q_int.round(), atol=1e-4))
 
     def test_force_dequant_layernorm(self):
         output_bit = 8
@@ -663,42 +664,41 @@ class IBertModelIntegrationTest(unittest.TestCase):
             ],
         }
 
-        ln_dq.weight = mindspore.Parameter(ops.ones(x.shape[1:]), 'weight')
-        ln_dq.bias = mindspore.Parameter(ops.ones(x.shape[1:]), 'bias')
+        ln_dq.weight = nn.Parameter(ops.ones(x.shape[1:]))
+        ln_dq.bias = nn.Parameter(ops.ones(x.shape[1:]))
         dq, dq_scaling_factor = ln_dq(x, x_scaling_factor)
         for label, ln_fdqs in ln_fdqs_dict.items():
             for ln_fdq in ln_fdqs:
-                ln_fdq.weight = mindspore.Parameter(ops.ones(x.shape[1:]), 'weight')
-                ln_fdq.bias = mindspore.Parameter(ops.ones(x.shape[1:]), 'bias')
+                ln_fdq.weight = nn.Parameter(ops.ones(x.shape[1:]))
+                ln_fdq.bias = nn.Parameter(ops.ones(x.shape[1:]))
                 q, q_scaling_factor = ln_fdq(x, x_scaling_factor)
                 if label:
-                    self.assertTrue(np.allclose(q.asnumpy(), dq.asnumpy(), atol=1e-4))
+                    self.assertTrue(ops.allclose(q, dq, atol=1e-4))
                 else:
-                    self.assertFalse(np.allclose(q.asnumpy(), dq.asnumpy(), atol=1e-4))
+                    self.assertFalse(ops.allclose(q, dq, atol=1e-4))
 
     def quantize(self, model):
         # Helper function that quantizes the given model
         # Recursively convert all the `quant_mode` attributes as `True`
         if hasattr(model, "quant_mode"):
             model.quant_mode = True
-        elif type(model) == nn.SequentialCell:
+        elif isinstance(model, nn.Sequential):
             for n, m in model.named_children():
                 self.quantize(m)
-        elif type(model) == nn.ModuleList:
+        elif isinstance(model, nn.ModuleList):
             for n in model:
                 self.quantize(n)
         else:
             for attr in dir(model):
-                if hasattr(model, attr):
-                    mod = getattr(model, attr)
-                    if isinstance(mod, nn.Module) and mod != model:
-                        self.quantize(mod)
+                mod = getattr(model, attr)
+                if isinstance(mod, nn.Module) and mod != model:
+                    self.quantize(mod)
 
     @slow
     def test_inference_masked_lm(self):
         # I-BERT should be "equivalent" to RoBERTa if not quantized
         # Test coped from `test_modeling_roberta.py`
-        model = IBertForMaskedLM.from_pretrained("kssteven/ibert-roberta-base", from_pt=True)
+        model = IBertForMaskedLM.from_pretrained("kssteven/ibert-roberta-base")
         input_ids = mindspore.tensor([[0, 31414, 232, 328, 740, 1140, 12695, 69, 46078, 1588, 2]])
         output = model(input_ids)[0]
         expected_shape = (1, 11, 50265)
@@ -706,28 +706,28 @@ class IBertModelIntegrationTest(unittest.TestCase):
         expected_slice = mindspore.tensor(
             [[[33.8802, -4.3103, 22.7761], [4.6539, -2.8098, 13.6253], [1.8228, -3.6898, 8.8600]]]
         )
-        self.assertTrue(np.allclose(output[:, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(output[:, :3, :3], expected_slice, atol=1e-4))
 
         # I-BERT should be "similar" to RoBERTa if quantized
         self.quantize(model)
         output = model(input_ids)[0]
         self.assertEqual(output.shape, expected_shape)
-        self.assertTrue(np.allclose(output[:, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=0.1))
+        self.assertTrue(ops.allclose(output[:, :3, :3], expected_slice, atol=0.1))
 
     @slow
     def test_inference_classification_head(self):
         # I-BERT should be "equivalent" to RoBERTa if not quantized
         # Test coped from `test_modeling_roberta.py`
-        model = IBertForSequenceClassification.from_pretrained("kssteven/ibert-roberta-large-mnli", from_pt=True)
+        model = IBertForSequenceClassification.from_pretrained("kssteven/ibert-roberta-large-mnli")
         input_ids = mindspore.tensor([[0, 31414, 232, 328, 740, 1140, 12695, 69, 46078, 1588, 2]])
         output = model(input_ids)[0]
         expected_shape = (1, 3)
         self.assertEqual(output.shape, expected_shape)
         expected_tensor = mindspore.tensor([[-0.9469, 0.3913, 0.5118]])
-        self.assertTrue(np.allclose(output.asnumpy(), expected_tensor.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(output, expected_tensor, atol=1e-4))
 
         # I-BERT should be "similar" to RoBERTa if quantized
         self.quantize(model)
         output = model(input_ids)[0]
         self.assertEqual(output.shape, expected_shape)
-        self.assertTrue(np.allclose(output.asnumpy(), expected_tensor.asnumpy(), atol=0.1))
+        self.assertTrue(ops.allclose(output, expected_tensor, atol=0.1))

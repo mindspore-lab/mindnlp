@@ -429,7 +429,7 @@ class MultiheadAttention(Module):
             `batch_first` argument is ignored for unbatched inputs.
         """
 
-        is_batched = query.dim() == 3
+        is_batched = query.ndim == 3
 
         key_padding_mask = F._canonical_mask(
             mask=key_padding_mask,
@@ -518,9 +518,9 @@ class MultiheadAttention(Module):
             mask_type = 2
 
             # Always expands attn_mask to 4D
-            if attn_mask.dim() == 3:
+            if attn_mask.ndim == 3:
                 attn_mask_expanded = attn_mask.view(batch_size, -1, seq_len, seq_len)
-            else:  # attn_mask.dim() == 2:
+            else:  # attn_mask.ndim == 2:
                 attn_mask_expanded = attn_mask.view(1, 1, seq_len, seq_len).expand(batch_size, self.num_heads, -1, -1)
             merged_mask = attn_mask_expanded
 

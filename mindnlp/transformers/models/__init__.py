@@ -64,6 +64,7 @@ from . import (
     cpmbee,
     cvt,
     data2vec,
+    dbrx,
     deberta,
     deberta_v2,
     decision_transformer,
@@ -158,13 +159,16 @@ from . import (
     opt,
     owlvit,
     pegasus,
+    pegasus_x,
     perceiver,
     persimmon,
     phi,
     phi3,
+    pix2struct,
     plbart,
     poolformer,
     pop2piano,
+    prophetnet,
     qdqbert,
     qwen2,
     qwen2_moe,
@@ -196,6 +200,7 @@ from . import (
     swin2sr,
     t5,
     tapas,
+    tapex,
     time_series_transformer,
     timesformer,
     tinybert,
@@ -283,6 +288,7 @@ from .cpmant import *
 from .cpmbee import *
 from .cvt import *
 from .data2vec import *
+from .dbrx import *
 from .deberta import *
 from .deberta_v2 import *
 from .decision_transformer import *
@@ -376,13 +382,16 @@ from .openelm import *
 from .opt import *
 from .owlvit import *
 from .pegasus import *
+from .pegasus_x import *
 from .perceiver import *
 from .persimmon import *
 from .phi import *
 from .phi3 import *
+from .pix2struct import *
 from .plbart import *
 from .poolformer import *
 from .pop2piano import *
+from .prophetnet import *
 from .qdqbert import *
 from .qwen2 import *
 from .qwen2_moe import *
@@ -415,6 +424,7 @@ from .swin2sr import *
 from .tinybert import *
 from .t5 import *
 from .tapas import *
+from .tapex import *
 from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
@@ -500,6 +510,7 @@ __all__.extend(cpmant.__all__)
 __all__.extend(cpmbee.__all__)
 __all__.extend(cvt.__all__)
 __all__.extend(data2vec.__all__)
+__all__.extend(dbrx.__all__)
 __all__.extend(deberta.__all__)
 __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
@@ -594,13 +605,16 @@ __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(owlvit.__all__)
 __all__.extend(pegasus.__all__)
+__all__.extend(pegasus_x.__all__)
 __all__.extend(perceiver.__all__)
 __all__.extend(persimmon.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
+__all__.extend(pix2struct.__all__)
 __all__.extend(plbart.__all__)
 __all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)
+__all__.extend(prophetnet.__all__)
 __all__.extend(qdqbert.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
@@ -632,6 +646,7 @@ __all__.extend(switch_transformers.__all__)
 __all__.extend(swin2sr.__all__)
 __all__.extend(superpoint.__all__)
 __all__.extend(t5.__all__)
+__all__.extend(tapex.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)

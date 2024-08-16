@@ -16,13 +16,11 @@
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
-import mindspore as ms
-from mindspore.common.initializer import initializer, Normal
-
+import mindspore
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindnlp.utils import logging
+
 from ...modeling_utils import ModelOutput, PreTrainedModel
+from ....utils import logging
 from .configuration_univnet import UnivNetConfig
 
 
@@ -41,14 +39,14 @@ class UnivNetModelOutput(ModelOutput):
     lengths of those waveforms (so that the padding can be removed by [`UnivNetModel.batch_decode`]).
 
     Args:
-        waveforms (`ms.Tensor` of shape `(batch_size, sequence_length)`):
+        waveforms (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
             Batched 1D (mono-channel) output audio waveforms.
-        waveform_lengths (`ms.Tensor` of shape `(batch_size,)`):
+        waveform_lengths (`mindspore.Tensor` of shape `(batch_size,)`):
             The batched length in samples of each unpadded waveform in `waveforms`.
     """
 
-    waveforms: ms.Tensor = None
-    waveform_lengths: ms.Tensor = None
+    waveforms: mindspore.Tensor = None
+    waveform_lengths: mindspore.Tensor = None
 
 
 class UnivNetKernelPredictorResidualBlock(nn.Module):
@@ -74,38 +72,26 @@ class UnivNetKernelPredictorResidualBlock(nn.Module):
         padding = (self.kernel_size - 1) // 2
 
         self.dropout = nn.Dropout(self.dropout_prob)
-        self.conv1 = nn.Conv1d(
-            self.channels,
-            self.channels,
-            self.kernel_size,
-            padding=padding,
-            bias=True,
-        )
-        self.conv2 = nn.Conv1d(
-            self.channels,
-            self.channels,
-            self.kernel_size,
-            padding=padding,
-            bias=True,
-        )
+        self.conv1 = nn.Conv1d(self.channels, self.channels, self.kernel_size, padding=padding, bias=True)
+        self.conv2 = nn.Conv1d(self.channels, self.channels, self.kernel_size, padding=padding, bias=True)
 
-    def forward(self, hidden_states: ms.Tensor):
+    def forward(self, hidden_states: mindspore.Tensor):
         # hidden_states should have shape (batch_size, channels, seq_length)
         residual = hidden_states
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.conv1(hidden_states)
-        hidden_states = ops.leaky_relu(hidden_states, self.leaky_relu_slope)
+        hidden_states = nn.functional.leaky_relu(hidden_states, self.leaky_relu_slope)
         hidden_states = self.conv2(hidden_states)
-        hidden_states = ops.leaky_relu(hidden_states, self.leaky_relu_slope)
+        hidden_states = nn.functional.leaky_relu(hidden_states, self.leaky_relu_slope)
         return hidden_states + residual
 
     def apply_weight_norm(self):
-        F.weight_norm(self.conv1)
-        F.weight_norm(self.conv2)
+        nn.utils.weight_norm(self.conv1)
+        nn.utils.weight_norm(self.conv2)
 
     def remove_weight_norm(self):
-        F.remove_weight_norm(self.conv1)
-        F.remove_weight_norm(self.conv2)
+        nn.utils.remove_weight_norm(self.conv1)
+        nn.utils.remove_weight_norm(self.conv2)
 
 
 class UnivNetKernelPredictor(nn.Module):
@@ -139,10 +125,7 @@ class UnivNetKernelPredictor(nn.Module):
         self.conv_layers = conv_layers
 
         self.kernel_channels = (
-            self.conv_in_channels
-            * self.conv_out_channels
-            * self.conv_kernel_size
-            * self.conv_layers
+            self.conv_in_channels * self.conv_out_channels * self.conv_kernel_size * self.conv_layers
         )
         self.bias_channels = self.conv_out_channels * self.conv_layers
 
@@ -155,48 +138,29 @@ class UnivNetKernelPredictor(nn.Module):
 
         padding = (self.resnet_kernel_size - 1) // 2
 
-        self.input_conv = nn.Conv1d(
-            self.resnet_in_channels,
-            self.resnet_hidden_channels,
-            5,
-            padding=2,
-            bias=True,
-        )
+        self.input_conv = nn.Conv1d(self.resnet_in_channels, self.resnet_hidden_channels, 5, padding=2, bias=True)
 
-        self.resblocks = nn.ModuleList(
-            [
-                UnivNetKernelPredictorResidualBlock(config)
-                for _ in range(self.num_blocks)
-            ]
-        )
+        self.resblocks = nn.ModuleList([UnivNetKernelPredictorResidualBlock(config) for _ in range(self.num_blocks)])
 
         self.kernel_conv = nn.Conv1d(
-            self.resnet_hidden_channels,
-            self.kernel_channels,
-            self.resnet_kernel_size,
-            padding=padding,
-            bias=True,
+            self.resnet_hidden_channels, self.kernel_channels, self.resnet_kernel_size, padding=padding, bias=True
         )
         self.bias_conv = nn.Conv1d(
-            self.resnet_hidden_channels,
-            self.bias_channels,
-            self.resnet_kernel_size,
-            padding=padding,
-            bias=True,
+            self.resnet_hidden_channels, self.bias_channels, self.resnet_kernel_size, padding=padding, bias=True
         )
 
-    def forward(self, spectrogram: ms.Tensor):
+    def forward(self, spectrogram: mindspore.Tensor):
         """
         Maps a conditioning log-mel spectrogram to a tensor of convolutional kernels and biases, for use in location
         variable convolutional layers. Note that the input spectrogram should have shape (batch_size, input_channels,
         seq_length).
 
         Args:
-            spectrogram (`ms.Tensor` of shape `(batch_size, input_channels, seq_length)`):
+            spectrogram (`mindspore.Tensor` of shape `(batch_size, input_channels, seq_length)`):
                 Tensor containing the log-mel spectrograms.
 
         Returns:
-            Tuple[`ms.Tensor, `ms.Tensor`]: tuple of tensors where the first element is the tensor of
+            Tuple[`mindspore.Tensor, `mindspore.Tensor`]: tuple of tensors where the first element is the tensor of
             location variable convolution kernels of shape `(batch_size, self.conv_layers, self.conv_in_channels,
             self.conv_out_channels, self.conv_kernel_size, seq_length)` and the second element is the tensor of
             location variable convolution biases of shape `(batch_size, self.conv_layers. self.conv_out_channels,
@@ -205,7 +169,7 @@ class UnivNetKernelPredictor(nn.Module):
         batch_size, _, seq_length = spectrogram.shape
 
         hidden_states = self.input_conv(spectrogram)
-        hidden_states = ops.leaky_relu(hidden_states, self.leaky_relu_slope)
+        hidden_states = nn.functional.leaky_relu(hidden_states, self.leaky_relu_slope)
 
         for resblock in self.resblocks:
             hidden_states = resblock(hidden_states)
@@ -232,18 +196,18 @@ class UnivNetKernelPredictor(nn.Module):
         return kernels, biases
 
     def apply_weight_norm(self):
-        F.weight_norm(self.input_conv)
+        nn.utils.weight_norm(self.input_conv)
         for layer in self.resblocks:
             layer.apply_weight_norm()
-        F.weight_norm(self.kernel_conv)
-        F.weight_norm(self.bias_conv)
+        nn.utils.weight_norm(self.kernel_conv)
+        nn.utils.weight_norm(self.bias_conv)
 
     def remove_weight_norm(self):
-        F.remove_weight_norm(self.input_conv)
+        nn.utils.remove_weight_norm(self.input_conv)
         for layer in self.resblocks:
             layer.remove_weight_norm()
-        F.remove_weight_norm(self.kernel_conv)
-        F.remove_weight_norm(self.bias_conv)
+        nn.utils.remove_weight_norm(self.kernel_conv)
+        nn.utils.remove_weight_norm(self.bias_conv)
 
 
 class UnivNetLvcResidualBlock(nn.Module):
@@ -279,21 +243,18 @@ class UnivNetLvcResidualBlock(nn.Module):
             self.kernel_size,
             padding=padding,
             dilation=self.dilation,
-            bias=True,
         )
 
     def forward(self, hidden_states, kernel, bias, hop_size=256):
         residual = hidden_states
-        hidden_states = ops.leaky_relu(hidden_states, self.leaky_relu_slope)
+        hidden_states = nn.functional.leaky_relu(hidden_states, self.leaky_relu_slope)
         hidden_states = self.conv(hidden_states)
-        hidden_states = ops.leaky_relu(hidden_states, self.leaky_relu_slope)
-        hidden_states = self.location_variable_convolution(
-            hidden_states, kernel, bias, hop_size=hop_size
-        )
+        hidden_states = nn.functional.leaky_relu(hidden_states, self.leaky_relu_slope)
+        hidden_states = self.location_variable_convolution(hidden_states, kernel, bias, hop_size=hop_size)
         # Gated activation unit
-        hidden_states = ops.sigmoid(
-            hidden_states[:, : self.hidden_channels, :]
-        ) * ops.tanh(hidden_states[:, self.hidden_channels :, :])
+        hidden_states = ops.sigmoid(hidden_states[:, : self.hidden_channels, :]) * ops.tanh(
+            hidden_states[:, self.hidden_channels :, :]
+        )
         # Skip connection
         hidden_states = residual + hidden_states
 
@@ -302,9 +263,9 @@ class UnivNetLvcResidualBlock(nn.Module):
     # Based on https://github.com/maum-ai/univnet/blob/9bb2b54838bb6d7ce767131cc7b8b61198bc7558/model/lvcnet.py#L171
     def location_variable_convolution(
         self,
-        hidden_states: ms.Tensor,
-        kernel: ms.Tensor,
-        bias: ms.Tensor,
+        hidden_states: mindspore.Tensor,
+        kernel: mindspore.Tensor,
+        bias: mindspore.Tensor,
         dilation: int = 1,
         hop_size: int = 256,
     ):
@@ -316,18 +277,18 @@ class UnivNetLvcResidualBlock(nn.Module):
         Time: 414 μs ± 309 ns per loop (mean ± std. dev. of 7 runs, 1000 loops each), test on NVIDIA V100.
 
         Args:
-            hidden_states (`ms.Tensor` of shape `(batch_size, in_channels, in_length)`):
+            hidden_states (`mindspore.Tensor` of shape `(batch_size, in_channels, in_length)`):
                 The input sequence of shape (batch, in_channels, in_length).
-            kernel (`ms.Tensor` of shape `(batch_size, in_channels, out_channels, kernel_size, kernel_length)`):
+            kernel (`mindspore.Tensor` of shape `(batch_size, in_channels, out_channels, kernel_size, kernel_length)`):
                 The local convolution kernel of shape (batch, in_channels, out_channels, kernel_size, kernel_length).
-            bias (`ms.Tensor` of shape `(batch_size, out_channels, kernel_length)`):
+            bias (`mindspore.Tensor` of shape `(batch_size, out_channels, kernel_length)`):
                 The bias for the local convolution of shape (batch, out_channels, kernel_length).
             dilation (`int`, *optional*, defaults to 1):
                 The dilation of convolution.
             hop_size (`int`, *optional*, defaults to 256):
                 The hop_size of the conditioning sequence.
         Returns:
-            `ms.Tensor`: the output sequence after performing local convolution with shape (batch_size,
+            `mindspore.Tensor`: the output sequence after performing local convolution with shape (batch_size,
             out_channels, in_length).
         """
         batch, _, in_length = hidden_states.shape
@@ -339,26 +300,24 @@ class UnivNetLvcResidualBlock(nn.Module):
             )
 
         padding = dilation * int((kernel_size - 1) / 2)
-
         # (batch, in_channels, in_length + 2*padding)
-        hidden_states = ops.pad(hidden_states, (padding, padding), "constant", 0)
+        hidden_states = nn.functional.pad(hidden_states, (padding, padding), "constant", 0)
         # (batch, in_channels, kernel_length, hop_size + 2*padding)
-        hidden_states = hidden_states.unfold(2, hop_size + 2 * padding, hop_size)
+        hidden_states = ops.unfold(hidden_states, 2, hop_size + 2 * padding, hop_size)
 
         if hop_size < dilation:
-            hidden_states = ops.pad(hidden_states, (0, dilation), "constant", 0)
+            hidden_states = nn.functional.pad(hidden_states, (0, dilation), "constant", 0)
         # (batch, in_channels, kernel_length, (hop_size + 2*padding)/dilation, dilation)
-        hidden_states = hidden_states.unfold(3, dilation, dilation)
+        hidden_states = ops.unfold(hidden_states, 3, dilation, dilation)
         hidden_states = hidden_states[:, :, :, :, :hop_size]
         # (batch, in_channels, kernel_length, dilation, (hop_size + 2*padding)/dilation)
-        hidden_states = hidden_states.swapaxes(3, 4)
+        hidden_states = ops.transpose(hidden_states, 3, 4)
         # (batch, in_channels, kernel_length, dilation, _, kernel_size)
-        hidden_states = hidden_states.unfold(4, kernel_size, 1)
+        hidden_states = ops.unfold(hidden_states, 4, kernel_size, 1)
 
         # Apply local convolution kernel to hidden_states.
-        output_hidden_states = ops.einsum("bildsk,biokl->bolsd", hidden_states, kernel)
+        output_hidden_states = ops.einsum("bildsk, biokl -> bolsd", hidden_states, kernel)
 
-        # output_hidden_states = output_hidden_states
         bias = bias.unsqueeze(-1).unsqueeze(-1)
         output_hidden_states = output_hidden_states + bias
         output_hidden_states = output_hidden_states.view(batch, out_channels, -1)
@@ -366,10 +325,10 @@ class UnivNetLvcResidualBlock(nn.Module):
         return output_hidden_states
 
     def apply_weight_norm(self):
-        F.weight_norm(self.conv)
+        nn.utils.weight_norm(self.conv)
 
     def remove_weight_norm(self):
-        F.remove_weight_norm(self.conv)
+        nn.utils.remove_weight_norm(self.conv)
 
 
 class UnivNetLvcBlock(nn.Module):
@@ -411,24 +370,19 @@ class UnivNetLvcBlock(nn.Module):
             2 * self.stride,
             stride=self.stride,
             padding=self.stride // 2 + self.stride % 2,
-            bias=True,
+            output_padding=self.stride % 2,
         )
 
-        self.kernel_predictor = UnivNetKernelPredictor(
-            config, self.kernel_size, self.num_blocks
-        )
+        self.kernel_predictor = UnivNetKernelPredictor(config, self.kernel_size, self.num_blocks)
 
         self.resblocks = nn.ModuleList(
-            [
-                UnivNetLvcResidualBlock(config, self.kernel_size, self.dilations[i])
-                for i in range(self.num_blocks)
-            ]
+            [UnivNetLvcResidualBlock(config, self.kernel_size, self.dilations[i]) for i in range(self.num_blocks)]
         )
 
-    def forward(self, hidden_states: ms.Tensor, spectrogram: ms.Tensor):
+    def forward(self, hidden_states: mindspore.Tensor, spectrogram: mindspore.Tensor):
         # hidden_states: (batch_size, hidden_channels, seq_length)
         # spectrogram: (batch_size, cond_channels, cond_length)
-        hidden_states = ops.leaky_relu(hidden_states, self.leaky_relu_slope)
+        hidden_states = nn.functional.leaky_relu(hidden_states, self.leaky_relu_slope)
         hidden_states = self.convt_pre(hidden_states)
 
         kernels, biases = self.kernel_predictor(spectrogram)
@@ -436,69 +390,21 @@ class UnivNetLvcBlock(nn.Module):
         for i, resblock in enumerate(self.resblocks):
             kernel = kernels[:, i, :, :, :, :]
             bias = biases[:, i, :, :]
-            hidden_states = resblock(
-                hidden_states, kernel, bias, hop_size=self.cond_hop_length
-            )
+            hidden_states = resblock(hidden_states, kernel, bias, hop_size=self.cond_hop_length)
 
         return hidden_states
 
     def apply_weight_norm(self):
-        F.weight_norm(self.convt_pre)
+        nn.utils.weight_norm(self.convt_pre)
         self.kernel_predictor.apply_weight_norm()
         for layer in self.resblocks:
             layer.apply_weight_norm()
 
     def remove_weight_norm(self):
-        F.remove_weight_norm(self.convt_pre)
+        nn.utils.remove_weight_norm(self.convt_pre)
         self.kernel_predictor.remove_weight_norm()
         for layer in self.resblocks:
             layer.remove_weight_norm()
-
-
-UNIVNET_START_DOCSTRING = r"""
-    This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
-    library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
-    etc.)
-
-    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
-    Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
-    and behavior.
-
-    Parameters:
-        config ([`UnivNetConfig`]):
-            Model configuration class with all the parameters of the model. Initializing with a config file does not
-            load the weights associated with the model, only the configuration. Check out the
-            [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-
-UNIVNET_INPUTS_DOCSTRING = r"""
-    Converts a noise waveform and a conditioning spectrogram to a speech waveform. Passing a batch of log-mel
-    spectrograms returns a batch of speech waveforms. Passing a single, un-batched log-mel spectrogram returns a
-    single, un-batched speech waveform.
-
-    Args:
-        input_features (`ms.Tensor`):
-            Tensor containing the log-mel spectrograms. Can be batched and of shape `(batch_size, sequence_length,
-            config.num_mel_channels)`, or un-batched and of shape `(sequence_length, config.num_mel_channels)`.
-        noise_sequence (`ms.Tensor`, *optional*):
-            Tensor containing a noise sequence of standard Gaussian noise. Can be batched and of shape `(batch_size,
-            sequence_length, config.model_in_channels)`, or un-batched and of shape (sequence_length,
-            config.model_in_channels)`. If not supplied, will be randomly generated.
-        padding_mask (`torch.BoolTensor`, *optional*):
-            Mask indicating which parts of each sequence are padded. Mask values are selected in `[0, 1]`:
-
-            - 1 for tokens that are **not masked**
-            - 0 for tokens that are **masked**
-
-            The mask can be batched and of shape `(batch_size, sequence_length)` or un-batched and of shape
-            `(sequence_length,)`.
-        generator (`torch.Generator`, *optional*):
-            A [torch generator](https://pytorch.org/docs/stable/generated/torch.Generator.html) to make generation
-            deterministic.
-        return_dict:
-            Whether to return a [`~utils.ModelOutput`] subclass instead of a plain tuple.
-"""
 
 
 class UnivNetModel(PreTrainedModel):
@@ -517,7 +423,7 @@ class UnivNetModel(PreTrainedModel):
             kernel_size=7,
             stride=1,
             padding=3,
-            bias=True,
+            padding_mode="reflect",
         )
 
         # Initialize location-variable convolution ResNet Blocks.
@@ -538,26 +444,19 @@ class UnivNetModel(PreTrainedModel):
                 for i in range(num_layers)
             ]
         )
-        self.conv_post = nn.Conv1d(
-            config.model_hidden_channels, 1, 7, padding=3, bias=True
-        )
+
+        self.conv_post = nn.Conv1d(config.model_hidden_channels, 1, 7, padding=3, padding_mode="reflect")
+
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Embedding:
-        return nn.Embedding(10, 10)
-
-    def set_input_embeddings(self, value):
-        x = value
-
     def forward(
         self,
-        input_features: ms.Tensor,
-        noise_sequence: Optional[ms.Tensor] = None,
-        padding_mask: Optional[ms.Tensor] = None,
-        generator: Optional[int] = None,
+        input_features: mindspore.Tensor,
+        noise_sequence: Optional[mindspore.Tensor] = None,
+        padding_mask: Optional[mindspore.Tensor] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple[ms.Tensor], UnivNetModelOutput]:
+    ) -> Union[Tuple[mindspore.Tensor], UnivNetModelOutput]:
         r"""
         Returns:
 
@@ -570,7 +469,7 @@ class UnivNetModel(PreTrainedModel):
          >>> model = UnivNetModel.from_pretrained("dg845/univnet-dev")
          >>> feature_extractor = UnivNetFeatureExtractor.from_pretrained("dg845/univnet-dev")
 
-         >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation", trust_remote_code=True)
+         >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
          >>> # Resample the audio to the feature extractor's sampling rate.
          >>> ds = ds.cast_column("audio", Audio(sampling_rate=feature_extractor.sampling_rate))
          >>> inputs = feature_extractor(
@@ -581,27 +480,21 @@ class UnivNetModel(PreTrainedModel):
          [1, 140288]
          ```
         """
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # Resolve batch sizes for noise_sequence and spectrogram
-        spectrogram_batched = input_features.dim() == 3
+        spectrogram_batched = input_features.ndim == 3
         if not spectrogram_batched:
             input_features = input_features.unsqueeze(0)
         spectrogram_batch_size, spectrogram_length, _ = input_features.shape
 
         if noise_sequence is not None:
-            noise_sequence_batched = noise_sequence.dim() == 3
+            noise_sequence_batched = noise_sequence.ndim == 3
             if not noise_sequence_batched:
                 noise_sequence = noise_sequence.unsqueeze(0)
         else:
             # Randomly generate noise_sequence
-            noise_sequence_shape = (
-                spectrogram_batch_size,
-                spectrogram_length,
-                self.config.model_in_channels,
-            )
+            noise_sequence_shape = (spectrogram_batch_size, spectrogram_length, self.config.model_in_channels)
             noise_sequence = ops.randn(
                 noise_sequence_shape, dtype=input_features.dtype
             )
@@ -609,10 +502,10 @@ class UnivNetModel(PreTrainedModel):
 
         if spectrogram_batch_size > 1 and noise_sequence_batch_size == 1:
             # Repeat noise_sequence spectrogram_batch_size times
-            noise_sequence = noise_sequence.repeat(spectrogram_batch_size, 1, 1)
+            noise_sequence = noise_sequence.tile((spectrogram_batch_size, 1, 1))
         elif noise_sequence_batch_size > 1 and spectrogram_batch_size == 1:
             # Repeat spectrogram noise_sequence_batch_size times
-            input_features = input_features.repeat(noise_sequence_batch_size, 1, 1)
+            input_features = input_features.tile((noise_sequence_batch_size, 1, 1))
 
         if noise_sequence_batch_size != spectrogram_batch_size:
             raise ValueError(
@@ -621,7 +514,7 @@ class UnivNetModel(PreTrainedModel):
             )
 
         if padding_mask is not None:
-            if padding_mask.dim() == 1:
+            if padding_mask.ndim == 1:
                 padding_mask = padding_mask.unsqueeze(0)
             padding_mask_batch_size = padding_mask.shape[0]
             if padding_mask_batch_size != spectrogram_batch_size:
@@ -631,15 +524,15 @@ class UnivNetModel(PreTrainedModel):
                 )
 
         # Change shapes to have channels before sequence lengths
-        hidden_states = noise_sequence.swapaxes(2, 1)
-        input_features = input_features.swapaxes(2, 1)
+        hidden_states = ops.transpose(noise_sequence, 2, 1)
+        input_features = ops.transpose(input_features, 2, 1)
 
         hidden_states = self.conv_pre(hidden_states)
 
         for resblock in self.resblocks:
             hidden_states = resblock(hidden_states, input_features)
 
-        hidden_states = ops.leaky_relu(hidden_states, self.leaky_relu_slope)
+        hidden_states = nn.functional.leaky_relu(hidden_states, self.leaky_relu_slope)
         hidden_states = self.conv_post(hidden_states)
         hidden_states = ops.tanh(hidden_states)
 
@@ -664,30 +557,21 @@ class UnivNetModel(PreTrainedModel):
 
     def _init_weights(self, module):
         """Initialize the weights."""
-        if isinstance(module, (nn.Linear, nn.Conv1d, nn.Conv1dTranspose)):
-            module.weight.set_data(
-                initializer(
-                    Normal(sigma=self.config.initializer_range, mean=0.0),
-                    module.weight.shape,
-                    module.weight.dtype,
-                )
-            )
+        if isinstance(module, (nn.Linear, nn.Conv1d, nn.ConvTranspose1d)):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
             if module.bias is not None:
-                module.bias.set_data(
-                    initializer("zeros", module.bias.shape, module.bias.dtype)
-                )
+                nn.init.zeros_(module.bias)
 
     def apply_weight_norm(self):
-        F.weight_norm(self.conv_pre)
+        nn.utils.weight_norm(self.conv_pre)
         for layer in self.resblocks:
             layer.apply_weight_norm()
-        F.weight_norm(self.conv_post)
+        nn.utils.weight_norm(self.conv_post)
 
     def remove_weight_norm(self):
-        F.remove_weight_norm(self.conv_pre)
+        nn.utils.remove_weight_norm(self.conv_pre)
         for layer in self.resblocks:
             layer.remove_weight_norm()
-        F.remove_weight_norm(self.conv_post)
-
+        nn.utils.remove_weight_norm(self.conv_post)
 
 __all__ = ["UnivNetModel"]

@@ -270,7 +270,6 @@ class UnivNetModelIntegrationTests(unittest.TestCase):
         inputs = {
             "input_features": spectrogram,
             "noise_sequence": noise_sequence,
-            "generator": seed,
         }
 
         return inputs

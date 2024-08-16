@@ -17,7 +17,6 @@ import re
 import tempfile
 import unittest
 
-from datasets import load_dataset
 from huggingface_hub import hf_hub_download
 from packaging import version
 
@@ -32,6 +31,7 @@ from mindnlp.utils.testing_utils import (
     to_2tuple,
 )
 from mindnlp.utils import cached_property, is_mindspore_available, is_vision_available
+from datasets import load_dataset
 
 from ...test_modeling_common import floats_tensor, ids_tensor, random_attention_mask
 from ..bart.test_modeling_bart import BartModelTester
@@ -167,7 +167,7 @@ class EncoderDecoderMixin:
                 decoder_input_ids=decoder_input_ids,
                 decoder_attention_mask=decoder_attention_mask,
             )
-            out_2 = outputs[0].cpu().numpy()
+            out_2 = outputs[0].asnumpy()
             out_2[np.isnan(out_2)] = 0
 
             with tempfile.TemporaryDirectory() as tmpdirname:
@@ -179,7 +179,7 @@ class EncoderDecoderMixin:
                     decoder_input_ids=decoder_input_ids,
                     decoder_attention_mask=decoder_attention_mask,
                 )
-                out_1 = after_outputs[0].cpu().numpy()
+                out_1 = after_outputs[0].asnumpy()
                 out_1[np.isnan(out_1)] = 0
                 max_diff = np.amax(np.abs(out_1 - out_2))
                 self.assertLessEqual(max_diff, 1e-5)
@@ -196,7 +196,7 @@ class EncoderDecoderMixin:
                 decoder_input_ids=decoder_input_ids,
                 decoder_attention_mask=decoder_attention_mask,
             )
-            out_2 = outputs[0].cpu().numpy()
+            out_2 = outputs[0].asnumpy()
             out_2[np.isnan(out_2)] = 0
 
             with tempfile.TemporaryDirectory() as encoder_tmp_dirname, tempfile.TemporaryDirectory() as decoder_tmp_dirname:
@@ -212,7 +212,7 @@ class EncoderDecoderMixin:
                     decoder_input_ids=decoder_input_ids,
                     decoder_attention_mask=decoder_attention_mask,
                 )
-                out_1 = after_outputs[0].cpu().numpy()
+                out_1 = after_outputs[0].asnumpy()
                 out_1[np.isnan(out_1)] = 0
                 max_diff = np.amax(np.abs(out_1 - out_2))
                 self.assertLessEqual(max_diff, 1e-5)
@@ -350,7 +350,7 @@ class EncoderDecoderMixin:
 
         with no_grad():
             outputs = model_2(**inputs)
-            out_2 = outputs[0].cpu().numpy()
+            out_2 = outputs[0].asnumpy()
             out_2[np.isnan(out_2)] = 0
 
             with tempfile.TemporaryDirectory() as tmp_dirname:
@@ -358,7 +358,7 @@ class EncoderDecoderMixin:
                 model_1 = VisionEncoderDecoderModel.from_pretrained(tmp_dirname)
 
                 after_outputs = model_1(**inputs)
-                out_1 = after_outputs[0].cpu().numpy()
+                out_1 = after_outputs[0].asnumpy()
                 out_1[np.isnan(out_1)] = 0
                 max_diff = np.amax(np.abs(out_1 - out_2))
                 self.assertLessEqual(max_diff, 1e-5)
@@ -804,7 +804,7 @@ class TrOCRModelIntegrationTest(unittest.TestCase):
         image = Image.open(dataset[0]["file"]).convert("RGB")
 
         processor = self.default_processor
-        pixel_values = processor(images=image, return_tensors="pt").pixel_values
+        pixel_values = processor(images=image, return_tensors="ms").pixel_values
 
         # forward pass
         decoder_input_ids = mindspore.tensor([[model.config.decoder.decoder_start_token_id]])
@@ -812,7 +812,7 @@ class TrOCRModelIntegrationTest(unittest.TestCase):
         logits = outputs.logits
 
         # verify the logits
-        expected_shape = torch.Size((1, 1, model.decoder.config.vocab_size))
+        expected_shape = (1, 1, model.decoder.config.vocab_size)
         self.assertEqual(outputs.logits.shape, expected_shape)
 
         expected_slice = mindspore.tensor(
@@ -829,7 +829,7 @@ class TrOCRModelIntegrationTest(unittest.TestCase):
         image = Image.open(dataset[1]["file"]).convert("RGB")
 
         processor = self.default_processor
-        pixel_values = processor(images=image, return_tensors="pt").pixel_values
+        pixel_values = processor(images=image, return_tensors="ms").pixel_values
 
         # forward pass
         decoder_input_ids = mindspore.tensor([[model.config.decoder.decoder_start_token_id]])
@@ -837,7 +837,7 @@ class TrOCRModelIntegrationTest(unittest.TestCase):
         logits = outputs.logits
 
         # verify the logits
-        expected_shape = torch.Size((1, 1, model.decoder.config.vocab_size))
+        expected_shape = (1, 1, model.decoder.config.vocab_size)
         self.assertEqual(outputs.logits.shape, expected_shape)
 
         is_pillow_less_than_9 = version.parse(PIL.__version__) < version.parse("9.0.0")
@@ -845,12 +845,10 @@ class TrOCRModelIntegrationTest(unittest.TestCase):
         if is_pillow_less_than_9:
             expected_slice = mindspore.tensor(
                 [-5.6816, -5.8388, 1.1398, -6.9034, 6.8505, -2.4393, 1.2284, -1.0232, -1.9661, -3.9210],
-                device=torch_device,
             )
         else:
             expected_slice = mindspore.tensor(
                 [-5.6844, -5.8372, 1.1518, -6.8984, 6.8587, -2.4453, 1.2347, -1.0241, -1.9649, -3.9109],
-                device=torch_device,
             )
 
         self.assertTrue(ops.allclose(logits[0, 0, :10], expected_slice, atol=1e-4))
@@ -870,12 +868,12 @@ class ViT2GPT2ModelIntegrationTest(unittest.TestCase):
 
         # We will verify our results on an image of cute cats
         img = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
-        pixel_values = image_processor(images=img, return_tensors="pt").pixel_values
+        pixel_values = image_processor(images=img, return_tensors="ms").pixel_values
 
         decoder_input_ids = mindspore.tensor([[model.config.decoder_start_token_id]])
 
         with no_grad():
-            logits = model(pixel_values, decoder_input_ids)[0].detach().cpu().numpy()
+            logits = model(pixel_values, decoder_input_ids)[0].asnumpy()
 
         # verify the logits
         expected_shape = (1, 1, model.config.decoder.vocab_size)
@@ -906,7 +904,7 @@ class ViT2GPT2ModelIntegrationTest(unittest.TestCase):
             preds = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
             preds = [pred.strip() for pred in preds]
 
-            return preds, outputs.sequences_scores.detach().cpu().numpy()
+            return preds, outputs.sequences_scores.asnumpy()
 
         preds, scores = generate_step(pixel_values)
 
@@ -926,16 +924,13 @@ class DonutModelIntegrationTest(unittest.TestCase):
     @slow
     def test_inference_docvqa(self):
         processor = DonutProcessor.from_pretrained("naver-clova-ix/donut-base-finetuned-docvqa")
-        model = VisionEncoderDecoderModel.from_pretrained("naver-clova-ix/donut-base-finetuned-docvqa").to(
-            torch_device
-        )
-
+        model = VisionEncoderDecoderModel.from_pretrained("naver-clova-ix/donut-base-finetuned-docvqa")
         dataset = load_dataset("hf-internal-testing/example-documents", split="test")
         image = dataset[0]["image"]
 
-        pixel_values = processor(images=image, return_tensors="pt").pixel_values
+        pixel_values = processor(images=image, return_tensors="ms").pixel_values
         decoder_input_ids = processor.tokenizer(
-            "<s_docvqa>", add_special_tokens=False, return_tensors="pt"
+            "<s_docvqa>", add_special_tokens=False, return_tensors="ms"
         ).input_ids
 
         # step 1: single forward pass
@@ -944,7 +939,7 @@ class DonutModelIntegrationTest(unittest.TestCase):
             logits = outputs.logits
 
         # verify the logits
-        expected_shape = torch.Size([1, 1, 57532])
+        expected_shape = (1, 1, 57532)
         self.assertEqual(outputs.logits.shape, expected_shape)
 
         expected_slice = mindspore.tensor([24.3873, -6.4491, 32.5394])
@@ -954,7 +949,7 @@ class DonutModelIntegrationTest(unittest.TestCase):
         task_prompt = "<s_docvqa><s_question>{user_input}</s_question><s_answer>"
         question = "When is the coffee break?"
         prompt = task_prompt.replace("{user_input}", question)
-        decoder_input_ids = processor.tokenizer(prompt, add_special_tokens=False, return_tensors="pt").input_ids
+        decoder_input_ids = processor.tokenizer(prompt, add_special_tokens=False, return_tensors="ms").input_ids
         decoder_input_ids = decoder_input_ids
 
         outputs = model.generate(
@@ -983,23 +978,20 @@ class DonutModelIntegrationTest(unittest.TestCase):
         self.assertEqual(len(outputs.scores), 11)
         self.assertTrue(
             ops.allclose(
-                outputs.scores[0][0, :3], mindspore.tensor([5.6019, -3.5070, 13.7123], device=torch_device), atol=1e-4
+                outputs.scores[0][0, :3], mindspore.tensor([5.6019, -3.5070, 13.7123]), atol=1e-4
             )
         )
 
     @slow
     def test_inference_cordv2(self):
         processor = DonutProcessor.from_pretrained("naver-clova-ix/donut-base-finetuned-cord-v2")
-        model = VisionEncoderDecoderModel.from_pretrained("naver-clova-ix/donut-base-finetuned-cord-v2").to(
-            torch_device
-        )
-
+        model = VisionEncoderDecoderModel.from_pretrained("naver-clova-ix/donut-base-finetuned-cord-v2")
         dataset = load_dataset("hf-internal-testing/example-documents", split="test")
         image = dataset[2]["image"]
 
-        pixel_values = processor(images=image, return_tensors="pt").pixel_values
+        pixel_values = processor(images=image, return_tensors="ms").pixel_values
         decoder_input_ids = processor.tokenizer(
-            "<s_cord-v2>", add_special_tokens=False, return_tensors="pt"
+            "<s_cord-v2>", add_special_tokens=False, return_tensors="ms"
         ).input_ids
 
         # step 1: single forward pass
@@ -1008,15 +1000,15 @@ class DonutModelIntegrationTest(unittest.TestCase):
             logits = outputs.logits
 
         # verify the logits
-        expected_shape = torch.Size((1, 1, model.decoder.config.vocab_size))
+        expected_shape = (1, 1, model.decoder.config.vocab_size)
         self.assertEqual(outputs.logits.shape, expected_shape)
 
-        expected_slice = mindspore.tensor([-27.4344, -3.2686, -19.3524], device=torch_device)
+        expected_slice = mindspore.tensor([-27.4344, -3.2686, -19.3524])
         self.assertTrue(ops.allclose(logits[0, 0, :3], expected_slice, atol=1e-4))
 
         # step 2: generation
         task_prompt = "<s_cord-v2>"
-        decoder_input_ids = processor.tokenizer(task_prompt, add_special_tokens=False, return_tensors="pt").input_ids
+        decoder_input_ids = processor.tokenizer(task_prompt, add_special_tokens=False, return_tensors="ms").input_ids
         decoder_input_ids = decoder_input_ids
 
         outputs = model.generate(
@@ -1045,40 +1037,38 @@ class DonutModelIntegrationTest(unittest.TestCase):
         self.assertEqual(len(outputs.scores), 43)
         self.assertTrue(
             ops.allclose(
-                outputs.scores[0][0, :3], mindspore.tensor([-27.4344, -3.2686, -19.3524], device=torch_device), atol=1e-4
+                outputs.scores[0][0, :3], mindspore.tensor([-27.4344, -3.2686, -19.3524]), atol=1e-4
             )
         )
 
     @slow
     def test_inference_rvlcdip(self):
         processor = DonutProcessor.from_pretrained("naver-clova-ix/donut-base-finetuned-rvlcdip")
-        model = VisionEncoderDecoderModel.from_pretrained("naver-clova-ix/donut-base-finetuned-rvlcdip").to(
-            torch_device
-        )
+        model = VisionEncoderDecoderModel.from_pretrained("naver-clova-ix/donut-base-finetuned-rvlcdip")
 
         dataset = load_dataset("hf-internal-testing/example-documents", split="test")
         image = dataset[1]["image"]
 
-        pixel_values = processor(images=image, return_tensors="pt").pixel_values
+        pixel_values = processor(images=image, return_tensors="ms").pixel_values
 
         # step 1: single forward pass
         decoder_input_ids = processor.tokenizer(
-            "<s_rvlcdip>", add_special_tokens=False, return_tensors="pt"
+            "<s_rvlcdip>", add_special_tokens=False, return_tensors="ms"
         ).input_ids
         with no_grad():
             outputs = model(pixel_values=pixel_values, decoder_input_ids=decoder_input_ids)
             logits = outputs.logits
 
         # verify the logits
-        expected_shape = torch.Size((1, 1, model.decoder.config.vocab_size))
+        expected_shape = (1, 1, model.decoder.config.vocab_size)
         self.assertEqual(outputs.logits.shape, expected_shape)
 
-        expected_slice = mindspore.tensor([-17.6490, -4.8381, -15.7577], device=torch_device)
+        expected_slice = mindspore.tensor([-17.6490, -4.8381, -15.7577])
         self.assertTrue(ops.allclose(logits[0, 0, :3], expected_slice, atol=1e-4))
 
         # step 2: generation
         task_prompt = "<s_rvlcdip>"
-        decoder_input_ids = processor.tokenizer(task_prompt, add_special_tokens=False, return_tensors="pt").input_ids
+        decoder_input_ids = processor.tokenizer(task_prompt, add_special_tokens=False, return_tensors="ms").input_ids
         decoder_input_ids = decoder_input_ids
 
         outputs = model.generate(
@@ -1106,7 +1096,7 @@ class DonutModelIntegrationTest(unittest.TestCase):
         self.assertEqual(len(outputs.scores), 4)
         self.assertTrue(
             ops.allclose(
-                outputs.scores[0][0, :3], mindspore.tensor([-17.6490, -4.8381, -15.7577], device=torch_device), atol=1e-4
+                outputs.scores[0][0, :3], mindspore.tensor([-17.6490, -4.8381, -15.7577]), atol=1e-4
             )
         )
 
@@ -1137,14 +1127,14 @@ class NougatModelIntegrationTest(unittest.TestCase):
         processor = self.default_processor
         model = self.default_model
         image = self.default_image
-        pixel_values = processor(images=image, return_tensors="pt").pixel_values
+        pixel_values = processor(images=image, return_tensors="ms").pixel_values
 
         decoder_input_ids = mindspore.tensor([[0]])
         outputs = model(pixel_values=pixel_values, decoder_input_ids=decoder_input_ids)
         logits = outputs.logits
 
         # verify the logits
-        expected_shape = torch.Size((1, 1, model.decoder.config.vocab_size))
+        expected_shape = (1, 1, model.decoder.config.vocab_size)
         self.assertEqual(outputs.logits.shape, expected_shape)
 
         expected_slice = mindspore.tensor(
@@ -1157,7 +1147,7 @@ class NougatModelIntegrationTest(unittest.TestCase):
         processor = self.default_processor
         model = self.default_model
         image = self.default_image
-        pixel_values = processor(images=image, return_tensors="pt").pixel_values
+        pixel_values = processor(images=image, return_tensors="ms").pixel_values
 
         outputs = model.generate(
             pixel_values,
@@ -1182,6 +1172,6 @@ class NougatModelIntegrationTest(unittest.TestCase):
         self.assertEqual(len(outputs.scores), 741)
         self.assertTrue(
             ops.allclose(
-                outputs.scores[0][0, :3], mindspore.tensor([1.6253, -4.2179, 5.8532], device=torch_device), atol=1e-4
+                outputs.scores[0][0, :3], mindspore.tensor([1.6253, -4.2179, 5.8532]), atol=1e-4
             )
         )
