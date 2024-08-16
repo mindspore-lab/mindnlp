@@ -158,6 +158,7 @@ from . import (
     openelm,
     opt,
     owlvit,
+    patchtst,
     pegasus,
     pegasus_x,
     perceiver,
@@ -381,6 +382,7 @@ from .oneformer import *
 from .openelm import *
 from .opt import *
 from .owlvit import *
+from .patchtst import *
 from .pegasus import *
 from .pegasus_x import *
 from .perceiver import *
@@ -604,6 +606,7 @@ __all__.extend(oneformer.__all__)
 __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(owlvit.__all__)
+__all__.extend(patchtst.__all__)
 __all__.extend(pegasus.__all__)
 __all__.extend(pegasus_x.__all__)
 __all__.extend(perceiver.__all__)
