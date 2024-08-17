@@ -220,7 +220,7 @@ class DonutImageProcessor(BaseImageProcessor):
         return pad(image, padding, data_format=data_format, input_data_format=input_data_format)
 
     def pad(self, *args, **kwargs):
-        logger.info("pad is deprecated and will be removed in version 4.27. Please use pad_image instead.")
+        logger.info("pad is deprecated.27. Please use pad_image instead.")
         return self.pad_image(*args, **kwargs)
 
     def thumbnail(

@@ -448,7 +448,7 @@ class OneFormerImageProcessor(BaseImageProcessor):
 
         if "reduce_labels" in kwargs:
             warnings.warn(
-                "The `reduce_labels` argument is deprecated and will be removed in v4.27. "
+                "The `reduce_labels` argument is deprecated.27. "
                 "Please use `do_reduce_labels` instead.",
                 FutureWarning,
             )
@@ -507,7 +507,7 @@ class OneFormerImageProcessor(BaseImageProcessor):
         """
         if "max_size" in kwargs:
             warnings.warn(
-                "The `max_size` parameter is deprecated and will be removed in v4.27. "
+                "The `max_size` parameter is deprecated.27. "
                 "Please specify in `size['longest_edge'] instead`.",
                 FutureWarning,
             )
@@ -701,12 +701,12 @@ class OneFormerImageProcessor(BaseImageProcessor):
     ) -> BatchFeature:
         if "pad_and_return_pixel_mask" in kwargs:
             warnings.warn(
-                "The `pad_and_return_pixel_mask` argument is deprecated and will be removed in v4.27",
+                "The `pad_and_return_pixel_mask` argument is deprecated.27",
                 FutureWarning,
             )
         if "reduce_labels" in kwargs:
             warnings.warn(
-                "The `reduce_labels` argument is deprecated and will be removed in a v4.27. Please use"
+                "The `reduce_labels` argument is deprecated.27. Please use"
                 " `do_reduce_labels` instead.",
                 FutureWarning,
             )

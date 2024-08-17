@@ -608,7 +608,7 @@ class PegasusXEncoderLayer(nn.Module):
     def pad_local_tokens(cls, hidden_states, attention_mask, block_size):
         # hidden_states: [batch_size, seq_len, hidden_dim]
         pad_size = block_size // 2
-        mask_min_value = ops.finfo(hidden_states.dtype).min
+        mask_min_value = float(ops.finfo(hidden_states.dtype).min)
         padded_hidden_states = F.pad(
             hidden_states,
             pad=(0, 0, pad_size, pad_size),
@@ -1009,8 +1009,7 @@ class PegasusXEncoder(PegasusXPreTrainedModel):
         if attention_mask is None:
             attention_mask = ops.ones(*input_shape, dtype=inputs_embeds.dtype)
         attention_mask = attention_mask.to(dtype=hidden_states.dtype)
-        mask_min_value = ops.finfo(hidden_states.dtype).min
-        mask_min_value = mindspore.Tensor(mask_min_value, dtype=hidden_states.dtype)
+        mask_min_value = float(ops.finfo(hidden_states.dtype).min)
         inverted_mask = 1.0 - attention_mask
         attention_mask = inverted_mask.masked_fill(
             inverted_mask.to(mindspore.bool_),

@@ -407,14 +407,14 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
     ):
         if "size_divisibility" in kwargs:
             warnings.warn(
-                "The `size_divisibility` argument is deprecated and will be removed in v4.27. Please use "
+                "The `size_divisibility` argument is deprecated.27. Please use "
                 "`size_divisor` instead.",
                 FutureWarning,
             )
             size_divisor = kwargs.pop("size_divisibility")
         if "max_size" in kwargs:
             warnings.warn(
-                "The `max_size` argument is deprecated and will be removed in v4.27. Please use size['longest_edge']"
+                "The `max_size` argument is deprecated.27. Please use size['longest_edge']"
                 " instead.",
                 FutureWarning,
             )
@@ -504,7 +504,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
         """
         if "max_size" in kwargs:
             warnings.warn(
-                "The `max_size` parameter is deprecated and will be removed in v4.27. "
+                "The `max_size` parameter is deprecated.27. "
                 "Please specify in `size['longest_edge'] instead`.",
                 FutureWarning,
             )

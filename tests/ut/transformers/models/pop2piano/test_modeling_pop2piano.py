@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2021, The HuggingFace Inc. team. All rights reserved.
+# Copyright 2023 The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,36 +12,38 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the Mindspore Pop2Piano8 model. """
+"""Testing suite for the MindSpore Pop2Piano model."""
 
 import copy
 import tempfile
 import unittest
 
 import numpy as np
-from datasets import load_dataset
 
+from mindnlp.dataset import load_dataset
 from mindnlp.transformers import Pop2PianoConfig
 from mindnlp.transformers.feature_extraction_utils import BatchFeature
 from mindnlp.utils.testing_utils import (
-    require_mindspore,
     require_essentia,
     require_librosa,
     require_scipy,
+    require_mindspore,
     slow,
 )
-from mindnlp.utils.testing_utils import is_mindspore_available, is_essentia_available, is_librosa_available, is_scipy_available
+from mindnlp.utils import is_essentia_available, is_librosa_available, is_scipy_available, is_mindspore_available
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, ids_tensor
+# from ...test_pipeline_mixin import PipelineTesterMixin
+
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import ops, serialization
-    
-    from mindnlp.transformers.models.pop2piano.modeling_pop2piano import Pop2PianoForConditionalGeneration
-    from mindnlp.transformers.models.pop2piano.modeling_pop2piano import POP2PIANO_PRETRAINED_MODEL_ARCHIVE_LIST
+    from mindnlp.core import ops
+    from mindnlp.engine import set_seed
+
+    from mindnlp.transformers import Pop2PianoForConditionalGeneration
 
 
 @require_mindspore
@@ -106,7 +108,6 @@ class Pop2PianoModelTester:
         lm_labels = (
             ids_tensor([self.batch_size, self.decoder_seq_length], self.vocab_size) if self.use_labels else None
         )
-        lm_labels = lm_labels.astype("int32")
 
         return self.get_config(), input_ids, decoder_input_ids, attention_mask, decoder_attention_mask, lm_labels
 
@@ -156,15 +157,14 @@ class Pop2PianoModelTester:
         lm_labels,
     ):
         model = Pop2PianoForConditionalGeneration(config=config)
-        # model.to(torch_device)
-        model.set_train(False)
+        model.eval()
 
         # make sure that lm_labels are correctly padded from the right
-        lm_labels.masked_fill((lm_labels == self.decoder_start_token_id), self.eos_token_id)
+        lm_labels = lm_labels.masked_fill((lm_labels == self.decoder_start_token_id), self.eos_token_id)
 
         # add causal pad token mask
         triangular_mask = ops.tril(lm_labels.new_ones(lm_labels.shape)).logical_not()
-        lm_labels.masked_fill(triangular_mask, self.pad_token_id)
+        lm_labels = lm_labels.masked_fill(triangular_mask, self.pad_token_id)
         decoder_input_ids = model._shift_right(lm_labels)
 
         for i, (decoder_input_ids_slice, lm_labels_slice) in enumerate(zip(decoder_input_ids, lm_labels)):
@@ -195,7 +195,7 @@ class Pop2PianoModelTester:
         lm_labels,
     ):
         model = Pop2PianoForConditionalGeneration(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids=input_ids,
             decoder_input_ids=decoder_input_ids,
@@ -221,7 +221,7 @@ class Pop2PianoModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = Pop2PianoForConditionalGeneration(config=config).set_train(False)
+        model = Pop2PianoForConditionalGeneration(config=config).eval()
         outputs = model(
             input_ids=input_ids,
             decoder_input_ids=decoder_input_ids,
@@ -241,7 +241,7 @@ class Pop2PianoModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = Pop2PianoForConditionalGeneration(config=config).get_decoder().set_train(False)
+        model = Pop2PianoForConditionalGeneration(config=config).get_decoder().eval()
         # first forward pass
         outputs = model(input_ids, use_cache=True)
         outputs_use_cache_conf = model(input_ids)
@@ -256,7 +256,7 @@ class Pop2PianoModelTester:
         next_tokens = ids_tensor((self.batch_size, 1), config.vocab_size)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
 
         output_from_no_past = model(next_input_ids)["last_hidden_state"]
         output_from_past = model(next_tokens, past_key_values=past_key_values)["last_hidden_state"]
@@ -267,7 +267,7 @@ class Pop2PianoModelTester:
         output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_decoder_model_attention_mask_past(
         self,
@@ -279,7 +279,7 @@ class Pop2PianoModelTester:
         lm_labels,
     ):
         model = Pop2PianoForConditionalGeneration(config=config).get_decoder()
-        model.set_train(False)
+        model.eval()
 
         # create attention mask
         attn_mask = ops.ones(input_ids.shape, dtype=mindspore.int64)
@@ -299,10 +299,10 @@ class Pop2PianoModelTester:
         input_ids[:, -random_seq_idx_to_change] = random_other_next_tokens
 
         # append to next input_ids and attn_mask
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         attn_mask = ops.cat(
             [attn_mask, ops.ones((attn_mask.shape[0], 1), dtype=mindspore.int64)],
-            axis=1,
+            dim=1,
         )
 
         # get two different outputs
@@ -317,7 +317,7 @@ class Pop2PianoModelTester:
         output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_decoder_model_past_large_inputs(
         self,
@@ -328,7 +328,7 @@ class Pop2PianoModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = Pop2PianoForConditionalGeneration(config=config).get_decoder().set_train(False)
+        model = Pop2PianoForConditionalGeneration(config=config).get_decoder().eval()
         # first forward pass
         outputs = model(input_ids, attention_mask=attention_mask, use_cache=True)
 
@@ -339,8 +339,8 @@ class Pop2PianoModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([attention_mask, next_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([attention_mask, next_mask], dim=-1)
 
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["last_hidden_state"]
         output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
@@ -355,7 +355,7 @@ class Pop2PianoModelTester:
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_generate_with_past_key_values(
         self,
@@ -366,12 +366,12 @@ class Pop2PianoModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = Pop2PianoForConditionalGeneration(config=config).set_train(False)
-        # torch.manual_seed(0)
+        model = Pop2PianoForConditionalGeneration(config=config).eval()
+        set_seed(0)
         output_without_past_cache = model.generate(
             input_ids[:1], num_beams=2, max_length=5, do_sample=True, use_cache=False
         )
-        # torch.manual_seed(0)
+        set_seed(0)
         output_with_past_cache = model.generate(input_ids[:1], num_beams=2, max_length=5, do_sample=True)
         self.parent.assertTrue(ops.all(output_with_past_cache == output_without_past_cache))
 
@@ -384,7 +384,7 @@ class Pop2PianoModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = Pop2PianoForConditionalGeneration(config=config).half().set_train(False)
+        model = Pop2PianoForConditionalGeneration(config=config).half().eval()
         output = model(input_ids, decoder_input_ids=input_ids, attention_mask=attention_mask)[
             "encoder_last_hidden_state"
         ]
@@ -400,17 +400,15 @@ class Pop2PianoModelTester:
         lm_labels,
     ):
         for model_class in [Pop2PianoForConditionalGeneration]:
-            # torch.manual_seed(0)
-            model = model_class(config=config).set_train(False)
-            # load state dict copies weights but does not tie them
+            set_seed(0)
             model = model_class(config=config).eval()
             # load state dict copies weights but does not tie them
             model.encoder.load_state_dict(model.decoder.state_dict(), strict=False)
 
-            # torch.manual_seed(0)
+            set_seed(0)
             tied_config = copy.deepcopy(config)
             tied_config.tie_encoder_decoder = True
-            tied_model = model_class(config=tied_config).set_train(False)
+            tied_model = model_class(config=tied_config).eval()
 
             model_result = model(
                 input_ids=input_ids,
@@ -428,16 +426,14 @@ class Pop2PianoModelTester:
 
             # check that models has less parameters
             self.parent.assertLess(
-                tied_model.num_parameters(), model.num_parameters()
+                sum(p.numel() for p in tied_model.parameters()), sum(p.numel() for p in model.parameters())
             )
             random_slice_idx = ids_tensor((1,), model_result[0].shape[-1]).item()
 
             # check that outputs are equal
             self.parent.assertTrue(
-                np.allclose(
-                    model_result[0][0, :, random_slice_idx].asnumpy(),
-                    tied_model_result[0][0, :, random_slice_idx].asnumpy(),
-                    atol=1e-4
+                ops.allclose(
+                    model_result[0][0, :, random_slice_idx], tied_model_result[0][0, :, random_slice_idx], atol=1e-4
                 )
             )
 
@@ -445,12 +441,11 @@ class Pop2PianoModelTester:
             with tempfile.TemporaryDirectory() as tmpdirname:
                 tied_model.save_pretrained(tmpdirname)
                 tied_model = model_class.from_pretrained(tmpdirname)
-                # tied_model.to(torch_device)
-                tied_model.set_train(False)
+                tied_model.eval()
 
                 # check that models has less parameters
                 self.parent.assertLess(
-                    tied_model.num_parameters(), model.num_parameters()
+                    sum(p.numel() for p in tied_model.parameters()), sum(p.numel() for p in model.parameters())
                 )
                 random_slice_idx = ids_tensor((1,), model_result[0].shape[-1]).item()
 
@@ -463,9 +458,9 @@ class Pop2PianoModelTester:
 
                 # check that outputs are equal
                 self.parent.assertTrue(
-                    np.allclose(
-                        model_result[0][0, :, random_slice_idx].asnumpy(),
-                        tied_model_result[0][0, :, random_slice_idx].asnumpy(),
+                    ops.allclose(
+                        model_result[0][0, :, random_slice_idx],
+                        tied_model_result[0][0, :, random_slice_idx],
                         atol=1e-4,
                     )
                 )
@@ -477,7 +472,7 @@ class Pop2PianoModelTester:
         prev_vocab_size = config.vocab_size
 
         config.tie_word_embeddings = False
-        model = Pop2PianoForConditionalGeneration(config=config).set_train(False)
+        model = Pop2PianoForConditionalGeneration(config=config).eval()
         model.resize_token_embeddings(prev_vocab_size - 10)
 
         self.parent.assertEqual(model.get_input_embeddings().weight.shape[0], prev_vocab_size - 10)
@@ -596,7 +591,6 @@ class Pop2PianoModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_encoder_decoder_shared_weights(*config_and_inputs)
 
-    # @unittest.skipIf(torch_device == "cpu", "Cant do half precision")
     def test_model_fp16_forward(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model_fp16_forward(*config_and_inputs)
@@ -607,9 +601,9 @@ class Pop2PianoModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
 
     @slow
     def test_model_from_pretrained(self):
-        for model_name in POP2PIANO_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = Pop2PianoForConditionalGeneration.from_pretrained(model_name)
-            self.assertIsNotNone(model)
+        model_name = "sweetcocoa/pop2piano"
+        model = Pop2PianoForConditionalGeneration.from_pretrained(model_name)
+        self.assertIsNotNone(model)
 
     def test_pass_with_input_features(self):
         input_features = BatchFeature(
@@ -630,19 +624,19 @@ class Pop2PianoModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
                 "input_features": ops.rand((220, 70, 512)).type(mindspore.float32),
                 "beatsteps": ops.randint(size=(5, 955), low=0, high=100).type(mindspore.float32),
                 "extrapolated_beatstep": ops.randint(size=(5, 900), low=0, high=100).type(mindspore.float32),
-                "attention_mask": ops.cat(
+                "attention_mask": ops.concatenate(
                     [
-                        ops.ones((120, 70), dtype=mindspore.int32),
-                        ops.zeros((1, 70), dtype=mindspore.int32),
-                        ops.ones((50, 70), dtype=mindspore.int32),
-                        ops.zeros((1, 70), dtype=mindspore.int32),
-                        ops.ones((47, 70), dtype=mindspore.int32),
-                        ops.zeros((1, 70), dtype=mindspore.int32),
+                        ops.ones([120, 70], dtype=mindspore.int32),
+                        ops.zeros([1, 70], dtype=mindspore.int32),
+                        ops.ones([50, 70], dtype=mindspore.int32),
+                        ops.zeros([1, 70], dtype=mindspore.int32),
+                        ops.ones([47, 70], dtype=mindspore.int32),
+                        ops.zeros([1, 70], dtype=mindspore.int32),
                     ],
-                    axis=0,
+                    dim=0,
                 ),
-                "attention_mask_beatsteps": ops.ones((5, 955), dtype=mindspore.int32),
-                "attention_mask_extrapolated_beatstep": ops.ones((5, 900), dtype=mindspore.int32),
+                "attention_mask_beatsteps": ops.ones((5, 955)).type(mindspore.int32),
+                "attention_mask_extrapolated_beatstep": ops.ones((5, 900)).type(mindspore.int32),
             }
         )
         model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano")
@@ -661,11 +655,11 @@ class Pop2PianoModelIntegrationTests(unittest.TestCase):
     def test_mel_conditioner_integration(self):
         composer = "composer1"
         model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano")
-        input_embeds = ops.ones((10, 100, 512))
+        input_embeds = ops.ones([10, 100, 512])
 
         composer_value = model.generation_config.composer_to_feature_token[composer]
         composer_value = mindspore.tensor(composer_value)
-        composer_value = composer_value.repeat(input_embeds.shape[0])
+        composer_value = composer_value.repeat(input_embeds.size(0))
         outputs = model.mel_conditioner(
             input_embeds, composer_value, min(model.generation_config.composer_to_feature_token.values())
         )
@@ -678,7 +672,7 @@ class Pop2PianoModelIntegrationTests(unittest.TestCase):
             [[1.0475305318832397, 0.29052114486694336, -0.47778210043907166], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]
         )
 
-        self.assertTrue(np.allclose(outputs[0, :3, :3].asnumpy(), EXPECTED_OUTPUTS.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(outputs[0, :3, :3], EXPECTED_OUTPUTS, atol=1e-4))
 
     @slow
     @require_essentia
@@ -686,14 +680,14 @@ class Pop2PianoModelIntegrationTests(unittest.TestCase):
     @require_scipy
     def test_full_model_integration(self):
         if is_librosa_available() and is_scipy_available() and is_essentia_available() and is_mindspore_available():
-            from mindnlp.transformers import Pop2PianoProcessor
+            from transformers import Pop2PianoProcessor
 
             speech_input1 = np.zeros([1_000_000], dtype=np.float32)
             sampling_rate = 44_100
 
             processor = Pop2PianoProcessor.from_pretrained("sweetcocoa/pop2piano")
             input_features = processor.feature_extractor(
-                speech_input1, sampling_rate=sampling_rate, return_tensors="ms"
+                speech_input1, sampling_rate=sampling_rate, return_tensors="pt"
             )
 
             model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano")
@@ -702,10 +696,10 @@ class Pop2PianoModelIntegrationTests(unittest.TestCase):
             ).sequences
 
             # check for shapes
-            self.assertEqual(outputs.shape[0], 70)
+            self.assertEqual(outputs.size(0), 70)
 
             # check for values
-            self.assertEqual(outputs[0, :2].asnumpy().tolist(), [0, 1])
+            self.assertEqual(outputs[0, :2].cpu().numpy().tolist(), [0, 1])
 
     # This is the test for a real music from K-Pop genre.
     @slow
@@ -714,16 +708,16 @@ class Pop2PianoModelIntegrationTests(unittest.TestCase):
     @require_scipy
     def test_real_music(self):
         if is_librosa_available() and is_scipy_available() and is_essentia_available() and is_mindspore_available():
-            from mindnlp.transformers import Pop2PianoFeatureExtractor, Pop2PianoTokenizer
+            from transformers import Pop2PianoFeatureExtractor, Pop2PianoTokenizer
 
             model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano")
-            model.set_train(False)
+            model.eval()
             feature_extractor = Pop2PianoFeatureExtractor.from_pretrained("sweetcocoa/pop2piano")
             tokenizer = Pop2PianoTokenizer.from_pretrained("sweetcocoa/pop2piano")
             ds = load_dataset("sweetcocoa/pop2piano_ci", split="test")
 
             output_fe = feature_extractor(
-                ds["audio"][0]["array"], sampling_rate=ds["audio"][0]["sampling_rate"], return_tensors="ms"
+                ds["audio"][0]["array"], sampling_rate=ds["audio"][0]["sampling_rate"], return_tensors="pt"
             )
             output_model = model.generate(input_features=output_fe["input_features"], composer="composer1")
             output_tokenizer = tokenizer.batch_decode(token_ids=output_model, feature_extractor_output=output_fe)

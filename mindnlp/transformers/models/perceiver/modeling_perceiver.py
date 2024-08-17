@@ -1,10 +1,11 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2021 Deepmind and The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,19 +23,19 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore.common.initializer import initializer, Normal
-
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from mindnlp.utils import (
-    ModelOutput,
-    logging,
-)
+
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithCrossAttentions
 from ...modeling_utils import PreTrainedModel
-from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
+from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, meshgrid, prune_linear_layer
+from ....utils import (
+    ModelOutput,
+    logging,
+)
 from .configuration_perceiver import PerceiverConfig
+
 
 ModalitySizeType = Mapping[str, int]
 PreprocessorOutputType = Tuple[mindspore.Tensor, Optional[mindspore.Tensor], mindspore.Tensor]
@@ -42,6 +43,9 @@ PreprocessorType = Callable[..., PreprocessorOutputType]
 PostprocessorType = Callable[..., Any]
 
 logger = logging.get_logger(__name__)
+
+_CHECKPOINT_FOR_DOC = "deepmind/language-perceiver"
+_CONFIG_FOR_DOC = "PerceiverConfig"
 
 
 @dataclass
@@ -54,18 +58,15 @@ class PerceiverModelOutput(ModelOutput):
             Classification (or regression if config.num_labels==1) scores (before SoftMax).
         last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the model.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or
-        when `config.output_hidden_states=True`):
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the model at the output of each layer
             plus the initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when
-        `config.output_attentions=True`):
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
-        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or
-        when `config.output_attentions=True`):
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights of the decoder's cross-attention layer, after the attention softmax,
             used to compute the weighted average in the cross-attention heads.
@@ -86,8 +87,7 @@ class PerceiverDecoderOutput(ModelOutput):
     Args:
         logits (`mindspore.Tensor` of shape `(batch_size, num_labels)`):
             Output of the basic decoder.
-        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or
-        when `config.output_attentions=True`):
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights of the decoder's cross-attention layer, after the attention softmax,
             used to compute the weighted average in the cross-attention heads.
@@ -107,18 +107,15 @@ class PerceiverMaskedLMOutput(ModelOutput):
             Masked language modeling (MLM) loss.
         logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
             Prediction scores of the language modeling head (scores for each vocabulary token before SoftMax).
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or
-        when `config.output_hidden_states=True`):
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the model at the output of each layer
             plus the initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when
-        `config.output_attentions=True`):
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, num_latents,
             num_latents)`. Attentions weights after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or
-        when `config.output_attentions=True`):
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights of the decoder's cross-attention layer, after the attention softmax,
             used to compute the weighted average in the cross-attention heads.
@@ -142,18 +139,15 @@ class PerceiverClassifierOutput(ModelOutput):
             Classification (or regression if config.num_labels==1) loss.
         logits (`mindspore.Tensor` of shape `(batch_size, config.num_labels)`):
             Classification (or regression if config.num_labels==1) scores (before SoftMax).
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or
-        when `config.output_hidden_states=True`):
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the model at the output of each layer
             plus the initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when
-        `config.output_attentions=True`):
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights after the attention softmax, used to compute the weighted average in
             the self-attention heads.
-        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or
-        when `config.output_attentions=True`):
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`. Attentions weights of the decoder's cross-attention layer, after the attention softmax,
             used to compute the weighted average in the cross-attention heads.
@@ -171,7 +165,7 @@ class PerceiverEmbeddings(nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        self.latents = mindspore.Parameter(ops.randn((config.num_latents, config.d_latents)), 'latents')
+        self.latents = nn.Parameter(ops.randn(config.num_latents, config.d_latents))
 
     def forward(self, batch_size: int):
         return self.latents.broadcast_to((batch_size, -1, -1))  # Thanks, Phil Wang
@@ -181,14 +175,14 @@ class PerceiverSelfAttention(nn.Module):
     """Multi-headed {cross, self}-attention. Can be used both in the encoder as well as in the decoder."""
 
     def __init__(
-            self,
-            config,
-            is_cross_attention=False,
-            qk_channels=None,
-            v_channels=None,
-            num_heads=1,
-            q_dim=None,
-            kv_dim=None,
+        self,
+        config,
+        is_cross_attention=False,
+        qk_channels=None,
+        v_channels=None,
+        num_heads=1,
+        q_dim=None,
+        kv_dim=None,
     ):
         super().__init__()
         self.num_heads = num_heads
@@ -211,15 +205,15 @@ class PerceiverSelfAttention(nn.Module):
         self.v_channels_per_head = self.v_channels // num_heads
 
         # Layer normalization
-        self.layernorm1 = nn.LayerNorm(q_dim, eps=1e-5)
-        self.layernorm2 = nn.LayerNorm(kv_dim, eps=1e-5) if is_cross_attention else nn.Identity()
+        self.layernorm1 = nn.LayerNorm(q_dim)
+        self.layernorm2 = nn.LayerNorm(kv_dim) if is_cross_attention else nn.Identity()
 
         # Projection matrices
         self.query = nn.Linear(q_dim, qk_channels)
         self.key = nn.Linear(kv_dim, qk_channels)
         self.value = nn.Linear(kv_dim, v_channels)
 
-        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x, channels_per_head):
         new_x_shape = x.shape[:-1] + (self.num_heads, channels_per_head)
@@ -227,20 +221,19 @@ class PerceiverSelfAttention(nn.Module):
         return x.permute(0, 2, 1, 3)
 
     def forward(
-            self,
-            hidden_states: mindspore.Tensor,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            inputs: Optional[mindspore.Tensor] = None,
-            inputs_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = False,
+        self,
+        hidden_states: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs: Optional[mindspore.Tensor] = None,
+        inputs_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
         hidden_states = self.layernorm1(hidden_states)
         inputs = self.layernorm2(inputs)
 
-        # Project queries, keys and values to a common feature dimension. If this is instantiated as a cross-attention
-        # module, the keys and values come from the inputs; the attention mask needs to be such that the inputs's
-        # non-relevant tokens are not attended to.
+        # Project queries, keys and values to a common feature dimension. If this is instantiated as a cross-attention module,
+        # the keys and values come from the inputs; the attention mask needs to be such that the inputs's non-relevant tokens are not attended to.
         is_cross_attention = inputs is not None
         queries = self.query(hidden_states)
 
@@ -259,7 +252,7 @@ class PerceiverSelfAttention(nn.Module):
         values = self.transpose_for_scores(values, self.v_channels_per_head)
 
         # Take the dot product between the queries and keys to get the raw attention scores.
-        attention_scores = ops.matmul(queries, keys.swapaxes(-1, -2))
+        attention_scores = ops.matmul(queries, ops.transpose(keys, -1, -2))
 
         batch_size, num_heads, seq_len, q_head_dim = queries.shape
         _, _, _, v_head_dim = values.shape
@@ -307,15 +300,15 @@ class PerceiverAttention(nn.Module):
     """Attention module, including a dense block."""
 
     def __init__(
-            self,
-            config,
-            is_cross_attention=False,
-            qk_channels=None,
-            v_channels=None,
-            num_heads=1,
-            q_dim=None,
-            kv_dim=None,
-            use_query_residual=True,
+        self,
+        config,
+        is_cross_attention=False,
+        qk_channels=None,
+        v_channels=None,
+        num_heads=1,
+        q_dim=None,
+        kv_dim=None,
+        use_query_residual=True,
     ):
         super().__init__()
         # MultiHead attention
@@ -373,13 +366,13 @@ class PerceiverAttention(nn.Module):
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def forward(
-            self,
-            hidden_states: mindspore.Tensor,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            inputs: Optional[mindspore.Tensor] = None,
-            inputs_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = False,
+        self,
+        hidden_states: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs: Optional[mindspore.Tensor] = None,
+        inputs_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
         self_outputs = self.self(
             hidden_states,
@@ -424,16 +417,16 @@ class PerceiverMLP(nn.Module):
 
 class PerceiverLayer(nn.Module):
     def __init__(
-            self,
-            config,
-            is_cross_attention=False,
-            qk_channels=None,
-            v_channels=None,
-            num_heads=1,
-            q_dim=None,
-            kv_dim=None,
-            widening_factor=4,
-            use_query_residual=True,
+        self,
+        config,
+        is_cross_attention=False,
+        qk_channels=None,
+        v_channels=None,
+        num_heads=1,
+        q_dim=None,
+        kv_dim=None,
+        widening_factor=4,
+        use_query_residual=True,
     ):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -452,13 +445,13 @@ class PerceiverLayer(nn.Module):
         self.mlp = PerceiverMLP(config, input_size=q_dim, widening_factor=widening_factor)
 
     def forward(
-            self,
-            hidden_states: mindspore.Tensor,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            inputs: Optional[mindspore.Tensor] = None,
-            inputs_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = False,
+        self,
+        hidden_states: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs: Optional[mindspore.Tensor] = None,
+        inputs_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
         attention_outputs = self.attention(
             hidden_states,
@@ -539,15 +532,15 @@ class PerceiverEncoder(nn.Module):
         self.self_attends = nn.ModuleList(self_attention_layers)
 
     def forward(
-            self,
-            hidden_states: mindspore.Tensor,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            inputs: Optional[mindspore.Tensor] = None,
-            inputs_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = False,
-            output_hidden_states: Optional[bool] = False,
-            return_dict: Optional[bool] = True,
+        self,
+        hidden_states: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs: Optional[mindspore.Tensor] = None,
+        inputs_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = False,
+        output_hidden_states: Optional[bool] = False,
+        return_dict: Optional[bool] = True,
     ) -> Union[Tuple, BaseModelOutputWithCrossAttentions]:
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
@@ -613,74 +606,37 @@ class PerceiverPreTrainedModel(PreTrainedModel):
     base_model_prefix = "perceiver"
     main_input_name = "inputs"
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv2d)):
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range, 0.0),
-                                             cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif hasattr(cell, "latents"):
-            cell.latents.set_data(initializer(Normal(self.config.initializer_range, 0.0), cell.latents.shape,
-                                              cell.latents.dtype))
-        elif hasattr(cell, "position_embeddings") and isinstance(cell, PerceiverTrainablePositionEncoding):
-            cell.position_embeddings.set_data(
-                initializer(Normal(self.config.initializer_range, 0.0), cell.position_embeddings.shape,
-                            cell.position_embeddings.dtype))
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            if cell.padding_idx is not None:
-                weight[cell.padding_idx] = 0
-            cell.weight.set_data(mindspore.Tensor(weight, dtype=cell.weight.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif hasattr(module, "latents"):
+            nn.init.normal_(module.latents, mean=0.0, std=self.config.initializer_range)
+        elif hasattr(module, "position_embeddings") and isinstance(module, PerceiverTrainablePositionEncoding):
+            nn.init.normal_( module.position_embeddings, mean=0.0, std=self.config.initializer_range)
+        elif isinstance(module, nn.ParameterDict):
+            for modality in module.keys():
+                nn.init.normal_(module[modality], mean=0.0, std=self.config.initializer_range)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight[module.padding_idx] = 0
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
 
 class PerceiverModel(PerceiverPreTrainedModel):
-    """
-    The Perceiver: a scalable, fully attentional architecture.
-
-    Note that it's possible to fine-tune Perceiver on higher resolution images than the ones it has been trained on, by
-    setting `interpolate_pos_encoding` to `True` in the forward of the model. This will interpolate the pre-trained
-    position embeddings to the higher resolution.
-
-    This model is a MindSpore [MindSpore.nn.Module] sub-class. Use it as a regular MindSpore Cell and refer to the
-    MindSpore documentation for all matter related to general usage and behavior.
-
-    Parameters:
-        config ([`PerceiverConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-        decoder (*DecoderType*, *optional*):
-            Optional decoder to use to decode the latent representation of the encoder. Examples include
-            *transformers.models.perceiver.modeling_perceiver.PerceiverBasicDecoder*,
-            *transformers.models.perceiver.modeling_perceiver.PerceiverClassificationDecoder*,
-            *transformers.models.perceiver.modeling_perceiver.PerceiverMultimodalDecoder*.
-        input_preprocessor (*PreprocessorType*, *optional*):
-            Optional input preprocessor to use. Examples include
-            *transformers.models.perceiver.modeling_perceiver.PerceiverImagePreprocessor*,
-            *transformers.models.perceiver.modeling_perceiver.PerceiverAudioPreprocessor*,
-            *transformers.models.perceiver.modeling_perceiver.PerceiverTextPreprocessor*,
-            *transformers.models.perceiver.modeling_perceiver.PerceiverMultimodalPreprocessor*.
-        output_postprocessor (*PostprocessorType*, *optional*):
-            Optional output postprocessor to use. Examples include
-            *transformers.models.perceiver.modeling_perceiver.PerceiverImagePostprocessor*,
-            *transformers.models.perceiver.modeling_perceiver.PerceiverAudioPostprocessor*,
-            *transformers.models.perceiver.modeling_perceiver.PerceiverClassificationPostprocessor*,
-            *transformers.models.perceiver.modeling_perceiver.PerceiverProjectionPostprocessor*,
-            *transformers.models.perceiver.modeling_perceiver.PerceiverMultimodalPostprocessor*.
-
-        Note that you can define your own decoders, preprocessors and/or postprocessors to fit your use-case.
-    """
-
     def __init__(
-            self,
-            config,
-            decoder=None,
-            input_preprocessor: PreprocessorType = None,
-            output_postprocessor: PostprocessorType = None,
+        self,
+        config,
+        decoder=None,
+        input_preprocessor: PreprocessorType = None,
+        output_postprocessor: PostprocessorType = None,
     ):
         super().__init__(config)
         self.config = config
@@ -711,46 +667,110 @@ class PerceiverModel(PerceiverPreTrainedModel):
             self.encoder.layer[layer].attention.prune_heads(heads)
 
     def forward(
-            self,
-            inputs: mindspore.Tensor,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            subsampled_output_points: Optional[Dict[str, mindspore.Tensor]] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            interpolate_pos_encoding: bool = False,
-            return_dict: Optional[bool] = None,
+        self,
+        inputs: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        subsampled_output_points: Optional[Dict[str, mindspore.Tensor]] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        interpolate_pos_encoding: bool = False,
+        return_dict: Optional[bool] = None,
     ) -> Union[Tuple, PerceiverModelOutput]:
         r"""
-        Args:
-            inputs (`mindspore.Tensor`):
-                Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
-            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-                Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
-            output_attentions (`bool`, *optional*):
-                Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-                tensors for more detail.
-            output_hidden_states (`bool`, *optional*):
-                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-                more detail.
-            interpolate_pos_encoding (`bool`, *optional*, defaults to `False`):
-                Whether to interpolate the pre-trained position encodings.
-            return_dict (`bool`, *optional*):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
         Returns:
-            mindnlp.transformers.models.perceiver.modeling_perceiver.PerceiverModelOutput or tuple(mindspore.Tensor)
-        """
+
+        Examples:
+
+        ```python
+        >>> from transformers import PerceiverConfig, PerceiverTokenizer, PerceiverImageProcessor, PerceiverModel
+        >>> from transformers.models.perceiver.modeling_perceiver import (
+        ...     PerceiverTextPreprocessor,
+        ...     PerceiverImagePreprocessor,
+        ...     PerceiverClassificationDecoder,
+        ... )
+        >>> import torch
+        >>> import requests
+        >>> from PIL import Image
+
+        >>> # EXAMPLE 1: using the Perceiver to classify texts
+        >>> # - we define a TextPreprocessor, which can be used to embed tokens
+        >>> # - we define a ClassificationDecoder, which can be used to decode the
+        >>> # final hidden states of the latents to classification logits
+        >>> # using trainable position embeddings
+        >>> config = PerceiverConfig()
+        >>> preprocessor = PerceiverTextPreprocessor(config)
+        >>> decoder = PerceiverClassificationDecoder(
+        ...     config,
+        ...     num_channels=config.d_latents,
+        ...     trainable_position_encoding_kwargs=dict(num_channels=config.d_latents, index_dims=1),
+        ...     use_query_residual=True,
+        ... )
+        >>> model = PerceiverModel(config, input_preprocessor=preprocessor, decoder=decoder)
+
+        >>> # you can then do a forward pass as follows:
+        >>> tokenizer = PerceiverTokenizer()
+        >>> text = "hello world"
+        >>> inputs = tokenizer(text, return_tensors="pt").input_ids
+
+        >>> with no_grad():
+        ...     outputs = model(inputs=inputs)
+        >>> logits = outputs.logits
+        >>> list(logits.shape)
+        [1, 2]
+
+        >>> # to train, one can train the model using standard cross-entropy:
+        >>> criterion = nn.CrossEntropyLoss()
+
+        >>> labels = mindspore.tensor([1])
+        >>> loss = criterion(logits, labels)
+
+        >>> # EXAMPLE 2: using the Perceiver to classify images
+        >>> # - we define an ImagePreprocessor, which can be used to embed images
+        >>> config = PerceiverConfig(image_size=224)
+        >>> preprocessor = PerceiverImagePreprocessor(
+        ...     config,
+        ...     prep_type="conv1x1",
+        ...     spatial_downsample=1,
+        ...     out_channels=256,
+        ...     position_encoding_type="trainable",
+        ...     concat_or_add_pos="concat",
+        ...     project_pos_dim=256,
+        ...     trainable_position_encoding_kwargs=dict(
+        ...         num_channels=256,
+        ...         index_dims=config.image_size**2,
+        ...     ),
+        ... )
+
+        >>> model = PerceiverModel(
+        ...     config,
+        ...     input_preprocessor=preprocessor,
+        ...     decoder=PerceiverClassificationDecoder(
+        ...         config,
+        ...         num_channels=config.d_latents,
+        ...         trainable_position_encoding_kwargs=dict(num_channels=config.d_latents, index_dims=1),
+        ...         use_query_residual=True,
+        ...     ),
+        ... )
+
+        >>> # you can then do a forward pass as follows:
+        >>> image_processor = PerceiverImageProcessor()
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+        >>> inputs = image_processor(image, return_tensors="pt").pixel_values
+
+        >>> with no_grad():
+        ...     outputs = model(inputs=inputs)
+        >>> logits = outputs.logits
+        >>> list(logits.shape)
+        [1, 2]
+
+        >>> # to train, one can train the model using standard cross-entropy:
+        >>> criterion = nn.CrossEntropyLoss()
+
+        >>> labels = mindspore.tensor([1])
+        >>> loss = criterion(logits, labels)
+        ```"""
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -824,7 +844,7 @@ class PerceiverModel(PerceiverPreTrainedModel):
             if output_attentions and decoder_outputs.cross_attentions is not None:
                 if return_dict:
                     encoder_outputs.cross_attentions = (
-                            encoder_outputs.cross_attentions + decoder_outputs.cross_attentions
+                        encoder_outputs.cross_attentions + decoder_outputs.cross_attentions
                     )
                 else:
                     encoder_outputs = encoder_outputs + decoder_outputs.cross_attentions
@@ -848,18 +868,6 @@ class PerceiverModel(PerceiverPreTrainedModel):
 
 
 class PerceiverForMaskedLM(PerceiverPreTrainedModel):
-    """
-    Example use of Perceiver for masked language modeling.
-
-    This model is a MindSpore [MindSpore.nn.Module] sub-class. Use it as a regular MindSpore Cell and refer to the
-    MindSpore documentation for all matter related to general usage and behavior.
-
-    Parameters:
-        config ([`PerceiverConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-    """
-
     def __init__(self, config: PerceiverConfig):
         super().__init__(config)
 
@@ -876,8 +884,7 @@ class PerceiverForMaskedLM(PerceiverPreTrainedModel):
             decoder=PerceiverBasicDecoder(
                 config,
                 output_num_channels=config.d_latents,
-                output_index_dims=config.max_position_embeddings,
-                # we need to define the seq_len of the inputs beforehand
+                output_index_dims=config.max_position_embeddings,  # we need to define the seq_len of the inputs beforehand
                 num_channels=text_preprocessor.num_channels,
                 qk_channels=8 * 32,
                 v_channels=text_preprocessor.num_channels,
@@ -893,51 +900,67 @@ class PerceiverForMaskedLM(PerceiverPreTrainedModel):
         self.post_init()
 
     def forward(
-            self,
-            inputs: Optional[mindspore.Tensor] = None,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            labels: Optional[mindspore.Tensor] = None,
-            return_dict: Optional[bool] = None,
-            input_ids: Optional[mindspore.Tensor] = None,
+        self,
+        inputs: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        return_dict: Optional[bool] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, PerceiverMaskedLMOutput]:
         r"""
-        Args:
-            inputs (`mindspore.Tensor`):
-                Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
-            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-                Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
-            output_attentions (`bool`, *optional*):
-                Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-                tensors for more detail.
-            output_hidden_states (`bool`, *optional*):
-                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-                more detail.
-            interpolate_pos_encoding (`bool`, *optional*, defaults to `False`):
-                Whether to interpolate the pre-trained position encodings.
-            return_dict (`bool`, *optional*):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked),
-                the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
 
         Returns:
-            mindnlp.transformers.models.perceiver.modeling_perceiver.PerceiverMaskedLMOutput or tuple(mindspore.Tensor)
-        """
+
+        Examples:
+
+        ```python
+        >>> from transformers import AutoTokenizer, PerceiverForMaskedLM
+        >>> import torch
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("deepmind/language-perceiver")
+        >>> model = PerceiverForMaskedLM.from_pretrained("deepmind/language-perceiver")
+
+        >>> # training
+        >>> text = "This is an incomplete sentence where some words are missing."
+        >>> inputs = tokenizer(text, padding="max_length", return_tensors="pt")
+        >>> # mask " missing."
+        >>> inputs["input_ids"][0, 52:61] = tokenizer.mask_token_id
+        >>> labels = tokenizer(text, padding="max_length", return_tensors="pt").input_ids
+
+        >>> outputs = model(**inputs, labels=labels)
+        >>> loss = outputs.loss
+        >>> round(loss.item(), 2)
+        19.87
+
+        >>> logits = outputs.logits
+        >>> list(logits.shape)
+        [1, 2048, 262]
+
+        >>> # inference
+        >>> text = "This is an incomplete sentence where some words are missing."
+        >>> encoding = tokenizer(text, padding="max_length", return_tensors="pt")
+
+        >>> # mask bytes corresponding to " missing.". Note that the model performs much better if the masked span starts with a space.
+        >>> encoding["input_ids"][0, 52:61] = tokenizer.mask_token_id
+
+        >>> # forward pass
+        >>> with no_grad():
+        ...     outputs = model(**encoding)
+        >>> logits = outputs.logits
+        >>> list(logits.shape)
+        [1, 2048, 262]
+
+        >>> masked_tokens_predictions = logits[0, 52:61].argmax(dim=-1).tolist()
+        >>> tokenizer.decode(masked_tokens_predictions)
+        ' missing.'
+        ```"""
         if inputs is not None and input_ids is not None:
             raise ValueError("You cannot use both `inputs` and `input_ids`")
         elif inputs is None and input_ids is not None:
@@ -961,7 +984,7 @@ class PerceiverForMaskedLM(PerceiverPreTrainedModel):
         masked_lm_loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()  # -100 index = padding token
-            masked_lm_loss = loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1).to(mindspore.int32))
+            masked_lm_loss = loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -977,18 +1000,6 @@ class PerceiverForMaskedLM(PerceiverPreTrainedModel):
 
 
 class PerceiverForSequenceClassification(PerceiverPreTrainedModel):
-    """
-    Example use of Perceiver for text classification.
-
-    This model is a MindSpore [MindSpore.nn.Module] sub-class. Use it as a regular MindSpore Cell and refer to the
-    MindSpore documentation for all matter related to general usage and behavior.
-
-    Parameters:
-        config ([`PerceiverConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-    """
-
     def __init__(self, config):
         super().__init__(config)
 
@@ -1010,52 +1021,39 @@ class PerceiverForSequenceClassification(PerceiverPreTrainedModel):
         self.post_init()
 
     def forward(
-            self,
-            inputs: Optional[mindspore.Tensor] = None,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            labels: Optional[mindspore.Tensor] = None,
-            return_dict: Optional[bool] = None,
-            input_ids: Optional[mindspore.Tensor] = None,
+        self,
+        inputs: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        return_dict: Optional[bool] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, PerceiverClassifierOutput]:
         r"""
-        Args:
-            inputs (`mindspore.Tensor`):
-                Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
-            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-                Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
-            output_attentions (`bool`, *optional*):
-                Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-                tensors for more detail.
-            output_hidden_states (`bool`, *optional*):
-                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-                more detail.
-            interpolate_pos_encoding (`bool`, *optional*, defaults to `False`):
-                Whether to interpolate the pre-trained position encodings.
-            return_dict (`bool`, *optional*):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the classification/regression loss. Indices should be in
-                `[0, ..., config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed
-                (Mean-Square loss), If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the classification/regression loss. Indices should be in `[0, ..., config.num_labels -
+            1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If `config.num_labels >
+            1` a classification loss is computed (Cross-Entropy).
 
         Returns:
-            mindnlp.transformers.models.perceiver.modeling_perceiver.PerceiverClassifierOutput or
-            tuple(mindspore.Tensor)
-        """
+
+        Examples:
+
+        ```python
+        >>> from transformers import AutoTokenizer, PerceiverForSequenceClassification
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("deepmind/language-perceiver")
+        >>> model = PerceiverForSequenceClassification.from_pretrained("deepmind/language-perceiver")
+
+        >>> text = "hello world"
+        >>> inputs = tokenizer(text, return_tensors="pt").input_ids
+        >>> outputs = model(inputs=inputs)
+        >>> logits = outputs.logits
+        >>> list(logits.shape)
+        [1, 2]
+        ```"""
         if inputs is not None and input_ids is not None:
             raise ValueError("You cannot use both `inputs` and `input_ids`")
         elif inputs is None and input_ids is not None:
@@ -1092,7 +1090,7 @@ class PerceiverForSequenceClassification(PerceiverPreTrainedModel):
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1).to(mindspore.int32))
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -1111,30 +1109,10 @@ class PerceiverForSequenceClassification(PerceiverPreTrainedModel):
 
 
 class PerceiverForImageClassificationLearned(PerceiverPreTrainedModel):
-    """
-    Example use of Perceiver for image classification, for tasks such as ImageNet.
-
-    This model uses learned position embeddings. In other words, this model is not given any privileged information
-    about the structure of images. As shown in the paper, this model can achieve a top-1 accuracy of 72.7 on ImageNet.
-
-    [`PerceiverForImageClassificationLearned`] uses [`~models.perceiver.modeling_perceiver.PerceiverImagePreprocessor`]
-    (with `prep_type="conv1x1"`) to preprocess the input images, and
-    [`~models.perceiver.modeling_perceiver.PerceiverClassificationDecoder`] to decode the latent representation of
-    [`PerceiverModel`] into classification logits.
-
-    This model is a MindSpore [MindSpore.nn.Module] sub-class. Use it as a regular MindSpore Cell and refer to the
-    MindSpore documentation for all matter related to general usage and behavior.
-
-    Parameters:
-        config ([`PerceiverConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-    """
-
     def __init__(self, config):
         super().__init__(config)
 
-        trainable_position_encoding_kwargs_preprocessor = {"num_channels": 256, "index_dims": config.image_size ** 2}
+        trainable_position_encoding_kwargs_preprocessor = {"num_channels": 256, "index_dims": config.image_size**2}
         trainable_position_encoding_kwargs_decoder = {"num_channels": config.d_latents, "index_dims": 1}
 
         self.num_labels = config.num_labels
@@ -1162,53 +1140,49 @@ class PerceiverForImageClassificationLearned(PerceiverPreTrainedModel):
         self.post_init()
 
     def forward(
-            self,
-            inputs: Optional[mindspore.Tensor] = None,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            labels: Optional[mindspore.Tensor] = None,
-            interpolate_pos_encoding: bool = False,
-            return_dict: Optional[bool] = None,
-            pixel_values: Optional[mindspore.Tensor] = None,
+        self,
+        inputs: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        interpolate_pos_encoding: bool = False,
+        return_dict: Optional[bool] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, PerceiverClassifierOutput]:
         r"""
-        Args:
-            inputs (`mindspore.Tensor`):
-                Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
-            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-                Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
-            output_attentions (`bool`, *optional*):
-                Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-                tensors for more detail.
-            output_hidden_states (`bool`, *optional*):
-                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-                more detail.
-            interpolate_pos_encoding (`bool`, *optional*, defaults to `False`):
-                Whether to interpolate the pre-trained position encodings.
-            return_dict (`bool`, *optional*):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss),
-                If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
 
         Returns:
-            mindnlp.transformers.models.perceiver.modeling_perceiver.PerceiverClassifierOutput or
-            tuple(mindspore.Tensor)
-        """
+
+        Examples:
+
+        ```python
+        >>> from transformers import AutoImageProcessor, PerceiverForImageClassificationLearned
+        >>> from PIL import Image
+        >>> import requests
+
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+
+        >>> image_processor = AutoImageProcessor.from_pretrained("deepmind/vision-perceiver-learned")
+        >>> model = PerceiverForImageClassificationLearned.from_pretrained("deepmind/vision-perceiver-learned")
+
+        >>> inputs = image_processor(images=image, return_tensors="pt").pixel_values
+        >>> outputs = model(inputs=inputs)
+        >>> logits = outputs.logits
+        >>> list(logits.shape)
+        [1, 1000]
+
+        >>> # model predicts one of the 1000 ImageNet classes
+        >>> predicted_class_idx = logits.argmax(-1).item()
+        >>> print("Predicted class:", model.config.id2label[predicted_class_idx])
+        Predicted class: tabby, tabby cat
+        ```"""
         if inputs is not None and pixel_values is not None:
             raise ValueError("You cannot use both `inputs` and `pixel_values`")
         elif inputs is None and pixel_values is not None:
@@ -1245,7 +1219,7 @@ class PerceiverForImageClassificationLearned(PerceiverPreTrainedModel):
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1).to(mindspore.int32))
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -1264,26 +1238,6 @@ class PerceiverForImageClassificationLearned(PerceiverPreTrainedModel):
 
 
 class PerceiverForImageClassificationFourier(PerceiverPreTrainedModel):
-    """
-    Example use of Perceiver for image classification, for tasks such as ImageNet.
-
-    This model uses fixed 2D Fourier position embeddings. As shown in the paper, this model can achieve a top-1 accuracy
-    of 79.0 on ImageNet, and 84.5 when pre-trained on a large-scale dataset (i.e. JFT).
-
-    [`PerceiverForImageClassificationLearned`] uses [`~models.perceiver.modeling_perceiver.PerceiverImagePreprocessor`]
-    (with `prep_type="pixels"`) to preprocess the input images, and
-    [`~models.perceiver.modeling_perceiver.PerceiverClassificationDecoder`] to decode the latent representation of
-    [`PerceiverModel`] into classification logits.
-
-    This model is a MindSpore [MindSpore.nn.Module] sub-class. Use it as a regular MindSpore Cell and refer to the
-    MindSpore documentation for all matter related to general usage and behavior.
-
-    Parameters:
-        config ([`PerceiverConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-    """
-
     def __init__(self, config):
         super().__init__(config)
 
@@ -1316,52 +1270,48 @@ class PerceiverForImageClassificationFourier(PerceiverPreTrainedModel):
         self.post_init()
 
     def forward(
-            self,
-            inputs: Optional[mindspore.Tensor] = None,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            labels: Optional[mindspore.Tensor] = None,
-            return_dict: Optional[bool] = None,
-            pixel_values: Optional[mindspore.Tensor] = None,
+        self,
+        inputs: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        return_dict: Optional[bool] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, PerceiverClassifierOutput]:
         r"""
-        Args:
-            inputs (`mindspore.Tensor`):
-                Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
-            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-                Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
-            output_attentions (`bool`, *optional*):
-                Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-                tensors for more detail.
-            output_hidden_states (`bool`, *optional*):
-                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-                more detail.
-            interpolate_pos_encoding (`bool`, *optional*, defaults to `False`):
-                Whether to interpolate the pre-trained position encodings.
-            return_dict (`bool`, *optional*):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss),
-                If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
 
         Returns:
-            mindnlp.transformers.models.perceiver.modeling_perceiver.PerceiverClassifierOutput or
-            tuple(mindspore.Tensor)
-        """
+
+        Examples:
+
+        ```python
+        >>> from transformers import AutoImageProcessor, PerceiverForImageClassificationFourier
+        >>> from PIL import Image
+        >>> import requests
+
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+
+        >>> image_processor = AutoImageProcessor.from_pretrained("deepmind/vision-perceiver-fourier")
+        >>> model = PerceiverForImageClassificationFourier.from_pretrained("deepmind/vision-perceiver-fourier")
+
+        >>> inputs = image_processor(images=image, return_tensors="pt").pixel_values
+        >>> outputs = model(inputs=inputs)
+        >>> logits = outputs.logits
+        >>> list(logits.shape)
+        [1, 1000]
+
+        >>> # model predicts one of the 1000 ImageNet classes
+        >>> predicted_class_idx = logits.argmax(-1).item()
+        >>> print("Predicted class:", model.config.id2label[predicted_class_idx])
+        Predicted class: tabby, tabby cat
+        ```"""
         if inputs is not None and pixel_values is not None:
             raise ValueError("You cannot use both `inputs` and `pixel_values`")
         elif inputs is None and pixel_values is not None:
@@ -1396,7 +1346,7 @@ class PerceiverForImageClassificationFourier(PerceiverPreTrainedModel):
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1).to(mindspore.int32))
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -1415,26 +1365,6 @@ class PerceiverForImageClassificationFourier(PerceiverPreTrainedModel):
 
 
 class PerceiverForImageClassificationConvProcessing(PerceiverPreTrainedModel):
-    """
-    Example use of Perceiver for image classification, for tasks such as ImageNet.
-
-    This model uses a 2D conv+maxpool preprocessing network. As shown in the paper, this model can achieve a top-1
-    accuracy of 82.1 on ImageNet.
-
-    [`PerceiverForImageClassificationLearned`] uses [`~models.perceiver.modeling_perceiver.PerceiverImagePreprocessor`]
-    (with `prep_type="conv"`) to preprocess the input images, and
-    [`~models.perceiver.modeling_perceiver.PerceiverClassificationDecoder`] to decode the latent representation of
-    [`PerceiverModel`] into classification logits.
-
-    This model is a MindSpore [MindSpore.nn.Module] sub-class. Use it as a regular MindSpore Cell and refer to the
-    MindSpore documentation for all matter related to general usage and behavior.
-
-    Parameters:
-        config ([`PerceiverConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-    """
-
     def __init__(self, config):
         super().__init__(config)
 
@@ -1468,52 +1398,48 @@ class PerceiverForImageClassificationConvProcessing(PerceiverPreTrainedModel):
         self.post_init()
 
     def forward(
-            self,
-            inputs: Optional[mindspore.Tensor] = None,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            labels: Optional[mindspore.Tensor] = None,
-            return_dict: Optional[bool] = None,
-            pixel_values: Optional[mindspore.Tensor] = None,
+        self,
+        inputs: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        return_dict: Optional[bool] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, PerceiverClassifierOutput]:
         r"""
-        Args:
-            inputs (`mindspore.Tensor`):
-                Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
-            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-                Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
-            output_attentions (`bool`, *optional*):
-                Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-                tensors for more detail.
-            output_hidden_states (`bool`, *optional*):
-                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-                more detail.
-            interpolate_pos_encoding (`bool`, *optional*, defaults to `False`):
-                Whether to interpolate the pre-trained position encodings.
-            return_dict (`bool`, *optional*):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
 
         Returns:
-            mindnlp.transformers.models.perceiver.modeling_perceiver.PerceiverClassifierOutput or
-            tuple(mindspore.Tensor)
-        """
+
+        Examples:
+
+        ```python
+        >>> from transformers import AutoImageProcessor, PerceiverForImageClassificationConvProcessing
+        >>> from PIL import Image
+        >>> import requests
+
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+
+        >>> image_processor = AutoImageProcessor.from_pretrained("deepmind/vision-perceiver-conv")
+        >>> model = PerceiverForImageClassificationConvProcessing.from_pretrained("deepmind/vision-perceiver-conv")
+
+        >>> inputs = image_processor(images=image, return_tensors="pt").pixel_values
+        >>> outputs = model(inputs=inputs)
+        >>> logits = outputs.logits
+        >>> list(logits.shape)
+        [1, 1000]
+
+        >>> # model predicts one of the 1000 ImageNet classes
+        >>> predicted_class_idx = logits.argmax(-1).item()
+        >>> print("Predicted class:", model.config.id2label[predicted_class_idx])
+        Predicted class: tabby, tabby cat
+        ```"""
         if inputs is not None and pixel_values is not None:
             raise ValueError("You cannot use both `inputs` and `pixel_values`")
         elif inputs is None and pixel_values is not None:
@@ -1548,7 +1474,7 @@ class PerceiverForImageClassificationConvProcessing(PerceiverPreTrainedModel):
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1).to(mindspore.int32))
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -1567,26 +1493,6 @@ class PerceiverForImageClassificationConvProcessing(PerceiverPreTrainedModel):
 
 
 class PerceiverForOpticalFlow(PerceiverPreTrainedModel):
-    """
-    Example use of Perceiver for optical flow, for tasks such as Sintel and KITTI. [`PerceiverForOpticalFlow`] uses
-    [`~models.perceiver.modeling_perceiver.PerceiverImagePreprocessor`] (with *prep_type="patches"*) to preprocess the
-    input images, and [`~models.perceiver.modeling_perceiver.PerceiverOpticalFlowDecoder`] to decode the latent
-    representation of [`PerceiverModel`].
-
-    As input, one concatenates 2 subsequent frames along the channel dimension and extract a 3 x 3 patch around each
-    pixel (leading to 3 x 3 x 3 x 2 = 54 values for each pixel). Fixed Fourier position encodings are used to encode
-    the position of each pixel in the patch. Next, one applies the Perceiver encoder. To decode, one queries the latent
-    representation using the same encoding used for the input.
-
-    This model is a MindSpore [MindSpore.nn.Module] sub-class. Use it as a regular MindSpore Cell and refer to the
-    MindSpore documentation for all matter related to general usage and behavior.
-
-    Parameters:
-        config ([`PerceiverConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-    """
-
     def __init__(self, config):
         super().__init__(config)
 
@@ -1637,49 +1543,39 @@ class PerceiverForOpticalFlow(PerceiverPreTrainedModel):
         self.post_init()
 
     def forward(
-            self,
-            inputs: Optional[mindspore.Tensor] = None,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            labels: Optional[mindspore.Tensor] = None,
-            return_dict: Optional[bool] = None,
+        self,
+        inputs: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[Tuple, PerceiverClassifierOutput]:
         r"""
-        Args:
-            inputs (`mindspore.Tensor`):
-                Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
-            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-                Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
-            output_attentions (`bool`, *optional*):
-                Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-                tensors for more detail.
-            output_hidden_states (`bool`, *optional*):
-                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-                more detail.
-            interpolate_pos_encoding (`bool`, *optional*, defaults to `False`):
-                Whether to interpolate the pre-trained position encodings.
-            return_dict (`bool`, *optional*):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the optical flow loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the optical flow loss. Indices should be in `[0, ..., config.num_labels - 1]`.
 
         Returns:
-            mindnlp.transformers.models.perceiver.modeling_perceiver.PerceiverClassifierOutput or
-            tuple(mindspore.Tensor)
-        """
+
+        Examples:
+
+        ```python
+        >>> from transformers import PerceiverForOpticalFlow
+        >>> import torch
+
+        >>> model = PerceiverForOpticalFlow.from_pretrained("deepmind/optical-flow-perceiver")
+
+        >>> # in the Perceiver IO paper, the authors extract a 3 x 3 patch around each pixel,
+        >>> # leading to 3 x 3 x 3 = 27 values for each pixel (as each pixel also has 3 color channels)
+        >>> # patches have shape (batch_size, num_frames, num_channels, height, width)
+        >>> # the authors train on resolutions of 368 x 496
+        >>> patches = ops.randn(1, 2, 27, 368, 496)
+        >>> outputs = model(inputs=patches)
+        >>> logits = outputs.logits
+        >>> list(logits.shape)
+        [1, 368, 496, 2]
+        ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         loss = None
@@ -1710,42 +1606,6 @@ class PerceiverForOpticalFlow(PerceiverPreTrainedModel):
 
 
 class PerceiverForMultimodalAutoencoding(PerceiverPreTrainedModel):
-    """
-    Example use of Perceiver for multimodal (video) autoencoding, for tasks such as Kinetics-700.
-
-    [`PerceiverForMultimodalAutoencoding`] uses [`~models.perceiver.modeling_perceiver.PerceiverMultimodalPreprocessor`]
-    to preprocess the 3 modalities: images, audio and class labels. This preprocessor uses modality-specific
-    preprocessors to preprocess every modality separately, after which they are concatenated. Trainable position
-    embeddings are used to pad each modality to the same number of channels to make concatenation along the time
-    dimension possible. Next, one applies the Perceiver encoder.
-
-    [`~models.perceiver.modeling_perceiver.PerceiverMultimodalDecoder`] is used to decode the latent representation of
-    [`PerceiverModel`]. This decoder uses each modality-specific decoder to forward queries. The decoder queries are
-    created based on the inputs after preprocessing. However, autoencoding an entire video in a single forward pass is
-    computationally infeasible, hence one only uses parts of the decoder queries to do cross-attention with the latent
-    representation. This is determined by the subsampled indices for each modality, which can be provided as additional
-    input to the forward pass of [`PerceiverForMultimodalAutoencoding`].
-
-    [`~models.perceiver.modeling_perceiver.PerceiverMultimodalDecoder`] also pads the decoder queries of the different
-    modalities to the same number of channels, in order to concatenate them along the time dimension. Next,
-    cross-attention is performed with the latent representation of [`PerceiverModel`].
-
-    Finally, [`~models.perceiver.modeling_perceiver.PerceiverMultiModalPostprocessor`] is used to turn this tensor into
-    an actual video. It first splits up the output into the different modalities, and then applies the respective
-    postprocessor for each modality.
-
-    Note that, by masking the classification label during evaluation (i.e. simply providing a tensor of zeros for the
-    "label" modality), this auto-encoding model becomes a Kinetics 700 video classifier.
-
-    This model is a MindSpore [MindSpore.nn.Module] sub-class. Use it as a regular MindSpore Cell and refer to the
-    MindSpore documentation for all matter related to general usage and behavior.
-
-    Parameters:
-        config ([`PerceiverConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-    """
-
     def __init__(self, config: PerceiverConfig):
         super().__init__(config)
 
@@ -1862,52 +1722,62 @@ class PerceiverForMultimodalAutoencoding(PerceiverPreTrainedModel):
         self.post_init()
 
     def forward(
-            self,
-            inputs: Optional[mindspore.Tensor] = None,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            subsampled_output_points: Optional[Dict[str, mindspore.Tensor]] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            labels: Optional[mindspore.Tensor] = None,
-            return_dict: Optional[bool] = None,
+        self,
+        inputs: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        subsampled_output_points: Optional[Dict[str, mindspore.Tensor]] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[Tuple, PerceiverClassifierOutput]:
         r"""
-        Args:
-            inputs (`mindspore.Tensor`):
-                Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
-            attention_mask (`mindspore.Tensor` of shape `{0}`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
-            head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-                Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
-            output_attentions (`bool`, *optional*):
-                Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-                tensors for more detail.
-            output_hidden_states (`bool`, *optional*):
-                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-                more detail.
-            interpolate_pos_encoding (`bool`, *optional*, defaults to `False`):
-                Whether to interpolate the pre-trained position encodings.
-            return_dict (`bool`, *optional*):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
 
         Returns:
-            mindnlp.transformers.models.perceiver.modeling_perceiver.PerceiverClassifierOutput or
-            tuple(mindspore.Tensor)
-        """
+
+        Examples:
+
+        ```python
+        >>> from transformers import PerceiverForMultimodalAutoencoding
+        >>> import torch
+        >>> import numpy as np
+
+        >>> # create multimodal inputs
+        >>> images = ops.randn((1, 16, 3, 224, 224))
+        >>> audio = ops.randn((1, 30720, 1))
+        >>> inputs = dict(image=images, audio=audio, label=ops.zeros((images.shape[0], 700)))
+
+        >>> model = PerceiverForMultimodalAutoencoding.from_pretrained("deepmind/multimodal-perceiver")
+
+        >>> # in the Perceiver IO paper, videos are auto-encoded in chunks
+        >>> # each chunk subsamples different index dimensions of the image and audio modality decoder queries
+        >>> nchunks = 128
+        >>> image_chunk_size = np.prod((16, 224, 224)) // nchunks
+        >>> audio_chunk_size = audio.shape[1] // model.config.samples_per_patch // nchunks
+        >>> # process the first chunk
+        >>> chunk_idx = 0
+        >>> subsampling = {
+        ...     "image": ops.arange(image_chunk_size * chunk_idx, image_chunk_size * (chunk_idx + 1)),
+        ...     "audio": ops.arange(audio_chunk_size * chunk_idx, audio_chunk_size * (chunk_idx + 1)),
+        ...     "label": None,
+        ... }
+
+        >>> outputs = model(inputs=inputs, subsampled_output_points=subsampling)
+        >>> logits = outputs.logits
+        >>> list(logits["audio"].shape)
+        [1, 240]
+
+        >>> list(logits["image"].shape)
+        [1, 6272, 3]
+
+        >>> list(logits["label"].shape)
+        [1, 700]
+        ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         loss = None
@@ -1942,11 +1812,11 @@ class PerceiverForMultimodalAutoencoding(PerceiverPreTrainedModel):
 
 
 def build_position_encoding(
-        position_encoding_type,
-        out_channels=None,
-        project_pos_dim=-1,
-        trainable_position_encoding_kwargs=None,
-        fourier_position_encoding_kwargs=None,
+    position_encoding_type,
+    out_channels=None,
+    project_pos_dim=-1,
+    trainable_position_encoding_kwargs=None,
+    fourier_position_encoding_kwargs=None,
 ):
     """
     Builds the position encoding.
@@ -2012,7 +1882,7 @@ class PerceiverProjectionDecoder(PerceiverAbstractDecoder):
         return None
 
     def forward(
-            self, query: mindspore.Tensor, z: mindspore.Tensor, query_mask: Optional[mindspore.Tensor] = None
+        self, query: mindspore.Tensor, z: mindspore.Tensor, query_mask: Optional[mindspore.Tensor] = None
     ) -> mindspore.Tensor:
         # (batch_size, num_latents, d_latents) -> (batch_size, d_latents)
         z = ops.mean(z, dim=1)
@@ -2058,29 +1928,29 @@ class PerceiverBasicDecoder(PerceiverAbstractDecoder):
     """
 
     def __init__(
-            self,
-            config: PerceiverConfig,
-            output_num_channels: int,
-            position_encoding_type: Optional[str] = "trainable",
-            # The following 2 arguments are ignored if position_encoding_type == 'none':
-            output_index_dims: Optional[int] = None,
-            num_channels: Optional[int] = 128,
-            subsampled_index_dims: Optional[int] = None,
-            qk_channels: Optional[int] = None,
-            v_channels: Optional[int] = None,
-            num_heads: Optional[int] = 1,
-            widening_factor: Optional[int] = 1,
-            use_query_residual: Optional[bool] = False,
-            concat_preprocessed_input: Optional[bool] = False,
-            final_project: Optional[bool] = True,
-            position_encoding_only: Optional[bool] = False,
-            **position_encoding_kwargs,
+        self,
+        config: PerceiverConfig,
+        output_num_channels: int,
+        position_encoding_type: Optional[str] = "trainable",
+        # The following 2 arguments are ignored if position_encoding_type == 'none':
+        output_index_dims: Optional[int] = None,
+        num_channels: Optional[int] = 128,
+        subsampled_index_dims: Optional[int] = None,
+        qk_channels: Optional[int] = None,
+        v_channels: Optional[int] = None,
+        num_heads: Optional[int] = 1,
+        widening_factor: Optional[int] = 1,
+        use_query_residual: Optional[bool] = False,
+        concat_preprocessed_input: Optional[bool] = False,
+        final_project: Optional[bool] = True,
+        position_encoding_only: Optional[bool] = False,
+        **position_encoding_kwargs,
     ) -> None:
         super().__init__()
 
         self.output_num_channels = output_num_channels
-        # If `none`, the decoder will not forward any position encodings.
-        # You should forward your own when querying the decoder.
+        # If `none`, the decoder will not construct any position encodings.
+        # You should construct your own when querying the decoder.
         self.output_position_encodings = None
         self.position_encoding_type = position_encoding_type
         self.position_encoding_kwargs = position_encoding_kwargs
@@ -2130,20 +2000,19 @@ class PerceiverBasicDecoder(PerceiverAbstractDecoder):
 
     def decoder_query(self, inputs, modality_sizes=None, inputs_without_pos=None, subsampled_points=None):
         if self.position_encoding_type == "none":  # Queries come from elsewhere
-            raise ValueError("You cannot forward decoder queries when position_encoding_type is set to none")
+            raise ValueError("You cannot construct decoder queries when position_encoding_type is set to none")
         if subsampled_points is not None:
             # subsampled_points are the indices if the inputs would be flattened
             # however, the inputs aren't flattened, that's why we use unravel_index
             # to get the indices for the unflattened array
             # unravel_index returns a tuple (x_idx, y_idx, ...)
             # stack to get the [n, d] tensor of coordinates
-            indices = [mindspore.Tensor.from_numpy(x) for x in
-                       np.unravel_index(subsampled_points.asnumpy(), self.output_index_dims)]
+            indices = [ops.from_numpy(x) for x in np.unravel_index(subsampled_points.asnumpy(), self.output_index_dims)]
             pos = ops.stack(indices, dim=1)
             batch_size = inputs.shape[0]
             # Map these coordinates to [-1, 1]
-            pos = -1 + 2 * pos / mindspore.Tensor(self.output_index_dims)[None, :]
-            pos = ops.broadcast_to(pos[None], (batch_size, pos.shape[0], pos.shape[1]))
+            pos = -1 + 2 * pos / mindspore.tensor(self.output_index_dims)[None, :]
+            pos = ops.broadcast_to(pos[None], [batch_size, pos.shape[0], pos.shape[1]])
             # Construct the position encoding.
             if self.position_encoding_type == "trainable":
                 pos_emb = self.output_position_encodings(batch_size)
@@ -2178,11 +2047,11 @@ class PerceiverBasicDecoder(PerceiverAbstractDecoder):
         return pos_emb
 
     def forward(
-            self,
-            query: mindspore.Tensor,
-            z: mindspore.Tensor,
-            query_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = False,
+        self,
+        query: mindspore.Tensor,
+        z: mindspore.Tensor,
+        query_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = False,
     ) -> PerceiverDecoderOutput:
         # Cross-attention decoding.
         # key, value: B x N x K; query: B x M x K
@@ -2240,11 +2109,11 @@ class PerceiverClassificationDecoder(PerceiverAbstractDecoder):
         )
 
     def forward(
-            self,
-            query: mindspore.Tensor,
-            z: mindspore.Tensor,
-            query_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = False,
+        self,
+        query: mindspore.Tensor,
+        z: mindspore.Tensor,
+        query_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = False,
     ) -> PerceiverDecoderOutput:
         decoder_outputs = self.decoder(query, z, output_attentions=output_attentions)
 
@@ -2275,11 +2144,11 @@ class PerceiverOpticalFlowDecoder(PerceiverAbstractDecoder):
         return inputs
 
     def forward(
-            self,
-            query: mindspore.Tensor,
-            z: mindspore.Tensor,
-            query_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = False,
+        self,
+        query: mindspore.Tensor,
+        z: mindspore.Tensor,
+        query_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = False,
     ) -> PerceiverDecoderOutput:
         decoder_outputs = self.decoder(query, z, output_attentions=output_attentions)
         preds = decoder_outputs.logits
@@ -2304,7 +2173,7 @@ class PerceiverBasicVideoAutoencodingDecoder(PerceiverAbstractDecoder):
     """
 
     def __init__(
-            self, config: PerceiverConfig, output_shape: List[int], position_encoding_type: str, **decoder_kwargs
+        self, config: PerceiverConfig, output_shape: List[int], position_encoding_type: str, **decoder_kwargs
     ) -> None:
         super().__init__()
         if len(output_shape) != 4:  # B, T, H, W
@@ -2333,7 +2202,7 @@ class PerceiverBasicVideoAutoencodingDecoder(PerceiverAbstractDecoder):
         )
 
     def forward(
-            self, query: mindspore.Tensor, z: mindspore.Tensor, query_mask: Optional[mindspore.Tensor] = None
+        self, query: mindspore.Tensor, z: mindspore.Tensor, query_mask: Optional[mindspore.Tensor] = None
     ) -> PerceiverDecoderOutput:
         decoder_outputs = self.decoder(query, z)
         logits = decoder_outputs.logits
@@ -2360,7 +2229,7 @@ def restructure(modality_sizes: ModalitySizeType, inputs: mindspore.Tensor) -> M
     # Apply a predictable ordering to the modalities
     for modality in sorted(modality_sizes.keys()):
         size = modality_sizes[modality]
-        inp = inputs[:, index: index + size]
+        inp = inputs[:, index : index + size]
         index += size
         outputs[modality] = inp
     return outputs
@@ -2368,8 +2237,8 @@ def restructure(modality_sizes: ModalitySizeType, inputs: mindspore.Tensor) -> M
 
 class PerceiverMultimodalDecoder(PerceiverAbstractDecoder):
     """
-    Multimodal decoding by composing uni-modal decoders. The *modalities* argument of the forwardor is a dictionary
-    mapping modality name to the decoder of that modality. That decoder will be used to forward queries for that
+    Multimodal decoding by composing uni-modal decoders. The *modalities* argument of the constructor is a dictionary
+    mapping modality name to the decoder of that modality. That decoder will be used to construct queries for that
     modality. Modality-specific queries are padded with trainable modality-specific parameters, after which they are
     concatenated along the time dimension.
 
@@ -2422,6 +2291,7 @@ class PerceiverMultimodalDecoder(PerceiverAbstractDecoder):
                 for modality, decoder in modalities.items()
             }
         )
+
     @property
     def num_query_channels(self) -> int:
         max_channel_size = max(decoder.num_query_channels for _, decoder in self.modalities.items())
@@ -2454,7 +2324,7 @@ class PerceiverMultimodalDecoder(PerceiverAbstractDecoder):
         def embed(modality, x):
             x = ops.reshape(x, [x.shape[0], int(np.prod(x.shape[1:-1])), x.shape[-1]])
             pos = self.padding[modality]
-            pos = ops.broadcast_to(pos, (x.shape[0], x.shape[1], self.num_query_channels - x.shape[2]))
+            pos = ops.broadcast_to(pos, [x.shape[0], x.shape[1], self.num_query_channels - x.shape[2]])
             return ops.cat([x, pos], dim=2)
 
         # Apply a predictable ordering to the modalities
@@ -2463,11 +2333,11 @@ class PerceiverMultimodalDecoder(PerceiverAbstractDecoder):
         )
 
     def forward(
-            self,
-            query: mindspore.Tensor,
-            z: mindspore.Tensor,
-            query_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = False,
+        self,
+        query: mindspore.Tensor,
+        z: mindspore.Tensor,
+        query_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = False,
     ) -> mindspore.Tensor:
         # B x 1 x num_classes -> B x num_classes
         decoder_outputs = self.decoder(query, z, output_attentions=output_attentions)
@@ -2476,12 +2346,12 @@ class PerceiverMultimodalDecoder(PerceiverAbstractDecoder):
 
 
 # Below: IO pre- and post-processor classes for Perceiver.
-def space_to_depth(frames: mindspore.Tensor, temporal_block_size: int = 1,
-                   spatial_block_size: int = 1) -> mindspore.Tensor:
+def space_to_depth(frames: mindspore.Tensor, temporal_block_size: int = 1, spatial_block_size: int = 1) -> mindspore.Tensor:
     """
     Space to depth transform. Rearranges blocks of spatial data, into depth.
 
     This function assumes the channels to be first, but will place the channels last after transformation.
+
     """
     if len(frames.shape) == 4:
         batch_size, num_channels, height, width = frames.shape
@@ -2501,7 +2371,7 @@ def space_to_depth(frames: mindspore.Tensor, temporal_block_size: int = 1,
             batch_size,
             height // spatial_block_size,
             width // spatial_block_size,
-            (spatial_block_size ** 2) * num_channels,
+            (spatial_block_size**2) * num_channels,
         )
         return frames
     elif len(frames.shape) == 5:
@@ -2525,7 +2395,7 @@ def space_to_depth(frames: mindspore.Tensor, temporal_block_size: int = 1,
             time // temporal_block_size,
             height // spatial_block_size,
             width // spatial_block_size,
-            temporal_block_size * (spatial_block_size ** 2) * num_channels,
+            temporal_block_size * (spatial_block_size**2) * num_channels,
         )
         return frames
     else:
@@ -2548,19 +2418,18 @@ class Conv2dSamePadding(nn.Conv2d):
         )
 
     def forward(self, input):
-        # return self._conv_forward(self.zero_pad_2d(input), self.weight, self.bias)
-        return super(Conv2dSamePadding, self).forward(self.zero_pad_2d(input))
+        return self._conv_forward(self.zero_pad_2d(input), self.weight, self.bias)
 
 
 class Conv2DDownsample(nn.Module):
     """Downsamples 4x by applying a 2D convolution and doing max pooling."""
 
     def __init__(
-            self,
-            num_layers: int = 1,
-            in_channels: int = 3,
-            out_channels: int = 64,
-            use_batchnorm: bool = True,
+        self,
+        num_layers: int = 1,
+        in_channels: int = 3,
+        out_channels: int = 64,
+        use_batchnorm: bool = True,
     ):
         """
         Constructs a Conv2DDownsample model.
@@ -2576,7 +2445,7 @@ class Conv2DDownsample(nn.Module):
         super().__init__()
 
         self.conv = Conv2dSamePadding(
-            in_channels=in_channels, out_channels=out_channels, kernel_size=7, stride=2, bias=False,
+            in_channels=in_channels, out_channels=out_channels, kernel_size=7, stride=2, bias=False
         )
         self.batchnorm = nn.BatchNorm2d(num_features=out_channels) if use_batchnorm else nn.Identity()
         self.relu = nn.ReLU()
@@ -2615,7 +2484,6 @@ def generate_fourier_features(pos, num_bands, max_resolution=(224, 224), concat_
     """
 
     batch_size = pos.shape[0]
-    pos = pos.to(mindspore.float32)
 
     min_freq = 1.0
     # Nyquist frequency at the target resolution:
@@ -2658,13 +2526,10 @@ def build_linear_positions(index_dims, output_range=(-1.0, 1.0)):
     """
 
     def _linspace(n_xels_per_dim):
-        return ops.linspace(start=output_range[0], end=output_range[1], steps=n_xels_per_dim)
+        return ops.linspace(start=output_range[0], end=output_range[1], steps=n_xels_per_dim, dtype=mindspore.float32)
 
     dim_ranges = [_linspace(n_xels_per_dim) for n_xels_per_dim in index_dims]
-    if len(index_dims) != 1:
-        array_index_grid = ops.meshgrid(*dim_ranges, indexing="ij")
-    else:
-        array_index_grid = [dim_ranges[0]]
+    array_index_grid = meshgrid(*dim_ranges, indexing="ij")
 
     return ops.stack(array_index_grid, dim=-1)
 
@@ -2693,8 +2558,8 @@ class PerceiverTrainablePositionEncoding(PerceiverAbstractPositionEncoding):
         super().__init__()
         self._num_channels = num_channels
         self._index_dims = index_dims
-        index_dim = int(np.prod(index_dims))
-        self.position_embeddings = mindspore.Parameter(ops.randn((index_dim, num_channels)), 'position_embeddings')
+        index_dim = np.prod(index_dims)
+        self.position_embeddings = nn.Parameter(ops.randn(int(index_dim), num_channels))
 
     @property
     def num_dimensions(self) -> int:
@@ -2705,25 +2570,23 @@ class PerceiverTrainablePositionEncoding(PerceiverAbstractPositionEncoding):
     def output_size(self, *args, **kwargs) -> int:
         return self._num_channels
 
-    def interpolate_pos_encoding(self, position_embeddings: mindspore.Tensor, height: int,
-                                 width: int) -> mindspore.Tensor:
+    def interpolate_pos_encoding(self, position_embeddings: mindspore.Tensor, height: int, width: int) -> mindspore.Tensor:
         num_positions = position_embeddings.shape[0]
         new_height = new_width = math.sqrt(num_positions)
         position_embeddings = position_embeddings.reshape(
             1, int(new_height), int(new_width), self._num_channels
         ).permute(0, 3, 1, 2)
-        position_embeddings = ops.interpolate(
+        position_embeddings = nn.functional.interpolate(
             position_embeddings,
             scale_factor=(height / new_height, width / new_width),
             mode="bicubic",
             align_corners=False,
-            recompute_scale_factor=True
         )
         position_embeddings = position_embeddings.reshape(1, self._num_channels, -1).permute(0, 2, 1).squeeze(0)
         return position_embeddings
 
     def forward(
-            self, batch_size: int, interpolate_pos_encoding: bool = False, input_size=None
+        self, batch_size: int, interpolate_pos_encoding: bool = False, input_size: tuple = None
     ) -> mindspore.Tensor:
         position_embeddings = self.position_embeddings
 
@@ -2754,6 +2617,8 @@ def _check_or_build_spatial_positions(pos, index_dims, batch_size):
     """
     if pos is None:
         pos = build_linear_positions(index_dims)
+        # equivalent to `ops.broadcast_to(pos[None], (batch_size,) + pos.shape)`
+        # but `ops.broadcast_to` cannot be converted to ONNX
         pos = pos[None].broadcast_to((batch_size,) + pos.shape)
         pos = ops.reshape(pos, [batch_size, int(np.prod(index_dims)), -1])
     else:
@@ -2791,11 +2656,11 @@ class PerceiverFourierPositionEncoding(PerceiverAbstractPositionEncoding):
         return encoding_size
 
     def forward(
-            self,
-            index_dims: List[int],
-            batch_size: int,
-            dtype: mindspore.dtype,
-            pos: mindspore.Tensor = None,
+        self,
+        index_dims: List[int],
+        batch_size: int,
+        dtype: mindspore.dtype,
+        pos: mindspore.Tensor = None,
     ) -> mindspore.Tensor:
         pos = _check_or_build_spatial_positions(pos, index_dims, batch_size)
         fourier_pos_enc = generate_fourier_features(
@@ -2829,7 +2694,7 @@ class PerceiverTextPreprocessor(AbstractPreprocessor):
     def __init__(self, config: PerceiverConfig) -> None:
         super().__init__()
         self.config = config
-        self.embeddings = nn.Embedding(config.vocab_size, config.d_model)
+        self.embeddings = nn.Embedding(num_embeddings=config.vocab_size, embedding_dim=config.d_model)
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.d_model)
 
     @property
@@ -2837,11 +2702,11 @@ class PerceiverTextPreprocessor(AbstractPreprocessor):
         return self.config.d_model
 
     def forward(
-            self,
-            inputs: mindspore.Tensor,
-            pos: Optional[mindspore.Tensor] = None,
-            network_input_is_1d: bool = True,
-            interpolate_pos_encoding: bool = False,
+        self,
+        inputs: mindspore.Tensor,
+        pos: Optional[mindspore.Tensor] = None,
+        network_input_is_1d: bool = True,
+        interpolate_pos_encoding: bool = False,
     ):
         embeddings_without_pos = self.embeddings(inputs)
 
@@ -2865,12 +2730,12 @@ class PerceiverEmbeddingDecoder(nn.Module):
         super().__init__()
         self.config = config
         self.vocab_size = config.vocab_size
-        self.bias = mindspore.Parameter(ops.zeros(self.vocab_size), 'bias')
+        self.bias = nn.Parameter(ops.zeros(self.vocab_size))
 
     def forward(self, hidden_states: mindspore.Tensor, embedding_layer: mindspore.Tensor) -> mindspore.Tensor:
         batch_size, seq_len, d_model = hidden_states.shape
         # Flatten batch dim
-        output = ops.matmul(hidden_states.reshape([-1, d_model]), embedding_layer.weight.swapaxes(0, 1))
+        output = ops.matmul(hidden_states.reshape([-1, d_model]), ops.transpose(embedding_layer.weight, 0, 1))
         output = output + self.bias
 
         return output.reshape([batch_size, seq_len, self.vocab_size])
@@ -2895,7 +2760,7 @@ class PerceiverMultimodalPostprocessor(nn.Module):
         self.input_is_dict = input_is_dict
 
     def forward(
-            self, inputs: mindspore.Tensor, pos: Optional[mindspore.Tensor] = None, modality_sizes=None
+        self, inputs: mindspore.Tensor, pos: Optional[mindspore.Tensor] = None, modality_sizes=None
     ) -> Mapping[str, mindspore.Tensor]:
         if not self.input_is_dict:
             # Slice up modalities by their sizes.
@@ -2952,8 +2817,7 @@ class PerceiverAudioPostprocessor(nn.Module):
         # Architecture parameters:
         self.classifier = nn.Linear(in_channels, config.samples_per_patch)
 
-    def forward(self, inputs: mindspore.Tensor, pos: Optional[mindspore.Tensor] = None,
-                  modality_sizes=None) -> mindspore.Tensor:
+    def forward(self, inputs: mindspore.Tensor, pos: Optional[mindspore.Tensor] = None, modality_sizes=None) -> mindspore.Tensor:
         logits = self.classifier(inputs)
         return ops.reshape(logits, [inputs.shape[0], -1])
 
@@ -2974,8 +2838,7 @@ class PerceiverProjectionPostprocessor(nn.Module):
         super().__init__()
         self.classifier = nn.Linear(in_channels, out_channels)
 
-    def forward(self, inputs: mindspore.Tensor, pos: Optional[mindspore.Tensor] = None,
-                  modality_sizes=None) -> mindspore.Tensor:
+    def forward(self, inputs: mindspore.Tensor, pos: Optional[mindspore.Tensor] = None, modality_sizes=None) -> mindspore.Tensor:
         logits = self.classifier(inputs)
         return logits
 
@@ -3018,20 +2881,20 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
     """
 
     def __init__(
-            self,
-            config,
-            prep_type="conv",
-            spatial_downsample: int = 4,
-            temporal_downsample: int = 1,
-            position_encoding_type: str = "fourier",
-            in_channels: int = 3,
-            out_channels: int = 64,
-            conv_after_patching: bool = False,
-            conv_after_patching_in_channels: int = 54,  # only relevant when conv_after_patching = True
-            conv2d_use_batchnorm: bool = True,
-            concat_or_add_pos: str = "concat",
-            project_pos_dim: int = -1,
-            **position_encoding_kwargs,
+        self,
+        config,
+        prep_type="conv",
+        spatial_downsample: int = 4,
+        temporal_downsample: int = 1,
+        position_encoding_type: str = "fourier",
+        in_channels: int = 3,
+        out_channels: int = 64,
+        conv_after_patching: bool = False,
+        conv_after_patching_in_channels: int = 54,  # only relevant when conv_after_patching = True
+        conv2d_use_batchnorm: bool = True,
+        concat_or_add_pos: str = "concat",
+        project_pos_dim: int = -1,
+        **position_encoding_kwargs,
     ):
         super().__init__()
         self.config = config
@@ -3075,7 +2938,6 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
                 kernel_size=(1, 1),
                 # spatial_downsample is unconstrained for 1x1 convolutions.
                 stride=(spatial_downsample, spatial_downsample),
-                bias=True
             )
 
         # Position embeddings
@@ -3099,7 +2961,6 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
         # In this case, for convenience, we will declare is_temporal variable,
         # which will show whether the data has a temporal dimension or not.
         is_temporal = self.position_embeddings.num_dimensions > 2
-
         # position embedding
         if self.project_pos_dim > 0:
             pos_dim = self.project_pos_dim
@@ -3119,14 +2980,14 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
             if self.conv_after_patching:
                 inp_dim = self.out_channels
             else:
-                inp_dim = self.in_channels * self.spatial_downsample ** 2
+                inp_dim = self.in_channels * self.spatial_downsample**2
                 if is_temporal:
                     inp_dim *= self.temporal_downsample
 
         return inp_dim + pos_dim
 
     def _build_network_inputs(
-            self, inputs: mindspore.Tensor, network_input_is_1d: bool = True, interpolate_pos_encoding: bool = False
+        self, inputs: mindspore.Tensor, network_input_is_1d: bool = True, interpolate_pos_encoding: bool = False
     ):
         """
         Construct the final input, including position encoding.
@@ -3137,19 +2998,17 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
         batch_size = inputs.shape[0]
         input_size = inputs.shape[1:3]
         index_dims = inputs.shape[1:-1]
-        indices = int(np.prod(index_dims))
+        indices = np.prod(index_dims)
 
         # Flatten input features to a 1D index dimension if necessary.
         if len(inputs.shape) > 3 and network_input_is_1d:
-            inputs = ops.reshape(inputs, [batch_size, indices, -1])
+            inputs = ops.reshape(inputs, [batch_size, int(indices), -1])
 
         # Construct the position encoding.
         if self.position_encoding_type == "trainable":
             pos_enc = self.position_embeddings(batch_size, interpolate_pos_encoding, input_size)
         elif self.position_encoding_type == "fourier":
             pos_enc = self.position_embeddings(index_dims, batch_size, dtype=inputs.dtype)
-        else:
-            pos_enc = None
 
         # Optionally project them to a target dimension.
         pos_enc = self.positions_projection(pos_enc)
@@ -3166,11 +3025,11 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
         return inputs_with_pos, inputs
 
     def forward(
-            self,
-            inputs: mindspore.Tensor,
-            pos: Optional[mindspore.Tensor] = None,
-            network_input_is_1d: bool = True,
-            interpolate_pos_encoding: bool = False,
+        self,
+        inputs: mindspore.Tensor,
+        pos: Optional[mindspore.Tensor] = None,
+        network_input_is_1d: bool = True,
+        interpolate_pos_encoding: bool = False,
     ):
         if self.prep_type == "conv":
             # Convnet image featurization.
@@ -3187,8 +3046,8 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
                 inputs = inputs[:: self.spatial_downsample, :: self.spatial_downsample]
             elif inputs.ndim == 5:
                 inputs = inputs[
-                         :, :: self.temporal_downsample, :, :: self.spatial_downsample, :: self.spatial_downsample
-                         ]
+                    :, :: self.temporal_downsample, :, :: self.spatial_downsample, :: self.spatial_downsample
+                ]
             else:
                 raise ValueError("Unsupported data format for pixels.")
 
@@ -3201,7 +3060,7 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
 
             if inputs.ndim == 5 and inputs.shape[1] == 1:
                 # for flow
-                inputs = inputs.squeeze(axis=1)
+                inputs = ops.squeeze(inputs, dim=1)
 
             # Optionally apply conv layer.
             inputs = self.conv_after_patches(inputs)
@@ -3238,8 +3097,7 @@ class PerceiverOneHotPreprocessor(AbstractPreprocessor):
     def num_channels(self) -> int:
         return self.config.num_labels
 
-    def forward(self, inputs: mindspore.Tensor, pos: Optional[mindspore.Tensor] = None,
-                  network_input_is_1d: bool = True):
+    def forward(self, inputs: mindspore.Tensor, pos: Optional[mindspore.Tensor] = None, network_input_is_1d: bool = True):
         # Add a dummy index dimension.
         inputs = inputs[:, None, :]
 
@@ -3272,15 +3130,15 @@ class PerceiverAudioPreprocessor(AbstractPreprocessor):
     """
 
     def __init__(
-            self,
-            config,
-            prep_type: str = "patches",
-            samples_per_patch: int = 96,
-            position_encoding_type: str = "fourier",
-            concat_or_add_pos: str = "concat",
-            out_channels=64,
-            project_pos_dim=-1,
-            **position_encoding_kwargs,
+        self,
+        config,
+        prep_type: str = "patches",
+        samples_per_patch: int = 96,
+        position_encoding_type: str = "fourier",
+        concat_or_add_pos: str = "concat",
+        out_channels=64,
+        project_pos_dim=-1,
+        **position_encoding_kwargs,
     ):
         super().__init__()
         self.config = config
@@ -3325,8 +3183,6 @@ class PerceiverAudioPreprocessor(AbstractPreprocessor):
             pos_enc = self.position_embeddings(batch_size)
         elif self.position_encoding_type == "fourier":
             pos_enc = self.position_embeddings(index_dims, batch_size, dtype=inputs.dtype)
-        else:
-            pos_enc = None
 
         # Optionally project them to a target dimension.
         pos_enc = self.positions_projection(pos_enc)
@@ -3339,11 +3195,11 @@ class PerceiverAudioPreprocessor(AbstractPreprocessor):
         return inputs_with_pos, inputs
 
     def forward(
-            self,
-            inputs: mindspore.Tensor,
-            pos: Optional[mindspore.Tensor] = None,
-            network_input_is_1d: bool = True,
-            interpolate_pos_encoding: bool = False,
+        self,
+        inputs: mindspore.Tensor,
+        pos: Optional[mindspore.Tensor] = None,
+        network_input_is_1d: bool = True,
+        interpolate_pos_encoding: bool = False,
     ):
         inputs = ops.reshape(inputs, [inputs.shape[0], -1, self.samples_per_patch])
 
@@ -3397,11 +3253,11 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
         return common_channel_size
 
     def forward(
-            self,
-            inputs: Mapping[str, mindspore.Tensor],
-            pos: Optional[mindspore.Tensor] = None,
-            network_input_is_1d: bool = True,
-            interpolate_pos_encoding: bool = False,
+        self,
+        inputs: Mapping[str, mindspore.Tensor],
+        pos: Optional[mindspore.Tensor] = None,
+        network_input_is_1d: bool = True,
+        interpolate_pos_encoding: bool = False,
     ) -> PreprocessorOutputType:
         padded = {}
         modality_sizes = {}
@@ -3418,7 +3274,7 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
 
             padding = ops.broadcast_to(
                 pos_enc,
-                (batch_size, num_samples, self.num_channels - num_channels),
+                [batch_size, num_samples, self.num_channels - num_channels],
             )
             output_padded = ops.cat([output, padding], dim=2)
 
@@ -3440,7 +3296,6 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
         final_inputs = ops.cat(padded_ls, dim=1)
 
         return final_inputs, modality_sizes, inputs_without_pos
-
 
 __all__ = [
     "PerceiverForImageClassificationConvProcessing",

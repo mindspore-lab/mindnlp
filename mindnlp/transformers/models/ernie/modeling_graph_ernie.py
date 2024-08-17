@@ -2378,7 +2378,7 @@ class MSErnieForNextSentencePrediction(MSErniePreTrainedModel):
         ```
 
     Note:
-        The 'next_sentence_label' argument in the forward method is deprecated and will be removed in a future version.
+        The 'next_sentence_label' argument in the forward method is deprecated.
         Use the 'labels' argument instead.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForNextSentencePrediction.__init__ with Bert->Ernie,bert->ernie

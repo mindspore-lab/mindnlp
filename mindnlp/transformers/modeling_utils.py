@@ -1929,7 +1929,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
 
         if use_auth_token is not None:
             warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+                "The `use_auth_token` argument is deprecated. Please use `token` instead.",
                 FutureWarning,
             )
             if token is not None:
@@ -1945,7 +1945,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
 
         if "save_config" in kwargs:
             warnings.warn(
-                "`save_config` is deprecated and will be removed in v5 of Transformers. Use `is_main_process` instead."
+                "`save_config` is deprecated. Use `is_main_process` instead."
             )
             is_main_process = kwargs.pop("save_config")
         if safe_serialization and not is_safetensors_available():

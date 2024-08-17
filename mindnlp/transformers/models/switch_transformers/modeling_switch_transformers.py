@@ -1128,7 +1128,7 @@ class SwitchTransformersStack(SwitchTransformersPreTrainedModel):
 # Warning message for FutureWarning: head_mask was separated into two input args - head_mask, decoder_head_mask
 __HEAD_MASK_WARNING_MSG = """
 The input argument `head_mask` was split into two arguments `head_mask` and `decoder_head_mask`. Currently,
-`decoder_head_mask` is set to copy `head_mask`, but this feature is deprecated and will be removed in future versions.
+`decoder_head_mask` is set to copy `head_mask`, but this feature is deprecated.
 If you do not want to use any `decoder_head_mask` now, please set `decoder_head_mask = torch.ones(num_layers,
 num_heads)`.
 """

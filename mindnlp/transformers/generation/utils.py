@@ -923,7 +923,6 @@ class GenerationMixin:
                 )
             )
         if generation_config.forced_decoder_ids is not None:
-            # TODO(Sanchit): deprecate in v4.40 by removing this logic
             warnings.warn(
                 "You have explicitly specified `forced_decoder_ids`. "
                 "This functionality has been deprecated and will throw an error. "
@@ -1354,7 +1353,7 @@ class GenerationMixin:
                 if new_generation_config != self.generation_config:
                     warnings.warn(
                         "You have modified the pretrained model configuration to control generation. This is a"
-                        " deprecated strategy to control generation and will be removed soon, in a future version."
+                        " deprecated strategy to control generation."
                         " Please use and modify the model generation configuration (see"
                         " https://huggingface.co/docs/transformers/generation_strategies#default-text-generation-configuration )"
                     )
@@ -2210,7 +2209,7 @@ class GenerationMixin:
 
     def contrastive_search(self, *args, **kwargs):
         logger.warning_once(
-            "Calling `contrastive_search` directly is deprecated and will be removed in v4.41. Use `generate` or a "
+            "Calling `contrastive_search` directly is deprecated.41. Use `generate` or a "
             "custom generation loop instead.",
         )
         return self._contrastive_search(*args, **kwargs)

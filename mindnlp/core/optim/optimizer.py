@@ -273,7 +273,7 @@ class Optimizer:
         lazily initialize state.
 
         This is a workaround due to lack of a proper step hook on the optimizer,
-        and will be removed if it exists.
+       .
         """
 
     def register_step_pre_hook(self, hook: OptimizerPreHook) -> RemovableHandle:
