@@ -316,13 +316,13 @@ class Distribution:
         if not isinstance(value, mindspore.Tensor):
             raise ValueError("The value argument to log_prob must be a Tensor")
 
-        event_dim_start = len(value.size()) - len(self._event_shape)
-        if value.size()[event_dim_start:] != self._event_shape:
+        event_dim_start = len(value.shape) - len(self._event_shape)
+        if value.shape[event_dim_start:] != self._event_shape:
             raise ValueError(
-                f"The right-most size of value must match event_shape: {value.size()} vs {self._event_shape}."
+                f"The right-most size of value must match event_shape: {value.shape} vs {self._event_shape}."
             )
 
-        actual_shape = value.size()
+        actual_shape = value.shape
         expected_shape = self._batch_shape + self._event_shape
         for i, j in zip(reversed(actual_shape), reversed(expected_shape)):
             if i != 1 and j != 1 and i != j:
@@ -361,7 +361,7 @@ class Distribution:
         param_names = [k for k, _ in self.arg_constraints.items() if k in self.__dict__]
         args_string = ", ".join(
             [
-                f"{p}: {self.__dict__[p] if self.__dict__[p].numel() == 1 else self.__dict__[p].size()}"
+                f"{p}: {self.__dict__[p] if self.__dict__[p].numel() == 1 else self.__dict__[p].shape}"
                 for p in param_names
             ]
         )

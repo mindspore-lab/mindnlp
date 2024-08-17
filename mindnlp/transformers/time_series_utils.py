@@ -172,7 +172,7 @@ class StudentTOutput(DistributionOutput):
 
     @classmethod
     def domain_map(cls, df: mindspore.Tensor, loc: mindspore.Tensor, scale: mindspore.Tensor):
-        scale = cls.squareplus(scale).clamp_min(ops.finfo(scale.dtype).eps)
+        scale = cls.squareplus(scale).clamp(float(ops.finfo(scale.dtype).eps))
         df = 2.0 + cls.squareplus(df)
         return df.squeeze(-1), loc.squeeze(-1), scale.squeeze(-1)
 
