@@ -478,6 +478,7 @@ class FlaubertModel(FlaubertPreTrainedModel):
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
         # removed: src_enc=None, src_len=None
         if input_ids is not None:
             bs, slen = input_ids.shape
@@ -486,25 +487,24 @@ class FlaubertModel(FlaubertPreTrainedModel):
 
         if lengths is None:
             if input_ids is not None:
-                lengths = (input_ids != self.pad_index).sum(axis=1).long()
+                lengths = ops.sum((input_ids != self.pad_index), dim=1).long()
             else:
-                lengths = mindspore.Tensor([slen] * bs)
-
+                lengths = mindspore.tensor([slen] * bs)
         # mask = input_ids != self.pad_index
 
         # check inputs
         assert lengths.shape[0] == bs
-        assert lengths.max().item() <= slen
+        # assert lengths.max().item() <= slen
         # input_ids = input_ids.transpose(0, 1)  # batch size as dimension 0
         # assert (src_enc is None) == (src_len is None)
         # if src_enc is not None:
         #     assert self.is_decoder
-        #     assert src_enc.shape[0] == bs
+        #     assert src_enc.size(0) == bs
 
         # generate masks
         mask, attn_mask = get_masks(slen, lengths, self.causal, padding_mask=attention_mask)
         # if self.is_decoder and src_enc is not None:
-        #     src_mask = torch.arange(src_len.max(), dtype=mindspore.int64) < src_len[:, None]
+        #     src_mask = torch.arange(src_len.max(), dtype=torch.long, device=lengths.device) < src_len[:, None]
 
         # Setting the position-ids to the registered buffer in constructor, it helps
         # when tracing the model without passing position-ids, solves
@@ -512,13 +512,14 @@ class FlaubertModel(FlaubertPreTrainedModel):
         if position_ids is None:
             if hasattr(self, "position_ids"):
                 position_ids = self.position_ids[:, :slen]
-                position_ids = position_ids.broadcast_to((bs, slen))
+                position_ids = position_ids.expand((bs, slen))
             else:
                 position_ids = ops.arange(slen, dtype=mindspore.int64)
-                position_ids = position_ids.unsqueeze(0).broadcast_to((bs, slen))
+                position_ids = position_ids.unsqueeze(0).expand((bs, slen))
         else:
             assert position_ids.shape == (bs, slen)  # (slen, bs)
             # position_ids = position_ids.transpose(0, 1)
+
         # langs
         if langs is not None:
             assert langs.shape == (bs, slen)  # (slen, bs)
@@ -526,6 +527,7 @@ class FlaubertModel(FlaubertPreTrainedModel):
 
         # Prepare head mask if needed
         head_mask = self.get_head_mask(head_mask, self.config.n_layers)
+
         # do not recompute cached elements
         if cache is not None and input_ids is not None:
             _slen = slen - cache["slen"]
@@ -561,6 +563,7 @@ class FlaubertModel(FlaubertPreTrainedModel):
 
             if output_hidden_states:
                 hidden_states = hidden_states + (tensor,)
+
             # self attention
             if not self.pre_norm:
                 attn_outputs = self.attentions[i](
@@ -570,7 +573,6 @@ class FlaubertModel(FlaubertPreTrainedModel):
                     head_mask=head_mask[i],
                     output_attentions=output_attentions,
                 )
-
                 attn = attn_outputs[0]
                 if output_attentions:
                     attentions = attentions + (attn_outputs[1],)
@@ -585,6 +587,7 @@ class FlaubertModel(FlaubertPreTrainedModel):
                     attentions = attentions + (attn_outputs[1],)
                 attn = nn.functional.dropout(attn, p=self.dropout, training=self.training)
                 tensor = tensor + attn
+
             # encoder attention (for decoder only)
             # if self.is_decoder and src_enc is not None:
             #     attn = self.encoder_attn[i](tensor, src_mask, kv=src_enc, cache=cache)
@@ -601,6 +604,7 @@ class FlaubertModel(FlaubertPreTrainedModel):
                 tensor = tensor + self.ffns[i](tensor_normalized)
 
             tensor *= mask.unsqueeze(-1).to(tensor.dtype)
+
         # Add last hidden state
         if output_hidden_states:
             hidden_states = hidden_states + (tensor,)
