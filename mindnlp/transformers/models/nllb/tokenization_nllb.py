@@ -83,7 +83,6 @@ FAIRSEQ_LANGUAGE_CODES = ['ace_Arab', 'ace_Latn', 'acm_Arab', 'acq_Arab', 'aeb_A
                           'xho_Latn', 'ydd_Hebr', 'yor_Latn', 'yue_Hant', 'zho_Hans', 'zho_Hant', 'zul_Latn']  # fmt: skip
 
 
-
 class NllbTokenizer(PreTrainedTokenizer):
     """
     Construct an NLLB tokenizer.
@@ -183,10 +182,26 @@ class NllbTokenizer(PreTrainedTokenizer):
     ):
         if additional_special_tokens is None:
             additional_special_tokens = FAIRSEQ_LANGUAGE_CODES
-        bos_token = AddedToken(bos_token, normalized=False, special=True) if isinstance(bos_token, str) else bos_token
-        pad_token = AddedToken(pad_token, normalized=False, special=True) if isinstance(pad_token, str) else pad_token
-        eos_token = AddedToken(eos_token, normalized=False, special=True) if isinstance(eos_token, str) else eos_token
-        unk_token = AddedToken(unk_token, normalized=False, special=True) if isinstance(unk_token, str) else unk_token
+        bos_token = (
+            AddedToken(bos_token, normalized=False, special=True)
+            if isinstance(bos_token, str)
+            else bos_token
+        )
+        pad_token = (
+            AddedToken(pad_token, normalized=False, special=True)
+            if isinstance(pad_token, str)
+            else pad_token
+        )
+        eos_token = (
+            AddedToken(eos_token, normalized=False, special=True)
+            if isinstance(eos_token, str)
+            else eos_token
+        )
+        unk_token = (
+            AddedToken(unk_token, normalized=False, special=True)
+            if isinstance(unk_token, str)
+            else unk_token
+        )
         # Mask token behave like a normal word, i.e. include the space before it
         mask_token = (
             AddedToken(mask_token, normalized=True, lstrip=True, special=True)
@@ -207,7 +222,12 @@ class NllbTokenizer(PreTrainedTokenizer):
         # spm      | '<unk>' | '<s>'   | '</s>' | 'an'    | '▁n' | '▁m' | '▁t' | '▁k' | '▁a' | '▁s'
 
         # unk token needs to be in the vocab with correct index
-        self._added_tokens_decoder = {0: bos_token, 1: pad_token, 2: eos_token, 3: unk_token}
+        self._added_tokens_decoder = {
+            0: bos_token,
+            1: pad_token,
+            2: eos_token,
+            3: unk_token,
+        }
         # The first "real" token "," has position 4 in the original fairseq vocab and position 3 in the spm vocab
         self.fairseq_offset = 1
         self.sp_model_size = len(self.sp_model)
@@ -264,7 +284,10 @@ class NllbTokenizer(PreTrainedTokenizer):
         self.set_src_lang_special_tokens(self._src_lang)
 
     def get_special_tokens_mask(
-        self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None, already_has_special_tokens: bool = False
+        self,
+        token_ids_0: List[int],
+        token_ids_1: Optional[List[int]] = None,
+        already_has_special_tokens: bool = False,
     ) -> List[int]:
         """
         Retrieve sequence ids from a token list that has no special tokens added. This method is called when adding
@@ -284,14 +307,21 @@ class NllbTokenizer(PreTrainedTokenizer):
 
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
-                token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
+                token_ids_0=token_ids_0,
+                token_ids_1=token_ids_1,
+                already_has_special_tokens=True,
             )
 
         prefix_ones = [1] * len(self.prefix_tokens)
         suffix_ones = [1] * len(self.suffix_tokens)
         if token_ids_1 is None:
             return prefix_ones + ([0] * len(token_ids_0)) + suffix_ones
-        return prefix_ones + ([0] * len(token_ids_0)) + ([0] * len(token_ids_1)) + suffix_ones
+        return (
+            prefix_ones
+            + ([0] * len(token_ids_0))
+            + ([0] * len(token_ids_1))
+            + suffix_ones
+        )
 
     def build_inputs_with_special_tokens(
         self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None
@@ -346,13 +376,25 @@ class NllbTokenizer(PreTrainedTokenizer):
         return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
 
     def _build_translation_inputs(
-        self, raw_inputs, return_tensors: str, src_lang: Optional[str], tgt_lang: Optional[str], **extra_kwargs
+        self,
+        raw_inputs,
+        return_tensors: str,
+        src_lang: Optional[str],
+        tgt_lang: Optional[str],
+        **extra_kwargs,
     ):
         """Used by translation pipeline, to prepare inputs for the generate function"""
         if src_lang is None or tgt_lang is None:
-            raise ValueError("Translation requires a `src_lang` and a `tgt_lang` for this model")
+            raise ValueError(
+                "Translation requires a `src_lang` and a `tgt_lang` for this model"
+            )
         self.src_lang = src_lang
-        inputs = self(raw_inputs, add_special_tokens=True, return_tensors=return_tensors, **extra_kwargs)
+        inputs = self(
+            raw_inputs,
+            add_special_tokens=True,
+            return_tensors=return_tensors,
+            **extra_kwargs,
+        )
         tgt_lang_id = self.convert_tokens_to_ids(tgt_lang)
         inputs["forced_bos_token_id"] = tgt_lang_id
         return inputs
@@ -380,15 +422,21 @@ class NllbTokenizer(PreTrainedTokenizer):
         out_string = "".join(tokens).replace(SPIECE_UNDERLINE, " ").strip()
         return out_string
 
-    def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+    def save_vocabulary(
+        self, save_directory: str, filename_prefix: Optional[str] = None
+    ) -> Tuple[str]:
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return
         out_vocab_file = os.path.join(
-            save_directory, (filename_prefix + "-" if filename_prefix else "") + VOCAB_FILES_NAMES["vocab_file"]
+            save_directory,
+            (filename_prefix + "-" if filename_prefix else "")
+            + VOCAB_FILES_NAMES["vocab_file"],
         )
 
-        if os.path.abspath(self.vocab_file) != os.path.abspath(out_vocab_file) and os.path.isfile(self.vocab_file):
+        if os.path.abspath(self.vocab_file) != os.path.abspath(
+            out_vocab_file
+        ) and os.path.isfile(self.vocab_file):
             copyfile(self.vocab_file, out_vocab_file)
         elif not os.path.isfile(self.vocab_file):
             with open(out_vocab_file, "wb") as fi:
@@ -440,3 +488,6 @@ class NllbTokenizer(PreTrainedTokenizer):
         else:
             self.prefix_tokens = [self.cur_lang_code]
             self.suffix_tokens = [self.eos_token_id]
+
+
+__all__ = ["NllbTokenizer"]
