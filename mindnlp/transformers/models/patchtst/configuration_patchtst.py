@@ -16,11 +16,12 @@
 
 from typing import List, Optional, Union
 
-from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
+from ....utils import logging
 
 
 logger = logging.get_logger(__name__)
+
 
 class PatchTSTConfig(PretrainedConfig):
     r"""
@@ -66,8 +67,6 @@ class PatchTSTConfig(PretrainedConfig):
             A value added to the denominator for numerical stability of normalization.
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout probability for the attention probabilities.
-        dropout (`float`, *optional*, defaults to 0.0):
-            The dropout probability for all fully connected layers in the Transformer.
         positional_dropout (`float`, *optional*, defaults to 0.0):
             The dropout probability in the positional embedding layer.
         path_dropout (`float`, *optional*, defaults to 0.0):
@@ -166,13 +165,11 @@ class PatchTSTConfig(PretrainedConfig):
         norm_type: str = "batchnorm",
         norm_eps: float = 1e-05,
         attention_dropout: float = 0.0,
-        dropout: float = 0.0,
         positional_dropout: float = 0.0,
         path_dropout: float = 0.0,
         ff_dropout: float = 0.0,
         bias: bool = True,
-        # activation_function: str = "gelu",
-        activation_function: str = "gelu_new",
+        activation_function: str = "gelu",
         pre_norm: bool = True,
         positional_encoding_type: str = "sincos",
         use_cls_token: bool = False,
@@ -209,7 +206,6 @@ class PatchTSTConfig(PretrainedConfig):
         self.num_attention_heads = num_attention_heads
         self.ffn_dim = ffn_dim
         self.num_hidden_layers = num_hidden_layers
-        self.dropout = dropout
         self.attention_dropout = attention_dropout
         self.share_embedding = share_embedding
         self.channel_attention = channel_attention

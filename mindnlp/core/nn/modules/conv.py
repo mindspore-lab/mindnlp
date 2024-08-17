@@ -263,14 +263,17 @@ class Conv2d(_ConvNd):
                                 stride=self.stride,
                                 dilation=self.dilation,
                                 group=self.groups)
-
-    def forward(self, input):
+    def _conv_forward(self, input: Tensor, weight: Tensor, bias: Optional[Tensor]):
         if self.padding_mode != 'zeros':
             input = ops.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode)
-        output = self.conv2d(input, self.weight)
-        if self.bias is not None:
-            output = mops.bias_add(output, self.bias)
+        output = self.conv2d(input, weight)
+        if bias is not None:
+            output = mops.bias_add(output, bias)
         return output
+
+    def forward(self, input):
+        return self._conv_forward(input, self.weight, self.bias)
+
 
 
 class Conv3d(_ConvNd):

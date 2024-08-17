@@ -36,7 +36,7 @@ def rgb_to_id(x):
 class ConditionalDetrFeatureExtractor(ConditionalDetrImageProcessor):
     def __init__(self, *args, **kwargs) -> None:
         warnings.warn(
-            "The class ConditionalDetrFeatureExtractor is deprecated and will be removed in version 5 of Transformers."
+            "The class ConditionalDetrFeatureExtractor is deprecated."
             " Please use ConditionalDetrImageProcessor instead.",
             FutureWarning,
         )

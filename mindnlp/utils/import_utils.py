@@ -674,11 +674,11 @@ def mindspore_required(func):
         None. The function returns None.
     
     Raises:
-        FutureWarning: If the method `torch_required` is deprecated and will be removed in v4.36. 
+        FutureWarning: If the method `torch_required` is deprecated. 
         ImportError: If the decorated function requires MindSpore but MindSpore is not available.
     """
     warnings.warn(
-        "The method `torch_required` is deprecated and will be removed in v4.36. Use `requires_backends` instead.",
+        "The method `torch_required` is deprecated. Use `requires_backends` instead.",
         FutureWarning,
     )
 

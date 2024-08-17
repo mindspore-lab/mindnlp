@@ -508,7 +508,7 @@ class BloomModel(BloomPreTrainedModel):
         if deprecated_arguments.pop("position_ids", False) is not False:
             # `position_ids` could have been `mindspore.Tensor` or `None` so defaulting pop to `False` allows to detect if users were passing explicitly `None`
             warnings.warn(
-                "`position_ids` have no functionality in BLOOM and will be removed in v5.0.0. You can safely ignore"
+                "`position_ids` have no functionality in BLOOM.0.0. You can safely ignore"
                 " passing `position_ids`.",
                 FutureWarning,
             )
@@ -542,7 +542,7 @@ class BloomModel(BloomPreTrainedModel):
             use_legacy_cache = True
             past_key_values = DynamicCache.from_legacy_cache(past_key_values)
             logger.warning_once(
-                "Using `past_key_values` as a tuple is deprecated and will be removed in v4.45. "
+                "Using `past_key_values` as a tuple is deprecated.45. "
                 "Please use an appropriate `Cache` class (https://huggingface.co/docs/transformers/v4.41.3/en/internal/generation_utils#transformers.Cache)"
             )
 
@@ -762,7 +762,7 @@ class BloomForCausalLM(BloomPreTrainedModel):
         if deprecated_arguments.pop("position_ids", False) is not False:
             # `position_ids` could have been `mindspore.Tensor` or `None` so defaulting pop to `False` allows to detect if users were passing explicitly `None`
             warnings.warn(
-                "`position_ids` have no functionality in BLOOM and will be removed in v5.0.0. You can safely ignore"
+                "`position_ids` have no functionality in BLOOM.0.0. You can safely ignore"
                 " passing `position_ids`.",
                 FutureWarning,
             )
@@ -869,7 +869,7 @@ class BloomForSequenceClassification(BloomPreTrainedModel):
         if deprecated_arguments.pop("position_ids", False) is not False:
             # `position_ids` could have been `mindspore.Tensor` or `None` so defaulting pop to `False` allows to detect if users were passing explicitly `None`
             warnings.warn(
-                "`position_ids` have no functionality in BLOOM and will be removed in v5.0.0. You can safely ignore"
+                "`position_ids` have no functionality in BLOOM.0.0. You can safely ignore"
                 " passing `position_ids`.",
                 FutureWarning,
             )
@@ -992,7 +992,7 @@ class BloomForTokenClassification(BloomPreTrainedModel):
         if deprecated_arguments.pop("position_ids", False) is not False:
             # `position_ids` could have been `mindspore.Tensor` or `None` so defaulting pop to `False` allows to detect if users were passing explicitly `None`
             warnings.warn(
-                "`position_ids` have no functionality in BLOOM and will be removed in v5.0.0. You can safely ignore"
+                "`position_ids` have no functionality in BLOOM.0.0. You can safely ignore"
                 " passing `position_ids`.",
                 FutureWarning,
             )

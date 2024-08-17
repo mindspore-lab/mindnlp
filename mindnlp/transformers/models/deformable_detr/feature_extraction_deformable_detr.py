@@ -36,7 +36,7 @@ def rgb_to_id(x):
 class DeformableDetrFeatureExtractor(DeformableDetrImageProcessor):
     def __init__(self, *args, **kwargs) -> None:
         warnings.warn(
-            "The class DeformableDetrFeatureExtractor is deprecated and will be removed in version 5 of Transformers."
+            "The class DeformableDetrFeatureExtractor is deprecated."
             " Please use DeformableDetrImageProcessor instead.",
             FutureWarning,
         )

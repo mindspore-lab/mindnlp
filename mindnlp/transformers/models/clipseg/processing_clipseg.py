@@ -147,7 +147,7 @@ class CLIPSegProcessor(ProcessorMixin):
     @property
     def feature_extractor_class(self):
         warnings.warn(
-            "`feature_extractor_class` is deprecated and will be removed in v5. Use `image_processor_class` instead.",
+            "`feature_extractor_class` is deprecated. Use `image_processor_class` instead.",
             FutureWarning,
         )
         return self.image_processor_class
@@ -155,7 +155,7 @@ class CLIPSegProcessor(ProcessorMixin):
     @property
     def feature_extractor(self):
         warnings.warn(
-            "`feature_extractor` is deprecated and will be removed in v5. Use `image_processor` instead.",
+            "`feature_extractor` is deprecated. Use `image_processor` instead.",
             FutureWarning,
         )
         return self.image_processor

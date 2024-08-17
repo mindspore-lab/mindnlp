@@ -915,7 +915,7 @@ class DeformableDetrImageProcessor(BaseImageProcessor):
 
         if "max_size" in kwargs:
             logger.warning_once(
-                "The `max_size` parameter is deprecated and will be removed in v4.26. "
+                "The `max_size` parameter is deprecated.26. "
                 "Please specify in `size['longest_edge'] instead`.",
             )
             max_size = kwargs.pop("max_size")
@@ -1064,7 +1064,7 @@ class DeformableDetrImageProcessor(BaseImageProcessor):
         """
         if "max_size" in kwargs:
             logger.warning_once(
-                "The `max_size` parameter is deprecated and will be removed in v4.26. "
+                "The `max_size` parameter is deprecated.26. "
                 "Please specify in `size['longest_edge'] instead`.",
             )
             max_size = kwargs.pop("max_size")

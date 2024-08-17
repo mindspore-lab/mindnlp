@@ -529,7 +529,7 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
 
         Raises:
             DeprecationWarning: If the method is called, a DeprecationWarning will be raised to notify that the
-                private method `_normalize` is deprecated and will be removed in v5 of Transformers. Users are
+                private method `_normalize` is deprecated. Users are
                 encouraged to use the `normalize` method to normalize the input string.
 
         Note:
@@ -542,12 +542,12 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
             >>> text = "Hello, World!"
             >>> tokenizer._normalize(text)
             .. warning::
-                The `_normalize` method is deprecated and will be removed in v5 of Transformers.
+                The `_normalize` method is deprecated.
                 You can normalize an input string using the Whisper English normalizer using the `normalize` method.
             ```
         """
         warnings.warn(
-            "The private method `_normalize` is deprecated and will be removed in v5 of Transformers."
+            "The private method `_normalize` is deprecated."
             "You can normalize an input string using the Whisper English normalizer using the `normalize` method."
         )
         return self.normalize(text)
@@ -569,10 +569,10 @@ class WhisperTokenizerFast(PreTrainedTokenizerFast):
 
         Raises:
             DeprecationWarning: If the method '_basic_normalize' is called, a DeprecationWarning is raised indicating
-                that the method is deprecated and will be removed in v5 of Transformers.
+                that the method is deprecated.
         """
         warnings.warn(
-            "The private method `_basic_normalize` is deprecated and will be removed in v5 of Transformers."
+            "The private method `_basic_normalize` is deprecated."
             "You can normalize an input string using the Whisper basic normalizer using the `basic_normalize` method."
         )
         return self.basic_normalize(text, remove_diacritics=remove_diacritics)
