@@ -15,7 +15,6 @@
 """table question answering pipeline."""
 import collections
 import types
-from typing import Dict
 
 from .base import ArgumentHandler, Dataset, Pipeline, PipelineException
 
@@ -124,7 +123,7 @@ class TableQuestionAnsweringPipeline(Pipeline):
     [hf-mirror.com/models](https://hf-mirror.com/models?filter=table-question-answering).
     """
 
-    def __init__(self, args_paser=TableQuestionAnsweringArgumentHandler(), *args, **kwargs):
+    def __init__(self, *args, args_paser=TableQuestionAnsweringArgumentHandler(), **kwargs):
         super().__init__(*args, **kwargs)
         self._args_paser = args_paser
 
@@ -300,7 +299,7 @@ class TableQuestionAnsweringPipeline(Pipeline):
 
                 answers.append(answer)
             if len(answer) == 0:
-                raise PipelineException("Empty answer")
+                raise PipelineException("Empty answer", self.model.model_tags, "Answer is empty!")
         else:
             answers = [{"answer": answer} for answer in self.tokenizer.batch_decode(outputs, skip_special_tokens=True)]
 

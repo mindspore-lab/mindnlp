@@ -28,7 +28,6 @@ from mindnlp.utils import (
     logging,
 )
 from mindnlp.utils.peft_utils import find_adapter_config_file
-from .table_question_answering import TableQuestionAnsweringPipeline
 from ..configuration_utils import PretrainedConfig
 from ..feature_extraction_utils import PreTrainedFeatureExtractor
 from ..models.auto.configuration_auto import AutoConfig
@@ -55,6 +54,7 @@ from .automatic_speech_recognition import AutomaticSpeechRecognitionPipeline
 from .zero_shot_classification import ZeroShotClassificationArgumentHandler, ZeroShotClassificationPipeline
 from .document_question_answering import DocumentQuestionAnsweringPipeline
 from .fill_mask import FillMaskPipeline
+from .table_question_answering import TableQuestionAnsweringPipeline
 
 from ..models.auto.modeling_auto import (
     # AutoModel,
@@ -68,7 +68,8 @@ from ..models.auto.modeling_auto import (
     AutoModelForQuestionAnswering,
     AutoModelForSeq2SeqLM,
     AutoModelForSequenceClassification,
-    AutoModelForSpeechSeq2Seq, AutoModelForTableQuestionAnswering,
+    AutoModelForSpeechSeq2Seq,
+    AutoModelForTableQuestionAnswering,
     # AutoModelForTableQuestionAnswering,
     # AutoModelForTextToSpectrogram,
     # AutoModelForTextToWaveform,
