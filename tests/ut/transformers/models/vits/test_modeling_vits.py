@@ -43,7 +43,6 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    mindspore.set_context(pynative_synchronize=True)
     from mindnlp.core import nn, ops
 
     from mindnlp.transformers import VitsModel, VitsTokenizer

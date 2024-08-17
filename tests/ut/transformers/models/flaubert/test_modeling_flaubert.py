@@ -36,7 +36,6 @@ if is_mindspore_available():
 
     import mindspore
 
-
 class FlaubertModelTester:
     def __init__(
         self,
