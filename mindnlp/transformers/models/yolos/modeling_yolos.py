@@ -907,7 +907,7 @@ class YolosLoss(nn.Module):
         target_lengths = Tensor([len(v["class_labels"]) for v in targets])
         # Count the number of predictions that are NOT "no-object" (which is the last class)
         card_pred = (logits.argmax(-1) != logits.shape[-1] - 1).sum(1)
-        card_err = ops.l1_loss(card_pred.float(), target_lengths.float())
+        card_err = F.l1_loss(card_pred.float(), target_lengths.float())
         losses = {"cardinality_error": card_err}
         return losses
 
@@ -924,7 +924,7 @@ class YolosLoss(nn.Module):
         source_boxes = outputs["pred_boxes"][idx]
         target_boxes = ops.cat([t["boxes"][i] for t, (_, i) in zip(targets, indices)], dim=0)
 
-        loss_bbox = ops.l1_loss(source_boxes, target_boxes, reduction="none")
+        loss_bbox = F.l1_loss(source_boxes, target_boxes, reduction="none")
 
         losses = {}
         losses["loss_bbox"] = loss_bbox.sum() / num_boxes
@@ -1052,7 +1052,7 @@ class YolosMLPPredictionHead(nn.Module):
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
-            x = ops.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
+            x = F.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
         return x
 
 
