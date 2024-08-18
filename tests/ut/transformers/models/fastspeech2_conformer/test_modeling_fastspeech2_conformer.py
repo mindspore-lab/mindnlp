@@ -39,7 +39,6 @@ if is_mindspore_available():
     from mindnlp.transformers import FastSpeech2ConformerModel, FastSpeech2ConformerWithHifiGan
     from mindspore import set_seed
 
-mindspore.set_context(pynative_synchronize=True)
 class FastSpeech2ConformerModelTester:
     def __init__(
         self,

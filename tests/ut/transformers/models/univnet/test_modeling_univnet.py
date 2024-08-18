@@ -217,7 +217,7 @@ class UnivNetModelTest(ModelTesterMixin, unittest.TestCase):
             )
 
 
-# @slow
+@slow
 class UnivNetModelIntegrationTests(unittest.TestCase):
     def tearDown(self):
         super().tearDown()
