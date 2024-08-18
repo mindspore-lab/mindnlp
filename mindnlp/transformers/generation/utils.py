@@ -1850,7 +1850,6 @@ class GenerationMixin:
         prepared_stopping_criteria = self._get_stopping_criteria(
             generation_config=generation_config, stopping_criteria=stopping_criteria, tokenizer=tokenizer, **kwargs
         )
-
         # 10. go into different generation modes
         if generation_mode == GenerationMode.ASSISTED_GENERATION:
             if generation_config.num_return_sequences > 1:
@@ -2922,6 +2921,7 @@ class GenerationMixin:
             # Clone is needed to avoid keeping a hanging ref to outputs.logits which may be very large for first iteration
             # (the clone itself is always small)
             next_token_logits = outputs.logits[:, -1, :]
+
             # pre-process distribution
             next_token_scores = logits_processor(input_ids, next_token_logits)
             if do_sample:

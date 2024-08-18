@@ -325,7 +325,7 @@ class RepetitionPenaltyLogitsProcessor(LogitsProcessor):
         # if score < 0 then repetition penalty has to be multiplied to reduce the token probabilities
         score = ops.where(score < 0, score * self.penalty, score / self.penalty)
 
-        scores_processed = scores.scatter(1, input_ids, score)
+        scores_processed = ops.scatter(scores, 1, input_ids, score)
         return scores_processed
 
 
@@ -1939,7 +1939,7 @@ class WhisperTimeStampLogitsProcessor(LogitsProcessor):
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         # suppress <|notimestamps|> which is handled by without_timestamps
         scores_processed = scores
-        scores_processed[:, self.no_timestamps_token_id] = -float("inf")
+        scores_processed[:, self.no_timestamps_token_id] = float(ops.finfo(scores.dtype).min)
 
         # timestamps have to appear in pairs, except directly before eos_token; mask logits accordingly
         for k in range(input_ids.shape[0]):
@@ -1951,11 +1951,12 @@ class WhisperTimeStampLogitsProcessor(LogitsProcessor):
 
             if last_was_timestamp:
                 if penultimate_was_timestamp:  # has to be non-timestamp
-                    scores_processed[k, self.timestamp_begin :] = -float("inf")
+                    scores_processed[k, self.timestamp_begin :] = float(ops.finfo(scores.dtype).min)
                 else:  # cannot be normal text tokens
-                    scores_processed[k, : self.eos_token_id] = -float("inf")
+                    scores_processed[k, : self.eos_token_id] = float(ops.finfo(scores.dtype).min)
 
-            timestamps = sampled_tokens[sampled_tokens.ge(self.timestamp_begin)]
+            # timestamps = sampled_tokens[ops.ge(sampled_tokens, self.timestamp_begin)]
+            timestamps = ops.masked_select(sampled_tokens, ops.ge(sampled_tokens, self.timestamp_begin))
             if timestamps.numel() > 0:
                 # `timestamps` shouldn't decrease; forbid timestamp tokens smaller than the last
                 # The following lines of code are copied from: https://github.com/openai/whisper/pull/914/files#r1137085090
@@ -1965,23 +1966,23 @@ class WhisperTimeStampLogitsProcessor(LogitsProcessor):
                     # Avoid to emit <|0.00|> again
                     timestamp_last = timestamps[-1] + 1
 
-                scores_processed[k, self.timestamp_begin : timestamp_last] = -float("inf")
+                scores_processed[k, self.timestamp_begin : timestamp_last] = float(ops.finfo(scores.dtype).min)
 
         # apply the `max_initial_timestamp` option
         if input_ids.shape[1] == self.begin_index:
-            scores_processed[:, : self.timestamp_begin] = -float("inf")
+            scores_processed[:, : self.timestamp_begin] = float(ops.finfo(scores.dtype).min)
 
             if self.max_initial_timestamp_index is not None:
                 last_allowed = self.timestamp_begin + self.max_initial_timestamp_index
-                scores_processed[:, last_allowed + 1 :] = -float("inf")
+                scores_processed[:, last_allowed + 1 :] = float(ops.finfo(scores.dtype).min)
 
         # if sum of probability over timestamps is above any other token, sample timestamp
         logprobs = nn.functional.log_softmax(scores_processed.float(), dim=-1)
         for k in range(input_ids.shape[0]):
-            timestamp_logprob = logprobs[k, self.timestamp_begin :].logsumexp(dim=-1)
+            timestamp_logprob = ops.logsumexp(logprobs[k, self.timestamp_begin :], dim=-1)
             max_text_token_logprob = logprobs[k, : self.timestamp_begin].max()
-            if timestamp_logprob > max_text_token_logprob and self._detect_timestamp_from_logprob:
-                scores_processed[k, : self.timestamp_begin] = -float("inf")
+            if not ops.isnan(timestamp_logprob) and timestamp_logprob > max_text_token_logprob and self._detect_timestamp_from_logprob:
+                scores_processed[k, : self.timestamp_begin] = float(ops.finfo(scores.dtype).min)
 
         return scores_processed
 

@@ -10,4 +10,5 @@ from .reduction import *
 from .other import *
 from .tensor import *
 from .fft_op import *
+from .spectral import *
 from ._inner import assign

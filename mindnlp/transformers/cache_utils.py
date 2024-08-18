@@ -990,7 +990,7 @@ class EncoderDecoderCache(Cache):
         """Returns the sequence length of the cached states. A layer index can be optionally passed."""
         if len(self.self_attention_cache.key_cache) <= layer_idx:
             return 0
-        return (self.self_attention_cache.key_cache[layer_idx][0, 0].any(dim=-1)).sum()
+        return (ops.any(self.self_attention_cache.key_cache[layer_idx][0, 0], dim=-1)).sum().item()
 
     def reset(self):
         if hasattr(self.self_attention_cache, "reset"):

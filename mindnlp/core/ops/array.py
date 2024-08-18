@@ -88,7 +88,8 @@ def index_select(input, dim, index):
     return ops.index_select(input, dim, index)
 
 # masked_select
-
+def masked_select(input, mask):
+    return ops.masked_select(input, mask)
 
 # movedim
 

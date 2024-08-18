@@ -61,7 +61,6 @@ else:
     FlavaForPreTraining = None
     mindspore = {}
 
-
 if is_vision_available():
     from PIL import Image
 
@@ -1038,7 +1037,7 @@ class FlavaForPreTrainingTester(FlavaModelTester):
             0, self.image_model_tester.vocab_size, bool_masked_pos.shape
         )
         mim_labels[bool_masked_pos.ne(True)] = config.ce_ignore_index
-        itm_labels = ops.ones(mlm_labels.shape[0]) # .int64
+        itm_labels = ops.ones(mlm_labels.shape[0], dtype=mindspore.int64) # .int64
 
         return config, {
             "input_ids": input_ids,
