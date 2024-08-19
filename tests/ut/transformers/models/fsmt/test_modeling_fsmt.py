@@ -336,7 +336,7 @@ class FSMTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
 

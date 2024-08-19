@@ -242,7 +242,7 @@ class Dinov2ModelTest(ModelTesterMixin,  unittest.TestCase):
         pass
     
     # override since we have embeddings / LM heads over multiple codebooks
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
         for model_class in self.all_model_classes:
             model = model_class(config)

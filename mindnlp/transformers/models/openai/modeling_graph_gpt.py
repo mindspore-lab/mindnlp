@@ -24,7 +24,7 @@ from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
-from .configuration_gpt import GPTConfig
+from .configuration_openai import OpenAIGPTConfig
 from ...modeling_utils import PreTrainedModel, SequenceSummary
 from ...ms_utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 from ...activations import ACT2FN
@@ -305,7 +305,7 @@ class Block(nn.Module):
 
 class GPTPreTrainedModel(PreTrainedModel):
     """BertPretrainedModel"""
-    config_class = GPTConfig
+    config_class = OpenAIGPTConfig
     base_model_prefix = 'transformer'
 
     def _init_weights(self, cell):
@@ -602,7 +602,7 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
 
         Args:
             self: The GPTDoubleHeadsModel instance.
-            config: An instance of the GPTConfig class that holds the configuration parameters.
+            config: An instance of the OpenAIGPTConfig class that holds the configuration parameters.
 
         Returns:
             None.

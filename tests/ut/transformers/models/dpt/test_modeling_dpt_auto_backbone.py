@@ -220,7 +220,7 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="DPT with AutoBackbone does not have a base model and hence no input_embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(reason="DPT with AutoBackbone does not have a base model")

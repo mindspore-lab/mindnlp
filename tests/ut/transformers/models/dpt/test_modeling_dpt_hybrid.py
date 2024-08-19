@@ -202,7 +202,7 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="DPT does not use the nn.Embedding")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_model_get_set_embeddings(self):

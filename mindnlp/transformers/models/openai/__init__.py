@@ -16,14 +16,14 @@
 GPT Model.
 """
 
-from . import configuration_gpt, modeling_gpt, tokenization_gpt, tokenization_gpt_fast
-from .modeling_gpt import *
-from .configuration_gpt import *
-from .tokenization_gpt import *
-from .tokenization_gpt_fast import *
+from . import configuration_openai, modeling_openai, tokenization_openai, tokenization_openai_fast
+from .modeling_openai import *
+from .configuration_openai import *
+from .tokenization_openai import *
+from .tokenization_openai_fast import *
 
 __all__ = []
-__all__.extend(modeling_gpt.__all__)
-__all__.extend(configuration_gpt.__all__)
-__all__.extend(tokenization_gpt.__all__)
-__all__.extend(tokenization_gpt_fast.__all__)
+__all__.extend(modeling_openai.__all__)
+__all__.extend(configuration_openai.__all__)
+__all__.extend(tokenization_openai.__all__)
+__all__.extend(tokenization_openai_fast.__all__)

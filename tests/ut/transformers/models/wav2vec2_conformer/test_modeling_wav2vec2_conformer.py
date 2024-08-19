@@ -516,7 +516,7 @@ class Wav2Vec2ConformerModelTest(ModelTesterMixin, unittest.TestCase):
     # Wav2Vec2Conformer has no inputs_embeds
     # and thus the `get_input_embeddings` fn
     # is not implemented
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     #@is_pt_flax_cross_test

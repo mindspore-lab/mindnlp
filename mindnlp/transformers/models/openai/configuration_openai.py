@@ -13,23 +13,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" OpenAI GPT configuration"""
+"""OpenAI GPT configuration"""
 
-from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
+from ....utils import logging
 
 
 logger = logging.get_logger(__name__)
 
-OPENAI_GPT_PRETRAINED_CONFIG_ARCHIVE_MAP = {"openai-gpt": "https://hf-mirror.com/openai-gpt/resolve/main/config.json"}
 
-
-class GPTConfig(PretrainedConfig):
+class OpenAIGPTConfig(PretrainedConfig):
     """
     This is the configuration class to store the configuration of a [`OpenAIGPTModel`] or a [`TFOpenAIGPTModel`]. It is
     used to instantiate a GPT model according to the specified arguments, defining the model architecture.
     Instantiating a configuration with the defaults will yield a similar configuration to that of the GPT
-    [openai-gpt](https://hf-mirror.com/openai-gpt) architecture from OpenAI.
+    [openai-community/openai-gpt](https://huggingface.co/openai-community/openai-gpt) architecture from OpenAI.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -63,13 +61,14 @@ class GPTConfig(PretrainedConfig):
         summary_type (`str`, *optional*, defaults to `"cls_index"`):
             Argument used when doing sequence summary, used in the models [`OpenAIGPTDoubleHeadsModel`] and
             [`OpenAIGPTDoubleHeadsModel`].
+
             Has to be one of the following options:
 
-            - `"last"`: Take the last token hidden state (like XLNet).
-            - `"first"`: Take the first token hidden state (like BERT).
-            - `"mean"`: Take the mean of all tokens hidden states.
-            - `"cls_index"`: Supply a Tensor of classification token position (like GPT/GPT-2).
-            - `"attn"`: Not implemented now, use multi-head attention.
+                - `"last"`: Take the last token hidden state (like XLNet).
+                - `"first"`: Take the first token hidden state (like BERT).
+                - `"mean"`: Take the mean of all tokens hidden states.
+                - `"cls_index"`: Supply a Tensor of classification token position (like GPT/GPT-2).
+                - `"attn"`: Not implemented now, use multi-head attention.
         summary_use_proj (`bool`, *optional*, defaults to `True`):
             Argument used when doing sequence summary, used in the models [`OpenAIGPTDoubleHeadsModel`] and
             [`OpenAIGPTDoubleHeadsModel`].
@@ -92,20 +91,21 @@ class GPTConfig(PretrainedConfig):
             The dropout ratio to be used after the projection and activation.
 
 
-    Example:
-        ```python
-        >>> from transformers import OpenAIGPTConfig, OpenAIGPTModel
-        ...
-        >>> # Initializing a GPT configuration
-        >>> configuration = OpenAIGPTConfig()
-        ...
-        >>> # Initializing a model (with random weights) from the configuration
-        >>> model = OpenAIGPTModel(configuration)
-        ...
-        >>> # Accessing the model configuration
-        >>> configuration = model.config
-        ```
-    """
+    Examples:
+
+    ```python
+    >>> from transformers import OpenAIGPTConfig, OpenAIGPTModel
+
+    >>> # Initializing a GPT configuration
+    >>> configuration = OpenAIGPTConfig()
+
+    >>> # Initializing a model (with random weights) from the configuration
+    >>> model = OpenAIGPTModel(configuration)
+
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
+    ```"""
+
     model_type = "openai-gpt"
     attribute_map = {
         "max_position_embeddings": "n_positions",
@@ -134,34 +134,6 @@ class GPTConfig(PretrainedConfig):
         summary_first_dropout=0.1,
         **kwargs,
     ):
-        """
-        Initializes a GPTConfig object with the provided parameters.
-
-        Args:
-            vocab_size (int): The size of the vocabulary.
-            n_positions (int): The number of positions.
-            n_embd (int): The embedding dimension.
-            n_layer (int): The number of layers.
-            n_head (int): The number of attention heads.
-            afn (str): The activation function to be used.
-            resid_pdrop (float): The dropout probability for residual connections.
-            embd_pdrop (float): The dropout probability for the embeddings.
-            attn_pdrop (float): The dropout probability for attention layers.
-            layer_norm_epsilon (float): The epsilon value for layer normalization.
-            initializer_range (float): The range of the initializer.
-            summary_type (str): The type of summary to be used.
-            summary_use_proj (bool): Whether to use projection in summary.
-            summary_activation (str): The activation function for the summary.
-            summary_proj_to_labels (bool): Whether to project the summary to labels.
-            summary_first_dropout (float): The dropout probability for the first layer of the summary.
-            **kwargs: Additional keyword arguments.
-
-        Returns:
-            None.
-
-        Raises:
-            None
-        """
         self.vocab_size = vocab_size
         self.n_positions = n_positions
         self.n_embd = n_embd
@@ -180,4 +152,4 @@ class GPTConfig(PretrainedConfig):
         self.summary_proj_to_labels = summary_proj_to_labels
         super().__init__(**kwargs)
 
-__all__ = ['GPTConfig']
+__all__ = ['OpenAIGPTConfig']

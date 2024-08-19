@@ -102,7 +102,7 @@ from . import (
     fsmt,
     gemma,
     git,
-    gpt,
+    openai,
     gpt2,
     gpt_bigcode,
     gptj,
@@ -330,7 +330,7 @@ from .fsmt import *
 from .fastspeech2_conformer import *
 from .gemma import *
 from .git import *
-from .gpt import *
+from .openai import *
 from .gptj import *
 from .gpt_neo import *
 from .gpt_neox import *
@@ -556,7 +556,7 @@ __all__.extend(fsmt.__all__)
 __all__.extend(fastspeech2_conformer.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)
-__all__.extend(gpt.__all__)
+__all__.extend(openai.__all__)
 __all__.extend(gptj.__all__)
 __all__.extend(gemma.__all__)
 __all__.extend(git.__all__)
