@@ -310,7 +310,7 @@ class NllbMoeTop2Router(nn.Module):
         top_1_max_probs = (router_probs * top_1_mask).sum(axis=1)
         top_2_max_probs = (router_probs * top_2_mask).sum(axis=1)
         denom_s = ops.clamp(
-            top_1_max_probs + top_2_max_probs, min=ops.finfo(router_probs.dtype).eps
+            top_1_max_probs + top_2_max_probs, min=float(ops.finfo(router_probs.dtype).eps)
         )
         top_1_max_probs = top_1_max_probs / denom_s
         top_2_max_probs = top_2_max_probs / denom_s
@@ -335,7 +335,7 @@ class NllbMoeTop2Router(nn.Module):
         top_1_mask = F.one_hot(top_1_expert_index, num_classes=self.num_experts)
 
         if self.second_expert_policy == "sampling":
-            gumbel = ops.distributions.gumbel.Gumbel(0, 1).rsample
+            gumbel = mindspore.nn.probability.distribution.Gumbel(float(0), float(1)).sample
             router_logits += gumbel(router_logits.shape)
 
         # replace top_1_expert_index with min values
@@ -366,21 +366,21 @@ class NllbMoeTop2Router(nn.Module):
         if self.batch_prioritized_routing:
             # sort tokens based on their routing probability
             # to make sure important tokens are routed, first
-            importance_scores = -1 * router_probs.max(dim=1)[0]
-            sorted_top_1_mask = top_1_mask[importance_scores.argsort(dim=0)]
+            importance_scores = -1 * router_probs.max(axis=1)
+            sorted_top_1_mask = top_1_mask[importance_scores.argsort(axis=0)]
             sorted_cumsum1 = (
                 ops.cumsum(sorted_top_1_mask, dim=0) - 1
             ) * sorted_top_1_mask
             locations1 = sorted_cumsum1[
-                importance_scores.argsort(dim=0).argsort(dim=0)
+                importance_scores.argsort(axis=0).argsort(axis=0)
             ]
 
-            sorted_top_2_mask = top_2_mask[importance_scores.argsort(dim=0)]
+            sorted_top_2_mask = top_2_mask[importance_scores.argsort(axis=0)]
             sorted_cumsum2 = (
                 ops.cumsum(sorted_top_2_mask, dim=0) - 1
             ) * sorted_top_2_mask
             locations2 = sorted_cumsum2[
-                importance_scores.argsort(dim=0).argsort(dim=0)
+                importance_scores.argsort(axis=0).argsort(axis=0)
             ]
             # Update 2nd's location by accounting for locations of 1st
             locations2 += ops.sum(top_1_mask, dim=0, keepdim=True)
@@ -463,6 +463,14 @@ class NllbMoeDenseActDense(nn.Module):
         self.act = ACT2FN[config.activation_function]
 
     def forward(self, hidden_states):
+        print(f"hidden_state shape: {hidden_states.shape}")
+        if hidden_states.shape[0] == 0:
+            hidden_states.view(-1, 16)
+            print(f"hidden_state shape: {hidden_states.shape}")
+            print(hidden_states)
+
+        # print(hidden_states)
+        # exit(0)
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -470,8 +478,8 @@ class NllbMoeDenseActDense(nn.Module):
             isinstance(self.fc2.weight, mindspore.Tensor)
             and hidden_states.dtype != self.fc2.weight.dtype
             and (
-                self.fc2.weight.dtype != mindspore.int328
-                and self.fc2.weight.dtype != ops.uint8
+                self.fc2.weight.dtype != mindspore.int8
+                and self.fc2.weight.dtype != mindspore.uint8
             )
         ):
             hidden_states = hidden_states.to(self.fc2.weight.dtype)
@@ -1406,7 +1414,7 @@ class NllbMoeDecoder(NllbMoePreTrainedModel):
                         f"The `{mask_name}` should be specified for {len(self.layers)} layers, but it is for"
                         f" {head_mask.shape[0]}."
                     )
-        deepspeed_zero3_is_enabled = is_deepspeed_zero3_enabled()
+        # deepspeed_zero3_is_enabled = is_deepspeed_zero3_enabled()
 
         for idx, decoder_layer in enumerate(self.layers):
             if output_hidden_states:
@@ -1420,7 +1428,7 @@ class NllbMoeDecoder(NllbMoePreTrainedModel):
                 if self.training and (dropout_probability < self.layerdrop)
                 else False
             )
-            if not skip_the_layer or deepspeed_zero3_is_enabled:
+            if not skip_the_layer:
                 layer_head_mask = head_mask[idx] if head_mask is not None else None
                 cross_attn_layer_head_mask = (
                     cross_attn_head_mask[idx]
