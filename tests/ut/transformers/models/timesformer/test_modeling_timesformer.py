@@ -1,6 +1,5 @@
 # coding=utf-8
 # Copyright 2022 The HuggingFace Inc. team. All rights reserved.
-# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,16 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the MindSpore TimeSformer model. """
-
+"""Testing suite for the PyTorch TimeSformer model."""
 
 import copy
 import unittest
 
 import numpy as np
 from huggingface_hub import hf_hub_download
-
-import mindspore.ops
 
 from mindnlp.transformers import TimesformerConfig
 from mindnlp.transformers.models.auto import get_values
@@ -36,7 +32,7 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn
+    from mindnlp.core import nn, ops, no_grad
 
     from mindnlp.transformers import (
         MODEL_FOR_VIDEO_CLASSIFICATION_MAPPING,
@@ -130,18 +126,19 @@ class TimesformerModelTester:
 
     def create_and_check_model(self, config, pixel_values, labels):
         model = TimesformerModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values)
         self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
 
     def create_and_check_for_video_classification(self, config, pixel_values, labels):
         model = TimesformerForVideoClassification(config)
-        model.set_train(False)
+        model.eval()
 
         result = model(pixel_values)
 
         # verify the logits shape
-        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
+        expected_shape = (self.batch_size, self.num_labels)
+        self.parent.assertEqual(result.logits.shape, expected_shape)
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -165,7 +162,6 @@ class TimesformerModelTest(ModelTesterMixin, unittest.TestCase):
     )
 
     test_pruning = False
-    test_torchscript = False
     test_resize_embeddings = False
     test_head_masking = False
 
@@ -180,7 +176,7 @@ class TimesformerModelTest(ModelTesterMixin, unittest.TestCase):
 
         if return_labels:
             if model_class in get_values(MODEL_FOR_VIDEO_CLASSIFICATION_MAPPING):
-                inputs_dict["labels"] = mindspore.ops.zeros(
+                inputs_dict["labels"] = ops.zeros(
                     self.model_tester.batch_size, dtype=mindspore.int64
                 )
 
@@ -193,14 +189,14 @@ class TimesformerModelTest(ModelTesterMixin, unittest.TestCase):
     def test_inputs_embeds(self):
         pass
 
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
             self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     def test_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -218,7 +214,7 @@ class TimesformerModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_attention_outputs(self):
         if not self.has_attentions:
-            pass
+            self.skipTest(reason="Model has no attentions")
 
         else:
             config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -232,8 +228,9 @@ class TimesformerModelTest(ModelTesterMixin, unittest.TestCase):
                 inputs_dict["output_hidden_states"] = False
                 config.return_dict = True
                 model = model_class(config)
-                model.set_train(False)
-                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+                model.eval()
+                with no_grad():
+                    outputs = model(**self._prepare_for_class(inputs_dict, model_class))
                 attentions = outputs.attentions
                 self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -241,8 +238,9 @@ class TimesformerModelTest(ModelTesterMixin, unittest.TestCase):
                 del inputs_dict["output_attentions"]
                 config.output_attentions = True
                 model = model_class(config)
-                model.set_train(False)
-                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+                model.eval()
+                with no_grad():
+                    outputs = model(**self._prepare_for_class(inputs_dict, model_class))
                 attentions = outputs.attentions
                 self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -257,8 +255,9 @@ class TimesformerModelTest(ModelTesterMixin, unittest.TestCase):
                 inputs_dict["output_attentions"] = True
                 inputs_dict["output_hidden_states"] = True
                 model = model_class(config)
-                model.set_train(False)
-                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+                model.eval()
+                with no_grad():
+                    outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
                 self.assertEqual(out_len + 1, len(outputs))
 
@@ -275,9 +274,10 @@ class TimesformerModelTest(ModelTesterMixin, unittest.TestCase):
     def test_hidden_states_output(self):
         def check_hidden_states_output(inputs_dict, config, model_class):
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             hidden_states = outputs.hidden_states
             expected_num_layers = self.model_tester.num_hidden_layers + 1
@@ -331,14 +331,16 @@ class TimesformerModelIntegrationTest(unittest.TestCase):
 
         image_processor = self.default_image_processor
         video = prepare_video()
-        inputs = image_processor(video[:8], return_tensors="ms")
+        inputs = image_processor(video[:8], return_tensors="pt")
 
         # forward pass
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
 
         # verify the logits
-        self.assertEqual(outputs.logits.shape, (1, 400))
+        expected_shape = (1, 400)
+        self.assertEqual(outputs.logits.shape, expected_shape)
 
         expected_slice = mindspore.tensor([-0.3016, -0.7713, -0.4205])
 
-        self.assertTrue(np.allclose(outputs.logits[0, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(outputs.logits[0, :3], expected_slice, atol=1e-4))

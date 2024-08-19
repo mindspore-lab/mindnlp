@@ -302,3 +302,12 @@ def getitem(tensor, slice):
     slices = _slice_helper(slice)
     # input_x, begin, end, strides, begin_mask=0, end_mask=0, ellipsis_mask=0, new_axis_mask=0, shrink_axis_mask=0
     return ops.strided_slice(tensor, *slices)
+
+def tensor_scatter_add(input, indeices, updates):
+    return ops.tensor_scatter_add(input, indeices, updates)
+
+def tensor_scatter_max(input, indeices, updates):
+    return ops.tensor_scatter_max(input, indeices, updates)
+
+def tensor_scatter_min(input, indeices, updates):
+    return ops.tensor_scatter_min(input, indeices, updates)
