@@ -710,7 +710,7 @@ class Wav2Vec2FeatureExtractor(Wav2Vec2FeatureEncoder):
     It is designed to extract features from audio data for use in Wav2Vec2 models.
 
     This class inherits from Wav2Vec2FeatureEncoder, and it is recommended to use Wav2Vec2FeatureEncoder instead of
-    this class, as Wav2Vec2FeatureExtractor has been deprecated and will be removed in Transformers v5.
+    this class, as Wav2Vec2FeatureExtractor has been deprecated.
 
     Please refer to the documentation for Wav2Vec2FeatureEncoder for feature extraction and encoding in Wav2Vec2 models.
     """
@@ -728,7 +728,7 @@ class Wav2Vec2FeatureExtractor(Wav2Vec2FeatureEncoder):
 
         Raises:
             FutureWarning: If the class Wav2Vec2FeatureExtractor is used, a FutureWarning is raised indicating that
-                the class has been depreciated and will be removed in Transformers v5. It is recommended to use the base
+                the class has been depreciated. It is recommended to use the base
                 class instead.
         """
         super().__init__(config)
@@ -2111,7 +2111,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
 
         if use_auth_token is not None:
             warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+                "The `use_auth_token` argument is deprecated. Please use `token` instead.",
                 FutureWarning,
             )
             if token is not None:
@@ -2245,7 +2245,7 @@ class Wav2Vec2Model(Wav2Vec2PreTrainedModel):
     the time axis and/or the feature axis according to SpecAugment.
     - `forward`: Constructs the model by processing the input values and returns the model outputs.
 
-    Please note that the `freeze_feature_extractor()` method is deprecated and will be removed in Transformers v5.
+    Please note that the `freeze_feature_extractor()` method is deprecated.
     The equivalent `freeze_feature_encoder()` method should be used instead.
 
     For more information about the Wav2Vec2 model, please refer to the official paper [SpecAugment]
@@ -2295,7 +2295,7 @@ class Wav2Vec2Model(Wav2Vec2PreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -2491,7 +2491,7 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -2899,7 +2899,7 @@ class Wav2Vec2ForCTC(Wav2Vec2PreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -3048,7 +3048,7 @@ class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -3473,7 +3473,7 @@ class Wav2Vec2ForXVector(Wav2Vec2PreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )

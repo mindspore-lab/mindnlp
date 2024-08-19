@@ -21,9 +21,12 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import ops, Tensor
+from mindspore import Tensor
 from huggingface_hub import hf_hub_download
 from huggingface_hub.utils import RepositoryNotFoundError
+
+from mindnlp.core import ops
+from mindnlp.core.nn import functional as F
 
 from ...image_processing_utils import BaseImageProcessor, BatchFeature, get_size_dict
 from ...image_transforms import (
@@ -174,7 +177,7 @@ def remove_low_and_no_objects(masks, scores, labels, object_mask_threshold, num_
     if not (masks.shape[0] == scores.shape[0] == labels.shape[0]):
         raise ValueError("mask, scores and labels must have the same shape!")
 
-    to_keep = labels.ne(num_labels) & (scores > object_mask_threshold)
+    to_keep = (labels.ne(num_labels).int() & (scores > object_mask_threshold).int()).bool()
 
     return masks[to_keep], scores[to_keep], labels[to_keep]
 
@@ -215,7 +218,7 @@ def compute_segments(
     segments: List[Dict] = []
 
     if target_size is not None:
-        mask_probs = ops.interpolate(
+        mask_probs = F.interpolate(
             mask_probs.unsqueeze(0), size=target_size, mode="bilinear", align_corners=False
         )[0]
 
@@ -445,7 +448,7 @@ class OneFormerImageProcessor(BaseImageProcessor):
 
         if "reduce_labels" in kwargs:
             warnings.warn(
-                "The `reduce_labels` argument is deprecated and will be removed in v4.27. "
+                "The `reduce_labels` argument is deprecated.27. "
                 "Please use `do_reduce_labels` instead.",
                 FutureWarning,
             )
@@ -504,7 +507,7 @@ class OneFormerImageProcessor(BaseImageProcessor):
         """
         if "max_size" in kwargs:
             warnings.warn(
-                "The `max_size` parameter is deprecated and will be removed in v4.27. "
+                "The `max_size` parameter is deprecated.27. "
                 "Please specify in `size['longest_edge'] instead`.",
                 FutureWarning,
             )
@@ -698,12 +701,12 @@ class OneFormerImageProcessor(BaseImageProcessor):
     ) -> BatchFeature:
         if "pad_and_return_pixel_mask" in kwargs:
             warnings.warn(
-                "The `pad_and_return_pixel_mask` argument is deprecated and will be removed in v4.27",
+                "The `pad_and_return_pixel_mask` argument is deprecated.27",
                 FutureWarning,
             )
         if "reduce_labels" in kwargs:
             warnings.warn(
-                "The `reduce_labels` argument is deprecated and will be removed in a v4.27. Please use"
+                "The `reduce_labels` argument is deprecated.27. Please use"
                 " `do_reduce_labels` instead.",
                 FutureWarning,
             )
@@ -1135,7 +1138,7 @@ class OneFormerImageProcessor(BaseImageProcessor):
         masks_queries_logits = outputs.masks_queries_logits  # [batch_size, num_queries, height, width]
 
         # Remove the null class `[..., :-1]`
-        masks_classes = ops.softmax(class_queries_logits, axis=-1)[..., :-1]
+        masks_classes = ops.softmax(class_queries_logits, dim=-1)[..., :-1]
         masks_probs = masks_queries_logits.sigmoid()  # [batch_size, num_queries, height, width]
 
         # Semantic segmentation logits of shape (batch_size, num_classes, height, width)
@@ -1151,7 +1154,7 @@ class OneFormerImageProcessor(BaseImageProcessor):
 
             semantic_segmentation = []
             for idx in range(batch_size):
-                resized_logits = ops.interpolate(
+                resized_logits = F.interpolate(
                     segmentation[idx].unsqueeze(dim=0), size=target_sizes[idx], mode="bilinear", align_corners=False
                 )
                 semantic_map = resized_logits[0].argmax(axis=0)
@@ -1223,8 +1226,8 @@ class OneFormerImageProcessor(BaseImageProcessor):
 
         for i in range(batch_size):
             # [Q, K]
-            scores = ops.softmax(class_queries_logits[i], axis=-1)[:, :-1]
-            labels = ops.arange(num_classes).unsqueeze(0).repeat(num_queries, 1).flatten()
+            scores = ops.softmax(class_queries_logits[i], dim=-1)[:, :-1]
+            labels = ops.arange(num_classes).unsqueeze(0).tile((num_queries, 1)).flatten()
 
             #scores_per_image, topk_indices = scores.flatten(0, 1).topk(self.num_queries, sorted=False)
             scores_per_image, topk_indices = scores.flatten().topk(num_queries, sorted=False)
@@ -1340,7 +1343,7 @@ class OneFormerImageProcessor(BaseImageProcessor):
 
         # Predicted label and score of each query (batch_size, num_queries)
         # [B, Q, NC] =(softmax)=> [B, Q, NC] =(max)=> [B, Q, NC]
-        pred = ops.softmax(class_queries_logits, axis=-1)
+        pred = ops.softmax(class_queries_logits, dim=-1)
         pred_scores = pred.max(-1)
         pred_labels = pred.argmax(-1)
 

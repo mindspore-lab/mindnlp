@@ -91,6 +91,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("ernie_m", "ErnieMConfig"),
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),
+        ("flaubert", "FlaubertConfig"),
         ("flava", "FlavaConfig"),
         ("florence2", "Florence2Config"),
         ("fnet", "FNetConfig"),
@@ -145,6 +146,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("opt", "OPTConfig"),
         ("owlv2", "Owlv2Config"),
         ("owlvit", "OwlViTConfig"),
+        ("patchtst", "PatchTSTConfig"),
         ("pegasus", "PegasusConfig"),
         ("pegasus_x", "PegasusXConfig"),
         ("perceiver", "PerceiverConfig"),
@@ -191,6 +193,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("univnet", "UnivNetConfig"),
         ("videomae", "VideoMAEConfig"),
         ("vit", "ViTConfig"),
+        ("vits", "VitsConfig"),
         ("vilt", "ViltConfig"),
         ("vit_hybrid", "ViTHybridConfig"),
         ("vit_msn", "ViTMSNConfig"),
@@ -614,6 +617,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("opt", "OPT"),
         ("owlv2", "OWLv2"),
         ("owlvit", "OWL-ViT"),
+        ("patchtst", "PatchTST"),
         ("pegasus", "Pegasus"),
         ("pegasus_x", "PEGASUS-X"),
         ("perceiver", "Perceiver"),
@@ -967,13 +971,13 @@ class _LazyLoadAllMappings(OrderedDict):
             None.
 
         Raises:
-            FutureWarning: If ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated and will be removed in v5 of Transformers.
+            FutureWarning: If ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated.
                 It does not contain all available model checkpoints. Refer to hf.co/models for that.
         """
         if self._initialized:
             return
         warnings.warn(
-            "ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated and will be removed in v5 of Transformers. "
+            "ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated. "
             "It does not contain all available model checkpoints, far from it. Checkout hf.co/models for that.",
             FutureWarning,
         )

@@ -24,7 +24,12 @@ def bincount(input, weights=None, minlength=0):
 
 
 # broadcast_tensors
+def broadcast_tensors(*tensors):
+    target_shape = broadcast_shapes(*[t.shape for t in tensors])
 
+    broadcasted_tensors = [t.broadcast_to(target_shape) for t in tensors]
+
+    return broadcasted_tensors
 
 # broadcast_to
 def broadcast_to(input, shape):
@@ -33,6 +38,26 @@ def broadcast_to(input, shape):
     return ops.broadcast_to(input, shape)
 
 # broadcast_shapes
+def broadcast_shapes(*shapes):
+    reversed_shapes = [list(reversed(shape)) for shape in shapes]
+
+    max_dim = max(len(shape) for shape in reversed_shapes)
+
+    result_shape = [1] * max_dim
+
+    for i in range(max_dim):
+        current_dim_size = 1
+        for shape in reversed_shapes:
+            if i < len(shape):
+                if shape[i] == 1:
+                    continue
+                if current_dim_size == 1:
+                    current_dim_size = shape[i]
+                elif current_dim_size != shape[i]:
+                    raise ValueError(f"Shapes {shapes} are not broadcastable.")
+        result_shape[i] = current_dim_size
+
+    return tuple(reversed(result_shape))
 
 
 # bucketize
@@ -551,6 +576,10 @@ def flip(input, dims):
 def meshgrid(*tensors, indexing=None):
     if isinstance(tensors[0], (list, tuple)):
         tensors = tensors[0]
+    if len(tensors) == 1:
+        return tensors
+    if indexing is None:
+        indexing = 'ij'
     return ops.meshgrid(*tensors, indexing=indexing)
 
 # lcm

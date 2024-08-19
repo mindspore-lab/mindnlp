@@ -32,6 +32,8 @@
 :::mindnlp.transformers.models.auto.modeling_auto.MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING
 :::mindnlp.transformers.models.auto.modeling_auto.MODEL_FOR_TABLE_QUESTION_ANSWERING_MAPPING
 :::mindnlp.transformers.models.auto.modeling_auto.MODEL_FOR_TEXT_ENCODING_MAPPING
+:::mindnlp.transformers.models.auto.modeling_auto.MODEL_FOR_TIME_SERIES_CLASSIFICATION_MAPPING
+:::mindnlp.transformers.models.auto.modeling_auto.MODEL_FOR_TIME_SERIES_REGRESSION_MAPPING
 :::mindnlp.transformers.models.auto.modeling_auto.MODEL_FOR_TEXT_TO_SPECTROGRAM_MAPPING
 :::mindnlp.transformers.models.auto.modeling_auto.MODEL_FOR_TEXT_TO_WAVEFORM_MAPPING
 :::mindnlp.transformers.models.auto.modeling_auto.MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING

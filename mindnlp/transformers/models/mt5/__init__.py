@@ -15,10 +15,12 @@
 """
 T5 Model init
 """
-from . import configuration_mt5, modeling_mt5
+from . import configuration_mt5, modeling_mt5, tokenization_mt5
 from .configuration_mt5 import *
 from .modeling_mt5 import *
+from .tokenization_mt5 import *
 
 __all__ = []
 __all__.extend(modeling_mt5.__all__)
 __all__.extend(configuration_mt5.__all__)
+__all__.extend(tokenization_mt5.__all__)

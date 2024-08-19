@@ -437,8 +437,7 @@ class PretrainedConfig:
         if len(non_default_generation_parameters) > 0:
             logger.warning(
                 "Some non-default generation parameters are set in the model config. These should go into a "
-                "GenerationConfig file (https://huggingface.co/docs/transformers/generation_strategies#save-a-custom-decoding-strategy-with-your-model) "
-                "instead. This warning will be raised to an exception in v4.41.\n"
+                "GenerationConfig file instead.\n"
                 f"Non-default generation parameters: {str(non_default_generation_parameters)}"
             )
 
@@ -466,7 +465,7 @@ class PretrainedConfig:
 
         if use_auth_token is not None:
             warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+                "The `use_auth_token` argument is deprecated. Please use `token` instead.",
                 FutureWarning,
             )
             if token is not None:

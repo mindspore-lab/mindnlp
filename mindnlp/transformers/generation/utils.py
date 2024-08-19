@@ -923,7 +923,6 @@ class GenerationMixin:
                 )
             )
         if generation_config.forced_decoder_ids is not None:
-            # TODO(Sanchit): deprecate in v4.40 by removing this logic
             warnings.warn(
                 "You have explicitly specified `forced_decoder_ids`. "
                 "This functionality has been deprecated and will throw an error. "
@@ -1354,7 +1353,7 @@ class GenerationMixin:
                 if new_generation_config != self.generation_config:
                     warnings.warn(
                         "You have modified the pretrained model configuration to control generation. This is a"
-                        " deprecated strategy to control generation and will be removed soon, in a future version."
+                        " deprecated strategy to control generation."
                         " Please use and modify the model generation configuration (see"
                         " https://huggingface.co/docs/transformers/generation_strategies#default-text-generation-configuration )"
                     )
@@ -1851,7 +1850,6 @@ class GenerationMixin:
         prepared_stopping_criteria = self._get_stopping_criteria(
             generation_config=generation_config, stopping_criteria=stopping_criteria, tokenizer=tokenizer, **kwargs
         )
-
         # 10. go into different generation modes
         if generation_mode == GenerationMode.ASSISTED_GENERATION:
             if generation_config.num_return_sequences > 1:
@@ -2210,7 +2208,7 @@ class GenerationMixin:
 
     def contrastive_search(self, *args, **kwargs):
         logger.warning_once(
-            "Calling `contrastive_search` directly is deprecated and will be removed in v4.41. Use `generate` or a "
+            "Calling `contrastive_search` directly is deprecated.41. Use `generate` or a "
             "custom generation loop instead.",
         )
         return self._contrastive_search(*args, **kwargs)
@@ -2923,6 +2921,7 @@ class GenerationMixin:
             # Clone is needed to avoid keeping a hanging ref to outputs.logits which may be very large for first iteration
             # (the clone itself is always small)
             next_token_logits = outputs.logits[:, -1, :]
+
             # pre-process distribution
             next_token_scores = logits_processor(input_ids, next_token_logits)
             if do_sample:
