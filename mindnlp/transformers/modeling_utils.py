@@ -851,7 +851,7 @@ class ModuleUtilsMixin:
         """-> [num_hidden_layers x batch x num_heads x seq_length x seq_length]"""
         if head_mask.ndim == 1:
             head_mask = head_mask.unsqueeze(0).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
-            head_mask = head_mask.expand(num_hidden_layers, -1, -1, -1, -1)
+            head_mask = head_mask.broadcast_to((num_hidden_layers, -1, -1, -1, -1))
         elif head_mask.ndim == 2:
             head_mask = head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)  # We can specify head_mask for each layer
         assert head_mask.ndim == 5, f"head_mask.dim != 5, instead {head_mask.ndim}"
@@ -1929,7 +1929,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
 
         if use_auth_token is not None:
             warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+                "The `use_auth_token` argument is deprecated. Please use `token` instead.",
                 FutureWarning,
             )
             if token is not None:
@@ -1945,7 +1945,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
 
         if "save_config" in kwargs:
             warnings.warn(
-                "`save_config` is deprecated and will be removed in v5 of Transformers. Use `is_main_process` instead."
+                "`save_config` is deprecated. Use `is_main_process` instead."
             )
             is_main_process = kwargs.pop("save_config")
         if safe_serialization and not is_safetensors_available():
@@ -3523,9 +3523,9 @@ class PoolerEndLogits(nn.Module):
         ), "One of start_states, start_positions should be not None"
         if start_positions is not None:
             slen, hsz = hidden_states.shape[-2:]
-            start_positions = start_positions[:, None, None].expand(-1, -1, hsz)  # shape (bsz, 1, hsz)
-            start_states = hidden_states.gather(-2, start_positions)  # shape (bsz, 1, hsz)
-            start_states = start_states.expand(-1, slen, -1)  # shape (bsz, slen, hsz)
+            start_positions = start_positions[:, None, None].broadcast_to((-1, -1, hsz))  # shape (bsz, 1, hsz)
+            start_states = ops.gather(hidden_states, -2, start_positions)  # shape (bsz, 1, hsz)
+            start_states = start_states.broadcast_to((-1, slen, -1))  # shape (bsz, slen, hsz)
 
         x = self.dense_0(ops.cat([hidden_states, start_states], dim=-1))
         x = self.activation(x)
@@ -3590,12 +3590,12 @@ class PoolerAnswerClass(nn.Module):
             start_states is not None or start_positions is not None
         ), "One of start_states, start_positions should be not None"
         if start_positions is not None:
-            start_positions = start_positions[:, None, None].expand(-1, -1, hsz)  # shape (bsz, 1, hsz)
-            start_states = hidden_states.gather(-2, start_positions).squeeze(-2)  # shape (bsz, hsz)
+            start_positions = start_positions[:, None, None].broadcast_to((-1, -1, hsz))  # shape (bsz, 1, hsz)
+            start_states = ops.gather(hidden_states, -2, start_positions).squeeze(-2)  # shape (bsz, hsz)
 
         if cls_index is not None:
-            cls_index = cls_index[:, None, None].expand(-1, -1, hsz)  # shape (bsz, 1, hsz)
-            cls_token_state = hidden_states.gather(-2, cls_index).squeeze(-2)  # shape (bsz, hsz)
+            cls_index = cls_index[:, None, None].broadcast_to((-1, -1, hsz))  # shape (bsz, 1, hsz)
+            cls_token_state = ops.gather(hidden_states, -2, cls_index).squeeze(-2)  # shape (bsz, hsz)
         else:
             cls_token_state = hidden_states[:, -1, :]  # shape (bsz, hsz)
 
@@ -3721,9 +3721,9 @@ class SQuADHead(nn.Module):
             start_top_log_probs, start_top_index = ops.topk(
                 start_log_probs, self.start_n_top, dim=-1
             )  # shape (bsz, start_n_top)
-            start_top_index_exp = start_top_index.unsqueeze(-1).expand(-1, -1, hsz)  # shape (bsz, start_n_top, hsz)
+            start_top_index_exp = start_top_index.unsqueeze(-1).broadcast_to((-1, -1, hsz))  # shape (bsz, start_n_top, hsz)
             start_states = ops.gather(hidden_states, -2, start_top_index_exp)  # shape (bsz, start_n_top, hsz)
-            start_states = start_states.unsqueeze(1).expand(-1, slen, -1, -1)  # shape (bsz, slen, start_n_top, hsz)
+            start_states = start_states.unsqueeze(1).broadcast_to((-1, slen, -1, -1))  # shape (bsz, slen, start_n_top, hsz)
 
             hidden_states_expanded = hidden_states.unsqueeze(2).expand_as(
                 start_states
@@ -3828,7 +3828,7 @@ class SequenceSummary(nn.Module):
         elif self.summary_type == "first":
             output = hidden_states[:, 0]
         elif self.summary_type == "mean":
-            output = hidden_states.mean(dim=1)
+            output = ops.mean(hidden_states, dim=1)
         elif self.summary_type == "cls_index":
             if cls_index is None:
                 cls_index = ops.full_like(
@@ -3838,9 +3838,9 @@ class SequenceSummary(nn.Module):
                 )
             else:
                 cls_index = cls_index.unsqueeze(-1).unsqueeze(-1)
-                cls_index = cls_index.expand((-1,) * (cls_index.ndim - 1) + (hidden_states.size(-1),))
+                cls_index = cls_index.broadcast_to((-1,) * (cls_index.ndim - 1) + (hidden_states.size(-1),))
             # shape of cls_index: (bsz, XX, 1, hidden_size) where XX are optional leading dim of hidden_states
-            output = hidden_states.gather(-2, cls_index).squeeze(-2)  # shape (bsz, XX, hidden_size)
+            output = ops.gather(hidden_states, -2, cls_index).squeeze(-2)  # shape (bsz, XX, hidden_size)
         elif self.summary_type == "attn":
             raise NotImplementedError
 

@@ -1,17 +1,18 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2021 The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the MindSpore Perceiver model."""
+"""Testing suite for the PyTorch Perceiver model."""
 
 import copy
 import inspect
@@ -34,11 +35,13 @@ from mindnlp.utils import is_mindspore_available, is_vision_available
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
+# from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindnlp.core import nn, ops, no_grad
+    from mindnlp.engine import set_seed
 
     from mindnlp.transformers import (
         PerceiverForImageClassificationConvProcessing,
@@ -68,39 +71,37 @@ if is_vision_available():
 
 class PerceiverModelTester:
     def __init__(
-            self,
-            parent,
-            batch_size=13,
-            seq_length=7,
-            num_channels=3,
-            image_size=32,
-            train_size=None,
-            num_frames=5,
-            audio_samples_per_frame=200,
-            samples_per_patch=20,
-            nchunks=20,
-            num_latents=10,
-            d_latents=20,
-            d_model=64,
-            num_blocks=1,
-            num_self_attends_per_block=2,
-            num_self_attention_heads=1,
-            num_cross_attention_heads=1,
-            self_attention_widening_factor=4,
-            cross_attention_widening_factor=4,
-            is_training=True,
-            use_input_mask=True,
-            use_labels=True,
-            vocab_size=99,
-            hidden_act="gelu",
-            attention_probs_dropout_prob=0.1,
-            initializer_range=0.02,
-            max_position_embeddings=7,
-            num_labels=3,
-            scope=None,
+        self,
+        parent,
+        batch_size=13,
+        seq_length=7,
+        num_channels=3,
+        image_size=32,
+        train_size=[20, 20],
+        num_frames=5,
+        audio_samples_per_frame=200,
+        samples_per_patch=20,
+        nchunks=20,
+        num_latents=10,
+        d_latents=20,
+        d_model=64,
+        num_blocks=1,
+        num_self_attends_per_block=2,
+        num_self_attention_heads=1,
+        num_cross_attention_heads=1,
+        self_attention_widening_factor=4,
+        cross_attention_widening_factor=4,
+        is_training=True,
+        use_input_mask=True,
+        use_labels=True,
+        vocab_size=99,
+        hidden_act="gelu",
+        attention_probs_dropout_prob=0.1,
+        initializer_range=0.02,
+        max_position_embeddings=7,
+        num_labels=3,
+        scope=None,
     ):
-        if train_size is None:
-            train_size = [20, 20]
         self.parent = parent
         self.batch_size = batch_size
         self.seq_length = seq_length
@@ -135,7 +136,7 @@ class PerceiverModelTester:
         audio_chunk_size = self.num_frames * self.audio_samples_per_frame // self.samples_per_patch // self.nchunks
         self.subsampling = {
             "image": ops.arange(0, int(image_chunk_size)),
-            "audio": ops.arange(0, int(audio_chunk_size)),
+            "audio": ops.arange(0, audio_chunk_size),
             "label": None,
         }
 
@@ -167,7 +168,7 @@ class PerceiverModelTester:
             inputs = floats_tensor([self.batch_size, 2, 27, self.train_size[0], self.train_size[1]])
         elif model_class.__name__ == "PerceiverForMultimodalAutoencoding":
             images = ops.randn(
-                (self.batch_size, self.num_frames, self.num_channels, self.image_size, self.image_size)
+                (self.batch_size, self.num_frames, self.num_channels, self.image_size, self.image_size),
             )
             audio = ops.randn(
                 (self.batch_size, self.num_frames * self.audio_samples_per_frame, 1)
@@ -219,37 +220,37 @@ class PerceiverModelTester:
 
     def create_and_check_for_masked_lm(self, config, inputs, input_mask, sequence_labels, token_labels):
         model = PerceiverForMaskedLM(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(inputs, attention_mask=input_mask, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
     def create_and_check_for_sequence_classification(self, config, inputs, input_mask, sequence_labels, token_labels):
         model = PerceiverForSequenceClassification(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(inputs, attention_mask=input_mask, labels=sequence_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
     def create_and_check_for_image_classification_learned(
-            self, config, inputs, input_mask, sequence_labels, token_labels
+        self, config, inputs, input_mask, sequence_labels, token_labels
     ):
         model = PerceiverForImageClassificationLearned(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(inputs, attention_mask=input_mask, labels=sequence_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
     def create_and_check_for_image_classification_fourier(
-            self, config, inputs, input_mask, sequence_labels, token_labels
+        self, config, inputs, input_mask, sequence_labels, token_labels
     ):
         model = PerceiverForImageClassificationFourier(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(inputs, attention_mask=input_mask, labels=sequence_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
     def create_and_check_for_image_classification_conv(
-            self, config, inputs, input_mask, sequence_labels, token_labels
+        self, config, inputs, input_mask, sequence_labels, token_labels
     ):
         model = PerceiverForImageClassificationConvProcessing(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(inputs, attention_mask=input_mask, labels=sequence_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
@@ -374,7 +375,7 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             # we overwrite this, as the embeddings of Perceiver are an instance of nn.Parameter
             # and Perceiver doesn't support get_output_embeddings
-            self.assertIsInstance(model.get_input_embeddings(), (mindspore.Parameter))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Parameter))
 
     def test_training(self):
         if not self.model_tester.is_training:
@@ -392,10 +393,10 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
             config.return_dict = True
 
             model = model_class(config)
-            model.set_train()
+            model.train()
             inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
             loss = model(**inputs).loss
-            # loss.backward()
+            loss.backward()
 
     def test_forward_signature(self):
         for model_class in self.all_model_classes:
@@ -414,10 +415,11 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
             config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_model_class(model_class)
 
             model = model_class(config)
-            model.set_train(False)
-            inputs_dict = self._prepare_for_class(inputs_dict, model_class)
-            first = model(**inputs_dict)[0]
-            second = model(**inputs_dict)[0]
+            model.eval()
+            with no_grad():
+                inputs_dict = self._prepare_for_class(inputs_dict, model_class)
+                first = model(**inputs_dict)[0]
+                second = model(**inputs_dict)[0]
 
             if model_class.__name__ == "PerceiverForMultimodalAutoencoding":
                 # model outputs a dictionary with logits per modality, let's verify each modality
@@ -447,20 +449,19 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
             inputs_dict["output_hidden_states"] = False
             config.return_dict = True
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             self_attentions = outputs.attentions
             cross_attentions = outputs.cross_attentions
 
             # check expected number of attentions depending on model class
             expected_num_self_attentions = self.model_tester.num_blocks * self.model_tester.num_self_attends_per_block
             if model.__class__.__name__ == "PerceiverModel":
-                # we expect to have 2 cross-attentions, namely one in the PerceiverEncoder,
-                # and one in PerceiverBasicDecoder
+                # we expect to have 2 cross-attentions, namely one in the PerceiverEncoder, and one in PerceiverBasicDecoder
                 expected_num_cross_attentions = 1
             else:
-                # we expect to have 2 cross-attentions, namely one in the PerceiverEncoder,
-                # and one in PerceiverBasicDecoder
+                # we expect to have 2 cross-attentions, namely one in the PerceiverEncoder, and one in PerceiverBasicDecoder
                 expected_num_cross_attentions = 2
             self.assertEqual(len(self_attentions), expected_num_self_attentions)
             self.assertEqual(len(cross_attentions), expected_num_cross_attentions)
@@ -469,8 +470,9 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
             del inputs_dict["output_attentions"]
             config.output_attentions = True
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             self_attentions = outputs.attentions
             cross_attentions = outputs.cross_attentions
             self.assertEqual(len(self_attentions), expected_num_self_attentions)
@@ -486,8 +488,9 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
             inputs_dict["output_attentions"] = True
             inputs_dict["output_hidden_states"] = True
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             self.assertEqual(out_len + 1, len(outputs))
 
@@ -502,9 +505,10 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
     def test_hidden_states_output(self):
         def check_hidden_states_output(inputs_dict, config, model_class):
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             hidden_states = outputs.hidden_states
 
@@ -536,34 +540,33 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
             return t
 
         def check_equivalence(model, tuple_inputs, dict_inputs, additional_kwargs={}):
-            tuple_output = model(**tuple_inputs, return_dict=False, **additional_kwargs)
-            dict_output = model(**dict_inputs, return_dict=True, **additional_kwargs).to_tuple()
+            with no_grad():
+                tuple_output = model(**tuple_inputs, return_dict=False, **additional_kwargs)
+                dict_output = model(**dict_inputs, return_dict=True, **additional_kwargs).to_tuple()
 
-            def recursive_check(tuple_object, dict_object):
-                if isinstance(tuple_object, (List, Tuple)):
-                    for tuple_iterable_value, dict_iterable_value in zip(tuple_object, dict_object):
-                        recursive_check(tuple_iterable_value, dict_iterable_value)
-                elif isinstance(tuple_object, Dict):
-                    for tuple_iterable_value, dict_iterable_value in zip(
+                def recursive_check(tuple_object, dict_object):
+                    if isinstance(tuple_object, (List, Tuple)):
+                        for tuple_iterable_value, dict_iterable_value in zip(tuple_object, dict_object):
+                            recursive_check(tuple_iterable_value, dict_iterable_value)
+                    elif isinstance(tuple_object, Dict):
+                        for tuple_iterable_value, dict_iterable_value in zip(
                             tuple_object.values(), dict_object.values()
-                    ):
-                        recursive_check(tuple_iterable_value, dict_iterable_value)
-                elif tuple_object is None:
-                    return
-                else:
-                    self.assertTrue(
-                        np.allclose(
-                            set_nan_tensor_to_zero(tuple_object).asnumpy(),
-                            set_nan_tensor_to_zero(dict_object).asnumpy(),
-                            atol=1e-5
-                        ),
-                        msg=(
-                            "Tuple and dict output are not equal. Difference:"
-                            f" {ops.max(ops.abs(tuple_object - dict_object))}. Tuple has `nan`:"
-                            f" {ops.isnan(tuple_object).any()} and `inf`: {ops.isinf(tuple_object)}. Dict has"
-                            f" `nan`: {ops.isnan(dict_object).any()} and `inf`: {ops.isinf(dict_object)}."
-                        ),
-                    )
+                        ):
+                            recursive_check(tuple_iterable_value, dict_iterable_value)
+                    elif tuple_object is None:
+                        return
+                    else:
+                        self.assertTrue(
+                            ops.allclose(
+                                set_nan_tensor_to_zero(tuple_object), set_nan_tensor_to_zero(dict_object), atol=1e-5
+                            ),
+                            msg=(
+                                "Tuple and dict output are not equal. Difference:"
+                                f" {ops.max(ops.abs(tuple_object - dict_object))}. Tuple has `nan`:"
+                                f" {ops.isnan(tuple_object).any()} and `inf`: {ops.isinf(tuple_object)}. Dict has"
+                                f" `nan`: {ops.isnan(dict_object).any()} and `inf`: {ops.isinf(dict_object)}."
+                            ),
+                        )
 
                 recursive_check(tuple_output, dict_output)
 
@@ -571,7 +574,7 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
             config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_model_class(model_class)
 
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
             tuple_inputs = self._prepare_for_class(inputs_dict, model_class)
             dict_inputs = self._prepare_for_class(inputs_dict, model_class)
@@ -612,75 +615,39 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
                     model, tuple_inputs, dict_inputs, {"output_hidden_states": True, "output_attentions": True}
                 )
 
-    @unittest.skip("Perceiver uses customized embedding methods.")
-    def test_model_common_attributes(self):
-        pass
-
-    @unittest.skip("Mindspore doesn't have retain grad.")
-    def test_retain_grad_hidden_states_attentions(self):
-        # no need to test all models as different heads yield the same functionality
-        model_class = PerceiverForMaskedLM
-        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_model_class(model_class)
-        config.output_hidden_states = True
-        config.output_attentions = True
-
-        model = model_class(config)
-
-        inputs = self._prepare_for_class(inputs_dict, model_class)
-
-        outputs = model(**inputs)
-
-        output = outputs[0]
-
-        # Encoder-only model
-        hidden_states = outputs.hidden_states[0]
-        attentions = outputs.attentions[0]
-
-        hidden_states.retain_grad()
-        attentions.retain_grad()
-
-        output.flatten()[0].backward(retain_graph=True)
-
-        self.assertIsNotNone(hidden_states.grad)
-        self.assertIsNotNone(attentions.grad)
-
     def test_feed_forward_chunking(self):
         for model_class in self.all_model_classes:
             original_config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_model_class(model_class)
-            mindspore.set_seed(0)
+            set_seed(0)
             config = copy.deepcopy(original_config)
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
             hidden_states_no_chunk = model(**self._prepare_for_class(inputs_dict, model_class))[0]
 
-            mindspore.set_seed(0)
+            set_seed(0)
             config.chunk_size_feed_forward = 1
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
             hidden_states_with_chunk = model(**self._prepare_for_class(inputs_dict, model_class))[0]
             if model_class.__name__ == "PerceiverForMultimodalAutoencoding":
                 # model outputs a dictionary with logits for each modality
                 for modality in hidden_states_no_chunk.keys():
                     self.assertTrue(
-                        np.allclose(hidden_states_no_chunk[modality].asnumpy(),
-                                    hidden_states_with_chunk[modality].asnumpy(),
-                                    atol=1e-3)
+                        ops.allclose(hidden_states_no_chunk[modality], hidden_states_with_chunk[modality], atol=1e-3)
                     )
             else:
-                self.assertTrue(np.allclose(hidden_states_no_chunk.asnumpy(),
-                                            hidden_states_with_chunk.asnumpy(),
-                                            atol=1e-3))
+                self.assertTrue(ops.allclose(hidden_states_no_chunk, hidden_states_with_chunk, atol=1e-3))
 
     def test_save_load(self):
         for model_class in self.all_model_classes:
             config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_model_class(model_class)
 
             model = model_class(config)
-            model.set_train(False)
-            mindspore.set_seed(0)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             if model_class.__name__ == "PerceiverForMultimodalAutoencoding":
                 for modality in outputs[0].keys():
@@ -690,8 +657,8 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
                     with tempfile.TemporaryDirectory() as tmpdirname:
                         model.save_pretrained(tmpdirname)
                         model = model_class.from_pretrained(tmpdirname)
-                        mindspore.set_seed(0)
-                        after_outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+                        with no_grad():
+                            after_outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
                         # Make sure we don't have nans
                         out_1 = after_outputs[0][modality].asnumpy()
@@ -706,7 +673,8 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
                 with tempfile.TemporaryDirectory() as tmpdirname:
                     model.save_pretrained(tmpdirname)
                     model = model_class.from_pretrained(tmpdirname)
-                    after_outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+                    with no_grad():
+                        after_outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
                     # Make sure we don't have nans
                     out_1 = after_outputs[0].asnumpy()
@@ -762,7 +730,7 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
                     config.num_labels = problem_type["num_labels"]
 
                     model = model_class(config)
-                    model.set_train()
+                    model.train()
 
                     inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
 
@@ -783,11 +751,12 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
                                 f"Something is going wrong in the regression problem: intercepted {w.message}"
                             )
 
-                    # loss.backward()
+                    loss.backward()
 
     @unittest.skip(
         reason=(
-                "Perceiver does not work with data parallel (DP)."
+            "Perceiver does not work with data parallel (DP) because of a bug in PyTorch:"
+            " https://github.com/pytorch/pytorch/issues/36035"
         )
     )
     def test_multi_gpu_data_parallel_forward(self):
@@ -827,7 +796,6 @@ class PerceiverModelTest(ModelTesterMixin, unittest.TestCase):
 # We will verify our results on an image of cute cats
 def prepare_img():
     image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
-    # image = Image.open("E:/开源实习/code_lib/mindnlp/tests/fixtures/tests_samples/COCO/000000039769.png")
     return image
 
 
@@ -851,11 +819,11 @@ def extract_image_patches(x, kernel, stride=1, dilation=1):
     w2 = math.ceil(w / stride)
     pad_row = (h2 - 1) * stride + (kernel - 1) * dilation + 1 - h
     pad_col = (w2 - 1) * stride + (kernel - 1) * dilation + 1 - w
-    x = ops.pad(x, (pad_row // 2, pad_row - pad_row // 2, pad_col // 2, pad_col - pad_col // 2))
+    x = nn.functional.pad(x, (pad_row // 2, pad_row - pad_row // 2, pad_col // 2, pad_col - pad_col // 2))
 
     # Extract patches
     patches = x.unfold(2, kernel, stride).unfold(3, kernel, stride)
-    patches = patches.permute(0, 4, 5, 1, 2, 3)
+    patches = patches.permute(0, 4, 5, 1, 2, 3).contiguous()
 
     return patches.view(b, -1, patches.shape[-2], patches.shape[-1])
 
@@ -877,7 +845,8 @@ class PerceiverModelIntegrationTest(unittest.TestCase):
         inputs, input_mask = encoding.input_ids, encoding.attention_mask
 
         # forward pass
-        outputs = model(inputs=inputs, attention_mask=input_mask)
+        with no_grad():
+            outputs = model(inputs=inputs, attention_mask=input_mask)
         logits = outputs.logits
 
         # verify logits
@@ -885,13 +854,13 @@ class PerceiverModelIntegrationTest(unittest.TestCase):
         self.assertEqual(logits.shape, expected_shape)
 
         expected_slice = mindspore.tensor(
-            [[-10.8609, -10.7651, -10.9187], [-12.1689, -11.9389, -12.1479], [-12.1518, -11.9707, -12.2073]]
+            [[-10.8609, -10.7651, -10.9187], [-12.1689, -11.9389, -12.1479], [-12.1518, -11.9707, -12.2073]],
         )
 
-        self.assertTrue(np.allclose(logits[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(logits[0, :3, :3], expected_slice, atol=1e-4))
 
         expected_greedy_predictions = [38, 115, 111, 121, 121, 111, 116, 109, 52]
-        masked_tokens_predictions = logits[0, 52:61].argmax(axis=-1).tolist()
+        masked_tokens_predictions = logits[0, 52:61].argmax(dim=-1).tolist()
         self.assertListEqual(expected_greedy_predictions, masked_tokens_predictions)
 
     @slow
@@ -905,7 +874,8 @@ class PerceiverModelIntegrationTest(unittest.TestCase):
         input_mask = None
 
         # forward pass
-        outputs = model(inputs=inputs, attention_mask=input_mask)
+        with no_grad():
+            outputs = model(inputs=inputs, attention_mask=input_mask)
         logits = outputs.logits
 
         # verify logits
@@ -915,7 +885,7 @@ class PerceiverModelIntegrationTest(unittest.TestCase):
         expected_slice = mindspore.tensor([-1.1652, -0.1992, -0.7520])
 
         atol = 1e-3
-        self.assertTrue(np.allclose(logits[0, :3].asnumpy(), expected_slice.asnumpy(), atol=atol))
+        self.assertTrue(ops.allclose(logits[0, :3], expected_slice, atol=atol))
 
     @slow
     def test_inference_image_classification_fourier(self):
@@ -928,7 +898,8 @@ class PerceiverModelIntegrationTest(unittest.TestCase):
         input_mask = None
 
         # forward pass
-        outputs = model(inputs=inputs, attention_mask=input_mask)
+        with no_grad():
+            outputs = model(inputs=inputs, attention_mask=input_mask)
         logits = outputs.logits
 
         # verify logits
@@ -937,7 +908,7 @@ class PerceiverModelIntegrationTest(unittest.TestCase):
 
         expected_slice = mindspore.tensor([-1.1295, -0.2832, 0.3226])
 
-        self.assertTrue(np.allclose(logits[0, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(logits[0, :3], expected_slice, atol=1e-4))
 
     @slow
     def test_inference_image_classification_conv(self):
@@ -950,7 +921,8 @@ class PerceiverModelIntegrationTest(unittest.TestCase):
         input_mask = None
 
         # forward pass
-        outputs = model(inputs=inputs, attention_mask=input_mask)
+        with no_grad():
+            outputs = model(inputs=inputs, attention_mask=input_mask)
         logits = outputs.logits
 
         # verify logits
@@ -959,7 +931,7 @@ class PerceiverModelIntegrationTest(unittest.TestCase):
 
         expected_slice = mindspore.tensor([-1.1186, 0.0554, 0.0897])
 
-        self.assertTrue(np.allclose(logits[0, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(logits[0, :3], expected_slice, atol=1e-4))
 
     @slow
     def test_inference_optical_flow(self):
@@ -971,9 +943,9 @@ class PerceiverModelIntegrationTest(unittest.TestCase):
         img2 = normalize(np.array(image1))
 
         # stack images
-        img1 = mindspore.Tensor(np.moveaxis(img1, -1, 0))
-        img2 = mindspore.Tensor(np.moveaxis(img2, -1, 0))
-        images = ops.stack([img1, img2], axis=0)
+        img1 = mindspore.tensor(np.moveaxis(img1, -1, 0))
+        img2 = mindspore.tensor(np.moveaxis(img2, -1, 0))
+        images = ops.stack([img1, img2], dim=0)
 
         # extract 3x3 patches
         patch_size = model.config.train_size
@@ -985,22 +957,23 @@ class PerceiverModelIntegrationTest(unittest.TestCase):
         patches = patches.view(batch_size, -1, C, H, W).float()
 
         # forward pass
-        outputs = model(inputs=patches)
+        with no_grad():
+            outputs = model(inputs=patches)
         logits = outputs.logits
 
         # verify logits
         expected_shape = (1, 368, 496, 2)
         self.assertEqual(logits.shape, expected_shape)
 
-        expected_slice = mindspore.Tensor(
+        expected_slice = mindspore.tensor(
             [
                 [[0.0025, -0.0050], [0.0025, -0.0049], [0.0025, -0.0048]],
                 [[0.0026, -0.0049], [0.0026, -0.0048], [0.0026, -0.0047]],
                 [[0.0026, -0.0049], [0.0026, -0.0048], [0.0026, -0.0046]],
-            ]
+            ],
         )
 
-        self.assertTrue(np.allclose(logits[0, :3, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(logits[0, :3, :3, :3], expected_slice, atol=1e-4))
 
     @slow
     def test_inference_interpolate_pos_encoding(self):
@@ -1013,7 +986,8 @@ class PerceiverModelIntegrationTest(unittest.TestCase):
         input_mask = None
 
         # forward pass
-        outputs = model(inputs=inputs, attention_mask=input_mask, interpolate_pos_encoding=True)
+        with no_grad():
+            outputs = model(inputs=inputs, attention_mask=input_mask, interpolate_pos_encoding=True)
         logits = outputs.logits
 
         # verify logits

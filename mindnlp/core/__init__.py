@@ -13,6 +13,6 @@
 # limitations under the License.
 # ============================================================================
 """core module"""
-from . import optim, ops, nn
+from . import optim, ops, nn, distributions
 from .utils import get_default_dtype, set_default_dtype
 from .autograd import no_grad

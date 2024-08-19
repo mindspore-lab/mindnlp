@@ -36,7 +36,7 @@ def rgb_to_id(x):
 class YolosFeatureExtractor(YolosImageProcessor):
     def __init__(self, *args, **kwargs) -> None:
         warnings.warn(
-            "The class YolosFeatureExtractor is deprecated and will be removed in version 5 of Transformers. Please"
+            "The class YolosFeatureExtractor is deprecated. Please"
             " use YolosImageProcessor instead.",
             FutureWarning,
         )

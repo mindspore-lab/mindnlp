@@ -12,22 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the MindSpore OLMo model. """
+"""Testing suite for the PyTorch OLMo model."""
 
 import unittest
 
 from parameterized import parameterized
 
-import numpy as np
 from mindnlp.engine import set_seed
 from mindnlp.transformers import OlmoConfig
 from mindnlp.transformers.models.auto.tokenization_auto import AutoTokenizer
 from mindnlp.transformers.models.gpt_neox.tokenization_gpt_neox_fast import GPTNeoXTokenizerFast
 from mindnlp.utils.testing_utils import (
+    is_flaky,
     require_tokenizers,
     require_mindspore,
     slow,
-    is_mindspore_available,
+    is_mindspore_available
 )
 
 from ...generation.test_utils import GenerationTesterMixin
@@ -141,7 +141,7 @@ class OlmoModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = OlmoModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask)
         result = model(input_ids)
         self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
@@ -160,7 +160,7 @@ class OlmoModelTester:
     ):
         config.add_cross_attention = True
         model = OlmoModel(config)
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -188,7 +188,7 @@ class OlmoModelTester:
         encoder_attention_mask,
     ):
         model = OlmoForCausalLM(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
@@ -207,7 +207,7 @@ class OlmoModelTester:
         config.is_decoder = True
         config.add_cross_attention = True
         model = OlmoForCausalLM(config=config)
-        model.set_train(False)
+        model.eval()
 
         # first forward pass
         outputs = model(
@@ -251,7 +251,7 @@ class OlmoModelTester:
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -298,7 +298,7 @@ class OlmoModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model(*config_and_inputs)
 
-    @unittest.skip("OLMo does not support head pruning.")
+    @unittest.skip(reason="OLMo does not support head pruning.")
     def test_headmasking(self):
         pass
 
@@ -308,7 +308,7 @@ class OlmoModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             config_and_inputs[0].position_embedding_type = type
             self.model_tester.create_and_check_model(*config_and_inputs)
 
-    @unittest.skip("OLMo buffers include complex numbers, which breaks this test")
+    @unittest.skip(reason="OLMo buffers include complex numbers, which breaks this test")
     def test_save_load_fast_init_from_base(self):
         pass
 
@@ -320,31 +320,26 @@ class OlmoModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
         set_seed(42)  # Fixed seed at init time so the two models get the same random weights
         original_model = OlmoModel(config)
-        original_model.set_train(False)
+        original_model.eval()
         original_short_output = original_model(short_input).last_hidden_state
         original_long_output = original_model(long_input).last_hidden_state
 
         set_seed(42)  # Fixed seed at init time so the two models get the same random weights
         config.rope_scaling = {"type": scaling_type, "factor": 10.0}
         scaled_model = OlmoModel(config)
-        scaled_model.set_train(False)
+        scaled_model.eval()
         scaled_short_output = scaled_model(short_input).last_hidden_state
         scaled_long_output = scaled_model(long_input).last_hidden_state
 
         # Dynamic scaling does not change the RoPE embeddings until it receives an input longer than the original
         # maximum sequence length, so the outputs for the short input should match.
         if scaling_type == "dynamic":
-            self.assertTrue(np.allclose(original_short_output.asnumpy(), scaled_short_output.asnumpy(), atol=1e-5))
+            self.assertTrue(ops.allclose(original_short_output, scaled_short_output, atol=1e-5))
         else:
-            self.assertFalse(np.allclose(original_short_output.asnumpy(), scaled_short_output.asnumpy(), atol=1e-5))
+            self.assertFalse(ops.allclose(original_short_output, scaled_short_output, atol=1e-5))
 
         # The output should be different for long inputs
-        self.assertFalse(np.allclose(original_long_output.asnumpy(), scaled_long_output.asnumpy(), atol=1e-5))
-
-    @unittest.skip("TODO @gante fix this for OLMo")
-    @parameterized.expand([(1, False), (1, True), (4, False)])
-    def test_new_cache_format(self, num_beams, do_sample):
-        pass
+        self.assertFalse(ops.allclose(original_long_output, scaled_long_output, atol=1e-5))
 
 
 @require_mindspore
@@ -352,14 +347,14 @@ class OlmoIntegrationTest(unittest.TestCase):
     @slow
     def test_model_1b_logits(self):
         input_ids = [[1, 306, 4658, 278, 6593, 310, 2834, 338]]
-        model = OlmoForCausalLM.from_pretrained("allenai/OLMo-1B-hf")
+        model = OlmoForCausalLM.from_pretrained("allenai/OLMo-1B-hf", device_map="auto")
         out = model(mindspore.tensor(input_ids)).logits
         # Expected mean on dim = -1
         EXPECTED_MEAN = mindspore.tensor([[2.2869, 0.3315, 0.9876, 1.4146, 1.8804, 2.0430, 1.7055, 1.2065]])
-        self.assertTrue(np.allclose(out.mean(-1).asnumpy(), EXPECTED_MEAN.asnumpy(), atol=1e-2, rtol=1e-2))
+        assert ops.allclose(out.mean(-1), EXPECTED_MEAN, atol=1e-2, rtol=1e-2)
         # slicing logits[0, 0, 0:30]
         EXPECTED_SLICE = mindspore.tensor([2.5551, -1.1230, 11.0510, 12.4977, 7.9651, 7.2342, 6.1885, 7.8340, 9.9847, 12.6695, 12.2345, 10.7970, 8.4749, 14.2483, 12.9588, 13.9233, 11.0496, 5.5749, 7.4466, 7.7914, 6.8440, 5.8951, 4.8180, 4.1935, 4.5216, 4.7256, 3.9553, 12.2870, 12.4990, 8.1591])  # fmt: skip
-        self.assertTrue(np.allclose(out[0, 0, :30].asnumpy(), EXPECTED_SLICE.asnumpy(), atol=1e-2, rtol=1e-2))
+        assert ops.allclose(out[0, 0, :30], EXPECTED_SLICE, atol=1e-2, rtol=1e-2)
 
     @slow
     def test_model_7b_logits(self):
@@ -368,10 +363,10 @@ class OlmoIntegrationTest(unittest.TestCase):
         out = model(mindspore.tensor(input_ids)).logits
         # Expected mean on dim = -1
         EXPECTED_MEAN = mindspore.tensor([[0.0271, 0.0249, -0.0578, -0.0870, 0.0167, 0.0710, 0.1002, 0.0677]])
-        self.assertTrue(np.allclose(out.mean(-1).asnumpy(), EXPECTED_MEAN.asnumpy(), atol=1e-2, rtol=1e-2))
+        assert ops.allclose(out.mean(-1), EXPECTED_MEAN, atol=1e-2, rtol=1e-2)
         # slicing logits[0, 0, 0:30]
         EXPECTED_SLICE = mindspore.tensor([-1.7433, -1.6685, 7.4941, 6.1506, 0.1364, -0.1127, 1.3224, 4.5458, 4.2068, 5.8296, 7.4723, 2.7925, 3.1245, 10.8872, 10.0758, 10.6717, 7.0945, 1.2398, 3.6766, 4.2365, 2.5655, 2.2222, 1.7418, 0.5223, 0.7753, 1.0938, 0.6723, 6.2522, 6.2264, 1.8105])  # fmt: skip
-        self.assertTrue(np.allclose(out[0, 0, :30].asnumpy(), EXPECTED_SLICE.asnumpy(), atol=1e-2, rtol=1e-2))
+        assert ops.allclose(out[0, 0, :30], EXPECTED_SLICE, atol=1e-2, rtol=1e-2)
 
     @slow
     def test_model_7b_twin_2t_logits(self):
@@ -380,10 +375,10 @@ class OlmoIntegrationTest(unittest.TestCase):
         out = model(mindspore.tensor(input_ids)).logits
         # Expected mean on dim = -1
         EXPECTED_MEAN = mindspore.tensor([[-0.3636, -0.3825, -0.4800, -0.3696, -0.8388, -0.9737, -0.9849, -0.8356]])
-        self.assertTrue(np.allclose(out.mean(-1).asnumpy(), EXPECTED_MEAN.asnumpy(), atol=1e-2, rtol=1e-2))
+        assert ops.allclose(out.mean(-1), EXPECTED_MEAN, atol=1e-2, rtol=1e-2)
         # slicing logits[0, 0, 0:30]
         EXPECTED_SLICE = mindspore.tensor([-2.0833, -1.9234, 8.7312, 7.8049, 1.0372, 0.8941, 3.1548, 1.8502, 5.5511, 5.5793, 8.1166, 4.5906, 1.8691, 11.6377, 8.9858, 11.6447, 7.4549, 1.4725, 2.8399, 2.7568, 1.4011, 1.6958, 0.5572, 0.5231, 0.3068, 0.5364, 0.6769, 7.9636, 8.2379, 1.7950])  # fmt: skip
-        self.assertTrue(np.allclose(out[0, 0, :30].asnumpy(), EXPECTED_SLICE.asnumpy(), atol=1e-2, rtol=1e-2))
+        assert ops.allclose(out[0, 0, :30], EXPECTED_SLICE, atol=1e-2, rtol=1e-2)
 
     @slow
     def test_model_7b_greedy_generation(self):

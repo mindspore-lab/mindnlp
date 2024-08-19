@@ -646,7 +646,7 @@ class GemmaDecoderLayer(nn.Module):
         """
         if "padding_mask" in kwargs:
             warnings.warn(
-                "Passing `padding_mask` is deprecated and will be removed in v4.37. Please make sure use `attention_mask` instead.`"
+                "Passing `padding_mask` is deprecated.37. Please make sure use `attention_mask` instead.`"
             )
 
         residual = hidden_states

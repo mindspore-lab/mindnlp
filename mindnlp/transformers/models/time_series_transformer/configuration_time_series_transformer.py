@@ -15,8 +15,10 @@
 """Time Series Transformer model configuration"""
 
 from typing import List, Optional, Union
-from mindnlp.utils import logging
+
 from ...configuration_utils import PretrainedConfig
+from ....utils import logging
+
 
 logger = logging.get_logger(__name__)
 
@@ -127,43 +129,42 @@ class TimeSeriesTransformerConfig(PretrainedConfig):
     }
 
     def __init__(
-            self,
-            prediction_length: Optional[int] = None,
-            context_length: Optional[int] = None,
-            distribution_output: str = "student_t",
-            loss: str = "nll",
-            input_size: int = 1,
-            lags_sequence: List[int] = [1, 2, 3, 4, 5, 6, 7],
-            scaling: Optional[Union[str, bool]] = "mean",
-            num_dynamic_real_features: int = 0,
-            num_static_categorical_features: int = 0,
-            num_static_real_features: int = 0,
-            num_time_features: int = 0,
-            cardinality: Optional[List[int]] = None,
-            embedding_dimension: Optional[List[int]] = None,
-            encoder_ffn_dim: int = 32,
-            decoder_ffn_dim: int = 32,
-            encoder_attention_heads: int = 2,
-            decoder_attention_heads: int = 2,
-            encoder_layers: int = 2,
-            decoder_layers: int = 2,
-            is_encoder_decoder: bool = True,
-            activation_function: str = "gelu",
-            d_model: int = 64,
-            dropout: float = 0.1,
-            encoder_layerdrop: float = 0.1,
-            decoder_layerdrop: float = 0.1,
-            attention_dropout: float = 0.1,
-            activation_dropout: float = 0.1,
-            num_parallel_samples: int = 100,
-            init_std: float = 0.02,
-            initializer_range = 0.02,
-            use_cache=True,
-            **kwargs,
+        self,
+        prediction_length: Optional[int] = None,
+        context_length: Optional[int] = None,
+        distribution_output: str = "student_t",
+        loss: str = "nll",
+        input_size: int = 1,
+        lags_sequence: List[int] = [1, 2, 3, 4, 5, 6, 7],
+        scaling: Optional[Union[str, bool]] = "mean",
+        num_dynamic_real_features: int = 0,
+        num_static_categorical_features: int = 0,
+        num_static_real_features: int = 0,
+        num_time_features: int = 0,
+        cardinality: Optional[List[int]] = None,
+        embedding_dimension: Optional[List[int]] = None,
+        encoder_ffn_dim: int = 32,
+        decoder_ffn_dim: int = 32,
+        encoder_attention_heads: int = 2,
+        decoder_attention_heads: int = 2,
+        encoder_layers: int = 2,
+        decoder_layers: int = 2,
+        is_encoder_decoder: bool = True,
+        activation_function: str = "gelu",
+        d_model: int = 64,
+        dropout: float = 0.1,
+        encoder_layerdrop: float = 0.1,
+        decoder_layerdrop: float = 0.1,
+        attention_dropout: float = 0.1,
+        activation_dropout: float = 0.1,
+        num_parallel_samples: int = 100,
+        init_std: float = 0.02,
+        use_cache=True,
+        **kwargs,
     ):
         # time series specific configuration
         self.prediction_length = prediction_length
-        self.context_length = context_length if context_length is not None else prediction_length
+        self.context_length = context_length or prediction_length
         self.distribution_output = distribution_output
         self.loss = loss
         self.input_size = input_size

@@ -359,7 +359,7 @@ class SPMTokenizer:
 
     def part_of_whole_word(self, token, is_bos=False):
         logger.warning_once(
-            "The `DebertaTokenizer.part_of_whole_word` method is deprecated and will be removed in `transformers==4.35`"
+            "The `DebertaTokenizer.part_of_whole_word` method is deprecated.35`"
         )
         if is_bos:
             return True
@@ -392,7 +392,7 @@ class SPMTokenizer:
 
     def id(self, sym):
         logger.warning_once(
-            "The `DebertaTokenizer.id` method is deprecated and will be removed in `transformers==4.35`"
+            "The `DebertaTokenizer.id` method is deprecated.35`"
         )
         return self.vocab[sym] if sym in self.vocab else 1
 

@@ -12,36 +12,46 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the PyTorch Whisper model. """
+"""Testing suite for the MindSpore Whisper model."""
 
 import copy
 import inspect
 import os
+import random
+import re
 import tempfile
+import time
 import unittest
 
 import numpy as np
-from pytest import mark
+from parameterized import parameterized
 
-
-from mindnlp.engine.utils import set_seed
+import mindnlp
 from mindnlp.transformers import WhisperConfig
-from mindnlp.utils.generic import cached_property
-from mindnlp.utils.testing_utils import require_mindspore, slow
-from mindnlp.utils.import_utils import is_datasets_available, is_mindspore_available
+from mindnlp.utils.testing_utils import (
+    is_flaky,
+    require_mindspore,
+    require_mindspore_gpu,
+    slow,
+)
+from mindnlp.utils import cached_property, is_mindspore_available
+from mindnlp.utils.import_utils import is_datasets_available
+from huggingface_hub import hf_hub_download
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_tensor, ids_tensor
-from .....common import MindNLPTestCase
+# from ...test_pipeline_mixin import PipelineTesterMixin
+
 
 if is_datasets_available():
     import datasets
-    from datasets import load_dataset
+    from datasets import Audio, load_dataset
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import nn, ops, no_grad
+    from mindnlp.engine import set_seed
 
     from mindnlp.transformers import (
         WhisperFeatureExtractor,
@@ -51,7 +61,92 @@ if is_mindspore_available():
         WhisperModel,
         WhisperProcessor,
     )
+    from mindnlp.transformers.generation import (
+        BeamSampleDecoderOnlyOutput,
+        BeamSampleEncoderDecoderOutput,
+        BeamSearchDecoderOnlyOutput,
+        BeamSearchEncoderDecoderOutput,
+        GenerateBeamDecoderOnlyOutput,
+        GenerateBeamEncoderDecoderOutput,
+        GenerateEncoderDecoderOutput,
+        PhrasalConstraint,
+    )
+    from mindnlp.transformers.generation.logits_process import LogitsProcessor
     from mindnlp.transformers.models.whisper.modeling_whisper import WhisperDecoder, WhisperEncoder, sinusoids
+
+    class DummyTimestampLogitProcessor(LogitsProcessor):
+        """This processor fakes the correct timestamps tokens pattern [TOK_1] [TOK_2] ... [TOK_N] [TIME_STAMP_TOK_1] [TIME_STAMP_TOK_2] [TOK_N+1] ..."""
+
+        def __init__(
+            self, timestamp_begin, vocab_size, batch_size, max_length, min_space=3, seed=0, is_length_ascending=True
+        ):
+            self.timestamp_begin = timestamp_begin
+            self.vocab_size = vocab_size
+
+            self.min_space_between_timestamps = min_space
+            self.timestamp_tokens = ops.arange(self.timestamp_begin, self.vocab_size)
+            self.is_length_ascending = is_length_ascending
+
+            self.no_time_stamp_counter = batch_size * [0]
+            self.prev_highest_timestamp = batch_size * [0]
+            self.batch_size = batch_size
+            self.max_length = max_length
+            self.count = 0
+            self.begin_index = 0
+
+            self.let_pass = [[] for _ in range(batch_size)]
+            for k in range(batch_size):
+                random.seed(seed + k)
+                for _ in range(10000):
+                    self.let_pass[k].append(random.randint(1, 10) <= 3)
+
+        def set_begin_index(self, begin_index: int):
+            self.begin_index = begin_index
+
+        def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+            # we don't want to randomely sample timestamp tokens
+            if input_ids.shape[-1] != self.begin_index:
+                scores[:, self.timestamp_begin :] = float(ops.finfo(scores.dtype).min)
+
+            self.no_time_stamp_counter = [x + 1 for x in self.no_time_stamp_counter]
+            for k in range(input_ids.shape[0]):
+                # make sure to use correct index if a batch was removed
+                if self.is_length_ascending and input_ids.shape[0] < self.batch_size:
+                    prev_k = k + self.batch_size - input_ids.shape[0]
+                else:
+                    prev_k = k
+
+                if input_ids[k, -1] == self.timestamp_begin:
+                    self.no_time_stamp_counter[prev_k] = 0
+
+                can_produce = self.no_time_stamp_counter[prev_k] > self.min_space_between_timestamps
+                must_produce = (
+                    input_ids[k][2:].le(self.timestamp_begin).all() and input_ids.shape[-1] == self.max_length - 1
+                )
+                # produce timestamp with 30%
+                if (can_produce and self.let_pass[prev_k][self.count]) or must_produce:
+                    self.no_time_stamp_counter[prev_k] = 0
+                    self.prev_highest_timestamp[prev_k] = max(input_ids[k].max() + 1, self.timestamp_tokens[0].item())
+
+                    # force a timestamp
+                    scores[k, :] = float(ops.finfo(scores.dtype).min)
+                    scores[k, self.prev_highest_timestamp[prev_k]] = 10.0
+
+                if (
+                    input_ids.shape[-1] > 3
+                    and input_ids[k, -1].item() in self.timestamp_tokens
+                    and input_ids[k, -2].item() not in self.timestamp_tokens
+                ):
+                    # force the same as before
+                    scores[k, :] = float(ops.finfo(scores.dtype).min)
+                    scores[k, input_ids[k, -1].item()] = 10.0
+
+            self.count += 1
+
+            if ops.isinf(scores).all():
+                raise ValueError("Dummy logit processor is incorrectly set up. Scores should not be all inf.")
+
+            return scores
 
 
 def prepare_whisper_inputs_dict(
@@ -67,11 +162,11 @@ def prepare_whisper_inputs_dict(
     if decoder_attention_mask is None:
         decoder_attention_mask = decoder_input_ids.ne(config.pad_token_id)
     if head_mask is None:
-        head_mask = ops.ones((config.encoder_layers, config.encoder_attention_heads))
+        head_mask = ops.ones(config.encoder_layers, config.encoder_attention_heads)
     if decoder_head_mask is None:
-        decoder_head_mask = ops.ones((config.decoder_layers, config.decoder_attention_heads))
+        decoder_head_mask = ops.ones(config.decoder_layers, config.decoder_attention_heads)
     if cross_attn_head_mask is None:
-        cross_attn_head_mask = ops.ones((config.decoder_layers, config.decoder_attention_heads))
+        cross_attn_head_mask = ops.ones(config.decoder_layers, config.decoder_attention_heads)
     return {
         # "input_ids": input_features,
         "input_features": input_features,
@@ -88,7 +183,7 @@ class WhisperModelTester:
     def __init__(
         self,
         parent,
-        batch_size=2,
+        batch_size=3,  # need batch_size != num_hidden_layers
         seq_length=60,
         is_training=True,
         use_labels=False,
@@ -190,7 +285,7 @@ class WhisperModelTester:
         return input_lengths
 
     def create_and_check_model_forward(self, config, inputs_dict, freeze_encoder=False):
-        model = WhisperModel(config=config).set_train(False)
+        model = WhisperModel(config=config).eval()
 
         if freeze_encoder:
             model.freeze_encoder()
@@ -204,7 +299,7 @@ class WhisperModelTester:
         self.parent.assertTrue(last_hidden_state.shape, (13, 7, 16))
 
     def create_and_check_decoder_model_past_large_inputs(self, config, inputs_dict):
-        model = WhisperModel(config=config).get_decoder().set_train(False)
+        model = WhisperModel(config=config).get_decoder().eval()
         input_ids = inputs_dict["decoder_input_ids"]
         attention_mask = inputs_dict["decoder_attention_mask"]
 
@@ -218,8 +313,8 @@ class WhisperModelTester:
         next_attn_mask = ids_tensor((self.batch_size, 3), 2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([attention_mask.astype(mindspore.int64), next_attn_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([attention_mask, next_attn_mask.to(attention_mask.dtype)], dim=-1)
 
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["last_hidden_state"]
         output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
@@ -234,10 +329,10 @@ class WhisperModelTester:
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-2))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-2))
 
     def check_encoder_decoder_model_standalone(self, config, inputs_dict):
-        model = WhisperModel(config=config).set_train(False)
+        model = WhisperModel(config=config).eval()
         outputs = model(**inputs_dict)
 
         encoder_last_hidden_state = outputs.encoder_last_hidden_state
@@ -267,7 +362,7 @@ class WhisperModelTester:
 
 
 @require_mindspore
-class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
+class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (WhisperModel, WhisperForConditionalGeneration) if is_mindspore_available() else ()
     all_generative_model_classes = (WhisperForConditionalGeneration,) if is_mindspore_available() else ()
     pipeline_model_mapping = (
@@ -275,6 +370,7 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
             "audio-classification": WhisperForAudioClassification,
             "automatic-speech-recognition": WhisperForConditionalGeneration,
             "feature-extraction": WhisperModel,
+            "text-generation": WhisperForCausalLM,
         }
         if is_mindspore_available()
         else {}
@@ -302,6 +398,30 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
             return True
 
         return False
+
+    def _get_logits_processor_kwargs(self, do_sample=False):
+        # Overwritten from `GenerationTesterMixin`, Whisper needs `"temperature": 0.0` to be able to do beam search
+        logits_processor_kwargs = super()._get_logits_processor_kwargs(do_sample=do_sample)
+        logits_processor_kwargs["temperature"] = 0.0
+        return logits_processor_kwargs
+
+    def _get_beam_kwargs(self, num_return_sequences=1):
+        # Overwritten from `GenerationTesterMixin`, Whisper's `num_return_sequences` differs from the core `generate`
+        beam_kwargs = super()._get_beam_kwargs(num_return_sequences=num_return_sequences)
+        beam_kwargs["num_return_sequences"] = beam_kwargs["num_beams"]
+        return beam_kwargs
+
+    def _get_diverse_beam_kwargs(self, num_return_sequences=1):
+        # Overwritten from `GenerationTesterMixin`, Whisper's `num_return_sequences` differs from the core `generate`
+        beam_kwargs = super()._get_diverse_beam_kwargs(num_return_sequences=num_return_sequences)
+        beam_kwargs["num_return_sequences"] = beam_kwargs["num_beams"]
+        return beam_kwargs
+
+    def _get_constrained_beam_kwargs(self, num_return_sequences=1):
+        # Overwritten from `GenerationTesterMixin`, Whisper's `num_return_sequences` differs from the core `generate`
+        beam_kwargs = super()._get_constrained_beam_kwargs(num_return_sequences=num_return_sequences)
+        beam_kwargs["num_return_sequences"] = beam_kwargs["num_beams"]
+        return beam_kwargs
 
     def setUp(self):
         self.model_tester = WhisperModelTester(self)
@@ -336,11 +456,11 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
             model.freeze_encoder()
 
             try:
-                encoder_grads = [param.requires_grad for param in model.encoder.get_parameters()]
-                decoder_grads = [param.requires_grad for param in model.decoder.get_parameters()]
+                encoder_grads = [param.requires_grad for param in model.encoder.parameters()]
+                decoder_grads = [param.requires_grad for param in model.decoder.parameters()]
             except AttributeError:
-                encoder_grads = [param.requires_grad for param in model.model.encoder.get_parameters()]
-                decoder_grads = [param.requires_grad for param in model.model.decoder.get_parameters()]
+                encoder_grads = [param.requires_grad for param in model.model.encoder.parameters()]
+                decoder_grads = [param.requires_grad for param in model.model.decoder.parameters()]
 
             self.assertFalse(all(encoder_grads))
             self.assertTrue(all(decoder_grads))
@@ -357,7 +477,7 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
         for model_class in self.all_model_classes:
             model = model_class(config)
             embeds = model.get_encoder().embed_positions.weight
-            self.assertTrue(np.allclose(embeds.asnumpy(), sinusoids(*embeds.shape).asnumpy()))
+            self.assertTrue(ops.allclose(embeds, sinusoids(*embeds.shape)))
 
     def test_decoder_model_past_with_large_inputs(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -374,20 +494,18 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
         # cut to half length & take max batch_size=batch_size
         input_ids = input_ids[:batch_size, :, :]
 
-        # generate max 3 tokens
-        max_length = 4
         if config.eos_token_id is not None and config.pad_token_id is None:
             # hack to allow generate for models such as GPT2 as is done in `generate()`
             config.pad_token_id = config.eos_token_id
 
-        return config, input_ids, None, max_length
+        return config, input_ids, None
 
     def test_inputs_embeds(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
             inputs = copy.deepcopy(self._prepare_for_class(inputs_dict, model_class))
 
@@ -397,12 +515,15 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
             wte = model.get_input_embeddings()
             inputs["decoder_inputs_embeds"] = wte(decoder_input_ids)
 
-            model(**inputs)[0]
+            with no_grad():
+                model(**inputs)[0]
 
     # training is not supported yet
+    @unittest.skip(reason="Training is not supported yet")
     def test_training(self):
         pass
 
+    @unittest.skip(reason="Training is not supported yet")
     def test_training_gradient_checkpointing(self):
         pass
 
@@ -418,16 +539,18 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
     def test_training_gradient_checkpointing_use_reentrant_false(self):
         pass
 
+    @unittest.skip
     def test_generate_with_head_masking(self):
         pass
 
+    @require_mindspore
     def test_generate_fp16(self):
         config, input_dict = self.model_tester.prepare_config_and_inputs()
         config.max_target_positions = 400
         input_features = input_dict["input_features"]
-        model = WhisperForConditionalGeneration(config).set_train(False)
+        model = WhisperForConditionalGeneration(config).eval()
         input_features = input_features.half()
-        model.to_float(mindspore.float16)
+        model.half()
         model.generate(input_features)
         model.generate(input_features, num_beams=4, do_sample=True, early_stopping=False, num_return_sequences=3)
 
@@ -441,10 +564,19 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
 
         # test language code
         model.generate(input_features, language="en")
-        # test tokenizer code
+        # test language token
         model.generate(input_features, language="<|en|>")
         # test language name
         model.generate(input_features, language="English")
+        # test language code list
+        model.generate(input_features, language=["en"] * input_features.shape[0])
+        # test language token list
+        model.generate(input_features, language=["<|en|>"] * input_features.shape[0])
+        # test language name list
+        model.generate(input_features, language=["English"] * input_features.shape[0])
+        # test list of the wrong length
+        with self.assertRaises(ValueError):
+            model.generate(input_features, language=["en"] * (input_features.shape[0] + 1))
 
     def test_forward_signature(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
@@ -471,9 +603,10 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
     def test_hidden_states_output(self):
         def check_hidden_states_output(inputs_dict, config, model_class):
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             hidden_states = outputs.encoder_hidden_states if config.is_encoder_decoder else outputs.hidden_states
 
@@ -534,12 +667,13 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
             inputs_dict["output_hidden_states"] = False
             config.return_dict = True
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
             subsampled_encoder_seq_length = model._get_feat_extract_output_lengths(encoder_seq_length)
             subsampled_encoder_key_length = model._get_feat_extract_output_lengths(encoder_key_length)
 
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.encoder_attentions if config.is_encoder_decoder else outputs.attentions
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -547,9 +681,9 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
             del inputs_dict["output_attentions"]
             config.output_attentions = True
             model = model_class(config)
-            model.set_train(False)
-
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.encoder_attentions if config.is_encoder_decoder else outputs.attentions
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -595,9 +729,9 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
             inputs_dict["output_attentions"] = True
             inputs_dict["output_hidden_states"] = True
             model = model_class(config)
-            model.set_train(False)
-
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             added_hidden_states = 2
             self.assertEqual(out_len + added_hidden_states, len(outputs))
@@ -616,14 +750,14 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
             inputs_dict,
         ) = self.model_tester.prepare_config_and_inputs_for_common()
         if not self.test_resize_embeddings:
-            return
+            self.skipTest(reason="test_resize_embeddings is False")
 
         for model_class in self.all_model_classes:
             config = copy.deepcopy(original_config)
             model = model_class(config)
 
             if self.model_tester.is_training is False:
-                model.set_train(False)
+                model.eval()
 
             model_vocab_size = config.vocab_size
             # Retrieve the embeddings and clone theme
@@ -663,13 +797,13 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
             inputs_dict,
         ) = self.model_tester.prepare_config_and_inputs_for_common()
         if not self.test_resize_embeddings:
-            return
+            self.skipTest(reason="test_resize_embeddings is False")
 
         original_config.tie_word_embeddings = False
 
         # if model cannot untied embeddings -> leave test
         if original_config.tie_word_embeddings:
-            return
+            self.skipTest(reason="Model cannot untie embeddings")
 
         for model_class in self.all_model_classes:
             config = copy.deepcopy(original_config)
@@ -706,6 +840,7 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             model(**self._prepare_for_class(inputs_dict, model_class))
 
+    @unittest.skip
     def test_generate_without_input_ids(self):
         pass
 
@@ -719,13 +854,13 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
         )
-        encoder_outputs["last_hidden_state"] = encoder_outputs.last_hidden_state.repeat_interleave(
-            num_interleave, dim=0
+        encoder_outputs["last_hidden_state"] = ops.repeat_interleave(
+            encoder_outputs.last_hidden_state, num_interleave, dim=0
         )
+        generation_config = copy.deepcopy(model.generation_config)
+        model._prepare_special_tokens(generation_config)
         input_ids = input_ids[:, :, 0]
-        input_ids = ops.zeros_like(input_ids[:, :1], dtype=mindspore.int32) + mindspore.tensor(
-            [model._get_decoder_start_token_id()]
-        )
+        input_ids = ops.zeros_like(input_ids[:, :1], dtype=mindspore.int64) + generation_config.decoder_start_token_id
         attention_mask = None
         return encoder_outputs, input_ids, attention_mask
 
@@ -778,7 +913,7 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            model.set_train()
+            model.train()
 
             # forward pass
             encoder_last_hidden_state = model(**input_dict).encoder_last_hidden_state
@@ -791,7 +926,7 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            model.set_train()
+            model.train()
 
             # forward pass
             encoder_last_hidden_state = model(**input_dict).encoder_last_hidden_state
@@ -799,9 +934,9 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
 
     def test_generate_with_prompt_ids_and_task_and_language(self):
         config, input_dict = self.model_tester.prepare_config_and_inputs_for_common()
-        model = WhisperForConditionalGeneration(config).set_train(False)
+        model = WhisperForConditionalGeneration(config).eval()
         input_features = input_dict["input_features"]
-        prompt_ids = np.arange(5)
+        prompt_ids = ops.arange(5)
         language = "<|de|>"
         task = "translate"
         lang_id = 6
@@ -822,9 +957,9 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
 
     def test_generate_with_prompt_ids_and_forced_decoder_ids(self):
         config, input_dict = self.model_tester.prepare_config_and_inputs_for_common()
-        model = WhisperForConditionalGeneration(config).set_train(False)
+        model = WhisperForConditionalGeneration(config).eval()
         input_features = input_dict["input_features"]
-        prompt_ids = np.asarray(range(5))
+        prompt_ids = ops.arange(5)
         forced_decoder_ids = [(1, 6), (2, 7), (3, 8)]
 
         output = model.generate(
@@ -841,30 +976,342 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
 
     def test_generate_with_prompt_ids_max_length(self):
         config, input_dict = self.model_tester.prepare_config_and_inputs_for_common()
-        config.max_target_positions = 5
+        config.max_target_positions = 7
 
-        model = WhisperForConditionalGeneration(config).set_train(False)
+        model = WhisperForConditionalGeneration(config).eval()
         input_features = input_dict["input_features"]
-        prompt_ids = np.asarray(range(4))
-        sliced_prompt_ids = prompt_ids[1:]
-        sliced_prompt_ids = sliced_prompt_ids[-config.max_target_positions // 2 - 1 :]
-        max_new_tokens = 5
+        decoder_input_ids = ops.arange(5)
+        prompt_ids = decoder_input_ids[:4]
+        max_new_tokens = 8
 
         with self.assertRaisesRegex(
             ValueError,
-            f"The length of the sliced `prompt_ids` is {len(sliced_prompt_ids)}, and the `max_new_tokens` "
-            f"{max_new_tokens}. Thus, the combined length of the sliced `prompt_ids` and `max_new_tokens` is: "
-            f"{len(sliced_prompt_ids) + max_new_tokens}. This exceeds the `max_target_positions` of the Whisper model: "
-            f"{config.max_target_positions}. You should either reduce the length of your prompt, or reduce the "
-            f"value of `max_new_tokens`, so that their combined length is less that {config.max_target_positions}.",
+            f"The length of `decoder_input_ids` equal `prompt_ids` plus special start tokens is {decoder_input_ids.shape[-1]}, and the `max_new_tokens` "
+            f"is {max_new_tokens}. Thus, the combined length of "
+            f"`decoder_input_ids` and `max_new_tokens` is: {max_new_tokens + decoder_input_ids.shape[-1]}. This exceeds the "
+            f"`max_target_positions` of the Whisper model: {config.max_target_positions}. "
+            "You should either reduce the length of your prompt, or reduce the value of `max_new_tokens`, "
+            f"so that their combined length is less than {config.max_target_positions}.",
         ):
             model.generate(input_features, max_new_tokens=max_new_tokens, prompt_ids=prompt_ids)
 
         model.generate(input_features, max_new_tokens=1, prompt_ids=prompt_ids)
 
+    def test_generate_longform_with_prompt_ids(self):
+        config, input_dict = self.model_tester.prepare_config_and_inputs_for_common()
+        model = WhisperForConditionalGeneration(config).eval()
+
+        prompt_ids = ops.arange(5)
+        model.generation_config.no_timestamps_token_id = 11
+        model.generation_config.pad_token_id = 10
+
+        # make sure prompt token ids [0-9] can't be generated
+        model.generation_config.suppress_tokens = list(range(10))
+
+        input_features = input_dict["input_features"]
+
+        language = "<|de|>"
+        lang_id = 6
+
+        input_features = input_features.tile((1, 1, 50))
+        attention_mask = ops.ones_like(input_features, dtype=mindspore.int64)[:, 0]
+
+        for prompt_type in ["first-segment", "all-segments"]:
+            for task_id, task in enumerate(["translate", "transcribe"]):
+                task_id = 7 + task_id
+
+                model.generation_config.__setattr__("lang_to_id", {language: lang_id})
+                model.generation_config.__setattr__("task_to_id", {task: task_id})
+
+                output = model.generate(
+                    input_features,
+                    attention_mask=attention_mask,
+                    prompt_condition_type=prompt_type,
+                    max_new_tokens=5,
+                    task=task,
+                    language=language,
+                    prompt_ids=prompt_ids,
+                    condition_on_prev_tokens=True,
+                )
+                for row in output.tolist():
+                    # make sure no token below 10 is in generated output => this means for long-form prompt ids should NOT be returned
+                    assert not any(i in row for i in model.generation_config.suppress_tokens)
+
+    def _check_longform_generate_single_batch(self, condition_on_prev_tokens):
+        config, input_dict = self.model_tester.prepare_config_and_inputs_for_common()
+
+        model = WhisperForConditionalGeneration(config).eval()
+        input_features = input_dict["input_features"]
+
+        # len = 250 with num_input_frames = 60
+        long_input_features = ops.cat([input_features.tile((1, 1, 4)), input_features[:, :, :10]], dim=-1)
+
+        # force bsz=1
+        long_input_features = long_input_features[:1]
+        vocab_size = model.config.vocab_size
+
+        batch_size = 1
+        num_timestamp_tokens = 20
+        max_length = 16
+        logits_processor = [
+            DummyTimestampLogitProcessor(
+                vocab_size - num_timestamp_tokens,
+                vocab_size,
+                batch_size=batch_size,
+                max_length=max_length,
+                min_space=4,
+            )
+        ]
+
+        # each chunk should not be longer than 10
+        model.generation_config.max_length = max_length
+
+        # if input features are long can't set return_timestamps to False
+        with self.assertRaises(ValueError):
+            _ = model.generate(long_input_features, logits_processor=logits_processor, return_timestamps=False)
+
+        # if input features are long need to set generation config
+        with self.assertRaises(ValueError):
+            _ = model.generate(long_input_features, logits_processor=logits_processor)
+
+        timestamp_begin = vocab_size - num_timestamp_tokens
+        model.generation_config.no_timestamps_token_id = timestamp_begin - 1
+        model.generation_config.eos_token_id = None
+        model.config.eos_token_id = None
+        model.generation_config._detect_timestamp_from_logprob = False
+        # make sure that we only have the same begin token
+        model.generation_config.max_initial_timestamp_index = 0
+        model.generation_config.prev_bos_token_id = timestamp_begin - 3
+
+        gen_kwargs = {
+            "logits_processor": logits_processor,
+            "return_segments": True,
+            "condition_on_prev_tokens": condition_on_prev_tokens,
+        }
+
+        if condition_on_prev_tokens:
+            gen_kwargs["no_speech_threshold"] = 0.6
+            gen_kwargs["temperature"] = (0.0, 0.2, 0.4, 0.6, 0.8, 1.0)
+            gen_kwargs["compression_ratio_threshold"] = 2.4
+            gen_kwargs["logprob_threshold"] = -1.0
+
+        outputs = model.generate(long_input_features, **gen_kwargs)
+
+        segments = outputs["segments"][0]
+
+        for _, segment in enumerate(segments):
+            assert segment["start"] <= segment["end"], "start has to be smaller equal end"
+            assert any(
+                s > timestamp_begin for s in segment["tokens"][1:]
+            ), f"At least one segment token should be a timestamp token, but not first., {segment['tokens']}"
+            assert (
+                segment["tokens"].shape[-1] <= max_length
+            ), "make sure that no segment is larger than max generation length"
+
+    def test_longform_generate_single_batch(self):
+        self._check_longform_generate_single_batch(condition_on_prev_tokens=False)
+
+    def test_longform_generate_single_batch_cond_prev(self):
+        self._check_longform_generate_single_batch(condition_on_prev_tokens=True)
+
+    def _check_longform_generate_multi_batch(self, condition_on_prev_tokens):
+        config, input_dict = self.model_tester.prepare_config_and_inputs_for_common()
+
+        model = WhisperForConditionalGeneration(config).eval()
+        input_features = input_dict["input_features"]
+        input_features = input_features[:2]
+
+        # len = 250 with num_input_frames = 60
+        long_input_features = ops.cat([input_features.tile((1, 1, 4)), input_features[:, :, :10]], dim=-1)
+        input_features_2 = long_input_features[1:]
+        attention_mask = ops.ones(
+            (2, long_input_features.shape[-1]), dtype=input_features.dtype
+        )
+        attention_mask[0, 200:] = 0
+
+        # force bsz=1
+        vocab_size = model.config.vocab_size
+
+        batch_size = 1
+        num_timestamp_tokens = 20
+        max_new_tokens = 16
+        timestamp_begin = vocab_size - num_timestamp_tokens
+        model.generation_config.no_timestamps_token_id = timestamp_begin - 1
+        model.generation_config.eos_token_id = None
+        model.config.eos_token_id = None
+        model.generation_config._detect_timestamp_from_logprob = False
+        # make sure that we only have the same begin token
+        model.generation_config.max_initial_timestamp_index = 0
+        model.generation_config.max_new_tokens = max_new_tokens
+        model.generation_config.prev_bos_token_id = timestamp_begin - 3
+
+        logits_processor = [
+            DummyTimestampLogitProcessor(
+                vocab_size - num_timestamp_tokens,
+                vocab_size,
+                batch_size=batch_size,
+                max_length=max_new_tokens,
+                min_space=4,
+                seed=1,
+            )
+        ]
+        outputs_2 = model.generate(
+            input_features_2,
+            max_new_tokens=max_new_tokens,
+            logits_processor=logits_processor,
+            condition_on_prev_tokens=condition_on_prev_tokens,
+            return_segments=True,
+        )
+        tokens_2 = outputs_2["sequences"][0]
+        segments_2 = outputs_2["segments"][0]
+
+        batch_size = 2
+        logits_processor = [
+            DummyTimestampLogitProcessor(
+                vocab_size - num_timestamp_tokens,
+                vocab_size,
+                batch_size=batch_size,
+                max_length=max_new_tokens,
+                min_space=4,
+                seed=0,
+            )
+        ]
+        gen_kwargs = {
+            "logits_processor": logits_processor,
+            "return_segments": True,
+            "condition_on_prev_tokens": condition_on_prev_tokens,
+            "attention_mask": attention_mask,
+            "max_new_tokens": max_new_tokens,
+        }
+
+        outputs = model.generate(long_input_features, **gen_kwargs)
+        tokens = outputs["sequences"][1]
+        segments = outputs["segments"][1]
+
+        # make sure batched and non-batched is the same
+        assert tokens_2.tolist() == tokens[: tokens_2.shape[-1]].tolist()
+
+        for seg1, seg2 in zip(segments_2, segments):
+            assert seg1["start"] == seg2["start"]
+            assert seg1["end"] == seg2["end"]
+            assert seg1["tokens"].tolist() == seg2["tokens"].tolist()
+
+    def test_longform_generate_multi_batch(self):
+        self._check_longform_generate_multi_batch(condition_on_prev_tokens=False)
+
+    def test_longform_generate_multi_batch_cond_prev(self):
+        self._check_longform_generate_multi_batch(condition_on_prev_tokens=True)
+
+    def test_beam_sample_generate_dict_output(self):
+        # We overwrite test_beam_sample_generate_dict_output in test_utils as
+        # we can only perform beam search if the temperature is set to 0 in Whisper.
+        config, input_ids, attention_mask = self._get_input_ids_and_config()
+
+        # disable cache
+        config.use_cache = False
+
+        model = WhisperForConditionalGeneration(config).eval()
+        _, logits_warper_kwargs = self._get_logits_processor_and_warper_kwargs(input_ids.shape[-1])
+        beam_kwargs = self._get_beam_kwargs()
+
+        # With Whisper, we can only perform a beam search if the temperature is set to 0.
+        logits_warper_kwargs["temperature"] = 0
+        # We will return num_beams sequences per input only if num_return_sequences == num_beams:
+        beam_kwargs["num_return_sequences"] = beam_kwargs["num_beams"]
+
+        output_generate = self._beam_sample_generate(
+            model=model,
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            beam_kwargs=beam_kwargs,
+            logits_warper_kwargs=logits_warper_kwargs,
+            output_scores=True,
+            output_logits=True,
+            output_hidden_states=True,
+            output_attentions=True,
+            return_dict_in_generate=True,
+        )
+        if model.config.is_encoder_decoder:
+            self.assertTrue(output_generate.sequences.shape[-1] == self.max_new_tokens + 1)
+            self.assertIsInstance(output_generate, GenerateBeamEncoderDecoderOutput)
+            # Retrocompatibility check
+            self.assertIsInstance(output_generate, BeamSampleEncoderDecoderOutput)
+        else:
+            self.assertTrue(output_generate.sequences.shape[-1] == self.max_new_tokens + input_ids.shape[-1])
+            self.assertIsInstance(output_generate, GenerateBeamDecoderOnlyOutput)
+            # Retrocompatibility check
+            self.assertIsInstance(output_generate, BeamSampleDecoderOnlyOutput)
+
+        self._check_outputs(output_generate, input_ids, model.config, num_return_sequences=beam_kwargs["num_beams"])
+
+
+    @is_flaky()  # TODO (joao, sanchit): fails ~9% of the times. Does the original test have the same issue?
+    def test_custom_4d_attention_mask(self):
+        config, input_dict = self.model_tester.prepare_config_and_inputs_for_common()
+        model = WhisperForConditionalGeneration(config).to(dtype=mindspore.float32)
+        model.eval()
+
+        (
+            input_ids,
+            position_ids,
+            input_ids_shared_prefix,
+            mask_shared_prefix,
+            position_ids_shared_prefix,
+        ) = self._get_custom_4d_mask_test_data()
+
+        with no_grad():
+            logits = model.forward(
+                decoder_input_ids=input_ids,
+                input_features=input_dict["input_features"],
+                decoder_position_ids=position_ids,
+            ).logits
+            # logits.shape == ([3, 4, ...])
+
+            logits_shared_prefix = model(
+                decoder_input_ids=input_ids_shared_prefix,
+                input_features=input_dict["input_features"],
+                decoder_attention_mask=mask_shared_prefix,
+                decoder_position_ids=position_ids_shared_prefix,
+            )[0]
+            # logits_shared_prefix.shape == ([1, 6, ...])
+
+        out_last_tokens = logits[:, -1, :]  # last tokens in each batch line
+        out_shared_prefix_last_tokens = logits_shared_prefix[0, -3:, :]  # last three tokens
+
+        # comparing softmax-normalized logits:
+        normalized_0 = nn.functional.softmax(out_last_tokens)
+        normalized_1 = nn.functional.softmax(out_shared_prefix_last_tokens)
+        assert ops.allclose(normalized_0, normalized_1, rtol=1e-3, atol=1e-4)
+
+    @parameterized.expand([(True,), (False,)])
+    def test_generate_output_type(self, return_dict_in_generate):
+        expected_output_type = GenerateEncoderDecoderOutput if return_dict_in_generate else mindspore.Tensor
+        for model_class in self.all_generative_model_classes:
+            config, inputs = self.model_tester.prepare_config_and_inputs()
+            model = model_class(config).eval()
+
+            # short-form generation without fallback
+            pred_ids = model.generate(**inputs, return_dict_in_generate=return_dict_in_generate)
+            assert isinstance(pred_ids, expected_output_type)
+
+            # short-form generation with fallback
+            pred_ids = model.generate(
+                **inputs,
+                logprob_threshold=-1.0,
+                temperature=[0.0, 0.1],
+                return_dict_in_generate=return_dict_in_generate,
+            )
+            assert isinstance(pred_ids, expected_output_type)
+
 
 @require_mindspore
-class WhisperModelIntegrationTests(MindNLPTestCase):
+class WhisperModelIntegrationTests(unittest.TestCase):
+    def setUp(self):
+        self._unpatched_generation_mixin_generate = mindnlp.transformers.GenerationMixin.generate
+
+    def tearDown(self):
+        mindnlp.transformers.GenerationMixin.generate = self._unpatched_generation_mixin_generate
+
     @cached_property
     def default_processor(self):
         return WhisperProcessor.from_pretrained("openai/whisper-base")
@@ -876,6 +1323,15 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
 
         return [x["array"] for x in speech_samples]
 
+    def _patch_generation_mixin_generate(self, check_args_fn=None):
+        test = self
+
+        def generate(self, *args, **kwargs):
+            if check_args_fn is not None:
+                check_args_fn(*args, **kwargs)
+            return test._unpatched_generation_mixin_generate(self, *args, **kwargs)
+
+        mindnlp.transformers.GenerationMixin.generate = generate
 
     @slow
     def test_tiny_logits_librispeech(self):
@@ -883,16 +1339,17 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         model = WhisperModel.from_pretrained("openai/whisper-tiny")
         input_speech = self._load_datasamples(1)
         feature_extractor = WhisperFeatureExtractor()
-        input_features = feature_extractor(input_speech, return_tensors="ms").input_features
+        input_features = feature_extractor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
 
-        logits = model(
-            input_features,
-            decoder_input_ids=mindspore.tensor([[50258, 50259, 50359]]),
-            output_hidden_states=False,
-            output_attentions=False,
-            return_dict=False,
-            use_cache=False,
-        )
+        with no_grad():
+            logits = model(
+                input_features,
+                decoder_input_ids=mindspore.tensor([[50258, 50259, 50359]]),
+                output_hidden_states=False,
+                output_attentions=False,
+                return_dict=False,
+                use_cache=False,
+            )
 
         # fmt: off
         EXPECTED_LOGITS = mindspore.tensor(
@@ -904,7 +1361,7 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
             ]
         )
         # fmt: on
-        self.assertTrue(np.allclose(logits[0][0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=5e-3))
+        self.assertTrue(ops.allclose(logits[0][0, 0, :30], EXPECTED_LOGITS, atol=1e-4))
 
         # fmt: off
         EXPECTED_GENERATION = mindspore.tensor(
@@ -918,8 +1375,7 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         # fmt: on
 
         head_logits = logits[0] @ model.decoder.embed_tokens.weight.T
-        self.assertTrue(np.allclose(head_logits[0, 0, :30].asnumpy(), EXPECTED_GENERATION.asnumpy(), atol=5e-3))
-
+        self.assertTrue(ops.allclose(head_logits[0, 0, :30], EXPECTED_GENERATION, atol=1e-4))
 
     @slow
     def test_small_en_logits_librispeech(self):
@@ -952,8 +1408,7 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
             ]
         )
         # fmt: on
-        self.assertTrue(np.allclose(logits[0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-3))
-
+        self.assertTrue(ops.allclose(logits[0, 0, :30], EXPECTED_LOGITS, atol=1e-4))
 
     @slow
     def test_large_logits_librispeech(self):
@@ -965,7 +1420,11 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
 
         processor = WhisperProcessor.from_pretrained("openai/whisper-large")
         processed_inputs = processor(
-            audio=input_speech, text="This part of the speech", add_special_tokens=False, return_tensors="ms"
+            audio=input_speech,
+            text="This part of the speech",
+            add_special_tokens=False,
+            return_tensors="ms",
+            sampling_rate=16_000,
         )
         input_features = processed_inputs.input_features
         decoder_input_ids = processed_inputs.labels
@@ -991,8 +1450,7 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         )
         # fmt: on
 
-        self.assertTrue(np.allclose(logits[0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-3))
-
+        self.assertTrue(ops.allclose(logits[0, 0, :30], EXPECTED_LOGITS, atol=1e-4))
 
     @slow
     def test_tiny_en_generation(self):
@@ -1002,7 +1460,7 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         model.config.decoder_start_token_id = 50257
 
         input_speech = self._load_datasamples(1)
-        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
 
         generated_ids = model.generate(input_features, num_beams=5, max_length=20)
         transcript = processor.tokenizer.batch_decode(generated_ids)[0]
@@ -1013,7 +1471,6 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         )
         self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
 
-
     @slow
     def test_tiny_generation(self):
         set_seed(0)
@@ -1021,7 +1478,7 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
 
         input_speech = self._load_datasamples(1)
-        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
 
         generated_ids = model.generate(input_features, num_beams=5, max_length=20)
         transcript = processor.tokenizer.decode(generated_ids[0])
@@ -1032,7 +1489,6 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         )
         self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
 
-
     @slow
     def test_large_generation(self):
         set_seed(0)
@@ -1040,7 +1496,8 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large")
 
         input_speech = self._load_datasamples(1)
-        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
+
         generated_ids = model.generate(
             input_features, do_sample=False, max_length=20, language="<|en|>", task="transcribe"
         )
@@ -1049,42 +1506,33 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         EXPECTED_TRANSCRIPT = " Mr. Quilter is the apostle of the middle classes and we are glad"
         self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
 
-
     @slow
     def test_large_generation_multilingual(self):
+        set_seed(0)
         processor = WhisperProcessor.from_pretrained("openai/whisper-large")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large")
 
-        token = os.getenv("HF_HUB_READ_TOKEN", True)
-        ds = load_dataset("mozilla-foundation/common_voice_6_1", "ja", split="test", streaming=True, token=token)
+        ds = load_dataset(
+            "facebook/multilingual_librispeech", "german", split="test", streaming=True, trust_remote_code=True
+        )
         ds = ds.cast_column("audio", datasets.Audio(sampling_rate=16_000))
+
         input_speech = next(iter(ds))["audio"]["array"]
-        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
 
         generated_ids = model.generate(
-            input_features, do_sample=False, max_length=20, language="<|ja|>", task="transcribe"
+            input_features, do_sample=False, max_length=20, language="<|de|>", task="transcribe"
         )
         transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-
-        EXPECTED_TRANSCRIPT = "木村さんに電話を貸してもらいました"
+        EXPECTED_TRANSCRIPT = " Mein sechster Sohn scheint, wenigstens auf den ersten Blick,"
         self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
 
         generated_ids = model.generate(
-            input_features, do_sample=False, max_length=20, language="<|en|>", task="transcribe"
+            input_features, do_sample=False, max_length=20, language="<|de|>", task="translate"
         )
         transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-
-        EXPECTED_TRANSCRIPT = " Kimura-san called me."
+        EXPECTED_TRANSCRIPT = " My sixth son seems, at least at first glance, the most deeply-minded"
         self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
-
-        generated_ids = model.generate(
-            input_features, do_sample=False, max_length=20, language="<|ja|>", task="translate"
-        )
-        transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-
-        EXPECTED_TRANSCRIPT = " I borrowed a phone from Kimura san"
-        self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
-
 
     @slow
     def test_large_batched_generation(self):
@@ -1093,7 +1541,7 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large")
 
         input_speech = self._load_datasamples(4)
-        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
         generated_ids = model.generate(input_features, max_length=20, task="translate")
 
         # fmt: off
@@ -1107,7 +1555,7 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         )
         # fmt: on
 
-        self.assertTrue(np.allclose(generated_ids.asnumpy(), EXPECTED_LOGITS.asnumpy()))
+        self.assertTrue(ops.allclose(generated_ids, EXPECTED_LOGITS))
 
         # fmt: off
         EXPECTED_TRANSCRIPT = [
@@ -1121,6 +1569,37 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)
         self.assertListEqual(transcript, EXPECTED_TRANSCRIPT)
 
+    @slow
+    def test_large_batched_generation_multilingual(self):
+        set_seed(0)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-large")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large")
+
+        token = os.getenv("HF_HUB_READ_TOKEN", True)
+        ds = load_dataset(
+            "mozilla-foundation/common_voice_6_1",
+            "ja",
+            split="test",
+            streaming=True,
+            token=token,
+            trust_remote_code=True,
+        )
+        ds = ds.cast_column("audio", datasets.Audio(sampling_rate=16_000))
+
+        input_speech = next(iter(ds))["audio"]["array"]
+        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
+
+        EXPECTED_TRANSCRIPTS = ["木村さんに電話を貸してもらいました", " Kimura-san called me."]
+
+        generated_ids = model.generate(
+            input_features.tile((2, 1, 1)),
+            do_sample=False,
+            max_length=20,
+            language=["<|ja|>", "<|en|>"],
+            task="transcribe",
+        )
+        transcripts = processor.batch_decode(generated_ids, skip_special_tokens=True)
+        self.assertEqual(transcripts, EXPECTED_TRANSCRIPTS)
 
     @slow
     def test_tiny_en_batched_generation(self):
@@ -1129,8 +1608,8 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
 
         input_speech = self._load_datasamples(4)
-        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
-        generated_ids = model.generate(input_features, max_length=20)
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
+        generated_ids = model.generate(input_features, max_length=20).to("cpu")
 
         # fmt: off
         EXPECTED_LOGITS = mindspore.tensor(
@@ -1144,7 +1623,7 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         )
         # fmt: on
 
-        self.assertTrue(np.allclose(generated_ids.asnumpy(), EXPECTED_LOGITS.asnumpy()))
+        self.assertTrue(ops.allclose(generated_ids, EXPECTED_LOGITS))
 
         # fmt: off
         EXPECTED_TRANSCRIPT = [
@@ -1158,7 +1637,6 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)
         self.assertListEqual(transcript, EXPECTED_TRANSCRIPT)
 
-
     @slow
     def test_tiny_timestamp_generation(self):
         set_seed(0)
@@ -1166,14 +1644,13 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
 
         input_speech = np.concatenate(self._load_datasamples(4))
-        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
-        generated_ids = model.generate(input_features, max_length=448, return_timestamps=True)
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
 
-        # fmt: off
-        EXPECTED_OUTPUT = mindspore.tensor([50258, 50259, 50359, 50364, 2221, 13, 2326, 388, 391, 307, 264, 50244, 295, 264, 2808, 5359, 11, 293, 321, 366, 5404, 281, 2928, 702, 14943, 13, 50692, 50692, 6966, 307, 2221, 13, 2326, 388, 391, 311, 9060, 1570, 1880, 813, 702, 1871, 13, 50926, 50926, 634, 5112, 505, 300, 412, 341, 42729, 3196, 295, 264, 1064, 11, 365, 5272, 293, 12904, 9256, 450, 10539, 51208, 51208, 949, 505, 11, 14138, 10117, 490, 3936, 293, 1080, 3542, 5160, 881, 26336, 281, 264, 1575, 13, 51552, 51552, 634, 575, 12525, 22618, 1968, 6144, 35617, 7354, 1292, 6, 589, 307, 534, 10281, 934, 439, 11, 293, 51836, 51836, 50257])
-        # fmt: on
+        generated_ids = model.generate(input_features, max_length=448, return_timestamps=True).to("cpu")
 
-        self.assertTrue(np.allclose(generated_ids.asnumpy(), EXPECTED_OUTPUT.asnumpy()))
+        EXPECTED_OUTPUT = mindspore.tensor([50258, 50259, 50359, 50364, 2221, 13, 2326, 388, 391, 307, 264, 50244, 295, 264, 2808, 5359, 11, 293, 321, 366, 5404, 281, 2928, 702, 14943, 13, 50692, 50692, 6966, 307, 2221, 13, 2326, 388, 391, 311, 9060, 1570, 1880, 813, 702, 1871, 13, 50926, 50926, 634, 5112, 505, 300, 412, 341, 42729, 3196, 295, 264, 1064, 11, 365, 5272, 293, 12904, 9256, 450, 10539, 51208, 51208, 949, 505, 11, 14138, 10117, 490, 3936, 293, 1080, 3542, 5160, 881, 26336, 281, 264, 1575, 13, 51552, 51552, 634, 575, 12525, 22618, 1968, 6144, 35617, 7354, 1292, 6, 589, 307, 534, 10281, 934, 439, 11, 293, 51836, 51836, 50257])  # fmt: skip
+
+        self.assertTrue(ops.allclose(generated_ids, EXPECTED_OUTPUT))
 
         EXPECTED_TRANSCRIPT = [
             {
@@ -1221,6 +1698,66 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         transcript = processor.batch_decode(generated_ids, skip_special_tokens=True, output_offsets=True)
         self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
 
+    @slow
+    def test_large_timestamp_generation(self):
+        set_seed(0)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-large-v3")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large-v3")
+
+        input_speech = np.concatenate(self._load_datasamples(4))
+        input_features = processor(
+            input_speech, return_tensors="ms", sampling_rate=16_000, return_token_timestamps=True
+        ).input_features
+
+        generated_ids = model.generate(input_features, max_length=448, return_timestamps=True).to("cpu")
+
+        # fmt: off
+        EXPECTED_OUTPUT = mindspore.tensor([50258, 50259, 50360, 50365, 2221, 13, 2326, 388, 391, 307, 264, 50244, 295, 264, 2808, 5359, 11, 293, 321, 366, 5404, 281, 2928, 702, 14943, 13, 50629, 50682, 6966, 307, 2221, 13, 2326, 388, 391, 311, 9060, 1570, 1880, 813, 702,  1871, 13, 50870, 50911, 634, 5112, 505, 300, 412, 341, 42729, 3196, 295, 264,  1064,  11, 365,  5272,   293, 12904,  9256, 450, 10539, 949, 505, 11, 51245, 51287,  1034, 4680, 10117, 490, 3936, 293, 1080,  3542, 5160, 881, 26336, 281, 264, 1575, 13, 51494, 51523, 634, 575, 12525, 22618, 1968,  6144, 35617, 1456, 397, 266, 311, 589, 307, 534, 10281, 934, 439, 11, 51799, 51815, 50257])
+        # fmt: on
+        self.assertTrue(ops.allclose(generated_ids, EXPECTED_OUTPUT))
+
+        EXPECTED_TRANSCRIPT = [
+            {
+                "text": (
+                    " Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel."
+                    " Nor is Mr. Quilter's manner less interesting than his matter. He tells us that at this festive"
+                    " season of the year, with Christmas and roast beef looming before us, similes drawn from eating"
+                    " and its results occur most readily to the mind. He has grave doubts whether Sir Frederick "
+                    "Leighton's work is really Greek after all,"
+                ),
+                "offsets": [
+                    {
+                        "text": (
+                            " Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel."
+                        ),
+                        "timestamp": (0.0, 5.28),
+                    },
+                    {
+                        "text": " Nor is Mr. Quilter's manner less interesting than his matter.",
+                        "timestamp": (6.34, 10.1),
+                    },
+                    {
+                        "text": (
+                            " He tells us that at this festive season of the year, with Christmas and roast beef looming before us,"
+                        ),
+                        "timestamp": (10.92, 17.6),
+                    },
+                    {
+                        "text": (" similes drawn from eating and its results occur most readily to the mind."),
+                        "timestamp": (18.44, 22.580000000000002),
+                    },
+                    {
+                        "text": (
+                            " He has grave doubts whether Sir Frederick Leighton's work is really Greek after all,"
+                        ),
+                        "timestamp": (23.16, 28.68),
+                    },
+                ],
+            }
+        ]
+
+        transcript = processor.batch_decode(generated_ids, skip_special_tokens=True, output_offsets=True)
+        self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
 
     @slow
     def test_tiny_token_timestamp_generation(self):
@@ -1230,7 +1767,7 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         model.generation_config.alignment_heads = [[2, 2], [3, 0], [3, 2], [3, 3], [3, 4], [3, 5]]
 
         input_speech = self._load_datasamples(4)
-        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
 
         generate_outputs = model.generate(
             input_features, max_length=448, return_timestamps=True, return_token_timestamps=True
@@ -1246,8 +1783,111 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
             [ 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.7400, 1.0400, 1.3200, 1.6800, 2.1400, 2.4800, 2.7800, 3.0800, 3.1600, 3.4000, 3.6000, 4.0200, 4.2200, 4.8600, 5.2400, 5.7400, 6.3400, 6.6200, 6.7600, 6.7600, 6.8600, 7.2400, 7.4200, 7.6800, 7.9200, 8.4800, 8.7600, 9.2000, 9.2000, 9.4200, 15.8200, 15.8200, 29.6400, 29.6600, 29.6600, 29.6600, 29.6600, 29.7600]
         ])
         # fmt: on
-        self.assertTrue(np.allclose(generate_outputs.token_timestamps.asnumpy(), EXPECTED_OUTPUT.asnumpy(), 1e-3))
 
+        self.assertTrue(ops.allclose(generate_outputs.token_timestamps.to("cpu"), EXPECTED_OUTPUT))
+
+    @slow
+    def test_large_token_timestamp_generation(self):
+        set_seed(0)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-large-v3")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large-v3")
+
+        input_speech = self._load_datasamples(4)
+        input_features = processor(
+            input_speech, return_tensors="ms", sampling_rate=16_000, return_token_timestamps=True
+        )
+
+        generate_outputs = model.generate(
+            **input_features, max_length=448, return_timestamps=True, return_token_timestamps=True
+        )
+
+        self.assertEqual(generate_outputs.sequences.shape, generate_outputs.token_timestamps.shape)
+
+        # fmt: off
+        EXPECTED_OUTPUT = mindspore.tensor([
+            [ 0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.6200,  0.7400,  0.8600, 1.0000,  1.0400,  1.3000,  1.4400,  1.7800,  2.1800,  2.2800,  2.5000, 2.9200,  3.0000,  3.3800,  3.5000,  3.6000,  3.8400,  4.1000,  4.4000, 4.6800,  5.1400,  5.3600,  5.8200,  5.8200,  5.8200,  5.8200,  5.8200, 5.8200,  5.8200,  5.8200,  5.8200,  5.8200,  5.8200,  5.8200,  5.8200, 5.8200],
+            [ 0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.6000,  0.9200,  1.2200, 1.3400,  1.4200,  1.5400,  1.5800,  1.7400,  2.0600,  2.3800,  3.0400, 3.3800,  3.6400,  4.1200,  4.3600,  4.7800,  4.7800,  4.7800,  4.7800, 4.7800,  4.7800,  4.7800,  4.7800,  4.7800,  4.7800,  4.7800,  4.7800, 4.7800,  4.7800,  4.7800,  4.7800,  4.7800,  4.7800,  4.7800,  4.7800, 4.7800],
+            [ 0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.5400,  0.8200,  1.1600, 1.4600,  1.7400,  1.8800,  2.3400,  2.7400,  3.1400,  3.2200,  3.5400, 4.2800,  4.5600,  4.8200,  5.0600,  5.3200,  5.6600,  5.9600,  6.1400, 6.4000,  6.8400,  7.8800,  8.0200,  8.3600,  8.7000,  9.0200,  9.3200, 9.5000,  9.8400, 10.3000, 10.6600, 11.0800, 11.3600, 11.4600, 11.8000, 12.4600],
+            [ 0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.5600,  0.7600,  1.0600, 1.4000,  1.8800,  2.2600,  2.6200,  2.8000,  2.9600,  3.0000,  3.2000, 3.4400,  3.6800,  4.0000,  4.6000,  5.0000,  5.3200,  5.4800,  6.0600, 6.0600,  6.1000,  6.3200,  6.7400,  7.0000,  7.2200,  7.4000,  7.7600, 8.0600,  8.5600,  8.8600,  8.9400,  9.1000,  9.3400,  9.8800,  9.8800, 9.8800]
+        ])
+        # fmt: on
+
+        self.assertTrue(ops.allclose(generate_outputs.token_timestamps.to("cpu"), EXPECTED_OUTPUT))
+
+    @slow
+    def test_tiny_token_timestamp_batch_generation(self):
+        set_seed(0)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
+        model.generation_config.alignment_heads = [[2, 2], [3, 0], [3, 2], [3, 3], [3, 4], [3, 5]]
+
+        num_samples = 4
+        num_return_sequences = 2
+
+        input_speech = self._load_datasamples(num_samples)
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
+
+        generate_outputs = model.generate(
+            input_features,
+            max_length=448,
+            return_timestamps=True,
+            return_token_timestamps=True,
+            num_beams=3,
+            num_return_sequences=num_return_sequences,
+        )
+
+        # task id and lang id prompts should not have timestamp tokens
+        self.assertEqual(generate_outputs.sequences.shape[-1] - 2, generate_outputs.token_timestamps.shape[-1])
+
+        self.assertEqual(len(generate_outputs.sequences), num_return_sequences * num_samples)
+
+    @slow
+    def test_tiny_token_timestamp_generation_longform(self):
+        set_seed(0)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
+        model.generation_config.alignment_heads = [[2, 2], [3, 0], [3, 2], [3, 3], [3, 4], [3, 5]]
+
+        input_speech = self._load_datasamples(5)
+        long_input_speech = np.concatenate(input_speech, dtype=np.float32)
+        inputs = processor(
+            long_input_speech,
+            return_tensors="ms",
+            truncation=False,  # False so the audio isn't truncated and whole audio is sent to the model
+            return_attention_mask=True,
+            padding=True,
+        )
+
+        generate_outputs = model.generate(**inputs, return_segments=True, return_token_timestamps=True)
+
+        token_timestamps_shape = [
+            [segment["token_timestamps"].shape for segment in segment_list]
+            for segment_list in generate_outputs["segments"]
+        ]
+        tokens_shape = [
+            [segment["tokens"].shape for segment in segment_list] for segment_list in generate_outputs["segments"]
+        ]
+        self.assertListEqual(tokens_shape, token_timestamps_shape)
+
+        # fmt: off
+        EXPECTED_OUTPUT = [
+            mindspore.tensor([0.0000, 0.4200, 0.8200, 0.9400, 1.1200, 1.1200, 1.2200, 1.5000, 1.7200, 2.0400, 2.3400, 2.5200, 2.6600, 3.2000, 3.4400, 3.5600, 3.6800, 3.8200, 4.1000, 4.3000, 4.5800, 4.9400, 5.4000, 6.3600]),
+            mindspore.tensor([ 6.5400,  6.5400,  6.7400,  6.9600,  7.2600,  7.3400,  7.5800,  7.5800, 7.6400,  7.8400,  8.1000,  8.5000,  9.0000,  9.4800,  9.7200, 10.2600, 11.1000]),
+            mindspore.tensor([11.2200, 11.2200, 11.4200, 11.6600, 12.0800, 12.4400, 12.5800, 12.8400, 13.1800, 13.6800, 14.0000, 14.2200, 14.6200, 14.9800, 15.2200, 15.6000, 15.9400, 16.2000, 16.5600, 16.8400, 16.9800]),
+            mindspore.tensor([16.9800, 16.9800, 17.3200, 18.1600, 18.6400, 18.8600, 19.2800, 19.5600, 19.8800, 20.1800, 20.3800, 20.7200, 21.1600, 21.5400, 21.9000, 22.2000, 22.4200, 22.8600, 23.7000]),
+            mindspore.tensor([23.7000, 23.7000, 23.9400, 24.1800, 24.3800, 24.8400, 25.2800, 25.6600, 25.9200, 26.2600, 26.4000, 26.5800, 26.7600, 27.1400, 27.3800, 28.0400, 28.3800, 28.8200, 29.3400, 29.5200]),
+            mindspore.tensor([29.4400, 29.4400, 29.7000, 30.0800, 30.3800, 30.5400, 30.8200, 31.0600, 31.6600, 31.9200, 32.3000, 32.4800, 32.6200, 33.6800]),
+            mindspore.tensor([33.8000, 33.8000, 33.9800, 33.9800, 34.1800, 34.4400, 34.6200, 35.0000, 35.2200, 35.3200, 35.5600, 35.9200, 36.3800, 36.6200, 36.6600, 36.9600, 37.3400, 37.9800, 38.5800, 38.7200, 38.9800, 39.4400, 39.5800, 39.8000, 40.1200, 40.2600]),
+            mindspore.tensor([40.5200, 40.5200, 40.6200, 41.1000, 41.5400, 41.9200, 42.1000, 42.3200, 42.3200, 43.0600, 44.6000]),
+            mindspore.tensor([44.7000, 44.7000, 44.8600, 44.9400, 45.1400, 45.1400, 45.2800, 45.6200, 45.9000, 46.2600, 47.1600, 47.4800, 47.7400, 48.1000, 48.2800, 48.4000, 48.6200, 48.8400, 49.0400, 49.2800, 49.4800, 49.6600, 49.9400, 50.5400]),
+            mindspore.tensor([50.5400, 50.5400, 50.6600, 50.8800, 51.2400, 51.7200, 52.8400]),
+            mindspore.tensor([52.9600, 52.9600, 53.0400, 53.2600, 53.4200, 53.5800, 53.9200, 54.1200, 54.7200, 54.9400, 55.2600, 55.6200, 55.9800, 56.5600, 56.8000, 56.9200, 57.3600, 57.9200, 58.1800, 58.5000, 58.6400, 58.8200]),
+            mindspore.tensor([58.6800, 58.6800, 59.1400, 59.5400, 59.9200, 60.1600, 60.3800, 60.8200, 61.6200, 62.2600, 75.2000]),
+        ]
+        # fmt: on
+
+        for segment, exp_segment in zip(generate_outputs["segments"][0], EXPECTED_OUTPUT):
+            self.assertTrue(ops.allclose(segment["token_timestamps"], exp_segment))
 
     @slow
     def test_tiny_specaugment_librispeech(self):
@@ -1255,19 +1895,20 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         # Apply SpecAugment
         model = WhisperModel.from_pretrained("openai/whisper-tiny", apply_spec_augment=True)
         # Set model to training mode to enable SpecAugment
-        model.set_train()
+        model.train()
         input_speech = self._load_datasamples(1)
         feature_extractor = WhisperFeatureExtractor()
-        input_features = feature_extractor(input_speech, return_tensors="ms").input_features
+        input_features = feature_extractor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
 
-        logits = model(
-            input_features,
-            decoder_input_ids=mindspore.tensor([[50258, 50259, 50359]]),
-            output_hidden_states=False,
-            output_attentions=False,
-            return_dict=False,
-            use_cache=False,
-        )
+        with no_grad():
+            logits = model(
+                input_features,
+                decoder_input_ids=mindspore.tensor([[50258, 50259, 50359]]),
+                output_hidden_states=False,
+                output_attentions=False,
+                return_dict=False,
+                use_cache=False,
+            )
 
         # fmt: off
         EXPECTED_LOGITS = mindspore.tensor(
@@ -1279,37 +1920,126 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
             ]
         )
         # fmt: on
-        self.assertTrue(np.allclose(logits[0][0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=5e-3))
-
+        self.assertTrue(ops.allclose(logits[0][0, 0, :30], EXPECTED_LOGITS, atol=1e-4))
 
     @slow
     def test_generate_with_prompt_ids(self):
         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
         input_speech = self._load_datasamples(4)[-1:]
-        input_features = processor(input_speech, return_tensors="ms").input_features
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
 
         output_without_prompt = model.generate(input_features)
-        prompt_ids = processor.get_prompt_ids("Leighton")
+        prompt_ids = processor.get_prompt_ids("Leighton", return_tensors="ms")
         output_with_prompt = model.generate(input_features, prompt_ids=prompt_ids)
 
         expected_without_prompt = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|> He has grave doubts whether Sir Frederick Layton's work is really Greek after all and can discover in it but little of Rocky Ithaca.<|endoftext|>"
         expected_with_prompt = "<|startofprev|> Leighton<|startoftranscript|><|en|><|transcribe|><|notimestamps|> He has grave doubts whether Sir Frederick Leighton's work is really Greek after all and can discover in it but little of Rocky Ithaca.<|endoftext|>"
-        self.assertEqual(processor.decode(output_without_prompt[0]), expected_without_prompt)
-        self.assertEqual(processor.decode(output_with_prompt[0]), expected_with_prompt)
 
+        output_without_prompt = processor.decode(output_without_prompt[0])
+        output_with_prompt = processor.decode(output_with_prompt[0])
+
+        self.assertEqual(output_without_prompt, expected_without_prompt)
+        self.assertEqual(output_with_prompt, expected_with_prompt)
+
+    @slow
+    def test_language_detection(self):
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
+        input_speech = self._load_datasamples(4)[-1:]
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
+
+        lang_id = model.detect_language(input_features)[0].item()
+
+        ids_to_lang = {v: k for k, v in model.generation_config.lang_to_id.items()}
+
+        assert ids_to_lang[lang_id] == "<|en|>"
+
+        audio = hf_hub_download("Narsil/asr_dummy", filename="hindi.ogg", repo_type="dataset")
+
+        from mindnlp.data.io.audio import read
+        raw_audio, sr = read(audio)
+        input_speech = mindspore.dataset.audio.transforms.Resample(sr, 16_000)(raw_audio).asnumpy()
+
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
+
+        lang_id = model.detect_language(input_features)[0].item()
+
+        assert ids_to_lang[lang_id] == "<|hi|>"
+
+    @slow
+    def test_default_multilingual_transcription_short_form(self):
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
+
+        audio = hf_hub_download("Narsil/asr_dummy", filename="hindi.ogg", repo_type="dataset")
+
+        raw_audio, sr = torchaudio.load(audio)
+        input_speech = torchaudio.transforms.Resample(sr, 16_000)(raw_audio).asnumpy()
+
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
+
+        # task defaults to transcribe
+        sequences = model.generate(input_features)
+
+        transcription = processor.batch_decode(sequences, skip_special_tokens=False)[0]
+
+        assert (
+            transcription
+            == "<|startoftranscript|><|hi|><|transcribe|><|notimestamps|> Mirchi mein ki tene vibinda prajatiya hai<|endoftext|>"
+        )
+
+        # set task to translate
+        sequences = model.generate(input_features, task="translate")
+        transcription = processor.batch_decode(sequences, skip_special_tokens=False)[0]
+
+        assert (
+            transcription
+            == "<|startoftranscript|><|hi|><|translate|><|notimestamps|> How much is the difference between the girls?<|endoftext|>"
+        )
+
+    @slow
+    def test_default_multilingual_transcription_long_form(self):
+        processor = WhisperProcessor.from_pretrained("openai/whisper-large-v2")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large-v2")
+
+        audio = hf_hub_download("Narsil/asr_dummy", filename="hindi.ogg", repo_type="dataset")
+
+        raw_audio, sr = torchaudio.load(audio)
+        input_speech = torchaudio.transforms.Resample(sr, 16_000)(raw_audio)
+
+        input_speech = input_speech.tile((1, 10)).asnumpy()
+        input_features = processor(
+            input_speech, return_tensors="ms", padding="longest", truncation=False, sampling_rate=16_000
+        ).input_features
+
+        # task defaults to transcribe
+        sequences = model.generate(input_features)
+
+        transcription = processor.batch_decode(sequences)[0]
+
+        assert transcription == " मिर्ची में कितने विबिन्द प्रजातियां हैं? मिर्ची में कितने विबिन्द प्रजातियां हैं?"
+
+        # set task to translate
+        sequences = model.generate(input_features, task="translate")
+        transcription = processor.batch_decode(sequences)[0]
+
+        assert (
+            transcription
+            == " How many different species are there in the chilli? How many different species are there in the chilli?"
+        )
 
     @slow
     def test_generate_with_prompt_ids_and_forced_decoder_ids(self):
         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
         input_speech = self._load_datasamples(1)
-        input_features = processor(input_speech, return_tensors="ms").input_features
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
         task = "translate"
         language = "de"
         expected_tokens = [f"<|{task}|>", f"<|{language}|>"]
         prompt = "test prompt"
-        prompt_ids = processor.get_prompt_ids(prompt)
+        prompt_ids = processor.get_prompt_ids(prompt, return_tensors="ms")
 
         output = model.generate(input_features, task=task, language=language, prompt_ids=prompt_ids)
         text = processor.decode(output[0])
@@ -1317,15 +2047,14 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         self.assertTrue(prompt in text)
         self.assertTrue(all(token in text for token in expected_tokens))
 
-
     @slow
     def test_generate_with_prompt_ids_and_no_non_prompt_forced_decoder_ids(self):
         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
         input_speech = self._load_datasamples(1)
-        input_features = processor(input_speech, return_tensors="ms").input_features
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
         prompt = "test prompt"
-        prompt_ids = processor.get_prompt_ids(prompt)
+        prompt_ids = processor.get_prompt_ids(prompt, return_tensors="ms")
 
         model.generation_config.forced_decoder_ids = None
         model.config.forced_decoder_ids = None
@@ -1335,10 +2064,723 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
 
         self.assertTrue(prompt in text)
 
+    @slow
+    def test_speculative_decoding_distil(self):
+        ms_dtype = mindspore.float16
+        model_id = "openai/whisper-large-v2"
+        model = WhisperForConditionalGeneration.from_pretrained(
+            model_id, ms_dtype=ms_dtype, low_cpu_mem_usage=True, use_safetensors=True
+        )
+
+        processor = WhisperProcessor.from_pretrained(model_id)
+
+        assistant_model_id = "distil-whisper/distil-large-v2"
+        assistant_model = WhisperForCausalLM.from_pretrained(
+            assistant_model_id, ms_dtype=ms_dtype, low_cpu_mem_usage=True, use_safetensors=True
+        )
+
+        dataset = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+        sample = dataset[0]["audio"]
+
+        input_features = processor(sample["array"], return_tensors="ms", sampling_rate=16_000).input_features
+        input_features = input_features.to(dtype=mindspore.float16)
+
+        # warm up assisted decoding
+        _ = model.generate(input_features, assistant_model=assistant_model)
+        # warm up non-assisted decoding
+        _ = model.generate(input_features)
+
+        # assisted decoding
+        start_time = time.time()
+        tokens = model.generate(input_features, assistant_model=assistant_model)
+        total_time_assist = time.time() - start_time
+
+        transcription_ass = processor.batch_decode(tokens, skip_special_tokens=True)
+
+        # non-assisted decoding
+        start_time = time.time()
+        tokens = model.generate(input_features)
+        total_time_non_assist = time.time() - start_time
+
+        transcription_non_ass = processor.batch_decode(tokens, skip_special_tokens=True)
+
+        assert transcription_ass == transcription_non_ass
+        assert transcription_ass == [
+            " Mr. Quilter is the apostle of the middle classes and we are glad to welcome his gospel."
+        ]
+        assert total_time_non_assist > total_time_assist, "Make sure that assistant decoding is faster"
+
+    @slow
+    def test_speculative_decoding_non_distil(self):
+        ms_dtype = mindspore.float16
+        model_id = "openai/whisper-large-v2"
+        model = WhisperForConditionalGeneration.from_pretrained(
+            model_id, ms_dtype=ms_dtype, low_cpu_mem_usage=True, use_safetensors=True
+        )
+
+        processor = WhisperProcessor.from_pretrained(model_id)
+
+        assistant_model_id = "openai/whisper-tiny"
+        assistant_model = WhisperForConditionalGeneration.from_pretrained(
+            assistant_model_id, ms_dtype=ms_dtype, low_cpu_mem_usage=True, use_safetensors=True
+        )
+
+        dataset = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+        sample = dataset[0]["audio"]
+
+        input_features = processor(sample["array"], return_tensors="ms", sampling_rate=16_000).input_features
+        input_features = input_features.to(mindspore.float16)
+
+        # warm up assisted decoding
+        _ = model.generate(input_features, assistant_model=assistant_model)
+        # warm up non-assisted decoding
+        _ = model.generate(input_features)
+
+        # assisted decoding
+        start_time = time.time()
+        tokens = model.generate(input_features, assistant_model=assistant_model)
+        total_time_assist = time.time() - start_time
+
+        transcription_ass = processor.batch_decode(tokens, skip_special_tokens=True)
+
+        # non-assisted decoding
+        start_time = time.time()
+        tokens = model.generate(input_features)
+        total_time_non_assist = time.time() - start_time
+
+        transcription_non_ass = processor.batch_decode(tokens, skip_special_tokens=True)
+
+        assert transcription_ass == transcription_non_ass
+        assert transcription_ass == [
+            " Mr. Quilter is the apostle of the middle classes and we are glad to welcome his gospel."
+        ]
+        assert total_time_non_assist > total_time_assist, "Make sure that assistant decoding is faster"
+
+    @slow
+    def test_whisper_longform_single_batch(self):
+        # fmt: off
+        EXPECTED_TEXT = [" Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel. Nor is Mr. Quilter's manner less interesting than his matter. He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similes drawn from eating and its results occur most readily to the mind. He has grave doubts whether Sir Frederick Layton's work is really Greek after all, and can discover in it but little of rocky Ithaca. Linnell's pictures are a sort of up-gards and atom paintings, and Mason's exquisite idles are as national as a jingo poem. Mr. Birk at Foster's landscapes smile at one much in the same way that Mr. Carker used to flash his teeth. Mr. John Collier gives his sitter a cheerful slap in the back, before he says, like a shampoo or a Turkish bath. Next man, it is obviously unnecessary for us to point out how luminous these criticisms are, how delicate an expression. On the general principles of art, Mr. Quilter writes with equal lucidity. he tells us is of a different quality to mathematics, and finish in art is adding more effect. As for etchings, there are two kinds, British and foreign. He laments most bitterly the divorce that has been made between decorative art and what we usually call pictures. Makes the customary appeal to the last judgment and reminds us that in the great days of art Michelangelo was the furnishing upholsterer. Near the fire, any ornaments Fred brought home from India on the mantelboard. In fact, he is quite severe on Mr. Ruskin for not recognizing that a picture should denote the frailty of man. And remarks was pleasing courtesy in Felicitis Grace that many faces are feeling. Only, unfortunately, his own work never does get good. Mr. Quilter has missed his chance, for he has failed even to make himself the Tupper of painting. By Harry Quilter M.A. Because you were sleeping instead of conquering, the lovely rose princess has become a fiddle without a bow, while poor Shaggy sits there, accoing dove. He has gone and gone for good, answered Polychrome, would manage to squeeze into the room beside the dragon and had witnessed the occurrences with much interest. I have remained a prisoner only because I wished to be one. And with this, he stepped forward and burst the stout chains as easily as if they had been threads. The little girl had been asleep, but she heard the wraps and opened the door. The king has fled and disgraced and your friends are asking for you. I begged Ruggadot long ago to send him away, but he would not do so. I also offered to help your brother to escape, but he would not go. He eats and sleeps very steadily, replied the new king. I hope he doesn't work too hard, since Shaggy. He doesn't work at all. In fact, there's nothing he can do in these dominions, as well as our gnomes, whose numbers are so great that it worries us to keep them all busy. Not exactly, we've turned Calico. Where is my brother now? In Quared Shaggy. In the metal forest. Where is that? The metal forest is in the great domed cavern, the largest and all-ard dominions, replied Calico. Calico hesitated. However, if we look sharp, we may be able to discover one of these secret ways. Oh no, I'm quite sure he didn't. That's funny, remarked Betsy thoughtfully. I don't believe and knew any magic or she'd have worked it before. I do not know, confess shaggy. True, a great calico. Calico went to the big gong and pounded on it just as we're good to use to do, but no one answered the summons. Having returned to the Royal Cavern, Calico first pounded the gong and then sat in the throne, wearing ruggedos discarded ruby crown and holding in his hand to scepter which ruggedo had so often thrown at his head. A man said to the universe, Sir, I exist. Sweat covered Breon's body, trickling into the titling cloth that was the only german he wore. The cut on his chest still dripping blood. The ache of his overstrained eyes, even the soaring arena around him with thousands of spectators, retrovealities not worth thinking about. His instant panic was followed by a small sharp blow high on his chest. One minute, a voice said, and a time buzzer sounded. A minute is not a very large measure of time, and his body needed every fraction of it. The buzzers were triggered as muscles into complete relaxation. Oli's heart and lungs worked on at a strong, measured rate. He was in reverie, sliding along the borders of consciousness. The contestants in the 20s needed undisturbed rest. Therefore, nights in the dormitories were as quiet as death. Particularly so, on this last night, when only two of the little cubicles were occupied, The thousands of others standing with dark empty doors. The other voice snapped with a harsh urgency, clearly used to command. I'm here because the matter is of utmost importance, and brand is the one I must see. Now stand aside. The twenties, he must have drawn his gun because the intruder said quickly, but that away you're being a fool. out, there was silence then, and still wondering, Breon was once more asleep. Ten seconds, he asked the handler who was needing his aching muscles. A red-haired mountain of a man, with an apparently inexhaustible store of energy. There could be little art in this last and final round of fencing. Just thrust and parry, and victory to the stronger. a man who entered the twenties had his own training tricks. They were appeared to be an immediate association with the death trauma, as if the two were inextricably linked into one. The strength that enables someone in a trance to hold his body stiff and unsupported except at two points, the head and heels. This is physically impossible when conscious. had died before during the 20s and death during the last round was in some ways easier than defeat. Breathing deeply, Breon's softly spoke the auto-hypnotic phrases that triggered the process. When the buzzer sounded, he pulled his foil from his second startled grasp and ran forward. Our role looked amazed at the sudden fury of the attack, then smiled. He thought it was the last burst of energy. He knew how close they both were to exhaustion. Breon saw something close to panic on his opponent's face when the man finally recognized his error. A wave of despair rolled out from our rogue. Breon sensed it and knew the fifth point was his. the powerful twist that's rest of the side, in and under the guard."]
+        # fmt: on
+
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
+
+        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean")
+        one_audio = np.concatenate([x["array"] for x in ds["validation"]["audio"]], dtype=np.float32)
+
+        input_features = processor(
+            one_audio, return_tensors="ms", truncation=False, padding="longest", sampling_rate=16_000
+        )["input_features"]
+
+        result = model.generate(input_features, return_timestamps=True)
+        decoded = processor.batch_decode(result, skip_special_tokens=True)
+
+        assert decoded == EXPECTED_TEXT
+
+        decoded_with_timestamps = processor.batch_decode(result, skip_special_tokens=True, decode_with_timestamps=True)
+
+        no_timestamp_matches = re.split(r"<\|[\d\.]+\|>", decoded_with_timestamps[0])
+
+        assert ["".join(no_timestamp_matches)] == EXPECTED_TEXT
+
+        timestamp_matches = re.findall(r"<\|[\d\.]+\|>", decoded_with_timestamps[0])
+
+        timestamp_floats = [float(t[2:-2]) for t in timestamp_matches]
+
+        is_increasing = all(timestamp_floats[i] <= timestamp_floats[i + 1] for i in range(len(timestamp_floats) - 1))
+
+        assert is_increasing
+
+    @slow
+    def test_whisper_longform_prompt_ids(self):
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
+
+        prompt = "Mr. Kilter, Brionno."  # let's force Quilter -> Kilter, Brion -> Brionno
+        prompt_ids = processor.get_prompt_ids(prompt, return_tensors="ms")
+
+        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation[:-1]")
+        one_audio = np.concatenate([x["array"] for x in ds["audio"]], dtype=np.float32)
+
+        first_text = ds[0]["text"].lower()
+        last_text = ds[-1]["text"].lower()
+
+        input_features = processor(
+            one_audio, return_tensors="ms", truncation=False, padding="longest", sampling_rate=16_000
+        )["input_features"]
+
+        result = model.generate(
+            input_features,
+            prompt_ids=prompt_ids,
+            return_timestamps=True,
+            prompt_condition_type="first-segment",
+            condition_on_prev_tokens=True,
+        )
+        decoded_first_segment = processor.batch_decode(result, skip_special_tokens=True)
+
+        result = model.generate(
+            input_features,
+            prompt_ids=prompt_ids,
+            return_timestamps=True,
+            prompt_condition_type="all-segments",
+            condition_on_prev_tokens=True,
+        )
+        decoded_all_segments = processor.batch_decode(result, skip_special_tokens=True)
+
+        # show that first segment has quilter and last segment has brion
+        assert "quilter" in first_text
+        assert "brion" in last_text
+
+        # condition on first segment correctly changes to kilter in first segment, but does not transcribe "brianno" correctly
+        assert "kilter" in decoded_first_segment[0][: len(first_text)].lower()
+        assert "brionno" not in decoded_first_segment[0][-len(last_text) :].lower()
+
+        # condition on all-segment correctly changes to kilter in first segment and correctly transcribes "brianno"
+        assert "kilter" in decoded_all_segments[0][: len(first_text)].lower()
+        assert "brionno" in decoded_all_segments[0][-len(last_text) :].lower()
+
+    @slow
+    def test_whisper_longform_single_batch_prev_cond(self):
+        # fmt: off
+        EXPECTED_TEXT = [" Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel. Nor is Mr. Quilter's manner less interesting than his matter. He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similes drawn from eating and its results occur most readily to the mind. He has grieved doubts whether Sir Frederick Layton's work is really Greek after all, and can discover in it but little of rocky Ithaca. Linnell's pictures are a sort of up-gards and atom paintings, and Mason's exquisite itals are as national as a jingo poem. Mr. Birk at Foster's landscapes smile at one much in the same way that Mr. Carker used to flash his teeth. When Mr. John Collier gives his sitter a cheerful slap in the back, before he says like a shampooer and a Turkish bath, next man it is obviously unnecessary for us to point out how luminous these criticisms are, how delicate an expression. On the general principles of art, Mr. Quilter writes with equal lucidity. He tells us is of a different quality to mathematics, and finish in art is adding more effect. As for etchings, there are two kinds, British and foreign. He laments most bitterly the divorce that has been made between decorative art and what we usually call pictures. Makes a customary appeal to the last judgment and reminds us that in the great days of art Michelangelo was the furnishing upholsterer. Near the fire, any ornaments Fred brought home from India on the mental board. In fact, he is quite severe on Mr. Ruskin for not recognizing that a picture should denote the frailty of man, and remarks was pleasing courtesy in felicitous grace that many faces are feeling. Unfortunately his own work never does get good. Mr. Quilter has missed his chance, for he has failed even to make himself the tupper of painting. By Harry Quilter M.A. because he was sleeping instead of conquering, the lovely rose princess has become a fiddle without a bow, while poor Shaggy sits there, accooing dove. He has gone and gone for good. answered Polychrome, who had managed to squeeze into the room beside the dragon, and had witnessed the occurrences with much interest. I have remained a prisoner only because I wished to be one. And with this he stepped forward and burst the stout chains as easily as if they had been threads. The little girl had been asleep, but she heard the wraps and opened the door. The king has fled and disgraced and your friends are asking for you. I begged Ruggido long ago to send him away, but he would not do so. I also offered to help your brother to escape, but he would not go. He eats and sleeps very steadily, replied the new king. I hope he doesn't work too hard, since Shaggy. He doesn't work at all. In fact, there is nothing he can do in these dominions, as well as our gnomes, whose numbers are so great that it worries us to keep them all busy. Not exactly, we've turned Calico. Where is my brother now, inquired Shaggy. In the metal forest. Where is that? The metal forest is in the great domed cavern, the largest in all our dominions, replied Calico. Calico hesitated. However, if we look sharp, we may be able to discover one of these secret ways. Oh no, I'm quite sure he didn't. It's funny, remarked Betsy thoughtfully. I don't believe and knew any magic, or she'd have worked it before. I do not know, confessed Shaggy. True, agreed Calico. Calico went to the big gong and pounded on it, just as Ruggido used to do, but no one answered the summons. Having returned to the royal cavern, Calico first pounded the gong and then sat in the throne, wearing Ruggido's discarded ruby crown. And holding it in his hand, the scepter which Ruggido had so often thrown at his head. A man said to the universe, Sir, I exist. Sweat covered Breon's body, trickling into the titling cloth that was the only german he wore. The cut on his chest, still dripping blood. The ache of his overstrained eyes, even to soaring arena around him with thousands of spectators, retrovealities not worth thinking about. His instant panic was followed by a small sharp blow high on his chest. One minute, a voice said, and a time buzzer sounded. A minute is not a very large measure of time, and his body needed every fraction of it. The buzzers were triggered as muscles into complete relaxation. Only his heart and lungs worked on at a strong measured rate. He was in reverie, sliding along the borders of consciousness. The contestants in the twenties needed undisturbed rest. Therefore, nights in the dormitories were as quiet as death. Particularly so, on this last night, when only two of the little cubicles were occupied, the thousands of others standing with dark empty doors. The other voice snapped with a harsh urgency clearly used to command. I'm here because the matter is of utmost importance, and brand is the one I must see. Now stand aside. The twenties, he must have drawn his gun because the intruder said quickly, but that away you're being a fool. Out there was silence then, and still wondering, Breon was once more asleep. In seconds he asked the handler who was needing his aching muscles. A red-haired mountain of a man with an apparently inexhaustible store of energy. There could be little art in this last and final round of fencing. Just thrust and parry and victory to the stronger. Every man who entered the twenties had his own training tricks. There appeared to be an immediate association with the death trauma, as if the two were inextricably linked into one. The strength that enables someone in a trance to hold his body stiff and unsupported, except at two points, the head and heels. This is physically impossible when conscious. Others had died before during the twenties and death during the last round was, in some ways, easier than defeat. In deeply, Breon softly spoke the auto-hypnotic phrases that triggered the process. When the buzzer sounded, he pulled his foil from his second startled grasp and ran forward. Our role looked amazed at the sudden fury of the attack, then smiled. He thought it was the last burst of energy. He knew how close they both were to exhaustion. Breon saw something close to panic on his opponent's face when the man finally recognized his error. A wave of despair rolled out from our rogue. Breon sensed it and knew the fifth point was his. Then the powerful twist that's rested aside, in and under the guard."]
+        # fmt: on
+
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
+
+        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean")
+        one_audio = np.concatenate([x["array"] for x in ds["validation"]["audio"]], dtype=np.float32)
+
+        input_features = processor(
+            one_audio, return_tensors="ms", truncation=False, padding="longest", sampling_rate=16_000
+        )["input_features"]
+
+        gen_kwargs = {
+            "return_timestamps": True,
+            "no_speech_threshold": 0.6,
+            "temperature": (0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
+            "compression_ratio_threshold": 1.35,
+            "condition_on_prev_tokens": True,
+            "logprob_threshold": -1.0,
+        }
+
+        set_seed(0)
+        result = model.generate(input_features, **gen_kwargs)
+        decoded = processor.batch_decode(result, skip_special_tokens=True)
+
+        assert decoded == EXPECTED_TEXT
+
+    @slow
+    def test_whisper_shortform_single_batch_prev_cond(self):
+        # fmt: off
+        EXPECTED_TEXT = [" Folks, I spend a lot of time right over there, night after night, actually. Carefully selecting for you the day's newsiest, most aerodynamic headlines, stress testing and the most topical antilock breaks and power steering pain, Stakingly stitching, leather seating so soft, it would make JD power and her associate blush. If you were to create the luxury sedan that is my nightly model, but sometimes— you're sometimes, folks— I lurched the consciousness and the back of an abandoned school bus"]
+        EXPECTED_TEXT1 = [" Folks, I spend a lot of time right over there night after night after, actually. Carefully selecting for you the day's noisiest, most aerodynamic headlines, stress testing, and the most topical, anti-lock breaks and power steering, painstakingly stitching, leather seating, so soft, it would make JD power and her associates blush to create the luxury sedan that is my nightly monologue. But sometimes, you sometimes, folks. I lurched a consciousness in the back of an abandoned school"]
+        # fmt: on
+
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
+
+        ds = load_dataset("distil-whisper/meanwhile", "default")["test"]
+        dataset = ds.cast_column("audio", Audio(sampling_rate=16000))
+
+        one_audio = dataset[1]["audio"]["array"]
+
+        input_features = processor(one_audio, return_tensors="ms", sampling_rate=16_000)["input_features"]
+
+        gen_kwargs = {
+            "return_timestamps": True,
+            "no_speech_threshold": 0.6,
+            "temperature": (0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
+            "compression_ratio_threshold": 1.35,
+            "condition_on_prev_tokens": True,
+            "logprob_threshold": -1.0,
+        }
+
+        set_seed(0)
+        result = model.generate(input_features, **gen_kwargs)
+        decoded = processor.batch_decode(result.sequences, skip_special_tokens=True)
+
+        assert decoded == EXPECTED_TEXT
+
+        gen_kwargs = {
+            "return_timestamps": True,
+            "no_speech_threshold": 0.3,
+            "temperature": (0.0, 0.2),
+            "compression_ratio_threshold": 1,
+            "condition_on_prev_tokens": False,
+            "logprob_threshold": -1.0,
+        }
+
+        set_seed(0)
+        result = model.generate(input_features, **gen_kwargs)
+        decoded = processor.batch_decode(result.sequences, skip_special_tokens=True)
+
+        assert decoded == EXPECTED_TEXT1
+
+    @slow
+    def test_whisper_longform_single_batch_beam(self):
+        # fmt: off
+        EXPECTED_TEXT = [" Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel. Nor is Mr. Quilter's manner less interesting than his matter. He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similes drawn from eating and its results occur most readily to the mind. He has grave doubts whether Sir Frederick Layton's work is really Greek after all, and can discover in it but little of rocky Ithaca. Linnell's pictures are a sort of up-gards and atom paintings, and Mason's exquisite idles are as national as a jingo poem. Mr. Burkett Foster's landscapes smile at one much in the same way that Mr. Carker used to flash his teeth. When Mr. John Collier gives his sitter a cheerful slap in the back, before he says, like a shampooer and a Turkish bath, next man, it is obviously unnecessary for us to point out how luminous these criticisms are, how delicate an expression. On the general principles of art, Mr. Quilter writes with equal lucidity. He tells us is of a different quality to mathematics, and finish in art is adding more effect. As for etchings, there are two kinds, British and foreign. He laments most bitterly the divorce that has been made between decorative art and what we usually call pictures. Mix a customary appeal to the last judgment and reminds us that in the great days of art with Michelangelo was the furnishing upholsterer. Near the fire, any ornaments Fred brought home from India on the mental board. In fact, he is quite severe on Mr. Ruskin for not recognizing that a picture should denote the frailty of man, and remarks was pleasing courtesy in felicitous grace that many faces are feeling. Only, unfortunately, his own work never does get good. Mr. Quilter has missed his chance, for he has failed even to make himself the topper of painting. By Harry Quilter, M.A., because he was sleeping instead of conquering, the lovely rose princess has become a fiddle without a bow, while poor Shaggy sits there, accooing dove. He has gone and gone for good, answered polychrome, who had managed to squeeze into the room beside the dragon, and had witnessed the occurrences with much interest. I have remained a prisoner only because I wished to be one. And with this, he stepped forward and burst the stout chains as easily as if they had been threads. The little girl had been asleep, but she heard the wraps and opened the door. The king has flooded this grace, and your friends are asking for you. I begged Ruggado long ago to send him away, but he would not do so. I also offered to help your brother to escape, but he would not go. He eats and sleeps very steadily, replied the new king. I hope he doesn't work too hard, since Shaggy. He doesn't work at all. In fact, there's nothing he can do in these dominions, as well as our gnomes, whose numbers are so great that it worries us to keep them all busy. Not exactly, we've turned Calico. Where is my brother now, inquired Shaggy. In the metal forest. Where is that? The metal forest is in the great domed cavern, the largest in all our dominions, replied Calico. Calico hesitated. However, if we look sharp, we may be able to discover one of these secret ways. Oh no, I'm quite sure he didn't. That's funny, remarked Betsy thoughtfully. I don't believe and knew any magic, or she'd have worked it before. I do not know, confessed Shaggy. True, a great Calico. Calico went to the big gong and pounded on it, just as Ruggado used to do, but no one answered the summons. Having returned to the Royal Cavern, Calico first pounded the gong and then sat in the throne, wearing Ruggado's discarded ruby crown, and holding in his hand to scepter which Ruggado had so often thrown at his head. A man said to the universe, Sir, I exist. Sweat covered Breon's body, trickling into the tight-laying cloth that was the only german who wore. The cut on his chest was still dripping blood. The ache of his overstrained eyes, even the soaring arena around him with thousands of spectators, retrovealities not worth thinking about. His instant panic was followed by a small, sharp, blow high on his chest. One minute, a voice said, and a time buzzer sounded, a minute is not a very large measure of time, and his body needed every fraction of it. The buzzers were, triggered his muscles into complete relaxation. Oli's heart and lungs worked on at a strong, measured rate. He was in reverie, sliding along the borders of consciousness. The contestants in the twenties needed undisturbed rest. Therefore, nights in the dormitories were as quiet as death. Particularly so, on this last night, when only two of the little cubicles were occupied, the thousands of others standing with dark empty doors. The other voice snapped with a harsh urgency clearly used to command. I'm here because the matter is of utmost importance, and brand is the one I must see. Now stand aside. The twenties, he must have drawn his gun because the intruder said quickly, but that away you're being a fool. Out there was silence then, and still wondering, Breon was once more asleep. Ten seconds, he asked the handler who was needing his aching muscles. A red-haired mountain of a man with an apparently inexhaustible store of energy. There could be little art in this last and final round of fencing. Just thrust and parry and victory to the stronger. Every man who entered the twenties had his own training tricks. There appeared to be an immediate association with the death trauma, as if the two were inextricably linked into one. The strength that enables someone in a trance to hold his body stiff and unsupported except at two points, the head and heels. This is physically impossible when conscious. Breon's head died before during the twenties and death during the last round was, in some ways, easier than defeat. Breeding deeply, Breon's softly spoke the auto-hypnotic phrases that triggered the process. When the buzzer sounded, he pulled his foil from his second startled grasp and ran forward. Our role looked amazed at the sudden fury of the attack, then smiled. He thought it was the last burst of energy. He knew how close they both were to exhaustion. Breon saw something close to panic on his opponent's face when the man finally recognized his error. A wave of despair rolled out from our rogue. Breon sensed it and knew the fifth point was his. In the powerful twist that's rest of the side, in and under the guard."]
+        # fmt: on
+
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
+
+        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean")
+        one_audio = np.concatenate([x["array"] for x in ds["validation"]["audio"]], dtype=np.float32)
+
+        input_features = processor(
+            one_audio, return_tensors="ms", truncation=False, padding="longest", sampling_rate=16_000
+        )["input_features"]
+
+        gen_kwargs = {
+            "return_timestamps": True,
+            "no_speech_threshold": 0.6,
+            "temperature": (0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
+            "num_beams": 2,
+            "compression_ratio_threshold": 1.35,
+            "condition_on_prev_tokens": True,
+            "logprob_threshold": -1.0,
+        }
+
+        def check_gen_kwargs(inputs, generation_config, *args, **kwargs):
+            assert generation_config.num_beams == gen_kwargs["num_beams"]
+
+        self._patch_generation_mixin_generate(check_args_fn=check_gen_kwargs)
+
+        set_seed(0)
+        result = model.generate(input_features, **gen_kwargs)
+        decoded = processor.batch_decode(result, skip_special_tokens=True)
+
+        assert decoded == EXPECTED_TEXT
+
+    @slow
+    def test_whisper_longform_multi_batch(self):
+        # fmt: off
+        EXPECTED_TEXT_1 = [" Mr. Quilter's manner less interesting than his matter. He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similes drawn from eating and its results occur most readily to the mind. He has grave doubts whether Sir Frederick Layton's work is really Greek after all, and can discover in it but little of rocky Ithaca. Linnell's pictures are a sort of up-gards and atom paintings, and Mason's exquisite idles are as national as a jingo poem. Mr. Birkett Foster's landscapes smile at one much in the same way that Mr. Carker used to flash his teeth. And Mr. John Collier gives his sitter a cheerful slap in the back, before he says, like a shampooer and a Turkish bath. Next man, it is obviously unnecessary for us to point out how luminous these criticisms are, how delicate an expression. On the general principles of art, Mr. Quilter writes with equal lucidity. Painting he tells us is of a different quality to mathematics, and finish in art is adding more effect. As for etchings, there are two kinds, British and foreign. He laments most bitterly the divorce that has been made between decorative art and what we usually call pictures. Mix a customary appeal to the last judgment and reminds us that in the great days of art Michelangelo was the furnishing a poster or near the fire, and the ornaments Fred brought home from India on the mental board. In fact, he is quite severe on Mr. Ruskin for not recognizing that a picture should denote the frailty of man. And remarks was pleasing courtesy in Felicitis Grace that many faces are feeling. Only unfortunately his own work never does get good. Mr. Quilter has missed his chance, for he has failed even to make himself the Tupper of painting. a Harry Quilter M.A. Because you were sleeping instead of conquering, the lovely rose princess has become a fiddle without a bow, while poor Shaggy sits there, accooing dove. He has gone, and gone for good, answered Polychrome, who had managed to squeeze into the room beside the dragon, and had witnessed the occurrences with much interest. I have remained a prisoner only because I wished to be one. And with this, he stepped forward and burst the stout chains as easily as if they had been threads. The little girl had been asleep, but she heard the wraps and opened the door. The king has flooded disgrace, and your friends are asking for you. I begged Ruggadot a long ago to send him away, but he would not do so. I also offered to help your brother to escape, but he would not go. He eats and sleeps very steadily, replied the new king. I hope he doesn't work too hard, St. Shaggy. He doesn't work at all. In fact, there's nothing he can do in these dominions as well as our gnomes, whose numbers are so great that it worries us to keep them all busy. Not exactly, we've turned Calico. Where is my brother now, inquired Shaggy. In the metal forest. Where is that? The middle forest is in the great domed cavern, the largest and all-ard dominions, replied Calico. Calico hesitated. However, if we look sharp, we may be able to discover one of these secret ways. Oh no, I'm quite sure he didn't. That's funny, remarked Betsy thoughtfully. I don't believe Anne knew any magic, or she'd have worked it before. I do not know, confess Shaggy. True, agreed Calico. Calico went to the big gong and pounded on it, just as Virgato used to do, but no one answered the summons. Having returned to the Royal Cavern, Calico first pounded the gong and then sat in the throne, wearing Virgados discarded Ruby Crown and holding in his hand to scepter, which Virgato had so often thrown at his head. A man said to the universe, Sir, I exist. Sweat-covered Breon's body trickling into the tight-lowing cloth that was the only german he wore. The cut on his chest is still dripping blood. The ache of his overstrained eyes, even the soaring arena around him with thousands of spectators, retrovealities not worth thinking about. His instant panic was followed by a small sharp, blow high on his chest. One minute, a voice said, and a time buzzer sounded. A minute is not a very large measure of time, and his body needed every fraction of it. The buzzers were, triggered his muscles into complete relaxation. Oliya's heart and lungs worked on at a strong, measured rate. He was in reverie, sliding along the borders of consciousness. The contestants in the 20s needed undisturbed rest. Therefore, knights and the dormitories were as quiet as death. Particularly so, on this last night, when only two of the little cubicles were occupied, the thousands of others standing with dark empty doors. The other voice snapped with a harsh urgency clearly used to command. I'm here because the matter is of utmost importance, and brand is the one I must see. Now stand aside. the twenties, he must have drawn his gun, because the intruder said quickly, but that away you're being a fool. Out, there was silence then, and still wondering, Breon was once more asleep. Ten seconds, he asked the handler who was needing his aching muscles. A red-haired mountain of a man with an apparently inexhaustible store of energy. There could be little art in this last and final round of fencing. Just thrust and parry and victory to the stronger. Every man who entered the twenties had his own training tricks. There appeared to be an immediate association with the death trauma as if the two were inextricably linked into one. The strength that enables someone in a trance to hold his body stiff and unsupported except at two points, the head and heels. This is physically impossible when conscious. Others had died before during the twenties and death during the last round was, in some ways, easier than defeat. Breeding deeply, Breon's softly spoke the auto-hypnotic phrases that triggered the process. When the buzzer sounded, he pulled his foil from his second started grasp and ran forward. Our role had looked amazed at the sudden fury of the attack, then smiled. He thought it was the last burst of energy. He knew how close they both were to exhaustion. Breon saw something close to panic on his opponent's face when the man finally recognized his error. A wave of despair rolled out from our role. and sensed it and knew the fifth point was his. Then the powerful twist that's thrust to the side in and under the guard."]
+        EXPECTED_TEXT_2 = [" Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel. Nor is Mr. Quilter's manner less interesting than his matter. He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similes drawn from eating and its results occur most readily to the mind. He has grave doubts whether Sir Frederick Layton's work is really Greek after all, and can discover in it but little of rocky Ithaca. Linnell's pictures are a sort of up-gards and atom paintings, and Mason's exquisite idles are as national as a jingo poem. Mr. Burkett Foster's landscapes smile at one much in the same way that Mr. Carker."]
+        EXPECTED_TEXT_3 = [" possible. Nor is Mr. Quilter's manner less interesting than his matter. He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similes drawn from eating and its results occur most readily to the mind. He has grieved doubts whether Sir Frederick Layton's work is really greek after all, and can discover in it but little of rocky Ithaca. Linnell's pictures are a sort of up-guards and atom paintings, and Mason's exquisite idles are as national as a jingo poem. Mr. Birk at Foster's landscapes smile at one much in the same way that Mr. Carker used to flash his teeth. And Mr. John Collier gives his sitter a cheerful slap in the back, before he says, like a shampooer and a Turkish bath, next man, it is obviously unnecessary for us to point out how luminous these criticisms are, how delicate an expression. Under general principles of art, Mr. Quilter writes with equal lucidity. Painting, he tells us, is of a different quality to mathematics and finish in art is adding more effect. As for etchings, there are two kinds, British and foreign. He laments most bitterly the divorce that has been made between decorative art and what we usually call pictures. Mix a customary appeal to the last judgment and reminds us that in the great days of art Michelangelo was the furnishing upholsterer. Near the fire. any ornaments Fred brought home from India on the mental board. In fact, he is quite severe on Mr. Ruskin for not recognizing that a picture should denote the frailty of man, and remarks was pleasing courtesy in Felicitis Grace that many faces are feeling. Only, unfortunately, his own work never does get good. Mr. Quilter has missed his chance, for he has failed even to make himself the tupper of painting. By Harry Quilter, M.A. Because he was sleeping instead of conquering, the lovely rose princess has become a fiddle without a bow, all poor ashaggy sits there, accoing dove. He has gone and gone for good, answered Polychrome, who had managed to squeeze into the room beside the dragon, and had witnessed the occurrences with much interest. I have remained a prisoner only because I wished to be one. And with this, he stepped forward and burst the stout chains as easily as if they had been threads. The little girl had been asleep, but she heard the wraps and opened the door. The king has fled and disgraced, and your friends are asking for you. I begged Ruggadot a long ago to send him away, but he would not do so. I also offered to help your brother to escape, but he would not go. He eats and sleeps very steadily, replied the new king. I hope he doesn't work too hard, St. Shaggy. He doesn't work at all. In fact, there's nothing he can do in these dominions as well as our gnomes, whose numbers are so great that it worries us to keep them all busy. Not exactly, we've turned Calico. Where is my brother now, inquired Shaggy. In the metal forest. Where is that? The middle forest is in the great domed cavern, the largest and all-ard dominions, replied Calico. Calico hesitated. However, if we look sharp, we may be able to discover one of these secret ways. Oh no, I'm quite sure he didn't. That's funny, remarked Betsy thoughtfully. I don't believe Anne knew any magic, or she'd have worked it before. I do not know, confess Shaggy. True, agreed Calico. Calico went to the big gong and pounded on it, just as Virgato used to do, but no one answered the summons. Having returned to the Royal Cavern, Calico first pounded the gong and then sat in the throne, wearing Virgados discarded Ruby Crown and holding in his hand the scepter, which Virgato had so often thrown at his head. The man said to the universe, Sir, I exist. Sweat-covered Breon's body trickling into the tight-lowing cloth that was the only german to war. The cut on his chest still dripping blood. The ache of his overstrained eyes, even to soaring arena around him with thousands of spectators, retroveilities not worth thinking about. His instant panic was followed by a small sharp, blow high on his chest. One minute, a voice said, and a time buzzer sounded. A minute is not a very large measure of time, and his body needed every fraction of it. The buzzers were triggered as muscles into complete relaxation. Oily his heart and lungs worked on at a strong, measured rate. He was in reverie, sliding along the borders of consciousness. The contestants in the 20s needed undisturbed rest. Therefore, knights and the dormitories were as quiet as death. Particularly so, on this last night, when only two of the little cubicles were occupied, the thousands of others standing with dark empty doors. The other voice snapped with a harsh urgency clearly used to command. I'm here because the matter is of utmost importance, and brand is the one I must see. Now stand aside. the twenties, he must have drawn his gun, because the intruder said quickly, but that away you're being a fool. Out, there was silence then, and still wondering, Breon was once more asleep. Ten seconds, he asked the handler who was needing his aching muscles. A red-haired mountain of a man, with an apparently inexhaustible store of energy. There could be little art in this last and final round of fencing. Just thrust and parry and victory to the stronger. Every man who entered the twenties had his own training tricks. There appeared to be an immediate association with the death trauma, as if the two were inextricably linked into one. The strength that enables someone in a trance to hold his body stiff and unsupported except at two points, the head and heels. This is physically impossible when conscious. Others had died before during the twenties and death during the last round was, in some ways, easier than defeat. Breeding deeply, Breon softly spoke the auto-hypnotic phrases that triggered the process. When the buzzer sounded, he pulled his foil from his second startled grasp and ran forward. Our role looked amazed at the sudden fury of the attack, then smiled. He thought it was the last burst of energy. He knew how close they both were to exhaustion. Breon saw something close to panic on his opponent's face when the man finally recognized his error. A wave of despair rolled out from our role. Breon sensed it and knew the fifth point was his. the powerful twist that's rest of the side, in and under the guard."]
+        EXPECTED_TEXT_4 = [" Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel. Nor is Mr. Quilter's manner less interesting than his matter. He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similes drawn from eating and its results occur most readily to the mind. He has grave doubts whether Sir Frederick Layton's work is really Greek after all, and can discover in it but little of rocky Ithaca. Linnell's pictures are a sort of up-gards and atom paintings, and Mason's exquisite idles are as national as a jingo poem. Mr. Birk at Foster's landscapes smile at one much in the same way that Mr. Carker used to flash his teeth. Mr. John Collier gives his sitter a cheerful slap in the back, before he says, like a shampoo or a Turkish bath. Next man, it is obviously unnecessary for us to point out how luminous these criticisms are, how delicate an expression. On the general principles of art, Mr. Quilter writes with equal lucidity. he tells us is of a different quality to mathematics, and finish in art is adding more effect. As for etchings, there are two kinds, British and foreign. He laments most bitterly the divorce that has been made between decorative art and what we usually call pictures. Makes the customary appeal to the last judgment and reminds us that in the great days of art Michelangelo was the furnishing upholsterer. Near the fire, any ornaments Fred brought home from India on the mantelboard. In fact, he is quite severe on Mr. Ruskin for not recognizing that a picture should denote the frailty of man. And remarks was pleasing courtesy in Felicitis Grace that many faces are feeling. Only, unfortunately, his own work never does get good. Mr. Quilter has missed his chance, for he has failed even to make himself the Tupper of painting. By Harry Quilter M.A. Because you were sleeping instead of conquering, the lovely rose princess has become a fiddle without a bow, while poor Shaggy sits there, accoing dove. He has gone and gone for good, answered Polychrome, would manage to squeeze into the room beside the dragon and had witnessed the occurrences with much interest. I have remained a prisoner only because I wished to be one. And with this, he stepped forward and burst the stout chains as easily as if they had been threads. The little girl had been asleep, but she heard the wraps and opened the door. The king has fled and disgraced and your friends are asking for you. I begged Ruggadot long ago to send him away, but he would not do so. I also offered to help your brother to escape, but he would not go. He eats and sleeps very steadily, replied the new king. I hope he doesn't work too hard, since Shaggy. He doesn't work at all. In fact, there's nothing he can do in these dominions, as well as our gnomes, whose numbers are so great that it worries us to keep them all busy. Not exactly, we've turned Calico. Where is my brother now? In Quared Shaggy. In the metal forest. Where is that? The metal forest is in the great domed cavern, the largest and all-ard dominions, replied Calico. Calico hesitated. However, if we look sharp, we may be able to discover one of these secret ways. Oh no, I'm quite sure he didn't. That's funny, remarked Betsy thoughtfully. I don't believe and knew any magic or she'd have worked it before. I do not know, confess shaggy. True, a great calico. Calico went to the big gong and pounded on it just as we're good to use to do, but no one answered the summons. Having returned to the Royal Cavern, Calico first pounded the gong and then sat in the throne, wearing ruggedos discarded ruby crown and holding in his hand to scepter which ruggedo had so often thrown at his head. A man said to the universe, Sir, I exist. Sweat covered Breon's body, trickling into the titling cloth that was the only german he wore. The cut on his chest still dripping blood. The ache of his overstrained eyes, even the soaring arena around him with thousands of spectators, retrovealities not worth thinking about. His instant panic was followed by a small sharp blow high on his chest. One minute, a voice said, and a time buzzer sounded. A minute is not a very large measure of time, and his body needed every fraction of it. The buzzers were triggered as muscles into complete relaxation. Oli's heart and lungs worked on at a strong, measured rate. He was in reverie, sliding along the borders of consciousness. The contestants in the 20s needed undisturbed rest. Therefore, nights in the dormitories were as quiet as death. Particularly so, on this last night, when only two of the little cubicles were occupied, The thousands of others standing with dark empty doors. The other voice snapped with a harsh urgency, clearly used to command. I'm here because the matter is of utmost importance, and brand is the one I must see. Now stand aside. The twenties, he must have drawn his gun because the intruder said quickly, but that away you're being a fool. out, there was silence then, and still wondering, Breon was once more asleep. Ten seconds, he asked the handler who was needing his aching muscles. A red-haired mountain of a man, with an apparently inexhaustible store of energy. There could be little art in this last and final round of fencing. Just thrust and parry, and victory to the stronger. a man who entered the twenties had his own training tricks. They were appeared to be an immediate association with the death trauma, as if the two were inextricably linked into one. The strength that enables someone in a trance to hold his body stiff and unsupported except at two points, the head and heels. This is physically impossible when conscious. had died before during the 20s and death during the last round was in some ways easier than defeat. Breathing deeply, Breon's softly spoke the auto-hypnotic phrases that triggered the process. When the buzzer sounded, he pulled his foil from his second startled grasp and ran forward. Our role looked amazed at the sudden fury of the attack, then smiled. He thought it was the last burst of energy. He knew how close they both were to exhaustion. Breon saw something close to panic on his opponent's face when the man finally recognized his error. A wave of despair rolled out from our rogue. Breon sensed it and knew the fifth point was his. the powerful twist that's rest of the side, in and under the guard."]
+        # fmt: on
+
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
+
+        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean")
+        one_audio = np.concatenate([x["array"] for x in ds["validation"]["audio"]], dtype=np.float32)
+        audios = []
+        audios.append(one_audio[110000:])
+        audios.append(one_audio[:800000])
+        audios.append(one_audio[80000:])
+        audios.append(one_audio[:])
+
+        decoded_single = []
+        for audio in audios:
+            inputs = processor(audio, return_tensors="ms", truncation=False, sampling_rate=16_000)
+
+            result = model.generate(**inputs, return_timestamps=True)
+            decoded_single.append(processor.batch_decode(result, skip_special_tokens=True))
+
+        inputs = processor(
+            audios,
+            return_tensors="ms",
+            truncation=False,
+            padding="longest",
+            return_attention_mask=True,
+            sampling_rate=16_000,
+        )
+
+        result = model.generate(**inputs, return_timestamps=True)
+        decoded_all = processor.batch_decode(result, skip_special_tokens=True)
+
+        # make sure single & batch is exactly the same
+        assert decoded_all[0:1] == decoded_single[0]
+        assert decoded_all[1:2] == decoded_single[1]
+        assert decoded_all[2:3] == decoded_single[2]
+        assert decoded_all[3:4] == decoded_single[3]
+
+        # exact match
+        assert decoded_all[0:1] == EXPECTED_TEXT_1
+        assert decoded_all[1:2] == EXPECTED_TEXT_2
+        assert decoded_all[2:3] == EXPECTED_TEXT_3
+        assert decoded_all[3:4] == EXPECTED_TEXT_4
+
+    @slow
+    def test_whisper_longform_multi_batch_prev_cond(self):
+        # fmt: off
+        EXPECTED_TEXT_1 = [" Mr. Quilters manner less interesting than his matter. He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similarly drawn from eating and its results occur most readily to the mind. He has grave doubts whether Sir Frederick Layton's work is really Greek after all and can discover in it but little of Rocky Ithaca. The Nils, pictures are sort of upguards and atom paintings and Mason's exquisite itals are as national as a jingo poem. Mr. Berkett Foster's landscapes smile at one much in the same way that Mr. Carker used to flash his teeth. And Mr. John Collier gives his sitter a cheerful slap on the back before he says like a shampooer and a Turkish bath. Next man, it is obviously unnecessary for us to point out how luminous these criticisms are, how delicate and expression. On the general principles of art, Mr. Quilters writes with equal lucidity. Painting he tells us is of a different quality to mathematics and finish in art is adding more effect. As for etchings, there are of two kinds, British and foreign. He laments most bitterly the divorce that has been made between decorative art and what we usually call pictures makes a customary appeal to the last judgment and reminds us that in the great days of art Michelangelo was the furnishing apostorer. Near the fire, any ornaments Fred brought home from India on the mental board. In fact, he is quite severe on Mr. Ruskin, for not recognizing that a picture should denote the frailty of man. And remarks with pleasing courtesy and solicitous grace that many phases of feeling only, unfortunately, his own work never does get good. Mr. Quilters has missed his chance, for he has failed even to make himself the tougher of painting. My hair equal to MA. Because he was sleeping instead of conquering, the lovely rose princess has become a fiddle with a bow, while poor shaggy sits there, a cooling dove. He has gone and gone for good, answered polychrome, who had managed to squeeze into the room beside the dragon and had witnessed the occurrences with much interest. I have remained a prisoner only because I wished to be one. And with this, he stepped forward and burst the stout chains as easily as if they had been threads. The little girl had been asleep, but she heard the wraps and opened the door. The king has fled in disgrace in your friends, they are asking for you. I begged Ruggedo long ago to send him away, but he would not do so. I also offered to help you brother to escape, but he would not go. He eats and sleeps very steadily, replied the new king. I hope he doesn't work too hard since shaggy. He doesn't work at all. In fact, there is nothing he can do in these dominions as well as our nooms, whose numbers are so great that it worries us to keep them all busy. Not exactly, we've turned Calico. Where is my brother now in Quarage Shaggy? In the metal forest. Where is that? The metal forest is in the great domed cavern. The largest and all our dominions replied Calico. Calico hesitated. However, if we look sharp, we may be able to discover one of these secret ways. Oh no, I'm quite sure he didn't. That's funny remarked but see you thoughtfully. I don't believe Anne knew any magic or she'd have worked it before. I do not know, confessed Shaggy. True, agreed Calico. Calico went to the big gong and pounded on it just as we're good to use to do, but no one answered the summons. Having returned to the royal cavern, Calico first pounded the gong and then sat in the throne, wearing reggos, discarded ruby crown, and holding in his hand to scepter which reggado had so often thrown at his head. The man said to the universe, Sir, I exist. Sweat covered Brianna's body trickling into the tight-wing cloth that was the only garment he wore. The cut on his chest still dripping blood. The ache of his overstrained eyes, even the soaring arena around him with thousands of spectators, retrievalidies not worth thinking about. His instant panic was followed by a small sharp blow high on his chest. One minute of voice said, and the time buzzer sounded. A minute is not a very large measure of time, and his body needed every fraction of it. The buzzer's were triggered as muscles into complete relaxation. Only his heart and lungs worked on at a strong, measured rate. He was in reverie sliding out on the borders of consciousness. The contestants in the twenties needed undisturbed rest. Therefore, knights and the dormitories were as quiet as death. Particularly so, on this last night, when only two of the little cubicles were occupied, the thousands of others standing with dark empty doors. The other voice snapped with a harsh urgency, clearly used to command. I'm here because the matter is of utmost importance, and brand is the one I must see. Now stand aside. But at the end of the 20s, he must have drawn his gun because the intruder said quickly, but that away, he'd be no fool. Out, the resoundance then, and still wondering, Brienne was once more asleep. Ten seconds, he asked the handler who was needing his aching muscles. A red-haired mountain of a man, with an apparently inexhaustible story of energy. There could be little art in this last and final round of fencing, just thrust and parry and victory to the stronger. Every man who entered the 20s had his own training tricks. There appeared to be an immediate association with the death trauma, as if the two were inexplicably linked into one. The strength that enables someone in a trance to hold his body stiff and unsupported, except at two points, the head and heels. This is physically impossible when conscious. Others had died before during the 20s, and death during the last round was, in some ways, easier than defeat. Breathing deeply, Brienne's softly spoke the autahypnotic phrases that triggered the process. When the buzzer sounded, he pulled his foil from his second startled grasp and ran forward. Her role clipped the maze at the sudden fury of the attack, then smiled. He thought it was the last burst of energy. He knew how closely both were to exhaustion. Brienne saw something close to panic on his opponent's face when the man finally recognized his error. A wave of despair rolled out from her role. Brienne sensed it and knew the fifth point was his. In the powerful twist that's first to decide. In and under the guard."]
+        EXPECTED_TEXT_2 = [" Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel. Nor is Mr. Quilter's manner less interesting than his matter. He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similarly drawn from eating and its results occur most readily to the mind. He has grave doubts whether Sir Frederick Latins' work is really Greek after all, and can discover in it but little of rocky Ithaca. Lennials, pictures are a sort of upguards and atom paintings, and Mason's exquisite idles are as national as a jingo poem. Mr. Berkett Foster's landscapes smile at one much in the same way that Mr. Carker"]
+        EXPECTED_TEXT_3 = [" gospel. Nor is Mr. Quilter's manner less interesting than his matter. He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similarly drawn from eating in its results occur most readily to the mind. He has grave doubts whether Sir Frederick Latins work is really Greek after all and can discover in it but little of rocky ithaka. Lennils, pictures, are a sort of upguards and atom paintings and Mason's exquisite itals are as national as a jingo poem. Mr. Birkut Foster's landscapes smile at one much in the same way that Mr. Carker used to flash his teeth. And Mr. John Collier gives his sitter a cheerful slap on the back before he says like a shampooer and a Turkish bath. Next man, it is obviously unnecessary for us to point out how luminous these criticisms are, how delicate and expression. Under general principles of art, Mr. Quilter writes with equal lucidity. Painting he tells us is of a different quality to mathematics and finish in art is adding more effect. As for etchings, thereof two kinds, British and foreign. He laments most bitterly the divorce that has been made between decorative art and what we usually call pictures makes a customary appeal to the last judgment and reminds us that in the great days of art Michelangelo was the furnishing apostoror. Near the fire, any ornaments spread brought home from India on the mental board. In fact, he is quite severe on Mr. Ruskin for not recognizing that a picture should denote the frailty of man. And remarks with pleasing courtesy and solicitous grace that many faces are feeling, only unfortunately his own work never does get good. Mr. Quilter has missed his chance. For he has failed even to make himself the tougher of painting by Harry Quilter MA. Because he was sleeping instead of conquering, the lovely Rus princess has become a fiddle with a bow while poor shaggy sits there, a cooling dove. He has gone and gone for good. Answered polychrome, who had managed to squeeze into the room beside the dragon and had witnessed the occurrences with much interest. I have remained the prisoner only because I wished to be one. And with this, he stepped forward and burst the stout chains as easily as if they had been threads. The little girl had been asleep, but she heard the wraps and opened the door. The king has fled in disgrace in your friends, they are asking for you. I begged Ruggedo long ago to send him away, but he would not do so. I also offered to help your brother to escape, but he would not go. He eats and sleeps very steadily, replied the new king. I hope he doesn't work too hard, such a shaggy. He doesn't work at all. In fact, there is nothing he can do in these dominions as well as our nooms, whose numbers are so great that it worries us to keep them all busy. Not exactly, we've turned Calico. Where is my brother now, inquired Shaggy, in the metal forest? Where is that? The metal forest is in the great domed cavern, the largest and all our dominions replied Calico. Calico hesitated. However, if we look sharp, we may be able to discover one of these secret ways. Oh no, I'm quite sure he didn't. That's funny, remarked a bedsy thoughtfully. I don't believe Anne knew any magic or she'd have worked before. I do not know, confessed Shaggy. True, agreed Calico. Calico went to the big gong and pounded on it just as Ruggedo used to do, but no one answered the summons. Having returned to the royal cavern, Calico first pounded the gong and then sat in the throne, wearing Ruggedo's discarded ruby crown and holding in his hand the scepter which Ruggedo had so often thrown at his head. A man said to the universe, Sir, I exist. Sweat covered Breon's body, trickling into the tight-wing cloth that was the only garment he wore. The cut on his chest still dripping blood. The ache of his overstrain dyes, even the soaring arena around him with thousands of spectators, retrievalidates not worth thinking about. His instant panic was followed by a small sharp blow high on his chest. One minute, a voice said, and a time buzzer sounded. A minute is not a very large measure of time and his body needed every fraction of it. The buzzer's were triggered as muscles into complete relaxation. Only his heart and lungs worked on at a strong, measured rate. He was in reverie sliding out on the borders of consciousness. The contestants in the 20s needed undisturbed rest. Therefore, knights in the dormitories were as quiet as death. Particularly so, on this last night, when only two of the little cubicles were occupied, the thousands of others standing with dark empty doors. The other voice snapped with a harsh urgency, clearly used to command. I'm here because the matter is of utmost importance, and brand is the one I must see. Now stand aside. To 20s, he must have drawn his gun because the intruder said quickly, but that away, he'd be no fool. Out, there was silence then, and still wondering, Brienne was once more asleep. Ten seconds, he asked the handler who was needing his aching muscles. A red-haired mountain of a man, with an apparently inexhaustible story of energy. There could be little art in this last and final round of fencing, just thrust and parry and victory to the stronger. Every man who entered the 20s had his own training tricks. There appeared to be an immediate association with the death trauma as if the two were inexplicably linked into one. The strength that enables someone in a trance to hold his body stiff and unsupported, except at two points, the head and heels. This is physically impossible when conscious. Others had died before during the 20s, and death during the last round was, in some ways, easier than defeat. Breathing deeply, Brienne softly spoke the odd hypnotic phrases that triggered the process. When the buzzer sounded, he pulled his foil from his second startled grasp and ran forward. I rolled up the maze at the sudden fury of the attack, then smiled. He thought it was the last burst of energy. He knew how close they both were to exhaustion. Brienne saw something close to panic on his opponent's face when the man finally recognized his error. A wave of despair rolled out from our old. Brienne sensed it and knew it was a fifth point was his. Then the powerful twist that's for us to decide in and under the guard."]
+        EXPECTED_TEXT_4 = [" Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel. Nor is Mr. Quilter's manner less interesting than his matter. He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similarly drawn from eating and its results occur most readily to the mind. He has grave doubts whether Sir Frederick Latins' work is really Greek after all, and can discover in it but little of rocky Ithaca. Lennils, pictures, are a sort of upguards and atom paintings, and Mason's exquisite idles are as national as a jingo poem. Mr. Berkett Foster's landscapes smile at one much in the same way that Mr. Carker used to flash his teeth. And Mr. John Collier gives his sitter a cheerful slap on the back before he says, like a shampooer in a Turkish bath. Next man, it is obviously unnecessary for us to point out how luminous these criticisms are, how delicate and expression. On the general principles of art, Mr. Quilter writes with equal lucidity. Painting he tells us is of a different quality to mathematics, and finish in art is adding more effect. As for etchings, thereof two kinds, British and foreign. He laments most bitterly the divorce that has been made between decorative art and what we usually call pictures makes a customary appeal to the last judgment and reminds us that in the great days of art Michelangelo was the furnishing apostorer. Near the fire, any ornaments Fred brought home from India on the mental board. In fact, he is quite severe on Mr. Ruskin, for not recognizing that a picture should denote the frailty of man. And remarks with pleasing courtesy and solicitous grace that many phases of feeling only, unfortunately, his own work never does, get good. Mr. Quilter has missed his chance, for he has failed even to make himself the tougher of painting. My Harry Quilter, MA. Because he was sleeping instead of conquering, the lovely rose princess has become a fiddle with a bow, while poor shaggy sits there, a cooling dove. He has gone and gone for good, answered polychrome, who had managed to squeeze into the room beside the dragon, and had witnessed the occurrences with much interest. I have remained a prisoner only because I wished to be one. And with this, he stepped forward and burst the stout chains as easily as if they had been threads. The little girl had been asleep, but she heard the wraps and opened the door. The king has fled in disgrace in your friends, they are asking for you. I begged Ruggedo a long ago to send him away, but he would not do so. I also offered to help your brother to escape, but he would not go. He eats and sleeps very steadily, replied the new king. I hope he does not work too hard, since Shaggy. He doesn't work at all. In fact, there is nothing he can do in these dominions, as well as our nooms, whose numbers are so great that it worries us to keep them all busy. Not exactly, we've turned Calico, whereas my brother now, in Quilter Shaggy, in the metal forest. Where is that? The metal forest is in the great domed cavern, the largest and all our dominions replied Calico. Calico hesitated. However, if we look sharp, we may be able to discover one of these secret ways. Oh no, I'm quite sure he didn't. That's funny, remarked a bit, see you thoughtfully. I don't believe Anne knew any magic, or she'd have worked it before. I do not know, confessed Shaggy. True, agreed Calico. Calico went to the big gong and pounded on it, just as we're good to have used to do, but no one answered the summons. Having returned to the royal cavern, Calico first pounded the gong and then sat in the throne, wearing reggos, discarded ruby crown, and holding in his hand to scepter which reggado had so often thrown at his head. A man said to the universe, Sir, I exist. Sweat covered Breon's body, trickling into the titling cloth of a zeal-neighurment he wore. The cut on his chest still dripping blood. The ache of his overstrained eyes, even the soaring arena around him with thousands of spectators, retrievalidies not worth thinking about. His instant panic was followed by a small sharp blow high on his chest. One minute, a voice said, and a time buzzer sounded. A minute is not a very large measure of time, and his body needed every fraction of it. The buzzer's were triggered as muscles into complete relaxation. Only his heart and lungs worked on at a strong, measured rate. He was in reverie, sliding out on the borders of consciousness. The contestants in the twenties needed undisturbed rest. Therefore, knights and the dormitories were as quiet as death. Particularly so, on this last night, when only two of the little cubicles were occupied, the thousands of others standing with dark empty doors. The other voice snapped with a harsh urgency, clearly used to command. I'm here because the matter is of utmost importance, and brand is the one I must see, and I'll stand aside. To twenties, he must have drawn his gun because the intruders had quickly, but that away, here being a fool. Out, there is silence then, and still wondering, Brian was once more asleep. Ten seconds, he asked the handler who was needing his aching muscles. I've read here at Mountain of a Man, with an apparently inexhaustible story of energy. There could be little art in this last and final round of fencing, just thrust and parry and victory to the stronger. Every man who entered the twenties had his own training tricks. There appeared to be an immediate association with the death trauma, as if the two were inexplicably linked into one. The strength that enables someone in a trance to hold his body stiff and unsupported, except at two points, the head and heels. This is physically impossible when conscious. Others had died before during the twenties, and death during the last round was, in some ways, easier than defeat. Breathing deeply, Brian's softly spoke the autahypnotic phrases that triggered the process. When the buzzer sounded, he pulled his foil from his second startled grasp and ran forward. I rolled the maze at the sudden fury of the attack, then smiled. He thought it was the last burst of energy. He knew how close they both were to exhaustion. Brian saw something close to panic on his opponent's face when the man finally recognized his error. A wave of despair rolled out from Irohog. Brian sensed it and knew the fifth point was his. In the powerful twist that's first to decide. In and under the guard."]
+        # fmt: on
+
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
+
+        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean")
+        one_audio = np.concatenate([x["array"] for x in ds["validation"]["audio"]], dtype=np.float32)
+        audios = []
+        audios.append(one_audio[110000:])
+        audios.append(one_audio[:800000])
+        audios.append(one_audio[80000:])
+        audios.append(one_audio[:])
+
+        gen_kwargs = {
+            "return_timestamps": True,
+            "no_speech_threshold": 0.6,
+            "temperature": 0.0,
+            "compression_ratio_threshold": 1.35,
+            "condition_on_prev_tokens": True,
+            "logprob_threshold": -1.0,
+        }
+
+        decoded_single = []
+        for audio in audios:
+            inputs = processor(audio, return_tensors="ms", truncation=False, sampling_rate=16_000)
+
+            result = model.generate(**inputs, **gen_kwargs)
+            decoded_single.append(processor.batch_decode(result, skip_special_tokens=True))
+
+        # exact match
+        assert decoded_single[0] == EXPECTED_TEXT_1
+        assert decoded_single[1] == EXPECTED_TEXT_2
+        assert decoded_single[2] == EXPECTED_TEXT_3
+        assert decoded_single[3] == EXPECTED_TEXT_4
+
+    @slow
+    def test_whisper_longform_multi_batch_hard(self):
+        # fmt: off
+        EXPECTED_TEXT = [
+            " Folks, if you watch the show, you know, I spent a lot of time right over there. Patiently and astutely scrutinizing the boxwood and mahogany chest set of the day's biggest stories developing the central headline pawns, definitely maneuvering an oso topical night to F6, fainting a classic Sicilian, nade door variation on the news, all the while seeing eight moves deep and patiently marshalling the latest press releases into a fisher's shows in Lip Nitsky attack that culminates in the elegant lethal slow-played, all-passant checkmate that is my nightly monologue. But sometimes, sometimes, folks, I. CHEERING AND APPLAUSE Sometimes I startle away, cubside down in the monkey bars of a condemned playground on a super fun site. Get all hept up on goofballs. Rummage that were discarded tag bag of defective toys. Yank out a fist bowl of disembodied doll limbs, toss them on a stained kid's place mat from a defunct dennies. set up a table inside a rusty cargo container down by the Wharf and challenged toothless drifters to the godless bughouse blitz of tournament that is my segment. Meanwhile.",
+            " Folks, I spend a lot of time right over there, night after night after night, actually. Carefully selecting for you the day's noosiest, most aerodynamic headlines, stress testing, and those topical anti-lock breaks and power steering, painstakingly stitching, leather seating so soft, it would make JD power and her associates blush to create the luxury sedan that is my nightly monologue. But sometimes, you sometimes, folks. I lurched a consciousness in the back of an abandoned school and slap myself awake with a crusty floor mat. Before using a mouse-bitten timing belt to strap some old plywood to a couple of discarded oil drums, then by the light of a heathen moon, render a gas tank out of an empty big gulp, fill with white claw and denatured alcohol, then light a match and let her rip and the demented one man soapbox derby of news that is my segment. Me, Guadalupe! No!",
+            " Ladies and gentlemen, you know, I spent a lot of time right over there Raising the finest Holstein news cattle firmly yet tenderly milking the latest headlines from their jokes swollen teats Churning the daily stories into the decadent proven-style style triple cream breed that is my nightly monologue But sometimes sometimes folks I stagger home hungry after being released by the police and Root around in the neighbor's trash can for an old milk carton scrape out the blooming dairy residue into the remains of a wet cheese rod I won from a rat in a pre-donned street fight. Put it in a discarded paint can to leave it to ferment next to a trash fire then hunker down and hallucinate while eating the listeria laden demon custard of news that is my segment. You mean one of them.",
+            " Folks, if you watch this show, you know I spend most of my time right over there carefully sorting through the day's biggest stories and selecting only the most subtle and unblemished ostrich and crocodile news leather, which I then entrust to artisan graduates of the Ichol Gregoire Ferrandi, who carefully dye them in a palette of bright zesty shades and adorn them in the finest and most topical inlay work using hand tools and double magnifying glasses, then assemble them according to now classic and elegant geometry using our signature saddles stitching. In line it with bees, wax, coated linen, finely attached a mallet, hammered strap, pearled hardware, and close-shit to create for you the one-of-a-kind hoke couture, Erme's Birkin bag that is my monologue. But sometimes, sometimes folks, sometimes. Sometimes I wake up in the last car of an abandoned roller coaster at Coney Island where I'm I'm hiding from the triads. I have some engine lubricants out of a safe way bag and stagger down the shore to tear the sail off a beach schooner. Then I rip the coaxial cable out of an RV and elderly couple from Utah, Hank, and Mabel lovely folks. And use it to stitch the sail into a loose pouch like a rock sack. And I stow away in the back of a garbage truck to the junkyard where I pick through to the debris for only the broken toys that make me the saddest until I have loaded for you. The Hobo Fugitives bug out, bindle of news that is my segment. Me one!",
+            " You know, folks, I spent a lot of time crafting for you a bespoke playlist of the day's biggest stories right over there. Meticulously selecting the most topical chakra affirming scented candles, and using Feng Shui to perfectly align the joke energy in the exclusive boutique yoga retreat that is my monologue. But sometimes just sometimes I go to the dumpster behind the waffle house at three in the morning, take off my shirt, cover myself, and used fry oil, wrap my hands with some double-duct tape by stole from the broken car window. Pound a six-pack of blueberry hard-seltzer and a sack of pills I stole from a parked ambulance. Then arm wrestle a raccoon in the back alley vision quest of news that is my segment. Meanwhile!",
+            " You know, folks, I spend most of my time right over there. Mining the day's biggest, most important stories, collecting the finest, most topical iron or hand hammering it into joke panels. Then I craft sheets of bronze and blazing with patterns that tell an epic tale of conquest and glory. Then, using the Germanic tradition press-black process, I place thin sheets of foil against the scenes and by hammering or otherwise applying pressure from the back, I project these scenes into a pair of cheat cards in a faceplate and, finally, using fluted strips of white alloyed molding, I divide the designs into framed panels and hold it all together using bronze rivets to create the beautiful and intimidating, Anglo-Saxon battle helm that is my nightly monologue. Sometimes, sometimes folks. Sometimes, just sometimes, I come into my sense as fully naked on the deck of a pirate besieged melee container ship that picked me up floating on the detached door of a portapotty in the Indian Ocean. Then after a sunstroke-induced realization of the crew of this ship plans to sell me an exchange for a bag of oranges to fight off scurvy, I lead a mutiny using only a PVC pipe at a pool chain that accepting my new role as Captain and declaring myself king of the windarc seas. I grab a dirty mop bucket covered in barnacles and adorn it with the teeth of the vanquished to create the sopping wet pirate crown of news that is my segment. Meanwhile!",
+            " Folks, if you watch this show, you know I spend most of my time right over there carefully blending for you the day's Newsiest most topical flower eggs milk and butter and Stranding into a fine batter to make delicate and informative comedy pancakes Then I glaze them in the juice and zest of the most relevant midnight Valencia oranges and douse it all and a fine Dela main de voyage cognac Before prom baying and basting them tables. I deserve for you the James Beard award worthy crepe suzzette That is my nightly monologue, but sometimes just sometimes folks. I wake up in the baggage hold of Greyhound bus. It's being hoisted by the scrap yard claw toward the burn pit. Escape to a nearby abandoned price chopper where I scrounge for old bread scraps and busted open bags of starfruit candies and expired eggs. Chuck it all on a dirty hubcap and slap it over a tire fire before using the legs of a strain, pair of sweatpants and as oven mitts to extract and serve the demented transience poundcake of news that is my segment. Me, Guadalupe!",
+            " Folks, if you watched the show and I hope you do, I spent a lot of time right over there. Tiredlessly studying the lineage of the days most important thoroughbred stories and whole-stiner headlines, working with the best trainers, money can buy to rear their comedy offspring with a hand that is stern yet gentle into the triple crown winning equine specimen. That is my nightly monologue, but sometimes, sometimes, folks, I break into an unincorporated veterinary genetics lab and grab whatever test tubes I can find and then under a grow light I got from a discarded chia pet. I mixed the pilfered DNA of a horse and whatever was in a tube labeled Keith Colan extra. Slurrying the concoction with caffeine pills and a microwave red bull, I screamed, sang a prayer to Janice, initiator of human life and God of transformation as a half horse, half man, freak. Seizes to life before me and the hideous collection of loose animal parts and corrupted man tissue that is my segment. Meanwhile!"
+        ]
+        # fmt: on
+
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
+
+        ds = load_dataset("distil-whisper/meanwhile", "default")["test"]
+        ds = ds.cast_column("audio", Audio(sampling_rate=16000))
+
+        num_samples = 8
+
+        audio = ds[:num_samples]["audio"]
+        audios = [x["array"] for x in audio]
+
+        decoded_single = []
+        for audio in audios:
+            inputs = processor(audio, return_tensors="ms", truncation=False, sampling_rate=16_000)
+
+            result = model.generate(**inputs, return_timestamps=True)
+            decoded_single += processor.batch_decode(result, skip_special_tokens=True)
+
+        inputs = processor(
+            audios,
+            return_tensors="ms",
+            truncation=False,
+            padding="longest",
+            return_attention_mask=True,
+            sampling_rate=16_000,
+        )
+
+        result = model.generate(**inputs, return_timestamps=True)
+        decoded_all = processor.batch_decode(result, skip_special_tokens=True)
+
+        for i in range(num_samples):
+            assert decoded_all[i] == decoded_single[i]
+            assert decoded_all[i] == EXPECTED_TEXT[i]
+
+    @slow
+    def test_whisper_longform_multi_batch_hard_prev_cond(self):
+        # Without this set here, this test may fail if it is run with other tests (say, `test_tiny_*`). It's unclear
+        # why other tests may affect this tests: it seems some random operations are beyond the scene.
+        set_seed(0)
+        # fmt: off
+        EXPECTED_TEXT = [
+            " Folks, if you watch the show, you know I spent a lot of time right over there. Patiently and astutely scrutinizing the boxwood and mahogany chest set of the day's biggest stories, developing the central headline pawns, definitely maneuvering an oh-so-topical night to F6, faming of classic Sicilian, named or variation on the news, all the while seeing eight moves deep and patiently marshalling the latest press releases into a Fisher shows in lip-nitsky attack that culminates in the elegant lethal slow-played, all-pass on checkmate that is my nightly monologue, but sometimes sometimes folks I sometimes I start to the wake-up side down in the monkey bars of a condemned playground on a super fun site, get all hepped up on goofballs, rummage that would discard a tag bag of defective toys, yank out a fistball of disembodied doll limbs, toss them on a stain kid's place mad from a defunct denies, set up a table inside a rusty cargo container down by the warf and challenge toothless drifters to the godless bughouse blitz of tournament that is my segment, meanwhile.",
+            " Folks, I spent a lot of time right over there night after night, actually. Carefully selecting for you the day's newsiest, most aerodynamic headlines, stress testing on those topical anti-lock breaks and power steering, painstakingly stitching, leather seating, so soft, it would make JD power and her associates blush. To create the luxury sedan that is my nightly monologue, but sometimes I just sometimes focus. I lurched to consciousness in the back of an abandoned school bus and slapped myself awake with a crusty floor mat. Before using a mouse-bitten timing belt to strap some old plywood to a couple of discarded oil drums, then by the light of a heathen-moon render a gas tank out of an empty big gulp, filled with white claw and de-natured alcohol, then light a match and let her rip in the dis-mented one man, soapbox derby of news that is my segment.",
+            " Ladies and gentlemen, you know, I spent a lot of time right over there, raising the finest hosting news cattle firmly, yet tenderly milking the latest headlines from their jokes, swollen teats, churning the daily stories into the decadent Provincil style triple cream-breed. It is my nightly monologue, but sometimes sometimes I stagger home hungry after being released by the police and root around in the neighbor's trash can for an old milk carton scrape out the blooming dairy residue into the remains of a wet cheese rod I won from a rat in a pre-drawn street fight. Put it in a discarded paint can to leave it to ferment next to a trash fire than a hunker down in hallucinate while eating the Listeria latent demon custard of news that is my segment.",
+            " Folks, you watched this show, you know I spend most of my time right over there, carefully sorting through the days, big stories, and selecting only the most subtle, and unblemished ostrich and crocodile news leather, which I then entrust to artisan graduates of the Ickel Greg Waferandi, who carefully died them in a pallet of bright, zesty shades, and adorn them in the finest most topical inlay work, using hand tools and double magnifying glasses, then assemble them according to now classic and elegant geometry using our signature saddle stitching, and line it with bees, wax, coated linen, and finally attach a mallet hammered strap, purled hardware, and close-shet to create for you the one of a kind hope kutur, Ernme, is burkin bag that is my monologue, but sometimes, sometimes folks, sometimes. Sometimes I wake up in the last car of an abandoned rollercoaster at Coney Island where I'm hiding from the triads, I have some engine lubricants out of a safe way bag and staggered down the shore to tear the sail off a beach skoener, then I ripped the coaxial cable out of an RV and elderly couple from Utah, Hank, and Mabel, lovely folks, and use it to stitch the sail into a loose pouch-like rock sack, and I stow in the back of a garbage truck to the junkyard, where I pick through to the debris for only the broken toys that make me the saddest, until I have loaded for you, the hobo fugitives bug out bindle of news that",
+            " You know, folks, I spent a lot of time crafting for you a bespoke playlist of the day's big stories right over there. meticulously selecting the most topical chakra affirming scented candles, using Feng Shui, to perfectly align the joke energy in the exclusive boutique yoga retreat that is my monologue, but sometimes just sometimes, I go to the dumpster behind the waffle house at three in the morning, take off my shirt, cover myself and use fry oil, wrap my hands and some old duct tape I stole from a broken car window, pound a six pack of blueberry hard-seller and a second pill, as I stole from a parked ambulance, then arm wrestle a raccoon in the back alley vision quest of news that is my segment.",
+            " You know, folks, I spend most of my time right over there. Mining the days, biggest, most important stories, collecting the finest, most topical iron or hand hammering it into joke panels, then I craft sheets of bronze and blazing with patterns that tell an epic tale of conquest and glory. Then, using the Germanic tradition press, black process, I place thin sheets of foil against the scenes and by hammering or otherwise applying pressure from the back, I project these scenes into a pair of cheat cards and a face plate, and finally using fluted strips of white, alloyed molding, I divide the designs into framed panels and hold it all together using bronze rivets to create the beautiful and intimidating, Anglo-Saxon battle helm that is my nightly monologue. But sometimes, sometimes, folks. Sometimes, just sometimes, I come to my senses fully naked on the deck of a pirate-be-seed, melee, container ship that picked me up floating on the detached door of a porta-potty in the Indian Ocean. Then, after a sunstroke induced realization of the crew of this ship plans to sell me an exchange for a bag of oranges to fight off scurvy, I lead a mutiny using only a PVC pipe and a pool chain that accepting my new role as captain and declaring myself King of the Windark Seas. I grab a dirty mop bucket covered in barnacles and adorn it with the teeth of the vanquished to create these shopping wet pirate crown of news that is my segment. Me wild!",
+            " Folks, if you watch this show, you know I spend most of my time right over there carefully blending for you the day's newsiest, most topical flower eggs, milk and butter. And straining into a fine batter to make delicate and informative comedy pancakes, then I glaze them in the juice and zest of the most relevant midnight valencio oranges. And doubts at all, and I find delimane de voyage cognac, before from bang and basting them tables, I deserve you the James Beard Award worthy creeps to ZET. That is my nightly monologue, but sometimes sometimes folks, I wake up in the baggage hole of Greyhound bus, it's being hoisted by the scrapyard claw toward the burn pit. Escape to a nearby abandoned price chopper where I scrounge for old bread scraps, busted up in bags of starfruit candies and expired eggs. Chuck it all on a dirty hubcap and slap it over a tire fire before using the legs of a strained pair of sweatpants and as ovenmets to extract and serve the demented transients pound cake of news that is my segment.",
+            (
+                " Folks, if you watch the show and I hope you do, I spend a lot of time right over there. Tirelessly studying the lineage of the day's most important thoroughbred stories and whole-stiner headlines, working with the best trainers money can buy to rear their comedy offspring with a hand that is stern yet gentle into the triple crown winning equine specimen that is my nightly monologue. But sometimes sometimes folks I break into an unincorporated veterinary genetics lab. And grab whatever test tubes I can find and then under a grow light I got from a discarded chia pet. I mixed the pill for DNA of a horse and whatever was in a tube labeled Keith Cohen-Extra. Slurring the concoction with caffeine pills and a microwave bread bowl, I scream sing a prayer to Janice initiator of human life and God of Transformation as a half horse, half man freak ceases to life before me and the hideous collection of loose animal parts and corrupted men tissue that is my segment. Meanwhile!",
+                " Folks, if you watch the show and I hope you do, I spend a lot of time right over there. Tirelessly studying the lineage of the day's most important thoroughbred stories and whole-stiner headlines, working with the best trainers money can buy to rear their comedy offspring with a hand that is stern yet gentle into the triple crown winning equine specimen that is my nightly monologue. But sometimes sometimes folks I break into an unincorporated veterinary genetics lab. And grab whatever test tubes I can find and then under a grow light I got from a discarded chia pet. I mixed the pill for DNA of a horse and whatever was in a tube labeled Keith Cohen-Extra. Slurring the concoction with caffeine pills and a microwave bread bowl, I screamed sing a prayer to Janice initiator of human life and God of Transformation as a half horse, half man freak ceases to life before me and the hideous collection of loose animal parts and corrupted men tissue that is my segment. Meanwhile!",
+            )
+        ]
+        # fmt: on
+
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
+
+        ds = load_dataset("distil-whisper/meanwhile", "default")["test"]
+        ds = ds.cast_column("audio", Audio(sampling_rate=16000))
+
+        num_samples = 8
+
+        audio = ds[:num_samples]["audio"]
+        audios = [x["array"] for x in audio]
+
+        inputs = processor(
+            audios,
+            return_tensors="ms",
+            truncation=False,
+            padding="longest",
+            return_attention_mask=True,
+            sampling_rate=16_000,
+        )
+
+        gen_kwargs = {
+            "return_timestamps": True,
+            "no_speech_threshold": 0.6,
+            "temperature": (0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
+            "compression_ratio_threshold": 1.35,
+            "condition_on_prev_tokens": True,
+            "logprob_threshold": -1.0,
+            "num_beams": 5,
+        }
+
+        result = model.generate(**inputs, **gen_kwargs)
+        decoded_all = processor.batch_decode(result, skip_special_tokens=True)
+
+        for i in range(num_samples):
+            if isinstance(EXPECTED_TEXT[i], str):
+                assert decoded_all[i] == EXPECTED_TEXT[i]
+            elif isinstance(EXPECTED_TEXT[i], tuple):
+                assert decoded_all[i] in EXPECTED_TEXT[i]
+
+    @slow
+    def test_whisper_shortform_multi_batch_hard_prev_cond(self):
+        # Without this set here, this test may fail if it is run with other tests (say, `test_tiny_*`). It's unclear
+        # why other tests may affect this tests: it seems some random operations are beyond the scene.
+        set_seed(0)
+        # fmt: off
+        EXPECTED_TEXT = [
+            ' Mr. Kfilter is the apostle of the Middle Classes and we are glad to welcome his gospel.',
+            " Nor is Mr. Qilter's manner less interesting than his matter.",
+            ' He tells us that at this festive season of the year, with Christmas and roce beef, looming before us, similarly drawn from eating and its results occur most readily to the mind.',
+            ' He has grabbed those with her surfered trigger late and his work is really a great after all, and can discover it in it but little of Rocky Ithaka.',
+            " L'Neile's pictures are a sort of upguards and add-um paintings, and Maessin's exquisite Itals are a national as a jingo poem. Mr. Birkett Foster's landscapes smiled at one much in the same way that Mr. Carcher used to flash his teeth. And Mr. John Collier gives his sitter a cheerful slapper in the back, before he says,",
+            ' It is obviously unnecessary for us, to point out how luminous these criticisms are, how delicate and expression.',
+            ' On the general principles of art and Mr. Kriltor rights with equal lucidity.',
+            ' Painting, he tells us is of a different quality to mathematics and finish in art is adding more effect.',
+        ]
+        # fmt: on
+
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
+
+        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+        num_samples = 8
+
+        audio = ds[:num_samples]["audio"]
+        audios = [x["array"] for x in audio]
+
+        inputs = processor(
+            audios,
+            return_tensors="ms",
+            sampling_rate=16_000,
+        )
+
+        gen_kwargs = {
+            "return_timestamps": True,
+            "no_speech_threshold": 0.6,
+            "temperature": (0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
+            "compression_ratio_threshold": 1.35,
+            "condition_on_prev_tokens": True,
+            "logprob_threshold": -1.0,
+        }
+
+        result = model.generate(**inputs, **gen_kwargs)
+        decoded_all = processor.batch_decode(result.sequences, skip_special_tokens=True)
+
+        for i in range(num_samples):
+            if isinstance(EXPECTED_TEXT[i], str):
+                assert decoded_all[i] == EXPECTED_TEXT[i]
+
+    @slow
+    def test_whisper_longform_no_speech_detection(self):
+        # fmt: off
+        EXPECTED_TEXT = [
+            " Folks, if you watch the show, you know, I spent a lot of time right over there. Patiently and astutely scrutinizing the boxwood and mahogany chest set of the day's biggest stories. Developing the central headline pawns, definitely maneuvering and also topical night to F6.",
+            " Folks, I spent a lot of time right over there night after night, actually. Carefully selecting for you the day's newsiest, most aerodynamic headlines, stress testing",
+            ' Ladies and gentlemen, you know, I spent a lot of time right over there raising the finest Holstein news cattle firmly yet tenderly milking the latest headlines from their joke swollen teats',
+            ' Folks, you watched this show, you know I spend most of my time right over there, carefully sorting through the days, big stories, and selecting only the most subtle and unblemished ostrich and crocodile news leather, which I then entrust to artisan graduates of the',
+            " You know, folks, I spent a lot of time crafting for you a bespoke playlist of the day's big stories right over there. meticulously selecting the most topical chakra affirming scented candles, using Feng Shui,",
+            ' You know, folks, I spend most of my time right over there. Mining the days, biggest, most important stories, collecting the finest, most topical iron or hand hammering it into joke panels, then I craft sheets of bronze and blazing with patterns that tell an epic tale of conquest.',
+            " Folks, if you watch this show, you know I spend most of my time right over there, carefully blending for you the day's newsiest, most topical flower eggs, milk and butter. And straining into a fine batter to make delicate and informative comedy pancakes, then I glaze them in the juice and zest of the most...",
+            " Folks, if you watch the show and I hope you do, I spent a lot of time right over there. Tirelessly studying the lineage of the day's most important thoroughbred stories and whole-stiner headlines.",
+        ]
+        # fmt: on
+
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
+
+        ds = load_dataset("distil-whisper/meanwhile", "default")["test"]
+        ds = ds.cast_column("audio", Audio(sampling_rate=16000))
+
+        num_samples = 8
+
+        audio = ds[:num_samples]["audio"]
+        audios = [x["array"] for x in audio]
+
+        # Make sure the second chunk is silent
+        for audio in audios:
+            audio[15 * 16000 : 60 * 16000] = 0.0
+
+        inputs = processor(
+            audios,
+            return_tensors="ms",
+            truncation=False,
+            padding="longest",
+            return_attention_mask=True,
+            sampling_rate=16_000,
+        )
+
+        gen_kwargs = {
+            "return_timestamps": True,
+            "no_speech_threshold": 0.2,
+            "temperature": (0.0,),
+            "compression_ratio_threshold": 1.35,
+            "condition_on_prev_tokens": True,
+            "logprob_threshold": 0.0,  # Ignore logprob, use only no-speech prob
+            "num_beams": 5,
+        }
+
+        set_seed(0)
+        result = model.generate(**inputs, **gen_kwargs)
+        decoded_all = processor.batch_decode(result, skip_special_tokens=True)
+
+        for i in range(num_samples):
+            assert decoded_all[i] == EXPECTED_TEXT[i]
+
+    @require_mindspore_gpu
+    @slow
+    def test_whisper_empty_longform(self):
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
+
+        ds = load_dataset("distil-whisper/meanwhile", "default")["test"]
+        ds = ds.cast_column("audio", Audio(sampling_rate=16000))
+
+        num_samples = 8
+
+        audio = ds[:num_samples]["audio"]
+        audios = [x["array"] for x in audio]
+        audios[0][:] = np.zeros(audios[0].shape)
+
+        inputs = processor(
+            audios,
+            return_tensors="ms",
+            truncation=False,
+            padding="longest",
+            return_attention_mask=True,
+            sampling_rate=16_000,
+        )
+
+        gen_kwargs = {
+            "no_speech_threshold": 0.2,
+            "temperature": (0.0,),
+            "logprob_threshold": 0.0,  # Ignore logprob, use only no-speech prob
+            "num_beams": 5,
+            "language": "fr",
+            "task": "transcribe",
+        }
+
+        set_seed(0)
+        model.generate(**inputs, **gen_kwargs)
+
+    @slow
+    def test_tiny_static_generation(self):
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
+
+        input_speech = self._load_datasamples(4)
+        input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
+        eager_generated_ids = model.generate(input_features, max_new_tokens=64)
+
+        model.generation_config.cache_implementation = "static"
+        # model.forward = torch.compile(model.forward, mode="reduce-overhead", fullgraph=True)
+
+        # compile the forward pass and assert equivalence
+        static_generated_ids = model.generate(input_features, max_new_tokens=64)
+        assert (eager_generated_ids == static_generated_ids).all()
+
+        # check the compiled graph can be re-used and that the cache is correctly reset
+        # reverse the ordering of the input features
+        permutation_idx = (
+            ops.arange(input_features.shape[0], 0, step=-1, dtype=mindspore.int64, device=input_features.device) - 1
+        )
+        input_features = input_features[permutation_idx, ...]
+        static_generated_ids = model.generate(input_features, max_new_tokens=64)
+        # assert re-ordered generations match those from eager
+        assert (eager_generated_ids[permutation_idx, :] == static_generated_ids).all()
+
+    @slow
+    def test_tiny_static_generation_long_form(self):
+
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
+
+        dataset = load_dataset("distil-whisper/meanwhile", "default")["test"]
+        dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
+        input_speech = [audio["array"] for audio in dataset[2:4]["audio"]]
+
+        inputs = processor(
+            input_speech,
+            return_tensors="ms",
+            padding="longest",
+            truncation=False,
+            return_attention_mask=True,
+            sampling_rate=16_000,
+        )
+
+        gen_kwargs = {
+            "return_timestamps": True,
+            "no_speech_threshold": 0.6,
+            "temperature": (0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
+            "compression_ratio_threshold": 1.35,
+            "condition_on_prev_tokens": True,  # conditioning on prev tokens introduces a recompile on the second time step
+            "logprob_threshold": -1.0,
+            "num_beams": 1,
+        }
+
+        set_seed(42)
+        eager_generated_ids = model.generate(**inputs, **gen_kwargs)
+
+        # compile the forward pass and assert equivalence
+        model.generation_config.cache_implementation = "static"
+        # model.forward = torch.compile(model.forward, mode="reduce-overhead", fullgraph=True)
+
+        set_seed(42)
+        static_generated_ids = model.generate(**inputs, **gen_kwargs)
+        assert (eager_generated_ids == static_generated_ids).all()
+
+        # check the compiled graph can be re-used and that the cache is correctly reset
+        # reverse the ordering of the input features
+        input_features = inputs.input_features
+        permutation_idx = (
+            ops.arange(input_features.shape[0], 0, step=-1, dtype=mindspore.int64, device=input_features.device) - 1
+        )
+        input_features = input_features[permutation_idx, ...]
+        attention_mask = inputs.attention_mask[permutation_idx, ...]
+
+        set_seed(42)
+        static_generated_ids = model.generate(input_features, attention_mask=attention_mask, **gen_kwargs)
+        # assert re-ordered generations match those from eager
+        assert (eager_generated_ids[permutation_idx, :] == static_generated_ids).all()
+
 
 def prepare_whisper_encoder_inputs_dict(config, input_features, head_mask=None):
     if head_mask is None:
-        head_mask = ops.ones((config.encoder_layers, config.encoder_attention_heads))
+        head_mask = ops.ones(config.encoder_layers, config.encoder_attention_heads)
     return {"input_features": input_features, "head_mask": head_mask}
 
 
@@ -1347,7 +2789,7 @@ class WhisperEncoderModelTester:
     def __init__(
         self,
         parent,
-        batch_size=2,
+        batch_size=3,  # need batch_size != num_hidden layers
         seq_length=60,
         is_training=True,
         use_labels=True,
@@ -1442,22 +2884,21 @@ class WhisperEncoderModelTester:
     def encoder_seq_length(self):
         return self.get_subsampled_output_lengths(self.seq_length)
 
-    def create_and_check_model_forward(self, config, inputs_dict, freeze_encoder=False):
-        model = WhisperForAudioClassification(config=config).set_train(False)
-
-        if freeze_encoder:
-            model.freeze_encoder()
+    def create_and_check_model_forward(self, config, inputs_dict, use_weighted_layer_sum=False):
+        config.use_weighted_layer_sum = use_weighted_layer_sum
+        model = WhisperForAudioClassification(config=config)
+        model.eval()
 
         input_features = inputs_dict["input_features"]
 
-        # first forward pass
-        last_hidden_state = model(input_features).logits
+        with no_grad():
+            last_hidden_state = model(input_features).logits
 
         self.parent.assertTrue(last_hidden_state.shape, (13, 2))
 
 
 @require_mindspore
-class WhisperEncoderModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
+class WhisperEncoderModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (WhisperForAudioClassification,) if is_mindspore_available() else ()
     is_encoder_decoder = False
     fx_compatible = False
@@ -1486,6 +2927,14 @@ class WhisperEncoderModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTe
             expected_arg_names = ["input_features", "head_mask", "encoder_outputs"]
             self.assertListEqual(arg_names[: len(expected_arg_names)], expected_arg_names)
 
+    def test_forward_pass(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_model_forward(*config_and_inputs)
+
+    def test_forward_pass_weighted_layer_sum(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_model_forward(*config_and_inputs, use_weighted_layer_sum=True)
+
     @unittest.skip(reason="Some undefined behavior encountered with tiny versions of this model. Skip for now.")
     def test_cpu_offload(self):
         pass
@@ -1502,8 +2951,9 @@ class WhisperEncoderModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTe
     def test_model_parallelism(self):
         pass
 
-    # input embeds is meaningless for an encoder-only acoustic model
+    @unittest.skip(reason="Not applicable for an encoder-only acoustic model")
     def test_inputs_embeds(self):
+        # input embeds is meaningless for an encoder-only acoustic model
         pass
 
     # the equivalent test is passing the encoder outputs directly to the model
@@ -1512,44 +2962,52 @@ class WhisperEncoderModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTe
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
             inputs = copy.deepcopy(self._prepare_for_class(inputs_dict, model_class))
 
-            outputs = model(**inputs)[0]
-
-            input_ids = inputs["input_features"]
-            del inputs["input_features"]
+            with no_grad():
+                outputs = model(**inputs)[0]
 
             encoder = model.encoder
 
+            encoder_inputs = {"input_features": inputs["input_features"]}
+            del inputs["input_features"]
 
-            inputs["encoder_outputs"] = encoder(input_ids)
-            outputs_embeds = model(**inputs)[0]
+            if "head_mask" in inputs:
+                encoder_inputs["head_mask"] = inputs["head_mask"]
+            if "attention_mask" in inputs:
+                encoder_inputs["attention_mask"] = inputs["attention_mask"]
+            if "output_attentions" in inputs:
+                encoder_inputs["output_attentions"] = inputs["output_attentions"]
+
+            with no_grad():
+                inputs["encoder_outputs"] = encoder(**encoder_inputs)
+                outputs_embeds = model(**inputs)[0]
 
             self.assertTrue((outputs_embeds == outputs).all())
 
     # Needs to override as the encoder input embedding is a Conv1d
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (mindspore.nn.Conv1d))
-            model.set_input_embeddings(mindspore.nn.Conv1d(10, 10, 3))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Conv1d))
+            model.set_input_embeddings(nn.Conv1d(10, 10, 3))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, mindspore.nn.Conv1d))
+            self.assertTrue(x is None or isinstance(x, nn.Conv1d))
 
     # WhisperEncoder cannot resize token embeddings since it has no tokens embeddings
+    @unittest.skip(reason="Model has no tokens embeds")
     def test_resize_tokens_embeddings(self):
         pass
-
 
 class WhisperStandaloneDecoderModelTester:
     def __init__(
         self,
         parent,
-        batch_size=2,
+        batch_size=3,  # need batch_size != num_hidden layers
         is_training=True,
         use_labels=False,
         vocab_size=200,
@@ -1669,7 +3127,7 @@ class WhisperStandaloneDecoderModelTester:
 
     def create_and_check_decoder_model_past(self, config, input_ids):
         config.use_cache = True
-        model = WhisperDecoder(config=config).set_train(False)
+        model = WhisperDecoder(config=config).eval()
         # first forward pass
         outputs = model(input_ids, use_cache=True)
         outputs_use_cache_conf = model(input_ids)
@@ -1684,7 +3142,7 @@ class WhisperStandaloneDecoderModelTester:
         next_tokens = ids_tensor((self.batch_size, 1), config.vocab_size)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
 
         output_from_no_past = model(next_input_ids)["last_hidden_state"]
         output_from_past = model(next_tokens, past_key_values=past_key_values)["last_hidden_state"]
@@ -1695,10 +3153,10 @@ class WhisperStandaloneDecoderModelTester:
         output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        assert np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3)
+        assert ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)
 
     def create_and_check_decoder_model_attention_mask_past(self, config, input_ids):
-        model = WhisperDecoder(config=config).set_train(False)
+        model = WhisperDecoder(config=config).eval()
 
         # create attention mask
         attn_mask = ops.ones(input_ids.shape, dtype=mindspore.int64)
@@ -1718,10 +3176,10 @@ class WhisperStandaloneDecoderModelTester:
         input_ids[:, -random_seq_idx_to_change] = random_other_next_tokens
 
         # append to next input_ids and attn_mask
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         attn_mask = ops.cat(
             [attn_mask, ops.ones((attn_mask.shape[0], 1), dtype=mindspore.int64)],
-            axis=1,
+            dim=1,
         )
 
         # get two different outputs
@@ -1736,11 +3194,11 @@ class WhisperStandaloneDecoderModelTester:
         output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        assert np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3)
+        assert ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)
 
 
 @require_mindspore
-class WhisperStandaloneDecoderModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
+class WhisperStandaloneDecoderModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (WhisperDecoder, WhisperForCausalLM) if is_mindspore_available() else ()
     all_generative_model_classes = (WhisperForCausalLM,) if is_mindspore_available() else ()
     fx_comptatible = False
@@ -1769,20 +3227,48 @@ class WhisperStandaloneDecoderModelTest(ModelTesterMixin, GenerationTesterMixin,
             config=config, input_ids=inputs_dict["input_ids"]
         )
 
-    @unittest.skip("Generate needs input ids")
+    @unittest.skip(reason="Tested implicitly through the encoder-decoder tests")
+    def test_custom_4d_attention_mask(self):
+        pass
+
+    @unittest.skip(reason="Generate needs input ids")
     def test_generate_without_input_ids(self):
         # generate only works with input ids for whisper
         pass
 
-    @unittest.skip("Decoder can't keep attention grads")
+    @unittest.skip(reason="Generate needs input ids")
+    def test_inputs_embeds_matches_input_ids_with_generate(self):
+        # generate only works with input ids for whisper
+        pass
+
+    @unittest.skip(reason="Decoder can't keep attention grads")
     def test_retain_grad_hidden_states_attentions(self):
-        # decoder cannot keep gradients
         return
 
-    @unittest.skip("The model doesn't support fast init from base")
+    @unittest.skip(reason="The model doesn't support fast init from base")
     def test_save_load_fast_init_from_base(self):
         pass
 
-    @unittest.skip("The model doesn't support left padding")  # and it's not used enough to be worth fixing :)
-    def test_left_padding_compatibility(self):
+    @unittest.skip(
+        reason="FA2 testing suite needs to be refactored to be compatible with WhisperDecoder for that test"
+    )
+    def test_flash_attn_2_generate_reuse_cache(self):
+        pass
+
+    @unittest.skip(
+        "Duplicated test with WhisperModelTest + the FA2 testing suite needs to be refactored to be compatible with WhisperDecoder for that test"
+    )
+    def test_flash_attn_2_generate_padding_right(self):
+        pass
+
+    @unittest.skip(
+        "Duplicated test with WhisperModelTest + the FA2 testing suite needs to be refactored to be compatible with WhisperDecoder for that test"
+    )
+    def test_flash_attn_2_inference(self):
+        pass
+
+    @unittest.skip(
+        "Duplicated test with WhisperModelTest + the FA2 testing suite needs to be refactored to be compatible with WhisperDecoder for that test"
+    )
+    def test_flash_attn_2_inference_padding_right(self):
         pass

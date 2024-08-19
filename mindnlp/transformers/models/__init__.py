@@ -52,8 +52,10 @@ from . import (
     clap,
     clip,
     clipseg,
+    clvp,
     codegen,
     cohere,
+    conditional_detr,
     cogvlm,
     convbert,
     convnext,
@@ -68,6 +70,7 @@ from . import (
     deberta,
     deberta_v2,
     decision_transformer,
+    deformable_detr,
     deepseek_v2,
     detr,
     deta,
@@ -91,6 +94,7 @@ from . import (
     chatglm3,
     chatglm4,
     flava,
+    flaubert,
     florence2,
     focalnet,
     fnet,
@@ -158,6 +162,7 @@ from . import (
     openelm,
     opt,
     owlvit,
+    patchtst,
     pegasus,
     pegasus_x,
     perceiver,
@@ -200,7 +205,6 @@ from . import (
     swin2sr,
     t5,
     tapas,
-    tapex,
     time_series_transformer,
     timesformer,
     tinybert,
@@ -221,6 +225,7 @@ from . import (
     vit_mae,
     vit_msn,
     vitdet,
+    vits,
     vivit,
     wav2vec2,
     wav2vec2_conformer,
@@ -276,8 +281,10 @@ from .chatglm4 import *
 from .clap import *
 from .clip import *
 from .clipseg import *
+from .clvp import *
 from .codegen import *
 from .cohere import *
+from .conditional_detr import *
 from .cogvlm import *
 from .convbert import *
 from .convnext import *
@@ -292,6 +299,7 @@ from .dbrx import *
 from .deberta import *
 from .deberta_v2 import *
 from .decision_transformer import *
+from .deformable_detr import *
 from .deepseek_v2 import *
 from .detr import *
 from .deta import *
@@ -313,6 +321,7 @@ from .chatglm2 import *
 from .chatglm3 import *
 from .falcon import *
 from .flava import *
+from .flaubert import *
 from .florence2 import *
 from .focalnet import *
 from .fnet import *
@@ -381,6 +390,7 @@ from .oneformer import *
 from .openelm import *
 from .opt import *
 from .owlvit import *
+from .patchtst import *
 from .pegasus import *
 from .pegasus_x import *
 from .perceiver import *
@@ -424,7 +434,6 @@ from .swin2sr import *
 from .tinybert import *
 from .t5 import *
 from .tapas import *
-from .tapex import *
 from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
@@ -440,6 +449,7 @@ from .vision_encoder_decoder import *
 from .vision_text_dual_encoder import *
 from .visual_bert import *
 from .vit import *
+from .vits import *
 from .vit_hybrid import *
 from .vit_mae import *
 from .vit_msn import *
@@ -498,8 +508,10 @@ __all__.extend(canine.__all__)
 __all__.extend(clap.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(clipseg.__all__)
+__all__.extend(clvp.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cohere.__all__)
+__all__.extend(conditional_detr.__all__)
 __all__.extend(cogvlm.__all__)
 __all__.extend(convbert.__all__)
 __all__.extend(convnext.__all__)
@@ -514,6 +526,7 @@ __all__.extend(dbrx.__all__)
 __all__.extend(deberta.__all__)
 __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
+__all__.extend(deformable_detr.__all__)
 __all__.extend(deepseek_v2.__all__)
 __all__.extend(deit.__all__)
 __all__.extend(dinov2.__all__)
@@ -534,6 +547,7 @@ __all__.extend(chatglm.__all__)
 __all__.extend(chatglm4.__all__)
 __all__.extend(falcon.__all__)
 __all__.extend(flava.__all__)
+__all__.extend(flaubert.__all__)
 __all__.extend(florence2.__all__)
 __all__.extend(fnet.__all__)
 __all__.extend(focalnet.__all__)
@@ -604,6 +618,7 @@ __all__.extend(oneformer.__all__)
 __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(owlvit.__all__)
+__all__.extend(patchtst.__all__)
 __all__.extend(pegasus.__all__)
 __all__.extend(pegasus_x.__all__)
 __all__.extend(perceiver.__all__)
@@ -646,7 +661,7 @@ __all__.extend(switch_transformers.__all__)
 __all__.extend(swin2sr.__all__)
 __all__.extend(superpoint.__all__)
 __all__.extend(t5.__all__)
-__all__.extend(tapex.__all__)
+__all__.extend(tapas.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
@@ -663,6 +678,7 @@ __all__.extend(vision_encoder_decoder.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
+__all__.extend(vits.__all__)
 __all__.extend(vit_hybrid.__all__)
 __all__.extend(vit_mae.__all__)
 __all__.extend(vit_msn.__all__)

@@ -956,11 +956,11 @@ def validate_annotations(
     
     Raises:
         ValueError: If the annotation format is not supported or if the annotations are invalid for the specified format.
-        DeprecatedWarning: If the annotation format is deprecated and will be removed in the future version.
+        DeprecatedWarning: If the annotation format is deprecated.
     """
     if isinstance(annotation_format, AnnotionFormat):
         logger.warning_once(
-            f"`{annotation_format.__class__.__name__}` is deprecated and will be removed in v4.38. "
+            f"`{annotation_format.__class__.__name__}` is deprecated.38. "
             f"Please use `{AnnotationFormat.__name__}` instead."
         )
         annotation_format = promote_annotation_format(annotation_format)
