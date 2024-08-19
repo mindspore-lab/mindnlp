@@ -409,8 +409,6 @@ class TvltModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             model.set_train()
             inputs = self._prepare_for_class(inputs_dict, model_class)
-            for k, v in inputs.items():
-                print(k, v.shape)
             loss = model(**inputs).loss
             # loss.backward()
 

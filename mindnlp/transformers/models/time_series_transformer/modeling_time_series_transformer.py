@@ -13,18 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Time Series Transformer model."""
+"""MindSpore Time Series Transformer model."""
 
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
-
 import mindspore
-from mindspore.common.initializer import initializer, Normal
+from mindnlp.core import nn, ops, no_grad, distributions
 
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
@@ -35,7 +31,8 @@ from ...modeling_outputs import (
     Seq2SeqTSPredictionOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from ...time_series_utils import NormalOutput, StudentTOutput
+from ...time_series_utils import NegativeBinomialOutput, NormalOutput, StudentTOutput
+from ....utils import logging
 from .configuration_time_series_transformer import TimeSeriesTransformerConfig
 
 
@@ -59,15 +56,13 @@ class TimeSeriesFeatureEmbedder(nn.Module):
         super().__init__()
 
         self.num_features = len(cardinalities)
-        self.embedders = nn.ModuleList(
-            [nn.Embedding(c, d) for c, d in zip(cardinalities, embedding_dims)])
+        self.embedders = nn.ModuleList([nn.Embedding(c, d) for c, d in zip(cardinalities, embedding_dims)])
 
     def forward(self, features: mindspore.Tensor) -> mindspore.Tensor:
         if self.num_features > 1:
             # we slice the last dimension, giving an array of length
             # self.num_features with shape (N,T) or (N)
-            cat_feature_slices = ops.chunk(
-                features, self.num_features, dim=-1)
+            cat_feature_slices = ops.chunk(features, self.num_features, dim=-1)
         else:
             cat_feature_slices = [features]
 
@@ -90,28 +85,27 @@ class TimeSeriesStdScaler(nn.Module):
         super().__init__()
         self.dim = config.scaling_dim if hasattr(config, "scaling_dim") else 1
         self.keepdim = config.keepdim if hasattr(config, "keepdim") else True
-        self.minimum_scale = config.minimum_scale if hasattr(
-            config, "minimum_scale") else 1e-5
+        self.minimum_scale = config.minimum_scale if hasattr(config, "minimum_scale") else 1e-5
 
-    def forward(self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
+    def forward(
+        self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor
+    ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         """
         Parameters:
-        data (`torch.Tensor` of shape `(batch_size, sequence_length, num_input_channels)`):
+            data (`mindspore.Tensor` of shape `(batch_size, sequence_length, num_input_channels)`):
                 input for Batch norm calculation
-            observed_indicator (`torch.BoolTensor` of shape `(batch_size, sequence_length, num_input_channels)`):
+            observed_indicator (`mindspore.Tensor` of shape `(batch_size, sequence_length, num_input_channels)`):
                 Calculating the scale on the observed indicator.
         Returns:
-            tuple of `torch.Tensor` of shapes
+            tuple of `mindspore.Tensor` of shapes
                 (`(batch_size, sequence_length, num_input_channels)`,`(batch_size, 1, num_input_channels)`,
                 `(batch_size, 1, num_input_channels)`)
         """
-        denominator = observed_indicator.sum(self.dim, keepdims=self.keepdim)
-        denominator = denominator.clamp(min=1.0)
-        loc = (data * observed_indicator).sum(self.dim,
-                                              keepdims=self.keepdim) / denominator
+        denominator = ops.sum(observed_indicator, self.dim, keepdim=self.keepdim)
+        denominator = denominator.clamp(1.0)
+        loc = ops.sum((data * observed_indicator), self.dim, keepdim=self.keepdim) / denominator
 
-        variance = (((data - loc) * observed_indicator) **
-                    2).sum(self.dim, keepdims=self.keepdim) / denominator
+        variance = ops.sum((((data - loc) * observed_indicator) ** 2), self.dim, keepdim=self.keepdim) / denominator
         scale = ops.sqrt(variance + self.minimum_scale)
         return (data - loc) / scale, loc, scale
 
@@ -126,32 +120,32 @@ class TimeSeriesMeanScaler(nn.Module):
         super().__init__()
         self.dim = config.scaling_dim if hasattr(config, "scaling_dim") else 1
         self.keepdim = config.keepdim if hasattr(config, "keepdim") else True
-        self.minimum_scale = config.minimum_scale if hasattr(
-            config, "minimum_scale") else 1e-10
-        self.default_scale = config.default_scale if hasattr(
-            config, "default_scale") else None
+        self.minimum_scale = config.minimum_scale if hasattr(config, "minimum_scale") else 1e-10
+        self.default_scale = config.default_scale if hasattr(config, "default_scale") else None
 
-    def forward(self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
+    def forward(
+        self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor
+    ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         """
         Parameters:
-        data (`torch.Tensor` of shape `(batch_size, sequence_length, num_input_channels)`):
+            data (`mindspore.Tensor` of shape `(batch_size, sequence_length, num_input_channels)`):
                 input for Batch norm calculation
-            observed_indicator (`torch.BoolTensor` of shape `(batch_size, sequence_length, num_input_channels)`):
+            observed_indicator (`mindspore.Tensor` of shape `(batch_size, sequence_length, num_input_channels)`):
                 Calculating the scale on the observed indicator.
         Returns:
-            tuple of `torch.Tensor` of shapes
+            tuple of `mindspore.Tensor` of shapes
                 (`(batch_size, sequence_length, num_input_channels)`,`(batch_size, 1, num_input_channels)`,
                 `(batch_size, 1, num_input_channels)`)
         """
-        ts_sum = (data * observed_indicator).abs().sum(self.dim, keepdims=True)
-        num_observed = observed_indicator.sum(self.dim, keepdims=True)
+        ts_sum = ops.sum((data * observed_indicator).abs(), self.dim, keepdim=True)
+        num_observed = ops.sum(observed_indicator, self.dim, keepdim=True)
 
         scale = ts_sum / ops.clamp(num_observed, min=1)
 
         # If `default_scale` is provided, we use it, otherwise we use the scale
         # of the batch.
         if self.default_scale is None:
-            batch_sum = ts_sum.sum(axis=0)
+            batch_sum = ts_sum.sum(dim=0)
             batch_observations = ops.clamp(num_observed.sum(0), min=1)
             default_scale = ops.squeeze(batch_sum / batch_observations)
         else:
@@ -180,22 +174,24 @@ class TimeSeriesNOPScaler(nn.Module):
         self.dim = config.scaling_dim if hasattr(config, "scaling_dim") else 1
         self.keepdim = config.keepdim if hasattr(config, "keepdim") else True
 
-    def forward(self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor = None) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
+    def forward(
+        self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor = None
+    ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         """
         Parameters:
-            data (`torch.Tensor` of shape `(batch_size, sequence_length, num_input_channels)`):
+            data (`mindspore.Tensor` of shape `(batch_size, sequence_length, num_input_channels)`):
                 input for Batch norm calculation
         Returns:
-            tuple of `torch.Tensor` of shapes
+            tuple of `mindspore.Tensor` of shapes
                 (`(batch_size, sequence_length, num_input_channels)`,`(batch_size, 1, num_input_channels)`,
                 `(batch_size, 1, num_input_channels)`)
         """
-        scale = ops.ones_like(data).mean(axis=self.dim, keep_dims=self.keepdim)
-        loc = ops.zeros_like(data).mean(axis=self.dim, keep_dims=self.keepdim)
+        scale = ops.mean(ops.ones_like(data), dim=self.dim, keepdim=self.keepdim)
+        loc = ops.mean(ops.zeros_like(data), dim=self.dim, keepdim=self.keepdim)
         return data, loc, scale
 
 
-def nll(input, target: mindspore.Tensor) -> mindspore.Tensor:
+def nll(input: distributions.Distribution, target: mindspore.Tensor) -> mindspore.Tensor:
     """
     Computes the negative log likelihood loss from input distribution with respect to target.
     """
@@ -208,24 +204,22 @@ def weighted_average(input_tensor: mindspore.Tensor, weights: Optional[mindspore
     meaning instead of `nan * 0 = nan` you will get `0 * 0 = 0`.
 
     Args:
-        input_tensor (`torch.FloatTensor`):
+        input_tensor (`mindspore.Tensor`):
             Input tensor, of which the average must be computed.
-        weights (`torch.FloatTensor`, *optional*):
+        weights (`mindspore.Tensor`, *optional*):
             Weights tensor, of the same shape as `input_tensor`.
         dim (`int`, *optional*):
             The dim along which to average `input_tensor`.
 
     Returns:
-        `torch.FloatTensor`: The tensor with values averaged along the specified `dim`.
+        `mindspore.Tensor`: The tensor with values averaged along the specified `dim`.
     """
     if weights is not None:
-        weighted_tensor = ops.where(
-            weights != 0, input_tensor * weights, ops.zeros_like(input_tensor))
-        sum_weights = ops.clamp(weights.sum(
-            axis=dim) if dim else weights.sum(), min=1.0)
-        return (weighted_tensor.sum(axis=dim) if dim else weighted_tensor.sum()) / sum_weights
+        weighted_tensor = ops.where(weights != 0, input_tensor * weights, ops.zeros_like(input_tensor))
+        sum_weights = ops.clamp(weights.sum(dim=dim) if dim else weights.sum(), min=1.0)
+        return (weighted_tensor.sum(dim=dim) if dim else weighted_tensor.sum()) / sum_weights
     else:
-        return input_tensor.mean(axis=dim)
+        return input_tensor.mean(dim=dim)
 
 
 # Copied from transformers.models.marian.modeling_marian.MarianSinusoidalPositionalEmbedding with Marian->TimeSeries
@@ -237,27 +231,24 @@ class TimeSeriesSinusoidalPositionalEmbedding(nn.Embedding):
         self.weight = self._init_weight(self.weight)
 
     @staticmethod
-    def _init_weight(out: mindspore.Parameter) -> mindspore.Parameter:
+    def _init_weight(out: nn.Parameter) -> nn.Parameter:
         """
         Identical to the XLM create_sinusoidal_embeddings except features are not interleaved. The cos features are in
         the 2nd half of the vector. [dim // 2:]
         """
-        np_out = out.asnumpy()
         n_pos, dim = out.shape
         position_enc = np.array(
-            [[pos / np.power(10000, 2 * (j // 2) / dim)
-              for j in range(dim)] for pos in range(n_pos)]
+            [[pos / np.power(10000, 2 * (j // 2) / dim) for j in range(dim)] for pos in range(n_pos)]
         )
         out.requires_grad = False  # set early to avoid an error in pytorch-1.8+
         sentinel = dim // 2 if dim % 2 == 0 else (dim // 2) + 1
-        np_out[:, 0:sentinel] = mindspore.Tensor(np.sin(position_enc[:, 0::2]))
-        np_out[:, sentinel:] = mindspore.Tensor(np.cos(position_enc[:, 1::2]))
-        out.set_data(mindspore.Tensor(np_out, out.dtype))
+        out[:, 0:sentinel] = mindspore.Tensor(np.sin(position_enc[:, 0::2]))
+        out[:, sentinel:] = mindspore.Tensor(np.cos(position_enc[:, 1::2]))
         return out
 
+    @no_grad()
     def forward(self, input_ids_shape, past_key_values_length: int = 0) -> mindspore.Tensor:
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
-        # bsz, seq_len = input_ids_shape[:2]
         bsz, seq_len = input_ids_shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
@@ -268,8 +259,7 @@ class TimeSeriesSinusoidalPositionalEmbedding(nn.Embedding):
 class TimeSeriesValueEmbedding(nn.Module):
     def __init__(self, feature_size, d_model):
         super().__init__()
-        self.value_projection = nn.Linear(
-            feature_size, d_model, bias=False)
+        self.value_projection = nn.Linear(in_features=feature_size, out_features=d_model, bias=False)
 
     def forward(self, x):
         return self.value_projection(x)
@@ -279,8 +269,16 @@ class TimeSeriesValueEmbedding(nn.Module):
 class TimeSeriesTransformerAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
-    def __init__(self, embed_dim: int, num_heads: int, dropout: float = 0.0, is_decoder: bool = False, bias: bool = True, is_causal: bool = False, config: Optional[TimeSeriesTransformerConfig] = None):
-
+    def __init__(
+        self,
+        embed_dim: int,
+        num_heads: int,
+        dropout: float = 0.0,
+        is_decoder: bool = False,
+        bias: bool = True,
+        is_causal: bool = False,
+        config: Optional[TimeSeriesTransformerConfig] = None,
+    ):
         super().__init__()
         self.embed_dim = embed_dim
         self.num_heads = num_heads
@@ -303,16 +301,17 @@ class TimeSeriesTransformerAttention(nn.Module):
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+        return ops.transpose(tensor.view(bsz, seq_len, self.num_heads, self.head_dim), 1, 2)
 
     def forward(
-            self,
-            hidden_states: mindspore.Tensor,
-            key_value_states: Optional[mindspore.Tensor] = None,
-            past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            layer_head_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: bool = False) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
+        self,
+        hidden_states: mindspore.Tensor,
+        key_value_states: Optional[mindspore.Tensor] = None,
+        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        layer_head_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: bool = False,
+    ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
 
         # if key_value_states are provided this layer is used as a cross-attention layer
@@ -327,7 +326,11 @@ class TimeSeriesTransformerAttention(nn.Module):
         # `past_key_value[0].shape[2] == key_value_states.shape[1]`
         # is checking that the `sequence_length` of the `past_key_value` is the same as
         # the provided `key_value_states` to support prefix tuning
-        if (is_cross_attention and past_key_value is not None and past_key_value[0].shape[2] == key_value_states.shape[1]):
+        if (
+            is_cross_attention
+            and past_key_value is not None
+            and past_key_value[0].shape[2] == key_value_states.shape[1]
+        ):
             # reuse k,v, cross_attentions
             key_states = past_key_value[0]
             value_states = past_key_value[1]
@@ -347,10 +350,10 @@ class TimeSeriesTransformerAttention(nn.Module):
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
 
         if self.is_decoder:
-            # if cross_attention save Tuple(torch.Tensor, torch.Tensor) of all cross attention key/value_states.
+            # if cross_attention save Tuple(mindspore.Tensor, mindspore.Tensor) of all cross attention key/value_states.
             # Further calls to cross_attention layer can then reuse all cross-attention
             # key/value_states (first "if" case)
-            # if uni-directional self-attention (decoder) save Tuple(torch.Tensor, torch.Tensor) of
+            # if uni-directional self-attention (decoder) save Tuple(mindspore.Tensor, mindspore.Tensor) of
             # all previous decoder key/value_states. Further calls to uni-directional self-attention
             # can concat previous decoder key/value_states to current projected key/value_states (third "elif" case)
             # if encoder bi-directional self-attention `past_key_value` is always `None`
@@ -362,7 +365,7 @@ class TimeSeriesTransformerAttention(nn.Module):
         value_states = value_states.reshape(*proj_shape)
 
         src_len = key_states.shape[1]
-        attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
+        attn_weights = ops.bmm(query_states, ops.transpose(key_states, 1, 2))
 
         if attn_weights.shape != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
@@ -375,12 +378,10 @@ class TimeSeriesTransformerAttention(nn.Module):
                 raise ValueError(
                     f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.shape}"
                 )
-            attn_weights = attn_weights.view(
-                bsz, self.num_heads, tgt_len, src_len) + attention_mask
-            attn_weights = attn_weights.view(
-                bsz * self.num_heads, tgt_len, src_len)
+            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
+            attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, dim=-1)
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -388,25 +389,20 @@ class TimeSeriesTransformerAttention(nn.Module):
                     f"Head mask for a single layer should be of size {(self.num_heads,)}, but is"
                     f" {layer_head_mask.shape}"
                 )
-            attn_weights = layer_head_mask.view(
-                1, -1, 1, 1) * attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
-            attn_weights = attn_weights.view(
-                bsz * self.num_heads, tgt_len, src_len)
+            attn_weights = layer_head_mask.view(1, -1, 1, 1) * attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
+            attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         if output_attentions:
             # this operation is a bit awkward, but it's required to
             # make sure that attn_weights keeps its gradient.
             # In order to do so, attn_weights have to be reshaped
             # twice and have to be reused in the following
-            attn_weights_reshaped = attn_weights.view(
-                bsz, self.num_heads, tgt_len, src_len)
-            attn_weights = attn_weights_reshaped.view(
-                bsz * self.num_heads, tgt_len, src_len)
+            attn_weights_reshaped = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
+            attn_weights = attn_weights_reshaped.view(bsz * self.num_heads, tgt_len, src_len)
         else:
             attn_weights_reshaped = None
 
-        attn_probs = F.dropout(
-            attn_weights, p=self.dropout, training=self.training)
+        attn_probs = nn.functional.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -416,9 +412,8 @@ class TimeSeriesTransformerAttention(nn.Module):
                 f" {attn_output.shape}"
             )
 
-        attn_output = attn_output.view(
-            bsz, self.num_heads, tgt_len, self.head_dim)
-        attn_output = attn_output.swapaxes(1, 2)
+        attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
+        attn_output = ops.transpose(attn_output, 1, 2)
 
         # Use the `embed_dim` from the config (stored in the class) rather than `hidden_state` because `attn_output` can be
         # partitioned across GPUs when using tensor-parallelism.
@@ -441,27 +436,27 @@ class TimeSeriesTransformerEncoderLayer(nn.Module):
             dropout=config.attention_dropout,
             config=config,
         )
-        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
         self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
         self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
-        self.final_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
     def forward(
-            self,
-            hidden_states,
-            attention_mask,
-            layer_head_mask,
-            output_attentions: Optional[bool] = False,
+        self,
+        hidden_states: mindspore.Tensor,
+        attention_mask: mindspore.Tensor,
+        layer_head_mask: mindspore.Tensor,
+        output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]:
         """
         Args:
-            hidden_states (`torch.FloatTensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
-            attention_mask (`torch.FloatTensor`): attention mask of size
+            hidden_states (`mindspore.Tensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
+            attention_mask (`mindspore.Tensor`): attention mask of size
                 `(batch, 1, tgt_len, src_len)` where padding elements are indicated by very large negative values.
-            layer_head_mask (`torch.FloatTensor`): mask for attention heads in a given layer of size
+            layer_head_mask (`mindspore.Tensor`): mask for attention heads in a given layer of size
                 `(encoder_attention_heads,)`.
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
@@ -474,26 +469,23 @@ class TimeSeriesTransformerEncoderLayer(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = F.dropout(
-            hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = F.dropout(
-            hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = F.dropout(
-            hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
-        if hidden_states.dtype == mindspore.float16 and (ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any()):
-            clamp_value = mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(
-                hidden_states.dtype)).max) - 1000
-            hidden_states = ops.clamp(
-                hidden_states, min=-clamp_value, max=clamp_value)
+        if hidden_states.dtype == mindspore.float16 and (
+            ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any()
+        ):
+            clamp_value = ops.finfo(hidden_states.dtype).max - 1000
+            hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
 
@@ -527,7 +519,7 @@ class TimeSeriesTransformerDecoderLayer(nn.Module):
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
 
-        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         self.encoder_attn = TIME_SERIES_TRANSFORMER_ATTENTION_CLASSES[config._attn_implementation](
             self.embed_dim,
             config.decoder_attention_heads,
@@ -535,37 +527,37 @@ class TimeSeriesTransformerDecoderLayer(nn.Module):
             is_decoder=True,
             config=config,
         )
-        self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
         self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
-        self.final_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
     def forward(
-            self,
-            hidden_states: mindspore.Tensor,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            encoder_hidden_states: Optional[mindspore.Tensor] = None,
-            encoder_attention_mask: Optional[mindspore.Tensor] = None,
-            layer_head_mask: Optional[mindspore.Tensor] = None,
-            cross_attn_layer_head_mask: Optional[mindspore.Tensor] = None,
-            past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
-            output_attentions: Optional[bool] = False,
-            use_cache: Optional[bool] = True,
+        self,
+        hidden_states: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
+        layer_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_layer_head_mask: Optional[mindspore.Tensor] = None,
+        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+        output_attentions: Optional[bool] = False,
+        use_cache: Optional[bool] = True,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """
         Args:
-            hidden_states (`torch.FloatTensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
-            attention_mask (`torch.FloatTensor`): attention mask of size
+            hidden_states (`mindspore.Tensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
+            attention_mask (`mindspore.Tensor`): attention mask of size
                 `(batch, 1, tgt_len, src_len)` where padding elements are indicated by very large negative values.
-            encoder_hidden_states (`torch.FloatTensor`):
+            encoder_hidden_states (`mindspore.Tensor`):
                 cross attention input to the layer of shape `(batch, seq_len, embed_dim)`
-            encoder_attention_mask (`torch.FloatTensor`): encoder attention mask of size
+            encoder_attention_mask (`mindspore.Tensor`): encoder attention mask of size
                 `(batch, 1, tgt_len, src_len)` where padding elements are indicated by very large negative values.
-            layer_head_mask (`torch.FloatTensor`): mask for attention heads in a given layer of size
+            layer_head_mask (`mindspore.Tensor`): mask for attention heads in a given layer of size
                 `(encoder_attention_heads,)`.
-            cross_attn_layer_head_mask (`torch.FloatTensor`): mask for cross-attention heads in a given layer of
+            cross_attn_layer_head_mask (`mindspore.Tensor`): mask for cross-attention heads in a given layer of
                 size `(decoder_attention_heads,)`.
-            past_key_value (`Tuple(torch.FloatTensor)`): cached past key and value projection states
+            past_key_value (`Tuple(mindspore.Tensor)`): cached past key and value projection states
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
                 returned tensors for more detail.
@@ -574,8 +566,7 @@ class TimeSeriesTransformerDecoderLayer(nn.Module):
 
         # Self Attention
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
-        self_attn_past_key_value = past_key_value[:
-                                                  2] if past_key_value is not None else None
+        self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
         # add present self-attn cache to positions 1,2 of present_key_value tuple
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
             hidden_states=hidden_states,
@@ -584,8 +575,7 @@ class TimeSeriesTransformerDecoderLayer(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = F.dropout(
-            hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
@@ -596,8 +586,7 @@ class TimeSeriesTransformerDecoderLayer(nn.Module):
             residual = hidden_states
 
             # cross_attn cached key/values tuple is at positions 3,4 of present_key_value tuple
-            cross_attn_past_key_value = past_key_value[-2:
-                                                       ] if past_key_value is not None else None
+            cross_attn_past_key_value = past_key_value[-2:] if past_key_value is not None else None
             hidden_states, cross_attn_weights, cross_attn_present_key_value = self.encoder_attn(
                 hidden_states=hidden_states,
                 key_value_states=encoder_hidden_states,
@@ -606,8 +595,7 @@ class TimeSeriesTransformerDecoderLayer(nn.Module):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = F.dropout(
-                hidden_states, p=self.dropout, training=self.training)
+            hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states = self.encoder_attn_layer_norm(hidden_states)
 
@@ -617,11 +605,9 @@ class TimeSeriesTransformerDecoderLayer(nn.Module):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = F.dropout(
-            hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = F.dropout(
-            hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
@@ -642,199 +628,19 @@ class TimeSeriesTransformerPreTrainedModel(PreTrainedModel):
     main_input_name = "past_values"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         std = self.config.init_std
-        if isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(
-                Normal(sigma=std, mean=0), cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer(
-                    'zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, TimeSeriesSinusoidalPositionalEmbedding):
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, TimeSeriesSinusoidalPositionalEmbedding):
             pass
-        elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(initializer(
-                Normal(sigma=std, mean=0), cell.weight.shape, cell.weight.dtype))
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight[module.padding_idx] = 0
 
-            if cell.padding_idx is not None:
-                cell.weight[cell.padding_idx] = initializer(
-                    "zeros", cell.weight[cell.padding_idx].shape, cell.weight.dtype)
-            # weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            # if cell.padding_idx:
-            #     weight[cell.padding_idx] = 0
-
-            # cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
-
-
-TIME_SERIES_TRANSFORMER_START_DOCSTRING = r"""
-    This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
-    library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
-    etc.)
-
-    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
-    Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
-    and behavior.
-
-    Parameters:
-        config ([`TimeSeriesTransformerConfig`]):
-            Model configuration class with all the parameters of the model. Initializing with a config file does not
-            load the weights associated with the model, only the configuration. Check out the
-            [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-TIME_SERIES_TRANSFORMER_INPUTS_DOCSTRING = r"""
-    Args:
-        past_values (`torch.FloatTensor` of shape `(batch_size, sequence_length)` or `(batch_size, sequence_length, input_size)`):
-            Past values of the time series, that serve as context in order to predict the future. The sequence size of
-            this tensor must be larger than the `context_length` of the model, since the model will use the larger size
-            to forward lag features, i.e. additional values from the past which are added in order to serve as "extra
-            context".
-
-            The `sequence_length` here is equal to `config.context_length` + `max(config.lags_sequence)`, which if no
-            `lags_sequence` is configured, is equal to `config.context_length` + 7 (as by default, the largest
-            look-back index in `config.lags_sequence` is 7). The property `_past_length` returns the actual length of
-            the past.
-
-            The `past_values` is what the Transformer encoder gets as input (with optional additional features, such as
-            `static_categorical_features`, `static_real_features`, `past_time_features` and lags).
-
-            Optionally, missing values need to be replaced with zeros and indicated via the `past_observed_mask`.
-
-            For multivariate time series, the `input_size` > 1 dimension is required and corresponds to the number of
-            variates in the time series per time step.
-        past_time_features (`torch.FloatTensor` of shape `(batch_size, sequence_length, num_features)`):
-            Required time features, which the model internally will add to `past_values`. These could be things like
-            "month of year", "day of the month", etc. encoded as vectors (for instance as Fourier features). These
-            could also be so-called "age" features, which basically help the model know "at which point in life" a
-            time-series is. Age features have small values for distant past time steps and increase monotonically the
-            more we approach the current time step. Holiday features are also a good example of time features.
-
-            These features serve as the "positional encodings" of the inputs. So contrary to a model like BERT, where
-            the position encodings are learned from scratch internally as parameters of the model, the Time Series
-            Transformer requires to provide additional time features. The Time Series Transformer only learns
-            additional embeddings for `static_categorical_features`.
-
-            Additional dynamic real covariates can be concatenated to this tensor, with the caveat that these features
-            must but known at prediction time.
-
-            The `num_features` here is equal to `config.`num_time_features` + `config.num_dynamic_real_features`.
-        past_observed_mask (`torch.BoolTensor` of shape `(batch_size, sequence_length)` or `(batch_size, sequence_length, input_size)`, *optional*):
-            Boolean mask to indicate which `past_values` were observed and which were missing. Mask values selected in
-            `[0, 1]`:
-
-            - 1 for values that are **observed**,
-            - 0 for values that are **missing** (i.e. NaNs that were replaced by zeros).
-
-        static_categorical_features (`torch.LongTensor` of shape `(batch_size, number of static categorical features)`, *optional*):
-            Optional static categorical features for which the model will learn an embedding, which it will add to the
-            values of the time series.
-
-            Static categorical features are features which have the same value for all time steps (static over time).
-
-            A typical example of a static categorical feature is a time series ID.
-        static_real_features (`torch.FloatTensor` of shape `(batch_size, number of static real features)`, *optional*):
-            Optional static real features which the model will add to the values of the time series.
-
-            Static real features are features which have the same value for all time steps (static over time).
-
-            A typical example of a static real feature is promotion information.
-        future_values (`torch.FloatTensor` of shape `(batch_size, prediction_length)` or `(batch_size, prediction_length, input_size)`, *optional*):
-            Future values of the time series, that serve as labels for the model. The `future_values` is what the
-            Transformer needs during training to learn to output, given the `past_values`.
-
-            The sequence length here is equal to `prediction_length`.
-
-            See the demo notebook and code snippets for details.
-
-            Optionally, during training any missing values need to be replaced with zeros and indicated via the
-            `future_observed_mask`.
-
-            For multivariate time series, the `input_size` > 1 dimension is required and corresponds to the number of
-            variates in the time series per time step.
-        future_time_features (`torch.FloatTensor` of shape `(batch_size, prediction_length, num_features)`):
-            Required time features for the prediction window, which the model internally will add to `future_values`.
-            These could be things like "month of year", "day of the month", etc. encoded as vectors (for instance as
-            Fourier features). These could also be so-called "age" features, which basically help the model know "at
-            which point in life" a time-series is. Age features have small values for distant past time steps and
-            increase monotonically the more we approach the current time step. Holiday features are also a good example
-            of time features.
-
-            These features serve as the "positional encodings" of the inputs. So contrary to a model like BERT, where
-            the position encodings are learned from scratch internally as parameters of the model, the Time Series
-            Transformer requires to provide additional time features. The Time Series Transformer only learns
-            additional embeddings for `static_categorical_features`.
-
-            Additional dynamic real covariates can be concatenated to this tensor, with the caveat that these features
-            must but known at prediction time.
-
-            The `num_features` here is equal to `config.`num_time_features` + `config.num_dynamic_real_features`.
-        future_observed_mask (`torch.BoolTensor` of shape `(batch_size, sequence_length)` or `(batch_size, sequence_length, input_size)`, *optional*):
-            Boolean mask to indicate which `future_values` were observed and which were missing. Mask values selected
-            in `[0, 1]`:
-
-            - 1 for values that are **observed**,
-            - 0 for values that are **missing** (i.e. NaNs that were replaced by zeros).
-
-            This mask is used to filter out missing values for the final loss calculation.
-        attention_mask (`torch.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on certain token indices. Mask values selected in `[0, 1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-
-            [What are attention masks?](../glossary#attention-mask)
-        decoder_attention_mask (`torch.LongTensor` of shape `(batch_size, target_sequence_length)`, *optional*):
-            Mask to avoid performing attention on certain token indices. By default, a causal mask will be used, to
-            make sure the model can only look at previous inputs in order to predict the future.
-        head_mask (`torch.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
-            Mask to nullify selected heads of the attention modules in the encoder. Mask values selected in `[0, 1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
-
-        decoder_head_mask (`torch.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-            Mask to nullify selected heads of the attention modules in the decoder. Mask values selected in `[0, 1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
-
-        cross_attn_head_mask (`torch.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-            Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
-
-        encoder_outputs (`tuple(tuple(torch.FloatTensor)`, *optional*):
-            Tuple consists of `last_hidden_state`, `hidden_states` (*optional*) and `attentions` (*optional*)
-            `last_hidden_state` of shape `(batch_size, sequence_length, hidden_size)` (*optional*) is a sequence of
-            hidden-states at the output of the last layer of the encoder. Used in the cross-attention of the decoder.
-        past_key_values (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-            Tuple of `tuple(torch.FloatTensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
-            `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of shape
-            `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`.
-
-            Contains pre-computed hidden-states (key and values in the self-attention blocks and in the cross-attention
-            blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
-
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        inputs_embeds (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation. This
-            is useful if you want more control over how to convert `input_ids` indices into associated vectors than the
-            model's internal embedding lookup matrix.
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
 
 
 class TimeSeriesTransformerEncoder(TimeSeriesTransformerPreTrainedModel):
@@ -852,47 +658,44 @@ class TimeSeriesTransformerEncoder(TimeSeriesTransformerPreTrainedModel):
         self.dropout = config.dropout
         self.layerdrop = config.encoder_layerdrop
         if config.prediction_length is None:
-            raise ValueError(
-                "The `prediction_length` config needs to be specified.")
+            raise ValueError("The `prediction_length` config needs to be specified.")
 
-        self.value_embedding = TimeSeriesValueEmbedding(
-            feature_size=config.feature_size, d_model=config.d_model)
+        self.value_embedding = TimeSeriesValueEmbedding(feature_size=config.feature_size, d_model=config.d_model)
         self.embed_positions = TimeSeriesSinusoidalPositionalEmbedding(
             config.context_length + config.prediction_length, config.d_model
         )
-        self.layers = nn.ModuleList([TimeSeriesTransformerEncoderLayer(
-            config) for _ in range(config.encoder_layers)])
-        self.layernorm_embedding = nn.LayerNorm([config.d_model])
+        self.layers = nn.ModuleList([TimeSeriesTransformerEncoderLayer(config) for _ in range(config.encoder_layers)])
+        self.layernorm_embedding = nn.LayerNorm(config.d_model)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
     def forward(
-            self,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            inputs_embeds: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            return_dict: Optional[bool] = None,
+        self,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutput]:
         r"""
         Args:
-            attention_mask (`torch.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
-            head_mask (`torch.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
+            head_mask (`mindspore.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
 
                 - 1 indicates the head is **not masked**,
                 - 0 indicates the head is **masked**.
 
-            inputs_embeds (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+            inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
                 This is useful if you want more control over how to convert `input_ids` indices into associated vectors
                 than the model's internal embedding lookup matrix.
@@ -915,14 +718,12 @@ class TimeSeriesTransformerEncoder(TimeSeriesTransformerPreTrainedModel):
         embed_pos = self.embed_positions(inputs_embeds.shape)
 
         hidden_states = self.layernorm_embedding(hidden_states + embed_pos)
-        hidden_states = F.dropout(
-            hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-            attention_mask = _prepare_4d_attention_mask(
-                attention_mask, inputs_embeds.dtype)
+            attention_mask = _prepare_4d_attention_mask(attention_mask, inputs_embeds.dtype)
 
         encoder_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
@@ -960,8 +761,7 @@ class TimeSeriesTransformerEncoder(TimeSeriesTransformerPreTrainedModel):
                     layer_outputs = encoder_layer(
                         hidden_states,
                         attention_mask,
-                        layer_head_mask=(
-                            head_mask[idx] if head_mask is not None else None),
+                        layer_head_mask=(head_mask[idx] if head_mask is not None else None),
                         output_attentions=output_attentions,
                     )
 
@@ -994,49 +794,46 @@ class TimeSeriesTransformerDecoder(TimeSeriesTransformerPreTrainedModel):
         self.dropout = config.dropout
         self.layerdrop = config.decoder_layerdrop
         if config.prediction_length is None:
-            raise ValueError(
-                "The `prediction_length` config needs to be specified.")
+            raise ValueError("The `prediction_length` config needs to be specified.")
 
-        self.value_embedding = TimeSeriesValueEmbedding(
-            feature_size=config.feature_size, d_model=config.d_model)
+        self.value_embedding = TimeSeriesValueEmbedding(feature_size=config.feature_size, d_model=config.d_model)
         self.embed_positions = TimeSeriesSinusoidalPositionalEmbedding(
             config.context_length + config.prediction_length, config.d_model
         )
-        self.layers = nn.ModuleList([TimeSeriesTransformerDecoderLayer(
-            config) for _ in range(config.decoder_layers)])
-        self.layernorm_embedding = nn.LayerNorm([config.d_model])
+        self.layers = nn.ModuleList([TimeSeriesTransformerDecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layernorm_embedding = nn.LayerNorm(config.d_model)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
     def forward(
-            self,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            encoder_hidden_states: Optional[mindspore.Tensor] = None,
-            encoder_attention_mask: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            cross_attn_head_mask: Optional[mindspore.Tensor] = None,
-            past_key_values: Optional[List[mindspore.Tensor]] = None,
-            inputs_embeds: Optional[mindspore.Tensor] = None,
-            use_cache: Optional[bool] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            return_dict: Optional[bool] = None,
+        self,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        past_key_values: Optional[List[mindspore.Tensor]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
         r"""
         Args:
-            attention_mask (`torch.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
                 - 1 for tokens that are **not masked**,
                 - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
-            encoder_hidden_states (`torch.FloatTensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
+            encoder_hidden_states (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
                 Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
                 of the decoder.
-            encoder_attention_mask (`torch.LongTensor` of shape `(batch_size, encoder_sequence_length)`, *optional*):
+            encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length)`, *optional*):
                 Mask to avoid performing cross-attention on padding tokens indices of encoder input_ids. Mask values
                 selected in `[0, 1]`:
 
@@ -1044,21 +841,21 @@ class TimeSeriesTransformerDecoder(TimeSeriesTransformerPreTrainedModel):
                 - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
-            head_mask (`torch.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
+            head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
 
                 - 1 indicates the head is **not masked**,
                 - 0 indicates the head is **masked**.
 
-            cross_attn_head_mask (`torch.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
+            cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
                 Mask to nullify selected heads of the cross-attention modules in the decoder to avoid performing
                 cross-attention on hidden heads. Mask values selected in `[0, 1]`:
 
                 - 1 indicates the head is **not masked**,
                 - 0 indicates the head is **masked**.
 
-            past_key_values (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-                Tuple of `tuple(torch.FloatTensor)` of length `config.n_layers`, with each tuple having 2 tensors of
+            past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+                Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
                 shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
                 shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`.
 
@@ -1068,7 +865,7 @@ class TimeSeriesTransformerDecoder(TimeSeriesTransformerPreTrainedModel):
                 If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those
                 that don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of
                 all `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-            inputs_embeds (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+            inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
                 This is useful if you want more control over how to convert `input_ids` indices into associated vectors
                 than the model's internal embedding lookup matrix.
@@ -1105,11 +902,9 @@ class TimeSeriesTransformerDecoder(TimeSeriesTransformerPreTrainedModel):
             )
 
         hidden_states = self.value_embedding(inputs_embeds)
-        embed_pos = self.embed_positions(
-            inputs_embeds.shape, past_key_values_length=self.config.context_length)
+        embed_pos = self.embed_positions(inputs_embeds.shape, past_key_values_length=self.config.context_length)
         hidden_states = self.layernorm_embedding(hidden_states + embed_pos)
-        hidden_states = F.dropout(
-            hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -1121,8 +916,7 @@ class TimeSeriesTransformerDecoder(TimeSeriesTransformerPreTrainedModel):
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
-        all_cross_attentions = () if (
-            output_attentions and encoder_hidden_states is not None) else None
+        all_cross_attentions = () if (output_attentions and encoder_hidden_states is not None) else None
         next_decoder_cache = () if use_cache else None
 
         # check if head_mask/cross_attn_head_mask has a correct number of layers specified if desired
@@ -1164,8 +958,7 @@ class TimeSeriesTransformerDecoder(TimeSeriesTransformerPreTrainedModel):
                     attention_mask=attention_mask,
                     encoder_hidden_states=encoder_hidden_states,
                     encoder_attention_mask=encoder_attention_mask,
-                    layer_head_mask=(
-                        head_mask[idx] if head_mask is not None else None),
+                    layer_head_mask=(head_mask[idx] if head_mask is not None else None),
                     cross_attn_layer_head_mask=(
                         cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None
                     ),
@@ -1176,8 +969,7 @@ class TimeSeriesTransformerDecoder(TimeSeriesTransformerPreTrainedModel):
             hidden_states = layer_outputs[0]
 
             if use_cache:
-                next_decoder_cache += (
-                    layer_outputs[3 if output_attentions else 1],)
+                next_decoder_cache += (layer_outputs[3 if output_attentions else 1],)
 
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
@@ -1233,7 +1025,9 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
     def _past_length(self) -> int:
         return self.config.context_length + max(self.config.lags_sequence)
 
-    def get_lagged_subsequences(self, sequence: mindspore.Tensor, subsequences_length: int, shift: int = 0) -> mindspore.Tensor:
+    def get_lagged_subsequences(
+        self, sequence: mindspore.Tensor, subsequences_length: int, shift: int = 0
+    ) -> mindspore.Tensor:
         """
         Returns lagged subsequences of a given sequence. Returns a tensor of shape (N, S, C, I),
             where S = subsequences_length and I = len(indices), containing lagged subsequences. Specifically, lagged[i,
@@ -1264,35 +1058,34 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
         return ops.stack(lagged_values, dim=-1)
 
     def create_network_inputs(
-            self,
-            past_values: mindspore.Tensor,
-            past_time_features: mindspore.Tensor,
-            static_categorical_features: Optional[mindspore.Tensor] = None,
-            static_real_features: Optional[mindspore.Tensor] = None,
-            past_observed_mask: Optional[mindspore.Tensor] = None,
-            future_values: Optional[mindspore.Tensor] = None,
-            future_time_features: Optional[mindspore.Tensor] = None,
+        self,
+        past_values: mindspore.Tensor,
+        past_time_features: mindspore.Tensor,
+        static_categorical_features: Optional[mindspore.Tensor] = None,
+        static_real_features: Optional[mindspore.Tensor] = None,
+        past_observed_mask: Optional[mindspore.Tensor] = None,
+        future_values: Optional[mindspore.Tensor] = None,
+        future_time_features: Optional[mindspore.Tensor] = None,
     ):
         # time feature
         time_feat = (
             ops.cat(
                 (
-                    past_time_features[:, self._past_length -
-                                       self.config.context_length:, ...],
+                    past_time_features[:, self._past_length - self.config.context_length :, ...],
                     future_time_features,
                 ),
                 dim=1,
             )
             if future_values is not None
-            else past_time_features[:, self._past_length - self.config.context_length:, ...]
+            else past_time_features[:, self._past_length - self.config.context_length :, ...]
         )
 
         # target
         if past_observed_mask is None:
             past_observed_mask = ops.ones_like(past_values)
 
-        context = past_values[:, -self.config.context_length:]
-        observed_context = past_observed_mask[:, -self.config.context_length:]
+        context = past_values[:, -self.config.context_length :]
+        observed_context = past_observed_mask[:, -self.config.context_length :]
         _, loc, scale = self.scaler(context, observed_context)
 
         inputs = (
@@ -1302,8 +1095,7 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
         )
 
         # static features
-        log_abs_loc = loc.abs().log1p(
-        ) if self.config.input_size == 1 else loc.squeeze(1).abs().log1p()
+        log_abs_loc = loc.abs().log1p() if self.config.input_size == 1 else loc.squeeze(1).abs().log1p()
         log_scale = scale.log() if self.config.input_size == 1 else scale.squeeze(1).log()
         static_feat = ops.cat((log_abs_loc, log_scale), dim=1)
 
@@ -1312,8 +1104,8 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
         if static_categorical_features is not None:
             embedded_cat = self.embedder(static_categorical_features)
             static_feat = ops.cat((embedded_cat, static_feat), dim=1)
-        expanded_static_feat = static_feat.unsqueeze(
-            1).broadcast_to((-1, time_feat.shape[1], -1))
+        expanded_static_feat = static_feat.unsqueeze(1).broadcast_to((-1, time_feat.shape[1], -1))
+
         # all features
         features = ops.cat((expanded_static_feat, time_feat), dim=-1)
 
@@ -1323,11 +1115,9 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
             if future_values is not None
             else self.config.context_length
         )
-        lagged_sequence = self.get_lagged_subsequences(
-            sequence=inputs, subsequences_length=subsequences_length)
+        lagged_sequence = self.get_lagged_subsequences(sequence=inputs, subsequences_length=subsequences_length)
         lags_shape = lagged_sequence.shape
-        reshaped_lagged_sequence = lagged_sequence.reshape(
-            lags_shape[0], lags_shape[1], -1)
+        reshaped_lagged_sequence = lagged_sequence.reshape(lags_shape[0], lags_shape[1], -1)
 
         if reshaped_lagged_sequence.shape[1] != time_feat.shape[1]:
             raise ValueError(
@@ -1335,8 +1125,7 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
             )
 
         # transformer inputs
-        transformer_inputs = ops.cat(
-            (reshaped_lagged_sequence, features), dim=-1)
+        transformer_inputs = ops.cat((reshaped_lagged_sequence, features), dim=-1)
 
         return transformer_inputs, loc, scale, static_feat
 
@@ -1347,24 +1136,24 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
         return self.decoder
 
     def forward(
-            self,
-            past_values: mindspore.Tensor,
-            past_time_features: mindspore.Tensor,
-            past_observed_mask: mindspore.Tensor,
-            static_categorical_features: Optional[mindspore.Tensor] = None,
-            static_real_features: Optional[mindspore.Tensor] = None,
-            future_values: Optional[mindspore.Tensor] = None,
-            future_time_features: Optional[mindspore.Tensor] = None,
-            decoder_attention_mask: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            decoder_head_mask: Optional[mindspore.Tensor] = None,
-            cross_attn_head_mask: Optional[mindspore.Tensor] = None,
-            encoder_outputs: Optional[List[mindspore.Tensor]] = None,
-            past_key_values: Optional[List[mindspore.Tensor]] = None,
-            output_hidden_states: Optional[bool] = None,
-            output_attentions: Optional[bool] = None,
-            use_cache: Optional[bool] = None,
-            return_dict: Optional[bool] = None,
+        self,
+        past_values: mindspore.Tensor,
+        past_time_features: mindspore.Tensor,
+        past_observed_mask: mindspore.Tensor,
+        static_categorical_features: Optional[mindspore.Tensor] = None,
+        static_real_features: Optional[mindspore.Tensor] = None,
+        future_values: Optional[mindspore.Tensor] = None,
+        future_time_features: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        decoder_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        encoder_outputs: Optional[List[mindspore.Tensor]] = None,
+        past_key_values: Optional[List[mindspore.Tensor]] = None,
+        output_hidden_states: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        use_cache: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[Seq2SeqTSModelOutput, Tuple]:
         r"""
         Returns:
@@ -1415,8 +1204,7 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
         )
 
         if encoder_outputs is None:
-            enc_input = transformer_inputs[:,
-                                           : self.config.context_length, ...]
+            enc_input = transformer_inputs[:, : self.config.context_length, ...]
             encoder_outputs = self.encoder(
                 inputs_embeds=enc_input,
                 head_mask=head_mask,
@@ -1428,29 +1216,23 @@ class TimeSeriesTransformerModel(TimeSeriesTransformerPreTrainedModel):
         elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
             encoder_outputs = BaseModelOutput(
                 last_hidden_state=encoder_outputs[0],
-                hidden_states=encoder_outputs[1] if len(
-                    encoder_outputs) > 1 else None,
-                attentions=encoder_outputs[2] if len(
-                    encoder_outputs) > 2 else None,
+                hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
+                attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
             )
 
-        if future_values is not None:
-
-            dec_input = transformer_inputs[:, self.config.context_length:, ...]
-            decoder_outputs = self.decoder(
-                inputs_embeds=dec_input,
-                attention_mask=decoder_attention_mask,
-                encoder_hidden_states=encoder_outputs[0],
-                head_mask=decoder_head_mask,
-                cross_attn_head_mask=cross_attn_head_mask,
-                past_key_values=past_key_values,
-                use_cache=use_cache,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
-        else:
-            decoder_outputs = BaseModelOutputWithPastAndCrossAttentions()
+        dec_input = transformer_inputs[:, self.config.context_length :, ...]
+        decoder_outputs = self.decoder(
+            inputs_embeds=dec_input,
+            attention_mask=decoder_attention_mask,
+            encoder_hidden_states=encoder_outputs[0],
+            head_mask=decoder_head_mask,
+            cross_attn_head_mask=cross_attn_head_mask,
+            past_key_values=past_key_values,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
 
         if not return_dict:
             return decoder_outputs + encoder_outputs + (loc, scale, static_feat)
@@ -1478,12 +1260,12 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
             self.distribution_output = StudentTOutput(dim=config.input_size)
         elif config.distribution_output == "normal":
             self.distribution_output = NormalOutput(dim=config.input_size)
+        elif config.distribution_output == "negative_binomial":
+            self.distribution_output = NegativeBinomialOutput(dim=config.input_size)
         else:
-            raise ValueError(
-                f"Unknown distribution output {config.distribution_output}")
+            raise ValueError(f"Unknown distribution output {config.distribution_output}")
 
-        self.parameter_projection = self.distribution_output.get_parameter_projection(
-            self.model.config.d_model)
+        self.parameter_projection = self.distribution_output.get_parameter_projection(self.model.config.d_model)
         self.target_shape = self.distribution_output.event_shape
 
         if config.loss == "nll":
@@ -1503,32 +1285,32 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
     def get_decoder(self):
         return self.model.get_decoder()
 
-    def output_distribution(self, params, loc=None, scale=None, trailing_n=None):
+    def output_distribution(self, params, loc=None, scale=None, trailing_n=None) -> distributions.Distribution:
         sliced_params = params
         if trailing_n is not None:
             sliced_params = [p[:, -trailing_n:] for p in params]
         return self.distribution_output.distribution(sliced_params, loc=loc, scale=scale)
 
     def forward(
-            self,
-            past_values: mindspore.Tensor,
-            past_time_features: mindspore.Tensor,
-            past_observed_mask: mindspore.Tensor,
-            static_categorical_features: Optional[mindspore.Tensor] = None,
-            static_real_features: Optional[mindspore.Tensor] = None,
-            future_values: Optional[mindspore.Tensor] = None,
-            future_time_features: Optional[mindspore.Tensor] = None,
-            future_observed_mask: Optional[mindspore.Tensor] = None,
-            decoder_attention_mask: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            decoder_head_mask: Optional[mindspore.Tensor] = None,
-            cross_attn_head_mask: Optional[mindspore.Tensor] = None,
-            encoder_outputs: Optional[List[mindspore.Tensor]] = None,
-            past_key_values: Optional[List[mindspore.Tensor]] = None,
-            output_hidden_states: Optional[bool] = None,
-            output_attentions: Optional[bool] = None,
-            use_cache: Optional[bool] = None,
-            return_dict: Optional[bool] = None,
+        self,
+        past_values: mindspore.Tensor,
+        past_time_features: mindspore.Tensor,
+        past_observed_mask: mindspore.Tensor,
+        static_categorical_features: Optional[mindspore.Tensor] = None,
+        static_real_features: Optional[mindspore.Tensor] = None,
+        future_values: Optional[mindspore.Tensor] = None,
+        future_time_features: Optional[mindspore.Tensor] = None,
+        future_observed_mask: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        decoder_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        encoder_outputs: Optional[List[mindspore.Tensor]] = None,
+        past_key_values: Optional[List[mindspore.Tensor]] = None,
+        output_hidden_states: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        use_cache: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[Seq2SeqTSModelOutput, Tuple]:
         r"""
         Returns:
@@ -1606,11 +1388,9 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
         prediction_loss = None
         params = None
         if future_values is not None:
-            # outputs.last_hidden_state
-            params = self.output_params(outputs[0])
+            params = self.output_params(outputs[0])  # outputs.last_hidden_state
             # loc is 3rd last and scale is 2nd last output
-            distribution = self.output_distribution(
-                params, loc=outputs[-3], scale=outputs[-2])
+            distribution = self.output_distribution(params, loc=outputs[-3], scale=outputs[-2])
 
             loss = self.loss(distribution, future_values)
 
@@ -1620,14 +1400,12 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
             if len(self.target_shape) == 0:
                 loss_weights = future_observed_mask
             else:
-                loss_weights, _ = future_observed_mask.min(
-                    axis=-1, keepdims=False)
+                loss_weights, _ = ops.min(future_observed_mask, dim=-1, keepdim=False)
 
             prediction_loss = weighted_average(loss, weights=loss_weights)
 
         if not return_dict:
-            outputs = ((params,) + outputs[1:]
-                       ) if params is not None else outputs[1:]
+            outputs = ((params,) + outputs[1:]) if params is not None else outputs[1:]
             return ((prediction_loss,) + outputs) if prediction_loss is not None else outputs
 
         return Seq2SeqTSPredictionOutput(
@@ -1645,25 +1423,26 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
             static_features=outputs.static_features,
         )
 
+    @no_grad()
     def generate(
-            self,
-            past_values: mindspore.Tensor,
-            past_time_features: mindspore.Tensor,
-            future_time_features: mindspore.Tensor,
-            past_observed_mask: Optional[mindspore.Tensor] = None,
-            static_categorical_features: Optional[mindspore.Tensor] = None,
-            static_real_features: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
+        self,
+        past_values: mindspore.Tensor,
+        past_time_features: mindspore.Tensor,
+        future_time_features: mindspore.Tensor,
+        past_observed_mask: Optional[mindspore.Tensor] = None,
+        static_categorical_features: Optional[mindspore.Tensor] = None,
+        static_real_features: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
     ) -> SampleTSPredictionOutput:
         r"""
         Greedily generate sequences of sample predictions from a model with a probability distribution head.
 
         Parameters:
-            past_values (`torch.FloatTensor` of shape `(batch_size, sequence_length)` or `(batch_size, sequence_length, input_size)`):
+            past_values (`mindspore.Tensor` of shape `(batch_size, sequence_length)` or `(batch_size, sequence_length, input_size)`):
                 Past values of the time series, that serve as context in order to predict the future. The sequence size
                 of this tensor must be larger than the `context_length` of the model, since the model will use the
-                larger size to forward lag features, i.e. additional values from the past which are added in order to
+                larger size to construct lag features, i.e. additional values from the past which are added in order to
                 serve as "extra context".
 
                 The `sequence_length` here is equal to `config.context_length` + `max(config.lags_sequence)`, which if
@@ -1678,7 +1457,7 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
 
                 For multivariate time series, the `input_size` > 1 dimension is required and corresponds to the number
                 of variates in the time series per time step.
-            past_time_features (`torch.FloatTensor` of shape `(batch_size, sequence_length, num_features)`):
+            past_time_features (`mindspore.Tensor` of shape `(batch_size, sequence_length, num_features)`):
                 Required time features, which the model internally will add to `past_values`. These could be things
                 like "month of year", "day of the month", etc. encoded as vectors (for instance as Fourier features).
                 These could also be so-called "age" features, which basically help the model know "at which point in
@@ -1695,7 +1474,7 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
                 features must but known at prediction time.
 
                 The `num_features` here is equal to `config.`num_time_features` + `config.num_dynamic_real_features`.
-            future_time_features (`torch.FloatTensor` of shape `(batch_size, prediction_length, num_features)`):
+            future_time_features (`mindspore.Tensor` of shape `(batch_size, prediction_length, num_features)`):
                 Required time features for the prediction window, which the model internally will add to sampled
                 predictions. These could be things like "month of year", "day of the month", etc. encoded as vectors
                 (for instance as Fourier features). These could also be so-called "age" features, which basically help
@@ -1712,14 +1491,14 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
                 features must but known at prediction time.
 
                 The `num_features` here is equal to `config.`num_time_features` + `config.num_dynamic_real_features`.
-            past_observed_mask (`torch.BoolTensor` of shape `(batch_size, sequence_length)` or `(batch_size, sequence_length, input_size)`, *optional*):
+            past_observed_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)` or `(batch_size, sequence_length, input_size)`, *optional*):
                 Boolean mask to indicate which `past_values` were observed and which were missing. Mask values selected
                 in `[0, 1]`:
 
                 - 1 for values that are **observed**,
                 - 0 for values that are **missing** (i.e. NaNs that were replaced by zeros).
 
-            static_categorical_features (`torch.LongTensor` of shape `(batch_size, number of static categorical features)`, *optional*):
+            static_categorical_features (`mindspore.Tensor` of shape `(batch_size, number of static categorical features)`, *optional*):
                 Optional static categorical features for which the model will learn an embedding, which it will add to
                 the values of the time series.
 
@@ -1727,7 +1506,7 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
                 time).
 
                 A typical example of a static categorical feature is a time series ID.
-            static_real_features (`torch.FloatTensor` of shape `(batch_size, number of static real features)`, *optional*):
+            static_real_features (`mindspore.Tensor` of shape `(batch_size, number of static real features)`, *optional*):
                 Optional static real features which the model will add to the values of the time series.
 
                 Static real features are features which have the same value for all time steps (static over time).
@@ -1764,21 +1543,19 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
         static_feat = outputs.static_features
 
         num_parallel_samples = self.config.num_parallel_samples
-        repeated_loc = loc.repeat_interleave(repeats=num_parallel_samples, dim=0)
-        repeated_scale = scale.repeat_interleave(repeats=num_parallel_samples, dim=0)
+        repeated_loc = ops.repeat_interleave(loc, repeats=num_parallel_samples, dim=0)
+        repeated_scale = ops.repeat_interleave(scale, repeats=num_parallel_samples, dim=0)
 
         repeated_past_values = (
-            past_values.repeat_interleave(repeats=num_parallel_samples, dim=0) - repeated_loc
+            ops.repeat_interleave(past_values, repeats=num_parallel_samples, dim=0) - repeated_loc
         ) / repeated_scale
 
+        expanded_static_feat = static_feat.unsqueeze(1).broadcast_to((-1, future_time_features.shape[1], -1))
+        features = ops.cat((expanded_static_feat, future_time_features), dim=-1)
+        repeated_features = ops.repeat_interleave(features, repeats=num_parallel_samples, dim=0)
 
-        expanded_static_feat = static_feat.unsqueeze(
-            1).broadcast_to((-1, future_time_features.shape[1], -1))
-        features = ops.cat(
-            (expanded_static_feat, future_time_features), dim=-1)
-        repeated_features = features.repeat_interleave(repeats=num_parallel_samples, dim=0)
+        repeated_enc_last_hidden = ops.repeat_interleave(enc_last_hidden, repeats=num_parallel_samples, dim=0)
 
-        repeated_enc_last_hidden = enc_last_hidden.repeat_interleave(repeats=num_parallel_samples, dim=0)
         future_samples = []
 
         # greedy decoding
@@ -1790,19 +1567,15 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
             )
 
             lags_shape = lagged_sequence.shape
-            reshaped_lagged_sequence = lagged_sequence.reshape(
-                lags_shape[0], lags_shape[1], -1)
+            reshaped_lagged_sequence = lagged_sequence.reshape(lags_shape[0], lags_shape[1], -1)
 
-            decoder_input = ops.cat(
-                (reshaped_lagged_sequence, repeated_features[:, : k + 1]), dim=-1)
+            decoder_input = ops.cat((reshaped_lagged_sequence, repeated_features[:, : k + 1]), dim=-1)
 
-            dec_output = decoder(inputs_embeds=decoder_input,
-                                 encoder_hidden_states=repeated_enc_last_hidden)
+            dec_output = decoder(inputs_embeds=decoder_input, encoder_hidden_states=repeated_enc_last_hidden)
             dec_last_hidden = dec_output.last_hidden_state
 
             params = self.parameter_projection(dec_last_hidden[:, -1:])
-            distr = self.output_distribution(
-                params, loc=repeated_loc, scale=repeated_scale)
+            distr = self.output_distribution(params, loc=repeated_loc, scale=repeated_scale)
             next_sample = distr.sample()
 
             repeated_past_values = ops.cat(
@@ -1814,11 +1587,12 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
 
         return SampleTSPredictionOutput(
             sequences=concat_future_samples.reshape(
-                (-1, num_parallel_samples, self.config.prediction_length) +
-                self.target_shape,
+                (-1, num_parallel_samples, self.config.prediction_length) + self.target_shape,
             )
         )
 
-
-__all__ = ['TimeSeriesTransformerConfig', 'TimeSeriesTransformerPreTrainedModel',
-           'TimeSeriesTransformerModel', 'TimeSeriesTransformerForPrediction']
+__all__ = [
+    "TimeSeriesTransformerForPrediction",
+    "TimeSeriesTransformerModel",
+    "TimeSeriesTransformerPreTrainedModel",
+]

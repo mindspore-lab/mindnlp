@@ -254,7 +254,8 @@ class _Boolean(Constraint):
     is_discrete = True
 
     def check(self, value):
-        return (value == 0) | (value == 1)
+        out = ((value == 0).int() | (value == 1).int()).bool()
+        return out
 
 
 class _OneHot(Constraint):
@@ -285,8 +286,8 @@ class _IntegerInterval(Constraint):
 
     def check(self, value):
         return (
-            (value % 1 == 0) & (self.lower_bound <= value) & (value <= self.upper_bound)
-        )
+            (value % 1 == 0).int() & (self.lower_bound <= value).int() & (value <= self.upper_bound).int()
+        ).bool()
 
     def __repr__(self):
         fmt_string = self.__class__.__name__[1:]
