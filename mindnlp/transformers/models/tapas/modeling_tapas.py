@@ -1793,12 +1793,8 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
     # logits_per_cell: shape (batch_size, max_num_rows*max_num_cols) i.e. (batch_size, 64*32)
     logits_per_cell, _ = reduce_mean(token_logits, cell_index)
     # labels_per_cell: shape (batch_size, 64*32), indicating whether each cell should be selected (1) or not (0)
-    if isinstance(labels, mindspore.Tensor):
-        labels = labels.type(mindspore.int64)
-    else:
-        labels = ops.as_tensor(labels, dtype=mindspore.int64)
     labels_per_cell, labels_index = reduce_max(
-        labels, cell_index
+        ops.as_tensor(labels, dtype=mindspore.int64), cell_index
     )
 
     # Mask for the selected column.
