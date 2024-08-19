@@ -537,7 +537,7 @@ class Wav2Vec2ModelTest(ModelTesterMixin, unittest.TestCase):
     # Wav2Vec2 has no inputs_embeds
     # and thus the `get_input_embeddings` fn
     # is not implemented
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_initialization(self):
@@ -713,7 +713,7 @@ class Wav2Vec2RobustModelTest(ModelTesterMixin, unittest.TestCase):
     # Wav2Vec2 has no inputs_embeds
     # and thus the `get_input_embeddings` fn
     # is not implemented
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_initialization(self):

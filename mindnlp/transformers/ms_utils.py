@@ -211,7 +211,7 @@ def apply_chunking_to_forward(forward_fn, chunk_size, chunk_axis, *input_tensors
         num_chunks = input_tensors[0].shape[chunk_axis] // chunk_size
 
         # chunk input tensor into tuples
-        input_tensors_chunks = tuple(input_tensor.chunk(num_chunks, axis=chunk_axis) for input_tensor in input_tensors)
+        input_tensors_chunks = tuple(ops.chunk(input_tensor, num_chunks, dim=chunk_axis) for input_tensor in input_tensors)
         # apply forward fn to every tuple
         output_chunks = tuple(forward_fn(*input_tensors_chunk) for input_tensors_chunk in zip(*input_tensors_chunks))
         # concatenate output at same dimension

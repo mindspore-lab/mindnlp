@@ -223,7 +223,7 @@ class AutoformerModelTest(ModelTesterMixin, unittest.TestCase):
     test_missing_keys = False
     test_torchscript = False
     test_inputs_embeds = False
-    test_model_common_attributes = False
+    test_model_get_set_embeddings = False
 
     def setUp(self):
         self.model_tester = AutoformerModelTester(self)

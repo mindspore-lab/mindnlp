@@ -113,7 +113,7 @@ class GPTBigCodeAttention(nn.Module):
     def _get_mask_value(self, dtype):
         # ops.where expects a tensor. We use a cache to avoid recreating it every time.
         if self.mask_value is None or self.mask_value.dtype != dtype:
-            self.mask_value = ops.full([], ops.finfo(dtype).min, dtype=dtype)
+            self.mask_value = ops.full([], float(ops.finfo(dtype).min), dtype=dtype)
         return self.mask_value
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
@@ -414,7 +414,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
 
         max_positions = config.max_position_embeddings
         self.register_buffer(
-            "bias", ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.bool_)), persistent=False
+            "bias", ops.tril(ops.ones((max_positions, max_positions))).to(mindspore.bool_), persistent=False
         )
 
         self.gradient_checkpointing = False
@@ -481,7 +481,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
 
         if attention_mask is not None and len(attention_mask.shape) == 2 and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_length > 0:
                 position_ids = position_ids[:, past_length : input_shape[-1] + past_length :]
@@ -516,7 +516,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
             if self._use_sdpa and head_mask is None and not output_attentions:
                 # SDPA with a custom mask is much faster in fp16/fp32 dtype rather than bool. Cast here to floating point instead of at every layer.
                 dtype = self.wte.weight.dtype
-                min_dtype = ops.finfo(dtype).min
+                min_dtype = float(ops.finfo(dtype).min)
                 self_attention_mask = ops.where(
                     self_attention_mask,
                     ops.full([], 0.0, dtype=dtype),

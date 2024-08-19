@@ -165,7 +165,7 @@ class ClapAudioModelTest(ModelTesterMixin, unittest.TestCase):
     test_pruning = False
     test_resize_embeddings = False
     test_head_masking = False
-    test_model_common_attributes = False
+    test_model_get_set_embeddings = False
 
     def setUp(self):
         self.model_tester = ClapAudioModelTester(self)
@@ -513,7 +513,7 @@ class ClapModelTest(ModelTesterMixin, unittest.TestCase):
     test_pruning = False
     test_resize_embeddings = False
     test_attention_outputs = False
-    test_model_common_attributes = False
+    test_model_get_set_embeddings = False
 
     def setUp(self):
         self.model_tester = ClapModelTester(self)

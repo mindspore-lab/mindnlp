@@ -425,7 +425,7 @@ class Data2VecAudioModelTest(ModelTesterMixin, unittest.TestCase):#PipelineTeste
     def test_ctc_train(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.check_ctc_training(*config_and_inputs)
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
     def test_seq_classifier_train(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()

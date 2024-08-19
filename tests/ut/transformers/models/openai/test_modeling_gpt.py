@@ -22,23 +22,23 @@ from mindnlp.utils.testing_utils import require_mindspore, slow
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, ids_tensor
+# from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import nn, ops
 
     from mindnlp.transformers import (
-        OPENAI_GPT_PRETRAINED_MODEL_ARCHIVE_LIST,
-        GPTConfig,
-        GPTDoubleHeadsModel,
-        GPTForSequenceClassification,
-        GPTLMHeadModel,
-        GPTModel,
+        OpenAIGPTConfig,
+        OpenAIGPTDoubleHeadsModel,
+        OpenAIGPTForSequenceClassification,
+        OpenAIGPTLMHeadModel,
+        OpenAIGPTModel,
     )
 
 
-class GPTModelTester:
+class OpenAIGPTModelTester:
     def __init__(
         self,
         parent,
@@ -101,7 +101,7 @@ class GPTModelTester:
             token_labels = ids_tensor([self.batch_size, self.seq_length], self.num_labels)
             choice_labels = ids_tensor([self.batch_size], self.num_choices)
 
-        config = GPTConfig(
+        config = OpenAIGPTConfig(
             vocab_size=self.vocab_size,
             n_embd=self.hidden_size,
             n_layer=self.num_hidden_layers,
@@ -129,9 +129,8 @@ class GPTModelTester:
         )
 
     def create_and_check_openai_gpt_model(self, config, input_ids, head_mask, token_type_ids, *args):
-        model = GPTModel(config=config)
-
-        model.set_train(False)
+        model = OpenAIGPTModel(config=config)
+        model.eval()
 
         result = model(input_ids, token_type_ids=token_type_ids, head_mask=head_mask)
         result = model(input_ids, token_type_ids=token_type_ids)
@@ -140,18 +139,16 @@ class GPTModelTester:
         self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
 
     def create_and_check_lm_head_model(self, config, input_ids, head_mask, token_type_ids, *args):
-        model = GPTLMHeadModel(config)
-
-        model.set_train(False)
+        model = OpenAIGPTLMHeadModel(config)
+        model.eval()
 
         result = model(input_ids, token_type_ids=token_type_ids, labels=input_ids)
         self.parent.assertEqual(result.loss.shape, ())
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
     def create_and_check_double_lm_head_model(self, config, input_ids, head_mask, token_type_ids, *args):
-        model = GPTDoubleHeadsModel(config)
-
-        model.set_train(False)
+        model = OpenAIGPTDoubleHeadsModel(config)
+        model.eval()
 
         result = model(input_ids, token_type_ids=token_type_ids, labels=input_ids)
         self.parent.assertEqual(result.loss.shape, ())
@@ -161,9 +158,8 @@ class GPTModelTester:
         self, config, input_ids, head_mask, token_type_ids, *args
     ):
         config.num_labels = self.num_labels
-        model = GPTForSequenceClassification(config)
-
-        model.set_train(False)
+        model = OpenAIGPTForSequenceClassification(config)
+        model.eval()
 
         sequence_labels = ids_tensor([self.batch_size], self.type_sequence_label_size)
         result = model(input_ids, token_type_ids=token_type_ids, labels=sequence_labels)
@@ -190,21 +186,21 @@ class GPTModelTester:
 
 
 @require_mindspore
-class GPTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
+class OpenAIGPTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (
-        (GPTModel, GPTLMHeadModel, GPTDoubleHeadsModel, GPTForSequenceClassification)
+        (OpenAIGPTModel, OpenAIGPTLMHeadModel, OpenAIGPTDoubleHeadsModel, OpenAIGPTForSequenceClassification)
         if is_mindspore_available()
         else ()
     )
     all_generative_model_classes = (
-        (GPTLMHeadModel,) if is_mindspore_available() else ()
+        (OpenAIGPTLMHeadModel,) if is_mindspore_available() else ()
     )  # TODO (PVP): Add Double HeadsModel when generate() function is changed accordingly
     pipeline_model_mapping = (
         {
-            "feature-extraction": GPTModel,
-            "text-classification": GPTForSequenceClassification,
-            "text-generation": GPTLMHeadModel,
-            "zero-shot": GPTForSequenceClassification,
+            "feature-extraction": OpenAIGPTModel,
+            "text-classification": OpenAIGPTForSequenceClassification,
+            "text-generation": OpenAIGPTLMHeadModel,
+            "zero-shot": OpenAIGPTForSequenceClassification,
         }
         if is_mindspore_available()
         else {}
@@ -216,7 +212,7 @@ class GPTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     ):
         if pipeline_test_casse_name == "ZeroShotClassificationPipelineTests":
             # Get `tokenizer does not have a padding token` error for both fast/slow tokenizers.
-            # `GPTConfig` was never used in pipeline tests, either because of a missing checkpoint or because a
+            # `OpenAIGPTConfig` was never used in pipeline tests, either because of a missing checkpoint or because a
             # tiny config could not be created.
             return True
 
@@ -227,7 +223,7 @@ class GPTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         inputs_dict = super()._prepare_for_class(inputs_dict, model_class, return_labels=return_labels)
 
         if return_labels:
-            if model_class.__name__ == "GPTDoubleHeadsModel":
+            if model_class.__name__ == "OpenAIGPTDoubleHeadsModel":
                 inputs_dict["labels"] = ops.zeros(
                     (self.model_tester.batch_size, self.model_tester.num_choices, self.model_tester.seq_length),
                     dtype=mindspore.int64,
@@ -236,7 +232,7 @@ class GPTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
                 inputs_dict["token_type_ids"] = inputs_dict["labels"]
                 inputs_dict["mc_token_ids"] = ops.zeros(
                     (self.model_tester.batch_size, self.model_tester.num_choices),
-                    dtype=mindspore.int64
+                    dtype=mindspore.int64,
                 )
                 inputs_dict["mc_labels"] = ops.zeros(
                     self.model_tester.batch_size, dtype=mindspore.int64
@@ -244,8 +240,8 @@ class GPTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         return inputs_dict
 
     def setUp(self):
-        self.model_tester = GPTModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=GPTConfig, n_embd=37)
+        self.model_tester = OpenAIGPTModelTester(self)
+        self.config_tester = ConfigTester(self, config_class=OpenAIGPTConfig, n_embd=37)
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -268,17 +264,16 @@ class GPTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        for model_name in OPENAI_GPT_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = GPTModel.from_pretrained(model_name)
-            self.assertIsNotNone(model)
+        model_name = "openai-community/openai-gpt"
+        model = OpenAIGPTModel.from_pretrained(model_name)
+        self.assertIsNotNone(model)
 
 
 @require_mindspore
 class OPENAIGPTModelLanguageGenerationTest(unittest.TestCase):
     @slow
     def test_lm_generate_openai_gpt(self):
-        model = GPTLMHeadModel.from_pretrained("openai-gpt")
-
+        model = OpenAIGPTLMHeadModel.from_pretrained("openai-community/openai-gpt")
         input_ids = mindspore.tensor([[481, 4735, 544]], dtype=mindspore.int64)  # the president is
         expected_output_ids = [
             481,
