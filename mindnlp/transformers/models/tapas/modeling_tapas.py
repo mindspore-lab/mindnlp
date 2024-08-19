@@ -1375,8 +1375,7 @@ class ProductIndexMap(IndexMap):
     def project_inner(self, index):
         """Projects an index with the same index set onto the inner components."""
         return IndexMap(
-            indices=ops.fmod(index.indices, self.inner_index.num_segments)
-            .to(mindspore.float32)
+            indices=ops.fmod(index.indices.to(mindspore.float32), self.inner_index.num_segments.to(mindspore.float32))
             .floor()
             .to(mindspore.int64),
             num_segments=self.inner_index.num_segments,
@@ -1534,21 +1533,21 @@ def _segment_reduce(values, index, segment_reduce_fn, name):
         indices_tmp = ops.stack([ops.zeros_like(flat_index.indices.long()), flat_index.indices.long()], dim= -1)
         segment_means = ops.tensor_scatter_max(out, indices_tmp, flat_values.float())
         segment_means = segment_means.view(-1)
-        segment_means = ops.where(segment_means < float(ops.finfo(mindspore.float32).min), 0, segment_means)
+        segment_means = ops.where(segment_means < float(ops.finfo(mindspore.float32).min), 0., segment_means)
     elif segment_reduce_fn == 'amin':
         out = out.view(1, -1)
         indices_tmp = ops.stack([ops.zeros_like(flat_index.indices.long()), flat_index.indices.long()], dim= -1)
         segment_means = ops.tensor_scatter_min(out, indices_tmp, flat_values.float())
         segment_means = segment_means.view(-1)
-        segment_means = ops.where(segment_means > float(ops.finfo(mindspore.float32).max), 0, segment_means)
+        segment_means = ops.where(segment_means > float(ops.finfo(mindspore.float32).max), 0., segment_means)
     else:
         segment_means = ops.scatter_add(
-            out, dim=0, index=flat_index.indices.long(), src=flat_values.float()
+            out, dim=0, index=flat_index.indices.long(), src=flat_values.float()[:flat_index.indices.shape[0]]
         )
 
     if segment_reduce_fn == 'mean':
         segment_count = ops.scatter_add(
-            out, dim=0, index=flat_index.indices.long(), src=ops.ones_like(flat_values)
+            out, dim=0, index=flat_index.indices.long(), src=ops.ones(flat_index.indices.shape)
         )
         segment_count = segment_count.view(-1)
         segment_means = segment_means/(segment_count + EPSILON_ZERO_DIVISION)
