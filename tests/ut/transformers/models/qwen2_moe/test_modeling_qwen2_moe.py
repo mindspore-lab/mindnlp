@@ -467,7 +467,7 @@ class Qwen2MoeIntegrationTest(unittest.TestCase):
     @slow
     def test_model_a2_7b_logits(self):
         input_ids = [1, 306, 4658, 278, 6593, 310, 2834, 338]
-        model = Qwen2MoeForCausalLM.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", mirror='gitee')
+        model = Qwen2MoeForCausalLM.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", mirror='modelscope')
         input_ids = mindspore.tensor([input_ids])
         with no_grad():
             out = model(input_ids).logits
@@ -486,8 +486,8 @@ class Qwen2MoeIntegrationTest(unittest.TestCase):
     def test_model_a2_7b_generation(self):
         EXPECTED_TEXT_COMPLETION = """To be or not to be, that is the question. This is the question that has been asked by many people over the"""
         prompt = "To be or not to"
-        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", use_fast=False)
-        model = Qwen2MoeForCausalLM.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B")
+        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", use_fast=False, mirror='modelscope')
+        model = Qwen2MoeForCausalLM.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", mirror='modelscope')
         input_ids = tokenizer.encode(prompt, return_tensors="ms")
 
         # greedy generation outputs
@@ -534,12 +534,12 @@ class Qwen2MoeIntegrationTest(unittest.TestCase):
             "To be or not to be, that is the question.\nThe answer is to be, of course. But what does it"
         )
         prompt = "To be or not to"
-        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", use_fast=False)
+        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", use_fast=False, mirror='modelscope')
         model = Qwen2MoeForCausalLM.from_pretrained(
-            "Qwen/Qwen1.5-MoE-A2.7B", ms_dtype=mindspore.float16
+            "Qwen/Qwen1.5-MoE-A2.7B", ms_dtype=mindspore.float16, mirror='modelscope'
         )
         assistant_model = Qwen2MoeForCausalLM.from_pretrained(
-            "Qwen/Qwen1.5-MoE-A2.7B", ms_dtype=mindspore.float16
+            "Qwen/Qwen1.5-MoE-A2.7B", ms_dtype=mindspore.float16, mirror='modelscope'
         )
         input_ids = tokenizer.encode(prompt, return_tensors="ms")
 
