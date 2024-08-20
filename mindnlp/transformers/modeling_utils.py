@@ -3429,7 +3429,6 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
                     f"to the `bos_token_id` ({self.config.bos_token_id}), `eos_token_id` ({self.config.eos_token_id}), "
                     f"or the `sep_token_id` ({self.config.sep_token_id}), and your input is not padded."
                 )
-
             logger.warning_once(warn_string)
 
 
