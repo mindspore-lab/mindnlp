@@ -217,7 +217,7 @@ class NllbMoeModelTester:
 
         # append to next input_ids and
         next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
-        next_attention_mask = ops.cat([attention_mask, next_attn_mask], dim=-1)
+        next_attention_mask = ops.cat([attention_mask.to(mindspore.int64), next_attn_mask], dim=-1)
 
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)[
             "last_hidden_state"
@@ -232,8 +232,8 @@ class NllbMoeModelTester:
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
         output_from_no_past_slice = output_from_no_past[
             :, -3:, random_slice_idx
-        ].detach()
-        output_from_past_slice = output_from_past[:, :, random_slice_idx].detach()
+        ]
+        output_from_past_slice = output_from_past[:, :, random_slice_idx]
 
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
@@ -597,7 +597,7 @@ class NllbMoeRouterTest(unittest.TestCase):
             expert_output = expert(masked_hidden_states[idx, token_indices])
 
             print(f"expert_output.shape: {expert_output.shape}")
-            exit(0)
+            # exit(0)
             
             expert_output *= 1 - self.config.moe_token_dropout
             masked_hidden_states[idx, token_indices] = ops.einsum(

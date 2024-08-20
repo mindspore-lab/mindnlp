@@ -463,11 +463,12 @@ class NllbMoeDenseActDense(nn.Module):
         self.act = ACT2FN[config.activation_function]
 
     def forward(self, hidden_states):
-        print(f"hidden_state shape: {hidden_states.shape}")
+        # print(f"hidden_state shape: {hidden_states.shape}")
         if hidden_states.shape[0] == 0:
-            hidden_states.view(-1, 16)
-            print(f"hidden_state shape: {hidden_states.shape}")
-            print(hidden_states)
+            hidden_states = ops.rand(16, 0)
+            hidden_states = hidden_states.transpose()
+            # print(hidden_states.shape)
+            # print(hidden_states)
 
         # print(hidden_states)
         # exit(0)
@@ -556,6 +557,8 @@ class NllbMoeSparseMLP(nn.Module):
                     expert_output = self.token_dropout(expert_output)
                 else:
                     expert_output *= 1 - self.moe_token_dropout
+            if expert_output.shape[0] == 0:
+                continue
             masked_hidden_states[idx, token_indices] = ops.einsum(
                 "b,be->be", combining_weights, expert_output
             )
@@ -1879,7 +1882,7 @@ class NllbMoeForConditionalGeneration(NllbMoePreTrainedModel):
         reordered_past = ()
         for layer_past in past_key_values:
             reordered_past += (
-                tuple(past_state.index_select(0) for past_state in layer_past),
+                tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),
             )
         return reordered_past
 
