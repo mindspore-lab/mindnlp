@@ -19,7 +19,7 @@ from collections import OrderedDict
 from typing import Optional, Iterable, Dict, Union, List, Literal, Tuple
 
 import mindspore
-from mindspore import nn
+from mindnlp.core import nn
 import numpy as np
 from mindspore import Tensor
 from tqdm import trange
@@ -91,14 +91,16 @@ class SentenceTransformer(nn.Sequential):
             tokenizer_args={
                 "token": token,
                 "local_files_only": local_files_only,
-            }
+            },
         )
-        pooling_model = Pooling(transformer_model.get_word_embedding_dimension(), "mean")
+        # pooling_model = Pooling(transformer_model.get_word_embedding_dimension(), "mean")
+        pooling_model = Pooling(transformer_model.get_word_embedding_dimension(),
+                                pooling_mode_cls_token=True, pooling_mode_mean_tokens=False)
         return [transformer_model, pooling_model]
 
     def _first_module(self):
         """Returns the first module of this sequential embedder"""
-        return self._cells[next(iter(self._cells))]
+        return self._modules[next(iter(self._modules))]
 
     def tokenize(self, texts: Union[List[str], List[Dict], List[Tuple[str, str]]]):
         """
@@ -198,7 +200,7 @@ class SentenceTransformer(nn.Sequential):
                 embeddings = out_features[output_value]
                 # embeddings = embeddings.detach()
                 if normalize_embeddings:
-                    embeddings = mindspore.ops.L2Normalize(embeddings, p=2, dim=1)
+                    embeddings = mindspore.ops.L2Normalize(axis=1)(embeddings)
 
             all_embeddings.extend(embeddings)
 

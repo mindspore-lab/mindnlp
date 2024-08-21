@@ -19,7 +19,8 @@ import os
 from typing import Dict
 
 import mindspore
-from mindspore import nn, Tensor
+from mindnlp.core import nn
+from mindspore import Tensor
 
 
 class Pooling(nn.Module):
@@ -148,7 +149,7 @@ class Pooling(nn.Module):
             output_vectors.append(cls_token)
         if self.pooling_mode_max_tokens:
             input_mask_expanded = (
-                attention_mask.unsqueeze(-1).expand(token_embeddings.size()).to(token_embeddings.dtype)
+                attention_mask.unsqueeze(-1).broadcast_to(token_embeddings.shape).to(token_embeddings.dtype)
             )
             token_embeddings[input_mask_expanded == 0] = -1e9  # Set padding tokens to large negative value
             max_over_time = mindspore.ops.max(token_embeddings, 1)[0]
@@ -156,7 +157,7 @@ class Pooling(nn.Module):
         if self.pooling_mode_mean_tokens or self.pooling_mode_mean_sqrt_len_tokens:
             attention_mask = attention_mask.unsqueeze(-1)
             token_embeddings_size = token_embeddings.shape
-            attention_mask = attention_mask.expand(token_embeddings_size)
+            attention_mask = attention_mask.broadcast_to(token_embeddings_size)
             input_mask_expanded = (
                 attention_mask.to(token_embeddings.dtype)
             )
@@ -164,7 +165,7 @@ class Pooling(nn.Module):
 
             # If tokens are weighted (by WordWeights layer), feature 'token_weights_sum' will be present
             if "token_weights_sum" in features:
-                sum_mask = features["token_weights_sum"].unsqueeze(-1).expand(sum_embeddings.size())
+                sum_mask = features["token_weights_sum"].unsqueeze(-1).broadcast_to(sum_embeddings.shape)
             else:
                 sum_mask = input_mask_expanded.sum(1)
 
@@ -176,14 +177,14 @@ class Pooling(nn.Module):
                 output_vectors.append(sum_embeddings / mindspore.ops.sqrt(sum_mask))
         if self.pooling_mode_weightedmean_tokens:
             input_mask_expanded = (
-                attention_mask.unsqueeze(-1).expand(token_embeddings.size()).to(token_embeddings.dtype)
+                attention_mask.unsqueeze(-1).broadcast_to(token_embeddings.shape).to(token_embeddings.dtype)
             )
             # token_embeddings shape: bs, seq, hidden_dim
             weights = (
                 mindspore.ops.arange(start=1, end=token_embeddings.shape[1] + 1)
                 .unsqueeze(0)
                 .unsqueeze(-1)
-                .expand(token_embeddings.size())
+                .broadcast_to(token_embeddings.shape)
                 .to(token_embeddings.dtype)
                 .to(token_embeddings.device)
             )
@@ -194,7 +195,7 @@ class Pooling(nn.Module):
 
             # If tokens are weighted (by WordWeights layer), feature 'token_weights_sum' will be present
             if "token_weights_sum" in features:
-                sum_mask = features["token_weights_sum"].unsqueeze(-1).expand(sum_embeddings.size())
+                sum_mask = features["token_weights_sum"].unsqueeze(-1).broadcast_to(sum_embeddings.shape)
             else:
                 sum_mask = input_mask_expanded.sum(1)
 
@@ -224,7 +225,7 @@ class Pooling(nn.Module):
             # but as we set some indices (which shouldn't be attended to) to 0 with clamp, we
             # use the attention mask to ignore them again
             input_mask_expanded = (
-                attention_mask.unsqueeze(-1).expand(token_embeddings.size()).to(token_embeddings.dtype)
+                attention_mask.unsqueeze(-1).broadcast_to(token_embeddings.shape).to(token_embeddings.dtype)
             )
             embedding = mindspore.ops.gather(token_embeddings * input_mask_expanded, 1, gather_indices).squeeze(dim=1)
             output_vectors.append(embedding)
