@@ -442,18 +442,8 @@ class NllbMoeModelIntegrationTests(unittest.TestCase):
         EXPECTED_ENCODER_STATE = mindspore.Tensor([ 0.3920, -0.1974, -0.0279,  0.3463, -0.8306, -1.0629, -0.4643,  2.0563, 1.1123,  0.3566, -0.9291, -0.3840, -0.2527, -0.9858,  1.5185, -1.1346, 0.0323, -0.9103, -0.3647, -0.4462, -0.9720, -0.3541,  0.1777, -0.4647, 1.6970, -0.9062,  0.2727, -1.0737,  0.8785,  0.4324])
         EXPECTED_DECODER_STATE = mindspore.Tensor([-6.0425e-02, -2.0015e-01,  6.0575e-02, -8.6366e-01, -1.1310e+00, 6.8369e-01,  7.5615e-01,  7.3555e-01,  2.3071e-01,  1.5954e+00, -7.0728e-01, -2.2647e-01, -1.3292e+00,  4.8246e-01, -6.9153e-01, -1.8199e-02, -7.3664e-01,  1.5902e-03,  1.0760e-01,  1.0298e-01, -9.3933e-01, -4.6567e-01,  8.0417e-01,  1.5243e+00,  5.5844e-01, -9.9239e-02,  1.4885e+00,  7.1527e-02, -5.2612e-01,  9.4435e-02])
         # fmt: on
-        ops.allclose(
-            output.encoder_last_hidden_state[1, 0, :30],
-            EXPECTED_ENCODER_STATE,
-            rtol=6e-3,
-            atol=9e-3,
-        )
-        ops.allclose(
-            output.last_hidden_state[1, 0, :30],
-            EXPECTED_DECODER_STATE,
-            rtol=6e-3,
-            atol=9e-3,
-        )
+        assert ops.allclose(output.encoder_last_hidden_state[1, 0, :30], EXPECTED_ENCODER_STATE, rtol=6e-3, atol=9e-3) is True
+        assert ops.allclose(output.last_hidden_state[1, 0, :30], EXPECTED_DECODER_STATE, rtol=6e-3, atol=9e-3) is True
 
     def test_inference_logits(self):
         r"""
@@ -468,9 +458,7 @@ class NllbMoeModelIntegrationTests(unittest.TestCase):
             output = model(**self.model_inputs)
 
         EXPECTED_LOGTIS = mindspore.Tensor([-0.3059, 0.0000, 9.3029, 0.6456, -0.9148, 1.7836, 0.6478, 0.9438, -0.5272, -0.6617, -1.2717, 0.4564, 0.1345, -0.2301, -1.0140, 1.1427, -1.5535, 0.1337, 0.2082, -0.8112, -0.3842, -0.3377, 0.1256, 0.6450, -0.0452, 0.0219, 1.4274, -0.4991, -0.2063, -0.4409,])  # fmt: skip
-        ops.allclose(
-            output.logits[1, 0, :30], EXPECTED_LOGTIS, rtol=6e-3, atol=9e-3
-        )
+        assert ops.allclose(output.logits[1, 0, :30], EXPECTED_LOGTIS, rtol=6e-3, atol=9e-3) is True
 
     @unittest.skip(reason="This requires 300GB of RAM")
     def test_large_logits(self):
@@ -484,21 +472,9 @@ class NllbMoeModelIntegrationTests(unittest.TestCase):
         EXPECTED_LOGTIS = mindspore.Tensor([ 0.3834,  0.2057,  4.5399,  0.8301,  0.4810,  0.9325,  0.9928,  0.9574,  0.5517,  0.9156,  0.2698,  0.6728,  0.7121,  0.3080,  0.4693,  0.5756,  1.0407,  0.2219,  0.3714,  0.5699,  0.5547,  0.8472,  0.3178,  0.1286,  0.1791,  0.9391,  0.5153, -0.2146,  0.1689,  0.6816])
         # fmt: on
 
-        ops.allclose(
-            output.encoder_last_hidden_state[1, 0, :30],
-            EXPECTED_ENCODER_STATE,
-            rtol=6e-3,
-            atol=9e-3,
-        )
-        ops.allclose(
-            output.last_hidden_state[1, 0, :30],
-            EXPECTED_DECODER_STATE,
-            rtol=6e-3,
-            atol=9e-3,
-        )
-        ops.allclose(
-            output.logits[1, 0, :30], EXPECTED_LOGTIS, rtol=6e-3, atol=9e-3
-        )
+        assert ops.allclose(output.encoder_last_hidden_state[1, 0, :30], EXPECTED_ENCODER_STATE, rtol=6e-3, atol=9e-3) is True
+        assert ops.allclose(output.last_hidden_state[1, 0, :30], EXPECTED_DECODER_STATE, rtol=6e-3, atol=9e-3) is True
+        assert ops.allclose(output.logits[1, 0, :30], EXPECTED_LOGTIS, rtol=6e-3, atol=9e-3) is True
 
     @unittest.skip(reason="This requires 300GB of RAM")
     def test_seq_to_seq_generation(self):
@@ -589,25 +565,23 @@ class NllbMoeRouterTest(unittest.TestCase):
         for idx, expert in enumerate(experts):
             token_indices = router_mask[:, idx]
 
-            # 调试信息
-            print(f"token_indices.shape: {token_indices.shape}")
-            print(f"masked_hidden_states[idx, token_indices].shape: {masked_hidden_states[idx, token_indices].shape}")
-
             combining_weights = router_probs[token_indices, idx]
-            expert_output = expert(masked_hidden_states[idx, token_indices])
+            expert_input = masked_hidden_states[idx, token_indices]
+            if expert_input.shape[0] == 0:
+                continue
+            expert_output = expert(expert_input)
 
-            print(f"expert_output.shape: {expert_output.shape}")
-            # exit(0)
-            
             expert_output *= 1 - self.config.moe_token_dropout
             masked_hidden_states[idx, token_indices] = ops.einsum(
                 "b,be->be", combining_weights, expert_output
             )
-        hidden_states = masked_hidden_states.sum(dim=0).reshape(
+        hidden_states = masked_hidden_states.sum(axis=0).reshape(
             self.batch_size, self.sequence_length, hidden_dim
         )
 
-        EXPECTED_MEAN_FAIRSEQ_HIDDEN_STATES = mindspore.Tensor([[ 7.0340e-04,  2.7997e-03, -1.3351e-02, -7.6705e-03, -3.5089e-03,3.9773e-03,  7.4593e-03,  1.2566e-02,  3.5860e-03, -2.7448e-02,-1.3731e-02, -1.0534e-02, -1.3606e-02, -1.5048e-02, -2.8914e-03,-5.0371e-03, -1.3963e-03,  6.0076e-03, -1.1380e-02, -1.4620e-02, 5.2401e-03,  8.4660e-04, -1.5319e-03, -1.6735e-02,  1.1302e-02, 3.6119e-03,  4.6084e-03, -1.3458e-02,  7.7792e-05,  1.4312e-02, 4.9107e-03, -5.0936e-03], [-4.4538e-03,  3.1026e-03,  1.4121e-04, -4.8121e-03, -5.6279e-03, 7.2493e-03,  3.9769e-03,  1.1114e-02, -1.5666e-03, -2.3477e-02, 8.7268e-03,  1.3446e-02, -2.8845e-05, -1.7287e-02,  8.7619e-03, -4.5316e-03, -1.2164e-02,  5.7461e-03, -4.5861e-03, -9.3907e-03, 2.9808e-02,  8.9206e-04, -7.6232e-04, -1.4173e-02,  3.0208e-03, 1.5310e-02,  9.7717e-03,  3.1014e-03,  7.8042e-03,  8.0197e-03, 3.4784e-03, -7.1728e-03]])  # fmt: skip
+        EXPECTED_MEAN_FAIRSEQ_HIDDEN_STATES = mindspore.Tensor([[7.0340e-04,  2.7997e-03, -1.3351e-02, -7.6705e-03, -3.5089e-03, 3.9773e-03,  7.4593e-03,  1.2566e-02,  3.5860e-03, -2.7448e-02,-1.3731e-02, -1.0534e-02, -1.3606e-02, -1.5048e-02, -2.8914e-03,-5.0371e-03, -1.3963e-03,  6.0076e-03, -1.1380e-02, -1.4620e-02, 5.2401e-03,  8.4660e-04, -1.5319e-03, -1.6735e-02,  1.1302e-02, 3.6119e-03,  4.6084e-03, -1.3458e-02,  7.7792e-05,  1.4312e-02, 4.9107e-03, -5.0936e-03], [-4.4538e-03,  3.1026e-03,  1.4121e-04, -4.8121e-03, -5.6279e-03, 7.2493e-03,  3.9769e-03,  1.1114e-02, -1.5666e-03, -2.3477e-02, 8.7268e-03,  1.3446e-02, -2.8845e-05, -1.7287e-02,  8.7619e-03, -4.5316e-03, -1.2164e-02,  5.7461e-03, -4.5861e-03, -9.3907e-03, 2.9808e-02,  8.9206e-04, -7.6232e-04, -1.4173e-02,  3.0208e-03, 1.5310e-02,  9.7717e-03,  3.1014e-03,  7.8042e-03,  8.0197e-03, 3.4784e-03, -7.1728e-03]])  # fmt: skip
+        # print(f"hidden_states mean:\n{hidden_states.mean(1)}")
+        # print(f"ans:\n{EXPECTED_MEAN_FAIRSEQ_HIDDEN_STATES}")
         self.assertTrue(
             ops.allclose(
                 hidden_states.mean(1), EXPECTED_MEAN_FAIRSEQ_HIDDEN_STATES, 1e-4
@@ -627,11 +601,15 @@ class NllbMoeRouterTest(unittest.TestCase):
             (self.batch_size * self.sequence_length), dtype=mindspore.bool_
         )
         logits = ops.rand((self.batch_size * self.sequence_length, 4))
+        # logits = logits.tolist()
+        # logits = [[0.4963, 0.7682, 0.0885, 0.1320],  [0.3074, 0.6341, 0.4901, 0.8964], [0.4556, 0.6323, 0.3489, 0.4017],[0.0223, 0.1689, 0.2939, 0.5185],[0.6977, 0.8000, 0.1610, 0.2823],[0.6816, 0.9152, 0.3971, 0.8742],[0.4194, 0.5529, 0.9527, 0.0362],[0.1852, 0.3734, 0.3051, 0.9320],[0.1759, 0.2698, 0.1507, 0.0317],[0.2081, 0.9298, 0.7231, 0.7423],[0.5263, 0.2437, 0.5846, 0.0332],[0.1387, 0.2422, 0.8155, 0.7932],[0.2783, 0.4820, 0.8198, 0.9971],[0.6984, 0.5675, 0.8352, 0.2056],[0.5932, 0.1123, 0.1535, 0.2417],[0.7262, 0.7011, 0.2038, 0.6511],[0.7745, 0.4369, 0.5191, 0.6159],[0.8102, 0.9801, 0.1147, 0.3168],[0.6965, 0.9143, 0.9351, 0.9412],[0.5995, 0.0652, 0.5460, 0.1872],[0.0340, 0.9442, 0.8802, 0.0012],[0.5936, 0.4158, 0.4177, 0.2711],[0.6923, 0.2038, 0.6833, 0.7529],[0.8579, 0.6870, 0.0051, 0.1757],[0.7497, 0.6047, 0.1100, 0.2121],[0.9704, 0.8369, 0.2820, 0.3742],[0.0237, 0.4910, 0.1235, 0.1143],[0.4725, 0.5751, 0.2952, 0.7967],[0.1957, 0.9537, 0.8426, 0.0784],[0.3756, 0.5226, 0.5730, 0.6186],[0.6962, 0.5300, 0.2560, 0.7366],[0.0204, 0.2036, 0.3748, 0.2564],[0.3251, 0.0902, 0.3936, 0.6069],[0.1743, 0.4743, 0.8579, 0.4486],[0.5139, 0.4569, 0.6012, 0.8179],[0.9736, 0.8175, 0.9747, 0.4638],[0.0508, 0.2630, 0.8405, 0.4968],[0.2515, 0.1168, 0.0321, 0.0780],[0.3986, 0.7742, 0.7703, 0.0178],[0.8119, 0.1087, 0.3943, 0.2973]]
+        # logits = mindspore.Tensor(logits)
         config.batch_prioritized_routing = True
         router = NllbMoeTop2Router(config)
         top_1_mask, _ = router.route_tokens(logits, padding_mask=mask)
         # check that the routing is batch first. One of the last token is routed while expert capacity is very small
         # this means that it had a greater probability of being routed
+        # print(top_1_mask)
         assert top_1_mask[-1, 0] == 1
 
     def test_second_expert_policy(self):
@@ -674,16 +652,10 @@ class NllbMoeRouterTest(unittest.TestCase):
         # `sampling` and `random` do not affect the mask of the top_1 router
         # fmt: on
 
-        ops.allclose(
-            router_probs_all, EXPECTED_ROUTER_ALL, rtol=1e-4, atol=1e-4
-        )
-        ops.allclose(
-            router_probs_sp, EXPECTED_ROUTER_SP, rtol=1e-4, atol=1e-4
-        )
-        ops.allclose(router_probs, EXPECTED_ROUTER, rtol=1e-4, atol=1e-4)
+        assert ops.allclose(router_probs_all, EXPECTED_ROUTER_ALL, rtol=1e-4, atol=1e-4) is True
+        assert ops.allclose(router_probs_sp, EXPECTED_ROUTER_SP, rtol=1e-4, atol=1e-4) is True
+        assert ops.allclose(router_probs, EXPECTED_ROUTER, rtol=1e-4, atol=1e-4) is True
 
-        ops.allclose(
-            top_1_mask_all, EXPECTED_TOP_1_ALL, rtol=1e-4, atol=1e-4
-        )
-        ops.allclose(top_1_mask_sp, EXPECTED_TOP_1_SP, rtol=1e-4, atol=1e-4)
-        ops.allclose(top_1_mask, EXPECTED_TOP_1_SP, rtol=1e-4, atol=1e-4)
+        assert ops.allclose(top_1_mask_all, EXPECTED_TOP_1_ALL, rtol=1e-4, atol=1e-4) is True
+        assert ops.allclose(top_1_mask_sp, EXPECTED_TOP_1_SP, rtol=1e-4, atol=1e-4) is True
+        assert ops.allclose(top_1_mask, EXPECTED_TOP_1_SP, rtol=1e-4, atol=1e-4) is True

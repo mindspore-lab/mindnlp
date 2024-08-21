@@ -130,7 +130,7 @@ def load_balancing_loss_func(
     expert_mask = F.one_hot(expert_indices, num_experts)
 
     # For a given token, determine if it was routed to a given expert.
-    expert_mask = ops.max(expert_mask, dim=-2).values
+    expert_mask = ops.max(expert_mask, dim=-2)[0]
 
     # cast to float32 otherwise mean will fail
     expert_mask = expert_mask.to(mindspore.float32)
@@ -445,7 +445,7 @@ class NllbMoeTop2Router(nn.Module):
         hidden_states = hidden_states.reshape(
             (batch_size * sequence_length), hidden_dim
         )
-        hidden_states = hidden_states.to(self.dtype)
+        # hidden_states = hidden_states.to(self.dtype)
         self._cast_classifier()
         router_logits = self.classifier(hidden_states)
         top_1_mask, router_probs = self.route_tokens(
@@ -465,13 +465,13 @@ class NllbMoeDenseActDense(nn.Module):
     def forward(self, hidden_states):
         # print(f"hidden_state shape: {hidden_states.shape}")
         if hidden_states.shape[0] == 0:
+            hidden_states_type = hidden_states.dtype
             hidden_states = ops.rand(16, 0)
+            hidden_states = hidden_states.to(hidden_states_type)
             hidden_states = hidden_states.transpose()
             # print(hidden_states.shape)
             # print(hidden_states)
 
-        # print(hidden_states)
-        # exit(0)
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.dropout(hidden_states)
