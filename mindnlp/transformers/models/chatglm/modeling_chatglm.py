@@ -171,7 +171,7 @@ def gelu(x):
     Raises:
         None.
     """
-    return ops.gelu(x, approximate='tanh')
+    return F.gelu(x, approximate='tanh')
 
 
 class RotaryEmbedding(nn.Module):
@@ -705,7 +705,7 @@ class GEGLU(nn.Module):
             None.
         """
         super().__init__()
-        self.activation_fn = ops.gelu
+        self.activation_fn = F.gelu
 
     def forward(self, x):
         """
