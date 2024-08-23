@@ -102,7 +102,8 @@ def empty(*size, dtype=None):
         size = size[0]
     if dtype is None:
         dtype = get_default_dtype()
-    return CTensor(dtype, size)
+    out = CTensor(dtype, size)
+    return mindspore.Tensor(out)
 
 # empty_like
 
