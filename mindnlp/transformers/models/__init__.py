@@ -101,6 +101,7 @@ from . import (
     funnel,
     fsmt,
     gemma,
+    gemma2,
     git,
     openai,
     gpt2,
@@ -329,6 +330,7 @@ from .funnel import *
 from .fsmt import *
 from .fastspeech2_conformer import *
 from .gemma import *
+from .gemma2 import *
 from .git import *
 from .openai import *
 from .gptj import *
@@ -559,6 +561,7 @@ __all__.extend(chatglm3.__all__)
 __all__.extend(openai.__all__)
 __all__.extend(gptj.__all__)
 __all__.extend(gemma.__all__)
+__all__.extend(gemma2.__all__)
 __all__.extend(git.__all__)
 __all__.extend(gpt_neo.__all__)
 __all__.extend(gpt_neox.__all__)
