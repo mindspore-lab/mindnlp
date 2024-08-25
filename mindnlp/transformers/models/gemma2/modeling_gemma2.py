@@ -19,6 +19,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""MindSpore Gemma2"""
 from typing import List, Optional, Tuple, Union
 
 import mindspore
@@ -80,7 +81,6 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
         causal_mask = attention_mask
     else:
         causal_mask = ops.full((sequence_length, target_length), fill_value=min_dtype, dtype=dtype)
-    
         if sequence_length != 1:
             causal_mask = ops.triu(causal_mask, diagonal=1)
         causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
@@ -128,8 +128,6 @@ class Gemma2RotaryEmbedding(nn.Module):
 
     @mindspore._no_grad()
     def forward(self, x, position_ids, seq_len=None):
-        # x: [bs, num_attention_heads, seq_len, head_size]
-        self.inv_freq
         inv_freq_expanded = self.inv_freq[None, :, None].float().broadcast_to((position_ids.shape[0], -1, 1))
         position_ids_expanded = position_ids[:, None, :].float()
         # Force float32 since bfloat16 loses precision on long contexts
@@ -391,7 +389,7 @@ class Gemma2SdpaAttention(Gemma2Attention):
 
         # We dispatch to SDPA's Flash Attention or Efficient kernels via this `is_causal` if statement instead of an inline conditional assignment
         # in SDPA to support both torch.compile's dynamic shapes and full graph options. An inline conditional prevents dynamic shapes from compiling.
-        is_causal = True if causal_mask is None and q_len > 1 else False
+        is_causal = not (causal_mask is not None or q_len <= 1)
         attn_output = F.scaled_dot_product_attention(
             query_states,
             key_states,
@@ -399,7 +397,6 @@ class Gemma2SdpaAttention(Gemma2Attention):
             attn_mask=causal_mask,
             dropout_p=self.attention_dropout if self.training else 0.0,
             is_causal=is_causal,
-            scale=self.scaling,
         )
 
         attn_output = ops.transpose(attn_output,1, 2)
@@ -911,7 +908,6 @@ class Gemma2ForCausalLM(Gemma2PreTrainedModel):
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Enable model parallelism
-            shift_labels = shift_labels
             loss = loss_fct(shift_logits, shift_labels)
 
         if not return_dict:
@@ -1060,7 +1056,6 @@ class Gemma2ForSequenceClassification(Gemma2PreTrainedModel):
                 # if no pad token found, use modulo instead of reverse indexing for ONNX compatibility
                 sequence_lengths = ops.eq(input_ids, self.config.pad_token_id).int().argmax(-1) - 1
                 sequence_lengths = sequence_lengths % input_ids.shape[-1]
-                sequence_lengths = sequence_lengths
             else:
                 sequence_lengths = -1
 
@@ -1068,11 +1063,10 @@ class Gemma2ForSequenceClassification(Gemma2PreTrainedModel):
 
         loss = None
         if labels is not None:
-            labels = labels
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"

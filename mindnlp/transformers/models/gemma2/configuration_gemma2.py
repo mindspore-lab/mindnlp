@@ -19,6 +19,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+""" Gemma2 model configuration"""
 from ...configuration_utils import PretrainedConfig
 
 
@@ -150,6 +151,5 @@ class Gemma2Config(PretrainedConfig):
         self.query_pre_attn_scalar = query_pre_attn_scalar
         self.sliding_window = sliding_window
         self.cache_implementation = "hybrid"
-
 
 __all__ = ['Gemma2Config']
