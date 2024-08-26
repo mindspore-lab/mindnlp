@@ -190,7 +190,7 @@ class VitMatteModelTest(ModelTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        model_name = "/home/ma-user/work/models/hustvl/vitmatte-small-composition-1k"
+        model_name = "hustvl/vitmatte-small-composition-1k"
         model = VitMatteForImageMatting.from_pretrained(model_name)
         self.assertIsNotNone(model)
 
@@ -263,18 +263,16 @@ class VitMatteModelTest(ModelTesterMixin, unittest.TestCase):
 class VitMatteModelIntegrationTest(unittest.TestCase):
     @slow
     def test_inference(self):
-        processor = VitMatteImageProcessor.from_pretrained("/home/ma-user/work/models/hustvl/vitmatte-small-composition-1k")
-        model = VitMatteForImageMatting.from_pretrained("/home/ma-user/work/models/hustvl/vitmatte-small-composition-1k")
+        processor = VitMatteImageProcessor.from_pretrained("hustvl/vitmatte-small-composition-1k")
+        model = VitMatteForImageMatting.from_pretrained("hustvl/vitmatte-small-composition-1k")
 
-        # filepath = hf_hub_download(
-        #     repo_id="hf-internal-testing/image-matting-fixtures", filename="image.png", repo_type="dataset"
-        # )
-        filepath = "/home/ma-user/work/images/image.png"
+        filepath = hf_hub_download(
+            repo_id="hf-internal-testing/image-matting-fixtures", filename="image.png", repo_type="dataset"
+        )
         image = Image.open(filepath).convert("RGB")
-        # filepath = hf_hub_download(
-        #     repo_id="hf-internal-testing/image-matting-fixtures", filename="trimap.png", repo_type="dataset"
-        # )
-        filepath = "/home/ma-user/work/images/trimap.png"
+        filepath = hf_hub_download(
+            repo_id="hf-internal-testing/image-matting-fixtures", filename="trimap.png", repo_type="dataset"
+        )
         trimap = Image.open(filepath).convert("L")
 
         # prepare image + trimap for the model

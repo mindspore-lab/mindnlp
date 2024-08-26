@@ -19,7 +19,6 @@ from typing import Optional, Tuple
 
 import mindspore
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
 
 from ...modeling_utils import PreTrainedModel
 from ....utils import (
@@ -327,7 +326,7 @@ class VitMatteForImageMatting(VitMattePreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
-    
+
 __all__ = [
     "VitMattePreTrainedModel",
     "VitMatteForImageMatting",

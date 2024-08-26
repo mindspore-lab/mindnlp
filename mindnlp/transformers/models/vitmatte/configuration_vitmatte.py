@@ -131,5 +131,5 @@ class VitMatteConfig(PretrainedConfig):
         output["backbone_config"] = self.backbone_config.to_dict()
         output["model_type"] = self.__class__.model_type
         return output
-    
+
 __all__ = ['VitMatteConfig']
