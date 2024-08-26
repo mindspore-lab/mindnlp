@@ -714,7 +714,7 @@ class YolosImageProcessor(BaseImageProcessor):
 
         if "max_size" in kwargs:
             logger.warning_once(
-                "The `max_size` parameter is deprecated and will be removed in v4.26. "
+                "The `max_size` parameter is deprecated. "
                 "Please specify in `size['longest_edge'] instead`.",
             )
             max_size = kwargs.pop("max_size")
@@ -812,7 +812,7 @@ class YolosImageProcessor(BaseImageProcessor):
     # Copied from transformers.models.detr.image_processing_detr.DetrImageProcessor.prepare
     def prepare(self, image, target, return_segmentation_masks=None, masks_path=None):
         logger.warning_once(
-            "The `prepare` method is deprecated and will be removed in a v4.33. "
+            "The `prepare` method is deprecated. "
             "Please use `prepare_annotation` instead. Note: the `prepare_annotation` method "
             "does not return the image anymore.",
         )
@@ -821,17 +821,17 @@ class YolosImageProcessor(BaseImageProcessor):
 
     # Copied from transformers.models.detr.image_processing_detr.DetrImageProcessor.convert_coco_poly_to_mask
     def convert_coco_poly_to_mask(self, *args, **kwargs):
-        logger.warning_once("The `convert_coco_poly_to_mask` method is deprecated and will be removed in v4.33. ")
+        logger.warning_once("The `convert_coco_poly_to_mask` method is deprecated. ")
         return convert_coco_poly_to_mask(*args, **kwargs)
 
     # Copied from transformers.models.detr.image_processing_detr.DetrImageProcessor.prepare_coco_detection with DETR->Yolos
     def prepare_coco_detection(self, *args, **kwargs):
-        logger.warning_once("The `prepare_coco_detection` method is deprecated and will be removed in v4.33. ")
+        logger.warning_once("The `prepare_coco_detection` method is deprecated. ")
         return prepare_coco_detection_annotation(*args, **kwargs)
 
     # Copied from transformers.models.detr.image_processing_detr.DetrImageProcessor.prepare_coco_panoptic
     def prepare_coco_panoptic(self, *args, **kwargs):
-        logger.warning_once("The `prepare_coco_panoptic` method is deprecated and will be removed in v4.33. ")
+        logger.warning_once("The `prepare_coco_panoptic` method is deprecated. ")
         return prepare_coco_panoptic_annotation(*args, **kwargs)
 
     # Copied from transformers.models.detr.image_processing_detr.DetrImageProcessor.resize
@@ -864,7 +864,7 @@ class YolosImageProcessor(BaseImageProcessor):
         """
         if "max_size" in kwargs:
             logger.warning_once(
-                "The `max_size` parameter is deprecated and will be removed in v4.26. "
+                "The `max_size` parameter is deprecated. "
                 "Please specify in `size['longest_edge'] instead`.",
             )
             max_size = kwargs.pop("max_size")
@@ -1175,7 +1175,7 @@ class YolosImageProcessor(BaseImageProcessor):
         """
         if "pad_and_return_pixel_mask" in kwargs:
             logger.warning_once(
-                "The `pad_and_return_pixel_mask` argument is deprecated and will be removed in v4.33, "
+                "The `pad_and_return_pixel_mask` argument is deprecated, "
                 "use `do_pad` instead.",
             )
             do_pad = kwargs.pop("pad_and_return_pixel_mask")
@@ -1183,7 +1183,7 @@ class YolosImageProcessor(BaseImageProcessor):
         max_size = None
         if "max_size" in kwargs:
             logger.warning_once(
-                "The `max_size` argument is deprecated and will be removed in v4.33, use"
+                "The `max_size` argument is deprecated, use"
                 " `size['longest_edge']` instead.",
             )
             size = kwargs.pop("max_size")
@@ -1357,7 +1357,7 @@ class YolosImageProcessor(BaseImageProcessor):
             in the batch as predicted by the model.
         """
         logger.warning_once(
-            "`post_process` is deprecated and will be removed in v5 of Transformers, please use"
+            "`post_process` is deprecated, please use"
             " `post_process_object_detection` instead, with `threshold=0.` for equivalent results.",
         )
 

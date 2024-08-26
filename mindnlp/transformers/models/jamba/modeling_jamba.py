@@ -21,17 +21,15 @@
 
 import math
 from typing import Any, Dict, List, Optional, Tuple, Union
+
 import mindspore
 from mindspore._c_expression import Tensor as RawTensor # pylint: disable=no-name-in-module
+import mindnlp.core.nn.functional as F
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache  # we need __iter__ and __len__ of pkv
-from ...modeling_attn_mask_utils import (
-    AttentionMaskConverter,
-)
 from ...modeling_outputs import (
     MoeCausalLMOutputWithPast,
     MoeModelOutputWithPast,
@@ -55,7 +53,7 @@ def load_balancing_loss_func(
     attention_mask: Optional[mindspore.Tensor] = None,
 ) -> float:
     r"""
-    Computes auxiliary load balancing loss as in Switch Transformer - implemented in MindNLP.
+    Computes auxiliary load balancing loss as in Switch Transformer - implemented in MindSpore.
 
     See Switch Transformer (https://arxiv.org/abs/2101.03961) for more details. This function implements the loss
     function presented in equations (4) - (6) of the paper. It aims at penalizing cases where the routing between
@@ -220,11 +218,11 @@ class HybridMambaAttentionDynamicCache(DynamicCache):
     def reorder_cache(self, beam_idx: mindspore.Tensor):
         """Reorders the cache for beam search, given the selected beam indices."""
         for layer_idx in range(len(self.key_cache)):
-            self.key_cache[layer_idx] = ops.index_select(self.key_cache[layer_idx], 0, beam_idx)
-            self.value_cache[layer_idx] = ops.index_select(self.value_cache[layer_idx], 0, beam_idx)
+            self.key_cache[layer_idx] = self.key_cache[layer_idx].index_select(0, beam_idx)
+            self.value_cache[layer_idx] = self.value_cache[layer_idx].index_select(0, beam_idx)
 
-            self.conv_states[layer_idx] = ops.index_select(self.conv_states[layer_idx], 0, beam_idx)
-            self.ssm_states[layer_idx] = ops.index_select(self.ssm_states[layer_idx], 0, beam_idx)
+            self.conv_states[layer_idx] = self.conv_states[layer_idx].index_select(0, beam_idx)
+            self.ssm_states[layer_idx] = self.ssm_states[layer_idx].index_select(0, beam_idx)
 
     def get_seq_length(self, layer_idx: Optional[int] = 0) -> int:
         """Returns the sequence length of the cached states. A layer index can be optionally passed."""
@@ -294,9 +292,9 @@ class JambaAttention(nn.Module):
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
-        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1, 2)
-        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1, 2)
+        query_states = ops.transpose(query_states.view(bsz, q_len, self.num_heads, self.head_dim), 1, 2)
+        key_states = ops.transpose(key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim), 1, 2)
+        value_states = ops.transpose(value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim), 1, 2)
 
         if past_key_value is not None:
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx)
@@ -305,7 +303,7 @@ class JambaAttention(nn.Module):
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
-        attn_weights = ops.matmul(query_states, key_states.swapaxes(2, 3)) / math.sqrt(self.head_dim)
+        attn_weights = ops.matmul(query_states, ops.transpose(key_states, 2, 3)) / math.sqrt(self.head_dim)
 
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
@@ -322,7 +320,7 @@ class JambaAttention(nn.Module):
                 f" {attn_output.shape}"
             )
 
-        attn_output = attn_output.swapaxes(1, 2)
+        attn_output = ops.transpose(attn_output, 1, 2)
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
 
         attn_output = self.o_proj(attn_output)
@@ -393,11 +391,11 @@ class JambaMambaMixer(nn.Module):
         self.c_layernorm = JambaRMSNorm(self.ssm_state_size, eps=config.rms_norm_eps)
 
     # fmt: off
-    def forward(self, input_states, cache_params: HybridMambaAttentionDynamicCache = None):
+    def slow_forward(self, input_states, cache_params: HybridMambaAttentionDynamicCache = None):
         batch_size, seq_len, _ = input_states.shape
         dtype = input_states.dtype
         # 1. Gated MLP's linear projection
-        projected_states = self.in_proj(input_states).swapaxes(1, 2)                   # [batch, 2 * intermediate_size, seq_len]
+        projected_states = ops.transpose(self.in_proj(input_states), 1, 2)                   # [batch, 2 * intermediate_size, seq_len]
         hidden_states, gate = ops.chunk(projected_states, 2, dim=1)
 
         use_cache = isinstance(cache_params,HybridMambaAttentionDynamicCache)
@@ -405,10 +403,9 @@ class JambaMambaMixer(nn.Module):
         if use_cache and cache_params.ssm_states[self.layer_idx].shape[0] == batch_size:
             if self.training:
                 # In training mode, we don't want to perform in-place operations on ssm_state so we can compute the backwards pass
-                ssm_state = cache_params.ssm_states[self.layer_idx].clone()
+                ssm_state = cache_params.ssm_states[self.layer_idx].copy()
             else:
                 ssm_state = cache_params.ssm_states[self.layer_idx]
-
 
             if cache_params.has_previous_state and seq_len == 1 and \
                     cache_params.conv_states[self.layer_idx].shape[0] == batch_size:
@@ -435,7 +432,7 @@ class JambaMambaMixer(nn.Module):
 
         # 3. State Space Model sequence transformation
         # 3.a. Selection:  [batch, seq_len, self.time_step_rank + self.ssm_state_size * 2]
-        ssm_parameters = self.x_proj(hidden_states.swapaxes(1, 2))
+        ssm_parameters = self.x_proj(ops.transpose(hidden_states, 1, 2))
         time_step, B, C = ops.split(
             ssm_parameters, [self.time_step_rank, self.ssm_state_size, self.ssm_state_size], dim=-1
         )
@@ -445,7 +442,7 @@ class JambaMambaMixer(nn.Module):
         C = self.c_layernorm(C)
 
         discrete_time_step = self.dt_proj(time_step)                                    # [batch, seq_len, intermediate_size]
-        discrete_time_step = nn.functional.softplus(discrete_time_step).swapaxes(1, 2) # [batch, intermediate_size, seq_len]
+        discrete_time_step = ops.transpose(nn.functional.softplus(discrete_time_step), 1, 2) # [batch, intermediate_size, seq_len]
 
         # 3.b. Discretization: B and C to [batch, seq_len, intermediate_size, ssm_state_size] (SRAM)
         A = -ops.exp(self.A_log.float())                                              # [intermediate_size, ssm_state_size]
@@ -466,8 +463,12 @@ class JambaMambaMixer(nn.Module):
             cache_params.ssm_states[self.layer_idx] = ssm_state
 
         # 4. Final linear projection
-        contextualized_states = self.out_proj(scan_output.swapaxes(1, 2))  # [batch, seq_len, hidden_size]
+        contextualized_states = self.out_proj(ops.transpose(scan_output, 1, 2))  # [batch, seq_len, hidden_size]
         return contextualized_states
+    # fmt: on
+
+    def forward(self, hidden_states, cache_params: HybridMambaAttentionDynamicCache = None):
+        return self.slow_forward(hidden_states, cache_params)
 
 
 # Copied from transformers.models.mistral.modeling_mistral.MistralMLP with Mistral->Jamba
@@ -676,7 +677,7 @@ class JambaMambaDecoderLayer(nn.Module):
         hidden_states = self.input_layernorm(hidden_states)
 
         hidden_states = self.mamba(
-            input_states=hidden_states,
+            hidden_states=hidden_states,
             cache_params=past_key_value,
         )
         self_attn_weights = None
@@ -728,7 +729,7 @@ class JambaPreTrainedModel(PreTrainedModel):
         elif isinstance(module, nn.Embedding):
             nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.padding_idx is not None:
-                module.weight.data[module.padding_idx] = 0
+                module.weight[module.padding_idx] = 0
 
 
 ALL_DECODER_LAYER_TYPES = {"attention": JambaAttentionDecoderLayer, "mamba": JambaMambaDecoderLayer}
@@ -907,19 +908,11 @@ class JambaModel(JambaPreTrainedModel):
         causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
         causal_mask = causal_mask[None, None, :, :].broadcast_to((input_tensor.shape[0], 1, -1, -1))
         if attention_mask is not None:
+            causal_mask = causal_mask.copy()  # copy to contiguous memory for in-place edit
             if attention_mask.ndim == 2:
                 mask_length = attention_mask.shape[-1]
-                padding_mask = causal_mask[..., :mask_length].eq(0.0).int() * attention_mask[:, None, None, :].eq(0.0).int()
-                causal_mask[..., :mask_length] = causal_mask[..., :mask_length].masked_fill(padding_mask.bool(), min_dtype)
-
-        if (
-            self.config._attn_implementation == "sdpa"
-            and attention_mask is not None
-        ):
-            # Attend to all tokens in fully masked rows in the causal_mask, for example the relevant first rows when
-            # using left padding. This is required by F.scaled_dot_product_attention memory-efficient attention path.
-            # Details: https://github.com/pytorch/pytorch/issues/110213
-            causal_mask = AttentionMaskConverter._unmask_unattended(causal_mask, min_dtype)
+                padding_mask = causal_mask[..., :mask_length].eq(0.0) * attention_mask[:, None, None, :].eq(0.0)
+                causal_mask[..., :mask_length] = causal_mask[..., :mask_length].masked_fill(padding_mask, min_dtype)
 
         return causal_mask
 
@@ -1105,7 +1098,7 @@ class JambaForCausalLM(JambaPreTrainedModel):
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if not empty_past_kv:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
@@ -1128,7 +1121,6 @@ class JambaForCausalLM(JambaPreTrainedModel):
             }
         )
         return model_inputs
-
 
 
 # Copied from transformers.models.mixtral.modeling_mixtral.MixtralForSequenceClassification with Mixtral->Jamba, MIXTRAL->JAMBA

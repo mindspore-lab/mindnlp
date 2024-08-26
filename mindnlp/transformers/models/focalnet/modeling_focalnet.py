@@ -819,7 +819,7 @@ class FocalNetForMaskedImageModeling(FocalNetPreTrainedModel):
                 .repeat_interleave(self.config.patch_size, 2)
                 .unsqueeze(1)
             )
-            reconstruction_loss = ops.l1_loss(pixel_values, reforwarded_pixel_values, reduction="none")
+            reconstruction_loss = F.l1_loss(pixel_values, reforwarded_pixel_values, reduction="none")
             masked_im_loss = (reconstruction_loss * mask).sum() / (mask.sum() + 1e-5) / self.config.num_channels
 
         if not return_dict:

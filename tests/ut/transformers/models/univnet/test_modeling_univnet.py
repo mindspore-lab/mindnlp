@@ -217,7 +217,7 @@ class UnivNetModelTest(ModelTesterMixin, unittest.TestCase):
             )
 
 
-# @slow
+@slow
 class UnivNetModelIntegrationTests(unittest.TestCase):
     def tearDown(self):
         super().tearDown()
@@ -270,7 +270,6 @@ class UnivNetModelIntegrationTests(unittest.TestCase):
         inputs = {
             "input_features": spectrogram,
             "noise_sequence": noise_sequence,
-            "generator": seed,
         }
 
         return inputs

@@ -353,7 +353,7 @@ class GPT2ModelTester:
             self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
             return result.loss
 
-        grad_fn = mindspore.value_and_grad(forward, None, model.trainable_params())
+        grad_fn = mindspore.value_and_grad(forward, None, tuple(model.parameters()))
         grad_fn(input_ids, token_type_ids)
 
     def create_and_check_double_lm_head_model(

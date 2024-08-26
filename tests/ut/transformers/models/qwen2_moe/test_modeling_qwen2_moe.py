@@ -12,20 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the MindSpore Qwen2MoE model. """
-
+"""Testing suite for the PyTorch Qwen2MoE model."""
 
 import gc
+import tempfile
 import unittest
 
-import numpy as np
+import pytest
 
 from mindnlp.transformers import AutoTokenizer, Qwen2MoeConfig
-from mindnlp.engine.utils import set_seed
+from mindnlp.engine import set_seed
 from mindnlp.utils.testing_utils import (
     require_mindspore,
+    require_mindspore_gpu,
     slow,
-    is_mindspore_available
+    is_mindspore_available,
 )
 
 from ...generation.test_utils import GenerationTesterMixin
@@ -36,11 +37,12 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import ops
+    from mindnlp.core import nn, ops, no_grad
 
     from mindnlp.transformers import (
         Qwen2MoeForCausalLM,
         Qwen2MoeForSequenceClassification,
+        Qwen2MoeForTokenClassification,
         Qwen2MoeModel,
     )
 
@@ -184,7 +186,7 @@ class Qwen2MoeModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = Qwen2MoeModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask)
         result = model(input_ids)
         self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
@@ -204,7 +206,7 @@ class Qwen2MoeModelTester:
     ):
         config.add_cross_attention = True
         model = Qwen2MoeModel(config)
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -233,8 +235,7 @@ class Qwen2MoeModelTester:
         encoder_attention_mask,
     ):
         model = Qwen2MoeForCausalLM(config=config)
-        model
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
@@ -254,7 +255,7 @@ class Qwen2MoeModelTester:
         config.is_decoder = True
         config.add_cross_attention = True
         model = Qwen2MoeForCausalLM(config=config)
-        model.set_train(False)
+        model.eval()
 
         # first forward pass
         outputs = model(
@@ -298,7 +299,7 @@ class Qwen2MoeModelTester:
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     # Copied from tests.models.llama.test_modeling_llama.LlamaModelTester.prepare_config_and_inputs_for_common
     def prepare_config_and_inputs_for_common(self):
@@ -320,13 +321,16 @@ class Qwen2MoeModelTester:
 # Copied from tests.models.mistral.test_modeling_mistral.MistralModelTest with Mistral->Qwen2Moe
 class Qwen2MoeModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (
-        (Qwen2MoeModel, Qwen2MoeForCausalLM, Qwen2MoeForSequenceClassification) if is_mindspore_available() else ()
+        (Qwen2MoeModel, Qwen2MoeForCausalLM, Qwen2MoeForSequenceClassification, Qwen2MoeForTokenClassification)
+        if is_mindspore_available()
+        else ()
     )
     all_generative_model_classes = (Qwen2MoeForCausalLM,) if is_mindspore_available() else ()
     pipeline_model_mapping = (
         {
             "feature-extraction": Qwen2MoeModel,
             "text-classification": Qwen2MoeForSequenceClassification,
+            "token-classification": Qwen2MoeForTokenClassification,
             "text-generation": Qwen2MoeForCausalLM,
             "zero-shot": Qwen2MoeForSequenceClassification,
         }
@@ -335,6 +339,7 @@ class Qwen2MoeModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCa
     )
     test_headmasking = False
     test_pruning = False
+    fx_compatible = True
 
     # TODO (ydshieh): Check this. See https://app.circleci.com/pipelines/github/huggingface/transformers/79245/workflows/9490ef58-79c2-410d-8f51-e3495156cf9c/jobs/1012146
     def is_pipeline_test_to_skip(
@@ -367,7 +372,7 @@ class Qwen2MoeModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCa
         attention_mask = input_ids.ne(1)
         sequence_labels = ids_tensor([self.model_tester.batch_size], self.model_tester.type_sequence_label_size)
         model = Qwen2MoeForSequenceClassification(config)
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=attention_mask, labels=sequence_labels)
         self.assertEqual(result.logits.shape, (self.model_tester.batch_size, self.model_tester.num_labels))
 
@@ -379,7 +384,7 @@ class Qwen2MoeModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCa
         attention_mask = input_ids.ne(1)
         sequence_labels = ids_tensor([self.model_tester.batch_size], self.model_tester.type_sequence_label_size)
         model = Qwen2MoeForSequenceClassification(config)
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=attention_mask, labels=sequence_labels)
         self.assertEqual(result.logits.shape, (self.model_tester.batch_size, self.model_tester.num_labels))
 
@@ -393,17 +398,68 @@ class Qwen2MoeModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCa
             [self.model_tester.batch_size, config.num_labels], self.model_tester.type_sequence_label_size
         ).to(mindspore.float32)
         model = Qwen2MoeForSequenceClassification(config)
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=attention_mask, labels=sequence_labels)
         self.assertEqual(result.logits.shape, (self.model_tester.batch_size, self.model_tester.num_labels))
 
-    @unittest.skip("Qwen2Moe buffers include complex numbers, which breaks this test")
+    # Copied from tests.models.llama.test_modeling_llama.LlamaModelTest.test_llama_token_classification_model with Llama->Qwen2Moe,llama->Qwen2Moe
+    def test_Qwen2Moe_token_classification_model(self):
+        config, input_dict = self.model_tester.prepare_config_and_inputs_for_common()
+        config.num_labels = 3
+        input_ids = input_dict["input_ids"]
+        attention_mask = input_ids.ne(1)
+        token_labels = ids_tensor([self.model_tester.batch_size, self.model_tester.seq_length], config.num_labels)
+        model = Qwen2MoeForTokenClassification(config=config)
+        model.eval()
+        result = model(input_ids, attention_mask=attention_mask, labels=token_labels)
+        self.assertEqual(
+            result.logits.shape,
+            (self.model_tester.batch_size, self.model_tester.seq_length, self.model_tester.num_labels),
+        )
+
+    @unittest.skip(reason="Qwen2Moe buffers include complex numbers, which breaks this test")
     def test_save_load_fast_init_from_base(self):
         pass
 
-    @unittest.skip("Qwen2Moe uses GQA on all models so the KV cache is a non standard format")
+    @unittest.skip(reason="Qwen2Moe uses GQA on all models so the KV cache is a non standard format")
     def test_past_key_values_format(self):
         pass
+
+    # Ignore copy
+    def test_load_balancing_loss(self):
+        r"""
+        Let's make sure we can actually compute the loss and do a backward on it.
+        """
+        config, input_dict = self.model_tester.prepare_config_and_inputs_for_common()
+        config.num_labels = 3
+        config.num_experts = 8
+        config.expert_interval = 2
+        config.output_router_logits = True
+        input_ids = input_dict["input_ids"]
+        attention_mask = input_ids.ne(1)
+        model = Qwen2MoeForCausalLM(config)
+        model.eval()
+        result = model(input_ids, attention_mask=attention_mask)
+        self.assertEqual(result.router_logits[0].shape, (91, config.num_experts))
+        assert ops.allclose(result.aux_loss, mindspore.tensor(2, dtype=mindspore.float32), rtol=1e-2, atol=1e-2)
+
+        # First, we make sure that adding padding tokens doesn't change the loss
+        # loss(input_ids, attention_mask=None) == loss(input_ids + padding, attention_mask=attention_mask_with_padding)
+        pad_length = 1000
+        # Add padding tokens (assume that pad_token_id=1) to input_ids
+        padding_block = ops.ones(input_ids.shape[0], pad_length, dtype=mindspore.int64)
+        padded_input_ids = ops.cat((padding_block, input_ids), dim=1)  # this is to simulate padding to the left
+        padded_attention_mask = padded_input_ids.ne(1)
+
+        padded_result = model(padded_input_ids, attention_mask=padded_attention_mask)
+        assert ops.allclose(result.aux_loss, padded_result.aux_loss, rtol=1e-4, atol=1e-4)
+
+        # We make sure that the loss of includding padding tokens != the loss without padding tokens
+        # if attention_mask=None --> we don't exclude padding tokens
+        include_padding_result = model(padded_input_ids, attention_mask=None)
+
+        # This is to mimic torch.testing.assert_not_close
+        self.assertNotAlmostEqual(include_padding_result.aux_loss.item(), result.aux_loss.item())
 
 
 @require_mindspore
@@ -411,16 +467,17 @@ class Qwen2MoeIntegrationTest(unittest.TestCase):
     @slow
     def test_model_a2_7b_logits(self):
         input_ids = [1, 306, 4658, 278, 6593, 310, 2834, 338]
-        model = Qwen2MoeForCausalLM.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B")
+        model = Qwen2MoeForCausalLM.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", mirror='modelscope')
         input_ids = mindspore.tensor([input_ids])
-        out = model(input_ids).logits
+        with no_grad():
+            out = model(input_ids).logits
         # Expected mean on dim = -1
         EXPECTED_MEAN = mindspore.tensor([[-4.2125, -3.6416, -4.9136, -4.3005, -4.9938, -3.4393, -3.5195, -4.1621]])
-        self.assertTrue(np.allclose(out.mean(-1).asnumpy(), EXPECTED_MEAN.asnumpy(), atol=1e-2, rtol=1e-2))
+        assert ops.allclose(out.mean(-1), EXPECTED_MEAN, atol=1e-2, rtol=1e-2)
         # slicing logits[0, 0, 0:30]
         EXPECTED_SLICE = mindspore.tensor([2.3013, -0.6595, -0.1389, -1.4095, -1.7381, -1.7609, -2.0449, -2.4289, -3.0271, -2.1351, -0.6568, -4.6012, -1.9102, -0.7475, -3.1377, 4.6904, 7.1936, 7.0991, 6.4414, 6.1720, 6.2617, 5.8751, 5.6997, 5.6011, 5.5828, -3.9505, -0.5384, -0.3392, 1.2445, 2.0714])  # fmt: skip
         print(out[0, 0, :30])
-        self.assertTrue(np.allclose(out[0, 0, :30].asnumpy(), EXPECTED_SLICE.asnumpy(), atol=1e-4, rtol=1e-4))
+        assert ops.allclose(out[0, 0, :30], EXPECTED_SLICE, atol=1e-4, rtol=1e-4)
 
         del model
         gc.collect()
@@ -429,8 +486,8 @@ class Qwen2MoeIntegrationTest(unittest.TestCase):
     def test_model_a2_7b_generation(self):
         EXPECTED_TEXT_COMPLETION = """To be or not to be, that is the question. This is the question that has been asked by many people over the"""
         prompt = "To be or not to"
-        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", use_fast=False)
-        model = Qwen2MoeForCausalLM.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B")
+        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", use_fast=False, mirror='modelscope')
+        model = Qwen2MoeForCausalLM.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", mirror='modelscope')
         input_ids = tokenizer.encode(prompt, return_tensors="ms")
 
         # greedy generation outputs
@@ -441,61 +498,35 @@ class Qwen2MoeIntegrationTest(unittest.TestCase):
         del model
         gc.collect()
 
-    @slow
-    def test_model_a2_7b_long_prompt(self):
-        EXPECTED_OUTPUT_TOKEN_IDS = [306, 338]
-        # An input with 4097 tokens that is above the size of the sliding window
-        input_ids = [1] + [306, 338] * 2048
-        model = Qwen2MoeForCausalLM.from_pretrained(
-            "Qwen/Qwen1.5-MoE-A2.7B",
-        )
-        input_ids = mindspore.tensor([input_ids])
-        generated_ids = model.generate(input_ids, max_new_tokens=4, temperature=0)
-        self.assertEqual(EXPECTED_OUTPUT_TOKEN_IDS, generated_ids[0][-2:].tolist())
+    # @require_bitsandbytes
+    # @slow
+    # @require_flash_attn
+    # @pytest.mark.flash_attn_test
+    # def test_model_a2_7b_long_prompt(self):
+    #     EXPECTED_OUTPUT_TOKEN_IDS = [306, 338]
+    #     # An input with 4097 tokens that is above the size of the sliding window
+    #     input_ids = [1] + [306, 338] * 2048
+    #     model = Qwen2MoeForCausalLM.from_pretrained(
+    #         "Qwen/Qwen1.5-MoE-A2.7B",
+    #         device_map="auto",
+    #         load_in_4bit=True,
+    #         attn_implementation="flash_attention_2",
+    #     )
+    #     input_ids = mindspore.tensor([input_ids]).to(model.model.embed_tokens.weight.device)
+    #     generated_ids = model.generate(input_ids, max_new_tokens=4, temperature=0)
+    #     self.assertEqual(EXPECTED_OUTPUT_TOKEN_IDS, generated_ids[0][-2:].tolist())
 
-        # Assisted generation
-        assistant_model = model
-        assistant_model.generation_config.num_assistant_tokens = 2
-        assistant_model.generation_config.num_assistant_tokens_schedule = "constant"
-        generated_ids = model.generate(input_ids, max_new_tokens=4, temperature=0)
-        self.assertEqual(EXPECTED_OUTPUT_TOKEN_IDS, generated_ids[0][-2:].tolist())
+    #     # Assisted generation
+    #     assistant_model = model
+    #     assistant_model.generation_config.num_assistant_tokens = 2
+    #     assistant_model.generation_config.num_assistant_tokens_schedule = "constant"
+    #     generated_ids = model.generate(input_ids, max_new_tokens=4, temperature=0)
+    #     self.assertEqual(EXPECTED_OUTPUT_TOKEN_IDS, generated_ids[0][-2:].tolist())
 
-        del assistant_model
-        del model
-        gc.collect()
+    #     del assistant_model
+    #     del model
+    #     gc.collect()
 
-    @slow
-    def test_model_a2_7b_long_prompt(self):
-        EXPECTED_OUTPUT_TOKEN_IDS = [306, 338]
-        # An input with 4097 tokens that is above the size of the sliding window
-        input_ids = [1] + [306, 338] * 2048
-        model = Qwen2MoeForCausalLM.from_pretrained(
-            "Qwen/Qwen1.5-MoE-A2.7B",
-        )
-        input_ids = mindspore.tensor([input_ids])
-        generated_ids = model.generate(input_ids, max_new_tokens=4, temperature=0)
-        self.assertEqual(EXPECTED_OUTPUT_TOKEN_IDS, generated_ids[0][-2:].tolist())
-
-        # Assisted generation
-        assistant_model = model
-        assistant_model.generation_config.num_assistant_tokens = 2
-        assistant_model.generation_config.num_assistant_tokens_schedule = "constant"
-        generated_ids = assistant_model.generate(input_ids, max_new_tokens=4, temperature=0)
-        self.assertEqual(EXPECTED_OUTPUT_TOKEN_IDS, generated_ids[0][-2:].tolist())
-
-        del assistant_model
-
-        gc.collect()
-
-        EXPECTED_TEXT_COMPLETION = """To be or not to be, that is the question. This is the question that has been asked by many people over the"""
-        prompt = "To be or not to"
-        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", use_fast=False)
-
-        input_ids = tokenizer.encode(prompt, return_tensors="ms")
-        # greedy generation outputs
-        generated_ids = model.generate(input_ids, max_new_tokens=20, temperature=0)
-        text = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
-        self.assertEqual(EXPECTED_TEXT_COMPLETION, text)
 
     @slow
     def test_speculative_generation(self):
@@ -503,14 +534,15 @@ class Qwen2MoeIntegrationTest(unittest.TestCase):
             "To be or not to be, that is the question.\nThe answer is to be, of course. But what does it"
         )
         prompt = "To be or not to"
-        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", use_fast=False)
+        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", use_fast=False, mirror='modelscope')
         model = Qwen2MoeForCausalLM.from_pretrained(
-            "Qwen/Qwen1.5-MoE-A2.7B", ms_dtype=mindspore.float16
+            "Qwen/Qwen1.5-MoE-A2.7B", ms_dtype=mindspore.float16, mirror='modelscope'
         )
         assistant_model = Qwen2MoeForCausalLM.from_pretrained(
-            "Qwen/Qwen1.5-MoE-A2.7B", ms_dtype=mindspore.float16
+            "Qwen/Qwen1.5-MoE-A2.7B", ms_dtype=mindspore.float16, mirror='modelscope'
         )
         input_ids = tokenizer.encode(prompt, return_tensors="ms")
+
         # greedy generation outputs
         set_seed(0)
         generated_ids = model.generate(

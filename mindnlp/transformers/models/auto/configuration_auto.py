@@ -72,6 +72,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("cvt", "CvtConfig"),
         ("data2vec-text", "Data2VecTextConfig"),
         ("data2vec-audio","Data2VecAudioConfig"),
+        ("dbrx", "DbrxConfig"),
         ("deit", "DeiTConfig"),
         ("deberta", "DebertaConfig"),
         ("deberta-v2", "DebertaV2Config"),
@@ -90,6 +91,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("ernie_m", "ErnieMConfig"),
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),
+        ("flaubert", "FlaubertConfig"),
         ("flava", "FlavaConfig"),
         ("florence2", "Florence2Config"),
         ("fnet", "FNetConfig"),
@@ -103,6 +105,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("gpt2", "GPT2Config"),
         ("gpt_bigcode", "GPTBigCodeConfig"),
         ("gptj", "GPTJConfig"),
+        ("gpt_neo", "GPTNeoConfig"),
         ("gpt_neox", "GPTNeoXConfig"),
         ("gpt_pangu", "GPTPanguConfig"),
         ("groupvit", "GroupViTConfig"),
@@ -141,14 +144,18 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("olmo", "OlmoConfig"),
         ("oneformer", "OneFormerConfig"),
         ("openelm", "OpenELMConfig"),
+        ("openai-gpt", "OpenAIGPTConfig"),
         ("opt", "OPTConfig"),
         ("owlv2", "Owlv2Config"),
         ("owlvit", "OwlViTConfig"),
+        ("patchtst", "PatchTSTConfig"),
         ("pegasus", "PegasusConfig"),
+        ("pegasus_x", "PegasusXConfig"),
         ("perceiver", "PerceiverConfig"),
         ("persimmon", "PersimmonConfig"),
         ("phi", "PhiConfig"),
         ("phi3", "Phi3Config"),
+        ("pix2struct", "Pix2StructConfig"),
         ("plbart", "PLBartConfig"),
         ("prophetnet", "ProphetNetConfig"),
         ("qdqbert", "QDQBertConfig"),
@@ -188,6 +195,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("univnet", "UnivNetConfig"),
         ("videomae", "VideoMAEConfig"),
         ("vit", "ViTConfig"),
+        ("vits", "VitsConfig"),
         ("vilt", "ViltConfig"),
         ("vit_hybrid", "ViTHybridConfig"),
         ("vit_msn", "ViTMSNConfig"),
@@ -485,6 +493,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("data2vec-audio", "Data2VecAudio"),
         ("data2vec-text", "Data2VecText"),
         ("data2vec-vision", "Data2VecVision"),
+        ("dbrx", "DBRX"),
         ("deberta", "DeBERTa"),
         ("deberta-v2", "DeBERTa-v2"),
         ("decision_transformer", "Decision Transformer"),
@@ -610,6 +619,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("opt", "OPT"),
         ("owlv2", "OWLv2"),
         ("owlvit", "OWL-ViT"),
+        ("patchtst", "PatchTST"),
         ("pegasus", "Pegasus"),
         ("pegasus_x", "PEGASUS-X"),
         ("perceiver", "Perceiver"),
@@ -963,13 +973,13 @@ class _LazyLoadAllMappings(OrderedDict):
             None.
 
         Raises:
-            FutureWarning: If ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated and will be removed in v5 of Transformers.
+            FutureWarning: If ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated.
                 It does not contain all available model checkpoints. Refer to hf.co/models for that.
         """
         if self._initialized:
             return
         warnings.warn(
-            "ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated and will be removed in v5 of Transformers. "
+            "ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated. "
             "It does not contain all available model checkpoints, far from it. Checkout hf.co/models for that.",
             FutureWarning,
         )

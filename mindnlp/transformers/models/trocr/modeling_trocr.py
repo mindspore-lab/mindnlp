@@ -116,9 +116,8 @@ class TrOCRSinusoidalPositionalEmbedding(nn.Module):
         if self.weights is None or max_pos > self.weights.shape[0]:
             # recompute/expand embeddings if needed
             self.weights = self.get_embedding(max_pos, self.embedding_dim, self.padding_idx)
-        self.weights = self.weights.to(self._float_tensor)
 
-        x = self.weights.index_select(0, position_ids.view(-1)).view(bsz, seq_len, -1).detach()
+        x = self.weights.index_select(0, position_ids.view(-1)).view(bsz, seq_len, -1)
 
         return x
 

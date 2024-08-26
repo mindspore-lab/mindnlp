@@ -49,7 +49,6 @@ if is_mindspore_available():
     )
     # from mindnlp.transformers.pipelines import TranslationPipeline
 
-# mindspore.set_context(device_target="CPU")
 
 class FSMTModelTester:
     def __init__(
@@ -337,7 +336,7 @@ class FSMTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
 

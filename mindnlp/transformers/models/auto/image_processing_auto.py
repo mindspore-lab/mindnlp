@@ -91,7 +91,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         # ("owlv2", "Owlv2ImageProcessor"),
         ("owlvit", "OwlViTImageProcessor"),
         ("perceiver", "PerceiverImageProcessor"),
-        # ("pix2struct", "Pix2StructImageProcessor"),
+        ("pix2struct", "Pix2StructImageProcessor"),
         ("poolformer", "PoolFormerImageProcessor"),
         # ("pvt", "PvtImageProcessor"),
         # ("pvt_v2", "PvtImageProcessor"),
@@ -235,7 +235,7 @@ def get_image_processor_config(
     use_auth_token = kwargs.pop("use_auth_token", None)
     if use_auth_token is not None:
         warnings.warn(
-            "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+            "The `use_auth_token` argument is deprecated. Please use `token` instead.",
             FutureWarning,
         )
         if token is not None:
@@ -366,7 +366,7 @@ class AutoImageProcessor:
         use_auth_token = kwargs.pop("use_auth_token", None)
         if use_auth_token is not None:
             warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+                "The `use_auth_token` argument is deprecated. Please use `token` instead.",
                 FutureWarning,
             )
             if kwargs.get("token", None) is not None:

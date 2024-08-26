@@ -86,6 +86,7 @@ _modelscope_available = _is_package_available("modelscope")
 _jieba_available = _is_package_available("jieba")
 _pytesseract_available = _is_package_available("pytesseract")
 _g2p_en_available = _is_package_available("g2p_en")
+_phonemizer_available = _is_package_available("phonemizer")
 _mindspore_version, _mindspore_available = _is_package_available(
     "mindspore", return_version=True
 )
@@ -431,6 +432,10 @@ def is_tiktoken_available():
     return _tiktoken_available
 
 
+def is_phonemizer_available():
+    return _phonemizer_available
+
+
 @lru_cache()
 def is_vision_available():
     """
@@ -669,11 +674,11 @@ def mindspore_required(func):
         None. The function returns None.
     
     Raises:
-        FutureWarning: If the method `torch_required` is deprecated and will be removed in v4.36. 
+        FutureWarning: If the method `torch_required` is deprecated. 
         ImportError: If the decorated function requires MindSpore but MindSpore is not available.
     """
     warnings.warn(
-        "The method `torch_required` is deprecated and will be removed in v4.36. Use `requires_backends` instead.",
+        "The method `torch_required` is deprecated. Use `requires_backends` instead.",
         FutureWarning,
     )
 

@@ -88,7 +88,7 @@ class FuyuForCausalLM(FuyuPreTrainedModel):
         return self.language_model.tie_weights()
 
     def resize_token_embeddings(self, new_num_tokens: Optional[int] = None, pad_to_multiple_of=None) -> nn.Embedding:
-        # TODO: config.vocab_size is deprecated and will be removed in v4.43.
+        # TODO: config.vocab_size is deprecated.43.
         # `resize_token_embeddings` should work from `modeling_utils.py``
         model_embeds = self.language_model.resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
         self.config.text_config.vocab_size = model_embeds.num_embeddings

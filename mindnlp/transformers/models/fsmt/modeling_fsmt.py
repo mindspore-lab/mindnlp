@@ -25,12 +25,11 @@
 #
 # Paper: Facebook FAIR's WMT19 News Translation Task Submission https://arxiv.org/abs/1907.06616
 #
-"""PyTorch Fairseq model, ported from https://github.com/pytorch/fairseq/tree/master/examples/wmt19"""
+"""MindSpore Fairseq model, ported from https://github.com/pytorch/fairseq/tree/master/examples/wmt19"""
 
 import math
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import numpy as np
 import mindspore
 
 from mindnlp.core import nn, ops
@@ -849,7 +848,7 @@ class Attention(nn.Module):
         if key_padding_mask is not None:  # don't attend to padding symbols
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
             reshaped = key_padding_mask.unsqueeze(1).unsqueeze(2)
-            attn_weights = attn_weights.masked_fill(reshaped, np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min)
+            attn_weights = attn_weights.masked_fill(reshaped, float(ops.finfo(attn_weights.dtype).min))
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         attn_weights = ops.softmax(attn_weights, dim=-1)
@@ -916,7 +915,7 @@ class Attention(nn.Module):
 
 def fill_with_neg_inf(t):
     """FP16-compatible function that fills a input_ids with -inf."""
-    return t.float().fill(np.finfo(mindspore.dtype_to_nptype(t.dtype)).min).type_as(t)
+    return t.float().fill(float(ops.finfo(t.dtype).min)).type_as(t)
 
 
 # Public API

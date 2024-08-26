@@ -57,6 +57,8 @@ def isin(elements, test_elements):
 
 # isinf
 def isinf(input):
+    if input.dtype in (mindspore.int32, mindspore.int64):
+        input = input.to(mindspore.float32)
     return ops.isinf(input)
 
 # isposinf
@@ -65,6 +67,8 @@ def isinf(input):
 
 # isnan
 def isnan(input):
+    if input.dtype in (mindspore.int32, mindspore.int64):
+        input = input.to(mindspore.float32)
     return ops.isnan(input)
 
 # isreal

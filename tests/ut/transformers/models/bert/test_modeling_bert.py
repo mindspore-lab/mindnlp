@@ -12,22 +12,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import numpy as np
+import os
+import tempfile
+import unittest
 
-from mindnlp.transformers import BertConfig
+from mindnlp.transformers import AutoTokenizer, BertConfig
 from mindnlp.transformers.models.auto import get_values
-from mindnlp.utils.testing_utils import CaptureLogger, require_mindspore, is_mindspore_available, slow
-from mindnlp.utils import logging
+from mindnlp.utils.testing_utils import (
+    CaptureLogger,
+    require_mindspore,
+    slow,
+    is_mindspore_available
+)
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
-from .....common import MindNLPTestCase
+# from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import ops
+    from mindnlp.core import ops, no_grad
 
     from mindnlp.transformers import (
         MODEL_FOR_PRETRAINING_MAPPING,
@@ -40,9 +46,8 @@ if is_mindspore_available():
         BertForTokenClassification,
         BertLMHeadModel,
         BertModel,
+        logging,
     )
-
-    from mindnlp.transformers.models.bert.modeling_bert import BERT_SUPPORT_LIST
 
 
 class BertModelTester:
@@ -167,8 +172,7 @@ class BertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = BertModel(config=config)
-        
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids)
         result = model(input_ids, token_type_ids=token_type_ids)
         result = model(input_ids)
@@ -189,8 +193,7 @@ class BertModelTester:
     ):
         config.add_cross_attention = True
         model = BertModel(config)
-        
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -221,8 +224,7 @@ class BertModelTester:
         encoder_attention_mask,
     ):
         model = BertLMHeadModel(config=config)
-        
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
@@ -230,8 +232,7 @@ class BertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = BertForMaskedLM(config=config)
-        
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
@@ -249,8 +250,7 @@ class BertModelTester:
     ):
         config.add_cross_attention = True
         model = BertLMHeadModel(config=config)
-        
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -282,7 +282,7 @@ class BertModelTester:
     ):
         config.is_decoder = True
         config.add_cross_attention = True
-        model = BertLMHeadModel(config=config).set_train(False)
+        model = BertLMHeadModel(config=config).eval()
 
         # first forward pass
         outputs = model(
@@ -319,21 +319,20 @@ class BertModelTester:
         )["hidden_states"][0]
 
         # select random slice
-        random_slice_idx = ids_tensor((1,), output_from_past.shape[-1])
+        random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
         output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx]
         output_from_past_slice = output_from_past[:, :, random_slice_idx]
 
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_for_next_sequence_prediction(
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = BertForNextSentencePrediction(config=config)
-        
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -346,8 +345,7 @@ class BertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = BertForPreTraining(config=config)
-        
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -362,8 +360,7 @@ class BertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = BertForQuestionAnswering(config=config)
-        
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -379,8 +376,7 @@ class BertModelTester:
     ):
         config.num_labels = self.num_labels
         model = BertForSequenceClassification(config)
-        
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=sequence_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
@@ -389,8 +385,7 @@ class BertModelTester:
     ):
         config.num_labels = self.num_labels
         model = BertForTokenClassification(config=config)
-        
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.num_labels))
 
@@ -399,8 +394,7 @@ class BertModelTester:
     ):
         config.num_choices = self.num_choices
         model = BertForMultipleChoice(config=config)
-        
-        model.set_train(False)
+        model.eval()
         multiple_choice_inputs_ids = input_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
         multiple_choice_token_type_ids = token_type_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
         multiple_choice_input_mask = input_mask.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
@@ -428,7 +422,7 @@ class BertModelTester:
 
 
 @require_mindspore
-class BertModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
+class BertModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (
         (
             BertModel,
@@ -459,6 +453,7 @@ class BertModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
         else {}
     )
     fx_compatible = True
+    model_split_percents = [0.5, 0.8, 0.9]
 
     # special case for ForPreTraining model
     def _prepare_for_class(self, inputs_dict, model_class, return_labels=False):
@@ -467,7 +462,7 @@ class BertModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
         if return_labels:
             if model_class in get_values(MODEL_FOR_PRETRAINING_MAPPING):
                 inputs_dict["labels"] = ops.zeros(
-                    self.model_tester.batch_size, self.model_tester.seq_length, dtype=mindspore.int64
+                    (self.model_tester.batch_size, self.model_tester.seq_length), dtype=mindspore.int64
                 )
                 inputs_dict["next_sentence_label"] = ops.zeros(
                     self.model_tester.batch_size, dtype=mindspore.int64
@@ -494,6 +489,11 @@ class BertModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
     def test_model_as_decoder(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs_for_decoder()
         self.model_tester.create_and_check_model_as_decoder(*config_and_inputs)
+
+    @unittest.skip(reason="Generate needs input ids")
+    def test_inputs_embeds_matches_input_ids_with_generate(self):
+        # generate only works with input ids for bertforcausalLM
+        pass
 
     def test_model_as_decoder_with_default_input_mask(self):
         # This regression test was failing with PyTorch < 1.3
@@ -589,56 +589,92 @@ class BertModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
 
         with CaptureLogger(logger) as cl:
             model = BertModel(config=config)
-            
-            model.set_train(False)
+            model.eval()
             model(input_ids, attention_mask=None, token_type_ids=token_type_ids)
         self.assertIn("We strongly recommend passing in an `attention_mask`", cl.out)
 
     @slow
     def test_model_from_pretrained(self):
-        for model_name in BERT_SUPPORT_LIST[:1]:
-            model = BertModel.from_pretrained(model_name)
-            self.assertIsNotNone(model)
+        model_name = "google-bert/bert-base-uncased"
+        model = BertModel.from_pretrained(model_name)
+        self.assertIsNotNone(model)
 
 
 @require_mindspore
-class BertModelIntegrationTest(MindNLPTestCase):
+class BertModelIntegrationTest(unittest.TestCase):
     @slow
     def test_inference_no_head_absolute_embedding(self):
-        model = BertModel.from_pretrained("bert-base-uncased")
+        model = BertModel.from_pretrained("google-bert/bert-base-uncased")
         input_ids = mindspore.tensor([[0, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 2]])
         attention_mask = mindspore.tensor([[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
-        output = model(input_ids, attention_mask=attention_mask)[0]
+        with no_grad():
+            output = model(input_ids, attention_mask=attention_mask)[0]
         expected_shape = (1, 11, 768)
         self.assertEqual(output.shape, expected_shape)
         expected_slice = mindspore.tensor([[[0.4249, 0.1008, 0.7531], [0.3771, 0.1188, 0.7467], [0.4152, 0.1098, 0.7108]]])
 
-        self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(output[:, 1:4, 1:4], expected_slice, atol=1e-3))
 
     @slow
     def test_inference_no_head_relative_embedding_key(self):
         model = BertModel.from_pretrained("zhiheng-huang/bert-base-uncased-embedding-relative-key")
         input_ids = mindspore.tensor([[0, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 2]])
         attention_mask = mindspore.tensor([[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
-        output = model(input_ids, attention_mask=attention_mask)[0]
+        with no_grad():
+            output = model(input_ids, attention_mask=attention_mask)[0]
         expected_shape = (1, 11, 768)
         self.assertEqual(output.shape, expected_shape)
         expected_slice = mindspore.tensor(
             [[[0.0756, 0.3142, -0.5128], [0.3761, 0.3462, -0.5477], [0.2052, 0.3760, -0.1240]]]
         )
 
-        self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(output[:, 1:4, 1:4], expected_slice, atol=1e-3))
 
     @slow
     def test_inference_no_head_relative_embedding_key_query(self):
         model = BertModel.from_pretrained("zhiheng-huang/bert-base-uncased-embedding-relative-key-query")
         input_ids = mindspore.tensor([[0, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 2]])
         attention_mask = mindspore.tensor([[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
-        output = model(input_ids, attention_mask=attention_mask)[0]
+        with no_grad():
+            output = model(input_ids, attention_mask=attention_mask)[0]
         expected_shape = (1, 11, 768)
         self.assertEqual(output.shape, expected_shape)
         expected_slice = mindspore.tensor(
             [[[0.6496, 0.3784, 0.8203], [0.8148, 0.5656, 0.2636], [-0.0681, 0.5597, 0.7045]]]
         )
 
-        self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
+        print(output[:, 1:4, 1:4])
+        self.assertTrue(ops.allclose(output[:, 1:4, 1:4], expected_slice, atol=1e-3))
+
+    def test_sdpa_ignored_mask(self):
+        pkv = []
+
+        model = BertModel.from_pretrained("hf-internal-testing/tiny-random-BertModel", attn_implementation="eager")
+        model_sdpa = BertModel.from_pretrained("hf-internal-testing/tiny-random-BertModel", attn_implementation="sdpa")
+
+        model = model.eval()
+        model_sdpa = model_sdpa.eval()
+
+        for _ in range(model.config.num_hidden_layers):
+            num_heads = model.config.num_attention_heads
+            head_dim = model.config.hidden_size // model.config.num_attention_heads
+            pkv.append([ops.rand(1, num_heads, 3, head_dim), ops.rand(1, num_heads, 3, head_dim)])
+
+        tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-BertModel")
+        inp = tokenizer("I am in Paris and", return_tensors="ms")
+
+        del inp["attention_mask"]
+
+        with no_grad():
+            res_eager = model(**inp)
+            res_sdpa = model_sdpa(**inp)
+            self.assertTrue(
+                ops.allclose(res_eager.last_hidden_state, res_sdpa.last_hidden_state, atol=1e-3, rtol=1e-3)
+            )
+
+            # Case where query length != kv_length.
+            res_eager = model(**inp, past_key_values=pkv)
+            res_sdpa = model_sdpa(**inp, past_key_values=pkv)
+            self.assertTrue(
+                ops.allclose(res_eager.last_hidden_state, res_sdpa.last_hidden_state, atol=1e-3, rtol=1e-3)
+            )

@@ -33,6 +33,7 @@ from zipfile import is_zipfile
 import mindspore
 from mindspore import Tensor
 from mindspore._c_expression import typing # pylint: disable=no-name-in-module, import-error
+from mindspore.communication import get_group_size
 from mindnlp.configs import GENERATOR_SEED
 from mindnlp.core import nn, ops, set_default_dtype, get_default_dtype
 from mindnlp.core.serialization import load, save_checkpoint, load_checkpoint, safe_save_file, safe_load_file
@@ -70,6 +71,8 @@ from ..utils import (
 )
 from ..utils.download import convert_file_size_to_int, get_checkpoint_shard_files
 
+from ..accelerate import infer_auto_device_map
+from ..accelerate.utils import get_balanced_memory, get_max_memory, check_tied_parameters_on_same_device, modify_model_for_pp_infer
 
 PARAM_RENAME_WARNING = "A parameter name that contains `{}` will be renamed internally to `{}`. Please use a different name to suppress this warning."
 
@@ -851,7 +854,7 @@ class ModuleUtilsMixin:
         """-> [num_hidden_layers x batch x num_heads x seq_length x seq_length]"""
         if head_mask.ndim == 1:
             head_mask = head_mask.unsqueeze(0).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
-            head_mask = head_mask.expand(num_hidden_layers, -1, -1, -1, -1)
+            head_mask = head_mask.broadcast_to((num_hidden_layers, -1, -1, -1, -1))
         elif head_mask.ndim == 2:
             head_mask = head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)  # We can specify head_mask for each layer
         assert head_mask.ndim == 5, f"head_mask.dim != 5, instead {head_mask.ndim}"
@@ -1413,17 +1416,21 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
         # output_embeddings.weight = nn.Parameter(input_embeddings.weight.clone())
         # # else:
         output_embeddings.weight = input_embeddings.weight
-
         if getattr(output_embeddings, "bias", None) is not None:
-            output_embeddings.bias.assign_value(nn.functional.pad(
-                output_embeddings.bias,
-                (
+            if output_embeddings.weight.shape[0] - output_embeddings.bias.shape[0] > 0:
+                new_bias = nn.functional.pad(
+                    output_embeddings.bias,
+                    (
+                        0,
+                        output_embeddings.weight.shape[0] - output_embeddings.bias.shape[0],
+                    ),
+                    "constant",
                     0,
-                    output_embeddings.weight.shape[0] - output_embeddings.bias.shape[0],
-                ),
-                "constant",
-                0,
-            ))
+                )
+            else:
+                new_bias = output_embeddings.bias[:output_embeddings.weight.shape[0]]
+            output_embeddings.bias.assign_value(new_bias)
+
         if hasattr(output_embeddings, "out_features") and hasattr(input_embeddings, "num_embeddings"):
             output_embeddings.out_features = input_embeddings.num_embeddings
 
@@ -1925,7 +1932,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
 
         if use_auth_token is not None:
             warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+                "The `use_auth_token` argument is deprecated. Please use `token` instead.",
                 FutureWarning,
             )
             if token is not None:
@@ -1941,7 +1948,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
 
         if "save_config" in kwargs:
             warnings.warn(
-                "`save_config` is deprecated and will be removed in v5 of Transformers. Use `is_main_process` instead."
+                "`save_config` is deprecated. Use `is_main_process` instead."
             )
             is_main_process = kwargs.pop("save_config")
         if safe_serialization and not is_safetensors_available():
@@ -2503,6 +2510,20 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
                 _adapter_model_path = pretrained_model_name_or_path
                 pretrained_model_name_or_path = json.load(f)["base_model_name_or_path"]
 
+        # change device_map into a map if we passed an int, a str or a torch.device
+        if isinstance(device_map, str) and device_map not in ["auto", "balanced", "balanced_low_0", "sequential"]:
+            raise ValueError(
+                "When passing device_map as a string, the value needs to be "
+                f"'auto', 'balanced', 'balanced_low_0', 'sequential' but found {device_map}."
+            )
+        elif isinstance(device_map, int):
+            if device_map < 0:
+                raise ValueError(
+                    "You can't pass device_map as a negative int. If you want to put the model on the cpu, pass device_map = 'cpu' "
+                )
+            else:
+                device_map = {"": device_map}
+
         if device_map is not None:
             if low_cpu_mem_usage is None:
                 low_cpu_mem_usage = True
@@ -2901,6 +2922,66 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
             keep_in_fp32_modules = model._keep_in_fp32_modules
         else:
             keep_in_fp32_modules = []
+
+        try:
+            group_size = get_group_size()
+        except:
+            group_size = 1
+
+        if isinstance(device_map, str):
+            special_dtypes = {}
+
+            special_dtypes.update(
+                {
+                    name: mindspore.float32
+                    for name, _ in model.named_parameters()
+                    if any(m in name for m in keep_in_fp32_modules)
+                }
+            )
+
+            target_dtype = ms_dtype
+
+            no_split_modules = model._get_no_split_modules(device_map)
+            if device_map not in ["auto", "balanced", "balanced_low_0", "sequential"]:
+                raise ValueError(
+                    "If passing a string for `device_map`, please choose 'auto', 'balanced', 'balanced_low_0' or "
+                    "'sequential'."
+                )
+
+            device_map_kwargs = {"no_split_module_classes": no_split_modules}
+            if "special_dtypes" in inspect.signature(infer_auto_device_map).parameters:
+                device_map_kwargs["special_dtypes"] = special_dtypes
+            elif len(special_dtypes) > 0:
+                logger.warning(
+                    "This model has some weights that should be kept in higher precision, you need to upgrade "
+                    "`accelerate` to properly deal with them (`pip install --upgrade accelerate`)."
+                )
+            if device_map != "sequential":
+                max_memory = get_balanced_memory(
+                    model,
+                    dtype=target_dtype,
+                    low_zero=(device_map == "balanced_low_0"),
+                    max_memory=max_memory,
+                    **device_map_kwargs,
+                )
+            else:
+                max_memory = get_max_memory(max_memory)
+
+            device_map_kwargs["max_memory"] = max_memory
+
+            # Make sure tied weights are tied before creating the device map.
+            model.tie_weights()
+            device_map = infer_auto_device_map(model, dtype=target_dtype, **device_map_kwargs)
+
+        elif device_map is not None:
+            model.tie_weights()
+            tied_params = find_tied_parameters(model)
+            # check if we don't have tied param in different devices
+            check_tied_parameters_on_same_device(tied_params, device_map)
+
+        # replace unnessasery modules to nn.Identity and insert send/recv for pipeline inference.
+        if device_map is not None and group_size != 1:
+            model = modify_model_for_pp_infer(model, device_map, model._no_split_modules)
 
         if from_pt:
             # restore default dtype
@@ -3425,7 +3506,6 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
                     f"to the `bos_token_id` ({self.config.bos_token_id}), `eos_token_id` ({self.config.eos_token_id}), "
                     f"or the `sep_token_id` ({self.config.sep_token_id}), and your input is not padded."
                 )
-
             logger.warning_once(warn_string)
 
 
@@ -3519,9 +3599,9 @@ class PoolerEndLogits(nn.Module):
         ), "One of start_states, start_positions should be not None"
         if start_positions is not None:
             slen, hsz = hidden_states.shape[-2:]
-            start_positions = start_positions[:, None, None].expand(-1, -1, hsz)  # shape (bsz, 1, hsz)
-            start_states = hidden_states.gather(-2, start_positions)  # shape (bsz, 1, hsz)
-            start_states = start_states.expand(-1, slen, -1)  # shape (bsz, slen, hsz)
+            start_positions = start_positions[:, None, None].broadcast_to((-1, -1, hsz))  # shape (bsz, 1, hsz)
+            start_states = ops.gather(hidden_states, -2, start_positions)  # shape (bsz, 1, hsz)
+            start_states = start_states.broadcast_to((-1, slen, -1))  # shape (bsz, slen, hsz)
 
         x = self.dense_0(ops.cat([hidden_states, start_states], dim=-1))
         x = self.activation(x)
@@ -3586,12 +3666,12 @@ class PoolerAnswerClass(nn.Module):
             start_states is not None or start_positions is not None
         ), "One of start_states, start_positions should be not None"
         if start_positions is not None:
-            start_positions = start_positions[:, None, None].expand(-1, -1, hsz)  # shape (bsz, 1, hsz)
-            start_states = hidden_states.gather(-2, start_positions).squeeze(-2)  # shape (bsz, hsz)
+            start_positions = start_positions[:, None, None].broadcast_to((-1, -1, hsz))  # shape (bsz, 1, hsz)
+            start_states = ops.gather(hidden_states, -2, start_positions).squeeze(-2)  # shape (bsz, hsz)
 
         if cls_index is not None:
-            cls_index = cls_index[:, None, None].expand(-1, -1, hsz)  # shape (bsz, 1, hsz)
-            cls_token_state = hidden_states.gather(-2, cls_index).squeeze(-2)  # shape (bsz, hsz)
+            cls_index = cls_index[:, None, None].broadcast_to((-1, -1, hsz))  # shape (bsz, 1, hsz)
+            cls_token_state = ops.gather(hidden_states, -2, cls_index).squeeze(-2)  # shape (bsz, hsz)
         else:
             cls_token_state = hidden_states[:, -1, :]  # shape (bsz, hsz)
 
@@ -3717,9 +3797,9 @@ class SQuADHead(nn.Module):
             start_top_log_probs, start_top_index = ops.topk(
                 start_log_probs, self.start_n_top, dim=-1
             )  # shape (bsz, start_n_top)
-            start_top_index_exp = start_top_index.unsqueeze(-1).expand(-1, -1, hsz)  # shape (bsz, start_n_top, hsz)
+            start_top_index_exp = start_top_index.unsqueeze(-1).broadcast_to((-1, -1, hsz))  # shape (bsz, start_n_top, hsz)
             start_states = ops.gather(hidden_states, -2, start_top_index_exp)  # shape (bsz, start_n_top, hsz)
-            start_states = start_states.unsqueeze(1).expand(-1, slen, -1, -1)  # shape (bsz, slen, start_n_top, hsz)
+            start_states = start_states.unsqueeze(1).broadcast_to((-1, slen, -1, -1))  # shape (bsz, slen, start_n_top, hsz)
 
             hidden_states_expanded = hidden_states.unsqueeze(2).expand_as(
                 start_states
@@ -3824,7 +3904,7 @@ class SequenceSummary(nn.Module):
         elif self.summary_type == "first":
             output = hidden_states[:, 0]
         elif self.summary_type == "mean":
-            output = hidden_states.mean(dim=1)
+            output = ops.mean(hidden_states, dim=1)
         elif self.summary_type == "cls_index":
             if cls_index is None:
                 cls_index = ops.full_like(
@@ -3834,9 +3914,9 @@ class SequenceSummary(nn.Module):
                 )
             else:
                 cls_index = cls_index.unsqueeze(-1).unsqueeze(-1)
-                cls_index = cls_index.expand((-1,) * (cls_index.ndim - 1) + (hidden_states.size(-1),))
+                cls_index = cls_index.broadcast_to((-1,) * (cls_index.ndim - 1) + (hidden_states.shape[-1],))
             # shape of cls_index: (bsz, XX, 1, hidden_size) where XX are optional leading dim of hidden_states
-            output = hidden_states.gather(-2, cls_index).squeeze(-2)  # shape (bsz, XX, hidden_size)
+            output = ops.gather(hidden_states, -2, cls_index).squeeze(-2)  # shape (bsz, XX, hidden_size)
         elif self.summary_type == "attn":
             raise NotImplementedError
 

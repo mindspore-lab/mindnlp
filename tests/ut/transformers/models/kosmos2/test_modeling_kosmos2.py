@@ -370,9 +370,6 @@ class Kosmos2ModelTest(ModelTesterMixin, unittest.TestCase):
 
     # overwrite from common in order to use `config.text_config.vocab_size` instead of `config.vocab_size`
     def test_tie_model_weights(self):
-        if not self.test_torchscript:
-            self.skipTest(reason="test_torchscript is set to False")
-
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def check_same_values(layer_1, layer_2):

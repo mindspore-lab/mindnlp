@@ -152,7 +152,7 @@ class SwinMaskedImageModelingOutput(ModelOutput):
     @property
     def logits(self):
         warnings.warn(
-            "logits attribute is deprecated and will be removed in version 5 of Transformers."
+            "logits attribute is deprecated."
             " Please use the reforwardion attribute to retrieve the final output instead.",
             FutureWarning,
         )

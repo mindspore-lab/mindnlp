@@ -12,25 +12,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the PyTorch CLIP model. """
-
+"""Testing suite for the PyTorch CLIP model."""
 
 import inspect
 import os
 import tempfile
 import unittest
+from typing import Optional, Tuple
 
 import numpy as np
 import requests
+from parameterized import parameterized
+from pytest import mark
 
 from mindnlp.transformers import CLIPConfig, CLIPTextConfig, CLIPVisionConfig
 from mindnlp.utils.testing_utils import (
     require_mindspore,
     require_vision,
-    require_mindspore,
     slow,
 )
-from mindnlp.utils import is_mindspore_available, is_vision_available
+from mindnlp.utils import (
+    is_mindspore_available,
+    is_vision_available,
+)
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import (
@@ -38,6 +42,7 @@ from ...test_modeling_common import (
     _config_zero_init,
     floats_tensor,
     ids_tensor,
+    is_flaky,
     random_attention_mask,
 )
 # from ...test_pipeline_mixin import PipelineTesterMixin
@@ -45,7 +50,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import nn, ops
+    from mindnlp.core import nn, ops, no_grad
 
     from mindnlp.transformers import (
         CLIPForImageClassification,
@@ -55,14 +60,12 @@ if is_mindspore_available():
         CLIPVisionModel,
         CLIPVisionModelWithProjection,
     )
-    from mindnlp.transformers.models.clip.modeling_clip import CLIP_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 if is_vision_available():
     from PIL import Image
 
     from mindnlp.transformers import CLIPProcessor
-
 
 
 class CLIPVisionModelTester:
@@ -127,9 +130,9 @@ class CLIPVisionModelTester:
 
     def create_and_check_model(self, config, pixel_values):
         model = CLIPVisionModel(config=config)
-
-        model.set_train(False)
-        result = model(pixel_values)
+        model.eval()
+        with no_grad():
+            result = model(pixel_values)
         # expected sequence length = num_patches + 1 (we add 1 for the [CLS] token)
         image_size = (self.image_size, self.image_size)
         patch_size = (self.patch_size, self.patch_size)
@@ -139,9 +142,9 @@ class CLIPVisionModelTester:
 
     def create_and_check_model_with_projection(self, config, pixel_values):
         model = CLIPVisionModelWithProjection(config=config)
-
-        model.set_train(False)
-        result = model(pixel_values)
+        model.eval()
+        with no_grad():
+            result = model(pixel_values)
         # expected sequence length = num_patches + 1 (we add 1 for the [CLS] token)
         image_size = (self.image_size, self.image_size)
         patch_size = (self.patch_size, self.patch_size)
@@ -180,14 +183,14 @@ class CLIPVisionModelTest(ModelTesterMixin, unittest.TestCase):
     def test_inputs_embeds(self):
         pass
 
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
             self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     def test_forward_signature(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
@@ -209,9 +212,11 @@ class CLIPVisionModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model_with_projection(*config_and_inputs)
 
+    @unittest.skip
     def test_training(self):
         pass
 
+    @unittest.skip
     def test_training_gradient_checkpointing(self):
         pass
 
@@ -237,16 +242,16 @@ class CLIPVisionModelTest(ModelTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        for model_name in CLIP_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = CLIPVisionModel.from_pretrained(model_name)
-            self.assertIsNotNone(model)
+        model_name = "openai/clip-vit-base-patch32"
+        model = CLIPVisionModel.from_pretrained(model_name)
+        self.assertIsNotNone(model)
 
     @slow
     def test_model_with_projection_from_pretrained(self):
-        for model_name in CLIP_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = CLIPVisionModelWithProjection.from_pretrained(model_name)
-            self.assertIsNotNone(model)
-            self.assertTrue(hasattr(model, "visual_projection"))
+        model_name = "openai/clip-vit-base-patch32"
+        model = CLIPVisionModelWithProjection.from_pretrained(model_name)
+        self.assertIsNotNone(model)
+        self.assertTrue(hasattr(model, "visual_projection"))
 
 
 class CLIPTextModelTester:
@@ -299,15 +304,8 @@ class CLIPTextModelTester:
             batch_size, seq_length = input_mask.shape
             rnd_start_indices = np.random.randint(1, seq_length - 1, size=(batch_size,))
             for batch_idx, start_index in enumerate(rnd_start_indices):
-                # input_mask[batch_idx, :start_index] = 1
-                # input_mask[batch_idx, start_index:] = 0
-                ops.scatter_nd_update(input_mask,
-                                      ops.stack([ops.full((int(start_index),), batch_idx, dtype=mindspore.int64), ops.arange(int(start_index))], dim=1),
-                                      ops.full((int(start_index),), 1, dtype=mindspore.int64))
-                ops.scatter_nd_update(input_mask,
-                                      ops.stack([ops.full((input_mask.shape[1] - int(start_index),), batch_idx, dtype=mindspore.int64), ops.arange(int(input_mask.shape[1] - start_index))], dim=1),
-                                      ops.full((input_mask.shape[1] - int(start_index),), 0, dtype=mindspore.int64))
-
+                input_mask[batch_idx, :int(start_index)] = 1
+                input_mask[batch_idx, int(start_index):] = 0
 
         config = self.get_config()
 
@@ -329,19 +327,19 @@ class CLIPTextModelTester:
 
     def create_and_check_model(self, config, input_ids, input_mask):
         model = CLIPTextModel(config=config)
-
-        model.set_train(False)
-        result = model(input_ids, attention_mask=input_mask)
-        result = model(input_ids)
+        model.eval()
+        with no_grad():
+            result = model(input_ids, attention_mask=input_mask)
+            result = model(input_ids)
         self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
         self.parent.assertEqual(result.pooler_output.shape, (self.batch_size, self.hidden_size))
 
     def create_and_check_model_with_projection(self, config, input_ids, input_mask):
         model = CLIPTextModelWithProjection(config=config)
-
-        model.set_train(False)
-        result = model(input_ids, attention_mask=input_mask)
-        result = model(input_ids)
+        model.eval()
+        with no_grad():
+            result = model(input_ids, attention_mask=input_mask)
+            result = model(input_ids)
         self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
         self.parent.assertEqual(result.text_embeds.shape, (self.batch_size, self.projection_dim))
 
@@ -375,9 +373,11 @@ class CLIPTextModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model_with_projection(*config_and_inputs)
 
+    @unittest.skip
     def test_training(self):
         pass
 
+    @unittest.skip
     def test_training_gradient_checkpointing(self):
         pass
 
@@ -407,16 +407,16 @@ class CLIPTextModelTest(ModelTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        for model_name in CLIP_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = CLIPTextModel.from_pretrained(model_name)
-            self.assertIsNotNone(model)
+        model_name = "openai/clip-vit-base-patch32"
+        model = CLIPTextModel.from_pretrained(model_name)
+        self.assertIsNotNone(model)
 
     @slow
     def test_model_with_projection_from_pretrained(self):
-        for model_name in CLIP_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = CLIPTextModelWithProjection.from_pretrained(model_name)
-            self.assertIsNotNone(model)
-            self.assertTrue(hasattr(model, "text_projection"))
+        model_name = "openai/clip-vit-base-patch32"
+        model = CLIPTextModelWithProjection.from_pretrained(model_name)
+        self.assertIsNotNone(model)
+        self.assertTrue(hasattr(model, "text_projection"))
 
 
 class CLIPModelTester:
@@ -429,6 +429,7 @@ class CLIPModelTester:
         self.parent = parent
         self.text_model_tester = CLIPTextModelTester(parent, **text_kwargs)
         self.vision_model_tester = CLIPVisionModelTester(parent, **vision_kwargs)
+        self.batch_size = self.text_model_tester.batch_size  # need bs for batching_equivalence test
         self.is_training = is_training
 
     def prepare_config_and_inputs(self):
@@ -445,8 +446,9 @@ class CLIPModelTester:
         )
 
     def create_and_check_model(self, config, input_ids, attention_mask, pixel_values):
-        model = CLIPModel(config).set_train(False)
-        result = model(input_ids, pixel_values, attention_mask)
+        model = CLIPModel(config).eval()
+        with no_grad():
+            result = model(input_ids, pixel_values, attention_mask)
         self.parent.assertEqual(
             result.logits_per_image.shape, (self.vision_model_tester.batch_size, self.text_model_tester.batch_size)
         )
@@ -498,7 +500,7 @@ class CLIPModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="CLIPModel does not have input/output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     # override as the `logit_scale` parameter initilization is different for CLIP
@@ -508,7 +510,7 @@ class CLIPModelTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            for name, param in model.parameters_and_names():
+            for name, param in model.named_parameters():
                 if param.requires_grad:
                     # check if `logit_scale` is initilized as per the original implementation
                     if name == "logit_scale":
@@ -542,9 +544,9 @@ class CLIPModelTest(ModelTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        for model_name in CLIP_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = CLIPModel.from_pretrained(model_name)
-            self.assertIsNotNone(model)
+        model_name = "openai/clip-vit-base-patch32"
+        model = CLIPModel.from_pretrained(model_name)
+        self.assertIsNotNone(model)
 
 
 class CLIPForImageClassificationModelTester(CLIPModelTester):
@@ -567,6 +569,7 @@ class CLIPForImageClassificationModelTester(CLIPModelTester):
         inputs_dict = {"pixel_values": pixel_values}
         return config, inputs_dict
 
+
 @require_mindspore
 class CLIPForImageClassificationModelTest(ModelTesterMixin, unittest.TestCase):
     all_model_classes = (CLIPForImageClassification,) if is_mindspore_available() else ()
@@ -585,7 +588,7 @@ class CLIPForImageClassificationModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="CLIPForImageClassification does not support inputs_embeds")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(reason="CLIPForImageClassification does not support gradient checkpointing yet")
@@ -604,17 +607,6 @@ class CLIPForImageClassificationModelTest(ModelTesterMixin, unittest.TestCase):
     def test_initialization(self):
         pass
 
-    def test_forward_signature(self):
-        config, _ = self.model_tester.prepare_config_and_inputs_for_common()
-
-        for model_class in self.all_model_classes:
-            model = model_class(config)
-            signature = inspect.signature(model.forward)
-            # signature.parameters is an OrderedDict => so arg_names order is deterministic
-            arg_names = [*signature.parameters.keys()]
-
-            expected_arg_names = ["pixel_values"]
-            self.assertListEqual(arg_names[:1], expected_arg_names)
 
 # We will verify our results on an image of cute cats
 def prepare_img():
@@ -636,8 +628,10 @@ class CLIPModelIntegrationTest(unittest.TestCase):
         inputs = processor(
             text=["a photo of a cat", "a photo of a dog"], images=image, padding=True, return_tensors="ms"
         )
+
         # forward pass
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
 
         # verify the logits
         self.assertEqual(
@@ -650,4 +644,6 @@ class CLIPModelIntegrationTest(unittest.TestCase):
         )
 
         expected_logits = mindspore.tensor([[24.5701, 19.3049]])
-        self.assertTrue(np.allclose(outputs.logits_per_image.asnumpy(), expected_logits.asnumpy(), atol=1e-3))
+        print(outputs.logits_per_image)
+
+        self.assertTrue(ops.allclose(outputs.logits_per_image, expected_logits, atol=1e-3))

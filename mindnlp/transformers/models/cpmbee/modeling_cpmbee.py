@@ -2762,7 +2762,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
                 if new_generation_config != self.generation_config:
                     warnings.warn(
                         "You have modified the pretrained model configuration to control generation. This is a"
-                        " deprecated strategy to control generation and will be removed soon, in a future version."
+                        " deprecated strategy to control generation."
                         " Please use a generation configuration file (see"
                         " https://hf-mirror.com/docs/transformers/main_classes/text_generation)"
                     )

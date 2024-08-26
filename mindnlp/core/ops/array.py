@@ -3,7 +3,7 @@ import mindspore
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 
-from mindnlp.configs import USE_PYBOOST, GENERATOR_SEED
+from mindnlp.configs import USE_PYBOOST
 
 # adjoint
 
@@ -88,7 +88,8 @@ def index_select(input, dim, index):
     return ops.index_select(input, dim, index)
 
 # masked_select
-
+def masked_select(input, mask):
+    return ops.masked_select(input, mask)
 
 # movedim
 
@@ -109,9 +110,8 @@ def narrow(input, dim, start, length):
 def nonzero(input, *, as_tuple=False):
     if USE_PYBOOST:
         return mindspore.mint.nonzero(input, as_tuple)
-    if GENERATOR_SEED:
-        return ops.nonzero(input, as_tuple)
-    out = ops.nonzero(input)
+    _nonzero = _get_cache_prim(ops.NonZero)()
+    out = _nonzero(input)
     if as_tuple:
         if 0 in out.shape:
             return (out, out)
@@ -240,6 +240,9 @@ def unsqueeze(input, dim):
 # vsplit
 
 # vstack
+def vstack(input):
+    return ops.vstack(input)
+
 
 # where
 def where(condition, input, other):
@@ -299,3 +302,12 @@ def getitem(tensor, slice):
     slices = _slice_helper(slice)
     # input_x, begin, end, strides, begin_mask=0, end_mask=0, ellipsis_mask=0, new_axis_mask=0, shrink_axis_mask=0
     return ops.strided_slice(tensor, *slices)
+
+def tensor_scatter_add(input, indeices, updates):
+    return ops.tensor_scatter_add(input, indeices, updates)
+
+def tensor_scatter_max(input, indeices, updates):
+    return ops.tensor_scatter_max(input, indeices, updates)
+
+def tensor_scatter_min(input, indeices, updates):
+    return ops.tensor_scatter_min(input, indeices, updates)
