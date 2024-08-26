@@ -93,7 +93,7 @@ class VitDetEmbeddings(nn.Module):
 
         if  (size != height or size != width):
             # nn.functional.interpolate is a noop in case size == height and size == width - we need to always capture this path with jit.trace.
-            new_abs_pos_embeddings = ops.interpolate(
+            new_abs_pos_embeddings = nn.functional.interpolate(
                 abs_pos_embeddings.reshape(1, size, size, -1).permute(0, 3, 1, 2),
                 size=(height, width),
                 mode="bicubic",
@@ -144,7 +144,7 @@ def get_rel_pos(q_size, k_size, rel_pos):
     # Interpolate rel pos if needed.
     if rel_pos.shape[0] != max_rel_dist:
         # Interpolate rel position embeddings.
-        rel_pos_resized = ops.interpolate(
+        rel_pos_resized = nn.functional.interpolate(
             rel_pos.reshape(1, rel_pos.shape[0], -1).permute(0, 2, 1),
             size=max_rel_dist,
             mode="linear",
@@ -354,7 +354,7 @@ class VitDetResBottleneckBlock(nn.Module):
 
     def forward(self, x):
         out = x
-        for layer in self.cells():
+        for layer in self.children():
             out = layer(out)
 
         out = x + out
