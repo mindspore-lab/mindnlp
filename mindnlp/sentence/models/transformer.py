@@ -18,7 +18,7 @@ import json
 import os
 from typing import Dict, List, Optional, Tuple, Union
 
-from mindspore import nn
+from mindnlp.core import nn
 from mindnlp.transformers import AutoModel, AutoTokenizer
 
 
