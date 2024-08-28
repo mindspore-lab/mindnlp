@@ -20,14 +20,13 @@ from typing import List
 
 from langchain.embeddings.base import Embeddings
 
-from mindnlp.sentence.SentenceTransformer import SentenceTransformer
+from mindnlp.sentence import SentenceTransformer
 
 
 class EmbeddingsFunAdapter(Embeddings):
-    def __init__(self, embed_model, device):
+    def __init__(self, embed_model, mirror='huggingface'):
         self.embed_model = embed_model
-        self.embed_device = device
-        self.embedding_model = SentenceTransformer(model_name_or_path=self.embed_model, device=self.embed_device)
+        self.embedding_model = SentenceTransformer(model_name_or_path=self.embed_model, mirror=mirror)
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         embeddings = self.embedding_model.encode_texts(texts)

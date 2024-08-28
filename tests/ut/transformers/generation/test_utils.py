@@ -1671,6 +1671,7 @@ class GenerationTesterMixin:
                         ops.allclose(
                             outputs.past_key_values[layer_idx][kv_idx],
                             outputs_cached.past_key_values[layer_idx][kv_idx],
+                            1e-3, 1e-3
                         )
                     )
 

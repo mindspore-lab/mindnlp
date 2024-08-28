@@ -142,7 +142,7 @@ class SuperPointModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="NotImplemented")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(reason="SuperPointForKeypointDetection does not support input and output embeddings")

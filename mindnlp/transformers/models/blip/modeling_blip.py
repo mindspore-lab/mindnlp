@@ -122,15 +122,15 @@ class BlipForConditionalGenerationModelOutput(ModelOutput):
         
         Raises:
             FutureWarning: This method raises a 'FutureWarning' if the 'decoder_logits' attribute is used.
-                This attribute is deprecated and will be removed in version 5 of Transformers. The 'logits' attribute
+                This attribute is deprecated. The 'logits' attribute
                 should be used instead to retrieve the final output.
 
         Note:
-            The 'decoder_logits' attribute is deprecated and will be removed in version 5 of Transformers.
+            The 'decoder_logits' attribute is deprecated.
             Please use the 'logits' attribute to retrieve the final output instead.
         """
         warnings.warn(
-            "`decoder_logits` attribute is deprecated and will be removed in version 5 of Transformers."
+            "`decoder_logits` attribute is deprecated."
             " Please use the `logits` attribute to retrieve the final output instead.",
             FutureWarning,
         )

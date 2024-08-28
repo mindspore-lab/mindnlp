@@ -25,7 +25,7 @@ logger = logging.get_logger(__name__)
 class PerceiverFeatureExtractor(PerceiverImageProcessor):
     def __init__(self, *args, **kwargs) -> None:
         warnings.warn(
-            "The class PerceiverFeatureExtractor is deprecated and will be removed."
+            "The class PerceiverFeatureExtractor is deprecated."
             " Please use PerceiverImageProcessor instead.",
             FutureWarning,
         )

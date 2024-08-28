@@ -55,6 +55,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("camembert", "CamembertConfig"),
         ("canine", "CanineConfig"),
         ("chatglm", "ChatGLMConfig"),
+        ("chatglm2", "ChatGLM2Config"),
+        ("chatglm3", "ChatGLM3Config"),
         ("chatglm4", "ChatGLM4Config"),
         ("clap", "ClapConfig"),
         ("clip", "CLIPConfig"),
@@ -91,6 +93,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("ernie_m", "ErnieMConfig"),
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),
+        ("flaubert", "FlaubertConfig"),
         ("flava", "FlavaConfig"),
         ("florence2", "Florence2Config"),
         ("fnet", "FNetConfig"),
@@ -104,6 +107,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("gpt2", "GPT2Config"),
         ("gpt_bigcode", "GPTBigCodeConfig"),
         ("gptj", "GPTJConfig"),
+        ("gpt_neo", "GPTNeoConfig"),
         ("gpt_neox", "GPTNeoXConfig"),
         ("gpt_pangu", "GPTPanguConfig"),
         ("groupvit", "GroupViTConfig"),
@@ -142,9 +146,11 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("olmo", "OlmoConfig"),
         ("oneformer", "OneFormerConfig"),
         ("openelm", "OpenELMConfig"),
+        ("openai-gpt", "OpenAIGPTConfig"),
         ("opt", "OPTConfig"),
         ("owlv2", "Owlv2Config"),
         ("owlvit", "OwlViTConfig"),
+        ("patchtst", "PatchTSTConfig"),
         ("pegasus", "PegasusConfig"),
         ("pegasus_x", "PegasusXConfig"),
         ("perceiver", "PerceiverConfig"),
@@ -191,6 +197,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("univnet", "UnivNetConfig"),
         ("videomae", "VideoMAEConfig"),
         ("vit", "ViTConfig"),
+        ("vits", "VitsConfig"),
         ("vilt", "ViltConfig"),
         ("vit_hybrid", "ViTHybridConfig"),
         ("vit_msn", "ViTMSNConfig"),
@@ -466,6 +473,8 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("canine", "CANINE"),
         ("chinese_clip", "Chinese-CLIP"),
         ("chatglm", "ChatGLM"),
+        ("chatglm2", "ChatGLM2"),
+        ("chatglm3", "ChatGLM3"),
         ("chatglm4", "ChatGLM4"),
         ("clap", "CLAP"),
         ("clip", "CLIP"),
@@ -614,6 +623,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("opt", "OPT"),
         ("owlv2", "OWLv2"),
         ("owlvit", "OWL-ViT"),
+        ("patchtst", "PatchTST"),
         ("pegasus", "Pegasus"),
         ("pegasus_x", "PEGASUS-X"),
         ("perceiver", "Perceiver"),
@@ -967,13 +977,13 @@ class _LazyLoadAllMappings(OrderedDict):
             None.
 
         Raises:
-            FutureWarning: If ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated and will be removed in v5 of Transformers.
+            FutureWarning: If ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated.
                 It does not contain all available model checkpoints. Refer to hf.co/models for that.
         """
         if self._initialized:
             return
         warnings.warn(
-            "ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated and will be removed in v5 of Transformers. "
+            "ALL_PRETRAINED_CONFIG_ARCHIVE_MAP is deprecated. "
             "It does not contain all available model checkpoints, far from it. Checkout hf.co/models for that.",
             FutureWarning,
         )
@@ -1423,6 +1433,8 @@ def fix_chatglm_name(config):
     elif 'chatglm2' in config['_name_or_path']:
         config['model_type'] = 'chatglm2'
         new_model_name = 'ChatGLM2'
+    else:
+        new_model_name = 'ChatGLM'
 
     for arch in config['architectures']:
         arch.replace('ChatGLM', new_model_name)

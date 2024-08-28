@@ -54,6 +54,7 @@ from .automatic_speech_recognition import AutomaticSpeechRecognitionPipeline
 from .zero_shot_classification import ZeroShotClassificationArgumentHandler, ZeroShotClassificationPipeline
 from .document_question_answering import DocumentQuestionAnsweringPipeline
 from .fill_mask import FillMaskPipeline
+from .table_question_answering import TableQuestionAnsweringPipeline
 
 from ..models.auto.modeling_auto import (
     # AutoModel,
@@ -68,6 +69,7 @@ from ..models.auto.modeling_auto import (
     AutoModelForSeq2SeqLM,
     AutoModelForSequenceClassification,
     AutoModelForSpeechSeq2Seq,
+    AutoModelForTableQuestionAnswering,
     # AutoModelForTableQuestionAnswering,
     # AutoModelForTextToSpectrogram,
     # AutoModelForTextToWaveform,
@@ -138,6 +140,16 @@ SUPPORTED_TASKS = {
         "default": {
             "model": {
                 "ms": ("distilbert/distilbert-base-cased-distilled-squad", "626af31"),
+            },
+        },
+        "type": "text",
+    },
+    "table-question-answering": {
+        "impl": TableQuestionAnsweringPipeline,
+        "ms": (AutoModelForTableQuestionAnswering,),
+        "default": {
+            "model": {
+                "ms": ("google/tapas-base-finetuned-wtq", "69ceee2"),
             },
         },
         "type": "text",
@@ -672,5 +684,6 @@ __all__ = [
     'QuestionAnsweringPipeline',
     'ZeroShotClassificationPipeline',
     'DocumentQuestionAnsweringPipeline',
+    'TableQuestionAnsweringPipeline',
     'pipeline',
 ]

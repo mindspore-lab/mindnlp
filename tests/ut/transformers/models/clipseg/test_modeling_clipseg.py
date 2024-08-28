@@ -160,7 +160,7 @@ class CLIPSegVisionModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="SegFormer does not have get_input_embeddings method and get_output_embeddings methods")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_model_get_set_embeddings(self):
@@ -505,7 +505,7 @@ class CLIPSegModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip("SegFormer does not have get_input_embeddings method and get_output_embeddings methods")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(

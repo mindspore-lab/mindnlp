@@ -110,7 +110,6 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
         gen_kwargs = {"max_length": max_length, "num_beams": num_beams, "do_sample": do_sample, "top_p": top_p,
                       "temperature": temperature, "logits_processor": logits_processor, **kwargs}
         inputs = tokenizer.build_chat_input(query, history=history, role=role)
-        inputs = inputs.to(self.device)
         eos_token_id = [tokenizer.eos_token_id, tokenizer.get_command("<|user|>"),
                         tokenizer.get_command("<|observation|>")]
         outputs = self.generate(**inputs, **gen_kwargs, eos_token_id=eos_token_id)

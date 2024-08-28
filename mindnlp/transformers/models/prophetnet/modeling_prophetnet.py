@@ -20,14 +20,10 @@ import warnings
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
-import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindspore.ops import constexpr
-
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import LayerNorm
-from mindnlp.core.nn import functional as F
 
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput
@@ -38,26 +34,11 @@ from ....utils import (
 )
 from .configuration_prophetnet import ProphetNetConfig
 
+
 logger = logging.get_logger(__name__)
 
 _CONFIG_FOR_DOC = "ProphenetConfig"
 _CHECKPOINT_FOR_DOC = "microsoft/prophetnet-large-uncased"
-
-@constexpr
-def finfo(dtype, attr="min"):
-    """finfo api to get dtype attributes."""
-    info = np.finfo(mindspore.dtype_to_nptype(dtype))
-    if attr == "min":
-        return Tensor(info.min, dtype)
-    if attr == "max":
-        return Tensor(info.max, dtype)
-    return Tensor(0, dtype)
-
-def softmax(hidden_state, dim, onnx_trace=False):
-    if onnx_trace:
-        return F.softmax(hidden_state.float(), dim=dim)
-    else:
-        return F.softmax(hidden_state, dim=dim, dtype=mindspore.float32)
 
 
 def ngram_attention_bias(sequence_length, ngram, dtype):
@@ -65,14 +46,12 @@ def ngram_attention_bias(sequence_length, ngram, dtype):
     This function computes the bias for the predict stream
     """
     left_block = (
-        ops.ones((ngram, sequence_length, sequence_length), dtype=dtype) * finfo(dtype, 'min')
+        ops.ones((ngram, sequence_length, sequence_length), dtype=dtype) * float(ops.finfo(dtype).min)
     )
     right_block = left_block.copy()
     # create bias
     for stream_idx in range(ngram):
-        # right_block[stream_idx].fill_diagonal_(0, wrap=False)
         right_block[stream_idx] = right_block[stream_idx].fill_diagonal(0.0, wrap=False)
-        # left_block[stream_idx].triu_(-stream_idx + 1)
         left_block[stream_idx] = left_block[stream_idx].triu(-stream_idx + 1)
 
     left_block[:, :, 0] = 0
@@ -135,79 +114,79 @@ class ProphetNetSeq2SeqLMOutput(ModelOutput):
     Base class for sequence-to-sequence language models outputs.
 
     Args:
-        loss (`Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
             Language modeling loss.
-        logits (`Tensor` of shape `(batch_size, decoder_sequence_length, config.vocab_size)`):
+        logits (`mindspore.Tensor` of shape `(batch_size, decoder_sequence_length, config.vocab_size)`):
             Prediction scores of the main stream language modeling head (scores for each vocabulary token before
             SoftMax).
-        logits_ngram (`Tensor` of shape `(batch_size, ngram * decoder_sequence_length, config.vocab_size)`):
+        logits_ngram (`mindspore.Tensor` of shape `(batch_size, ngram * decoder_sequence_length, config.vocab_size)`):
             Prediction scores of the predict stream language modeling head (scores for each vocabulary token before
             SoftMax).
-        past_key_values (`List[Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-            List of `Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
+        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+            List of `mindspore.Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
             num_attn_heads, decoder_sequence_length, embed_size_per_head)`).
 
             Contains pre-computed hidden-states (key and values in the attention blocks) of the decoder that can be
             used (see `past_key_values` input) to speed up sequential decoding.
-        decoder_hidden_states (`tuple(Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, decoder_sequence_length, hidden_size)`.
 
             Hidden-states of main stream of the decoder at the output of each layer plus the initial embedding outputs.
-        decoder_ngram_hidden_states (`tuple(Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        decoder_ngram_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, ngram * decoder_sequence_length, hidden_size)`.
 
             Hidden-states of the predict stream of the decoder at the output of each layer plus the initial embedding
             outputs.
-        decoder_attentions (`tuple(Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
+        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
             decoder_sequence_length, decoder_sequence_length)`.
 
             Attentions weights of the decoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        decoder_ngram_attentions (`tuple(Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
+        decoder_ngram_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
             decoder_sequence_length, decoder_sequence_length)`.
 
             Attentions weights of the predict stream of the decoder, after the attention softmax, used to compute the
             weighted average in the self-attention heads.
-        cross_attentions (`tuple(Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
             encoder_sequence_length, decoder_sequence_length)`.
 
             Attentions weights of the cross-attention layer of the decoder, after the attention softmax, used to
             compute the weighted average in the
-        encoder_last_hidden_state (`Tensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
+        encoder_last_hidden_state (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder of the model.
-        encoder_hidden_states (`tuple(Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, encoder_sequence_length, hidden_size)`.
 
             Hidden-states of the encoder at the output of each layer plus the initial embedding outputs.
-        encoder_attentions (`tuple(Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
+        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
             encoder_sequence_length, encoder_sequence_length)`. Attentions weights of the encoder, after the attention
             softmax, used to compute the weighted average in the self-attention heads.
     """
 
-    loss: Optional[Tensor] = None
-    logits: Tensor = None
-    logits_ngram: Optional[Tensor] = None
-    past_key_values: Optional[Tuple[Tensor]] = None
-    decoder_hidden_states: Optional[Tuple[Tensor]] = None
-    decoder_ngram_hidden_states: Optional[Tuple[Tensor]] = None
-    decoder_attentions: Optional[Tuple[Tensor]] = None
-    decoder_ngram_attentions: Optional[Tuple[Tensor]] = None
-    cross_attentions: Optional[Tuple[Tensor]] = None
-    encoder_last_hidden_state: Optional[Tensor] = None
-    encoder_hidden_states: Optional[Tuple[Tensor]] = None
-    encoder_attentions: Optional[Tuple[Tensor]] = None
+    loss: Optional[mindspore.Tensor] = None
+    logits: mindspore.Tensor = None
+    logits_ngram: Optional[mindspore.Tensor] = None
+    past_key_values: Optional[Tuple[mindspore.Tensor]] = None
+    decoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    decoder_ngram_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    decoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    decoder_ngram_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    cross_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    encoder_last_hidden_state: Optional[mindspore.Tensor] = None
+    encoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    encoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
 
     @property
     def decoder_cross_attentions(self):
         warnings.warn(
-            "`decoder_cross_attentions` is deprecated and will be removed soon. Please use `cross_attentions`"
+            "`decoder_cross_attentions` is deprecated. Please use `cross_attentions`"
             " instead.",
             FutureWarning,
         )
@@ -221,79 +200,79 @@ class ProphetNetSeq2SeqModelOutput(ModelOutput):
     decoding.
 
     Args:
-        last_hidden_state (`Tensor` of shape `(batch_size, decoder_sequence_length, hidden_size)`):
+        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, decoder_sequence_length, hidden_size)`):
             Sequence of main stream hidden-states at the output of the last layer of the decoder of the model.
 
             If `past_key_values` is used only the last hidden-state of the sequences of shape `(batch_size, 1,
             hidden_size)` is output.
-        last_hidden_state_ngram (`Tensor` of shape `(batch_size,ngram * decoder_sequence_length, config.vocab_size)`, *optional*):
+        last_hidden_state_ngram (`mindspore.Tensor` of shape `(batch_size,ngram * decoder_sequence_length, config.vocab_size)`, *optional*):
             Sequence of predict stream hidden-states at the output of the last layer of the decoder of the model.
-        past_key_values (`List[Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-            List of `Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
+        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+            List of `mindspore.Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
             num_attn_heads, decoder_sequence_length, embed_size_per_head)`).
 
             Contains pre-computed hidden-states (key and values in the attention blocks) of the decoder that can be
             used (see `past_key_values` input) to speed up sequential decoding.
-        decoder_hidden_states (`tuple(Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        decoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, decoder_sequence_length, hidden_size)`.
 
             Hidden-states of main stream of the decoder at the output of each layer plus the initial embedding outputs.
-        decoder_ngram_hidden_states (`tuple(Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        decoder_ngram_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, ngram * decoder_sequence_length, hidden_size)`.
 
             Hidden-states of the predict stream of the decoder at the output of each layer plus the initial embedding
             outputs.
-        decoder_attentions (`tuple(Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
+        decoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
             decoder_sequence_length, decoder_sequence_length)`.
 
             Attentions weights of the decoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        decoder_ngram_attentions (`tuple(Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
+        decoder_ngram_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
             decoder_sequence_length, decoder_sequence_length)`.
 
             Attentions weights of the predict stream of the decoder, after the attention softmax, used to compute the
             weighted average in the
-        cross_attentions (`tuple(Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
             encoder_sequence_length, decoder_sequence_length)`.
 
             Attentions weights of the cross-attention layer of the decoder, after the attention softmax, used to
             compute the weighted average in the
-        encoder_last_hidden_state (`Tensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
+        encoder_last_hidden_state (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder of the model.
-        encoder_hidden_states (`tuple(Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, encoder_sequence_length, hidden_size)`.
 
             Hidden-states of the encoder at the output of each layer plus the initial embedding outputs.
-        encoder_attentions (`tuple(Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
+        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
             encoder_sequence_length, encoder_sequence_length)`.
 
             Attentions weights of the encoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
     """
 
-    last_hidden_state: Tensor
-    last_hidden_state_ngram: Optional[Tensor] = None
-    past_key_values: Optional[Tuple[Tensor]] = None
-    decoder_hidden_states: Optional[Tuple[Tensor]] = None
-    decoder_ngram_hidden_states: Optional[Tuple[Tensor]] = None
-    decoder_attentions: Optional[Tuple[Tensor]] = None
-    decoder_ngram_attentions: Optional[Tuple[Tensor]] = None
-    cross_attentions: Optional[Tuple[Tensor]] = None
-    encoder_last_hidden_state: Optional[Tensor] = None
-    encoder_hidden_states: Optional[Tuple[Tensor]] = None
-    encoder_attentions: Optional[Tuple[Tensor]] = None
+    last_hidden_state: mindspore.Tensor
+    last_hidden_state_ngram: Optional[mindspore.Tensor] = None
+    past_key_values: Optional[Tuple[mindspore.Tensor]] = None
+    decoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    decoder_ngram_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    decoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    decoder_ngram_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    cross_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    encoder_last_hidden_state: Optional[mindspore.Tensor] = None
+    encoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    encoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
 
     @property
     def decoder_cross_attentions(self):
         warnings.warn(
-            "`decoder_cross_attentions` is deprecated and will be removed soon. Please use `cross_attentions`"
+            "`decoder_cross_attentions` is deprecated. Please use `cross_attentions`"
             " instead.",
             FutureWarning,
         )
@@ -306,58 +285,58 @@ class ProphetNetDecoderModelOutput(ModelOutput):
     Base class for model's outputs that may also contain a past key/values (to speed up sequential decoding).
 
     Args:
-        last_hidden_state (`Tensor` of shape `(batch_size, decoder_sequence_length, hidden_size)`):
+        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, decoder_sequence_length, hidden_size)`):
             Sequence of main stream hidden-states at the output of the last layer of the decoder of the model.
 
             If `past_key_values` is used only the last hidden-state of the sequences of shape `(batch_size, 1,
             hidden_size)` is output.
-        last_hidden_state_ngram (`Tensor` of shape `(batch_size, ngram * decoder_sequence_length, config.vocab_size)`):
+        last_hidden_state_ngram (`mindspore.Tensor` of shape `(batch_size, ngram * decoder_sequence_length, config.vocab_size)`):
             Sequence of predict stream hidden-states at the output of the last layer of the decoder of the model.
-        past_key_values (`List[Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-            List of `Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
+        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+            List of `mindspore.Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
             num_attn_heads, decoder_sequence_length, embed_size_per_head)`).
 
             Contains pre-computed hidden-states (key and values in the attention blocks) of the decoder that can be
             used (see `past_key_values` input) to speed up sequential decoding.
-        hidden_states (`tuple(Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, decoder_sequence_length, hidden_size)`.
 
             Hidden-states of main stream of the decoder at the output of each layer plus the initial embedding outputs.
-        ngram_hidden_states (`tuple(Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        ngram_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, ngram * decoder_sequence_length, hidden_size)`.
 
             Hidden-states of the predict stream of the decoder at the output of each layer plus the initial embedding
             outputs.
-        attentions (`tuple(Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
             decoder_sequence_length, decoder_sequence_length)`.
 
             Attentions weights of the decoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        ngram_attentions (`tuple(Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
+        ngram_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
             decoder_sequence_length, decoder_sequence_length)`.
 
             Attentions weights of the predict stream of the decoder, after the attention softmax, used to compute the
             weighted average in the
-        cross_attentions (`tuple(Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
             encoder_sequence_length, decoder_sequence_length)`.
 
             Attentions weights of the cross-attention layer of the decoder, after the attention softmax, used to
             compute the weighted average in the
     """
 
-    last_hidden_state: Tensor
-    last_hidden_state_ngram: Optional[Tensor] = None
-    past_key_values: Optional[Tuple[Tensor]] = None
-    hidden_states: Optional[Tuple[Tensor]] = None
-    hidden_states_ngram: Optional[Tuple[Tensor]] = None
-    attentions: Optional[Tuple[Tensor]] = None
-    ngram_attentions: Optional[Tuple[Tensor]] = None
-    cross_attentions: Optional[Tuple[Tensor]] = None
+    last_hidden_state: mindspore.Tensor
+    last_hidden_state_ngram: Optional[mindspore.Tensor] = None
+    past_key_values: Optional[Tuple[mindspore.Tensor]] = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    hidden_states_ngram: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+    ngram_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    cross_attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
 @dataclass
@@ -366,60 +345,60 @@ class ProphetNetDecoderLMOutput(ModelOutput):
     Base class for model's outputs that may also contain a past key/values (to speed up sequential decoding).
 
     Args:
-        loss (`Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
             Language modeling loss.
-        logits (`Tensor` of shape `(batch_size, decoder_sequence_length, config.vocab_size)`):
+        logits (`mindspore.Tensor` of shape `(batch_size, decoder_sequence_length, config.vocab_size)`):
             Prediction scores of the main stream language modeling head (scores for each vocabulary token before
             SoftMax).
-        logits_ngram (`Tensor` of shape `(batch_size, ngram * decoder_sequence_length, config.vocab_size)`):
+        logits_ngram (`mindspore.Tensor` of shape `(batch_size, ngram * decoder_sequence_length, config.vocab_size)`):
             Prediction scores of the predict stream language modeling head (scores for each vocabulary token before
             SoftMax).
-        past_key_values (`List[Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-            List of `Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
+        past_key_values (`List[mindspore.Tensor]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+            List of `mindspore.Tensor` of length `config.n_layers`, with each tensor of shape `(2, batch_size,
             num_attn_heads, decoder_sequence_length, embed_size_per_head)`).
 
             Contains pre-computed hidden-states (key and values in the attention blocks) of the decoder that can be
             used (see `past_key_values` input) to speed up sequential decoding.
-        hidden_states (`tuple(Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, decoder_sequence_length, hidden_size)`.
 
             Hidden-states of main stream of the decoder at the output of each layer plus the initial embedding outputs.
-        ngram_hidden_states (`tuple(Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `Tensor` (one for the output of the embeddings + one for the output of each layer) of
+        ngram_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, ngram * decoder_sequence_length, hidden_size)`.
 
             Hidden-states of the predict stream of the decoder at the output of each layer plus the initial embedding
             outputs.
-        attentions (`tuple(Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
             decoder_sequence_length, decoder_sequence_length)`.
 
             Attentions weights of the decoder, after the attention softmax, used to compute the weighted average in the
             self-attention heads.
-        ngram_attentions (`tuple(Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
+        ngram_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
             decoder_sequence_length, decoder_sequence_length)`.
 
             Attentions weights of the predict stream of the decoder, after the attention softmax, used to compute the
             weighted average in the
-        cross_attentions (`tuple(Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
+        cross_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_attn_heads,
             encoder_sequence_length, decoder_sequence_length)`.
 
             Attentions weights of the cross-attention layer of the decoder, after the attention softmax, used to
             compute the weighted average in the
     """
 
-    loss: Optional[Tensor] = None
-    logits: Tensor = None
-    logits_ngram: Optional[Tensor] = None
-    past_key_values: Optional[Tuple[Tensor]] = None
-    hidden_states: Optional[Tuple[Tensor]] = None
-    hidden_states_ngram: Optional[Tuple[Tensor]] = None
-    attentions: Optional[Tuple[Tensor]] = None
-    ngram_attentions: Optional[Tuple[Tensor]] = None
-    cross_attentions: Optional[Tuple[Tensor]] = None
+    loss: Optional[mindspore.Tensor] = None
+    logits: mindspore.Tensor = None
+    logits_ngram: Optional[mindspore.Tensor] = None
+    past_key_values: Optional[Tuple[mindspore.Tensor]] = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    hidden_states_ngram: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+    ngram_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    cross_attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
 class ProphetNetPreTrainedModel(PreTrainedModel):
@@ -435,7 +414,7 @@ class ProphetNetPreTrainedModel(PreTrainedModel):
         elif isinstance(module, nn.Embedding):
             nn.init.normal_(module.weight, mean=0.0, std=self.config.init_std)
             if module.padding_idx is not None:
-                module.weight.data[module.padding_idx] = 0
+                module.weight[module.padding_idx] = 0
 
     def _shift_right(self, input_ids):
         decoder_start_token_id = self.config.decoder_start_token_id
@@ -447,7 +426,7 @@ class ProphetNetPreTrainedModel(PreTrainedModel):
         )
 
         # shift inputs to the right
-        shifted_input_ids = input_ids.new_zeros(input_ids.shape)
+        shifted_input_ids = ops.zeros(input_ids.shape, dtype=input_ids.dtype)
         shifted_input_ids[..., 1:] = input_ids[..., :-1].copy()
         shifted_input_ids[..., 0] = decoder_start_token_id
 
@@ -530,7 +509,7 @@ class ProphetNetAttention(nn.Module):
 
         self.out_proj = nn.Linear(hidden_size, hidden_size)
 
-    def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
+    def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return ops.transpose(tensor.view(bsz, seq_len, self.num_attn_heads, self.head_dim), 1, 2)
 
     def forward(
@@ -570,7 +549,7 @@ class ProphetNetAttention(nn.Module):
             value_states = self._shape(self.value_proj(hidden_states), -1, batch_size)
 
         if is_cross_attention:
-            # if cross_attention save Tuple(Tensor, Tensor) of all cross attention key/value_states.
+            # if cross_attention save Tuple(mindspore.Tensor, mindspore.Tensor) of all cross attention key/value_states.
             # Further calls to cross_attention layer can then reuse all cross-attention
             # key/value_states (first "if" case)
             # if encoder bi-directional self-attention `past_key_value` is always `None`
@@ -601,7 +580,7 @@ class ProphetNetAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_weights = F.softmax(attn_weights, dim=-1)
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             assert layer_head_mask.shape == (self.num_attn_heads,), (
@@ -615,7 +594,7 @@ class ProphetNetAttention(nn.Module):
             # apply head_mask also on attn_weights_reshaped which is used for n-gram attention inside the model
             attn_weights_reshaped = layer_head_mask.view(1, -1, 1, 1) * attn_weights_reshaped
 
-        attn_probs = F.dropout(
+        attn_probs = nn.functional.dropout(
             attn_weights,
             p=self.attention_dropout,
             training=self.training,
@@ -625,11 +604,10 @@ class ProphetNetAttention(nn.Module):
         if attn_output.shape != expected_shape:
             raise ValueError(f"`attn_output` should have shape {expected_shape}, but is of shape {attn_output.shape}")
 
-        # attn_output = attn_output.swapaxes(1, 2).reshape(batch_size, tgt_len, hidden_size)
         attn_output = ops.transpose(attn_output, 1, 2).reshape(batch_size, tgt_len, hidden_size)
         attn_output = self.out_proj(attn_output)
 
-        attn_output = F.dropout(attn_output, p=self.dropout, training=self.training)
+        attn_output = nn.functional.dropout(attn_output, p=self.dropout, training=self.training)
         return attn_output, attn_weights_reshaped, past_key_value
 
 
@@ -650,9 +628,9 @@ class ProphetNetFeedForward(nn.Module):
         hidden_states = self.intermediate(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
 
-        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.output(hidden_states)
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         return hidden_states
 
 
@@ -683,14 +661,8 @@ class ProphetNetNgramSelfAttention(nn.Module):
         # rel position embeddings
         self.relative_pos_embeddings = nn.Linear(config.hidden_size, self.num_buckets * self.num_attn_heads)
 
-        # for onnx runtime
-        self.onnx_trace = False
-
     def _shape(self, tensor, seq_len, batch_size):
         return ops.transpose(tensor.view(batch_size, seq_len, self.num_attn_heads, self.head_dim), 1, 2)
-
-    def prepare_for_onnx_export_(self):
-        self.onnx_trace = True
 
     def forward(
         self,
@@ -728,10 +700,10 @@ class ProphetNetNgramSelfAttention(nn.Module):
         value_states = value_states.view(*proj_shape)
 
         # chunk into main stream and predict stream
-        hidden_states_list = hidden_states.chunk(1 + self.ngram, axis=1)
-        query_states_list = query_states.chunk(1 + self.ngram, axis=2)
-        key_states_list = key_states.chunk(1 + self.ngram, axis=2)
-        value_states_list = value_states.chunk(1 + self.ngram, axis=2)
+        hidden_states_list = ops.chunk(hidden_states, 1 + self.ngram, dim=1)
+        query_states_list = ops.chunk(query_states, 1 + self.ngram, dim=2)
+        key_states_list = ops.chunk(key_states, 1 + self.ngram, dim=2)
+        value_states_list = ops.chunk(value_states, 1 + self.ngram, dim=2)
 
         main_hidden_states, hidden_states_predict_list = hidden_states_list[0], hidden_states_list[1:]
         main_query_states, predict_query_states_list = query_states_list[0], query_states_list[1:]
@@ -768,10 +740,9 @@ class ProphetNetNgramSelfAttention(nn.Module):
         if attention_mask is not None:
             main_attn_weights = main_attn_weights + attention_mask
 
-        main_attn_probs = softmax(
+        main_attn_probs = ops.softmax(
             main_attn_weights,
             dim=-1,
-            onnx_trace=self.onnx_trace,
         ).type_as(main_attn_weights)
 
         if layer_head_mask is not None:
@@ -783,14 +754,13 @@ class ProphetNetNgramSelfAttention(nn.Module):
                 batch_size, self.num_attn_heads, -1, sequence_length
             )
 
-        main_attn_probs = F.dropout(main_attn_probs, p=self.attention_dropout, training=self.training)
+        main_attn_probs = nn.functional.dropout(main_attn_probs, p=self.attention_dropout, training=self.training)
         # project to attn_output
         # [batch_size, number_heads, sequence_length, sequence_length]
         # x [batch_size, number_heads, sequence_length, head_dimesion]
         # -> [batch_size, number_heads, sequence_length, head_dimesion]
         main_attn_output = ops.einsum("bntc,bncs->bnts", main_attn_probs, main_value_states)
         # reshape so that num_heads dim is merged into last `head_dim` axis
-        # main_attn_output = main_attn_output.swapaxes(1, 2).reshape(batch_size, 1, sequence_length, hidden_size)
         main_attn_output = ops.transpose(main_attn_output, 1, 2).reshape(batch_size, 1, sequence_length, hidden_size)
         main_attn_output = self.out_proj(main_attn_output)
 
@@ -831,10 +801,9 @@ class ProphetNetNgramSelfAttention(nn.Module):
             extended_predict_attention_mask = extended_predict_attention_mask.to(predict_attn_weights.dtype)
             predict_attn_weights = predict_attn_weights + extended_predict_attention_mask
 
-        predict_attn_probs = softmax(
+        predict_attn_probs = ops.softmax(
             predict_attn_weights,
             dim=-1,
-            onnx_trace=self.onnx_trace,
         ).type_as(predict_attn_weights)
 
         if layer_head_mask is not None:
@@ -844,7 +813,7 @@ class ProphetNetNgramSelfAttention(nn.Module):
             )
             predict_attn_probs = layer_head_mask.view(1, 1, -1, 1, 1) * predict_attn_probs
 
-        predict_attn_probs = F.dropout(
+        predict_attn_probs = nn.functional.dropout(
             predict_attn_probs, p=self.attention_dropout, training=self.training
         )
         # project to attention output
@@ -867,7 +836,7 @@ class ProphetNetNgramSelfAttention(nn.Module):
         # reshape into better form for `config.output_attentions`
         main_attn_probs = main_attn_probs.view(batch_size, self.num_attn_heads, sequence_length, -1)
 
-        attn_output = F.dropout(attn_output, p=self.dropout, training=self.training)
+        attn_output = nn.functional.dropout(attn_output, p=self.dropout, training=self.training)
 
         return attn_output, main_attn_probs, predict_attn_probs, past_key_value
 
@@ -954,9 +923,9 @@ class ProphetNetNgramSelfAttention(nn.Module):
         rel_pos_embeddings = rel_pos_embeddings.reshape(-1, self.num_buckets)
         # [ngram, batch_size, num_heads * sequence_length, -1]
         predict_relative_position_buckets = predict_relative_position_buckets.unsqueeze(0)
-        predict_relative_position_buckets = predict_relative_position_buckets.tile((
-            self.ngram, 1, self.num_attn_heads, 1
-        ))
+        predict_relative_position_buckets = predict_relative_position_buckets.tile(
+            (self.ngram, 1, self.num_attn_heads, 1)
+        )
         # [ngram * batch_size * num_heads * sequence_length, -1]
         predict_relative_position_buckets = predict_relative_position_buckets.view(
             -1, predict_relative_position_buckets.shape[-1]
@@ -1103,7 +1072,7 @@ class ProphetNetDecoderLayer(nn.Module):
 
 class ProphetNetEncoder(ProphetNetPreTrainedModel):
     r"""
-    word_embeddings  (`torch.nn.Embeddings` of shape `(config.vocab_size, config.hidden_size)`, *optional*):
+    word_embeddings  (`nn.Embeddings` of shape `(config.vocab_size, config.hidden_size)`, *optional*):
         The word embedding parameters. This can be used to initialize [`ProphetNetEncoder`] with pre-defined word
         embeddings instead of randomly initialized word embeddings.
     """
@@ -1133,10 +1102,10 @@ class ProphetNetEncoder(ProphetNetPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[Tensor] = None,
-        attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        inputs_embeds: Optional[Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
@@ -1175,7 +1144,7 @@ class ProphetNetEncoder(ProphetNetPreTrainedModel):
         if attention_mask is not None:
             extended_attention_mask = (
                 1.0 - attention_mask[:, None, None, :].tile((1, self.config.num_encoder_attention_heads, 1, 1))
-            ) * finfo(self.dtype, 'min')
+            ) * float(ops.finfo(self.dtype).min)
             extended_attention_mask = extended_attention_mask.to(inputs_embeds.dtype)
         else:
             extended_attention_mask = None
@@ -1184,7 +1153,7 @@ class ProphetNetEncoder(ProphetNetPreTrainedModel):
 
         hidden_states = inputs_embeds + position_embeddings
         hidden_states = self.embeddings_layer_norm(hidden_states)
-        hidden_states = F.dropout(hidden_states, p=self.config.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.config.dropout, training=self.training)
 
         encoder_hidden_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
@@ -1231,7 +1200,7 @@ class ProphetNetEncoder(ProphetNetPreTrainedModel):
 
 class ProphetNetDecoder(ProphetNetPreTrainedModel):
     r"""
-    word_embeddings  (`torch.nn.Embeddings` of shape `(config.vocab_size, config.hidden_size)`, *optional*):
+    word_embeddings  (`nn.Embeddings` of shape `(config.vocab_size, config.hidden_size)`, *optional*):
         The word embedding parameters. This can be used to initialize [`ProphetNetEncoder`] with pre-defined word
         embeddings instead of randomly initialized word embeddings.
     """
@@ -1266,36 +1235,35 @@ class ProphetNetDecoder(ProphetNetPreTrainedModel):
     def set_input_embeddings(self, value):
         self.word_embeddings = value
 
-
     def forward(
         self,
-        input_ids: Optional[Tensor] = None,
-        attention_mask: Optional[Tensor] = None,
-        encoder_hidden_states: Optional[Tensor] = None,
-        encoder_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        cross_attn_head_mask: Optional[Tensor] = None,
-        past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
-        inputs_embeds: Optional[Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, ProphetNetDecoderModelOutput]:
         r"""
-        encoder_hidden_states  (`Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+        encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
             the model is configured as a decoder.
-        encoder_attention_mask (`Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+        encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
             the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
-        cross_attn_head_mask (`Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
+        cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
             Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
 
             - 1 indicates the head is **not masked**,
             - 0 indicates the head is **masked**.
 
-        past_key_values (`tuple(tuple(Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
             Contains precomputed key and value hidden-states of the attention blocks. Can be used to speed up decoding.
 
             If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
@@ -1381,7 +1349,7 @@ class ProphetNetDecoder(ProphetNetPreTrainedModel):
         if encoder_attention_mask is not None:
             extended_encoder_attention_mask = (
                 1.0 - encoder_attention_mask[:, None, None, :].tile((1, self.config.num_decoder_attention_heads, 1, 1))
-            ) * finfo(self.dtype, 'min')
+            ) * float(ops.finfo(self.dtype).min)
             extended_encoder_attention_mask = extended_encoder_attention_mask.to(inputs_embeds.dtype)
         else:
             extended_encoder_attention_mask = None
@@ -1391,7 +1359,7 @@ class ProphetNetDecoder(ProphetNetPreTrainedModel):
         if self.embeddings_layer_norm:
             hidden_states = self.embeddings_layer_norm(hidden_states)
 
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # init attentions, hidden_states and cache with empty tuples
         all_main_stream_hidden_states = () if output_hidden_states else None
@@ -1537,7 +1505,7 @@ class ProphetNetDecoder(ProphetNetPreTrainedModel):
         # get causal mask
         causal_mask = ops.full(
             (seq_length, seq_length),
-            finfo(hidden_states.dtype, 'min'),
+            float(ops.finfo(hidden_states.dtype).min),
             dtype=hidden_states.dtype,
         )
         causal_mask = ops.triu(causal_mask, 1)
@@ -1548,7 +1516,7 @@ class ProphetNetDecoder(ProphetNetPreTrainedModel):
 
         # add usual attention mask
         if attention_mask is not None:
-            extended_attention_mask = (1.0 - attention_mask[:, None, None, :]) * finfo(self.dtype, 'min')
+            extended_attention_mask = (1.0 - attention_mask[:, None, None, :]) * float(ops.finfo(self.dtype).min)
             extended_attention_mask = extended_causal_mask + extended_attention_mask
         else:
             extended_attention_mask = extended_causal_mask
@@ -1576,7 +1544,7 @@ class ProphetNetDecoder(ProphetNetPreTrainedModel):
 
         # add usual attention mask
         if attention_mask is not None:
-            extended_attention_mask = (1.0 - attention_mask[:, None, None, None, :]) * finfo(self.dtype, 'min')
+            extended_attention_mask = (1.0 - attention_mask[:, None, None, None, :]) * float(ops.finfo(self.dtype).min)
             extended_attention_mask = extended_attention_mask.broadcast_to(
                 (batch_size, self.config.num_decoder_attention_heads, self.ngram, seq_length, seq_length)
             )
@@ -1631,17 +1599,17 @@ class ProphetNetModel(ProphetNetPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[Tensor] = None,
-        attention_mask: Optional[Tensor] = None,
-        decoder_input_ids: Optional[Tensor] = None,
-        decoder_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        decoder_head_mask: Optional[Tensor] = None,
-        cross_attn_head_mask: Optional[Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        decoder_input_ids: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        decoder_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
         encoder_outputs: Optional[Tuple] = None,
-        past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
-        inputs_embeds: Optional[Tensor] = None,
-        decoder_inputs_embeds: Optional[Tensor] = None,
+        past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
@@ -1717,6 +1685,7 @@ class ProphetNetModel(ProphetNetPreTrainedModel):
             encoder_attentions=encoder_outputs.attentions,
         )
 
+
 class ProphetNetForConditionalGeneration(ProphetNetPreTrainedModel):
     _tied_weights_keys = ["encoder.word_embeddings.weight", "decoder.word_embeddings.weight", "lm_head.weight"]
 
@@ -1746,25 +1715,25 @@ class ProphetNetForConditionalGeneration(ProphetNetPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[Tensor] = None,
-        attention_mask: Optional[Tensor] = None,
-        decoder_input_ids: Optional[Tensor] = None,
-        decoder_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        decoder_head_mask: Optional[Tensor] = None,
-        cross_attn_head_mask: Optional[Tensor] = None,
-        encoder_outputs: Optional[Tensor] = None,
-        past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
-        inputs_embeds: Optional[Tensor] = None,
-        decoder_inputs_embeds: Optional[Tensor] = None,
-        labels: Optional[Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        decoder_input_ids: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        decoder_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        encoder_outputs: Optional[mindspore.Tensor] = None,
+        past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, ProphetNetSeq2SeqLMOutput]:
         r"""
-        labels (`Tensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the sequence classification/regression loss. Indices should be in `[-100, 0, ...,
             config.vocab_size - 1]`. All labels set to `-100` are ignored (masked), the loss is only computed for
             labels in `[0, ..., config.vocab_size]`
@@ -1821,10 +1790,6 @@ class ProphetNetForConditionalGeneration(ProphetNetPreTrainedModel):
         logits = predict_logits[:, 0]
         logits_ngram = predict_logits[:, 1:] if self.config.ngram > 1 else None
 
-        # To use .view in loss computation, make sure that logits is contiguous.
-        # if not logits.is_contiguous():
-        #     logits = logits.contiguous()
-
         loss = None
         if labels is not None:
             loss = self._compute_loss(predict_logits, labels)
@@ -1849,10 +1814,7 @@ class ProphetNetForConditionalGeneration(ProphetNetPreTrainedModel):
             )
 
     def _compute_loss(self, logits, labels, ignore_index=-100):
-        # expend_targets = labels.new_zeros(self.config.ngram, labels.shape[0], labels.shape[1]).fill_(ignore_index)
-        temp = labels.new_zeros((self.config.ngram, labels.shape[0], labels.shape[1]))
-        temp = temp.fill(ignore_index)
-        expend_targets = temp
+        expend_targets = ops.zeros(self.config.ngram, labels.shape[0], labels.shape[1], dtype=labels.dtype).fill(ignore_index)
 
         for i in range(self.config.ngram):
             if i > 0 and self.disable_ngram_loss:
@@ -1860,16 +1822,16 @@ class ProphetNetForConditionalGeneration(ProphetNetPreTrainedModel):
             expend_targets[i, :, :] = labels
 
         logits = ops.transpose(logits, 0, 1)
-        lprobs = F.log_softmax(
+        lprobs = nn.functional.log_softmax(
             logits.view(-1, logits.shape[-1]),
             dim=-1,
-            # dtype=mindspore.float32,
+            dtype=mindspore.float32,
         )
 
-        loss = F.nll_loss(lprobs, expend_targets.view(-1), reduction="mean")
+        loss = nn.functional.nll_loss(lprobs, expend_targets.view(-1), reduction="mean")
 
         if self.config.eps > 0.0:
-            smooth_loss = -lprobs.sum(axis=-1, keepdim=True)
+            smooth_loss = -lprobs.sum(dim=-1, keepdim=True)
             non_masked_tokens = expend_targets.ne(ignore_index).view(-1)
             smooth_loss = smooth_loss[non_masked_tokens]
             smooth_loss = smooth_loss.mean()
@@ -1908,7 +1870,7 @@ class ProphetNetForConditionalGeneration(ProphetNetPreTrainedModel):
             "use_cache": use_cache,
         }
 
-    def prepare_decoder_input_ids_from_labels(self, labels: Tensor):
+    def prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor):
         return self._shift_right(labels)
 
     @staticmethod
@@ -1977,34 +1939,34 @@ class ProphetNetForCausalLM(ProphetNetPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[Tensor] = None,
-        attention_mask: Optional[Tensor] = None,
-        encoder_hidden_states: Optional[Tensor] = None,
-        encoder_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        cross_attn_head_mask: Optional[Tensor] = None,
-        past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
-        inputs_embeds: Optional[Tensor] = None,
-        labels: Optional[Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, ProphetNetDecoderLMOutput]:
         r"""
-        encoder_hidden_states (`Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+        encoder_hidden_states (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
             the model is configured as a decoder.
-        encoder_attention_mask (`Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+        encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
             the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
-        cross_attn_head_mask (`Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
+        cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
             Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
 
             - 1 indicates the head is **not masked**,
             - 0 indicates the head is **masked**.
 
-        past_key_values (`tuple(tuple(Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
             Contains precomputed key and value hidden-states of the attention blocks. Can be used to speed up decoding.
 
             If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
@@ -2017,7 +1979,7 @@ class ProphetNetForCausalLM(ProphetNetPreTrainedModel):
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
 
-        labels (`Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
             `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
             ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`
@@ -2108,10 +2070,7 @@ class ProphetNetForCausalLM(ProphetNetPreTrainedModel):
             )
 
     def _compute_loss(self, logits, labels, ignore_index=-100):
-        # expend_targets = labels.new_zeros(self.config.ngram, labels.shape[0], labels.shape[1]).fill_(ignore_index)
-        temp = labels.new_zeros((self.config.ngram, labels.shape[0], labels.shape[1]))
-        temp = temp.fill(ignore_index)
-        expend_targets = temp
+        expend_targets = ops.zeros(self.config.ngram, labels.shape[0], labels.shape[1], dtype=labels.dtype).fill(ignore_index)
 
         for i in range(self.config.ngram):
             if i > 0 and self.disable_ngram_loss:
@@ -2119,16 +2078,16 @@ class ProphetNetForCausalLM(ProphetNetPreTrainedModel):
             expend_targets[i, :, :] = labels
 
         logits = ops.transpose(logits, 0, 1)
-        lprobs = F.log_softmax(
+        lprobs = nn.functional.log_softmax(
             logits.view(-1, logits.shape[-1]),
             dim=-1,
-            # dtype=mindspore.float32,
+            dtype=mindspore.float32,
         )
 
-        loss = F.nll_loss(lprobs, expend_targets.view(-1), reduction="mean")
+        loss = nn.functional.nll_loss(lprobs, expend_targets.view(-1), reduction="mean")
 
         if self.config.eps > 0.0:
-            smooth_loss = -lprobs.sum(axis=-1, keepdim=True)
+            smooth_loss = -lprobs.sum(dim=-1, keepdim=True)
             non_masked_tokens = expend_targets.ne(ignore_index).view(-1)
             smooth_loss = smooth_loss[non_masked_tokens]
             smooth_loss = smooth_loss.mean()
@@ -2149,7 +2108,7 @@ class ProphetNetForCausalLM(ProphetNetPreTrainedModel):
     ):
         # if model is used as a decoder in encoder-decoder model, the decoder attention mask is created on the fly
         if attention_mask is None:
-            attention_mask = input_ids.new_ones(input_ids.shape)
+            attention_mask = ops.ones(input_ids.shape, dtype=input_ids.dtype)
 
         if past_key_values:
             input_ids = input_ids[:, -1:]

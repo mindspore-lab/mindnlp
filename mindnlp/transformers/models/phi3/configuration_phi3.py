@@ -13,18 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-""" Phi-3 model configuration"""
+"""Phi-3 model configuration"""
 
 from ...configuration_utils import PretrainedConfig
 from ....utils import logging
 
 
 logger = logging.get_logger(__name__)
-
-PHI3_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "microsoft/Phi-3-mini-4k-instruct": "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct/resolve/main/config.json",
-    "microsoft/Phi-3-mini-128k-instruct": "https://huggingface.co/microsoft/Phi-3-mini-128k-instruct/resolve/main/config.json",
-}
 
 
 class Phi3Config(PretrainedConfig):
@@ -53,7 +48,7 @@ class Phi3Config(PretrainedConfig):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
             `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
-            converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be forwarded
+            converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to
             `num_attention_heads`.
@@ -83,7 +78,7 @@ class Phi3Config(PretrainedConfig):
             The base period of the RoPE embeddings.
         rope_scaling (`dict`, *optional*):
             The scaling strategy for the RoPE embeddings. If `None`, no scaling is applied. If a dictionary, it must
-            contain the following keys: `type`, `short_factor` and `long_factor`. The `type` must be either `su` or `yarn` and
+            contain the following keys: `type`, `short_factor` and `long_factor`. The `type` must be `longrope` and
             the `short_factor` and `long_factor` must be lists of numbers with the same length as the hidden size
             divided by the number of attention heads divided by 2.
         bos_token_id (`int`, *optional*, defaults to 1):
@@ -96,19 +91,20 @@ class Phi3Config(PretrainedConfig):
             Sliding window attention window size. If `None`, no sliding window is applied.
 
     Example:
-        ```python
-        >>> from transformers import Phi3Model, Phi3Config
-        ...
-        >>> # Initializing a Phi-3 style configuration
-        >>> configuration = Phi3Config.from_pretrained("microsoft/Phi-3-mini-4k-instruct")
-        ...
-        >>> # Initializing a model from the configuration
-        >>> model = Phi3Model(configuration)
-        ...
-        >>> # Accessing the model configuration
-        >>> configuration = model.config
-        ```
-    """
+
+    ```python
+    >>> from transformers import Phi3Model, Phi3Config
+
+    >>> # Initializing a Phi-3 style configuration
+    >>> configuration = Phi3Config.from_pretrained("microsoft/Phi-3-mini-4k-instruct")
+
+    >>> # Initializing a model from the configuration
+    >>> model = Phi3Model(configuration)
+
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
+    ```"""
+
     model_type = "phi3"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -138,41 +134,6 @@ class Phi3Config(PretrainedConfig):
         sliding_window=None,
         **kwargs,
     ):
-        """
-        This method initializes an instance of the Phi3Config class with the provided parameters.
-
-        Args:
-            self: The instance of the class.
-            vocab_size (int): The size of the vocabulary. Default is 32064.
-            hidden_size (int): The size of the hidden layers in the model. Default is 3072.
-            intermediate_size (int): The size of the intermediate layers in the model. Default is 8192.
-            num_hidden_layers (int): The number of hidden layers in the model. Default is 32.
-            num_attention_heads (int): The number of attention heads. Default is 32.
-            num_key_value_heads (int): The number of key and value heads. If None, it defaults to num_attention_heads.
-            resid_pdrop (float): The dropout probability for residual connections. Default is 0.0.
-            embd_pdrop (float): The dropout probability for the embeddings. Default is 0.0.
-            attention_dropout (float): The dropout probability for attention layers. Default is 0.0.
-            hidden_act (str): The activation function for the hidden layers. Default is 'silu'.
-            max_position_embeddings (int): The maximum position embeddings. Default is 4096.
-            original_max_position_embeddings (int): The original maximum position embeddings. Default is 4096.
-            initializer_range (float): The range for parameter initializations. Default is 0.02.
-            rms_norm_eps (float): The epsilon value for RMS normalization. Default is 1e-05.
-            use_cache (bool): Indicates whether caching is used. Default is True.
-            tie_word_embeddings (bool): Indicates whether word embeddings are tied. Default is False.
-            rope_theta (float): The theta value for ROPE. Default is 10000.0.
-            rope_scaling (float): The scaling factor for ROPE.
-            bos_token_id (int): The beginning of sequence token id. Default is 1.
-            eos_token_id (int): The end of sequence token id. Default is 32000.
-            pad_token_id (int): The padding token id. Default is 32000.
-            sliding_window: Not specified.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If rope_scaling is provided without rope_theta or vice versa.
-            TypeError: If any of the input parameters have an unexpected type.
-        """
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
         self.intermediate_size = intermediate_size
@@ -194,6 +155,7 @@ class Phi3Config(PretrainedConfig):
         self.use_cache = use_cache
         self.rope_theta = rope_theta
         self.rope_scaling = rope_scaling
+        self._rope_scaling_adjustment()
         self._rope_scaling_validation()
         self.sliding_window = sliding_window
 
@@ -204,6 +166,19 @@ class Phi3Config(PretrainedConfig):
             tie_word_embeddings=tie_word_embeddings,
             **kwargs,
         )
+
+    def _rope_scaling_adjustment(self):
+        """
+        Adjust the `type` of the `rope_scaling` configuration for backward compatibility.
+        """
+        if self.rope_scaling is None:
+            return
+
+        rope_scaling_type = self.rope_scaling.get("type", None)
+
+        # For backward compatibility if previous version used "su" or "yarn"
+        if rope_scaling_type is not None and rope_scaling_type in ["su", "yarn"]:
+            self.rope_scaling["type"] = "longrope"
 
     def _rope_scaling_validation(self):
         """
@@ -220,8 +195,8 @@ class Phi3Config(PretrainedConfig):
         rope_scaling_type = self.rope_scaling.get("type", None)
         rope_scaling_short_factor = self.rope_scaling.get("short_factor", None)
         rope_scaling_long_factor = self.rope_scaling.get("long_factor", None)
-        if rope_scaling_type is None or rope_scaling_type not in ["su", "yarn"]:
-            raise ValueError(f"`rope_scaling`'s type field must be one of ['su', 'yarn'], got {rope_scaling_type}")
+        if rope_scaling_type is None or rope_scaling_type not in ["longrope"]:
+            raise ValueError(f"`rope_scaling`'s type field must be one of ['longrope'], got {rope_scaling_type}")
         if not (
             isinstance(rope_scaling_short_factor, list)
             and all(isinstance(x, (int, float)) for x in rope_scaling_short_factor)

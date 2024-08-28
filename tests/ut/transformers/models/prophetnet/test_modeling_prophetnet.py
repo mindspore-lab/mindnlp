@@ -31,6 +31,7 @@ if is_mindspore_available():
     import mindspore
     from mindspore import Tensor
     from mindnlp.core import ops
+    from mindnlp.engine import set_seed
 
     from mindnlp.transformers import (
         ProphetNetDecoder,
@@ -298,11 +299,11 @@ class ProphetNetModelTester:
         lm_labels,
     ):
         model = ProphetNetForConditionalGeneration(config=config).eval()
-        mindspore.set_seed(0)
+        set_seed(0)
         output_without_past_cache = model.generate(
             input_ids[:1], num_beams=2, max_length=5, do_sample=True, use_cache=False
         )
-        mindspore.set_seed(0)
+        set_seed(0)
         output_with_past_cache = model.generate(input_ids[:1], num_beams=2, max_length=5, do_sample=True)
         self.parent.assertTrue(ops.all(output_with_past_cache == output_without_past_cache))
 
@@ -316,11 +317,11 @@ class ProphetNetModelTester:
         lm_labels,
     ):
         model = ProphetNetForCausalLM(config=config).eval()
-        mindspore.set_seed(0)
+        set_seed(0)
         output_without_past_cache = model.generate(
             input_ids[:1], num_beams=2, max_length=10, do_sample=True, use_cache=False
         )
-        mindspore.set_seed(0)
+        set_seed(0)
         output_with_past_cache = model.generate(input_ids[:1], num_beams=2, max_length=10, do_sample=True)
         self.parent.assertTrue(ops.all(output_with_past_cache == output_without_past_cache))
 
@@ -347,7 +348,7 @@ class ProphetNetModelTester:
         lm_labels,
     ):
         for model_class in [ProphetNetModel, ProphetNetForConditionalGeneration]:
-            mindspore.set_seed(0)
+            set_seed(0)
             model = model_class(config=config).eval()
             # load state dict copies weights but does not tie them
 
@@ -361,7 +362,7 @@ class ProphetNetModelTester:
                                             strict_load=False)
 
 
-            mindspore.set_seed(0)
+            set_seed(0)
             tied_config = copy.deepcopy(config)
             tied_config.tie_encoder_decoder = True
             tied_model = model_class(config=tied_config).eval()
@@ -433,7 +434,7 @@ class ProphetNetModelTester:
         attention_mask = Tensor([[1, 1, 1, 0, 1, 0, 0]], dtype=mindspore.int64)
         decoder_attention_mask = Tensor([[1, 1, 1, 0, 0, 1, 0]], dtype=mindspore.int64)
         lm_labels = Tensor([[62, 25, 11, 47, 15, 14, 24]], dtype=mindspore.int64)
-        # mindspore.set_seed(0)
+        # set_seed(0)
         config.ngram = 4
         model = ProphetNetForConditionalGeneration(config=config)
         model.eval()
@@ -444,7 +445,6 @@ class ProphetNetModelTester:
             decoder_attention_mask=decoder_attention_mask,
             labels=lm_labels,
         )
-
 
         self.parent.assertTrue(np.allclose(result.loss.asnumpy(), Tensor(4.5892).asnumpy(), atol=1e-3))
 
@@ -1171,7 +1171,7 @@ class ProphetNetStandaloneEncoderModelTest(ModelTesterMixin, unittest.TestCase):
 
 @require_mindspore
 class ProphetNetModelIntegrationTest(unittest.TestCase):
-    # @slow
+    @slow
     def test_pretrained_checkpoint_hidden_states(self):
         model = ProphetNetForConditionalGeneration.from_pretrained("microsoft/prophetnet-large-uncased")
 
@@ -1244,7 +1244,7 @@ class ProphetNetModelIntegrationTest(unittest.TestCase):
         #        self.assertTrue(np.allclose(next_first_stream_logits[:, :3, :3], expected_slice, atol=1e-4))
         assert np.allclose(next_first_stream_logits[:, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4)
 
-    # @slow
+    @slow
     def test_cnndm_inference(self):
         model = ProphetNetForConditionalGeneration.from_pretrained("microsoft/prophetnet-large-uncased-cnndm")
         model.config.max_length = 512
@@ -1293,7 +1293,7 @@ class ProphetNetModelIntegrationTest(unittest.TestCase):
             generated_titles,
         )
 
-    # @slow
+    @slow
     def test_question_gen_inference(self):
         model = ProphetNetForConditionalGeneration.from_pretrained("microsoft/prophetnet-large-uncased-squad-qg")
 

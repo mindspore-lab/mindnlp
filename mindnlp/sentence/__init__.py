@@ -13,3 +13,4 @@
 # limitations under the License.
 # ============================================================================
 """MindNLP Text2vec"""
+from .sentence_transformer import SentenceTransformer

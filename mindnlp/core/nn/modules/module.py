@@ -23,6 +23,17 @@ class _IncompatibleKeys(namedtuple('IncompatibleKeys', ['missing_keys', 'unexpec
 
     __str__ = __repr__
 
+def _addindent(s_, numSpaces):
+    s = s_.split('\n')
+    # don't do anything for single-line stuff
+    if len(s) == 1:
+        return s_
+    first = s.pop(0)
+    s = [(numSpaces * ' ') + line for line in s]
+    s = '\n'.join(s)
+    s = first + '\n' + s
+    return s
+
 _EXTRA_STATE_KEY_SUFFIX = '_extra_state'
 
 _global_buffer_registration_hooks: Dict[int, Callable] = OrderedDict()
@@ -579,6 +590,54 @@ class Module:
             object.__delattr__(self, name)
 
 
+    def extra_repr(self) -> str:
+        r"""Set the extra representation of the module.
+
+        To print customized extra information, you should re-implement
+        this method in your own modules. Both single-line and multi-line
+        strings are acceptable.
+        """
+        return ''
+
+
+    def __repr__(self):
+        # We treat the extra repr like the sub-module, one item per line
+        extra_lines = []
+        extra_repr = self.extra_repr()
+        # empty string will be split into list ['']
+        if extra_repr:
+            extra_lines = extra_repr.split('\n')
+        child_lines = []
+        for key, module in self._modules.items():
+            mod_str = repr(module)
+            mod_str = _addindent(mod_str, 2)
+            child_lines.append('(' + key + '): ' + mod_str)
+        lines = extra_lines + child_lines
+
+        main_str = self._get_name() + '('
+        if lines:
+            # simple one-liner info, which most builtin Modules will use
+            if len(extra_lines) == 1 and not child_lines:
+                main_str += extra_lines[0]
+            else:
+                main_str += '\n  ' + '\n  '.join(lines) + '\n'
+
+        main_str += ')'
+        return main_str
+
+    def __dir__(self):
+        module_attrs = dir(self.__class__)
+        attrs = list(self.__dict__.keys())
+        parameters = list(self._parameters.keys())
+        modules = list(self._modules.keys())
+        buffers = list(self._buffers.keys())
+        keys = module_attrs + attrs + parameters + modules + buffers
+
+        # Eliminate attrs that are not legal Python variable names
+        keys = [key for key in keys if not key[0].isdigit()]
+
+        return sorted(keys)
+
     def cuda(self):
         return self
 
@@ -1127,6 +1186,10 @@ class Module:
         for p in self.parameters():
             p.requires_grad = requires_grad
         return self
+
+
+    def _get_name(self):
+        return self.__class__.__name__
 
     def to(self, *args, **kwargs):
         return self

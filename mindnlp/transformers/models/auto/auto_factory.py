@@ -430,7 +430,7 @@ class _BaseAutoModelClass:
         use_auth_token = hub_kwargs.pop("use_auth_token", None)
         if use_auth_token is not None:
             warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+                "The `use_auth_token` argument is deprecated. Please use `token` instead.",
                 FutureWarning,
             )
             if token is not None:
@@ -462,8 +462,9 @@ class _BaseAutoModelClass:
             if token is not None:
                 adapter_kwargs["token"] = token
 
+        mirror = kwargs.get('mirror', "huggingface")
         maybe_adapter_path = find_adapter_config_file(
-            pretrained_model_name_or_path, _commit_hash=commit_hash, **adapter_kwargs
+            pretrained_model_name_or_path, _commit_hash=commit_hash, mirror=mirror, **adapter_kwargs
         )
 
         if maybe_adapter_path is not None:

@@ -1914,7 +1914,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
 
         Raises:
             UserWarning: If using `max_length`'s default value to control generation length.
-                This behavior is deprecated and will be removed in v5 of Transformers.
+                This behavior is deprecated.
                 It is recommended to use `max_new_tokens` instead.
             UserWarning: If both `max_new_tokens` and `max_length` are set. `max_new_tokens` takes precedence.
             UserWarning: If the input length exceeds `max_length` and may lead to unexpected behavior.

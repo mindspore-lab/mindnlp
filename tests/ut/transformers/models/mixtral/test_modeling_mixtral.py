@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the PyTorch Mixtral model. """
+""" Testing suite for the MindSpore Mixtral model. """
 
 
 import unittest
@@ -227,8 +227,8 @@ class MixtralModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([input_mask, next_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([input_mask, next_mask], dim=-1)
 
         output_from_no_past = model(
             next_input_ids,
@@ -383,7 +383,7 @@ class MixtralModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCas
         pad_length = 1000
         # Add padding tokens (assume that pad_token_id=1) to input_ids
         padding_block = ops.ones(input_ids.shape[0], pad_length, dtype=mindspore.int64)
-        padded_input_ids = ops.cat((padding_block, input_ids), axis=1)  # this is to simulate padding to the left
+        padded_input_ids = ops.cat((padding_block, input_ids), dim=1)  # this is to simulate padding to the left
         padded_attention_mask = padded_input_ids.ne(1)
 
         padded_result = model(padded_input_ids, attention_mask=padded_attention_mask)
