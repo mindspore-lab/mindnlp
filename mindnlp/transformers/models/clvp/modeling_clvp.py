@@ -302,7 +302,7 @@ class ClvpSelfAttention(nn.Module):
         if hasattr(config, "max_position_embeddings"):
             max_positions = config.max_position_embeddings
             bias = ops.tril(
-                ops.ones((max_positions, max_positions), dtype=mindspore.bool_))
+                ops.ones((max_positions, max_positions))).to(mindspore.bool_)
             bias = bias.view(1, 1, max_positions, max_positions)
             self.register_buffer("bias", bias, persistent=False)
 

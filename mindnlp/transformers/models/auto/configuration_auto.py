@@ -55,6 +55,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("camembert", "CamembertConfig"),
         ("canine", "CanineConfig"),
         ("chatglm", "ChatGLMConfig"),
+        ("chatglm2", "ChatGLM2Config"),
+        ("chatglm3", "ChatGLM3Config"),
         ("chatglm4", "ChatGLM4Config"),
         ("clap", "ClapConfig"),
         ("clip", "CLIPConfig"),
@@ -471,6 +473,8 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("canine", "CANINE"),
         ("chinese_clip", "Chinese-CLIP"),
         ("chatglm", "ChatGLM"),
+        ("chatglm2", "ChatGLM2"),
+        ("chatglm3", "ChatGLM3"),
         ("chatglm4", "ChatGLM4"),
         ("clap", "CLAP"),
         ("clip", "CLIP"),
@@ -1429,6 +1433,8 @@ def fix_chatglm_name(config):
     elif 'chatglm2' in config['_name_or_path']:
         config['model_type'] = 'chatglm2'
         new_model_name = 'ChatGLM2'
+    else:
+        new_model_name = 'ChatGLM'
 
     for arch in config['architectures']:
         arch.replace('ChatGLM', new_model_name)
