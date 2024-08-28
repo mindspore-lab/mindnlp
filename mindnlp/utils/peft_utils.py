@@ -33,6 +33,7 @@ def find_adapter_config_file(
     revision: Optional[str] = None,
     local_files_only: bool = False,
     subfolder: str = "",
+    mirror: str = "huggingface",
     _commit_hash: Optional[str] = None,
 ) -> Optional[str]:
     r"""
@@ -93,6 +94,7 @@ def find_adapter_config_file(
             revision=revision,
             local_files_only=local_files_only,
             subfolder=subfolder,
+            mirror=mirror,
             # _commit_hash=_commit_hash,
             _raise_exceptions_for_gated_repo=False,
             _raise_exceptions_for_missing_entries=False,

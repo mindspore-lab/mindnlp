@@ -14,31 +14,31 @@
 # ============================================================================
 """Sentence Transformer"""
 
-import logging
 from collections import OrderedDict
 from typing import Optional, Iterable, Dict, Union, List, Literal, Tuple
-
-import mindspore
-from mindspore import nn
 import numpy as np
-from mindspore import Tensor
 from tqdm import trange
 
-from mindnlp.sentence.models import Transformer, Pooling
-from mindnlp.sentence.util import truncate_embeddings
+import mindspore
+from mindspore import Tensor
+from mindnlp.core import nn, ops, no_grad
+from mindnlp.utils import logging
+from .models import Transformer, Pooling
+from .util import truncate_embeddings
 
+logger = logging.get_logger(__name__)
 
 class SentenceTransformer(nn.Sequential):
     def __init__(
             self,
             model_name_or_path: Optional[str] = None,
             modules: Optional[Iterable[nn.Module]] = None,
-            device: Optional[str] = None,
             prompts: Optional[Dict[str, str]] = None,
             default_prompt_name: Optional[str] = None,
             cache_folder: Optional[str] = None,
             local_files_only: bool = False,
             token: Optional[Union[bool, str]] = None,
+            mirror: str = "huggingface",
             truncate_dim: Optional[int] = None,
     ):
         self.prompts = prompts or {}
@@ -48,19 +48,15 @@ class SentenceTransformer(nn.Sequential):
         self._model_card_text = None
         self._model_config = {}
 
-        if device is None:
-            device = 'CPU'
-        logging.info(f"Use device_name: {device}")
-        mindspore.set_context(device_target=device)
-
         if model_name_or_path is not None and model_name_or_path != "":
-            logging.info("Load pretrained SentenceTransformer: %s", model_name_or_path)
+            logger.info("Load pretrained SentenceTransformer: %s", model_name_or_path)
 
             modules = self._load_auto_model(
                 model_name_or_path,
                 token=token,
                 cache_folder=cache_folder,
                 local_files_only=local_files_only,
+                mirror=mirror
             )
         if modules is not None and not isinstance(modules, OrderedDict):
             modules = OrderedDict([(str(idx), module) for idx, module in enumerate(modules)])
@@ -73,11 +69,12 @@ class SentenceTransformer(nn.Sequential):
             token: Optional[Union[bool, str]],
             cache_folder: Optional[str],
             local_files_only: bool = False,
+            mirror: str = 'huggingface'
     ):
         """
         Creates a simple Transformer + Mean Pooling model and returns the modules
         """
-        logging.warning(
+        logger.warning(
             "No sentence-transformers model found with name %s. Creating a new one with MEAN pooling.",
             model_name_or_path
         )
@@ -87,10 +84,12 @@ class SentenceTransformer(nn.Sequential):
             model_args={
                 "token": token,
                 "local_files_only": local_files_only,
+                "mirror": mirror
             },
             tokenizer_args={
                 "token": token,
                 "local_files_only": local_files_only,
+                "mirror": mirror
             }
         )
         pooling_model = Pooling(transformer_model.get_word_embedding_dimension(), "mean")
@@ -98,7 +97,7 @@ class SentenceTransformer(nn.Sequential):
 
     def _first_module(self):
         """Returns the first module of this sequential embedder"""
-        return self._cells[next(iter(self._cells))]
+        return self._modules[next(iter(self._modules))]
 
     def tokenize(self, texts: Union[List[str], List[Dict], List[Tuple[str, str]]]):
         """
@@ -123,15 +122,29 @@ class SentenceTransformer(nn.Sequential):
             return sum(len(t) for t in text)  # Sum of length of individual strings
 
     def encode(
-            self,
-            sentences: Union[str, List[str]],
-            prompt_name: Optional[str] = None,
-            prompt: Optional[str] = None,
-            batch_size: int = 32,
-            show_progress_bar: bool = None,
-            output_value: Optional[Literal["sentence_embedding", "token_embeddings"]] = "sentence_embedding",
-            normalize_embeddings: bool = False,
+        self,
+        sentences: Union[str, List[str]],
+        prompt_name: Optional[str] = None,
+        prompt: Optional[str] = None,
+        batch_size: int = 32,
+        show_progress_bar: bool = None,
+        output_value: Optional[Literal["sentence_embedding", "token_embeddings"]] = "sentence_embedding",
+        precision: Literal["float32", "int8", "uint8", "binary", "ubinary"] = "float32",
+        convert_to_numpy: bool = True,
+        convert_to_tensor: bool = False,
+        normalize_embeddings: bool = False,
     ) -> Union[List[Tensor], Tensor]:
+        self.eval()
+        if show_progress_bar is None:
+            show_progress_bar = logger.getEffectiveLevel() in (logging.INFO, logging.DEBUG)
+
+        if convert_to_tensor:
+            convert_to_numpy = False
+
+        if output_value != "sentence_embedding":
+            convert_to_tensor = False
+            convert_to_numpy = False
+
         input_was_string = False
         if isinstance(sentences, str) or not hasattr(
                 sentences, "__len__"
@@ -151,7 +164,7 @@ class SentenceTransformer(nn.Sequential):
                 prompt = self.prompts.get(self.default_prompt_name, None)
         else:
             if prompt_name is not None:
-                logging.warning(
+                logger.warning(
                     "Encode with either a `prompt`, a `prompt_name`, or neither, but not both. "
                     "Ignoring the `prompt_name` in favor of `prompt`."
                 )
@@ -175,34 +188,54 @@ class SentenceTransformer(nn.Sequential):
             features = self.tokenize(sentences_batch)
             features.update(extra_features)
 
-            out_features = self.forward(features)
+            with no_grad():
+                out_features = self.forward(features)
 
-            out_features["sentence_embedding"] = truncate_embeddings(
-                out_features["sentence_embedding"], self.truncate_dim
-            )
+                out_features["sentence_embedding"] = truncate_embeddings(
+                    out_features["sentence_embedding"], self.truncate_dim
+                )
 
-            if output_value == "token_embeddings":
-                embeddings = []
-                for token_emb, attention in zip(out_features[output_value], out_features["attention_mask"]):
-                    last_mask_id = len(attention) - 1
-                    while last_mask_id > 0 and attention[last_mask_id].item() == 0:
-                        last_mask_id -= 1
+                if output_value == "token_embeddings":
+                    embeddings = []
+                    for token_emb, attention in zip(out_features[output_value], out_features["attention_mask"]):
+                        last_mask_id = len(attention) - 1
+                        while last_mask_id > 0 and attention[last_mask_id].item() == 0:
+                            last_mask_id -= 1
 
-                    embeddings.append(token_emb[0: last_mask_id + 1])
-            elif output_value is None:  # Return all outputs
-                embeddings = []
-                for sent_idx in range(len(out_features["sentence_embedding"])):
-                    row = {name: out_features[name][sent_idx] for name in out_features}
-                    embeddings.append(row)
-            else:  # Sentence embeddings
-                embeddings = out_features[output_value]
-                # embeddings = embeddings.detach()
-                if normalize_embeddings:
-                    embeddings = mindspore.ops.L2Normalize(embeddings, p=2, dim=1)
+                        embeddings.append(token_emb[0: last_mask_id + 1])
+                elif output_value is None:  # Return all outputs
+                    embeddings = []
+                    for sent_idx in range(len(out_features["sentence_embedding"])):
+                        row = {name: out_features[name][sent_idx] for name in out_features}
+                        embeddings.append(row)
+                else:  # Sentence embeddings
+                    embeddings = out_features[output_value]
+                    if normalize_embeddings:
+                        embeddings = nn.functional.normalize(embeddings, p=2, dim=1)
 
-            all_embeddings.extend(embeddings)
+                all_embeddings.extend(embeddings)
 
         all_embeddings = [all_embeddings[idx] for idx in np.argsort(length_sorted_idx)]
+
+        # if precision and precision != "float32":
+        #     all_embeddings = quantize_embeddings(all_embeddings, precision=precision)
+
+        if convert_to_tensor:
+            if len(all_embeddings):
+                if isinstance(all_embeddings, np.ndarray):
+                    all_embeddings = ops.from_numpy(all_embeddings)
+                else:
+                    all_embeddings = ops.stack(all_embeddings)
+            else:
+                all_embeddings = mindspore.Tensor()
+        elif convert_to_numpy:
+            if not isinstance(all_embeddings, np.ndarray):
+                if all_embeddings and all_embeddings[0].dtype == mindspore.bfloat16:
+                    all_embeddings = np.asarray([emb.float().asnumpy() for emb in all_embeddings])
+                else:
+                    all_embeddings = np.asarray([emb.asnumpy() for emb in all_embeddings])
+        elif isinstance(all_embeddings, np.ndarray):
+            all_embeddings = [ops.from_numpy(embedding) for embedding in all_embeddings]
 
         if input_was_string:
             all_embeddings = all_embeddings[0]
@@ -215,20 +248,3 @@ class SentenceTransformer(nn.Sequential):
         for i, embedding in enumerate(embeddings):
             embeddings[i] = embedding.tolist()
         return embeddings
-
-
-if __name__ == '__main__':
-    model = SentenceTransformer(
-        "moka-ai/m3e-base",
-        device='CPU',
-    )
-    sentences = [
-        "This framework generates embeddings for each input sentence",
-        "Sentences are passed as a list of string.",
-        "The quick brown fox jumps over the lazy dog.",
-    ]
-    sentence_embeddings = model.encode(sentences)
-    for sentence, embedding in zip(sentences, sentence_embeddings):
-        print("Sentence:", sentence)
-        print("Embedding:", embedding)
-        print("")

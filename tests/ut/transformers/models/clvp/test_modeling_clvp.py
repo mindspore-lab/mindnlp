@@ -115,12 +115,8 @@ class ClvpEncoderTester:
             batch_size, seq_length = input_mask.shape
             rnd_start_indices = np.random.randint(1, seq_length - 1, size=(batch_size,))
             for batch_idx, start_index in enumerate(rnd_start_indices):
-                ops.scatter_nd_update(input_mask,
-                                      ops.stack([ops.full((int(start_index),), batch_idx), ops.arange(mindspore.Tensor(start_index))], dim=1),
-                                      ops.full((int(start_index),), 1))
-                ops.scatter_nd_update(input_mask,
-                                      ops.stack([ops.full((input_mask.shape[1] - int(start_index),), batch_idx), ops.arange(mindspore.Tensor(input_mask.shape[1] - start_index))], dim=1),
-                                      ops.full((input_mask.shape[1] - int(start_index),), 0))
+                input_mask[batch_idx, :int(start_index)] = 1
+                input_mask[batch_idx, int(start_index):] = 0
 
         encoder_config = self.get_config()
 
