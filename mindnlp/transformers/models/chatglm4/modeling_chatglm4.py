@@ -667,7 +667,7 @@ class ChatGLM4PreTrainedModel(PreTrainedModel):
 
     def get_position_ids(self, input_ids):
         batch_size, seq_length = input_ids.shape
-        position_ids = ops.arange(seq_length, dtype=mindspore.int64).unsqueeze(0).repeat(batch_size, 1)
+        position_ids = ops.arange(seq_length, dtype=mindspore.int64).unsqueeze(0).tile((batch_size, 1))
         return position_ids
 
 class Embedding(nn.Module):
