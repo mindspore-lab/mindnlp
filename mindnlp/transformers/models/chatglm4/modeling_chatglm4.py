@@ -662,7 +662,7 @@ class ChatGLM4PreTrainedModel(PreTrainedModel):
         if not past_length and padding_mask is not None:
             full_attention_mask -= padding_mask.unsqueeze(-1) - 1
         full_attention_mask = (full_attention_mask < 0.5).bool()
-        full_attention_mask.unsqueeze_(1)
+        full_attention_mask = full_attention_mask.unsqueeze(1)
         return full_attention_mask
 
     def get_position_ids(self, input_ids):
