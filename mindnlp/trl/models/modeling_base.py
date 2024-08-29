@@ -46,7 +46,7 @@ from typing import Optional
 #管理和控制分布式训练环境下的训练进程
 
 import mindspore as ms
-from mindspore import nn
+from mindnlp.core import nn
 
 
 from huggingface_hub import hf_hub_download
@@ -85,7 +85,7 @@ LAYER_PATTERNS = [
 ]
 
 
-class PreTrainedModelWrapper(nn.Cell):
+class PreTrainedModelWrapper(nn.Module):
     r"""
     A wrapper class around a (`transformers.PreTrainedModel`) to be compatible with the
     (`~transformers.PreTrained`) class in order to keep some attributes and methods of the

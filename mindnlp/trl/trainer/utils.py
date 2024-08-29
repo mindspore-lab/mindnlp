@@ -28,21 +28,21 @@ limitations under the License.'''
 import random
 import warnings
 # from collections import deque
-# from dataclasses import dataclass
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import mindspore.numpy as np
-# import pandas as pd
+import pandas as pd
 import mindspore as ms
-import mindspore.ops as ops
+import mindnlp.core.ops as ops
 # from accelerate import Accelerator
 # from accelerate.state import AcceleratorState, PartialState
 # from accelerate.utils import is_deepspeed_available
-# from rich.console import Console, Group
-# from rich.live import Live
-# from rich.panel import Panel
-# from rich.progress import Progress
-# from rich.table import Table
+from rich.console import Console, Group
+from rich.live import Live
+from rich.panel import Panel
+from rich.progress import Progress
+from rich.table import Table
 # from torch.nn.utils.rnn import pad_sequence
 # from torch.utils.data import IterableDataset
 # from transformers import (
@@ -51,17 +51,20 @@ import mindspore.ops as ops
 #     PreTrainedModel,
 #     PreTrainedTokenizerBase,
 # )
+from mindnlp.transformers import (
+    PreTrainedTokenizerBase,
+)
 from data.data_collator import DataCollatorForLanguageModeling
 from mindnlp.engine import TrainerCallback
 # from transformers.trainer_utils import has_length
 
-# from ..import_utils import is_peft_available
+from ..import_utils import is_peft_available
 from ..import_utils import is_unsloth_available
-# from ..trainer.model_config import ModelConfig
+from ..trainer.model_config import ModelConfig
 
 
-# if is_peft_available():
-#     from peft import LoraConfig, PeftConfig
+if is_peft_available():
+    from peft import LoraConfig, PeftConfig
 
 
 # if is_deepspeed_available():
@@ -134,7 +137,7 @@ class IterableDataset(Dataset[T_co], Iterable[T_co]):
 
     def __add__(self, other: Dataset[T_co]):
         return ChainDataset([self, other])
-    
+
 class ConcatDataset(Dataset[T_co]):
     r"""Dataset as a concatenation of multiple datasets.
 
@@ -429,86 +432,86 @@ class DataCollatorForCompletionOnlyLM(DataCollatorForLanguageModeling):
         return batch
 
 
-# @dataclass
-# class RewardDataCollatorWithPadding:
-#     r"""
-#     Reward DataCollator class that pads the inputs to the maximum length of the batch.
-#     Args:
-#         tokenizer (`PreTrainedTokenizerBase`):
-#             The tokenizer used for encoding the data.
-#         padding (`Union[bool, str, `PaddingStrategy`]`, `optional`, defaults to `True`):
-#             padding_strategy to pass to the tokenizer.
-#         max_length (`Optional[int]`, `optional`, defaults to `None`):
-#             The maximum length of the sequence to be processed.
-#         pad_to_multiple_of (`Optional[int]`, `optional`, defaults to `None`):
-#             If set will pad the sequence to a multiple of the provided value.
-#         return_tensors (`str`, `optional`, defaults to `"pt"`):
-#             The tensor type to use.
-#     """
+@dataclass
+class RewardDataCollatorWithPadding:
+    r"""
+    Reward DataCollator class that pads the inputs to the maximum length of the batch.
+    Args:
+        tokenizer (`PreTrainedTokenizerBase`):
+            The tokenizer used for encoding the data.
+        padding (`Union[bool, str, `PaddingStrategy`]`, `optional`, defaults to `True`):
+            padding_strategy to pass to the tokenizer.
+        max_length (`Optional[int]`, `optional`, defaults to `None`):
+            The maximum length of the sequence to be processed.
+        pad_to_multiple_of (`Optional[int]`, `optional`, defaults to `None`):
+            If set will pad the sequence to a multiple of the provided value.
+        return_tensors (`str`, `optional`, defaults to `"pt"`):
+            The tensor type to use.
+    """
 
-#     tokenizer: PreTrainedTokenizerBase
-#     padding: Union[bool, str] = True
-#     max_length: Optional[int] = None
-#     pad_to_multiple_of: Optional[int] = None
-#     return_tensors: str = "pt"
+    tokenizer: PreTrainedTokenizerBase
+    padding: Union[bool, str] = True
+    max_length: Optional[int] = None
+    pad_to_multiple_of: Optional[int] = None
+    return_tensors: str = "ms"
 
-#     def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
-#         features_chosen = []
-#         features_rejected = []
-#         margin = []
-#         # check if we have a margin. If we do, we need to batch it as well
-#         has_margin = "margin" in features[0]
-#         for feature in features:
-#             # check if the keys are named as expected
-#             if (
-#                 "input_ids_chosen" not in feature
-#                 or "input_ids_rejected" not in feature
-#                 or "attention_mask_chosen" not in feature
-#                 or "attention_mask_rejected" not in feature
-#             ):
-#                 raise ValueError(
-#                     "The features should include `input_ids_chosen`, `attention_mask_chosen`, `input_ids_rejected` and `attention_mask_rejected`"
-#                 )
+    def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+        features_chosen = []
+        features_rejected = []
+        margin = []
+        # check if we have a margin. If we do, we need to batch it as well
+        has_margin = "margin" in features[0]
+        for feature in features:
+            # check if the keys are named as expected
+            if (
+                "input_ids_chosen" not in feature
+                or "input_ids_rejected" not in feature
+                or "attention_mask_chosen" not in feature
+                or "attention_mask_rejected" not in feature
+            ):
+                raise ValueError(
+                    "The features should include `input_ids_chosen`, `attention_mask_chosen`, `input_ids_rejected` and `attention_mask_rejected`"
+                )
 
-#             features_chosen.append(
-#                 {
-#                     "input_ids": feature["input_ids_chosen"],
-#                     "attention_mask": feature["attention_mask_chosen"],
-#                 }
-#             )
-#             features_rejected.append(
-#                 {
-#                     "input_ids": feature["input_ids_rejected"],
-#                     "attention_mask": feature["attention_mask_rejected"],
-#                 }
-#             )
-#             if has_margin:
-#                 margin.append(feature["margin"])
-#         batch_chosen = self.tokenizer.pad(
-#             features_chosen,
-#             padding=self.padding,
-#             max_length=self.max_length,
-#             pad_to_multiple_of=self.pad_to_multiple_of,
-#             return_tensors=self.return_tensors,
-#         )
-#         batch_rejected = self.tokenizer.pad(
-#             features_rejected,
-#             padding=self.padding,
-#             max_length=self.max_length,
-#             pad_to_multiple_of=self.pad_to_multiple_of,
-#             return_tensors=self.return_tensors,
-#         )
-#         batch = {
-#             "input_ids_chosen": batch_chosen["input_ids"],
-#             "attention_mask_chosen": batch_chosen["attention_mask"],
-#             "input_ids_rejected": batch_rejected["input_ids"],
-#             "attention_mask_rejected": batch_rejected["attention_mask"],
-#             "return_loss": True,
-#         }
-#         if has_margin:
-#             margin = torch.tensor(margin, dtype=torch.float)
-#             batch["margin"] = margin
-#         return batch
+            features_chosen.append(
+                {
+                    "input_ids": feature["input_ids_chosen"],
+                    "attention_mask": feature["attention_mask_chosen"],
+                }
+            )
+            features_rejected.append(
+                {
+                    "input_ids": feature["input_ids_rejected"],
+                    "attention_mask": feature["attention_mask_rejected"],
+                }
+            )
+            if has_margin:
+                margin.append(feature["margin"])
+        batch_chosen = self.tokenizer.pad(
+            features_chosen,
+            padding=self.padding,
+            max_length=self.max_length,
+            pad_to_multiple_of=self.pad_to_multiple_of,
+            return_tensors=self.return_tensors,
+        )
+        batch_rejected = self.tokenizer.pad(
+            features_rejected,
+            padding=self.padding,
+            max_length=self.max_length,
+            pad_to_multiple_of=self.pad_to_multiple_of,
+            return_tensors=self.return_tensors,
+        )
+        batch = {
+            "input_ids_chosen": batch_chosen["input_ids"],
+            "attention_mask_chosen": batch_chosen["attention_mask"],
+            "input_ids_rejected": batch_rejected["input_ids"],
+            "attention_mask_rejected": batch_rejected["attention_mask"],
+            "return_loss": True,
+        }
+        if has_margin:
+            margin = ms.Tensor(margin, dtype=ms.float)
+            batch["margin"] = margin
+        return batch
 
 
 # @dataclass
@@ -766,18 +769,18 @@ class ConstantLengthDataset(IterableDataset):
 #     return global_mean.to(device), global_var.to(device), count.to(device)
 
 
-# def compute_accuracy(eval_pred) -> Dict[str, float]:
-#     predictions, labels = eval_pred
-#     # Here, predictions is rewards_chosen and rewards_rejected.
-#     # We want to see how much of the time rewards_chosen > rewards_rejected.
-#     if np.array(predictions[:, 0] == predictions[:, 1], dtype=float).sum() > 0:
-#         warnings.warn(
-#             f"There are {np.array(predictions[:, 0] == predictions[:, 1]).sum()} out of {len(predictions[:, 0])} instances where the predictions for both options are equal. As a consequence the accuracy can be misleading."
-#         )
-#     predictions = np.argmax(predictions, axis=1)
+def compute_accuracy(eval_pred) -> Dict[str, float]:
+    predictions, labels = eval_pred
+    # Here, predictions is rewards_chosen and rewards_rejected.
+    # We want to see how much of the time rewards_chosen > rewards_rejected.
+    if np.array(predictions[:, 0] == predictions[:, 1], dtype=float).sum() > 0:
+        warnings.warn(
+            f"There are {np.array(predictions[:, 0] == predictions[:, 1]).sum()} out of {len(predictions[:, 0])} instances where the predictions for both options are equal. As a consequence the accuracy can be misleading."
+        )
+    predictions = np.argmax(predictions, axis=1)
 
-#     accuracy = np.array(predictions == labels, dtype=float).mean().item()
-#     return {"accuracy": accuracy}
+    accuracy = np.array(predictions == labels, dtype=float).mean().item()
+    return {"accuracy": accuracy}
 
 
 # def pad_to_length(tensor: torch.Tensor, length: int, pad_value: Union[int, float], dim: int = -1) -> torch.Tensor:
@@ -936,27 +939,27 @@ def trl_sanitze_kwargs_for_tagging(model, tag_names, kwargs=None):
 #         return None
 
 
-# def get_peft_config(model_config: ModelConfig) -> "Optional[PeftConfig]":
-#     if model_config.use_peft is False:
-#         return None
+def get_peft_config(model_config: ModelConfig) -> "Optional[PeftConfig]":
+    if model_config.use_peft is False:
+        return None
 
-#     if not is_peft_available():
-#         raise ValueError(
-#             "You need to have PEFT library installed in your environment, make sure to install `peft`. "
-#             "Make sure to run `pip install -U peft`."
-#         )
+    if not is_peft_available():
+        raise ValueError(
+            "You need to have PEFT library installed in your environment, make sure to install `peft`. "
+            "Make sure to run `pip install -U peft`."
+        )
 
-#     peft_config = LoraConfig(
-#         r=model_config.lora_r,
-#         lora_alpha=model_config.lora_alpha,
-#         lora_dropout=model_config.lora_dropout,
-#         bias="none",
-#         task_type=model_config.lora_task_type,
-#         target_modules=model_config.lora_target_modules,
-#         modules_to_save=model_config.lora_modules_to_save,
-#     )
+    peft_config = LoraConfig(
+        r=model_config.lora_r,
+        lora_alpha=model_config.lora_alpha,
+        lora_dropout=model_config.lora_dropout,
+        bias="none",
+        task_type=model_config.lora_task_type,
+        target_modules=model_config.lora_target_modules,
+        modules_to_save=model_config.lora_modules_to_save,
+    )
 
-#     return peft_config
+    return peft_config
 
 
 class RichProgressCallback(TrainerCallback):
@@ -1036,14 +1039,14 @@ class RichProgressCallback(TrainerCallback):
             self.current_step = None
 
 
-# def print_rich_table(df: pd.DataFrame) -> Table:
-#     console = Console()
-#     table = Table(show_lines=True)
-#     for column in df.columns:
-#         table.add_column(column)
-#     for _, row in df.iterrows():
-#         table.add_row(*row.astype(str).tolist())
-#     console.print(table)
+def print_rich_table(df: pd.DataFrame) -> Table:
+    console = Console()
+    table = Table(show_lines=True)
+    for column in df.columns:
+        table.add_column(column)
+    for _, row in df.iterrows():
+        table.add_row(*row.astype(str).tolist())
+    console.print(table)
 
 
 # SIMPLE_SFT_CHAT_TEMPLATE = "{% for message in messages %}{{' ' + message['content']}}{% endfor %}{{ eos_token }}"
@@ -1054,23 +1057,23 @@ class RichProgressCallback(TrainerCallback):
 # # is to have the generated response to end with an EOS token, but the query itself should not end with EOS tokens.
 
 
-# @dataclass
-# class OnpolicyRuntimeConfig:
-#     # various batch sizes
-#     world_size: Optional[int] = None
-#     """The number of processes (GPUs) to use"""
-#     num_updates: Optional[int] = None
-#     """The number of updates to train"""
-#     micro_batch_size: Optional[int] = None
-#     """The micro batch size across devices (HF's `per_device_train_batch_size` * `world_size`)"""
-#     local_batch_size: Optional[int] = None
-#     """The batch size per GPU (HF's `per_device_train_batch_size` * `gradient_accumulation_steps`)"""
-#     batch_size: Optional[int] = None
-#     """The batch size across devices (HF's `per_device_train_batch_size` * `world_size` * `gradient_accumulation_steps`)"""
-#     local_mini_batch_size: Optional[int] = None
-#     """the mini batch size per GPU"""
-#     mini_batch_size: Optional[int] = None
-#     """the mini batch size across GPUs"""
+@dataclass
+class OnpolicyRuntimeConfig:
+    # various batch sizes
+    world_size: Optional[int] = None
+    """The number of processes (GPUs) to use"""
+    num_updates: Optional[int] = None
+    """The number of updates to train"""
+    micro_batch_size: Optional[int] = None
+    """The micro batch size across devices (HF's `per_device_train_batch_size` * `world_size`)"""
+    local_batch_size: Optional[int] = None
+    """The batch size per GPU (HF's `per_device_train_batch_size` * `gradient_accumulation_steps`)"""
+    batch_size: Optional[int] = None
+    """The batch size across devices (HF's `per_device_train_batch_size` * `world_size` * `gradient_accumulation_steps`)"""
+    local_mini_batch_size: Optional[int] = None
+    """the mini batch size per GPU"""
+    mini_batch_size: Optional[int] = None
+    """the mini batch size across GPUs"""
 
 
 # def first_true_indices(bools: torch.Tensor, dtype=torch.long):

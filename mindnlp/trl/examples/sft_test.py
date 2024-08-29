@@ -1,3 +1,6 @@
+'''
+    This file is an example for sft method.
+'''
 # imports
 from mindnlp.dataset import load_dataset
 from mindnlp.trl.trainer import SFTTrainer
@@ -18,8 +21,7 @@ trainer = SFTTrainer(
     train_dataset=imdb_train,
     dataset_text_field="text",
     max_seq_length=512,
-    tokenizer=tokenizer
-)
+    tokenizer=tokenizer,)
 
 # train
 trainer.train()

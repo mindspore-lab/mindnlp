@@ -27,10 +27,10 @@ from dataclasses import dataclass
 
 # import mindspore.numpy as np
 # import mindspore as ms
-from mindspore import ops
 from mindspore import Tensor
+from mindnlp.core import ops
 
-from diffusers import DDIMScheduler, StableDiffusionPipeline
+# from diffusers import DDIMScheduler, StableDiffusionPipeline
 # from diffusers import UNet2DConditionModel
 # from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import rescale_noise_cfg
 

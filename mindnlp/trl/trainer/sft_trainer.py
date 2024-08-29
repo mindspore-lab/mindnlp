@@ -34,9 +34,9 @@ from typing import Callable, Dict, List, Optional, Tuple, Union, NewType, Any
 # import datasets
 
 import mindspore as ms
-from mindspore import nn
+from mindnlp.core import nn
 from mindspore.dataset import Dataset, transforms
-from mindspore.nn.learning_rate_schedule import LearningRateSchedule
+from mindnlp.core.nn.learning_rate_schedule import LearningRateSchedule
 #暂只考虑单卡训练
 # from accelerate.state import PartialState
 # from mindspore.dataset.engine import Dataset
@@ -89,7 +89,7 @@ class DatasetGenerationError(DatasetBuildError):
     pass
 
 
-def unwrap_model(model: nn.Cell, recursive: bool = False) -> nn.Cell:
+def unwrap_model(model: nn.Module, recursive: bool = False) -> nn.Module:
     """
     Recursively unwraps a model from potential containers (as used in distributed training).
 
@@ -170,7 +170,7 @@ class SFTTrainer(Trainer):
     )
     def __init__(
         self,
-        model: Optional[Union[PreTrainedModel, nn.Cell, str]] = None,
+        model: Optional[Union[PreTrainedModel, nn.Module, str]] = None,
         args: Optional[SFTConfig] = None,
         data_collator: Optional[DataCollator] = None,
         train_dataset: Optional[Dataset] = None,
@@ -649,8 +649,9 @@ class SFTTrainer(Trainer):
         # Cast the datatype of the 'label' column to int32 and rename the column to 'labels'
         tokenized_dataset = tokenized_dataset.map(operations=transforms.TypeCast(ms.int32), input_columns="label", output_columns="labels")
 
-        tokenized_dataset = tokenized_dataset.padded_batch(1, pad_info={'input_ids': (None, tokenizer.pad_token_id),
-                                                             'attention_mask': (None, 0)})
+        tokenized_dataset = tokenized_dataset.padded_batch(1, pad_info={
+                                                                        'input_ids': (None, tokenizer.pad_token_id),
+                                                                        'attention_mask': (None, 0),})
         return tokenized_dataset
 
     def _prepare_packed_dataloader(

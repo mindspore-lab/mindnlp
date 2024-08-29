@@ -21,7 +21,7 @@ from collections.abc import Mapping
 import numpy as np
 import mindspore as ms
 
-from mindspore import ops
+from mindnlp.core import ops
 from mindspore import Tensor
 
 #与huggingface.transformers同路程

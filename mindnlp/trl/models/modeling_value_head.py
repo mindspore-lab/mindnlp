@@ -18,7 +18,8 @@ limitations under the License.'''
 
 
 import mindspore as ms
-from mindspore import nn, Tensor
+from mindspore import Tensor
+from mindnlp.core import nn
 from mindnlp.transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM
 
 
@@ -26,7 +27,7 @@ from mindnlp.transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM
 from .modeling_base import PreTrainedModelWrapper
 
 
-class ValueHead(nn.Cell):
+class ValueHead(nn.Module):
     r"""
     The ValueHead class implements a head for GPT2 that returns a scalar for each output token.
     """
