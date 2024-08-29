@@ -584,10 +584,11 @@ class Module:
             del self._parameters[name]
         elif name in self._buffers:
             del self._buffers[name]
+            self._non_persistent_buffers_set.discard(name)
         elif name in self._modules:
             del self._modules[name]
         else:
-            object.__delattr__(self, name)
+            super().__delattr__(name)
 
 
     def extra_repr(self) -> str:
@@ -881,6 +882,13 @@ class Module:
         """
         for name, param in self.named_parameters(recurse=recurse):
             yield param
+
+    def trainable_params(self, recurse: bool = True):
+        params = tuple()
+        for name, param in self.named_parameters(recurse=recurse):
+            if param.requires_grad:
+                params += (param,)
+        return params
 
     def get_submodule(self, target: str) -> "Module":
         """Return the submodule given by ``target`` if it exists, otherwise throw an error.
