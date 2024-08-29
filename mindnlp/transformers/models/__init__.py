@@ -183,6 +183,7 @@ from . import (
     rembert,
     resnet,
     roberta,
+    roberta_prelayernorm,
     roc_bert,
     rwkv,
     sam,
@@ -411,6 +412,7 @@ from .reformer import *
 from .rembert import *
 from .resnet import *
 from .roberta import *
+from .roberta_prelayernorm import *
 from .roc_bert import *
 from .rwkv import *
 from .sam import *
@@ -639,6 +641,7 @@ __all__.extend(reformer.__all__)
 __all__.extend(rembert.__all__)
 __all__.extend(resnet.__all__)
 __all__.extend(roberta.__all__)
+__all__.extend(roberta_prelayernorm.__all__)
 __all__.extend(roc_bert.__all__)
 __all__.extend(rwkv.__all__)
 __all__.extend(sam.__all__)
