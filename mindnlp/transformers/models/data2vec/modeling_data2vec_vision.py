@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2022 Meta Platforms and The HuggingFace Inc. team. All rights reserved.
+# Copyright 2021 The Fairseq Authors and the HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,20 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Data2VecVision model."""
-
+"""MindSpore Data2VecVision model."""
 import collections.abc
 import math
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
-from mindspore.common.initializer import Normal, Zero, initializer
-
 import mindspore
-from mindspore.ops import functional as F
-from mindspore import ops, Tensor, Parameter
-from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-import numpy as np
-from mindnlp.core import nn
+
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from mindnlp.core import nn, ops
+from mindnlp.utils import (
+    logging,
+)
+
+from .configuration_data2vec_vision import Data2VecVisionConfig
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -34,13 +34,13 @@ from ...modeling_outputs import (
     SemanticSegmenterOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from ...ms_utils import find_pruneable_heads_and_indices, meshgrid, prune_linear_layer
-from mindnlp.utils import (
+from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
 
-    logging,
 
-)
-from .configuration_data2vec_vision import Data2VecVisionConfig
+mindspore.set_context(pynative_synchronize=True)
+
+
+
 
 
 logger = logging.get_logger(__name__)
@@ -56,13 +56,9 @@ _EXPECTED_OUTPUT_SHAPE = [1, 197, 768]
 _IMAGE_CLASS_CHECKPOINT = "facebook/data2vec-vision-base-ft1k"
 _IMAGE_CLASS_EXPECTED_OUTPUT = "remote control, remote"
 
-D2VVision_PRETRAINED_MODEL_ARCHIVE_LIST = [
-    "facebook/data2vec-vision-base-ft1k",
-'Data2VecVisionModelOutputWithPooling'
-]
 
 @dataclass
-# Copied from transformers.models.beit.modeling_beit.Data2VecVisionModelOutputWithPooling with Beit->Data2VecVision
+# Copied from transformers.models.beit.modeling_beit.BeitModelOutputWithPooling with Beit->Data2VecVision
 class Data2VecVisionModelOutputWithPooling(BaseModelOutputWithPooling):
     """
     Class for outputs of [`Data2VecVisionModel`].
@@ -90,15 +86,6 @@ class Data2VecVisionModelOutputWithPooling(BaseModelOutputWithPooling):
 
 # Copied from transformers.models.beit.modeling_beit.drop_path
 def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = False) -> mindspore.Tensor:
-    """
-    Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
-
-    Comment by Ross Wightman: This is the same as the DropConnect impl I created for EfficientNet, etc networks,
-    however, the original name is misleading as 'Drop Connect' is a different form of dropout in a separate paper...
-    See discussion: https://github.com/tensorflow/tpu/issues/494#issuecomment-532968956 ... I've opted for changing the
-    layer and argument names to 'drop path' rather than mix DropConnect as a layer name and use 'survival rate' as the
-    argument.
-    """
     if drop_prob == 0.0 or not training:
         return input
     keep_prob = 1 - drop_prob
@@ -124,7 +111,7 @@ class Data2VecVisionDropPath(nn.Module):
         return "p={}".format(self.drop_prob)
 
 
-# Copied from transformers.models.beit.modeling_beit.Data2VecVisionEmbeddings with Beit->Data2VecVision
+# Copied from transformers.models.beit.modeling_beit.BeitEmbeddings with Beit->Data2VecVision
 class Data2VecVisionEmbeddings(nn.Module):
     """
     Construct the CLS token, position and patch embeddings. Optionally, also the mask token.
@@ -134,9 +121,9 @@ class Data2VecVisionEmbeddings(nn.Module):
     def __init__(self, config: Data2VecVisionConfig) -> None:
         super().__init__()
 
-        self.cls_token = Parameter(ops.zeros((1, 1), config.hidden_size))
+        self.cls_token = nn.Parameter(ops.zeros((1, 1, config.hidden_size)))
         if config.use_mask_token:
-            self.mask_token = Parameter(ops.zeros((1, 1), config.hidden_size))
+            self.mask_token = nn.Parameter(ops.zeros((1, 1, config.hidden_size)))
         else:
             self.mask_token = None
         self.patch_embeddings = Data2VecVisionPatchEmbeddings(config)
@@ -148,12 +135,12 @@ class Data2VecVisionEmbeddings(nn.Module):
         )
         num_patches = self.patch_embeddings.num_patches
         if config.use_absolute_position_embeddings:
-            self.position_embeddings = Parameter(ops.zeros((1, num_patches + 1), config.hidden_size))
+            self.position_embeddings = nn.Parameter(ops.zeros((1, num_patches + 1, config.hidden_size)))
         else:
             self.position_embeddings = None
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def interpolate_pos_encoding(self, embeddings: Tensor, height: int, width: int) -> Tensor:
+    def interpolate_pos_encoding(self, embeddings: mindspore.Tensor, height: int, width: int) -> mindspore.Tensor:
         """
         This method allows the model to interpolate the pre-trained position encodings so that it can be used on
         higher resolution images.
@@ -177,45 +164,47 @@ class Data2VecVisionEmbeddings(nn.Module):
 
         patch_pos_embed = patch_pos_embed.reshape(1, int(math.sqrt(num_positions)), int(math.sqrt(num_positions)), dim)
         patch_pos_embed = patch_pos_embed.permute(0, 3, 1, 2)
-        patch_pos_embed = ops.interpolate(
+        patch_pos_embed = nn.functional.interpolate(
             patch_pos_embed,
             scale_factor=(h / math.sqrt(num_positions), w / math.sqrt(num_positions)),
             mode="bicubic",
             align_corners=False,
-            recompute_scale_factor=True,
+            recompute_scale_factor=True
         )
         if int(h) != patch_pos_embed.shape[-2] or int(w) != patch_pos_embed.shape[-1]:
             raise ValueError("Width or height does not match with the interpolated position embeddings")
 
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
-        return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), axis=1)
+        return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), dim=1)
 
     def forward(
-        self,
-        pixel_values: mindspore.Tensor,
-        bool_masked_pos: Optional[mindspore.Tensor] = None,
-        interpolate_pos_encoding: bool = False,
+            self,
+            pixel_values: mindspore.Tensor,
+            bool_masked_pos: Optional[mindspore.Tensor] = None,
+            interpolate_pos_encoding: bool = False,
     ) -> mindspore.Tensor:
+
         _, _, height, width = pixel_values.shape
         embeddings, (patch_height, patch_width) = self.patch_embeddings(
             pixel_values, self.position_embeddings[:, 1:, :] if self.position_embeddings is not None else None
         )
+
         batch_size, seq_len, _ = embeddings.shape
 
         if bool_masked_pos is not None:
-            mask_tokens = self.mask_token.expand(batch_size, seq_len, -1)
+            mask_tokens = self.mask_token.expand((batch_size, seq_len, -1))
             # replace the masked visual tokens by mask_tokens
             w = bool_masked_pos.unsqueeze(-1).type_as(mask_tokens)
             embeddings = embeddings * (1 - w) + mask_tokens * w
 
-        cls_tokens = self.cls_token.expand(batch_size, -1, -1)
+        cls_tokens = self.cls_token.broadcast_to((batch_size, -1, -1))
         if self.position_embeddings is not None:
             if interpolate_pos_encoding:
                 cls_tokens = cls_tokens + self.interpolate_pos_encoding(embeddings, height, width)
             else:
                 cls_tokens = cls_tokens + self.position_embeddings[:, :1, :]
 
-        embeddings = ops.cat((cls_tokens, embeddings), axis=1)
+        embeddings = ops.cat((cls_tokens, embeddings), dim=1)
 
         embeddings = self.dropout(embeddings)
 
@@ -259,6 +248,7 @@ class Data2VecVisionPatchEmbeddings(nn.Module):
             )
 
         embeddings = self.projection(pixel_values)
+
         patch_height, patch_width = embeddings.shape[2], embeddings.shape[3]
 
         if position_embedding is not None:
@@ -266,12 +256,15 @@ class Data2VecVisionPatchEmbeddings(nn.Module):
             position_embedding = position_embedding.view(1, self.patch_shape[0], self.patch_shape[1], -1).permute(
                 0, 3, 1, 2
             )
-            position_embedding = ops.interpolate(
+            position_embedding = nn.functional.interpolate(
                 position_embedding, size=(patch_height, patch_width), mode="bicubic"
             )
             embeddings = embeddings + position_embedding
-        #embeddings = embeddings.flatten(2).swapaxes(1, 2)
-        embeddings = embeddings.flatten(2).transpose(1, 2)
+
+        #ops.transpose((embeddings.flatten(start_dim=2)), 1,2)
+        embeddings = embeddings.flatten(start_dim=2).swapaxes(1, 2)
+
+        #embeddings = embeddings.flatten(start_dim=2).transpose(1, 2)
 
         return embeddings, (patch_height, patch_width)
 
@@ -295,7 +288,7 @@ class Data2VecVisionSelfAttention(nn.Module):
         self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=False)
         self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
-        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
         if window_size:
             self.relative_position_bias = Data2VecVisionRelativePositionBias(config, window_size=window_size)
@@ -323,8 +316,7 @@ class Data2VecVisionSelfAttention(nn.Module):
         query_layer = self.transpose_for_scores(mixed_query_layer)
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        #attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
-        attention_scores = ops.matmul(query_layer, key_layer.transpose(-1, -2))
+        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
 
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
@@ -341,7 +333,7 @@ class Data2VecVisionSelfAttention(nn.Module):
             attention_scores = attention_scores + relative_position_bias
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -353,7 +345,7 @@ class Data2VecVisionSelfAttention(nn.Module):
 
         context_layer = ops.matmul(attention_probs, value_layer)
 
-        context_layer = context_layer.permute(0, 2, 1, 3)
+        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
 
@@ -372,7 +364,7 @@ class Data2VecVisionSelfOutput(nn.Module):
     def __init__(self, config: Data2VecVisionConfig) -> None:
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor, gamma=None) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -400,7 +392,7 @@ class Data2VecVisionAttention(nn.Module):
         self.attention.query = prune_linear_layer(self.attention.query, index)
         self.attention.key = prune_linear_layer(self.attention.key, index)
         self.attention.value = prune_linear_layer(self.attention.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.attention.num_attention_heads = self.attention.num_attention_heads - len(heads)
@@ -448,7 +440,7 @@ class Data2VecVisionOutput(nn.Module):
     def __init__(self, config: Data2VecVisionConfig) -> None:
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -476,8 +468,8 @@ class Data2VecVisionLayer(nn.Module):
 
         init_values = config.layer_scale_init_value
         if init_values > 0:
-            self.lambda_1 =  mindspore.Parameter(init_values * mindspore.ops.ones((config.hidden_size)), requires_grad=True)
-            self.lambda_2 =  mindspore.Parameter(init_values * mindspore.ops.ones((config.hidden_size)), requires_grad=True)
+            self.lambda_1 = nn.Parameter(init_values * ops.ones((config.hidden_size)), requires_grad=True)
+            self.lambda_2 = nn.Parameter(init_values * ops.ones((config.hidden_size)), requires_grad=True)
         else:
             self.lambda_1, self.lambda_2 = None, None
 
@@ -531,14 +523,14 @@ class Data2VecVisionRelativePositionBias(nn.Module):
         super().__init__()
         self.window_size = window_size
         self.num_relative_distance = (2 * window_size[0] - 1) * (2 * window_size[1] - 1) + 3
-        self.relative_position_bias_table = mindspore.Parameter(
-            mindspore.ops.zeros(self.num_relative_distance, config.num_attention_heads)
+        self.relative_position_bias_table = nn.Parameter(
+            ops.zeros((self.num_relative_distance, config.num_attention_heads))
         )  # 2*Wh-1 * 2*Ww-1, nH
         # cls to token & token 2 cls & cls to cls
 
         self.relative_position_indices = {}
 
-    def generate_relative_position_index(self, window_size: Tuple[int, int]) -> Tensor:
+    def generate_relative_position_index(self, window_size: Tuple[int, int]) -> mindspore.Tensor:
         """
         This method creates the relative position index, modified to support arbitrary window sizes,
         as introduced in [MiDaS v3.1](https://arxiv.org/abs/2307.14460).
@@ -555,14 +547,14 @@ class Data2VecVisionRelativePositionBias(nn.Module):
         relative_coords[:, :, 0] += window_size[0] - 1  # shift to start from 0
         relative_coords[:, :, 1] += window_size[1] - 1
         relative_coords[:, :, 0] *= 2 * window_size[1] - 1
-        relative_position_index = ops.zeros(size=(window_area + 1,) * 2, dtype=relative_coords.dtype)
+        relative_position_index = ops.zeros((window_area + 1,) * 2, dtype=relative_coords.dtype)
         relative_position_index[1:, 1:] = relative_coords.sum(-1)  # Wh*Ww, Wh*Ww
         relative_position_index[0, 0:] = num_relative_distance - 3
         relative_position_index[0:, 0] = num_relative_distance - 2
         relative_position_index[0, 0] = num_relative_distance - 1
         return relative_position_index
 
-    def forward(self, window_size, interpolate_pos_encoding: bool = False, dim_size=None) -> Tensor:
+    def forward(self, window_size, interpolate_pos_encoding: bool = False, dim_size=None) -> mindspore.Tensor:
         """
         Modification of timm.models.beit.py: Attention._get_rel_pos_bias to support arbitrary window sizes.
         """
@@ -580,7 +572,7 @@ class Data2VecVisionRelativePositionBias(nn.Module):
         old_sub_table = old_relative_position_bias_table[: old_num_relative_distance - 3]
 
         old_sub_table = old_sub_table.reshape(1, old_width, old_height, -1).permute(0, 3, 1, 2)
-        new_sub_table = ops.interpolate(
+        new_sub_table = nn.functional.interpolate(
             old_sub_table, size=(int(new_height), int(new_width)), mode="bilinear"
         )
         new_sub_table = new_sub_table.permute(0, 2, 3, 1).reshape(new_num_relative_distance - 3, -1)
@@ -602,7 +594,7 @@ class Data2VecVisionRelativePositionBias(nn.Module):
         relative_position_bias = relative_position_bias.permute(2, 0, 1).contiguous()
 
         if interpolate_pos_encoding:
-            relative_position_bias = ops.interpolate(
+            relative_position_bias = nn.functional.interpolate(
                 relative_position_bias.unsqueeze(1),
                 size=(dim_size, dim_size),
                 mode="bilinear",
@@ -680,7 +672,7 @@ class Data2VecVisionEncoder(nn.Module):
                     interpolate_pos_encoding,
                     resolution,
                 )
-            print(layer_outputs)
+
             hidden_states = layer_outputs[0]
 
             if output_attentions:
@@ -688,7 +680,7 @@ class Data2VecVisionEncoder(nn.Module):
 
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
-        print(all_hidden_states)
+
         if not return_dict:
             return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)
         return BaseModelOutput(
@@ -717,71 +709,25 @@ class Data2VecVisionPreTrainedModel(PreTrainedModel):
         if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                             module.weight.shape, module.weight.dtype))
-            if module.bias:
-                module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))
-        elif isinstance(module, nn.Embedding):
-            weight = np.random.normal(0.0, self.config.initializer_range, module.weight.shape)
-            if module.padding_idx:
-                weight[module.padding_idx] = 0
-
-            module.weight.set_data(Tensor(weight, module.weight.dtype))
-        elif isinstance(module, nn.LayerNorm):
-            module.weight.set_data(initializer('ones', module.weight.shape, module.weight.dtype))
-            module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))
-    
-    '''def _init_weights(self, module):
-        """Initialize the weights"""
-        if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
-            # Slightly different from the TF version which uses truncated_normal for initialization
-            # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                               module.weight.shape, module.weight.dtype))
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            #module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
             if module.bias is not None:
-                module.bias.data.zero_()
+                nn.init.zeros_(module.bias)
+                #module.bias.data.zero_()
         elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            #module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
             if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
+                module.weight.data[module.padding_idx]=0
+                #module.weight.data[module.padding_idx].zero_()
         elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)'''
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
+            #module.bias.data.zero_()
+            #module.weight.data.fill_(1.0)
 
-DATA2VEC_VISION_START_DOCSTRING = r"""
-    This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass. Use it
-    as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
-    behavior.
 
-    Parameters:
-        config ([`Data2VecVisionConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
 
-DATA2VEC_VISION_INPUTS_DOCSTRING = r"""
-    Args:
-        pixel_values (`torch.FloatTensor` of shape `(batch_size, num_channels, height, width)`):
-            Pixel values. Pixel values can be obtained using [`AutoImageProcessor`]. See
-            [`BeitImageProcessor.__call__`] for details.
-
-        head_mask (`torch.FloatTensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-            Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
-
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        interpolate_pos_encoding (`bool`, *optional*, defaults to `False`):
-            Whether to interpolate the pre-trained position encodings.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
 
 
 
@@ -815,25 +761,23 @@ class Data2VecVisionModel(Data2VecVisionPreTrainedModel):
 
 
     def forward(
-            self,
-            pixel_values: Optional[mindspore.Tensor] = None,
-            bool_masked_pos: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            interpolate_pos_encoding: bool = False,
-            return_dict: Optional[bool] = None,
+        self,
+        pixel_values: mindspore.Tensor,
+        bool_masked_pos: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        interpolate_pos_encoding: bool = False,
+        return_dict: Optional[bool] = None,
     ) -> Union[tuple, Data2VecVisionModelOutputWithPooling]:
         r"""
         bool_masked_pos (`mindspore.Tensor` of shape `(batch_size, num_patches)`, *optional*):
             Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        #print(output_attentions)
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        #print(output_hidden_states)
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # Prepare head mask if needed
@@ -847,7 +791,7 @@ class Data2VecVisionModel(Data2VecVisionPreTrainedModel):
             pixel_values, bool_masked_pos=bool_masked_pos, interpolate_pos_encoding=interpolate_pos_encoding
         )
         resolution = pixel_values.shape[2:]
-        print(resolution)
+
         encoder_outputs = self.encoder(
             embedding_output,
             head_mask=head_mask,
@@ -857,12 +801,10 @@ class Data2VecVisionModel(Data2VecVisionPreTrainedModel):
             return_dict=return_dict,
             interpolate_pos_encoding=interpolate_pos_encoding,
         )
-        print(encoder_outputs)
+
         sequence_output = encoder_outputs[0]
         sequence_output = self.layernorm(sequence_output)
         pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
-
-
 
         if not return_dict:
             head_outputs = (sequence_output, pooled_output) if pooled_output is not None else (sequence_output,)
@@ -876,7 +818,7 @@ class Data2VecVisionModel(Data2VecVisionPreTrainedModel):
         )
 
 
-# Copied from transformers.models.beit.modeling_beit.Data2VecVisionPooler with Beit->Data2VecVision
+# Copied from transformers.models.beit.modeling_beit.BeitPooler with Beit->Data2VecVision
 class Data2VecVisionPooler(nn.Module):
     def __init__(self, config: Data2VecVisionConfig) -> None:
         super().__init__()
@@ -922,14 +864,7 @@ class Data2VecVisionForImageClassification(Data2VecVisionPreTrainedModel):
         interpolate_pos_encoding: bool = False,
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, ImageClassifierOutput]:
-        r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
-        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        #print(pixel_values)
         outputs = self.data2vec_vision(
             pixel_values,
             head_mask=head_mask,
@@ -938,7 +873,6 @@ class Data2VecVisionForImageClassification(Data2VecVisionPreTrainedModel):
             interpolate_pos_encoding=interpolate_pos_encoding,
             return_dict=return_dict,
         )
-        print(len(outputs))
 
         pooled_output = outputs.pooler_output if return_dict else outputs[1]
 
@@ -949,7 +883,7 @@ class Data2VecVisionForImageClassification(Data2VecVisionPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -957,13 +891,15 @@ class Data2VecVisionForImageClassification(Data2VecVisionPreTrainedModel):
             if self.config.problem_type == "regression":
                 loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -1024,7 +960,6 @@ class Data2VecVisionPyramidPoolingBlock(nn.Module):
         ]
         for i, layer in enumerate(self.layers):
             self.add_module(str(i), layer)
-            #setattr(self, str(i), layer)
 
     def forward(self, input: mindspore.Tensor) -> mindspore.Tensor:
         hidden_state = input
@@ -1061,13 +996,12 @@ class Data2VecVisionPyramidPoolingModule(nn.Module):
             )
             self.blocks.append(block)
             self.add_module(str(i), block)
-            #setattr(self, str(i), block)
 
     def forward(self, x: mindspore.Tensor) -> List[mindspore.Tensor]:
         ppm_outs = []
         for ppm in self.blocks:
             ppm_out = ppm(x)
-            upsampled_ppm_out = ops.interpolate(
+            upsampled_ppm_out = nn.functional.interpolate(
                 ppm_out, size=x.shape[2:], mode="bilinear", align_corners=self.align_corners
             )
             ppm_outs.append(upsampled_ppm_out)
@@ -1125,7 +1059,7 @@ class Data2VecVisionUperHead(nn.Module):
         x = inputs[-1]
         psp_outs = [x]
         psp_outs.extend(self.psp_modules(x))
-        psp_outs = ops.cat(psp_outs, axis=1)
+        psp_outs = ops.cat(psp_outs, dim=1)
         output = self.bottleneck(psp_outs)
 
         return output
@@ -1140,7 +1074,7 @@ class Data2VecVisionUperHead(nn.Module):
         used_backbone_levels = len(laterals)
         for i in range(used_backbone_levels - 1, 0, -1):
             prev_shape = laterals[i - 1].shape[2:]
-            laterals[i - 1] = laterals[i - 1] + ops.interpolate(
+            laterals[i - 1] = laterals[i - 1] + nn.functional.interpolate(
                 laterals[i], size=prev_shape, mode="bilinear", align_corners=self.align_corners
             )
 
@@ -1150,10 +1084,10 @@ class Data2VecVisionUperHead(nn.Module):
         fpn_outs.append(laterals[-1])
 
         for i in range(used_backbone_levels - 1, 0, -1):
-            fpn_outs[i] = ops.interpolate(
+            fpn_outs[i] = nn.functional.interpolate(
                 fpn_outs[i], size=fpn_outs[0].shape[2:], mode="bilinear", align_corners=self.align_corners
             )
-        fpn_outs = mindspore.ops.cat(fpn_outs, axis=1)
+        fpn_outs = ops.cat(fpn_outs, dim=1)
         output = self.fpn_bottleneck(fpn_outs)
         output = self.classifier(output)
 
@@ -1219,7 +1153,7 @@ class Data2VecVisionFCNHead(nn.Module):
         hidden_states = encoder_hidden_states[self.in_index]
         output = self.convs(hidden_states)
         if self.concat_input:
-            output = self.conv_cat(mindspore.ops.cat([hidden_states, output], axis=1))
+            output = self.conv_cat(ops.cat([hidden_states, output], dim=1))
         output = self.classifier(output)
         return output
 
@@ -1261,18 +1195,19 @@ class Data2VecVisionForSemanticSegmentation(Data2VecVisionPreTrainedModel):
 
     def compute_loss(self, logits, auxiliary_logits, labels):
         # upsample logits to the images' original size
-        upsampled_logits = ops.interpolate(
+        upsampled_logits = nn.functional.interpolate(
             logits, size=labels.shape[-2:], mode="bilinear", align_corners=False
         )
         if auxiliary_logits is not None:
-            upsampled_auxiliary_logits = ops.interpolate(
+            upsampled_auxiliary_logits = nn.functional.interpolate(
                 auxiliary_logits, size=labels.shape[-2:], mode="bilinear", align_corners=False
             )
         # compute weighted loss
-        main_loss = ops.cross_entropy(upsampled_logits, labels, ignore_index=self.config.semantic_loss_ignore_index)
+        loss_fct = CrossEntropyLoss(ignore_index=self.config.semantic_loss_ignore_index)
+        main_loss = loss_fct(upsampled_logits, labels)
         loss = main_loss
         if auxiliary_logits is not None:
-            auxiliary_loss = ops.cross_entropy(upsampled_auxiliary_logits, labels, ignore_index=self.config.semantic_loss_ignore_index)
+            auxiliary_loss = loss_fct(upsampled_auxiliary_logits, labels)
             loss += self.config.auxiliary_loss_weight * auxiliary_loss
 
         return loss
@@ -1288,12 +1223,10 @@ class Data2VecVisionForSemanticSegmentation(Data2VecVisionPreTrainedModel):
         interpolate_pos_encoding: bool = False,
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, SemanticSegmenterOutput]:
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-
         if labels is not None and self.config.num_labels == 1:
             raise ValueError("The number of labels should be greater than one")
 
@@ -1345,7 +1278,6 @@ class Data2VecVisionForSemanticSegmentation(Data2VecVisionPreTrainedModel):
             hidden_states=outputs.hidden_states if output_hidden_states else None,
             attentions=outputs.attentions,
         )
-
 
 __all__ = [
     "Data2VecVisionForImageClassification",
