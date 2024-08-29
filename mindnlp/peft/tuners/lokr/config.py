@@ -27,7 +27,7 @@ class LoKrConfig(PeftConfig):
 
     Args:
         r (`int`): lokr attention dimension.
-        target_cells (`Union[List[str],str]`): The names of the cells to apply Lora to.
+        target_modules (`Union[List[str],str]`): The names of the cells to apply Lora to.
         lora_alpha (`float`): The alpha parameter for Lokr scaling.
         rank_dropout (`float`):The dropout probability for rank dimension during training.
         cell_dropout (`float`): The dropout probability for LoKR layers.
@@ -59,7 +59,7 @@ class LoKrConfig(PeftConfig):
             specified by `alpha`.
     """
     r: int = field(default=8, metadata={"help": "lokr attention dimension"})
-    target_cells: Optional[Union[List[str], str]] = field(
+    target_modules: Optional[Union[List[str], str]] = field(
         default=None,
         metadata={
             "help": "List of cell names or regex expression of the cell names to replace with Lora."

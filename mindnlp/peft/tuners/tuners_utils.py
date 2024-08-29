@@ -107,7 +107,7 @@ class BaseTuner(nn.Module):
     For adding a new Tuner class, one needs to overwrite the following methods:
 
     - **_prepare_adapter_config**:
-        A private method to eventually prepare the adapter config, for example in case the field `target_cells` is
+        A private method to eventually prepare the adapter config, for example in case the field `target_modules` is
         missing.
     - **_check_new_adapter_config**:
         A helper private method to check if the passed cell's key name matches any of the target cells in the
@@ -220,7 +220,7 @@ class BaseTuner(nn.Module):
     def _prepare_adapter_config(self, peft_config: PeftConfig, model_config: dict) -> PeftConfig:
         r"""
         A private method to eventually prepare the adapter config. For transformers based models, if
-        `peft_config.target_cells` is None, we can automatically infer the target cells from the
+        `peft_config.target_modules` is None, we can automatically infer the target cells from the
         `TRANSFORMERS_MODELS_TO_XXX_TARGET_MODULES_MAPPING`. This method can be further refactored in the future to
         automatically infer it for all tuner models.
 
@@ -238,7 +238,7 @@ class BaseTuner(nn.Module):
     def _check_target_cell_exists(peft_config: PeftConfig, key: str) -> bool:
         r"""
         A helper private method to check if the passed cell's key name matches any of the target cells in the
-        `peft_config.target_cells` list. If it does, return `True`, else return `False`.
+        `peft_config.target_modules` list. If it does, return `True`, else return `False`.
 
         Args:
             peft_config (`PeftConfig`):
@@ -327,7 +327,7 @@ class BaseTuner(nn.Module):
         # in a bad (half-initialized) state.
         self._check_new_adapter_config(peft_config)
 
-        is_target_cells_in_base_model = False
+        is_target_modules_in_base_model = False
         key_list = [key for key, _ in model.cells_and_names()]  # named_cells
 
         model_config = getattr(model, "config", {"model_type": "custom"})
@@ -339,7 +339,7 @@ class BaseTuner(nn.Module):
             if not self._check_target_cell_exists(peft_config, key):
                 continue
 
-            is_target_cells_in_base_model = True
+            is_target_modules_in_base_model = True
             parent, target, target_name = _get_subcells(model, key)
 
             optionnal_kwargs = {
@@ -350,9 +350,9 @@ class BaseTuner(nn.Module):
             # **finally create or replace target cell.**
             self._create_and_replace(peft_config, adapter_name, target, target_name, parent, current_key=key)
 
-        if not is_target_cells_in_base_model:
+        if not is_target_modules_in_base_model:
             raise ValueError(
-                f"Target cells {peft_config.target_cells} not found in the base model. "
+                f"Target cells {peft_config.target_modules} not found in the base model. "
                 f"Please check the target cells and try again."
             )
 
@@ -707,13 +707,13 @@ def check_target_cell_exists(config, key: str) -> bool | re.Match[str] | None:
         `bool` | `re.Match[str]` | `None`: True of match object if key matches any target cells from config, False or
         None if no match found
     """
-    if isinstance(config.target_cells, str):
-        target_cell_found = re.fullmatch(config.target_cells, key)
-    elif key in config.target_cells:
-        # this cell is specified directly in target_cells
+    if isinstance(config.target_modules, str):
+        target_cell_found = re.fullmatch(config.target_modules, key)
+    elif key in config.target_modules:
+        # this cell is specified directly in target_modules
         target_cell_found = True
     else:
-        target_cell_found = any(key.endswith(f".{target_key}") for target_key in config.target_cells)
+        target_cell_found = any(key.endswith(f".{target_key}") for target_key in config.target_modules)
 
         layer_indexes = getattr(config, "layers_to_transform", None)
         layers_pattern = getattr(config, "layers_pattern", None)
