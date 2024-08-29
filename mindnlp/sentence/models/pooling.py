@@ -157,7 +157,7 @@ class Pooling(nn.Module):
         if self.pooling_mode_mean_tokens or self.pooling_mode_mean_sqrt_len_tokens:
             attention_mask = attention_mask.unsqueeze(-1)
             token_embeddings_size = token_embeddings.shape
-            attention_mask = attention_mask.expand(token_embeddings_size)
+            attention_mask = attention_mask.broadcast_to(token_embeddings_size)
             input_mask_expanded = (
                 attention_mask.to(token_embeddings.dtype)
             )
@@ -224,7 +224,7 @@ class Pooling(nn.Module):
             # but as we set some indices (which shouldn't be attended to) to 0 with clamp, we
             # use the attention mask to ignore them again
             input_mask_expanded = (
-                attention_mask.unsqueeze(-1).expand(token_embeddings.shape).to(token_embeddings.dtype)
+                attention_mask.unsqueeze(-1).broadcast_to(token_embeddings.shape).to(token_embeddings.dtype)
             )
             embedding = ops.gather(token_embeddings * input_mask_expanded, 1, gather_indices).squeeze(dim=1)
             output_vectors.append(embedding)
