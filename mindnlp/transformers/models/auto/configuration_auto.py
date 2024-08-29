@@ -170,6 +170,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("rembert", "RemBertConfig"),
         ("resnet", "ResNetConfig"),
         ("roberta", "RobertaConfig"),
+        ("roberta-prelayernorm", "RobertaPreLayerNormConfig"),
         ("roc_bert", "RoCBertConfig"),
         ("rwkv", "RwkvConfig"),
         ("sam", "SamConfig"),

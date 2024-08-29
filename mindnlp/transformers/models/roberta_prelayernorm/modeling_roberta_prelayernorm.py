@@ -1028,7 +1028,7 @@ class RobertaPreLayerNormLMHead(nn.Module):
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
-        self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
+        self.bias = Parameter(ops.zeros(config.vocab_size))
         self.decoder.bias = self.bias
 
     def forward(self, features, **kwargs):
@@ -1039,12 +1039,13 @@ class RobertaPreLayerNormLMHead(nn.Module):
         x = self.decoder(x)
 
         return x
+
     def _tie_weights(self):
-        # To tie those two weights if they get disconnected (on TPU or when the bias is resized)
-        # For accelerate compatibility and to not break backward compatibility
         # if self.decoder.bias.device.type == "meta":
-        #     self.decoder.bias = self.bias
+        # self.decoder.bias = self.bias
         # else:
+        print('tie weights')
+        print(self.bias.asnumpy())
         self.bias = self.decoder.bias
 
 

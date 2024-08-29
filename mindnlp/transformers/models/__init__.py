@@ -152,6 +152,7 @@ from . import (
     mpnet,
     mpt,
     mluke,
+    mt5,
     musicgen,
     musicgen_melody,
     mvp,
@@ -382,6 +383,7 @@ from .mobilevit import *
 from .mpnet import *
 from .mluke import *
 from .mpt import *
+from .mt5 import *
 from .musicgen import *
 from .musicgen_melody import *
 from .mvp import *
@@ -612,6 +614,7 @@ __all__.extend(mobilenet_v2.__all__)
 __all__.extend(mobilevit.__all__)
 __all__.extend(mpnet.__all__)
 __all__.extend(mpt.__all__)
+__all__.extend(mt5.__all__)
 __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
 __all__.extend(mvp.__all__)
