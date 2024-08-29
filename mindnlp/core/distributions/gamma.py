@@ -11,10 +11,6 @@ from .utils import broadcast_all
 __all__ = ["Gamma"]
 
 
-def _standard_gamma(concentration):
-    return ops.gamma(concentration)
-
-
 class Gamma(ExponentialFamily):
     r"""
     Creates a Gamma distribution parameterized by shape :attr:`concentration` and :attr:`rate`.
@@ -62,19 +58,26 @@ class Gamma(ExponentialFamily):
 
     def expand(self, batch_shape, _instance=None):
         new = self._get_checked_instance(Gamma, _instance)
-        new.concentration = self.concentration.expand(batch_shape)
-        new.rate = self.rate.expand(batch_shape)
+        new.concentration = self.concentration.broadcast_to(batch_shape)
+        new.rate = self.rate.broadcast_to(batch_shape)
         super(Gamma, new).__init__(batch_shape, validate_args=False)
         new._validate_args = self._validate_args
         return new
 
     def rsample(self, sample_shape=()):
         shape = self._extended_shape(sample_shape)
-        value = _standard_gamma(self.concentration.expand(shape)) / self.rate.expand(
-            shape
-        )
+
+        if shape == (): # pylint: disable=use-implicit-booleaness-not-comparison
+            sample_shape = (1,)
+        else:
+            sample_shape = shape
+        value = ops.gamma(sample_shape, self.concentration, self.rate)
+
+        if shape == (): # pylint: disable=use-implicit-booleaness-not-comparison
+            value = ops.squeeze(value)
+
         value = value.clamp(
-            min=ops.finfo(value.dtype).tiny
+            min=float(ops.finfo(value.dtype).tiny)
         )  # do not record in autograd graph
         return value
 
@@ -107,4 +110,4 @@ class Gamma(ExponentialFamily):
     def cdf(self, value):
         if self._validate_args:
             self._validate_sample(value)
-        return ops.gammainc(self.concentration, self.rate * value)
+        return ops.igamma(self.concentration, self.rate * value)

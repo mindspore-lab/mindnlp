@@ -101,3 +101,6 @@ def randperm(n, seed=0, offset=0, dtype=mindspore.int64):
 
     randperm_op = _get_cache_prim(ops.Randperm)(max_length=n, dtype=dtype)
     return randperm_op(mindspore.tensor([n]))
+
+def gamma(shape, alpha, beta):
+    return ops.gamma(shape, alpha, beta)

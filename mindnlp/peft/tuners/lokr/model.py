@@ -57,7 +57,7 @@ class LoKrModel(BaseTuner):
         >>> config_te = LoKrConfig(
         ...     r=8,
         ...     lora_alpha=32,
-        ...     target_cells=["k_proj", "q_proj", "v_proj", "out_proj", "fc1", "fc2"],
+        ...     target_modules=["k_proj", "q_proj", "v_proj", "out_proj", "fc1", "fc2"],
         ...     rank_dropout=0.0,
         ...     cell_dropout=0.0,
         ...     init_weights=True,
@@ -65,7 +65,7 @@ class LoKrModel(BaseTuner):
         >>> config_unet = LoKrConfig(
         ...     r=8,
         ...     lora_alpha=32,
-        ...     target_cells=[
+        ...     target_modules=[
         ...         "proj_in",
         ...         "proj_out",
         ...         "to_k",
@@ -381,10 +381,10 @@ containing the specified prefix.
             None. This method does not return any value.
         
         Raises:
-            ValueError: If `target_cells` is not specified in `peft_config`.
+            ValueError: If `target_modules` is not specified in `peft_config`.
         """
-        if peft_config.target_cells is None:
-            raise ValueError("Please specify `target_cells` in `peft_config`")
+        if peft_config.target_modules is None:
+            raise ValueError("Please specify `target_modules` in `peft_config`")
         return peft_config
 
     @staticmethod

@@ -283,8 +283,8 @@ class LycorisTuner(BaseTuner):
 
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
-        if peft_config.target_cells is None:
-            raise ValueError("Please specify `target_cells` in `peft_config`")
+        if peft_config.target_modules is None:
+            raise ValueError("Please specify `target_modules` in `peft_config`")
         return peft_config
 
     def _replace_module(self, parent, child_name, new_module, child):

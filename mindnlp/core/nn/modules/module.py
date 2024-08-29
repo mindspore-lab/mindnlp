@@ -1191,8 +1191,20 @@ class Module:
     def _get_name(self):
         return self.__class__.__name__
 
-    def to(self, *args, **kwargs):
-        return self
+    def to(self, dtype=None):
+        def convert(t):
+            try:
+                return t.to(dtype)
+            except NotImplementedError as e:
+                if str(e) == "Cannot copy out of meta tensor; no data!":
+                    raise NotImplementedError(
+                        f"{e} Please use torch.nn.Module.to_empty() instead of torch.nn.Module.to() "
+                        f"when moving module from meta to a different device."
+                    ) from None
+                else:
+                    raise
+
+        return self._apply(convert)
 
     def float(self: T) -> T:
         r"""Casts all floating point parameters and buffers to ``float`` datatype.
