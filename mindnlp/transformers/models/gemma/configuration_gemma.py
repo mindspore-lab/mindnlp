@@ -137,7 +137,6 @@ class GemmaConfig(PretrainedConfig):
         self.attention_bias = attention_bias
         self.attention_dropout = attention_dropout
         self.sliding_window = sliding_window
-        
         super().__init__(
             pad_token_id=pad_token_id,
             bos_token_id=bos_token_id,
