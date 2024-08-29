@@ -587,7 +587,7 @@ class CoreAttention(nn.Module):
             attention_mask = attention_mask.tril().bool()
             attention_mask = ~attention_mask
         if attention_mask is not None:
-            attention_scores = attention_scores.masked_fill(attention_mask, float("-inf"))
+            attention_scores = attention_scores.masked_fill(attention_mask, float(ops.finfo(attention_scores.dtype).min))
         attention_probs = ops.softmax(attention_scores, dim=-1)
         attention_probs = attention_probs.astype(value_layer.dtype)
 
@@ -757,15 +757,15 @@ class SelfAttention(nn.Module):
 
         if self.multi_query_attention:
             key_layer = key_layer.unsqueeze(-2)
-            key_layer = key_layer.expand(
-                -1, -1, -1, self.num_attention_heads_per_partition // self.num_multi_query_groups_per_partition, -1
+            key_layer = key_layer.broadcast_to(
+                (-1, -1, -1, self.num_attention_heads_per_partition // self.num_multi_query_groups_per_partition, -1)
             )
             key_layer = key_layer.view(
                 key_layer.shape[:2] + (self.num_attention_heads_per_partition, self.hidden_size_per_attention_head)
             )
             value_layer = value_layer.unsqueeze(-2)
-            value_layer = value_layer.expand(
-                -1, -1, -1, self.num_attention_heads_per_partition // self.num_multi_query_groups_per_partition, -1
+            value_layer = value_layer.broadcast_to(
+                (-1, -1, -1, self.num_attention_heads_per_partition // self.num_multi_query_groups_per_partition, -1)
             )
             value_layer = value_layer.view(
                 value_layer.shape[:2] + (self.num_attention_heads_per_partition, self.hidden_size_per_attention_head)
@@ -840,7 +840,7 @@ class MLP(nn.Module):
 
         def swiglu(x):
             x = ops.chunk(x, 2, dim=-1)
-            return ops.silu(x[0]) * x[1]
+            return F.silu(x[0]) * x[1]
 
         self.activation_func = swiglu
 
@@ -1094,6 +1094,9 @@ class GLMTransformer(nn.Module):
             kv_caches = [None for _ in range(self.num_layers)]
         presents = () if use_cache else None
 
+        if isinstance(kv_caches[0], str):
+            kv_caches = kv_caches[1]
+
         all_self_attentions = None
         all_hidden_states = () if output_hidden_states else None
         for index in range(self.num_layers):
@@ -1188,7 +1191,7 @@ class ChatGLM2PreTrainedModel(PreTrainedModel):
 
         """
         batch_size, seq_length = input_ids.shape
-        position_ids = ops.arange(seq_length, dtype=mindspore.int64).unsqueeze(0).repeat(batch_size, 1)
+        position_ids = ops.arange(seq_length, dtype=mindspore.int64).unsqueeze(0).tile((batch_size, 1))
         return position_ids
 
 
@@ -1337,7 +1340,7 @@ class ChatGLM2Model(ChatGLM2PreTrainedModel):
         Raises:
             None.
         """
-        prefix_tokens = self.prefix_tokens.unsqueeze(0).expand(batch_size, -1)
+        prefix_tokens = self.prefix_tokens.unsqueeze(0).broadcast_to((batch_size, -1))
         past_key_values = self.prefix_encoder(prefix_tokens).astype(dtype)
         past_key_values = past_key_values.view(
             batch_size,
@@ -1964,6 +1967,9 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
         # 2. Set generation parameters if not already defined
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
+
+        kwargs_has_attention_mask = model_kwargs.get("attention_mask", None) is not None
+        self._prepare_special_tokens(generation_config, kwargs_has_attention_mask)
 
         logits_processor = self._get_logits_processor(
             generation_config=generation_config,

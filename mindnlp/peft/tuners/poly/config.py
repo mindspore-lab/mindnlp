@@ -31,7 +31,7 @@ class PolyConfig(PeftConfig):
 
     Args:
         r (`int`): Attention dimension of each Lora in Poly.
-        target_cells (`Union[List[str],str]`): The names of the cells to apply Poly to.
+        target_modules (`Union[List[str],str]`): The names of the cells to apply Poly to.
         cells_to_save (`List[str]`): List of cells apart from Poly layers to be set as trainable
             and saved in the final checkpoint.
         init_weights (bool): Whether to perform initialization of Poly weights.
@@ -44,7 +44,7 @@ class PolyConfig(PeftConfig):
     """
 
     r: int = field(default=8, metadata={"help": "Lora attention dimension"})
-    target_cells: Optional[Union[List[str], str]] = field(
+    target_modules: Optional[Union[List[str], str]] = field(
         default=None,
         metadata={
             "help": "List of cell names or regex expression of the cell names to replace with Poly."
@@ -89,8 +89,8 @@ class PolyConfig(PeftConfig):
 
     def __post_init__(self):
         self.peft_type = PeftType.POLY
-        self.target_cells = (
-            set(self.target_cells)
-            if isinstance(self.target_cells, list)
-            else self.target_cells
+        self.target_modules = (
+            set(self.target_modules)
+            if isinstance(self.target_modules, list)
+            else self.target_modules
         )
