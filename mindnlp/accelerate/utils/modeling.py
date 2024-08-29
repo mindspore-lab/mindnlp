@@ -10,7 +10,7 @@ from collections import OrderedDict, defaultdict
 from typing import Optional, Dict, Union, List, Tuple, Set
 import mindspore
 from mindspore.communication import get_group_size, get_rank
-#from mindspore.communication.comm_func import isend, irecv, broadcast
+from mindspore.communication.comm_func import isend, irecv, broadcast
 
 from ...core import nn, ops
 from ...utils import logging
