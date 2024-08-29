@@ -26,7 +26,7 @@ logger = logging.get_logger(__name__)
 class OwlViTFeatureExtractor(OwlViTImageProcessor):
     def __init__(self, *args, **kwargs) -> None:
         warnings.warn(
-            "The class OwlViTFeatureExtractor is deprecated and will be removed in version 5 of Transformers. Please"
+            "The class OwlViTFeatureExtractor is deprecated. Please"
             " use OwlViTImageProcessor instead.",
             FutureWarning,
         )

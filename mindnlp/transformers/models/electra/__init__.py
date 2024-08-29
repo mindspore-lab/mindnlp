@@ -15,4 +15,14 @@
 """
 electra Model.
 """
+from . import configuration_electra, modeling_electra, tokenization_electra, tokenization_electra_fast
+from .configuration_electra import *
+from .modeling_electra import *
+from .tokenization_electra import *
+from .tokenization_electra_fast import *
+
 __all__ = []
+__all__.extend(configuration_electra.__all__)
+__all__.extend(modeling_electra.__all__)
+__all__.extend(tokenization_electra.__all__)
+__all__.extend(tokenization_electra_fast.__all__)

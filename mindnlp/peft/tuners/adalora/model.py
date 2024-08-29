@@ -12,18 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=arguments-differ
-# pylint: disable=arguments-renamed
-# pylint: disable=useless-parent-delegation
-# pylint: disable=invalid-name
-# pylint: disable=unused-variable
-# pylint: disable=unused-argument
-# pylint: disable=too-many-arguments
 "Adalora Model"
 import warnings
-from mindspore import nn, ops, Tensor, Parameter
-from mindnlp.transformers.ms_utils import Conv1D
+from mindspore import Tensor, Parameter
 
+from mindnlp.core import nn, ops
+from mindnlp.transformers.ms_utils import Conv1D
 from mindnlp.peft.tuners.lora import LoraConfig, LoraModel
 from mindnlp.peft.utils import (
     TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING,
@@ -41,18 +35,18 @@ class AdaLoraModel(LoraModel):
     https://openreview.net/forum?id=lq62uWRJjiY
 
     Args:
-        model ([`mindspore.nn.Cell`]): The model to be adapted.
+        model ([`mindspore.nn.Module`]): The model to be adapted.
         config ([`AdaLoraConfig`]): The configuration of the AdaLora model.
         adapter_name (`str`): The name of the adapter, defaults to `"default"`.
 
     Returns:
-        AdaLoraModel ([`mindspore.nn.Cell`]): The AdaLora model.
+        AdaLoraModel ([`mindspore.nn.Module`]): The AdaLora model.
 
     Example::
 
         >>> from transformers import AutoModelForSeq2SeqLM, LoraConfig >>> from peft import AdaLoraModel, AdaLoraConfig
         >>> config = AdaLoraConfig(
-                peft_type="ADALORA", task_type="SEQ_2_SEQ_LM", r=8, lora_alpha=32, target_cells=["q", "v"],
+                peft_type="ADALORA", task_type="SEQ_2_SEQ_LM", r=8, lora_alpha=32, target_modules=["q", "v"],
                 lora_dropout=0.01,
             )
         >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base") >>> model = AdaLoraModel(model, config, "default")
@@ -122,13 +116,13 @@ class AdaLoraModel(LoraModel):
                 "When using multiple adapters, set inference_mode to True for all adapters except the one "
                 "you want to train."
             )
-    def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
+    def _mark_only_adapters_as_trainable(self, model: nn.Module) -> None:
         """
         Marks only specific adapters in the model as trainable based on the specified bias configuration.
         
         Args:
             self: The instance of the AdaLoraModel class.
-            model (nn.Cell): The neural network model for which adapters should be marked as trainable.
+            model (nn.Module): The neural network model for which adapters should be marked as trainable.
         
         Returns:
             None. This method does not return any value.
@@ -273,7 +267,7 @@ class AdaLoraModel(LoraModel):
         #     new_cell = SVDLinear4bit(target, adapter_name, **fourbit_kwargs)
         # elif AutoGPTQQuantLinear is not None and isinstance(target, AutoGPTQQuantLinear):
         #     new_cell = SVDQuantLinear(target, adapter_name, **kwargs)
-        if isinstance(target_base_layer, nn.Dense):
+        if isinstance(target_base_layer, nn.Linear):
             if kwargs["fan_in_fan_out"]:
                 warnings.warn(
                     "fan_in_fan_out is set to True but the target cell is `torch.nn.Linear`. "
@@ -336,22 +330,22 @@ class AdaLoraModel(LoraModel):
         This method '_prepare_adapter_config' in the class 'AdaLoraModel' prepares the adapter configuration based on the provided 'peft_config' and 'model_config' parameters.
         
         Args:
-        - peft_config (dict): A dictionary containing the configuration details for the adapter. It should include information about the target cells. If 'target_cells' is not specified, it is inferred based
+        - peft_config (dict): A dictionary containing the configuration details for the adapter. It should include information about the target cells. If 'target_modules' is not specified, it is inferred based
 on the 'model_type' from the 'model_config' parameter.
-        - model_config (dict): A dictionary containing the configuration details specific to the model. It is used to determine the 'model_type' which is then used to infer the 'target_cells' if not explicitly
+        - model_config (dict): A dictionary containing the configuration details specific to the model. It is used to determine the 'model_type' which is then used to infer the 'target_modules' if not explicitly
 provided in 'peft_config'.
         
         Returns:
-        None: This method does not return any value but updates the 'peft_config' parameter with the inferred or provided 'target_cells' based on the 'model_type'.
+        None: This method does not return any value but updates the 'peft_config' parameter with the inferred or provided 'target_modules' based on the 'model_type'.
         
         Raises:
-        - ValueError: Raised if 'target_cells' is not specified in 'peft_config' and the 'model_type' from 'model_config' does not have a corresponding mapping in
+        - ValueError: Raised if 'target_modules' is not specified in 'peft_config' and the 'model_type' from 'model_config' does not have a corresponding mapping in
 TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING.
         """
-        if peft_config.target_cells is None:
+        if peft_config.target_modules is None:
             if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING:
-                raise ValueError("Please specify `target_cells` in `peft_config`")
-            peft_config.target_cells = TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING[
+                raise ValueError("Please specify `target_modules` in `peft_config`")
+            peft_config.target_modules = TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING[
                 model_config["model_type"]
             ]
         return peft_config
@@ -363,8 +357,8 @@ TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING.
         except AttributeError:
             return getattr(self.model, name)
 
-    def construct(self, *args, **kwargs):
-        """The construct method of the model"""
+    def forward(self, *args, **kwargs):
+        """The forward method of the model"""
         outputs = self.model(*args, **kwargs)
 
         if (getattr(outputs, "loss", None) is not None) and isinstance(outputs.loss, Tensor):
@@ -382,7 +376,7 @@ TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING.
                     I = ops.eye(*para_cov.shape)  # noqa: E741
                     I = ops.stop_gradient(I)
                     num_param += 1
-                    regu_loss += ops.norm(para_cov - I, ord="fro")
+                    regu_loss += ops.norm(para_cov - I, p="fro")
             if num_param > 0:
                 regu_loss = regu_loss / num_param
             else:

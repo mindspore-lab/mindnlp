@@ -1,4 +1,4 @@
-from mindspore import nn
+from mindnlp.core import nn
 
 from mindnlp.transformers import PreTrainedModel
 
@@ -10,7 +10,7 @@ class CustomModel(PreTrainedModel):
 
     def __init__(self, config):
         super().__init__(config)
-        self.linear = nn.Dense(config.hidden_size, config.hidden_size)
+        self.linear = nn.Linear(config.hidden_size, config.hidden_size)
 
     def forward(self, x):
         return self.linear(x)
@@ -24,7 +24,7 @@ class NoSuperInitModel(PreTrainedModel):
 
     def __init__(self, config):
         super().__init__(config)
-        self.linear = nn.Dense(config.attribute, config.attribute)
+        self.linear = nn.Linear(config.attribute, config.attribute)
 
     def forward(self, x):
         return self.linear(x)

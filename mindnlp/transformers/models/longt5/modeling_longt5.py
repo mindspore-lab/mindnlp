@@ -22,9 +22,11 @@ from typing import List, Tuple
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Constant, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     DUMMY_INPUTS,
     DUMMY_MASK,
@@ -68,7 +70,7 @@ def _pad_to_multiple(x: mindspore.Tensor, block_len: int, dim: int, pad_value: i
     pad = [(0, 0)] * x.ndim
     pad[dim] = (0, pad_len)
     pad = sum(pad[::-1], ())
-    x = ops.pad(x, padding=pad, mode='constant', value=pad_value)
+    x = nn.functional.pad(x, pad=pad, mode="constant", value=pad_value)
     return x
 
 def _split_into_blocks(x: mindspore.Tensor, block_len: int, dim: int) -> mindspore.Tensor:
@@ -96,7 +98,7 @@ def _concatenate_3_blocks(x: mindspore.Tensor, block_dim: int, sequence_dim: int
     pad[block_dim] = (1, 1)
     pad = sum(pad[::-1], ())
     # [batch_size, num_blocks, block_len] -> [batch_size, num_blocks + 2, block_len]
-    x = ops.pad(x, padding=pad, mode='constant', value=pad_value)
+    x = nn.functional.pad(x, pad=pad, mode="constant", value=pad_value)
 
     blocks_list: List[mindspore.Tensor] = []
     for i in range(3):
@@ -107,7 +109,7 @@ def _concatenate_3_blocks(x: mindspore.Tensor, block_dim: int, sequence_dim: int
         indices = tuple(indices)
         blocks_list.append(x[indices])
     # [batch_size, num_blocks, 3 * block_len, ...]
-    return ops.cat(blocks_list, axis=sequence_dim)
+    return ops.cat(blocks_list, dim=sequence_dim)
 
 def _make_3block_relative_position_ids(block_len: int) -> mindspore.Tensor:
     """Makes 3-blocked relative position ids for local attention."""
@@ -165,7 +167,7 @@ def _make_global_fixed_block_ids(
         return block_ids
 
     fixed_block_mask = ops.ones_like(attention_mask) / global_block_size
-    fixed_block_mask = ops.cumsum(fixed_block_mask, axis=1) - fixed_block_mask
+    fixed_block_mask = ops.cumsum(fixed_block_mask, dim=1) - fixed_block_mask
     mask = ops.where(attention_mask != 0.0, 1.0, -1000.0).type(attention_mask.dtype)
     global_block_ids = ops.floor(mask + fixed_block_mask - 1.0).type(attention_mask.dtype)
     _global_block_ids_lower_bound = mindspore.tensor(-1, dtype=global_block_ids.dtype)
@@ -179,12 +181,12 @@ def _make_global_fixed_block_ids(
     num_globals = seq_len // global_block_size
     # [batch_size, seq_len // global_block_size]
     if num_globals > 0:
-        _sequence_block_ids_max = ops.max(global_block_ids, axis=-1).values.repeat(num_globals, 1).transpose(0, 1)
+        _sequence_block_ids_max = ops.max(global_block_ids, dim=-1).values.repeat(num_globals, 1).transpose(0, 1)
     else:
         _sequence_block_ids_max = ops.zeros(
             batch_size, dtype=global_block_ids.dtype
         )
-    global_segment_ids = ops.cumsum(ops.ones(batch_size, num_globals), axis=-1) - 1
+    global_segment_ids = ops.cumsum(ops.ones(batch_size, num_globals), dim=-1) - 1
     global_segment_ids = global_segment_ids.to(attention_mask.device)
     global_segment_ids = ops.where(global_segment_ids <= _sequence_block_ids_max, 1, 0)
     return global_block_ids.type(mindspore.Tensor.int), global_segment_ids.type(mindspore.Tensor.int)
@@ -210,7 +212,7 @@ def _create_global_aggregates(
     return ops.einsum("...nd,...ng->...gd", hidden_states, one_hot_block_ids.type(hidden_states.dtype))
 
 
-class LongT5LayerNorm(nn.Cell):
+class LongT5LayerNorm(nn.Module):
     """LongT5LayerNorm"""
     def __init__(self, hidden_size, eps=1e-6):
         """
@@ -220,7 +222,7 @@ class LongT5LayerNorm(nn.Cell):
         self.weight = Parameter(ops.ones(hidden_size, mindspore.float32))
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the LongT5LayerNorm for normalization of hidden states.
         
@@ -245,7 +247,7 @@ class LongT5LayerNorm(nn.Cell):
 
 ALL_LAYERNORM_LAYERS.append(LongT5LayerNorm)
 
-class LongT5DenseActDense(nn.Cell):
+class LongT5DenseActDense(nn.Module):
     """LongT5DenseActDense"""
     def __init__(self, config: LongT5Config):
         """
@@ -266,14 +268,14 @@ class LongT5DenseActDense(nn.Cell):
             RuntimeError: If there is an issue with initializing the dense layers, dropout, or activation function.
         """
         super().__init__()
-        self.wi = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
+        self.wi = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, bias=False)
         self.dropout = nn.Dropout(p=config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method constructs and processes hidden states in the LongT5DenseActDense class.
+        This method forwards and processes hidden states in the LongT5DenseActDense class.
 
         Args:
             self: An instance of the LongT5DenseActDense class, representing the current object.
@@ -294,7 +296,7 @@ class LongT5DenseActDense(nn.Cell):
         return hidden_states
 
 
-class LongT5DenseGatedActDense(nn.Cell):
+class LongT5DenseGatedActDense(nn.Module):
     """LongT5DenseGatedActDense"""
     def __init__(self, config: LongT5Config):
         """
@@ -317,13 +319,13 @@ class LongT5DenseGatedActDense(nn.Cell):
             None.
         """
         super().__init__()
-        self.wi_0 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wi_1 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
+        self.wi_0 = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wi_1 = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, bias=False)
         self.dropout = nn.Dropout(p=config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the hidden states of the LongT5DenseGatedActDense model.
 
@@ -344,7 +346,7 @@ class LongT5DenseGatedActDense(nn.Cell):
         hidden_states = self.wo(hidden_states)
         return hidden_states
 
-class LongT5LayerFF(nn.Cell):
+class LongT5LayerFF(nn.Module):
     """LongT5LayerFF"""
     def __init__(self, config: LongT5Config):
         """
@@ -371,9 +373,9 @@ class LongT5LayerFF(nn.Cell):
         self.layer_norm = LongT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        Method to construct the forward pass through the LongT5LayerFF feed-forward layer.
+        Method to forward the forward pass through the LongT5LayerFF feed-forward layer.
 
         Args:
             self (LongT5LayerFF): The instance of the LongT5LayerFF class.
@@ -392,7 +394,7 @@ class LongT5LayerFF(nn.Cell):
         return hidden_states
 
 
-class LongT5Attention(nn.Cell):
+class LongT5Attention(nn.Module):
     """LongT5Attention"""
     def __init__(self, config: LongT5Config, has_relative_attention_bias=False):
         """
@@ -422,10 +424,10 @@ class LongT5Attention(nn.Cell):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Dense(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -524,7 +526,7 @@ class LongT5Attention(nn.Cell):
         values = values.transpose([2, 0, 1]).expand_dims(0)  # shape (1, num_heads, query_length, key_length)
         return values
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         mask=None,
@@ -577,7 +579,7 @@ class LongT5Attention(nn.Cell):
                 if key_value_states is None:
                     # self-attn
                     # (batch_size, n_heads, key_length, dim_per_head)
-                    hidden_states = ops.cat([past_key_value, hidden_states], axis=2)
+                    hidden_states = ops.cat([past_key_value, hidden_states], dim=2)
                 elif past_key_value.shape[2] != key_value_states.shape[1]:
                     # checking that the `sequence_length` of the `past_key_value` is the same as
                     # the provided `key_value_states` to support prefix tuning
@@ -631,11 +633,11 @@ class LongT5Attention(nn.Cell):
             position_bias_masked = position_bias
 
         scores += position_bias_masked
-        attn_weights = ops.softmax(scores.astype(mindspore.float32), axis=-1).astype(
+        attn_weights = ops.softmax(scores.astype(mindspore.float32), dim=-1).astype(
             scores.dtype
         )  # (batch_size, n_heads, seq_length, key_length)
         if self.training:
-            attn_weights = ops.dropout(
+            attn_weights = F.dropout(
                 attn_weights, p=self.dropout
             )  # (batch_size, n_heads, seq_length, key_length)
 
@@ -653,7 +655,7 @@ class LongT5Attention(nn.Cell):
             outputs = outputs + (attn_weights,)
         return outputs
 
-class LongT5LocalAttention(nn.Cell):
+class LongT5LocalAttention(nn.Module):
     """LongT5LocalAttention"""
     def __init__(self, config: LongT5Config, has_relative_attention_bias=False):
         """
@@ -684,10 +686,10 @@ class LongT5LocalAttention(nn.Cell):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Dense(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -770,7 +772,7 @@ class LongT5LocalAttention(nn.Cell):
         values = values.transpose([2, 0, 1]).expand_dims(0).expand_dims(0)
         return values
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         mask=None,
@@ -852,12 +854,12 @@ class LongT5LocalAttention(nn.Cell):
 
         scores += position_bias
         # (batch_size, num_blocks, n_heads, block_len, 3 * block_len)
-        attn_weights = ops.softmax(scores.astype(mindspore.float32), axis=-1).astype(
+        attn_weights = ops.softmax(scores.astype(mindspore.float32), dim=-1).astype(
             scores.dtype
         )
         # (batch_size, num_blocks, n_heads, block_len, 3 * block_len)
         if self.training:
-            attn_weights = ops.dropout(
+            attn_weights = F.dropout(
                 attn_weights, p=self.dropout
             )  # (batch_size, n_heads, seq_length, key_length)
 
@@ -876,7 +878,7 @@ class LongT5LocalAttention(nn.Cell):
             outputs = outputs + (attn_weights,)
         return outputs
 
-class LongT5TransientGlobalAttention(nn.Cell):
+class LongT5TransientGlobalAttention(nn.Module):
     """LongT5TransientGlobalAttention"""
     def __init__(self, config: LongT5Config, has_relative_attention_bias=False):
         """
@@ -909,10 +911,10 @@ class LongT5TransientGlobalAttention(nn.Cell):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Dense(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -1027,7 +1029,7 @@ class LongT5TransientGlobalAttention(nn.Cell):
         attention_side_bias = attention_side_bias + side_bias
         return attention_side_bias
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         mask=None,
@@ -1036,7 +1038,7 @@ class LongT5TransientGlobalAttention(nn.Cell):
         output_attentions=False,
     ):
         """
-        This method constructs the transient global attention mechanism for the LongT5 model.
+        This method forwards the transient global attention mechanism for the LongT5 model.
 
         Args:
             self: The instance of the LongT5TransientGlobalAttention class.
@@ -1108,8 +1110,8 @@ class LongT5TransientGlobalAttention(nn.Cell):
 
         # Concatenate "local" and "side"/"global" key/value states to allow each token to attend global aggregated ones
         # New shape: (batch_size, num_blocks, 3 * block_len + global_seq_len, n_heads, dim_per_head)
-        key_states = ops.cat([key_states, side_key_states], axis=2)
-        value_states = ops.cat([value_states, side_value_states], axis=2)
+        key_states = ops.cat([key_states, side_key_states], dim=2)
+        value_states = ops.cat([value_states, side_value_states], dim=2)
 
         # Compute scores -> (batch_size, num_block, n_heads, block_len, 3 * block_len + global_seq_len)
         scores = ops.einsum(
@@ -1149,16 +1151,16 @@ class LongT5TransientGlobalAttention(nn.Cell):
             side_position_bias = _split_into_blocks(side_position_bias, self.block_len, dim=-2).transpose(1, 2)
             side_position_bias = side_position_bias.type(scores.dtype).to(scores.device)
             # (batch_size, num_blocks, num_heads, block_len, 3 * block_len + global_seq_len)
-            position_bias = ops.cat([position_bias, side_position_bias], axis=-1)
+            position_bias = ops.cat([position_bias, side_position_bias], dim=-1)
 
         scores += position_bias
         # (batch_size, num_blocks, n_heads, block_len, 3 * block_len)
-        attn_weights = ops.softmax(scores.astype(mindspore.float32), axis=-1).astype(
+        attn_weights = ops.softmax(scores.astype(mindspore.float32), dim=-1).astype(
             scores.dtype
         )
         # (batch_size, num_blocks, n_heads, block_len, 3 * block_len)
         if self.training:
-            attn_weights = ops.dropout(
+            attn_weights = F.dropout(
                 attn_weights, p=self.dropout
             )  # (batch_size, n_heads, seq_length, key_length)
 
@@ -1178,7 +1180,7 @@ class LongT5TransientGlobalAttention(nn.Cell):
         return outputs
 
 
-class LongT5LayerSelfAttention(nn.Cell):
+class LongT5LayerSelfAttention(nn.Module):
     """LongT5LayerSelfAttention"""
     def __init__(self, config, has_relative_attention_bias=False):
         """
@@ -1201,7 +1203,7 @@ class LongT5LayerSelfAttention(nn.Cell):
         self.layer_norm = LongT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1212,9 +1214,9 @@ class LongT5LayerSelfAttention(nn.Cell):
         output_attentions=False,
     ):
         """
-        Method 'construct' in the class 'LongT5LayerSelfAttention'.
+        Method 'forward' in the class 'LongT5LayerSelfAttention'.
 
-        This method constructs the output hidden states by applying self-attention mechanism.
+        This method forwards the output hidden states by applying self-attention mechanism.
 
         Args:
             self: Instance of the class.
@@ -1248,7 +1250,7 @@ class LongT5LayerSelfAttention(nn.Cell):
         outputs = (hidden_states,) + attention_output[1:]  # add attentions if we output them
         return outputs
 
-class LongT5LayerLocalSelfAttention(nn.Cell):
+class LongT5LayerLocalSelfAttention(nn.Module):
     """LongT5LayerSelfAttention"""
     def __init__(self, config, has_relative_attention_bias=False):
         """
@@ -1269,7 +1271,7 @@ class LongT5LayerLocalSelfAttention(nn.Cell):
         self.layer_norm = LongT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1278,7 +1280,7 @@ class LongT5LayerLocalSelfAttention(nn.Cell):
         output_attentions=False,
     ):
         """
-        This method constructs the LongT5LayerLocalSelfAttention and performs the local self-attention operation.
+        This method forwards the LongT5LayerLocalSelfAttention and performs the local self-attention operation.
 
         Args:
             self: The instance of the LongT5LayerLocalSelfAttention class.
@@ -1317,7 +1319,7 @@ class LongT5LayerLocalSelfAttention(nn.Cell):
         outputs = (hidden_states,) + attention_output[1:]  # add attentions if we output them
         return outputs
 
-class LongT5LayerTransientGlobalSelfAttention(nn.Cell):
+class LongT5LayerTransientGlobalSelfAttention(nn.Module):
     """LongT5LayerSelfAttention"""
     def __init__(self, config, has_relative_attention_bias=False):
         """
@@ -1342,7 +1344,7 @@ class LongT5LayerTransientGlobalSelfAttention(nn.Cell):
         self.layer_norm = LongT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1351,8 +1353,8 @@ class LongT5LayerTransientGlobalSelfAttention(nn.Cell):
         output_attentions=False,
     ):
         """
-        Method 'construct' in the class 'LongT5LayerTransientGlobalSelfAttention'.
-        This method constructs the output of the layer by applying transient global self-attention mechanism.
+        Method 'forward' in the class 'LongT5LayerTransientGlobalSelfAttention'.
+        This method forwards the output of the layer by applying transient global self-attention mechanism.
 
         Args:
             self: Reference to the instance of the class.
@@ -1384,7 +1386,7 @@ class LongT5LayerTransientGlobalSelfAttention(nn.Cell):
         outputs = (hidden_states,) + attention_output[1:]  # add attentions if we output them
         return outputs
 
-class LongT5LayerCrossAttention(nn.Cell):
+class LongT5LayerCrossAttention(nn.Module):
     """LongT5LayerCrossAttention"""
     def __init__(self, config):
         """
@@ -1410,7 +1412,7 @@ class LongT5LayerCrossAttention(nn.Cell):
         self.layer_norm = LongT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(p=config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         key_value_states,
@@ -1476,7 +1478,7 @@ class LongT5LayerCrossAttention(nn.Cell):
         return outputs
 
 
-class LongT5Block(nn.Cell):
+class LongT5Block(nn.Module):
     """LongT5Block"""
     def __init__(self, config, has_relative_attention_bias=False):
         """
@@ -1509,14 +1511,14 @@ class LongT5Block(nn.Cell):
                 f"but got {config.encoder_attention_type}."
             )
 
-        self.layer = nn.CellList()
+        self.layer = nn.ModuleList()
         self.layer.append(attention_layer(config, has_relative_attention_bias=has_relative_attention_bias))
         if self.is_decoder:
             self.layer.append(LongT5LayerCrossAttention(config))
 
         self.layer.append(LongT5LayerFF(config))
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1811,7 +1813,7 @@ class LongT5Stack(LongT5PreTrainedModel):
         4. Sets the is_decoder attribute to the value of config.is_decoder.
         5. Sets the local_radius attribute to the value of config.local_radius.
         6. Sets the block_len attribute to the local_radius + 1.
-        7. Creates a block attribute as an nn.CellList containing LongT5Block objects. The number of blocks is
+        7. Creates a block attribute as an nn.ModuleList containing LongT5Block objects. The number of blocks is
         determined by config.num_layers. Each block is initialized with a relative_attention_bias if it is the
         first block in the list.
         8. Sets the final_layer_norm attribute to a LongT5LayerNorm object with the specified d_model and layer_norm_epsilon.
@@ -1833,7 +1835,7 @@ class LongT5Stack(LongT5PreTrainedModel):
         self.local_radius = config.local_radius
         self.block_len = self.local_radius + 1
 
-        self.block = nn.CellList(
+        self.block = nn.ModuleList(
             [LongT5Block(config, has_relative_attention_bias=bool(i == 0)) for i in range(config.num_layers)]
         )
         self.final_layer_norm = LongT5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
@@ -1878,7 +1880,7 @@ class LongT5Stack(LongT5PreTrainedModel):
         """
         self.embed_tokens = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -1894,7 +1896,7 @@ class LongT5Stack(LongT5PreTrainedModel):
         return_dict=None,
     ):
         '''
-        This method constructs the LongT5Stack model. It takes 13 parameters:
+        This method forwards the LongT5Stack model. It takes 13 parameters:
 
         Args:
             self (object): The instance of the class.
@@ -2180,7 +2182,7 @@ class LongT5Model(LongT5PreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids = None,
         attention_mask = None,
@@ -2199,7 +2201,7 @@ class LongT5Model(LongT5PreTrainedModel):
         return_dict = None,
     ):
         """
-        This method constructs a LongT5 model with the specified parameters.
+        This method forwards a LongT5 model with the specified parameters.
 
         Args:
             self (object): The instance of the class.
@@ -2321,7 +2323,7 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
         decoder_config.num_layers = config.num_decoder_layers
         self.decoder = LongT5Stack(decoder_config, self.shared)
 
-        self.lm_head = nn.Dense(config.d_model, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
     def get_input_embeddings(self):
         """
@@ -2383,7 +2385,7 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
         """get decoder"""
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids = None,
         attention_mask = None,
@@ -2403,7 +2405,7 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
         return_dict = None,
     ):
         """
-        This method constructs a LongT5 model for conditional generation.
+        This method forwards a LongT5 model for conditional generation.
 
         Args:
             self: The instance of the class.
@@ -2483,7 +2485,7 @@ class LongT5ForConditionalGeneration(LongT5PreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1), ignore_index=-100)
+            loss = F.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1), ignore_index=-100)
             # TODO(thom): Add z_loss
 
         if not return_dict:
@@ -2682,7 +2684,7 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.block[layer].layer[0].SelfAttention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids = None,
         attention_mask = None,
@@ -2693,7 +2695,7 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
         return_dict = None,
     ):
         """
-        This method constructs the LongT5EncoderModel by passing the input parameters to the encoder.
+        This method forwards the LongT5EncoderModel by passing the input parameters to the encoder.
         
         Args:
             self: The instance of the LongT5EncoderModel class.

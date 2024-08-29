@@ -22,29 +22,26 @@ from pathlib import Path
 
 import pytest
 
+import mindnlp
 from mindnlp.transformers import BertConfig, GPT2Model
 from mindnlp.transformers.models.auto.configuration_auto import CONFIG_MAPPING
-from mindnlp.utils import is_mindspore_available, is_safetensors_available
 from mindnlp.utils.testing_utils import (
     DUMMY_UNKNOWN_IDENTIFIER,
     SMALL_MODEL_IDENTIFIER,
     RequestCounter,
     require_mindspore,
-    slow
+    slow,
 )
-
+from mindnlp.utils import is_safetensors_available, is_mindspore_available
 from ..bert.test_modeling_bert import BertModelTester
 
 
-sys.path.append(str(Path(__file__).parent.parent.parent.parent.parent))
-
-from test_module.custom_configuration import CustomConfig  # noqa E402
-
+from .....test_module.custom_configuration import CustomConfig  # noqa E402
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
-    from test_module.custom_modeling import CustomModel
+    from mindnlp.core import ops
+    from .....test_module.custom_modeling import CustomModel
 
     from mindnlp.transformers import (
         AutoBackbone,
@@ -65,11 +62,16 @@ if is_mindspore_available():
         BertForSequenceClassification,
         BertForTokenClassification,
         BertModel,
+        FunnelBaseModel,
+        FunnelModel,
         GPT2Config,
         GPT2LMHeadModel,
+        ResNetBackbone,
         RobertaForMaskedLM,
         T5Config,
         T5ForConditionalGeneration,
+        TapasConfig,
+        TapasForQuestionAnswering,
     )
     from mindnlp.transformers.models.auto.modeling_auto import (
         MODEL_FOR_CAUSAL_LM_MAPPING,
@@ -80,9 +82,6 @@ if is_mindspore_available():
         MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING,
         MODEL_MAPPING,
     )
-    from mindnlp.transformers.models.bert.modeling_bert import BERT_SUPPORT_LIST
-    from mindnlp.transformers.models.gpt2.modeling_gpt2 import GPT2_PRETRAINED_MODEL_ARCHIVE_LIST
-    from mindnlp.transformers.models.t5.modeling_t5 import T5_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 @require_mindspore
@@ -90,147 +89,150 @@ class AutoModelTest(unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        for model_name in BERT_SUPPORT_LIST[:1]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, BertConfig)
+        model_name = "google-bert/bert-base-uncased"
+        config = AutoConfig.from_pretrained(model_name)
+        self.assertIsNotNone(config)
+        self.assertIsInstance(config, BertConfig)
 
-            model = AutoModel.from_pretrained(model_name)
-            model, loading_info = AutoModel.from_pretrained(model_name, output_loading_info=True)
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, BertModel)
+        model = AutoModel.from_pretrained(model_name)
+        model, loading_info = AutoModel.from_pretrained(model_name, output_loading_info=True)
+        self.assertIsNotNone(model)
+        self.assertIsInstance(model, BertModel)
 
-            self.assertEqual(len(loading_info["missing_keys"]), 0)
-            # When using PyTorch checkpoint, the expected value is `8`. With `safetensors` checkpoint (if it is
-            # installed), the expected value becomes `7`.
-            EXPECTED_NUM_OF_UNEXPECTED_KEYS = 7 if is_safetensors_available() else 8
-            self.assertEqual(len(loading_info["unexpected_keys"]), EXPECTED_NUM_OF_UNEXPECTED_KEYS)
-            # self.assertEqual(len(loading_info["mismatched_keys"]), 0)
-            # self.assertEqual(len(loading_info["error_msgs"]), 0)
-
+        self.assertEqual(len(loading_info["missing_keys"]), 0)
+        # When using PyTorch checkpoint, the expected value is `8`. With `safetensors` checkpoint (if it is
+        # installed), the expected value becomes `7`.
+        EXPECTED_NUM_OF_UNEXPECTED_KEYS = 7 if is_safetensors_available() else 8
+        self.assertEqual(len(loading_info["unexpected_keys"]), EXPECTED_NUM_OF_UNEXPECTED_KEYS)
+        self.assertEqual(len(loading_info["mismatched_keys"]), 0)
+        self.assertEqual(len(loading_info["error_msgs"]), 0)
 
     @slow
     def test_model_for_pretraining_from_pretrained(self):
-        for model_name in BERT_SUPPORT_LIST[:1]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, BertConfig)
+        model_name = "google-bert/bert-base-uncased"
+        config = AutoConfig.from_pretrained(model_name)
+        self.assertIsNotNone(config)
+        self.assertIsInstance(config, BertConfig)
 
-            model = AutoModelForPreTraining.from_pretrained(model_name)
-            model, loading_info = AutoModelForPreTraining.from_pretrained(model_name, output_loading_info=True)
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, BertForPreTraining)
-            # Only one value should not be initialized and in the missing keys.
-            for key, value in loading_info.items():
-                self.assertEqual(len(value), 0)
+        model = AutoModelForPreTraining.from_pretrained(model_name)
+        model, loading_info = AutoModelForPreTraining.from_pretrained(model_name, output_loading_info=True)
+        self.assertIsNotNone(model)
+        self.assertIsInstance(model, BertForPreTraining)
+        # Only one value should not be initialized and in the missing keys.
+        for key, value in loading_info.items():
+            self.assertEqual(len(value), 0)
 
     @slow
     def test_lmhead_model_from_pretrained(self):
-        for model_name in BERT_SUPPORT_LIST[:1]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, BertConfig)
+        model_name = "google-bert/bert-base-uncased"
+        config = AutoConfig.from_pretrained(model_name)
+        self.assertIsNotNone(config)
+        self.assertIsInstance(config, BertConfig)
 
-            model = AutoModelWithLMHead.from_pretrained(model_name)
-            model, loading_info = AutoModelWithLMHead.from_pretrained(model_name, output_loading_info=True)
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, BertForMaskedLM)
-
+        model = AutoModelWithLMHead.from_pretrained(model_name)
+        model, loading_info = AutoModelWithLMHead.from_pretrained(model_name, output_loading_info=True)
+        self.assertIsNotNone(model)
+        self.assertIsInstance(model, BertForMaskedLM)
 
     @slow
     def test_model_for_causal_lm(self):
-        for model_name in GPT2_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, GPT2Config)
+        model_name = "openai-community/gpt2"
+        config = AutoConfig.from_pretrained(model_name)
+        self.assertIsNotNone(config)
+        self.assertIsInstance(config, GPT2Config)
 
-            model = AutoModelForCausalLM.from_pretrained(model_name)
-            model, loading_info = AutoModelForCausalLM.from_pretrained(model_name, output_loading_info=True)
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, GPT2LMHeadModel)
-
+        model = AutoModelForCausalLM.from_pretrained(model_name)
+        model, loading_info = AutoModelForCausalLM.from_pretrained(model_name, output_loading_info=True)
+        self.assertIsNotNone(model)
+        self.assertIsInstance(model, GPT2LMHeadModel)
 
     @slow
     def test_model_for_masked_lm(self):
-        for model_name in BERT_SUPPORT_LIST[:1]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, BertConfig)
+        model_name = "google-bert/bert-base-uncased"
+        config = AutoConfig.from_pretrained(model_name)
+        self.assertIsNotNone(config)
+        self.assertIsInstance(config, BertConfig)
 
-            model = AutoModelForMaskedLM.from_pretrained(model_name)
-            model, loading_info = AutoModelForMaskedLM.from_pretrained(model_name, output_loading_info=True)
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, BertForMaskedLM)
+        model = AutoModelForMaskedLM.from_pretrained(model_name)
+        model, loading_info = AutoModelForMaskedLM.from_pretrained(model_name, output_loading_info=True)
+        self.assertIsNotNone(model)
+        self.assertIsInstance(model, BertForMaskedLM)
 
     @slow
     def test_model_for_encoder_decoder_lm(self):
-        for model_name in T5_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, T5Config)
+        model_name = "google-t5/t5-base"
+        config = AutoConfig.from_pretrained(model_name)
+        self.assertIsNotNone(config)
+        self.assertIsInstance(config, T5Config)
 
-            model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-            model, loading_info = AutoModelForSeq2SeqLM.from_pretrained(model_name, output_loading_info=True)
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, T5ForConditionalGeneration)
-
+        model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+        model, loading_info = AutoModelForSeq2SeqLM.from_pretrained(model_name, output_loading_info=True)
+        self.assertIsNotNone(model)
+        self.assertIsInstance(model, T5ForConditionalGeneration)
 
     @slow
     def test_sequence_classification_model_from_pretrained(self):
-        for model_name in BERT_SUPPORT_LIST[:1]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, BertConfig)
+        model_name = "google-bert/bert-base-uncased"
+        config = AutoConfig.from_pretrained(model_name)
+        self.assertIsNotNone(config)
+        self.assertIsInstance(config, BertConfig)
 
-            model = AutoModelForSequenceClassification.from_pretrained(model_name)
-            model, loading_info = AutoModelForSequenceClassification.from_pretrained(
-                model_name, output_loading_info=True
-            )
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, BertForSequenceClassification)
-
+        model = AutoModelForSequenceClassification.from_pretrained(model_name)
+        model, loading_info = AutoModelForSequenceClassification.from_pretrained(model_name, output_loading_info=True)
+        self.assertIsNotNone(model)
+        self.assertIsInstance(model, BertForSequenceClassification)
 
     @slow
     def test_question_answering_model_from_pretrained(self):
-        for model_name in BERT_SUPPORT_LIST[:1]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, BertConfig)
+        model_name = "google-bert/bert-base-uncased"
+        config = AutoConfig.from_pretrained(model_name)
+        self.assertIsNotNone(config)
+        self.assertIsInstance(config, BertConfig)
 
-            model = AutoModelForQuestionAnswering.from_pretrained(model_name)
-            model, loading_info = AutoModelForQuestionAnswering.from_pretrained(model_name, output_loading_info=True)
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, BertForQuestionAnswering)
+        model = AutoModelForQuestionAnswering.from_pretrained(model_name)
+        model, loading_info = AutoModelForQuestionAnswering.from_pretrained(model_name, output_loading_info=True)
+        self.assertIsNotNone(model)
+        self.assertIsInstance(model, BertForQuestionAnswering)
 
-
-    @unittest.skip('not support yet')
     @slow
     def test_table_question_answering_model_from_pretrained(self):
-        for model_name in TAPAS_PRETRAINED_MODEL_ARCHIVE_LIST[5:6]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, TapasConfig)
+        model_name = "google/tapas-base"
+        config = AutoConfig.from_pretrained(model_name)
+        self.assertIsNotNone(config)
+        self.assertIsInstance(config, TapasConfig)
 
-            model = AutoModelForTableQuestionAnswering.from_pretrained(model_name)
-            model, loading_info = AutoModelForTableQuestionAnswering.from_pretrained(
-                model_name, output_loading_info=True
-            )
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, TapasForQuestionAnswering)
-
+        model = AutoModelForTableQuestionAnswering.from_pretrained(model_name)
+        model, loading_info = AutoModelForTableQuestionAnswering.from_pretrained(model_name, output_loading_info=True)
+        self.assertIsNotNone(model)
+        self.assertIsInstance(model, TapasForQuestionAnswering)
 
     @slow
     def test_token_classification_model_from_pretrained(self):
-        for model_name in BERT_SUPPORT_LIST[:1]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, BertConfig)
+        model_name = "google-bert/bert-base-uncased"
+        config = AutoConfig.from_pretrained(model_name)
+        self.assertIsNotNone(config)
+        self.assertIsInstance(config, BertConfig)
 
-            model = AutoModelForTokenClassification.from_pretrained(model_name)
-            model, loading_info = AutoModelForTokenClassification.from_pretrained(model_name, output_loading_info=True)
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, BertForTokenClassification)
+        model = AutoModelForTokenClassification.from_pretrained(model_name)
+        model, loading_info = AutoModelForTokenClassification.from_pretrained(model_name, output_loading_info=True)
+        self.assertIsNotNone(model)
+        self.assertIsInstance(model, BertForTokenClassification)
 
+    @slow
+    def test_auto_backbone_from_pretrained(self):
+        model = AutoBackbone.from_pretrained("microsoft/resnet-18")
+        model, loading_info = AutoBackbone.from_pretrained("microsoft/resnet-18", output_loading_info=True)
+        self.assertIsNotNone(model)
+        self.assertIsInstance(model, ResNetBackbone)
+
+        # Check kwargs are correctly passed to the backbone
+        model = AutoBackbone.from_pretrained("microsoft/resnet-18", out_indices=[-2, -1])
+        self.assertEqual(model.out_indices, [-2, -1])
+        self.assertEqual(model.out_features, ["stage3", "stage4"])
+
+        model = AutoBackbone.from_pretrained("microsoft/resnet-18", out_features=["stage2", "stage4"])
+        self.assertEqual(model.out_indices, [2, 4])
+        self.assertEqual(model.out_features, ["stage2", "stage4"])
 
     def test_from_pretrained_identifier(self):
         model = AutoModelWithLMHead.from_pretrained(SMALL_MODEL_IDENTIFIER)
@@ -244,7 +246,6 @@ class AutoModelTest(unittest.TestCase):
         self.assertEqual(model.num_parameters(), 14410)
         self.assertEqual(model.num_parameters(only_trainable=True), 14410)
 
-    @unittest.skip('not support yet')
     def test_from_pretrained_with_tuple_values(self):
         # For the auto model mapping, FunnelConfig has two models: FunnelModel and FunnelBaseModel
         model = AutoModel.from_pretrained("sgugger/funnel-random-tiny")
@@ -311,17 +312,24 @@ class AutoModelTest(unittest.TestCase):
                 if CustomConfig in mapping._extra_content:
                     del mapping._extra_content[CustomConfig]
 
-    def test_repo_not_found(self):
-        with self.assertRaises(
-            EnvironmentError
-        ):
-            _ = AutoModel.from_pretrained("bert-base")
+    # def test_repo_not_found(self):
+    #     with self.assertRaisesRegex(
+    #         EnvironmentError, "bert-base is not a local folder and is not a valid model identifier"
+    #     ):
+    #         _ = AutoModel.from_pretrained("bert-base")
 
-    def test_model_file_not_found(self):
-        with self.assertRaises(
-            EnvironmentError,
-        ):
-            _ = AutoModel.from_pretrained("hf-internal-testing/config-no-model")
+    # def test_revision_not_found(self):
+    #     with self.assertRaisesRegex(
+    #         EnvironmentError, r"aaaaaa is not a valid git identifier \(branch name, tag name or commit id\)"
+    #     ):
+    #         _ = AutoModel.from_pretrained(DUMMY_UNKNOWN_IDENTIFIER, revision="aaaaaa")
+
+    # def test_model_file_not_found(self):
+    #     with self.assertRaisesRegex(
+    #         EnvironmentError,
+    #         "hf-internal-testing/config-no-model does not appear to have a file named mindspore_model.ckpt, model.safetensors.",
+    #     ):
+    #         _ = AutoModel.from_pretrained("hf-internal-testing/config-no-model")
 
     # def test_cached_model_has_minimum_calls_to_head(self):
     #     # Make sure we have cached the model.

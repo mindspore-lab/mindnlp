@@ -32,7 +32,7 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_
 
 if is_mindspore_available():
     import mindspore as ms
-    from mindspore import nn
+    from mindnlp.core import nn
     from mindnlp.transformers import MgpstrForSceneTextRecognition, MgpstrModel
 
 
@@ -160,9 +160,9 @@ class MgpstrModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     @unittest.skip(reason="MgpstrModel does not support feedforward chunking")
     def test_feed_forward_chunking(self):

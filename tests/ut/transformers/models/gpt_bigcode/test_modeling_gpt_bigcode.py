@@ -13,16 +13,16 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor,
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         GPTBigCodeForCausalLM,
         GPTBigCodeForSequenceClassification,
         GPTBigCodeForTokenClassification,
         GPTBigCodeModel,
-        GPTBigCodeAttention,
         AutoTokenizer
     )
+    from mindnlp.transformers.models.gpt_bigcode.modeling_gpt_bigcode import GPTBigCodeAttention
 
 class GPTBigCodeModelTester:
     def __init__(
@@ -232,9 +232,9 @@ class GPTBigCodeModelTester:
             [self.batch_size, 1], self.type_vocab_size)
 
         # append to next input_ids and token_type_ids
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         next_token_type_ids = ops.cat(
-            [token_type_ids, next_token_types], axis=-1)
+            [token_type_ids, next_token_types], dim=-1)
 
         output_from_no_past = model(next_input_ids, token_type_ids=next_token_type_ids)[
             "last_hidden_state"]
@@ -248,7 +248,7 @@ class GPTBigCodeModelTester:
         output_from_past_slice = output_from_past[:,0, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(ops.all(ops.isclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_gpt_bigcode_model_attention_mask_past(
         self, config, input_ids, input_mask, head_mask, token_type_ids, *args
@@ -274,11 +274,11 @@ class GPTBigCodeModelTester:
         input_ids[:, -random_seq_idx_to_change] = random_other_next_tokens
 
         # append to next input_ids and attn_mask
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         attn_mask = ops.cat(
             [attn_mask, ops.ones(
                 (attn_mask.shape[0], 1), dtype=mindspore.int64)],
-            axis=1,
+            dim=1,
         )
 
         # get two different outputs
@@ -294,7 +294,8 @@ class GPTBigCodeModelTester:
         output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(ops.all(ops.isclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)))
+        print(output_from_past_slice, output_from_no_past_slice)
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_gpt_bigcode_model_past_large_inputs(
         self, config, input_ids, input_mask, head_mask, token_type_ids, *args
@@ -314,10 +315,10 @@ class GPTBigCodeModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and token_type_ids
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         next_token_type_ids = ops.cat(
-            [token_type_ids, next_token_types], axis=-1)
-        next_attention_mask = ops.cat([input_mask, next_mask], axis=-1)
+            [token_type_ids, next_token_types], dim=-1)
+        next_attention_mask = ops.cat([input_mask, next_mask], dim=-1)
 
         output_from_no_past = model(
             next_input_ids, token_type_ids=next_token_type_ids, attention_mask=next_attention_mask
@@ -334,7 +335,7 @@ class GPTBigCodeModelTester:
         output_from_past_slice = output_from_past[:, :, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(ops.all(ops.isclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_lm_head_model(self, config, input_ids, input_mask, head_mask, token_type_ids, *args):
         model = GPTBigCodeForCausalLM(config)
@@ -350,8 +351,6 @@ class GPTBigCodeModelTester:
             args, gradient_checkpointing=False
     ):
         model = GPTBigCodeForCausalLM(config)
-        if gradient_checkpointing:
-            model.gradient_checkpointing_enable()
 
         result = model(input_ids, token_type_ids=token_type_ids,
                        labels=input_ids)
@@ -623,14 +622,14 @@ class GPTBigCodeMQATest(unittest.TestCase):
         mqa_kv_weight = attention_mqa.c_attn.weight[embed_dim:, :].view(
             1, 2, head_dim, embed_dim)
         mha_c_weight = ops.cat(
-            [mqa_q_weight, mqa_kv_weight.broadcast_to((num_heads, 2, head_dim, embed_dim))], axis=1
+            [mqa_q_weight, mqa_kv_weight.broadcast_to((num_heads, 2, head_dim, embed_dim))], dim=1
         ).view(3 * num_heads * head_dim, embed_dim)
 
         mqa_q_bias = attention_mqa.c_attn.bias[:embed_dim].view(
             num_heads, 1, head_dim)
         mqa_kv_bias = attention_mqa.c_attn.bias[embed_dim:].view(
             1, 2, head_dim)
-        mha_c_bias = ops.cat([mqa_q_bias, mqa_kv_bias.broadcast_to((num_heads, 2, head_dim))], axis=1).view(
+        mha_c_bias = ops.cat([mqa_q_bias, mqa_kv_bias.broadcast_to((num_heads, 2, head_dim))], dim=1).view(
             3 * num_heads * head_dim
         )
 
@@ -650,5 +649,5 @@ class GPTBigCodeMQATest(unittest.TestCase):
         attention_mqa_result = attention_mqa(hidden_states)[0]
 
         # CHECK THAT ALL OUTPUTS ARE THE SAME
-        self.assertTrue(ops.all(ops.isclose(attention_mha_result,
-                        attention_mqa_result, atol=1e-5)))
+        self.assertTrue(ops.allclose(attention_mha_result,
+                        attention_mqa_result, atol=1e-5))

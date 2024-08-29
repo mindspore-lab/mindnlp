@@ -12,7 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Jamba model configuration"""
+"""Jamba model configuration"""
+
 import math
 
 from ...configuration_utils import PretrainedConfig
@@ -26,10 +27,13 @@ class JambaConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`JambaModel`]. It is used to instantiate a
     Jamba model according to the specified arguments, defining the model architecture. Instantiating a configuration
-    with the defaults will yield a similar configuration to that of the jamba-small architecture.
-    [ai21labs/jamba-small](https://huggingface.co/ai21labs/Jamba-v0.1)
+    with the defaults will yield a similar configuration to that of the Jamba-v0.1 model.
+
+    [ai21labs/Jamba-v0.1](https://huggingface.co/ai21labs/Jamba-v0.1)
+
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
+
 
     Args:
         vocab_size (`int`, *optional*, defaults to 65536):
@@ -49,7 +53,7 @@ class JambaConfig(PretrainedConfig):
         num_key_value_heads (`int`, *optional*, defaults to 8):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
-            `num_key_value_heads=1`, the model will use Multi Query Attention (MQA) otherwise GQA is used. When
+            `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
             converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to `8`.
@@ -62,12 +66,12 @@ class JambaConfig(PretrainedConfig):
         use_cache (`bool`, *optional*, defaults to `True`):
             Whether or not the model should return the last key/values attentions (not used by all models). Only
             relevant if `config.is_decoder=True`.
-        calc_logits_for_entire_prompt (`bool`, *optional*, defaults to `False`):
-            Whether or not to calculate logits for entire prompt during generation. If `False`, only the logits of the
-            last prompt token will be calculated, which are the only logits needed for generation. For long sequences,
-            the logits for the entire sequence may use a lot of memory so setting `calc_logits_for_entire_prompt=False`
-            will reduce memory footprint significantly.
-            Note: some generation features may not be available if this is set to `False`.
+        num_logits_to_keep (`int` or `None`, *optional*, defaults to 1):
+            Number of prompt logits to calculate during generation. If `None`, all logits will be calculated. If an
+            integer value, only last `num_logits_to_keep` logits will be calculated. Default is 1 because only the
+            logits of the last prompt token are needed for generation. For long sequences, the logits for the entire
+            sequence may use a lot of memory so, setting `num_logits_to_keep=1` will reduce memory footprint
+            significantly.
         output_router_logits (`bool`, *optional*, defaults to `False`):
             Whether or not the router logits should be returned by the model. Enabling this will also
             allow the model to output the auxiliary loss. See [here]() for more details
@@ -81,7 +85,7 @@ class JambaConfig(PretrainedConfig):
             The id of the "end-of-sequence" token.
         sliding_window (`int`, *optional*):
             Sliding window attention window size. If not specified, will default to `None`.
-        n_ctx (`int`, *optional*, defaults to 262144):
+        max_position_embeddings (`int`, *optional*, defaults to 262144):
             This value doesn't have any real effect. The maximum sequence length that this model is intended to be
             used with. It can be used with longer sequences, but performance may degrade.
         attention_dropout (`float`, *optional*, defaults to 0.0):
@@ -110,104 +114,54 @@ class JambaConfig(PretrainedConfig):
         mamba_expand (`int`, *optional*, defaults to 2):
             Expanding factor (relative to hidden_size) used to determine the mamba intermediate size
         mamba_dt_rank (`Union[int,str]`, *optional*, defaults to `"auto"`):
-            Rank of the the mamba discretization projection matrix.
-            `"auto"` means that it will default to `math.ceil(self.hidden_size / 16)`
+            Rank of the the mamba discretization projection matrix. `"auto"` means that it will default to `math.ceil(self.hidden_size / 16)`
         mamba_conv_bias (`bool`, *optional*, defaults to `True`):
             Flag indicating whether or not to use bias in the convolution layer of the mamba mixer block.
         mamba_proj_bias (`bool`, *optional*, defaults to `False`):
-            Flag indicating whether or not to use bias in the input and output projections
-            (["in_proj", "out_proj"]) of the mamba mixer block
-        mamba_inner_layernorms (`bool`, *optional*, defaults to `True`):
-            Flag indicating whether or not to apply layernorms to internal mamba activations
+            Flag indicating whether or not to use bias in the input and output projections (["in_proj", "out_proj"]) of the mamba mixer block
+
     """
+
     model_type = "jamba"
     keys_to_ignore_at_inference = ["past_key_values"]
 
     def __init__(
-            self,
-            vocab_size=65536,
-            tie_word_embeddings=False,
-            hidden_size=4096,
-            intermediate_size=14336,
-            num_hidden_layers=32,
-            num_attention_heads=32,
-            num_key_value_heads=8,
-            hidden_act="silu",
-            initializer_range=0.02,
-            rms_norm_eps=1e-6,
-            use_cache=True,
-            calc_logits_for_entire_prompt=False,
-            output_router_logits=False,
-            router_aux_loss_coef=0.001,
-            pad_token_id=0,
-            bos_token_id=1,
-            eos_token_id=2,
-            sliding_window=None,
-            n_ctx=262144,
-            attention_dropout=0.0,
-            num_experts_per_tok=2,
-            num_experts=16,
-            expert_layer_period=2,
-            expert_layer_offset=1,
-            attn_layer_period=8,
-            attn_layer_offset=4,
-            use_mamba_kernels=True,
-            mamba_d_state=16,
-            mamba_d_conv=4,
-            mamba_expand=2,
-            mamba_dt_rank="auto",
-            mamba_conv_bias=True,
-            mamba_proj_bias=False,
-            mamba_inner_layernorms=True,
-            **kwargs,
+        self,
+        vocab_size=65536,
+        tie_word_embeddings=False,
+        hidden_size=4096,
+        intermediate_size=14336,
+        num_hidden_layers=32,
+        num_attention_heads=32,
+        num_key_value_heads=8,
+        hidden_act="silu",
+        initializer_range=0.02,
+        rms_norm_eps=1e-6,
+        use_cache=True,
+        num_logits_to_keep=1,
+        output_router_logits=False,
+        router_aux_loss_coef=0.001,
+        pad_token_id=0,
+        bos_token_id=1,
+        eos_token_id=2,
+        sliding_window=None,
+        max_position_embeddings=262144,
+        attention_dropout=0.0,
+        num_experts_per_tok=2,
+        num_experts=16,
+        expert_layer_period=2,
+        expert_layer_offset=1,
+        attn_layer_period=8,
+        attn_layer_offset=4,
+        use_mamba_kernels=True,
+        mamba_d_state=16,
+        mamba_d_conv=4,
+        mamba_expand=2,
+        mamba_dt_rank="auto",
+        mamba_conv_bias=True,
+        mamba_proj_bias=False,
+        **kwargs,
     ):
-        """
-        Initializes a new instance of the JambaConfig class.
-        
-        Args:
-            self: The object instance.
-            vocab_size (int, optional): The size of the vocabulary. Default is 65536.
-            tie_word_embeddings (bool, optional): Whether to tie the word embeddings. Default is False.
-            hidden_size (int, optional): The size of the hidden layers. Default is 4096.
-            intermediate_size (int, optional): The size of the intermediate layers. Default is 14336.
-            num_hidden_layers (int, optional): The number of hidden layers. Default is 32.
-            num_attention_heads (int, optional): The number of attention heads. Default is 32.
-            num_key_value_heads (int, optional): The number of key-value heads. Default is 8.
-            hidden_act (str, optional): The activation function for the hidden layers. Default is 'silu'.
-            initializer_range (float, optional): The range for weight initialization. Default is 0.02.
-            rms_norm_eps (float, optional): The epsilon value for RMS normalization. Default is 1e-06.
-            use_cache (bool, optional): Whether to use cache for attention layers. Default is True.
-            calc_logits_for_entire_prompt (bool, optional): Whether to calculate logits for the entire prompt.
-                Default is False.
-            output_router_logits (bool, optional): Whether to output router logits. Default is False.
-            router_aux_loss_coef (float, optional): The coefficient for the router auxiliary loss. Default is 0.001.
-            pad_token_id (int, optional): The token ID for padding. Default is 0.
-            bos_token_id (int, optional): The token ID for the beginning of sentence. Default is 1.
-            eos_token_id (int, optional): The token ID for the end of sentence. Default is 2.
-            sliding_window (None or int, optional): The size of the sliding window. Default is None.
-            n_ctx (int, optional): The size of the context window. Default is 262144.
-            attention_dropout (float, optional): The dropout rate for attention layers. Default is 0.0.
-            num_experts_per_tok (int, optional): The number of experts per token. Default is 2.
-            num_experts (int, optional): The total number of experts. Default is 16.
-            expert_layer_period (int, optional): The period for expert layers. Default is 2.
-            expert_layer_offset (int, optional): The offset for expert layers. Default is 1.
-            attn_layer_period (int, optional): The period for attention layers. Default is 8.
-            attn_layer_offset (int, optional): The offset for attention layers. Default is 4.
-            use_mamba_kernels (bool, optional): Whether to use Mamba kernels. Default is True.
-            mamba_d_state (int, optional): The state dimension for Mamba. Default is 16.
-            mamba_d_conv (int, optional): The convolutional dimension for Mamba. Default is 4.
-            mamba_expand (int, optional): The expansion factor for Mamba. Default is 2.
-            mamba_dt_rank (int or 'auto', optional): The rank for Mamba's data tensors. Default is 'auto'.
-            mamba_conv_bias (bool, optional): Whether to include biases in Mamba's convolution layers. Default is True.
-            mamba_proj_bias (bool, optional): Whether to include biases in Mamba's projection layers. Default is False.
-            mamba_inner_layernorms (bool, optional): Whether to use inner layer normalization in Mamba. Default is True.
-        
-        Returns:
-            None
-        
-        Raises:
-            None
-        """
         self.vocab_size = vocab_size
         self.tie_word_embeddings = tie_word_embeddings
         self.hidden_size = hidden_size
@@ -215,7 +169,7 @@ class JambaConfig(PretrainedConfig):
         self.num_hidden_layers = num_hidden_layers
         self.num_attention_heads = num_attention_heads
         self.sliding_window = sliding_window
-        self.n_ctx = n_ctx
+        self.max_position_embeddings = max_position_embeddings
         self.attention_dropout = attention_dropout
 
         # for backward compatibility
@@ -228,7 +182,7 @@ class JambaConfig(PretrainedConfig):
         self.rms_norm_eps = rms_norm_eps
 
         self.use_cache = use_cache
-        self.calc_logits_for_entire_prompt = calc_logits_for_entire_prompt
+        self.num_logits_to_keep = num_logits_to_keep
         self.output_router_logits = output_router_logits
         self.router_aux_loss_coef = router_aux_loss_coef
 
@@ -246,7 +200,6 @@ class JambaConfig(PretrainedConfig):
         self.mamba_dt_rank = math.ceil(self.hidden_size / 16) if mamba_dt_rank == "auto" else mamba_dt_rank
         self.mamba_conv_bias = mamba_conv_bias
         self.mamba_proj_bias = mamba_proj_bias
-        self.mamba_inner_layernorms = mamba_inner_layernorms
 
         super().__init__(
             pad_token_id=pad_token_id,
@@ -255,5 +208,19 @@ class JambaConfig(PretrainedConfig):
             tie_word_embeddings=tie_word_embeddings,
             **kwargs,
         )
+
+    @property
+    def layers_block_type(self):
+        return [
+            "attention" if i % self.attn_layer_period == self.attn_layer_offset else "mamba"
+            for i in range(self.num_hidden_layers)
+        ]
+
+    @property
+    def layers_num_experts(self):
+        return [
+            self.num_experts if i % self.expert_layer_period == self.expert_layer_offset else 1
+            for i in range(self.num_hidden_layers)
+        ]
 
 __all__ = ['JambaConfig']

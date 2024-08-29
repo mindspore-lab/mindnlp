@@ -103,7 +103,7 @@ class Pop2PianoFeatureExtractor(SequenceFeatureExtractor):
             min_frequency (float, optional): The minimum frequency in Hz for the mel filters. Defaults to 10.0.
             feature_size (int, optional): The size of the output feature representation. Defaults to 512.
             num_bars (int, optional): The number of bars in each feature representation. Defaults to 2.
-            **kwargs: Additional keyword arguments to be passed to the parent class constructor.
+            **kwargs: Additional keyword arguments to be passed to the parent class forwardor.
         
         Returns:
             None.

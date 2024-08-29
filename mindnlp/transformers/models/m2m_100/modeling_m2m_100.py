@@ -12,18 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch M2M100 model."""
+"""MindSpore M2M100 model."""
 
 import math
 from typing import List, Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindspore import ops
-import mindspore.ops.functional as F
-from mindspore import nn
+from mindspore.common.api import _no_grad
 from mindspore import Tensor
-from mindspore.common.initializer import initializer,Normal
-from mindnlp.modules.functional import finfo
+from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     logging,
 )
@@ -70,7 +70,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length) * mask
+    incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
     return incremental_indices.long() + padding_idx
 
 
@@ -80,15 +80,15 @@ class M2M100ScaledWordEmbedding(nn.Embedding):
     This module overrides nn.Embeddings' forward by multiplying with embeddings scale.
     """
 
-    def __init__(self, vocab_size: int, embedding_dim: int, padding_idx: int, embed_scale: Optional[float] = 1.0):
-        super().__init__(vocab_size, embedding_dim, padding_idx)
+    def __init__(self, num_embeddings: int, embedding_dim: int, padding_idx: int, embed_scale: Optional[float] = 1.0):
+        super().__init__(num_embeddings, embedding_dim, padding_idx)
         self.embed_scale = embed_scale
 
-    def construct(self, input_ids: mindspore.Tensor):
-        return super().construct(input_ids) * self.embed_scale
+    def forward(self, input_ids: mindspore.Tensor):
+        return super().forward(input_ids) * self.embed_scale
 
 
-class M2M100SinusoidalPositionalEmbedding(nn.Cell):
+class M2M100SinusoidalPositionalEmbedding(nn.Module):
     """This module produces sinusoidal positional embeddings of any length."""
 
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None):
@@ -98,19 +98,16 @@ class M2M100SinusoidalPositionalEmbedding(nn.Cell):
         self.padding_idx = padding_idx
         self.make_weights(num_positions + self.offset, embedding_dim, padding_idx)
 
-    def make_weights(self, vocab_size: int, embedding_dim: int, padding_idx: Optional[int] = None):
-        emb_weights = self.get_embedding(vocab_size, embedding_dim, padding_idx)
-        has_weight = False
+    def make_weights(self, num_embeddings: int, embedding_dim: int, padding_idx: Optional[int] = None):
+        emb_weights = self.get_embedding(num_embeddings, embedding_dim, padding_idx)
         if hasattr(self, "weights"):
-            has_weight = True
-        self.weights = emb_weights
-        if has_weight:
             # in forward put the weights on the correct dtype and device of the param
-            emb_weights = emb_weights.to(dtype=self.weights.dtype)
-            self.weights = emb_weights
+            emb_weights = emb_weights.to(dtype=self.weights.dtype, device=self.weights.device)
+
+        self.register_buffer("weights", emb_weights, persistent=False)
 
     @staticmethod
-    def get_embedding(vocab_size: int, embedding_dim: int, padding_idx: Optional[int] = None):
+    def get_embedding(num_embeddings: int, embedding_dim: int, padding_idx: Optional[int] = None):
         """
         Build sinusoidal embeddings.
 
@@ -120,18 +117,18 @@ class M2M100SinusoidalPositionalEmbedding(nn.Cell):
         half_dim = embedding_dim // 2
         emb = math.log(10000) / (half_dim - 1)
         emb = ops.exp(ops.arange(half_dim, dtype=mindspore.int64).float() * -emb)
-        emb = ops.arange(vocab_size, dtype=mindspore.int64).float().unsqueeze(1) * emb.unsqueeze(0)
-        emb = ops.cat([ops.sin(emb), ops.cos(emb)], axis=1).view(vocab_size, -1)
+        emb = ops.arange(num_embeddings, dtype=mindspore.int64).float().unsqueeze(1) * emb.unsqueeze(0)
+        emb = ops.cat([ops.sin(emb), ops.cos(emb)], dim=1).view(num_embeddings, -1)
         if embedding_dim % 2 == 1:
             # zero pad
-            emb = ops.cat([emb, ops.zeros(vocab_size, 1)], axis=1)
+            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], dim=1)
         if padding_idx is not None:
             emb[padding_idx, :] = 0
 
-        return emb#.to(ops.get_default_dtype())
+        return emb.to(get_default_dtype())
 
-    #@mindspore.no_grad()
-    def construct(
+    @_no_grad()
+    def forward(
         self, input_ids: mindspore.Tensor = None, inputs_embeds: mindspore.Tensor = None, past_key_values_length: int = 0
     ):
         if input_ids is not None:
@@ -156,7 +153,7 @@ class M2M100SinusoidalPositionalEmbedding(nn.Cell):
         Args:
             inputs_embeds: mindspore.Tensor
 
-        Returns: mindspore.Tensor
+        Returns: torch.Tensor
         """
         input_shape = inputs_embeds.shape[:-1]
         sequence_length = input_shape[1]
@@ -166,9 +163,8 @@ class M2M100SinusoidalPositionalEmbedding(nn.Cell):
         )
         return position_ids.unsqueeze(0).broadcast_to(input_shape) + past_key_values_length
 
-
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->M2M100
-class M2M100Attention(nn.Cell):
+class M2M100Attention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(
@@ -197,15 +193,15 @@ class M2M100Attention(nn.Cell):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         key_value_states: Optional[mindspore.Tensor] = None,
@@ -244,8 +240,8 @@ class M2M100Attention(nn.Cell):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -283,7 +279,7 @@ class M2M100Attention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -304,7 +300,7 @@ class M2M100Attention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -331,7 +327,7 @@ def _get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
     indices = ops.nonzero(attention_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = F.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = F.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
@@ -340,7 +336,7 @@ def _get_unpad_data(attention_mask):
 
 
 # Copied from transformers.models.mbart.modeling_mbart.MBartEncoderLayer with MBart->M2M100, MBART->M2M100
-class M2M100EncoderLayer(nn.Cell):
+class M2M100EncoderLayer(nn.Module):
     def __init__(self, config: M2M100Config):
         super().__init__()
         self.embed_dim = config.d_model
@@ -355,11 +351,11 @@ class M2M100EncoderLayer(nn.Cell):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
-        self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
-        self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
+        self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -385,21 +381,21 @@ class M2M100EncoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         residual = hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         if hidden_states.dtype == mindspore.float16 and (
             ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any()
         ):
-            clamp_value = finfo(hidden_states.dtype).max - 1000
+            clamp_value = ops.finfo(hidden_states.dtype).max - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -416,7 +412,7 @@ M2M100_ATTENTION_CLASSES = {
 
 
 # Copied from transformers.models.mbart.modeling_mbart.MBartDecoderLayer with MBart->M2M100, MBART->M2M100
-class M2M100DecoderLayer(nn.Cell):
+class M2M100DecoderLayer(nn.Module):
     def __init__(self, config: M2M100Config):
         super().__init__()
         self.embed_dim = config.d_model
@@ -442,11 +438,11 @@ class M2M100DecoderLayer(nn.Cell):
             config=config,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
-        self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
+        self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -490,7 +486,7 @@ class M2M100DecoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         # Cross-Attention Block
@@ -510,7 +506,7 @@ class M2M100DecoderLayer(nn.Cell):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
 
             # add cross-attn to positions 3,4 of present_key_value tuple
@@ -520,9 +516,9 @@ class M2M100DecoderLayer(nn.Cell):
         residual = hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         outputs = (hidden_states,)
@@ -545,9 +541,9 @@ class M2M100PreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         std = self.config.init_std
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(std),cell.weight.shape,cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer("zeros",cell.bias.shape,cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0,std,cell.weight.shape)
@@ -608,14 +604,14 @@ class M2M100Encoder(M2M100PreTrainedModel):
             embed_dim,
             self.padding_idx,
         )
-        self.layers = nn.CellList([M2M100EncoderLayer(config) for _ in range(config.encoder_layers)])
+        self.layers = nn.ModuleList([M2M100EncoderLayer(config) for _ in range(config.encoder_layers)])
         self.layer_norm = nn.LayerNorm(config.d_model)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -685,7 +681,7 @@ class M2M100Encoder(M2M100PreTrainedModel):
         embed_pos = self.embed_positions(input_ids, inputs_embeds)
 
         hidden_states = inputs_embeds + embed_pos
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
@@ -778,14 +774,14 @@ class M2M100Decoder(M2M100PreTrainedModel):
             config.d_model,
             self.padding_idx,
         )
-        self.layers = nn.CellList([M2M100DecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layers = nn.ModuleList([M2M100DecoderLayer(config) for _ in range(config.decoder_layers)])
         self.layer_norm = nn.LayerNorm(config.d_model)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -906,7 +902,7 @@ class M2M100Decoder(M2M100PreTrainedModel):
 
         hidden_states = inputs_embeds + positions
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -1041,7 +1037,7 @@ class M2M100Model(M2M100PreTrainedModel):
         return self.decoder
 
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1123,7 +1119,7 @@ class M2M100ForConditionalGeneration(M2M100PreTrainedModel):
     def __init__(self, config: M2M100Config):
         super().__init__(config)
         self.model = M2M100Model(config)
-        self.lm_head = nn.Dense(config.d_model, self.model.shared.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, self.model.shared.num_embeddings, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1141,7 +1137,7 @@ class M2M100ForConditionalGeneration(M2M100PreTrainedModel):
         self.lm_head = new_embeddings
 
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1197,7 +1193,7 @@ class M2M100ForConditionalGeneration(M2M100PreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]

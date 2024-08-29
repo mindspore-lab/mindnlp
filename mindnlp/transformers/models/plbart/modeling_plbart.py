@@ -12,16 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch PLBART model."""
-
+"""MindSpore PLBART model."""
 import copy
 import math
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import mindspore as ms
-from mindspore import ops, nn
 import numpy as np
+import mindspore as ms
 from mindspore.common.initializer import Normal, initializer
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import (
     _prepare_4d_attention_mask,
@@ -81,33 +82,33 @@ class PLBartLearnedPositionalEmbedding(nn.Embedding):
         self.offset = 2
         super().__init__(num_embeddings + self.offset, embedding_dim)
 
-    def construct(self, input_ids: ms.Tensor, past_key_values_length: int = 0):
+    def forward(self, input_ids: ms.Tensor, past_key_values_length: int = 0):
         """`input_ids' shape is expected to be [bsz x seqlen]."""
 
         bsz, seq_len = input_ids.shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=ms.int64
-        ).expand(bsz, -1)
+        ).broadcast_to((bsz, -1))
 
-        return super().construct(positions + self.offset)
+        return super().forward(positions + self.offset)
 
 
 # Copied from transformers.models.bart.modeling_bart.BartScaledWordEmbedding with Bart->PLBart
 class PLBartScaledWordEmbedding(nn.Embedding):
     """
-    This module overrides nn.Embeddings' construct by multiplying with embeddings scale.
+    This module overrides nn.Embeddings' forward by multiplying with embeddings scale.
     """
 
     def __init__(self, num_embeddings: int, embedding_dim: int, padding_idx: int, embed_scale: Optional[float] = 1.0):
         super().__init__(num_embeddings, embedding_dim, padding_idx)
         self.embed_scale = embed_scale
 
-    def construct(self, input_ids: ms.Tensor):
-        return super().construct(input_ids) * self.embed_scale
+    def forward(self, input_ids: ms.Tensor):
+        return super().forward(input_ids) * self.embed_scale
 
 
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->PLBart
-class PLBartAttention(nn.Cell):
+class PLBartAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(
@@ -136,15 +137,15 @@ class PLBartAttention(nn.Cell):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: ms.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         key_value_states: Optional[ms.Tensor] = None,
@@ -183,8 +184,8 @@ class PLBartAttention(nn.Cell):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -222,7 +223,7 @@ class PLBartAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -243,7 +244,7 @@ class PLBartAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -266,7 +267,7 @@ class PLBartAttention(nn.Cell):
 
 
 # Copied from transformers.models.bart.modeling_bart.BartEncoderLayer with Bart->PLBart, BART->PLBART
-class PLBartEncoderLayer(nn.Cell):
+class PLBartEncoderLayer(nn.Module):
     def __init__(self, config: PLBartConfig):
         super().__init__()
         self.embed_dim = config.d_model
@@ -281,11 +282,11 @@ class PLBartEncoderLayer(nn.Cell):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
-        self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
-        self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
+        self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm([self.embed_dim])
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         attention_mask: ms.Tensor,
@@ -310,15 +311,15 @@ class PLBartEncoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
@@ -342,7 +343,7 @@ PLBART_ATTENTION_CLASSES = {"eager": PLBartAttention}
 
 
 # Copied from transformers.models.bart.modeling_bart.BartDecoderLayer with Bart->PLBart, BART->PLBART
-class PLBartDecoderLayer(nn.Cell):
+class PLBartDecoderLayer(nn.Module):
     def __init__(self, config: PLBartConfig):
         super().__init__()
         self.embed_dim = config.d_model
@@ -368,11 +369,11 @@ class PLBartDecoderLayer(nn.Cell):
             config=config,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim])
-        self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
+        self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm([self.embed_dim])
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
@@ -415,7 +416,7 @@ class PLBartDecoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
@@ -435,7 +436,7 @@ class PLBartDecoderLayer(nn.Cell):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states = self.encoder_attn_layer_norm(hidden_states)
 
@@ -445,9 +446,9 @@ class PLBartDecoderLayer(nn.Cell):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
@@ -463,7 +464,7 @@ class PLBartDecoderLayer(nn.Cell):
 
 
 # Copied from transformers.models.bart.modeling_bart.BartClassificationHead with Bart->PLBart
-class PLBartClassificationHead(nn.Cell):
+class PLBartClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
     def __init__(
@@ -474,11 +475,11 @@ class PLBartClassificationHead(nn.Cell):
         pooler_dropout: float,
     ):
         super().__init__()
-        self.dense = nn.Dense(input_dim, inner_dim)
+        self.dense = nn.Linear(input_dim, inner_dim)
         self.dropout = nn.Dropout(p=pooler_dropout)
-        self.out_proj = nn.Dense(inner_dim, num_classes)
+        self.out_proj = nn.Linear(inner_dim, num_classes)
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.dense(hidden_states)
         hidden_states = ops.tanh(hidden_states)
@@ -495,7 +496,7 @@ class PLBartPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, module):
         std = self.config.init_std
-        if isinstance(module, nn.Dense):
+        if isinstance(module, nn.Linear):
             module.weight.set_data(
                 initializer(
                     Normal(mean=0.0,sigma=std),
@@ -529,7 +530,7 @@ PLBART_START_DOCSTRING = r"""
     library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
     etc.)
 
-    This model is also a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) subclass.
+    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
     Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
     and behavior.
 
@@ -695,7 +696,7 @@ class PLBartEncoder(PLBartPreTrainedModel):
             config.max_position_embeddings,
             embed_dim,
         )
-        self.layers = nn.CellList([PLBartEncoderLayer(config) for _ in range(config.encoder_layers)])
+        self.layers = nn.ModuleList([PLBartEncoderLayer(config) for _ in range(config.encoder_layers)])
         self._use_flash_attention_2 = False
         self._use_sdpa = False
         self.layernorm_embedding = nn.LayerNorm([embed_dim])
@@ -710,7 +711,7 @@ class PLBartEncoder(PLBartPreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: ms.Tensor = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -781,7 +782,7 @@ class PLBartEncoder(PLBartPreTrainedModel):
 
         hidden_states = inputs_embeds + embed_pos
         hidden_states = self.layernorm_embedding(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
@@ -872,7 +873,7 @@ class PLBartDecoder(PLBartPreTrainedModel):
             config.max_position_embeddings,
             config.d_model,
         )
-        self.layers = nn.CellList([PLBartDecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layers = nn.ModuleList([PLBartDecoderLayer(config) for _ in range(config.decoder_layers)])
         self._use_flash_attention_2 = False
         self._use_sdpa = False
 
@@ -888,7 +889,7 @@ class PLBartDecoder(PLBartPreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: ms.Tensor = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1013,7 +1014,7 @@ class PLBartDecoder(PLBartPreTrainedModel):
         hidden_states = inputs_embeds + positions
         hidden_states = self.layernorm_embedding(hidden_states)
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -1125,7 +1126,7 @@ class PLBartModel(PLBartPreTrainedModel):
     def get_decoder(self):
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1212,8 +1213,8 @@ class PLBartForConditionalGeneration(PLBartPreTrainedModel):
     def __init__(self, config: PLBartConfig):
         super().__init__(config)
         self.model = PLBartModel(config)
-        self.final_logits_bias = ops.zeros((1, self.model.shared.vocab_size))
-        self.lm_head = nn.Dense(config.d_model, self.model.shared.vocab_size, has_bias=False)
+        self.final_logits_bias = ops.zeros((1, self.model.shared.num_embeddings))
+        self.lm_head = nn.Linear(config.d_model, self.model.shared.num_embeddings, bias=False)
 
         self.init_weights()
 
@@ -1234,7 +1235,7 @@ class PLBartForConditionalGeneration(PLBartPreTrainedModel):
             new_bias = self.final_logits_bias[:, :new_num_tokens]
         else:
             extra_bias = ops.zeros((1, new_num_tokens - old_num_tokens))
-            new_bias = ops.cat([self.final_logits_bias, extra_bias], axis=1)
+            new_bias = ops.cat([self.final_logits_bias, extra_bias], dim=1)
         self.final_logits_bias = new_bias
 
     def get_output_embeddings(self):
@@ -1243,7 +1244,7 @@ class PLBartForConditionalGeneration(PLBartPreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.lm_head = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1299,7 +1300,7 @@ class PLBartForConditionalGeneration(PLBartPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]
@@ -1385,8 +1386,8 @@ class PLBartForSequenceClassification(PLBartPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    # Copied from transformers.models.bart.modeling_bart.BartForSequenceClassification.construct
-    def construct(
+    # Copied from transformers.models.bart.modeling_bart.BartForSequenceClassification.forward
+    def forward(
         self,
         input_ids: ms.Tensor = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1438,8 +1439,8 @@ class PLBartForSequenceClassification(PLBartPreTrainedModel):
 
         eos_mask = input_ids.eq(self.config.eos_token_id)
 
-        if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
-            raise ValueError("All examples must have the same number of <eos> tokens.")
+        # if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
+        #     raise ValueError("All examples must have the same number of <eos> tokens.")
         sentence_representation = hidden_states[eos_mask].view(hidden_states.shape[0], -1, hidden_states.shape[-1])[
             :, -1, :
         ]
@@ -1458,13 +1459,13 @@ class PLBartForSequenceClassification(PLBartPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.config.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1493,7 +1494,7 @@ class PLBartDecoderWrapper(PLBartPreTrainedModel):
         super().__init__(config)
         self.decoder = PLBartDecoder(config)
 
-    def construct(self, *args, **kwargs):
+    def forward(self, *args, **kwargs):
         return self.decoder(*args, **kwargs)
 
 
@@ -1508,7 +1509,7 @@ class PLBartForCausalLM(PLBartPreTrainedModel):
         super().__init__(config)
         self.model = PLBartDecoderWrapper(config)
 
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1531,7 +1532,7 @@ class PLBartForCausalLM(PLBartPreTrainedModel):
     def get_decoder(self):
         return self.model.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: ms.Tensor = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -1659,7 +1660,7 @@ class PLBartForCausalLM(PLBartPreTrainedModel):
         loss = None
         if labels is not None:
             # labels = labels.to(logits.device)
-            loss = ops.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]

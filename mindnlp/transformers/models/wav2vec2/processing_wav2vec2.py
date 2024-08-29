@@ -189,7 +189,7 @@ class Wav2Vec2Processor(ProcessorMixin):
         Wav2Vec2.
         """
         warnings.warn(
-            "`as_target_processor` is deprecated and will be removed in v5 of Transformers. You can process your "
+            "`as_target_processor` is deprecated. You can process your "
             "labels by using the argument `text` of the regular `__call__` method (either in the same call as "
             "your audio inputs, or in a separate call."
         )

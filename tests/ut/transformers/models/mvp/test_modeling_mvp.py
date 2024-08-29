@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch MVP model."""
+"""Testing suite for the MindSpore MVP model."""
 
 import copy
 import unittest
@@ -36,7 +36,7 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
     from mindnlp.transformers.models.mvp import(
         MvpForCausalLM,
         MvpForConditionalGeneration,
@@ -175,8 +175,8 @@ class MvpModelTester:
         next_attn_mask = ids_tensor((self.batch_size, 3), 2)
         
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=1)
-        next_attention_mask = ops.cat([attention_mask, next_attn_mask==1], axis=1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=1)
+        next_attention_mask = ops.cat([attention_mask, next_attn_mask==1], dim=1)
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["last_hidden_state"]
         output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
             "last_hidden_state"
@@ -713,7 +713,7 @@ class MvpStandaloneDecoderModelTester:
         next_tokens = ids_tensor((self.batch_size, 1), config.vocab_size)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
 
         output_from_no_past = model(next_input_ids)["last_hidden_state"]
         output_from_past = model(next_tokens, past_key_values=past_key_values)["last_hidden_state"]
@@ -753,10 +753,10 @@ class MvpStandaloneDecoderModelTester:
         input_ids[:, -random_seq_idx_to_change] = random_other_next_tokens
 
         # append to next input_ids and attn_mask
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         attn_mask = ops.cat(
             [attn_mask, ops.ones((attn_mask.shape[0], 1), dtype=mindspore.int64)],
-            axis=1,
+            dim=1,
         )
 
         # get two different outputs

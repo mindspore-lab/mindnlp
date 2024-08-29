@@ -17,7 +17,7 @@
 import os
 from shutil import copyfile
 from typing import Dict, List, Optional, Tuple, Union
-from mindnlp.utils import PaddingStrategy, TensorType, is_sentencepiece_available, logging
+
 from ...tokenization_utils_base import (
     BatchEncoding,
     EncodedInput,
@@ -27,6 +27,7 @@ from ...tokenization_utils_base import (
     TruncationStrategy,
 )
 from ...tokenization_utils_fast import PreTrainedTokenizerFast
+from ....utils import PaddingStrategy, TensorType, is_sentencepiece_available, logging
 
 
 if is_sentencepiece_available():
@@ -35,21 +36,11 @@ else:
     UdopTokenizer = None
 
 
-VOCAB_FILES_NAMES = {"vocab_file": "spiece.model", "tokenizer_file": "tokenizer_config.json"}
-PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    "microsoft/udop-large": 1024,
-}
-PRETRAINED_VOCAB_FILES_MAP={
-    "vocab_file": {"microsoft/udop-large":"https://hf-mirror.com/microsoft/udop-large/blob/main/spiece.model"
-    },
-    "tokenizer_config_file": {
-        "microsoft/udop-large": (
-            "https://hf-mirror.com/microsoft/udop-large/blob/main/tokenizer_config.json"
-        ),
-    },
-}
+VOCAB_FILES_NAMES = {"vocab_file": "spiece.model", "tokenizer_file": "tokenizer.json"}
+
 
 logger = logging.get_logger(__name__)
+
 
 class UdopTokenizerFast(PreTrainedTokenizerFast):
     """
@@ -97,9 +88,8 @@ class UdopTokenizerFast(PreTrainedTokenizerFast):
         additional_special_tokens (`List[str]`, *optional*, defaults to `["<s>NOTUSED", "</s>NOTUSED"]`):
             Additional special tokens used by the tokenizer.
     """
-    pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
+
     vocab_files_names = VOCAB_FILES_NAMES
-    max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     model_input_names = ["input_ids", "attention_mask"]
     slow_tokenizer_class = UdopTokenizer
 
@@ -330,9 +320,11 @@ class UdopTokenizerFast(PreTrainedTokenizerFast):
     # Copied from transformers.models.layoutxlm.tokenization_layoutxlm_fast.LayoutXLMTokenizerFast.tokenize
     def tokenize(self, text: str, pair: Optional[str] = None, add_special_tokens: bool = False, **kwargs) -> List[str]:
         batched_input = [(text, pair)] if pair else [text]
+
         self._tokenizer.encode_special_tokens = kwargs.pop(
             "split_special_tokens", self._tokenizer.encode_special_tokens
         )
+
         encodings = self._tokenizer.encode_batch(
             batched_input, add_special_tokens=add_special_tokens, is_pretokenized=False, **kwargs
         )
@@ -376,9 +368,8 @@ class UdopTokenizerFast(PreTrainedTokenizerFast):
         </Tip>
 
         Args:
-            batch_text_or_text_pairs (`List[str]`, `List[Tuple[str, str]]`, 
-            `List[List[str]]`, `List[Tuple[List[str], List[str]]]`, and for not-fast tokenizers, 
-            also `List[List[int]]`, `List[Tuple[List[int], List[int]]]`):
+            batch_text_or_text_pairs (`List[str]`, `List[Tuple[str, str]]`, `List[List[str]]`, `List[Tuple[List[str], List[str]]]`,
+            and for not-fast tokenizers, also `List[List[int]]`, `List[Tuple[List[int], List[int]]]`):
                 Batch of sequences or pair of sequences to be encoded. This can be a list of
                 string/string-sequences/int-sequences or a list of pair of string/string-sequences/int-sequence (see
                 details in `encode_plus`).
@@ -563,10 +554,6 @@ class UdopTokenizerFast(PreTrainedTokenizerFast):
                         else:
                             labels_example.append(word_labels[original_index][word_id])
                         previous_token_empty = self.decode(id) == ""
-                        #if self.decode(id) == "":
-                            #previous_token_empty = True
-                        #else:
-                            #previous_token_empty = False
                     else:
                         labels_example.append(self.pad_token_label)
                 labels.append(labels_example)
@@ -720,7 +707,7 @@ class UdopTokenizerFast(PreTrainedTokenizerFast):
         </Tip>
 
         Args:
-            text (`str`, `List[str]` or `List[int]` (the latter only for not-fast tokenizers)):
+            text (`str`, `List[str]` or (for non-fast tokenizers) `List[int]`):
                 The first sequence to be encoded. This can be a string, a list of strings (tokenized string using the
                 `tokenize` method) or a list of integers (tokenized string ids using the `convert_tokens_to_ids`
                 method).
@@ -916,4 +903,5 @@ class UdopTokenizerFast(PreTrainedTokenizerFast):
             copyfile(self.vocab_file, out_vocab_file)
 
         return (out_vocab_file,)
+
 __all__ = ["UdopTokenizerFast"]

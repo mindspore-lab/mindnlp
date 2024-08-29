@@ -57,6 +57,7 @@ PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("clvp", "ClvpProcessor"),
         ("donut", "DonutProcessor"),
         ("flava", "FlavaProcessor"),
+        ("florence2", "Florence2Processor"),
         ("fuyu", "FuyuProcessor"),
         ("git", "GitProcessor"),
         ("groupvit", "CLIPProcessor"),
@@ -74,7 +75,7 @@ PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("oneformer", "OneFormerProcessor"),
         ("owlv2", "Owlv2Processor"),
         ("owlvit", "OwlViTProcessor"),
-        ("pix2struct", "Pix2StructProcessor"),
+        # ("pix2struct", "Pix2StructProcessor"),
         ("pop2piano", "Pop2PianoProcessor"),
         ("sam", "SamProcessor"),
         ("seamless_m4t", "SeamlessM4TProcessor"),
@@ -246,7 +247,7 @@ class AutoProcessor:
         use_auth_token = kwargs.pop("use_auth_token", None)
         if use_auth_token is not None:
             warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+                "The `use_auth_token` argument is deprecated. Please use `token` instead.",
                 FutureWarning,
             )
             if kwargs.get("token", None) is not None:

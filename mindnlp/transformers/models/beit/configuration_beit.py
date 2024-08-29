@@ -244,7 +244,7 @@ class BeitConfig(BackboneConfigMixin, PretrainedConfig):
         # handle backwards compatibility
         if "segmentation_indices" in kwargs:
             logger.warning(
-                "The `segmentation_indices` argument is deprecated and will be removed in a future version, use `out_indices` instead.",
+                "The `segmentation_indices` argument is deprecated.",
                 FutureWarning,
             )
             out_indices = kwargs.pop("segmentation_indices")

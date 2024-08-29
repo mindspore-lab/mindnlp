@@ -368,10 +368,10 @@ class PeftAdapterMixin:
             A string representing the active adapter.
         
         Raises:
-            FutureWarning: If the `active_adapter` method is deprecated and will be removed in a future version.
+            FutureWarning: If the `active_adapter` method is deprecated.
         """
         warnings.warn(
-            "The `active_adapter` method is deprecated and will be removed in a future version.", FutureWarning
+            "The `active_adapter` method is deprecated.", FutureWarning
         )
 
         return self.active_adapters()[0]

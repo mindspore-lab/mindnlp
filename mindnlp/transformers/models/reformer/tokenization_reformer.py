@@ -112,7 +112,7 @@ class ReformerTokenizer(PreTrainedTokenizer):
             additional_special_tokens (List[str], optional):
                 Additional special tokens to be added to the vocabulary. Defaults to an empty list.
             sp_model_kwargs (Optional[Dict[str, Any]], optional):
-                Additional arguments to be passed to the SentencePieceProcessor constructor. Defaults to None.
+                Additional arguments to be passed to the SentencePieceProcessor forwardor. Defaults to None.
 
         Returns:
             None

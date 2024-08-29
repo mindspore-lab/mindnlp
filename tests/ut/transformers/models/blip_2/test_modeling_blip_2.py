@@ -44,7 +44,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindnlp.core import nn
 
     from mindnlp.transformers import Blip2ForConditionalGeneration, Blip2Model, Blip2VisionModel
 
@@ -158,12 +158,12 @@ class Blip2VisionModelTest(ModelTesterMixin, unittest.TestCase):
     def test_inputs_embeds(self):
         pass
 
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
             self.assertTrue(x is None or isinstance(x, nn.Dense))
 
@@ -172,7 +172,7 @@ class Blip2VisionModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -457,7 +457,7 @@ class Blip2ForConditionalGenerationDecoderOnlyTest(ModelTesterMixin, GenerationT
         pass
 
     @unittest.skip(reason="Blip2Model does not have input/output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(reason="There's no base Blip2Model")
@@ -473,7 +473,7 @@ class Blip2ForConditionalGenerationDecoderOnlyTest(ModelTesterMixin, GenerationT
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -714,7 +714,7 @@ class Blip2ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
         pass
 
     @unittest.skip(reason="Blip2Model does not have input/output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(reason="There's no base Blip2Model")
@@ -734,7 +734,7 @@ class Blip2ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 

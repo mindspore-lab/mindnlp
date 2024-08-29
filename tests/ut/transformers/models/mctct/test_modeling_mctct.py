@@ -204,10 +204,10 @@ class MCTCTModelTester:
             input_features[i, input_lengths[i] :] = 0.0
             attention_mask[i, input_lengths[i] :] = 0
         model.config.ctc_loss_reduction = "sum"
-        sum_loss = model(input_features, attention_mask=attention_mask, labels=labels).loss[0].item()
+        sum_loss = model(input_features, attention_mask=attention_mask, labels=labels).loss.item()
 
         model.config.ctc_loss_reduction = "mean"
-        mean_loss = model(input_features, attention_mask=attention_mask, labels=labels).loss[0].item()
+        mean_loss = model(input_features, attention_mask=attention_mask, labels=labels).loss.item()
 
         self.parent.assertTrue(isinstance(sum_loss, float))
         self.parent.assertTrue(isinstance(mean_loss, float))
@@ -233,7 +233,7 @@ class MCTCTModelTester:
                 labels[i, max_length_labels[i] - 1 :] = -100
 
         loss = model(input_features, labels=labels).loss
-        self.parent.assertFalse(ops.isinf(loss[0]).item())
+        self.parent.assertFalse(ops.isinf(loss).item())
 
         # loss.backward()
 
@@ -297,7 +297,7 @@ class MCTCTModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -317,7 +317,7 @@ class MCTCTModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     # MCTCT has no inputs_embeds
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip("MindSpore has no retain grad")
@@ -466,7 +466,7 @@ class MCTCTRobustModelTest(ModelTesterMixin, unittest.TestCase):
     # MCTCT has no inputs_embeds
     # and thus the `get_input_embeddings` fn
     # is not implemented
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip("MindSpore has no retain grad")

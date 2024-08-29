@@ -13,10 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=C0103
-# pylint: disable=W0237
-# pylint: disable=R1714
-# pylint: disable=R1720
 """MindSpore MPNet model."""
 
 
@@ -25,10 +21,11 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.utils import logging
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
+from mindnlp.utils import logging
 from ...activations import ACT2FN, gelu
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -66,12 +63,12 @@ class MPNetPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -84,8 +81,8 @@ class MPNetPreTrainedModel(PreTrainedModel):
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
-class MPNetEmbeddings(nn.Cell):
-    """construct the embeddings from word, position and token_type embeddings."""
+class MPNetEmbeddings(nn.Module):
+    """forward the embeddings from word, position and token_type embeddings."""
     def __init__(self, config):
         """
         Initializes an instance of the MPNetEmbeddings class.
@@ -107,13 +104,13 @@ class MPNetEmbeddings(nn.Cell):
             config.max_position_embeddings, config.hidden_size, padding_idx=self.padding_idx
         )
 
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
 
-    def construct(self, input_ids=None, position_ids=None, inputs_embeds=None, **kwargs):
+    def forward(self, input_ids=None, position_ids=None, inputs_embeds=None, **kwargs):
         """
-        Method 'construct' in the class 'MPNetEmbeddings'.
+        Method 'forward' in the class 'MPNetEmbeddings'.
         
         Args:
             self: The instance of the class.
@@ -122,7 +119,7 @@ class MPNetEmbeddings(nn.Cell):
             inputs_embeds (torch.Tensor, optional): The input tensor representing embeddings. Defaults to None.
         
         Returns:
-            embeddings: The method returns the constructed embeddings of input data.
+            embeddings: The method returns the forwarded embeddings of input data.
         
         Raises:
             ValueError: If both 'input_ids' and 'inputs_embeds' are None.
@@ -173,7 +170,7 @@ class MPNetEmbeddings(nn.Cell):
         return position_ids.unsqueeze(0).broadcast_to(input_shape)
 
 
-class MPNetSelfAttention(nn.Cell):
+class MPNetSelfAttention(nn.Module):
     """SelfAttention Model"""
     def __init__(self, config):
         """
@@ -207,10 +204,10 @@ class MPNetSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.q = nn.Dense(config.hidden_size, self.all_head_size)
-        self.k = nn.Dense(config.hidden_size, self.all_head_size)
-        self.v = nn.Dense(config.hidden_size, self.all_head_size)
-        self.o = nn.Dense(config.hidden_size, config.hidden_size)
+        self.q = nn.Linear(config.hidden_size, self.all_head_size)
+        self.k = nn.Linear(config.hidden_size, self.all_head_size)
+        self.v = nn.Linear(config.hidden_size, self.all_head_size)
+        self.o = nn.Linear(config.hidden_size, config.hidden_size)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -222,7 +219,7 @@ class MPNetSelfAttention(nn.Cell):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -232,7 +229,7 @@ class MPNetSelfAttention(nn.Cell):
         **kwargs,
     ):
         """
-        This method constructs self-attention mechanism for MPNetSelfAttention.
+        This method forwards self-attention mechanism for MPNetSelfAttention.
 
         Args:
             self: The instance of the class.
@@ -275,7 +272,7 @@ class MPNetSelfAttention(nn.Cell):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         attention_probs = self.dropout(attention_probs)
 
@@ -294,7 +291,7 @@ class MPNetSelfAttention(nn.Cell):
         return outputs
 
 
-class MPNetAttention(nn.Cell):
+class MPNetAttention(nn.Module):
     """
     Multi-head self-attention mechanism for MPNet.
     """
@@ -314,7 +311,7 @@ class MPNetAttention(nn.Cell):
         """
         super().__init__()
         self.attn = MPNetSelfAttention(config)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         self.pruned_heads = set()
@@ -336,7 +333,7 @@ class MPNetAttention(nn.Cell):
         self.attn.all_head_size = self.attn.attention_head_size * self.attn.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -379,7 +376,7 @@ class MPNetAttention(nn.Cell):
         return outputs
 
 
-class MPNetIntermediate(nn.Cell):
+class MPNetIntermediate(nn.Module):
     """Copied from transformers.models.bert.modeling_bert.BertIntermediate"""
     def __init__(self, config):
         """
@@ -402,13 +399,13 @@ class MPNetIntermediate(nn.Cell):
             ValueError: If the hidden activation function specified in the config is not supported.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the intermediate layer of the MPNet model.
 
@@ -430,7 +427,7 @@ class MPNetIntermediate(nn.Cell):
         return hidden_states
 
 
-class MPNetOutput(nn.Cell):
+class MPNetOutput(nn.Module):
     """Copied from transformers.models.bert.modeling_bert.BertOutput"""
     def __init__(self, config):
         """
@@ -453,11 +450,11 @@ class MPNetOutput(nn.Cell):
             ValueError: If the config parameter does not contain the required attributes.
         """
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the MPNetOutput.
 
@@ -471,9 +468,9 @@ class MPNetOutput(nn.Cell):
                 The shape of this tensor should be compatible with the hidden states tensor.
 
         Returns:
-            mindspore.Tensor: A tensor representing the constructed MPNetOutput.
+            mindspore.Tensor: A tensor representing the forwarded MPNetOutput.
                 The shape of the tensor is the same as the hidden_states tensor.
-                The constructed MPNetOutput is obtained by applying the dense layer, dropout, and LayerNorm operations
+                The forwarded MPNetOutput is obtained by applying the dense layer, dropout, and LayerNorm operations
                 to the hidden states and adding the input tensor.
 
         Raises:
@@ -485,7 +482,7 @@ class MPNetOutput(nn.Cell):
         return hidden_states
 
 
-class MPNetLayer(nn.Cell):
+class MPNetLayer(nn.Module):
     """Single layer in the MPNet model architecture."""
     def __init__(self, config):
         """
@@ -507,7 +504,7 @@ class MPNetLayer(nn.Cell):
         self.intermediate = MPNetIntermediate(config)
         self.output = MPNetOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -553,7 +550,7 @@ class MPNetLayer(nn.Cell):
         return outputs
 
 
-class MPNetEncoder(nn.Cell):
+class MPNetEncoder(nn.Module):
     """Encoder module for the MPNet model."""
     def __init__(self, config):
         """
@@ -577,10 +574,10 @@ class MPNetEncoder(nn.Cell):
         super().__init__()
         self.config = config
         self.n_heads = config.num_attention_heads
-        self.layer = nn.CellList([MPNetLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([MPNetLayer(config) for _ in range(config.num_hidden_layers)])
         self.relative_attention_bias = nn.Embedding(config.relative_attention_num_buckets, self.n_heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -708,7 +705,7 @@ class MPNetEncoder(nn.Cell):
         return ret
 
 
-class MPNetPooler(nn.Cell):
+class MPNetPooler(nn.Module):
     """Copied from transformers.models.bert.modeling_bert.BertPooler"""
     def __init__(self, config):
         """
@@ -726,12 +723,12 @@ class MPNetPooler(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
-        This method constructs a pooled output from the hidden states of the MPNet model.
+        This method forwards a pooled output from the hidden states of the MPNet model.
 
         Args:
             self: The instance of the MPNetPooler class.
@@ -822,7 +819,7 @@ class MPNetModel(MPNetPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -978,7 +975,7 @@ class MPNetForMaskedLM(MPNetPreTrainedModel):
         """
         self.lm_head.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1015,7 +1012,7 @@ class MPNetForMaskedLM(MPNetPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
@@ -1029,7 +1026,7 @@ class MPNetForMaskedLM(MPNetPreTrainedModel):
         )
 
 
-class MPNetLMHead(nn.Cell):
+class MPNetLMHead(nn.Module):
     """MPNet Head for masked and permuted language modeling."""
     def __init__(self, config):
         """
@@ -1052,18 +1049,18 @@ class MPNetLMHead(nn.Cell):
             TypeError: If the configuration object is not of the expected type.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
 
         # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
         self.decoder.bias = self.bias
 
-    def construct(self, features, **kwargs):
+    def forward(self, features, **kwargs):
         """
-        This method constructs the output by processing the input features through various layers.
+        This method forwards the output by processing the input features through various layers.
 
         Args:
             self (MPNetLMHead): Instance of the MPNetLMHead class.
@@ -1111,7 +1108,7 @@ class MPNetForSequenceClassification(MPNetPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1150,7 +1147,7 @@ class MPNetForSequenceClassification(MPNetPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1162,7 +1159,7 @@ class MPNetForSequenceClassification(MPNetPreTrainedModel):
                 else:
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = nn.BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -1198,12 +1195,12 @@ class MPNetForMultipleChoice(MPNetPreTrainedModel):
 
         self.mpnet = MPNetModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1252,7 +1249,7 @@ class MPNetForMultipleChoice(MPNetPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss = F.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1287,12 +1284,12 @@ class MPNetForTokenClassification(MPNetPreTrainedModel):
 
         self.mpnet = MPNetModel(config, add_pooling_layer=False)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1329,7 +1326,7 @@ class MPNetForTokenClassification(MPNetPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1343,7 +1340,7 @@ class MPNetForTokenClassification(MPNetPreTrainedModel):
         )
 
 
-class MPNetClassificationHead(nn.Cell):
+class MPNetClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
     def __init__(self, config):
         """
@@ -1366,11 +1363,11 @@ class MPNetClassificationHead(nn.Cell):
             ValueError: If any of the configuration parameters are invalid or missing.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
+        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(self, features, **kwargs):
+    def forward(self, features, **kwargs):
         """
         Constructs the MPNetClassificationHead by performing a series of operations on the input features.
 
@@ -1420,12 +1417,12 @@ class MPNetForQuestionAnswering(MPNetPreTrainedModel):
 
         self.num_labels = config.num_labels
         self.mpnet = MPNetModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1481,8 +1478,8 @@ class MPNetForQuestionAnswering(MPNetPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
@@ -1505,7 +1502,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx):
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = ops.cumsum(mask, axis=1).type_as(mask) * mask
+    incremental_indices = ops.cumsum(mask, dim=1).type_as(mask) * mask
     return incremental_indices.long() + padding_idx
 
 

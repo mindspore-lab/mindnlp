@@ -52,8 +52,10 @@ from . import (
     clap,
     clip,
     clipseg,
+    clvp,
     codegen,
     cohere,
+    conditional_detr,
     cogvlm,
     convbert,
     convnext,
@@ -64,9 +66,11 @@ from . import (
     cpmbee,
     cvt,
     data2vec,
+    dbrx,
     deberta,
     deberta_v2,
     decision_transformer,
+    deformable_detr,
     deepseek_v2,
     detr,
     deta,
@@ -88,13 +92,17 @@ from . import (
     chatglm,
     chatglm2,
     chatglm3,
+    chatglm4,
     flava,
+    flaubert,
+    florence2,
     focalnet,
     fnet,
     funnel,
+    fsmt,
     gemma,
     git,
-    gpt,
+    openai,
     gpt2,
     gpt_bigcode,
     gptj,
@@ -108,6 +116,8 @@ from . import (
     imagegpt,
     instructblip,
     ibert,
+    idefics,
+    jamba,
     jetmoe,
     kosmos2,
     layoutlm,
@@ -152,21 +162,28 @@ from . import (
     openelm,
     opt,
     owlvit,
+    patchtst,
     pegasus,
+    pegasus_x,
     perceiver,
     persimmon,
     phi,
     phi3,
+    pix2struct,
     plbart,
     poolformer,
     pop2piano,
+    prophetnet,
     qdqbert,
     qwen2,
     qwen2_moe,
+    rag,
+    realm,
     reformer,
     rembert,
     resnet,
     roberta,
+    roberta_prelayernorm,
     roc_bert,
     rwkv,
     sam,
@@ -182,6 +199,7 @@ from . import (
     splinter,
     squeezebert,
     starcoder2,
+    superpoint,
     swiftformer,
     swin,
     switch_transformers,
@@ -192,6 +210,7 @@ from . import (
     timesformer,
     tinybert,
     trocr,
+    tvlt,
     udop,
     upernet,
     umt5,
@@ -207,6 +226,8 @@ from . import (
     vit_mae,
     vit_msn,
     vitdet,
+    vits,
+    vivit,
     wav2vec2,
     wav2vec2_conformer,
     wav2vec2_bert,
@@ -222,8 +243,9 @@ from . import (
     xmod,
     vilt,
     yolos,
+    fuyu,
 )
-
+from .fuyu import *
 from .owlv2 import *
 from .albert import *
 from .align import *
@@ -256,11 +278,14 @@ from .bros import *
 from .byt5 import *
 from .camembert import *
 from .canine import *
+from .chatglm4 import *
 from .clap import *
 from .clip import *
 from .clipseg import *
+from .clvp import *
 from .codegen import *
 from .cohere import *
+from .conditional_detr import *
 from .cogvlm import *
 from .convbert import *
 from .convnext import *
@@ -271,9 +296,11 @@ from .cpmant import *
 from .cpmbee import *
 from .cvt import *
 from .data2vec import *
+from .dbrx import *
 from .deberta import *
 from .deberta_v2 import *
 from .decision_transformer import *
+from .deformable_detr import *
 from .deepseek_v2 import *
 from .detr import *
 from .deta import *
@@ -295,13 +322,16 @@ from .chatglm2 import *
 from .chatglm3 import *
 from .falcon import *
 from .flava import *
+from .flaubert import *
+from .florence2 import *
 from .focalnet import *
 from .fnet import *
 from .funnel import *
+from .fsmt import *
 from .fastspeech2_conformer import *
 from .gemma import *
 from .git import *
-from .gpt import *
+from .openai import *
 from .gptj import *
 from .gpt_neo import *
 from .gpt_neox import *
@@ -312,9 +342,11 @@ from .gpt2 import *
 from .graphormer import *
 from .groupvit import *
 from .ibert import *
+from .idefics import *
 from .hubert import *
 from .imagegpt import *
 from .instructblip import *
+from .jamba import *
 from .jetmoe import *
 from .kosmos2 import *
 from .layoutlm import *
@@ -359,21 +391,28 @@ from .oneformer import *
 from .openelm import *
 from .opt import *
 from .owlvit import *
+from .patchtst import *
 from .pegasus import *
+from .pegasus_x import *
 from .perceiver import *
 from .persimmon import *
 from .phi import *
 from .phi3 import *
+from .pix2struct import *
 from .plbart import *
 from .poolformer import *
 from .pop2piano import *
+from .prophetnet import *
 from .qdqbert import *
 from .qwen2 import *
 from .qwen2_moe import *
+from .rag import *
+from .realm import *
 from .reformer import *
 from .rembert import *
 from .resnet import *
 from .roberta import *
+from .roberta_prelayernorm import *
 from .roc_bert import *
 from .rwkv import *
 from .sam import *
@@ -389,6 +428,7 @@ from .stablelm import *
 from .splinter import *
 from .squeezebert import *
 from .starcoder2 import *
+from .superpoint import *
 from .swiftformer import *
 from .swin import *
 from .switch_transformers import *
@@ -399,6 +439,7 @@ from .tapas import *
 from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
+from .tvlt import *
 from .udop import *
 from .upernet import *
 from .unispeech_sat import *
@@ -410,10 +451,12 @@ from .vision_encoder_decoder import *
 from .vision_text_dual_encoder import *
 from .visual_bert import *
 from .vit import *
+from .vits import *
 from .vit_hybrid import *
 from .vit_mae import *
 from .vit_msn import *
 from .vitdet import *
+from .vivit import *
 from .whisper import *
 from .wav2vec2 import *
 from .wav2vec2_conformer import *
@@ -467,8 +510,10 @@ __all__.extend(canine.__all__)
 __all__.extend(clap.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(clipseg.__all__)
+__all__.extend(clvp.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cohere.__all__)
+__all__.extend(conditional_detr.__all__)
 __all__.extend(cogvlm.__all__)
 __all__.extend(convbert.__all__)
 __all__.extend(convnext.__all__)
@@ -479,9 +524,11 @@ __all__.extend(cpmant.__all__)
 __all__.extend(cpmbee.__all__)
 __all__.extend(cvt.__all__)
 __all__.extend(data2vec.__all__)
+__all__.extend(dbrx.__all__)
 __all__.extend(deberta.__all__)
 __all__.extend(deberta_v2.__all__)
 __all__.extend(decision_transformer.__all__)
+__all__.extend(deformable_detr.__all__)
 __all__.extend(deepseek_v2.__all__)
 __all__.extend(deit.__all__)
 __all__.extend(dinov2.__all__)
@@ -499,15 +546,19 @@ __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
 __all__.extend(esm.__all__)
 __all__.extend(chatglm.__all__)
+__all__.extend(chatglm4.__all__)
 __all__.extend(falcon.__all__)
 __all__.extend(flava.__all__)
+__all__.extend(flaubert.__all__)
+__all__.extend(florence2.__all__)
 __all__.extend(fnet.__all__)
 __all__.extend(focalnet.__all__)
 __all__.extend(funnel.__all__)
+__all__.extend(fsmt.__all__)
 __all__.extend(fastspeech2_conformer.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)
-__all__.extend(gpt.__all__)
+__all__.extend(openai.__all__)
 __all__.extend(gptj.__all__)
 __all__.extend(gemma.__all__)
 __all__.extend(git.__all__)
@@ -519,10 +570,12 @@ __all__.extend(gpt_bigcode.__all__)
 __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(groupvit.__all__)
-__all__.extend(ibert.__all__)
-__all__.extend(instructblip.__all__)
 __all__.extend(hubert.__all__)
+__all__.extend(ibert.__all__)
+__all__.extend(idefics.__all__)
 __all__.extend(imagegpt.__all__)
+__all__.extend(instructblip.__all__)
+__all__.extend(jamba.__all__)
 __all__.extend(jetmoe.__all__)
 __all__.extend(kosmos2.__all__)
 __all__.extend(layoutlm.__all__)
@@ -567,21 +620,28 @@ __all__.extend(oneformer.__all__)
 __all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(owlvit.__all__)
+__all__.extend(patchtst.__all__)
 __all__.extend(pegasus.__all__)
+__all__.extend(pegasus_x.__all__)
 __all__.extend(perceiver.__all__)
 __all__.extend(persimmon.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(phi3.__all__)
+__all__.extend(pix2struct.__all__)
 __all__.extend(plbart.__all__)
 __all__.extend(poolformer.__all__)
 __all__.extend(pop2piano.__all__)
+__all__.extend(prophetnet.__all__)
 __all__.extend(qdqbert.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
+__all__.extend(rag.__all__)
+__all__.extend(realm.__all__)
 __all__.extend(reformer.__all__)
 __all__.extend(rembert.__all__)
 __all__.extend(resnet.__all__)
 __all__.extend(roberta.__all__)
+__all__.extend(roberta_prelayernorm.__all__)
 __all__.extend(roc_bert.__all__)
 __all__.extend(rwkv.__all__)
 __all__.extend(sam.__all__)
@@ -602,11 +662,14 @@ __all__.extend(owlv2.__all__)
 __all__.extend(swin.__all__)
 __all__.extend(switch_transformers.__all__)
 __all__.extend(swin2sr.__all__)
+__all__.extend(superpoint.__all__)
 __all__.extend(t5.__all__)
+__all__.extend(tapas.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(trocr.__all__)
+__all__.extend(tvlt.__all__)
 __all__.extend(udop.__all__)
 __all__.extend(upernet.__all__)
 __all__.extend(unispeech_sat.__all__)
@@ -618,10 +681,12 @@ __all__.extend(vision_encoder_decoder.__all__)
 __all__.extend(vision_text_dual_encoder.__all__)
 __all__.extend(visual_bert.__all__)
 __all__.extend(vit.__all__)
+__all__.extend(vits.__all__)
 __all__.extend(vit_hybrid.__all__)
 __all__.extend(vit_mae.__all__)
 __all__.extend(vit_msn.__all__)
 __all__.extend(vitdet.__all__)
+__all__.extend(vivit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_conformer.__all__)
@@ -636,4 +701,5 @@ __all__.extend(xlm_prophetnet.__all__)
 __all__.extend(xlnet.__all__)
 __all__.extend(umt5.__all__)
 __all__.extend(xmod.__all__)
+__all__.extend(fuyu.__all__)
 __all__.extend(yolos.__all__)

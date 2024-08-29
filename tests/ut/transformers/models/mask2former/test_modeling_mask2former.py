@@ -19,7 +19,6 @@
 import unittest
 
 import numpy as np
-from mindspore import ops
 
 from mindnlp.transformers import Mask2FormerConfig
 from mindnlp.utils import is_mindspore_available, is_vision_available
@@ -37,6 +36,7 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor
 
 if is_mindspore_available():
     import mindspore
+    from mindnlp.core import ops
 
     from mindnlp.transformers import Mask2FormerForUniversalSegmentation, Mask2FormerModel
 
@@ -83,9 +83,9 @@ class Mask2FormerModelTester:
         pixel_mask = ops.ones([self.batch_size, self.min_size, self.max_size])
 
         mask_labels = (
-            ops.rand([self.batch_size, self.num_labels, self.min_size, self.max_size]) > 0.5
+            ops.rand(self.batch_size, self.num_labels, self.min_size, self.max_size) > 0.5
         ).float()
-        class_labels = (ops.rand((self.batch_size, self.num_labels)) > 0.5).long()
+        class_labels = (ops.rand(self.batch_size, self.num_labels) > 0.5).long()
 
         config = self.get_config()
         return config, pixel_values, pixel_mask, mask_labels, class_labels
@@ -217,7 +217,7 @@ class Mask2FormerModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="Mask2Former does not have a get_input_embeddings method")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(reason="Mask2Former is not a generative model")
@@ -247,8 +247,8 @@ class Mask2FormerModelTest(ModelTesterMixin, unittest.TestCase):
     def test_model_with_labels(self):
         size = (self.model_tester.min_size,) * 2
         inputs = {
-            "pixel_values": ops.randn((2, 3, *size)),
-            "mask_labels": ops.randn((2, 10, *size)),
+            "pixel_values": ops.randn(2, 3, *size),
+            "mask_labels": ops.randn(2, 10, *size),
             "class_labels": ops.zeros(2, 10).long(),
         }
         config = self.model_tester.get_config()

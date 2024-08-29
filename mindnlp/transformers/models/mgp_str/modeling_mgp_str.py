@@ -19,8 +19,9 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import ops, nn
 from mindspore.common.initializer import initializer, TruncatedNormal
+
+from mindnlp.core import nn, ops
 from ...modeling_outputs import BaseModelOutput
 from ...modeling_utils import PreTrainedModel
 from ....utils import (
@@ -66,14 +67,14 @@ def drop_path(
 
 
 # Copied from transformers.models.beit.modeling_beit.BeitDropPath with Beit->Mgpstr
-class MgpstrDropPath(nn.Cell):
+class MgpstrDropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
 
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         super().__init__()
         self.drop_prob = drop_prob
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         return drop_path(hidden_states, self.drop_prob, self.training)
 
     def extra_repr(self) -> str:
@@ -118,7 +119,7 @@ class MgpstrModelOutput(ModelOutput):
     a3_attentions: Optional[Tuple[ms.Tensor]] = None
 
 
-class MgpstrEmbeddings(nn.Cell):
+class MgpstrEmbeddings(nn.Module):
     """2D Image to Patch Embedding"""
 
     def __init__(self, config: MgpstrConfig):
@@ -147,8 +148,7 @@ class MgpstrEmbeddings(nn.Cell):
             config.hidden_size,
             kernel_size=patch_size,
             stride=patch_size,
-            has_bias=True,
-            pad_mode="pad",
+            bias=True,
         )
 
         self.cls_token = ms.Parameter(ops.zeros(1, 1, config.hidden_size))
@@ -158,7 +158,7 @@ class MgpstrEmbeddings(nn.Cell):
         )
         self.pos_drop = nn.Dropout(p=config.drop_rate)
 
-    def construct(self, pixel_values):
+    def forward(self, pixel_values):
         batch_size, channel, height, width = pixel_values.shape
         if height != self.image_size[0] or width != self.image_size[1]:
             raise ValueError(
@@ -170,26 +170,26 @@ class MgpstrEmbeddings(nn.Cell):
             1, 2
         )  # BCHW -> BNC
 
-        cls_tokens = self.cls_token.expand(batch_size, -1, -1)
-        embedding_output = ops.cat((cls_tokens, patch_embeddings), axis=1)
+        cls_tokens = self.cls_token.broadcast_to((batch_size, -1, -1))
+        embedding_output = ops.cat((cls_tokens, patch_embeddings), dim=1)
         embedding_output = embedding_output + self.pos_embed
         embedding_output = self.pos_drop(embedding_output)
 
         return embedding_output
 
 
-class MgpstrMlp(nn.Cell):
+class MgpstrMlp(nn.Module):
     """MLP as used in Vision Transformer, MLP-Mixer and related networks"""
 
     def __init__(self, config: MgpstrConfig, hidden_features):
         super().__init__()
         hidden_features = hidden_features or config.hidden_size
-        self.fc1 = nn.Dense(config.hidden_size, hidden_features)
-        self.act = nn.GELU(approximate=False)
-        self.fc2 = nn.Dense(hidden_features, config.hidden_size)
+        self.fc1 = nn.Linear(config.hidden_size, hidden_features)
+        self.act = nn.GELU()
+        self.fc2 = nn.Linear(hidden_features, config.hidden_size)
         self.drop = nn.Dropout(config.drop_rate)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.drop(hidden_states)
@@ -198,21 +198,21 @@ class MgpstrMlp(nn.Cell):
         return hidden_states
 
 
-class MgpstrAttention(nn.Cell):
+class MgpstrAttention(nn.Module):
     def __init__(self, config: MgpstrConfig):
         super().__init__()
         self.num_heads = config.num_attention_heads
         head_dim = config.hidden_size // config.num_attention_heads
         self.scale = head_dim**-0.5
 
-        self.qkv = nn.Dense(
-            config.hidden_size, config.hidden_size * 3, has_bias=config.qkv_bias
+        self.qkv = nn.Linear(
+            config.hidden_size, config.hidden_size * 3, bias=config.qkv_bias
         )
         self.attn_drop = nn.Dropout(config.attn_drop_rate)
-        self.proj = nn.Dense(config.hidden_size, config.hidden_size)
+        self.proj = nn.Linear(config.hidden_size, config.hidden_size)
         self.proj_drop = nn.Dropout(config.drop_rate)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         batch_size, num, channel = hidden_states.shape
         qkv = (
             self.qkv(hidden_states)
@@ -226,7 +226,7 @@ class MgpstrAttention(nn.Cell):
         )  # make torchscript happy (cannot use tensor as tuple)
 
         attention_probs = (query @ key.swapaxes(-2, -1)) * self.scale
-        attention_probs = nn.Softmax(axis=-1)(attention_probs)
+        attention_probs = nn.Softmax(dim=-1)(attention_probs)
         attention_probs = self.attn_drop(attention_probs)
 
         context_layer = (
@@ -237,20 +237,20 @@ class MgpstrAttention(nn.Cell):
         return (context_layer, attention_probs)
 
 
-class MgpstrLayer(nn.Cell):
+class MgpstrLayer(nn.Module):
     def __init__(self, config: MgpstrConfig, drop_path=None):
         super().__init__()
-        self.norm1 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm1 = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.attn = MgpstrAttention(config)
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
         self.drop_path = (
             MgpstrDropPath(drop_path) if drop_path is not None else nn.Identity()
         )
-        self.norm2 = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm2 = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         mlp_hidden_dim = int(config.hidden_size * config.mlp_ratio)
         self.mlp = MgpstrMlp(config, mlp_hidden_dim)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         self_attention_outputs = self.attn(self.norm1(hidden_states))
         attention_output = self_attention_outputs[0]
         outputs = self_attention_outputs[1]
@@ -267,7 +267,7 @@ class MgpstrLayer(nn.Cell):
         return outputs
 
 
-class MgpstrEncoder(nn.Cell):
+class MgpstrEncoder(nn.Module):
     def __init__(self, config: MgpstrConfig):
         super().__init__()
         # stochastic depth decay rule
@@ -276,14 +276,14 @@ class MgpstrEncoder(nn.Cell):
             for x in ops.linspace(0, config.drop_path_rate, config.num_hidden_layers)
         ]
 
-        self.blocks = nn.SequentialCell(
+        self.blocks = nn.Sequential(
             *[
                 MgpstrLayer(config=config, drop_path=dpr[i])
                 for i in range(config.num_hidden_layers)
             ]
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         output_attentions=False,
@@ -319,11 +319,11 @@ class MgpstrEncoder(nn.Cell):
         )
 
 
-class MgpstrA3Module(nn.Cell):
+class MgpstrA3Module(nn.Module):
     def __init__(self, config: MgpstrConfig):
         super().__init__()
         self.token_norm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         if self.token_norm.bias is None:
             self.token_norm.bias.set_data(
@@ -331,23 +331,21 @@ class MgpstrA3Module(nn.Cell):
                     "zeros", self.token_norm.bias.shape, self.token_norm.bias.dtype
                 )
             )
-        self.tokenLearner = nn.SequentialCell(
+        self.tokenLearner = nn.Sequential(
             nn.Conv2d(
                 config.hidden_size,
                 config.hidden_size,
                 kernel_size=(1, 1),
                 stride=1,
-                group=8,
-                has_bias=False,
-                pad_mode="pad",
+                groups=8,
+                bias=False,
             ),
             nn.Conv2d(
                 config.hidden_size,
                 config.max_token_length,
                 kernel_size=(1, 1),
                 stride=1,
-                has_bias=False,
-                pad_mode="pad",
+                bias=False,
             ),
         )
         self.feat = nn.Conv2d(
@@ -355,13 +353,12 @@ class MgpstrA3Module(nn.Cell):
             config.hidden_size,
             kernel_size=(1, 1),
             stride=1,
-            group=8,
-            has_bias=False,
-            pad_mode="pad",
+            groups=8,
+            bias=False,
         )
-        self.norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
-    def _init_weights(self, module: Union[nn.Dense, nn.Conv2d, nn.LayerNorm]) -> None:
+    def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
         if isinstance(module, MgpstrEmbeddings):
             module.pos_embed.set_data(
@@ -378,7 +375,7 @@ class MgpstrA3Module(nn.Cell):
                     module.cls_token.dtype,
                 )
             )
-        elif isinstance(module, (nn.Dense, nn.Conv2d)):
+        elif isinstance(module, (nn.Linear, nn.Conv2d)):
             module.weight.set_data(
                 initializer(
                     TruncatedNormal(sigma=self.config.initializer_range, mean=0.0),
@@ -406,12 +403,12 @@ class MgpstrA3Module(nn.Cell):
                 initializer("ones", module.weight.shape, module.weight.dtype)
             )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.token_norm(hidden_states)
         hidden_states = hidden_states.swapaxes(1, 2).unsqueeze(-1)
         selected = self.tokenLearner(hidden_states)
         selected = selected.flatten(start_dim=2)
-        attentions = ops.softmax(selected, axis=-1)
+        attentions = ops.softmax(selected, dim=-1)
 
         feat = self.feat(hidden_states)
         feat = feat.flatten(start_dim=2).swapaxes(1, 2)
@@ -431,7 +428,7 @@ class MgpstrPreTrainedModel(PreTrainedModel):
     base_model_prefix = "mgp_str"
     _no_split_modules = []
 
-    def _init_weights(self, module: Union[nn.Dense, nn.Conv2d, nn.LayerNorm]) -> None:
+    def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
         if isinstance(module, MgpstrEmbeddings):
             module.pos_embed.set_data(
@@ -448,7 +445,7 @@ class MgpstrPreTrainedModel(PreTrainedModel):
                     module.cls_token.dtype,
                 )
             )
-        elif isinstance(module, (nn.Dense, nn.Conv2d)):
+        elif isinstance(module, (nn.Linear, nn.Conv2d)):
             module.weight.set_data(
                 initializer(
                     TruncatedNormal(sigma=self.config.initializer_range, mean=0.0),
@@ -477,31 +474,6 @@ class MgpstrPreTrainedModel(PreTrainedModel):
             )
 
 
-MGP_STR_START_DOCSTRING = r"""
-    This model is a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) subclass. Use it
-    as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
-    behavior.
-
-    Parameters:
-        config ([`MgpstrConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-MGP_STR_INPUTS_DOCSTRING = r"""
-    Args:
-        pixel_values (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`):
-            Pixel values. Pixel values can be obtained using [`AutoImageProcessor`]. See [`ViTImageProcessor.__call__`]
-            for details.
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
 
 
 class MgpstrModel(MgpstrPreTrainedModel):
@@ -511,14 +483,14 @@ class MgpstrModel(MgpstrPreTrainedModel):
         self.embeddings = MgpstrEmbeddings(config)
         self.encoder = MgpstrEncoder(config)
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         return nn.Embedding(10, 10)
 
     # fix for NotImplemented
     def set_input_embeddings(self, value):
         x = value
 
-    def construct(
+    def forward(
         self,
         pixel_values: ms.Tensor,
         output_attentions: Optional[bool] = None,
@@ -574,11 +546,11 @@ class MgpstrForSceneTextRecognition(MgpstrPreTrainedModel):
         self.bpe_a3_module = MgpstrA3Module(config)
         self.wp_a3_module = MgpstrA3Module(config)
 
-        self.char_head = nn.Dense(config.hidden_size, config.num_character_labels)
-        self.bpe_head = nn.Dense(config.hidden_size, config.num_bpe_labels)
-        self.wp_head = nn.Dense(config.hidden_size, config.num_wordpiece_labels)
+        self.char_head = nn.Linear(config.hidden_size, config.num_character_labels)
+        self.bpe_head = nn.Linear(config.hidden_size, config.num_bpe_labels)
+        self.wp_head = nn.Linear(config.hidden_size, config.num_wordpiece_labels)
 
-    def construct(
+    def forward(
         self,
         pixel_values: ms.Tensor,
         output_attentions: Optional[bool] = None,

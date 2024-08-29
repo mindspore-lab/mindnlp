@@ -18,15 +18,19 @@ Global configs
 import os
 from packaging import version
 import mindspore
+from mindspore._c_expression import MSContext # pylint: disable=no-name-in-module, import-error
 
+SOC = MSContext.get_instance().get_ascend_soc_version()
 DEVICE_TARGET = mindspore.get_context('device_target')
 GENERATOR_SEED = version.parse(mindspore.__version__) >= version.parse('2.3.0')
+SUPPORT_VIEW = GENERATOR_SEED
+SUPPORT_BF16 = GENERATOR_SEED and '910b' in SOC
 USE_PYBOOST = version.parse(mindspore.__version__) >= version.parse('2.3.0') and DEVICE_TARGET == 'Ascend'
 DEFAULT_DTYPE = mindspore.float32
 
-WEIGHTS_NAME = "mindspore.ckpt"
+WEIGHTS_NAME = "mindspore_model.ckpt"
 PT_WEIGHTS_NAME = "pytorch_model.bin"
-WEIGHTS_INDEX_NAME = "mindspore.ckpt.index.json"
+WEIGHTS_INDEX_NAME = "mindspore_model.ckpt.index.json"
 PT_WEIGHTS_INDEX_NAME = "pytorch_model.bin.index.json"
 SAFE_WEIGHTS_NAME = "model.safetensors"
 SAFE_WEIGHTS_INDEX_NAME = "model.safetensors.index.json"
@@ -48,7 +52,7 @@ DEFAULT_ROOT = os.path.join(os.getcwd(), ".mindnlp")
 MS_URL_BASE = "https://modelscope.cn/api/v1/models/{}/repo?Revision={}&FilePath={}"
 # for huggingface url
 HF_ENDPOINT = os.environ.get('HF_ENDPOINT', 'https://hf-mirror.com')
-HF_URL_BASE = HF_ENDPOINT + '/{}/resolve/{}/{}'
+HF_URL_BASE = HF_ENDPOINT + '/{}/resolve/{}/{}?download=true'
 
 ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
 MINDNLP_CACHE = os.getenv("MINDNLP_CACHE", DEFAULT_ROOT)

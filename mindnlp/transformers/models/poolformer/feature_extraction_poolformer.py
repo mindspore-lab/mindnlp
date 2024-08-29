@@ -22,7 +22,7 @@ from .image_processing_poolformer import PoolFormerImageProcessor
 class PoolFormerFeatureExtractor(PoolFormerImageProcessor):
     def __init__(self, *args, **kwargs) -> None:
         warnings.warn(
-            "The class PoolFormerFeatureExtractor is deprecated and will be removed in version 5 of Transformers."
+            "The class PoolFormerFeatureExtractor is deprecated."
             " Please use PoolFormerImageProcessor instead.",
             FutureWarning,
         )

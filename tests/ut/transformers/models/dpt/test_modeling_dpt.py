@@ -26,7 +26,7 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn
+    from mindnlp.core import nn
 
     from mindnlp.transformers import DPTForDepthEstimation, DPTForSemanticSegmentation, DPTModel
     from mindnlp.transformers.models.auto.modeling_auto import MODEL_MAPPING_NAMES
@@ -184,7 +184,7 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="DPT does not use the nn.Embedding")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_model_get_set_embeddings(self):
@@ -192,9 +192,9 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), nn.Cell)
+            self.assertIsInstance(model.get_input_embeddings(), nn.Module)
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     def test_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()

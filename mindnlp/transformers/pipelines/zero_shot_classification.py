@@ -376,7 +376,7 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         model_inputs = {k: inputs[k] for k in self.tokenizer.model_input_names}
 
         #`XXForSequenceClassification` models should not use `use_cache=True` even if it's supported
-        model_forward = self.model.construct
+        model_forward = self.model.forward
         if "use_cache" in inspect.signature(model_forward).parameters.keys():
             model_inputs["use_cache"] = False
         outputs = model_forward(**model_inputs)

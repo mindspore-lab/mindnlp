@@ -18,12 +18,11 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 from functools import reduce
 
-import numpy as np
-
 import mindspore
-from mindspore import nn, Tensor, ops, Parameter
-from mindspore.common.initializer import Normal
+from mindspore import Tensor, Parameter
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
 from ...cache_utils import Cache
@@ -146,24 +145,24 @@ class LlavaNextCausalLMOutputWithPast(ModelOutput):
 
 
 # Copied from transformers.models.llava.modeling_llava.LlavaMultiModalProjector with Llava->LlavaNext
-class LlavaNextMultiModalProjector(nn.Cell):
+class LlavaNextMultiModalProjector(nn.Module):
 
     """
     This class represents a multi-modal projector for the LlavaNext model.
     It is used to project image features and text embeddings into a shared hidden space.
     
     Inherits from:
-        nn.Cell
+        nn.Module
     
     Attributes:
-        linear_1 (nn.Dense): A fully connected layer that maps image features to the hidden size specified
+        linear_1 (nn.Linear): A fully connected layer that maps image features to the hidden size specified
             in the configuration.
         act (function): An activation function chosen based on the configuration's specified projector hidden activation.
-        linear_2 (nn.Dense): A fully connected layer that maps the hidden states from linear_1 to the hidden size
+        linear_2 (nn.Linear): A fully connected layer that maps the hidden states from linear_1 to the hidden size
             specified in the configuration.
     
     Methods:
-        construct(image_features):
+        forward(image_features):
             Projects the given image features into the shared hidden space by applying the linear transformations
             and activation function.
     
@@ -185,13 +184,13 @@ class LlavaNextMultiModalProjector(nn.Cell):
         """
         super().__init__()
 
-        self.linear_1 = nn.Dense(
-            config.vision_config.hidden_size, config.text_config.hidden_size, has_bias=True)
+        self.linear_1 = nn.Linear(
+            config.vision_config.hidden_size, config.text_config.hidden_size, bias=True)
         self.act = ACT2FN[config.projector_hidden_act]
-        self.linear_2 = nn.Dense(
-            config.text_config.hidden_size, config.text_config.hidden_size, has_bias=True)
+        self.linear_2 = nn.Linear(
+            config.text_config.hidden_size, config.text_config.hidden_size, bias=True)
 
-    def construct(self, image_features):
+    def forward(self, image_features):
         """
         Constructs the hidden states for the LlavaNextMultiModalProjector.
         
@@ -229,44 +228,27 @@ class LlavaNextPreTrainedModel(PreTrainedModel):
     _skip_keys_device_placement = "past_key_values"
     _supports_flash_attn_2 = True
 
-    def _init_weights(self, cell):
-        """
-        This method initializes the weights of the specified cell based on the configuration parameters.
-
-        Args:
-            self (LlavaNextPreTrainedModel): The instance of the LlavaNextPreTrainedModel class.
-            cell: The cell for which the weights need to be initialized.
-                It can be of type nn.Embedding, nn.Dense, or nn.Conv2d.
-
-        Returns:
-            None.
-
-        Raises:
-            AttributeError: If the provided cell does not have the required attributes for weight initialization.
-            TypeError: If the cell type is not supported for weight initialization.
-        """
-        # important: this ported version of Llava isn't meant for training from scratch - only
+    def _init_weights(self, module):
+        # important: this ported version of LlavaNext isn't meant for training from scratch - only
         # inference and fine-tuning - so the proper init weights code has been removed - the original codebase
-        # https://github.com/haotian-liu/LLaVA/tree/main/llava should serve for that purpose
+        # https://github.com/haotian-liu/LLaVA/tree/main/llava_next should serve for that purpose
         std = (
             self.config.initializer_range
             if hasattr(self.config, "initializer_range")
             else self.config.text_config.initializer_range
         )
 
-        if hasattr(cell, "class_embedding"):
-            cell.class_embedding.initialize(Normal(std))
+        if hasattr(module, "class_embedding"):
+            nn.init.normal_(module.class_embedding, mean=0.0, std=std)
 
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
-            cell.weight.data.initialize(Normal(std))
-            if cell.bias is not None:
-                cell.bias.initialize('zeros')
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, std, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
 
 class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
 
@@ -277,7 +259,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
 
     The class provides methods for setting and getting input embeddings, output embeddings, decoder, and for tying weights.
     It also includes functionality for resizing token embeddings and merging input IDs with image features.
-    Additionally, the class offers a 'construct' method for generating text based on input IDs, pixel values,
+    Additionally, the class offers a 'forward' method for generating text based on input IDs, pixel values,
     attention masks, and other optional parameters. The 'prepare_inputs_for_generation' method prepares input data
     for text generation by handling past key values, inputs embeddings, pixel values, and attention masks.
 
@@ -458,8 +440,8 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
         model_embeds = self.language_model.resize_token_embeddings(
             new_num_tokens, pad_to_multiple_of)
         # update vocab size
-        self.config.text_config.vocab_size = model_embeds.vocab_size
-        self.vocab_size = model_embeds.vocab_size
+        self.config.text_config.vocab_size = model_embeds.num_embeddings
+        self.vocab_size = model_embeds.num_embeddings
         return model_embeds
 
     # Copied from transformers.models.llava.modeling_llava.LlavaForConditionalGeneration._merge_input_ids_with_image_features
@@ -489,9 +471,8 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
         num_special_image_tokens = ops.sum(special_image_token_mask, dim=-1)
         # Compute the maximum embed dimension
         max_embed_dim = (num_special_image_tokens.max() * (num_image_patches - 1)).item() + sequence_length
-        nonzero_result = ops.nonzero(
-            input_ids != self.config.image_token_index)
-        batch_indices, non_image_indices = ops.tensor_split(nonzero_result, 2, -1)
+        batch_indices, non_image_indices = ops.nonzero(
+            input_ids != self.config.image_token_index, as_tuple=True)
 
         # 2. Compute the positions where text should be written
         # Calculate new positions for text tokens in merged image-text sequence.
@@ -524,8 +505,8 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
             final_labels[batch_indices, text_to_overwrite] = labels[batch_indices, non_image_indices]
 
         # 5. Fill the embeddings corresponding to the images. Anything that is still zeros needs filling
-        image_to_overwrite = ops.all(final_embedding == 0, axis=-1)
-        image_to_overwrite &= image_to_overwrite.cumsum(-1) - 1 >= nb_image_pad[:, None]
+        image_to_overwrite = ops.all(final_embedding == 0, dim=-1)
+        image_to_overwrite = (image_to_overwrite.int() & (image_to_overwrite.cumsum(-1) - 1 >= nb_image_pad[:, None]).int()).bool()
 
         if image_to_overwrite.sum() != reduce(lambda x, y: x * y, image_features.shape[:-1]):
             raise ValueError(
@@ -534,12 +515,11 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
             )
 
         final_embedding[image_to_overwrite] = image_features.reshape(-1, embed_dim)
-        final_attention_mask |= image_to_overwrite
+        final_attention_mask = (final_attention_mask.int() | image_to_overwrite.int()).bool()
         position_ids = (final_attention_mask.cumsum(-1) - 1).masked_fill((final_attention_mask == 0), 1)
 
         # 6. Mask out the embedding at padding positions, as we later use the past_key_value value to determine the non-attended tokens.
-        nonzero = ops.nonzero(input_ids == self.pad_token_id)
-        batch_indices, pad_indices = ops.tensor_split(nonzero, 2, -1)
+        batch_indices, pad_indices = ops.nonzero(input_ids == self.pad_token_id, as_tuple=True)
         indices_to_mask = new_token_positions[batch_indices, pad_indices]
 
         if batch_indices.asnumpy() != []:
@@ -550,7 +530,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
 
         return final_embedding, final_attention_mask, final_labels, position_ids
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         pixel_values: mindspore.Tensor = None,
@@ -633,7 +613,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
                 # hence we get a list of image_features, each of shape (5, num_patches, hidden_size)
                 # if we assume each image has 5 image features (base image + 4 patches)
                 split_sizes = [image.shape[0] for image in pixel_values]
-                image_features = ops.split(image_features, split_sizes, axis=0)
+                image_features = ops.split(image_features, split_sizes, dim=0)
 
                 # NOTE we only support multimodal_patch_merge_type == "spatial_unpad"
                 height = width = self.config.vision_config.image_size // self.config.vision_config.patch_size
@@ -658,17 +638,17 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
                         image_feature = ops.cat(
                             (
                                 image_feature,
-                                self.image_newline[:, None, None].expand(*image_feature.shape[:-1], 1),
+                                self.image_newline[:, None, None].broadcast_to((*image_feature.shape[:-1], 1)),
                             ),
-                            axis=-1,
+                            dim=-1,
                         )
                         image_feature = image_feature.flatten(start_dim=1, end_dim=2).swapaxes(0, 1)
-                        image_feature = ops.cat((base_image_feature, image_feature), axis=0)
+                        image_feature = ops.cat((base_image_feature, image_feature), dim=0)
                     else:
                         image_feature = image_feature[0]
-                        image_feature = ops.cat((image_feature, self.image_newline[None]), axis=0)
+                        image_feature = ops.cat((image_feature, self.image_newline[None]), dim=0)
                     new_image_features.append(image_feature)
-                image_features = ops.stack(new_image_features, axis=0)
+                image_features = ops.stack(new_image_features, dim=0)
 
                 inputs_embeds, attention_mask, labels, position_ids = self._merge_input_ids_with_image_features(
                     image_features, inputs_embeds, input_ids, attention_mask, labels
@@ -684,8 +664,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
                 first_layer_past_key_value = past_key_values[0][0][:, :, :, 0]
 
                 # Sum all dimensions of head_dim (-2) to avoid random errors such as: https://github.com/huggingface/transformers/pull/28032#issuecomment-1863691941
-                nonzero = ops.nonzero(first_layer_past_key_value.float().sum(-2) == 0)
-                batch_index, non_attended_tokens = ops.tensor_split(nonzero, 2, -1)
+                batch_index, non_attended_tokens = ops.nonzero(first_layer_past_key_value.float().sum(-2) == 0, as_tuple=True)
 
                 # Get the target length
                 target_length = input_ids.shape[1]
@@ -706,7 +685,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
                 # Zero-out the places where we don't need to attend
                 extended_attention_mask[new_batch_index, new_non_attended_tokens] = 0
 
-                attention_mask = ops.cat((extended_attention_mask, attention_mask[:, -target_length:]), axis=1)
+                attention_mask = ops.cat((extended_attention_mask, attention_mask[:, -target_length:]), dim=1)
                 position_ids = ops.sum(attention_mask, dim=1).unsqueeze(-1) - 1
 
         outputs = self.language_model(
@@ -733,7 +712,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
                 shift_logits = logits[..., :-1, :]
                 shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1)
             )
 

@@ -21,10 +21,11 @@ from typing import Optional, Tuple, List, Callable, Dict, Any
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindspore import Tensor
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from mindnlp.modules.functional import embedding
 from ...modeling_utils import PreTrainedModel
 from ...generation.logits_process import LogitsProcessor
 from ...generation.utils import LogitsProcessorList, StoppingCriteriaList, GenerationConfig
@@ -59,7 +60,7 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
         return scores
 
 
-class PrefixEncoder(nn.Cell):
+class PrefixEncoder(nn.Module):
     """
     The model to encode the prefix
     Input shape: (batch-size, prefix-length)
@@ -92,15 +93,15 @@ class PrefixEncoder(nn.Cell):
         if self.prefix_projection:
             # Use a two-layer MLP to encode the prefix
             self.embedding = nn.Embedding(config.pre_seq_len, config.hidden_size)
-            self.trans = nn.SequentialCell(
-                nn.Dense(config.hidden_size, config.hidden_size),
+            self.trans = nn.Sequential(
+                nn.Linear(config.hidden_size, config.hidden_size),
                 nn.Tanh(),
-                nn.Dense(config.hidden_size, config.num_layers * config.hidden_size * 2)
+                nn.Linear(config.hidden_size, config.num_layers * config.hidden_size * 2)
             )
         else:
             self.embedding = nn.Embedding(config.pre_seq_len, config.num_layers * config.hidden_size * 2)
 
-    def construct(self, prefix: mindspore.Tensor):
+    def forward(self, prefix: mindspore.Tensor):
         """
         Constructs past key values for the PrefixEncoder.
 
@@ -122,7 +123,7 @@ class PrefixEncoder(nn.Cell):
         return past_key_values
 
 
-class RotaryEmbedding(nn.Cell):
+class RotaryEmbedding(nn.Module):
     """Rotary Embedding."""
     def __init__(self, dim, base=10000, precision=mindspore.float16, max_seq_len=2048):
         """
@@ -151,13 +152,13 @@ class RotaryEmbedding(nn.Cell):
         self.cos_cached = Tensor(self.cos_cached, precision)
         self.sin_cached = Tensor(self.sin_cached, precision)
 
-    def construct(self, seq_len):
+    def forward(self, seq_len):
         """
         Constructs and returns the cached cosine and sine arrays of the specified length for the RotaryEmbedding class.
 
         Args:
             self (RotaryEmbedding): An instance of the RotaryEmbedding class.
-            seq_len (int): The length of the sequence for which the cosine and sine arrays should be constructed.
+            seq_len (int): The length of the sequence for which the cosine and sine arrays should be forwarded.
 
         Returns:
             None
@@ -172,14 +173,14 @@ class RotaryEmbedding(nn.Cell):
 def rotate_half(x):
     """rotate half tensor."""
     x1, x2 = x.chunk(2, x.ndim - 1)
-    return ops.cat((-x2, x1), axis=x1.ndim - 1)  # dim=-1 triggers a bug in earlier torch versions
+    return ops.cat((-x2, x1), dim=x1.ndim - 1)  # dim=-1 triggers a bug in earlier torch versions
 
 
 def apply_rotary_pos_emb_index(q, k, cos, sin, position_id):
     """apply rotary pos"""
     # position_id: [sq, b], q, k: [sq, b, np, hn], cos: [sq, 1, hn] -> [sq, b, 1, hn]
-    cos, sin = embedding(position_id, cos.squeeze(1)).unsqueeze(2), \
-        embedding(position_id, sin.squeeze(1)).unsqueeze(2)
+    cos, sin = F.embedding(position_id, cos.squeeze(1)).unsqueeze(2), \
+        F.embedding(position_id, sin.squeeze(1)).unsqueeze(2)
 
     q, k = (q * cos) + (rotate_half(q) * sin), (k * cos) + (rotate_half(k) * sin)
     return q, k
@@ -190,7 +191,7 @@ def default_init(cls, *args, **kwargs):
     return cls(*args, **kwargs)
 
 
-class SelfAttention(nn.Cell):
+class SelfAttention(nn.Module):
     """Self Attention."""
     def __init__(self, config, hidden_size, num_attention_heads,
                  layer_id, hidden_size_per_attention_head=None, bias=True,
@@ -243,17 +244,17 @@ class SelfAttention(nn.Cell):
         self.inner_hidden_size = num_attention_heads * self.hidden_size_per_attention_head
 
         # Strided linear layer.
-        self.query_key_value = nn.Dense(
+        self.query_key_value = nn.Linear(
             hidden_size,
             3 * self.inner_hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
 
-        self.dense = nn.Dense(
+        self.dense = nn.Linear(
             self.inner_hidden_size,
             hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
 
@@ -273,12 +274,12 @@ class SelfAttention(nn.Cell):
         last_dim = tensor.ndim - 1
         last_dim_size = tensor.shape[last_dim] // num_partitions
         # Split.
-        tensor_list = ops.split(tensor, last_dim_size, axis=last_dim)
+        tensor_list = ops.split(tensor, last_dim_size, dim=last_dim)
         # Note: torch.split does not create contiguous tensors by default.
 
         return tensor_list
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             position_ids,
@@ -315,8 +316,8 @@ class SelfAttention(nn.Cell):
             q1, k1 = apply_rotary_pos_emb_index(q1, k1, cos, sin, position_ids)
             q2, k2 = apply_rotary_pos_emb_index(q2, k2, cos, sin, block_position_ids)
 
-            query_layer = ops.concat([q1, q2], axis=3)
-            key_layer = ops.concat([k1, k2], axis=3)
+            query_layer = ops.concat([q1, q2], dim=3)
+            key_layer = ops.concat([k1, k2], dim=3)
         else:
             position_ids = position_ids.swapaxes(0, 1)
             cos, sin = self.rotary_emb(position_ids.max() + 1)
@@ -361,8 +362,8 @@ class SelfAttention(nn.Cell):
         if layer_past is not None and seq_len == 1:
             # layer_past = layer_past.chunk(2, 0)
             past_key, past_value = layer_past[0], layer_past[1]
-            key_layer = ops.cat((past_key, key_layer), axis=0)
-            value_layer = ops.cat((past_value, value_layer), axis=0)
+            key_layer = ops.cat((past_key, key_layer), dim=0)
+            value_layer = ops.cat((past_value, value_layer), dim=0)
 
         # seqlen, batch, num_attention_heads, hidden_size_per_attention_head
         hidden_size = key_layer.shape[-1]
@@ -408,7 +409,7 @@ class SelfAttention(nn.Cell):
         attention_scores = attention_scores.float()
         attention_scores = attention_scores * query_key_layer_scaling_coeff
 
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         attention_probs = attention_probs.astype(dtype)
 
@@ -450,7 +451,7 @@ def gelu(x):
     return ops.gelu(x, approximate='tanh')
 
 
-class GEGLU(nn.Cell):
+class GEGLU(nn.Module):
     """GEGLU"""
     def __init__(self):
         """
@@ -468,7 +469,7 @@ class GEGLU(nn.Cell):
         super().__init__()
         self.activation_fn = ops.gelu
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Constructs a GEGLU object.
 
@@ -492,7 +493,7 @@ class GEGLU(nn.Cell):
             ```python
             >>> g = GEGLU()
             >>> x = torch.tensor([1, 2, 3, 4])
-            >>> g.construct(x)
+            >>> g.forward(x)
             ```
         """
         # dim=-1 breaks in jit for pt<1.10
@@ -500,7 +501,7 @@ class GEGLU(nn.Cell):
         return x1 * self.activation_fn(x2)
 
 
-class GLU(nn.Cell):
+class GLU(nn.Module):
     """GLU"""
     def __init__(self, hidden_size, inner_hidden_size=None,
                  layer_id=None, bias=True, activation_func=gelu, params_dtype=mindspore.float32):
@@ -531,21 +532,21 @@ class GLU(nn.Cell):
         if inner_hidden_size is None:
             inner_hidden_size = 4 * hidden_size
         self.inner_hidden_size = inner_hidden_size
-        self.dense_h_to_4h = nn.Dense(
+        self.dense_h_to_4h = nn.Linear(
             self.hidden_size,
             self.inner_hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
         # Project back to h.
-        self.dense_4h_to_h = nn.Dense(
+        self.dense_4h_to_h = nn.Linear(
             self.inner_hidden_size,
             self.hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Args:
             hidden_states: [seq_len, batch, hidden_size]
@@ -560,7 +561,7 @@ class GLU(nn.Cell):
         return output
 
 
-class GLMBlock(nn.Cell):
+class GLMBlock(nn.Module):
     """GLM Block."""
     def __init__(
             self,
@@ -605,7 +606,7 @@ class GLMBlock(nn.Cell):
         self.layer_id = layer_id
 
         # Layernorm on the input data.
-        self.input_layernorm = nn.LayerNorm([hidden_size], epsilon=layernorm_epsilon)
+        self.input_layernorm = nn.LayerNorm([hidden_size], eps=layernorm_epsilon)
 
         self.position_encoding_2d = position_encoding_2d
 
@@ -622,7 +623,7 @@ class GLMBlock(nn.Cell):
         )
 
         # Layernorm on the input data.
-        self.post_attention_layernorm = nn.LayerNorm([hidden_size], epsilon=layernorm_epsilon)
+        self.post_attention_layernorm = nn.LayerNorm([hidden_size], eps=layernorm_epsilon)
 
         self.num_layers = num_layers
 
@@ -635,7 +636,7 @@ class GLMBlock(nn.Cell):
             params_dtype=params_dtype,
         )
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             position_ids,
@@ -701,7 +702,7 @@ class MSChatGLMPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["GLMBlock"]
     _keys_to_ignore_on_load_unexpected = [r'inv_freq']
 
-    def _init_weights(self, cell: nn.Cell):
+    def _init_weights(self, cell: nn.Module):
         """Initialize the weights."""
     def get_masks(self, input_ids):
         """get masks"""
@@ -730,8 +731,8 @@ class MSChatGLMPreTrainedModel(PreTrainedModel):
                 ops.zeros(context_length, dtype=mindspore.int64),
                 ops.arange(seq_length - context_length, dtype=mindspore.int64) + 1
             )) for context_length in context_lengths]
-            block_position_ids = ops.stack(block_position_ids, axis=0)
-            position_ids = ops.stack((position_ids, block_position_ids), axis=1)
+            block_position_ids = ops.stack(block_position_ids, dim=0)
+            position_ids = ops.stack((position_ids, block_position_ids), dim=1)
         else:
             position_ids = ops.arange(seq_length, dtype=mindspore.int64).unsqueeze(0).tile((batch_size, 1))
             for i, context_length in enumerate(context_lengths):
@@ -823,11 +824,11 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
                 position_encoding_2d=self.position_encoding_2d,
             )
 
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [get_layer(layer_id) for layer_id in range(self.num_layers)]
         )
         # Final layer norm before output.
-        self.final_layernorm = nn.LayerNorm([self.hidden_size], epsilon=self.layernorm_epsilon)
+        self.final_layernorm = nn.LayerNorm([self.hidden_size], eps=self.layernorm_epsilon)
 
         if self.pre_seq_len is not None:
             # for param in self.parameters():
@@ -893,7 +894,7 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
         # past_key_values = [(v[0], v[1]) for v in past_key_values]
         return past_key_values
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             position_ids: Optional[mindspore.Tensor] = None,
@@ -903,7 +904,7 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
     ) -> Tuple[mindspore.Tensor, ...]:
         """Constructs the MSChatGLMModel.
 
-        This method is used to construct the MSChatGLMModel. It takes in several parameters and returns a tuple of tensors.
+        This method is used to forward the MSChatGLMModel. It takes in several parameters and returns a tuple of tensors.
 
         Args:
             self (MSChatGLMModel): The instance of the MSChatGLMModel class.
@@ -966,7 +967,7 @@ class MSChatGLMModel(MSChatGLMPreTrainedModel):
         if self.pre_seq_len is not None and attention_mask is not None:
             prefix_attention_mask = ops.ones((batch_size, 1, input_ids.shape[-1], self.pre_seq_len))
             prefix_attention_mask = (prefix_attention_mask < 0.5).bool()
-            attention_mask = ops.cat((prefix_attention_mask, attention_mask), axis=3)
+            attention_mask = ops.cat((prefix_attention_mask, attention_mask), dim=3)
 
         # [seq_len, batch, hidden_size]
         hidden_states = inputs_embeds.swapaxes(0, 1)
@@ -1041,10 +1042,10 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
         self.max_sequence_length = config.max_sequence_length
         self.position_encoding_2d = config.position_encoding_2d
         self.transformer = MSChatGLMModel(config)
-        self.lm_head = nn.Dense(
+        self.lm_head = nn.Linear(
             config.hidden_size,
             config.vocab_size,
-            has_bias=False,
+            bias=False,
             dtype=mindspore.float16
         )
         self.quantized = False
@@ -1115,7 +1116,7 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
         """
         # update past_key_values
         model_kwargs["past_key_values"] = self._extract_past_from_model_output(
-            outputs, standardize_cache_format=standardize_cache_format
+            outputs
         )
 
         # update attention mask
@@ -1123,11 +1124,11 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
             attention_mask = model_kwargs["attention_mask"]
             if attention_mask is not None and attention_mask.dtype == mindspore.bool_:
                 attention_mask = ops.cat(
-                    [attention_mask, attention_mask.new_ones((*attention_mask.shape[:3], 1))], axis=3)
+                    [attention_mask, attention_mask.new_ones((*attention_mask.shape[:3], 1))], dim=3)
                 new_attention_mask = attention_mask[:, :, -1:].copy()
                 new_attention_mask[..., -1] = False
                 model_kwargs["attention_mask"] = ops.cat(
-                    [attention_mask, new_attention_mask], axis=2
+                    [attention_mask, new_attention_mask], dim=2
                 )
 
         # update position ids
@@ -1136,7 +1137,7 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
             new_position_id = position_ids[..., -1:].copy()
             new_position_id[:, 1, :] += 1
             model_kwargs["position_ids"] = ops.cat(
-                [position_ids, new_position_id], axis=-1
+                [position_ids, new_position_id], dim=-1
             )
 
         return model_kwargs
@@ -1238,7 +1239,7 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
                 "attention_mask": attention_mask
             }
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             position_ids: Optional[mindspore.Tensor] = None,
@@ -1465,14 +1466,14 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
             next_token_scores = logits_warper(input_ids, next_token_scores)
 
             # sample
-            probs = ops.softmax(next_token_scores, axis=-1)
+            probs = ops.softmax(next_token_scores, dim=-1)
             if generation_config.do_sample:
                 next_tokens = ops.multinomial(probs, num_samples=1).squeeze(1)
             else:
                 next_tokens = ops.argmax(probs, dim=-1)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            input_ids = ops.cat([input_ids, next_tokens[:, None]], dim=-1)
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
             )

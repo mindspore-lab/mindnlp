@@ -16,7 +16,7 @@ import re
 from itertools import chain
 from typing import Dict, Type, Union
 
-from mindspore import nn
+from mindnlp.core import nn
 
 from mindnlp.peft.tuners.lycoris_utils import LycorisConfig, LycorisTuner
 
@@ -79,18 +79,18 @@ class LoHaModel(LycorisTuner):
         - **peft_config** ([`LoHaConfig`]): The configuration of the LoHa model.
     """
     prefix: str = "hada_"
-    layers_mapping: Dict[Type[nn.Cell], Type[LoHaLayer]] = {
+    layers_mapping: Dict[Type[nn.Module], Type[LoHaLayer]] = {
         nn.Conv2d: Conv2d,
-        nn.Dense: Linear,
+        nn.Linear: Linear,
     }
 
     def _create_and_replace(
         self,
         config: LycorisConfig,
         adapter_name: str,
-        target: Union[LoHaLayer, nn.Cell],
+        target: Union[LoHaLayer, nn.Module],
         target_name: str,
-        parent: nn.Cell,
+        parent: nn.Module,
         current_key: str,
     ) -> None:
         """

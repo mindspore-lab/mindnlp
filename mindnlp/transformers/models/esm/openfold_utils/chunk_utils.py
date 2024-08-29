@@ -257,10 +257,10 @@ def chunk_layer(
     def _prep_inputs(t: mindspore.Tensor) -> mindspore.Tensor:
         if not low_mem:
             if not sum(t.shape[:no_batch_dims]) == no_batch_dims:
-                t = t.expand(orig_batch_dims + t.shape[no_batch_dims:])
+                t = t.broadcast_to(orig_batch_dims + t.shape[no_batch_dims:])
             t = t.reshape(-1, *t.shape[no_batch_dims:])
         else:
-            t = t.expand(orig_batch_dims + t.shape[no_batch_dims:])
+            t = t.broadcast_to(orig_batch_dims + t.shape[no_batch_dims:])
         return t
 
     prepped_inputs: Dict[str, Any] = tensor_tree_map(_prep_inputs, inputs)

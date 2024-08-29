@@ -17,8 +17,10 @@
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import nn, ops, Parameter
+from mindspore import Parameter
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...modeling_utils import PreTrainedModel
 from ....utils import logging
 from ..auto.configuration_auto import AutoConfig
@@ -34,7 +36,7 @@ _CONFIG_FOR_DOC = "VisionTextDualEncoderConfig"
 
 # Copied from transformers.models.clip.modeling_clip.contrastive_loss
 def contrastive_loss(logits: ms.Tensor) -> ms.Tensor:
-    return ops.cross_entropy(logits, ops.arange(len(logits)))
+    return F.cross_entropy(logits, ops.arange(len(logits)))
 
 
 # Copied from transformers.models.clip.modeling_clip.clip_loss
@@ -89,8 +91,8 @@ class VisionTextDualEncoderModel(PreTrainedModel):
         self.text_embed_dim = config.text_config.hidden_size
         self.projection_dim = config.projection_dim
 
-        self.visual_projection = nn.Dense(self.vision_embed_dim, self.projection_dim, has_bias=False)
-        self.text_projection = nn.Dense(self.text_embed_dim, self.projection_dim, has_bias=False)
+        self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, bias=False)
+        self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, bias=False)
         self.logit_scale = Parameter(ms.tensor(self.config.logit_scale_init_value))
 
     def get_text_features(
@@ -176,7 +178,7 @@ class VisionTextDualEncoderModel(PreTrainedModel):
 
         return image_features
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         pixel_values: Optional[ms.Tensor] = None,

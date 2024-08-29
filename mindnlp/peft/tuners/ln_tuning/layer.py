@@ -18,27 +18,27 @@ from copy import deepcopy
 from typing import List, Optional
 
 import mindspore
-from mindspore import nn
+from mindnlp.core import nn
 
 from mindnlp.peft.tuners.tuners_utils import BaseTunerLayer, check_adapters_to_merge
 
 
-class LNTuningLayer(nn.Cell, BaseTunerLayer):
+class LNTuningLayer(nn.Module, BaseTunerLayer):
     """
     Selects a layer from the model.
     """
 
     adapter_layer_names = ("ln_tuning_layers",)
 
-    def __init__(self, base_layer: nn.Cell, adapter_name: str):
+    def __init__(self, base_layer: nn.Module, adapter_name: str):
         super().__init__()
         self.base_layer = base_layer
-        self.ln_tuning_layers = nn.CellDict({})
+        self.ln_tuning_layers = nn.ModuleDict({})
         self.update_layer(self.base_layer, adapter_name)
         self._active_adapter = adapter_name
         self.merged_adapters = []
 
-    def update_layer(self, layer: nn.Cell, adapter_name: str):
+    def update_layer(self, layer: nn.Module, adapter_name: str):
         self.ln_tuning_layers[adapter_name] = deepcopy(layer)
 
     def enable_adapters(self, enabled: bool) -> None:
@@ -95,7 +95,7 @@ class LNTuningLayer(nn.Cell, BaseTunerLayer):
             self.base_layer,
         )
 
-    def construct(self, x: mindspore.Tensor, *args, **kwargs) -> mindspore.Tensor:
+    def forward(self, x: mindspore.Tensor, *args, **kwargs) -> mindspore.Tensor:
         if self.disable_adapters:
             if self.merged:
                 self.unmerge()

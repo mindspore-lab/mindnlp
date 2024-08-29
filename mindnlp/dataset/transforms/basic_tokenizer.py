@@ -23,7 +23,7 @@ from __future__ import print_function
 import unicodedata
 import platform
 import numpy as np
-import mindspore._c_dataengine as cde
+import mindspore._c_dataengine as cde # pylint: disable=no-name-in-module, import-error
 from mindspore.dataset.transforms.transforms import PyTensorOperation
 from mindspore.dataset.text.transforms import TextTensorOperation, Implementation
 

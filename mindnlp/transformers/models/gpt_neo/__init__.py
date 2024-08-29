@@ -16,11 +16,11 @@
 """
 GPT Neo Models init
 """
-from . import gpt_neo, gpt_neo_config
+from . import configuration_gpt_neo, modeling_gpt_neo
 
-from .gpt_neo_config import *
-from .gpt_neo import *
+from .configuration_gpt_neo import *
+from .modeling_gpt_neo import *
 
 __all__ = []
-__all__.extend(gpt_neo.__all__)
-__all__.extend(gpt_neo_config.__all__)
+__all__.extend(modeling_gpt_neo.__all__)
+__all__.extend(configuration_gpt_neo.__all__)

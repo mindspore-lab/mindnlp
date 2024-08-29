@@ -181,7 +181,7 @@ class GemmaTokenizer(PreTrainedTokenizer):
             self (GemmaTokenizer): The instance of the GemmaTokenizer class on which this method is called.
                 It represents the tokenizer object itself.
             d (dict): A dictionary containing the state information to be set on the tokenizer object.
-                This dictionary should include the necessary information for reconstructing the object's state.
+                This dictionary should include the necessary information for reforwarding the object's state.
 
         Returns:
             None: This method does not return any value explicitly.

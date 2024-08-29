@@ -35,7 +35,6 @@ if is_mindspore_available():
 if is_vision_available():
     from PIL import Image
 
-
 class BitModelTester:
     def __init__(
         self,
@@ -191,7 +190,7 @@ class BitModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="Bit does not support input and output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_model(self):

@@ -14,7 +14,7 @@
 """model for adaption prompt tuners."""
 from typing import Dict, List
 
-from mindspore import nn
+from mindnlp.core import nn
 
 from mindnlp.peft.utils import _freeze_adapter, _get_subcells
 
@@ -23,7 +23,7 @@ from .layer import AdaptedAttention
 from .utils import is_adaption_prompt_trainable
 
 
-class AdaptionPromptModel(nn.Cell):
+class AdaptionPromptModel(nn.Module):
     """
     Implements adaption prompts as described in https://arxiv.org/pdf/2303.16199.pdf.
 
@@ -68,7 +68,7 @@ class AdaptionPromptModel(nn.Cell):
         self._cached_adapters = {}
         self._active_adapter = None
         self._enabled = True
-        self.forward = self.model.construct
+        self.forward = self.model.forward
         self.add_adapter(adapter_name, configs[adapter_name])
         self._mark_only_adaption_prompts_as_trainable(self.model)
 
@@ -81,7 +81,7 @@ class AdaptionPromptModel(nn.Cell):
         parents = []
         # 获取模型的所有子模块及其名称
         for name, subcell in self.model.name_cells().items():
-            if name.endswith(config.target_cells):
+            if name.endswith(config.target_modules):
                 # 对每个符合条件的子模块调用 _get_subcells 函数
                 parent, target, target_name = _get_subcells(self.model, name)
                 if target == subcell:
@@ -127,15 +127,15 @@ class AdaptionPromptModel(nn.Cell):
         self._enabled = False
         self._remove_adapted_attentions(self._active_adapter)
 
-    def _create_adapted_attentions(self, config: AdaptionPromptConfig, parents: List[nn.Cell]) -> None:
+    def _create_adapted_attentions(self, config: AdaptionPromptConfig, parents: List[nn.Module]) -> None:
         """Wrap LlamaAttention cells with newly created AdaptedAttention cells."""
         for par in parents:
             attn = AdaptedAttention(
                 model_type=self.model.config.model_type,
                 adapter_len=config.adapter_len,
-                model=getattr(par, config.target_cells),
+                model=getattr(par, config.target_modules),
             )
-            setattr(par, config.target_cells, attn)
+            setattr(par, config.target_modules, attn)
 
     def _set_adapted_attentions(self, adapter_name: str) -> None:
         """Replace LlamaAttention cells with cached AdaptedAttention cells."""
@@ -143,24 +143,24 @@ class AdaptionPromptModel(nn.Cell):
         del self._cached_adapters[adapter_name]
         config = self.peft_config[adapter_name]
         for i, par in enumerate(self._parents[adapter_name]):
-            setattr(par, config.target_cells, cached[i])
+            setattr(par, config.target_modules, cached[i])
 
     def _remove_adapted_attentions(self, adapter_name: str) -> None:
         """Remove AdaptedAttention cells from the model and store them in the cache."""
         config = self.peft_config[adapter_name]
         adapted_attentions = []
         for par in self._parents[adapter_name]:
-            attn = getattr(par, config.target_cells)
+            attn = getattr(par, config.target_modules)
             adapted_attentions.append(attn)
-            setattr(par, config.target_cells, attn.model)
+            setattr(par, config.target_modules, attn.model)
         self._cached_adapters[adapter_name] = adapted_attentions
 
-    def _mark_only_adaption_prompts_as_trainable(self, model: nn.Cell) -> None:
+    def _mark_only_adaption_prompts_as_trainable(self, model: nn.Module) -> None:
         r"""Marks only adaption prompts as trainable in the given model.
         
         Args:
             self (AdaptionPromptModel): The instance of AdaptionPromptModel class.
-            model (nn.Cell): The model for which adaption prompts need to be marked as trainable.
+            model (nn.Module): The model for which adaption prompts need to be marked as trainable.
         
         Returns:
             None. This method does not return any value.

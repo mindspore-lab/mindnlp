@@ -173,7 +173,7 @@ class CLIPProcessor(ProcessorMixin):
 
         Raises:
             FutureWarning: If the method is called, a FutureWarning will be raised to inform the user that
-                `feature_extractor_class` is deprecated and will be removed in v5. It is recommended to use
+                `feature_extractor_class` is deprecated. It is recommended to use
                 `image_processor_class` instead.
 
         Note:
@@ -187,7 +187,7 @@ class CLIPProcessor(ProcessorMixin):
             ```
         """
         warnings.warn(
-            "`feature_extractor_class` is deprecated and will be removed in v5. Use `image_processor_class` instead.",
+            "`feature_extractor_class` is deprecated. Use `image_processor_class` instead.",
             FutureWarning,
         )
         return self.image_processor_class
@@ -195,7 +195,7 @@ class CLIPProcessor(ProcessorMixin):
     @property
     def feature_extractor(self):
         """
-        This method is deprecated and will be removed in v5. Use `image_processor` instead.
+        This method is deprecated. Use `image_processor` instead.
         
         Args:
             self: An instance of the CLIPProcessor class.
@@ -204,10 +204,10 @@ class CLIPProcessor(ProcessorMixin):
             None.
         
         Raises:
-            FutureWarning: This method raises a FutureWarning to alert users that it is deprecated and will be removed in v5.
+            FutureWarning: This method raises a FutureWarning to alert users that it is deprecated.
         """
         warnings.warn(
-            "`feature_extractor` is deprecated and will be removed in v5. Use `image_processor` instead.",
+            "`feature_extractor` is deprecated. Use `image_processor` instead.",
             FutureWarning,
         )
         return self.image_processor

@@ -1,35 +1,24 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2022 The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-""" TimeSformer model configuration"""
+"""TimeSformer model configuration"""
 
-from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
+from ....utils import logging
 
 
 logger = logging.get_logger(__name__)
-
-
-__all__ = [
-    'TimesformerConfig',
-    "TIMESFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP"
-]
-
-
-TIMESFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "facebook/timesformer": "https://hf-mirror.com/facebook/timesformer/resolve/main/config.json",
-}
 
 
 class TimesformerConfig(PretrainedConfig):
@@ -37,7 +26,7 @@ class TimesformerConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`TimesformerModel`]. It is used to instantiate a
     TimeSformer model according to the specified arguments, defining the model architecture. Instantiating a
     configuration with the defaults will yield a similar configuration to that of the TimeSformer
-    [facebook/timesformer-base-finetuned-k600](https://hf-mirror.com/facebook/timesformer-base-finetuned-k600)
+    [facebook/timesformer-base-finetuned-k600](https://huggingface.co/facebook/timesformer-base-finetuned-k600)
     architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
@@ -79,19 +68,20 @@ class TimesformerConfig(PretrainedConfig):
             The dropout ratio for stochastic depth.
 
     Example:
-        ```python
-        >>> from transformers import TimesformerConfig, TimesformerModel
-        ...
-        >>> # Initializing a TimeSformer timesformer-base style configuration
-        >>> configuration = TimesformerConfig()
-        ...
-        >>> # Initializing a model from the configuration
-        >>> model = TimesformerModel(configuration)
-        ...
-        >>> # Accessing the model configuration
-        >>> configuration = model.config
-        ```
-    """
+
+    ```python
+    >>> from transformers import TimesformerConfig, TimesformerModel
+
+    >>> # Initializing a TimeSformer timesformer-base style configuration
+    >>> configuration = TimesformerConfig()
+
+    >>> # Initializing a model from the configuration
+    >>> model = TimesformerModel(configuration)
+
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
+    ```"""
+
     model_type = "timesformer"
 
     def __init__(
@@ -114,34 +104,6 @@ class TimesformerConfig(PretrainedConfig):
         drop_path_rate=0,
         **kwargs,
     ):
-        """
-        Initializes an instance of the TimesformerConfig class.
-        
-        Args:
-            self (object): The TimesformerConfig object itself.
-            image_size (int, optional): The size of the input image. Defaults to 224.
-            patch_size (int, optional): The size of each patch in the input image. Defaults to 16.
-            num_channels (int, optional): The number of channels in the input image. Defaults to 3.
-            num_frames (int, optional): The number of frames in a video sequence. Defaults to 8.
-            hidden_size (int, optional): The size of the hidden state in the transformer layers. Defaults to 768.
-            num_hidden_layers (int, optional): The number of hidden layers in the transformer. Defaults to 12.
-            num_attention_heads (int, optional): The number of attention heads in the transformer. Defaults to 12.
-            intermediate_size (int, optional): The size of the intermediate layer in the transformer. Defaults to 3072.
-            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
-            hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Defaults to 0.0.
-            attention_probs_dropout_prob (float, optional): The dropout probability for the attention layer. Defaults to 0.0.
-            initializer_range (float, optional): The range for the initializer. Defaults to 0.02.
-            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-06.
-            qkv_bias (bool, optional): Whether to include bias terms in the qkv layers. Defaults to True.
-            attention_type (str, optional): The type of attention used in the transformer. Defaults to 'divided_space_time'.
-            drop_path_rate (float, optional): The drop path rate for stochastic depth. Defaults to 0.
-            
-        Returns:
-            None.
-        
-        Raises:
-            None.
-        """
         super().__init__(**kwargs)
 
         self.image_size = image_size
@@ -162,3 +124,5 @@ class TimesformerConfig(PretrainedConfig):
 
         self.attention_type = attention_type
         self.drop_path_rate = drop_path_rate
+
+__all__ = ['TimesformerConfig']

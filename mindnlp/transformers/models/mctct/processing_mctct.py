@@ -130,7 +130,7 @@ class MCTCTProcessor(ProcessorMixin):
         Temporarily sets the tokenizer for processing the input. Useful for encoding the labels when fine-tuning MCTCT.
         """
         warnings.warn(
-            "`as_target_processor` is deprecated and will be removed in v5 of Transformers. You can process your "
+            "`as_target_processor` is deprecated. You can process your "
             "labels by using the argument `text` of the regular `__call__` method (either in the same call as "
             "your audio inputs, or in a separate call."
         )

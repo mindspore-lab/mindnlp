@@ -116,7 +116,7 @@ class DonutProcessor(ProcessorMixin):
         Temporarily sets the tokenizer for processing the input. Useful for encoding the labels when fine-tuning TrOCR.
         """
         warnings.warn(
-            "`as_target_processor` is deprecated and will be removed in v5 of Transformers. You can process your "
+            "`as_target_processor` is deprecated. You can process your "
             "labels by using the argument `text` of the regular `__call__` method (either in the same call as "
             "your images inputs, or in a separate call."
         )
@@ -183,7 +183,7 @@ class DonutProcessor(ProcessorMixin):
     @property
     def feature_extractor_class(self):
         warnings.warn(
-            "`feature_extractor_class` is deprecated and will be removed in v5. Use `image_processor_class` instead.",
+            "`feature_extractor_class` is deprecated. Use `image_processor_class` instead.",
             FutureWarning,
         )
         return self.image_processor_class
@@ -191,7 +191,7 @@ class DonutProcessor(ProcessorMixin):
     @property
     def feature_extractor(self):
         warnings.warn(
-            "`feature_extractor` is deprecated and will be removed in v5. Use `image_processor` instead.",
+            "`feature_extractor` is deprecated. Use `image_processor` instead.",
             FutureWarning,
         )
         return self.image_processor

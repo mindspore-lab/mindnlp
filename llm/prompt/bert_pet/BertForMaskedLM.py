@@ -3,7 +3,7 @@ from mindspore import nn, ops
 from mindspore.common.initializer import initializer, HeUniform, Uniform, _calculate_fan_in_and_fan_out
 from mindnlp.models import BertModel, BertLMPredictionHead
 
-class BertOnlyMLMHead(nn.Cell):
+class BertOnlyMLMHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.predictions = BertLMPredictionHead(config)
@@ -13,7 +13,7 @@ class BertOnlyMLMHead(nn.Cell):
         return prediction_scores
 
 
-class BertForMaskedLM(nn.Cell):
+class BertForMaskedLM(nn.Module):
     def __init__(self, config, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         self.config = config

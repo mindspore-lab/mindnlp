@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch Donut Swin model."""
+"""Testing suite for the MindSpore Donut Swin model."""
 
 import collections
 import unittest
@@ -27,7 +27,7 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_
 
 if is_mindspore_available():
     import mindspore as ms
-    from mindspore import nn, ops
+    from mindnlp.core import nn, ops
 
     from mindnlp.transformers import DonutSwinModel
 
@@ -171,12 +171,12 @@ class DonutSwinModelTest(ModelTesterMixin, unittest.TestCase):
     def test_inputs_embeds(self):
         pass
 
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
             self.assertTrue(x is None or isinstance(x, nn.Dense))
 

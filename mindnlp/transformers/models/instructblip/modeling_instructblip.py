@@ -19,8 +19,8 @@ from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
-from mindspore.common.initializer import initializer, Normal, TruncatedNormal
+from mindnlp.core import nn, ops, no_grad
+from mindnlp.core.nn import CrossEntropyLoss
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -79,7 +79,7 @@ class InstructBlipForConditionalGenerationModelOutput(ModelOutput):
 
 
 # Copied from transformers.models.blip.modeling_blip.BlipVisionEmbeddings with Blip->InstructBlip
-class InstructBlipVisionEmbeddings(nn.Cell):
+class InstructBlipVisionEmbeddings(nn.Module):
     def __init__(self, config: InstructBlipVisionConfig):
         super().__init__()
         self.config = config
@@ -87,17 +87,16 @@ class InstructBlipVisionEmbeddings(nn.Cell):
         self.image_size = config.image_size
         self.patch_size = config.patch_size
 
-        self.class_embedding = Parameter(ops.randn(1, 1, self.embed_dim))
+        self.class_embedding = nn.Parameter(ops.randn(1, 1, self.embed_dim))
 
         self.patch_embedding = nn.Conv2d(
-            in_channels=3, out_channels=self.embed_dim, kernel_size=self.patch_size, stride=self.patch_size,
-            has_bias=True, pad_mode='valid'
+            in_channels=3, out_channels=self.embed_dim, kernel_size=self.patch_size, stride=self.patch_size
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
         self.num_positions = self.num_patches + 1
 
-        self.position_embedding = mindspore.Parameter(ops.randn(1, self.num_positions, self.embed_dim))
+        self.position_embedding = nn.Parameter(ops.randn(1, self.num_positions, self.embed_dim))
 
     def interpolate_pos_encoding(self, embeddings: mindspore.Tensor, height: int, width: int) -> mindspore.Tensor:
         """
@@ -123,22 +122,22 @@ class InstructBlipVisionEmbeddings(nn.Cell):
         h0, w0 = h0 + 0.1, w0 + 0.1
         patch_pos_embed = patch_pos_embed.reshape(1, int(math.sqrt(num_positions)), int(math.sqrt(num_positions)), dim)
         patch_pos_embed = patch_pos_embed.permute(0, 3, 1, 2)
-        patch_pos_embed = ops.interpolate(
+        patch_pos_embed = nn.functional.interpolate(
             patch_pos_embed,
             scale_factor=(h0 / math.sqrt(num_positions), w0 / math.sqrt(num_positions)),
             mode="bicubic",
             align_corners=False,
         )
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
-        return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), axis=1)
+        return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), dim=1)
 
-    def construct(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
         batch_size, _, height, width = pixel_values.shape
         target_dtype = self.patch_embedding.weight.dtype
         patch_embeds = self.patch_embedding(pixel_values.to(dtype=target_dtype))  # shape = [*, width, grid, grid]
-        patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
-        class_embeds = self.class_embedding.expand(batch_size, 1, -1).to(target_dtype)
-        embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
+        patch_embeds = ops.transpose(ops.flatten(patch_embeds, 2), 1, 2)
+        class_embeds = self.class_embedding.broadcast_to((batch_size, 1, -1)).to(target_dtype)
+        embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
         if interpolate_pos_encoding:
             position_embedding = self.interpolate_pos_encoding(embeddings, height, width)
         else:
@@ -148,7 +147,7 @@ class InstructBlipVisionEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.blip_2.modeling_blip_2.Blip2Attention with Blip2->InstructBlip
-class InstructBlipAttention(nn.Cell):
+class InstructBlipAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config):
@@ -166,25 +165,25 @@ class InstructBlipAttention(nn.Cell):
         self.dropout = nn.Dropout(config.attention_dropout)
 
         # small tweak here compared to CLIP, no bias here
-        self.qkv = nn.Dense(self.embed_dim, 3 * self.embed_dim, has_bias=False)
+        self.qkv = nn.Linear(self.embed_dim, 3 * self.embed_dim, bias=False)
 
         if config.qkv_bias:
-            q_bias = mindspore.Parameter(ops.zeros(self.embed_dim))
-            v_bias = mindspore.Parameter(ops.zeros(self.embed_dim))
+            q_bias = nn.Parameter(ops.zeros(self.embed_dim))
+            v_bias = nn.Parameter(ops.zeros(self.embed_dim))
         else:
             q_bias = None
             v_bias = None
 
         if q_bias is not None:
             qkv_bias = ops.cat((q_bias, ops.zeros_like(v_bias), v_bias))
-            self.qkv.bias = Parameter(qkv_bias)
+            self.qkv.bias = nn.Parameter(qkv_bias)
 
-        self.projection = nn.Dense(self.embed_dim, self.embed_dim)
+        self.projection = nn.Linear(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+        return ops.transpose(tensor.view(bsz, seq_len, self.num_heads, self.head_dim), 1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -202,12 +201,12 @@ class InstructBlipAttention(nn.Cell):
         query_states, key_states, value_states = mixed_qkv[0], mixed_qkv[1], mixed_qkv[2]
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = ops.matmul(query_states, key_states.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_states, ops.transpose(key_states, -1, -2))
 
         attention_scores = attention_scores * self.scale
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -230,15 +229,15 @@ class InstructBlipAttention(nn.Cell):
 
 
 # Copied from transformers.models.blip.modeling_blip.BlipMLP
-class InstructBlipMLP(nn.Cell):
+class InstructBlipMLP(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
-        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size)
-        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.fc1 = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.fc2 = nn.Linear(config.intermediate_size, config.hidden_size)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
         hidden_states = self.fc2(hidden_states)
@@ -246,16 +245,16 @@ class InstructBlipMLP(nn.Cell):
 
 
 # Copied from transformers.models.blip.modeling_blip.BlipEncoderLayer with Blip->InstructBlip
-class InstructBlipEncoderLayer(nn.Cell):
+class InstructBlipEncoderLayer(nn.Module):
     def __init__(self, config: InstructBlipConfig):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = InstructBlipAttention(config)
-        self.layer_norm1 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = InstructBlipMLP(config)
-        self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -312,30 +311,29 @@ class InstructBlipPreTrainedModel(PreTrainedModel):
     _keep_in_fp32_modules = []
 
     # Copied from transformers.models.blip_2.modeling_blip_2.Blip2PreTrainedModel._init_weights with Blip2->InstructBlip
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
         factor = self.config.initializer_range
-        if isinstance(cell, (nn.Conv2d, nn.Dense, nn.Embedding)):
-            cell.weight.set_data(initializer(Normal(factor), cell.weight.shape, cell.weight.dtype))
-            if hasattr(cell, "bias") and cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        if isinstance(module, (nn.Conv2d, nn.Embedding, nn.Linear)):
+            nn.init.normal_(module.weight, mean=0.0, std=factor)
+            if hasattr(module, "bias") and module.bias is not None:
+                nn.init.zeros_(module.bias)
 
-        if isinstance(cell, InstructBlipVisionEmbeddings):
-            if hasattr(self.config, "vision_config"):
+        if isinstance(module, InstructBlipVisionEmbeddings):
+            if hasattr(self.config, "vision_config") and not isinstance(self.config, InstructBlipVisionConfig):
                 factor = self.config.vision_config.initializer_range
+            nn.init.trunc_normal_(module.position_embedding, mean=0.0, std=factor)
+            nn.init.trunc_normal_(module.class_embedding, mean=0.0, std=factor)
 
-            cell.position_embedding.set_data(initializer(TruncatedNormal(factor), cell.position_embedding.shape, cell.position_embedding.dtype))
-            cell.class_embedding.set_data(initializer(TruncatedNormal(factor), cell.class_embedding.shape, cell.class_embedding.dtype))
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
+        elif isinstance(module, nn.Linear) and module.bias is not None:
+            nn.init.zeros_(module.bias)
 
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-
-        elif isinstance(cell, nn.Dense) and cell.bias is not None:
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 # Copied from transformers.models.blip.modeling_blip.BlipEncoder with Blip->InstructBlip
-class InstructBlipEncoder(nn.Cell):
+class InstructBlipEncoder(nn.Module):
     """
     Transformer encoder consisting of `config.num_hidden_layers` self attention layers. Each layer is a
     [`InstructBlipEncoderLayer`].
@@ -348,10 +346,10 @@ class InstructBlipEncoder(nn.Cell):
     def __init__(self, config: InstructBlipConfig):
         super().__init__()
         self.config = config
-        self.layers = nn.CellList([InstructBlipEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([InstructBlipEncoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         inputs_embeds,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -433,10 +431,11 @@ class InstructBlipVisionModel(InstructBlipPreTrainedModel):
 
         self.embeddings = InstructBlipVisionEmbeddings(config)
         self.encoder = InstructBlipEncoder(config)
-        self.post_layernorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.post_layernorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
 
         self.post_init()
-    def construct(
+
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -486,7 +485,7 @@ class InstructBlipVisionModel(InstructBlipPreTrainedModel):
         return self.embeddings
 
 
-class InstructBlipQFormerMultiHeadAttention(nn.Cell):
+class InstructBlipQFormerMultiHeadAttention(nn.Module):
     def __init__(self, config, is_cross_attention=False):
         super().__init__()
         self.config = config
@@ -500,17 +499,17 @@ class InstructBlipQFormerMultiHeadAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
         if is_cross_attention:
-            self.key = nn.Dense(config.encoder_hidden_size, self.all_head_size)
-            self.value = nn.Dense(config.encoder_hidden_size, self.all_head_size)
+            self.key = nn.Linear(config.encoder_hidden_size, self.all_head_size)
+            self.value = nn.Linear(config.encoder_hidden_size, self.all_head_size)
         else:
-            self.key = nn.Dense(config.hidden_size, self.all_head_size)
-            self.value = nn.Dense(config.hidden_size, self.all_head_size)
+            self.key = nn.Linear(config.hidden_size, self.all_head_size)
+            self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        if self.position_embedding_type in ("relative_key", "relative_key_query"):
+        if self.position_embedding_type in ('relative_key', 'relative_key_query'):
             self.max_position_embeddings = config.max_position_embeddings
             self.distance_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
         self.save_attention = False
@@ -532,7 +531,7 @@ class InstructBlipQFormerMultiHeadAttention(nn.Cell):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -554,8 +553,8 @@ class InstructBlipQFormerMultiHeadAttention(nn.Cell):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -567,9 +566,9 @@ class InstructBlipQFormerMultiHeadAttention(nn.Cell):
         past_key_value = (key_layer, value_layer)
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_layer, ops.transpose(key_layer, -1, -2))
 
-        if self.position_embedding_type in ("relative_key", "relative_key_query"):
+        if self.position_embedding_type in ('relative_key', 'relative_key_query'):
             seq_length = hidden_states.shape[1]
             position_ids_l = ops.arange(seq_length, dtype=mindspore.int64).view(-1, 1)
             position_ids_r = ops.arange(seq_length, dtype=mindspore.int64).view(1, -1)
@@ -593,7 +592,7 @@ class InstructBlipQFormerMultiHeadAttention(nn.Cell):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = nn.Softmax(dim=-1)(attention_scores).to(attention_scores_dtype)
 
         if is_cross_attention and self.save_attention:
             self.save_attention_map(attention_probs)
@@ -620,14 +619,14 @@ class InstructBlipQFormerMultiHeadAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfOutput with Bert->InstructBlipQFormer
-class InstructBlipQFormerSelfOutput(nn.Cell):
+class InstructBlipQFormerSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
@@ -635,7 +634,7 @@ class InstructBlipQFormerSelfOutput(nn.Cell):
 
 
 # Copied from transformers.models.blip_2.modeling_blip_2.Blip2QFormerAttention with Blip2->InstructBlip
-class InstructBlipQFormerAttention(nn.Cell):
+class InstructBlipQFormerAttention(nn.Module):
     def __init__(self, config, is_cross_attention=False):
         super().__init__()
         self.attention = InstructBlipQFormerMultiHeadAttention(config, is_cross_attention)
@@ -660,7 +659,7 @@ class InstructBlipQFormerAttention(nn.Cell):
         self.attention.all_head_size = self.attention.attention_head_size * self.attention.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -685,37 +684,37 @@ class InstructBlipQFormerAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate with Bert->InstructBlipQFormer
-class InstructBlipQFormerIntermediate(nn.Cell):
+class InstructBlipQFormerIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->InstructBlipQFormer
-class InstructBlipQFormerOutput(nn.Cell):
+class InstructBlipQFormerOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class InstructBlipQFormerLayer(nn.Cell):
+class InstructBlipQFormerLayer(nn.Module):
     def __init__(self, config, layer_idx):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -736,7 +735,7 @@ class InstructBlipQFormerLayer(nn.Cell):
         self.intermediate_query = InstructBlipQFormerIntermediate(config)
         self.output_query = InstructBlipQFormerOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -793,7 +792,7 @@ class InstructBlipQFormerLayer(nn.Cell):
                     self.seq_len_dim,
                     attention_output[:, query_length:, :],
                 )
-                layer_output = ops.cat([layer_output, layer_output_text], axis=1)
+                layer_output = ops.cat([layer_output, layer_output_text], dim=1)
         else:
             layer_output = apply_chunking_to_forward(
                 self.feed_forward_chunk,
@@ -819,16 +818,16 @@ class InstructBlipQFormerLayer(nn.Cell):
 
 
 # Copied from transformers.models.blip_2.modeling_blip_2.Blip2QFormerEncoder with Blip2->InstructBlip
-class InstructBlipQFormerEncoder(nn.Cell):
+class InstructBlipQFormerEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList(
+        self.layer = nn.ModuleList(
             [InstructBlipQFormerLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -914,7 +913,7 @@ class InstructBlipQFormerEncoder(nn.Cell):
         )
 
 
-class InstructBlipQFormerEmbeddings(nn.Cell):
+class InstructBlipQFormerEmbeddings(nn.Module):
     """Construct the embeddings from word and position embeddings."""
 
     def __init__(self, config):
@@ -922,14 +921,18 @@ class InstructBlipQFormerEmbeddings(nn.Cell):
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
 
-        self.layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.position_ids=ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
+
+        # position_ids (1, len position emb) is contiguous in memory and exported when serialized
+        self.register_buffer(
+            "position_ids", ops.arange(config.max_position_embeddings).broadcast_to((1, -1)), persistent=False
+        )
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
 
         self.config = config
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         position_ids=None,
@@ -951,7 +954,7 @@ class InstructBlipQFormerEmbeddings(nn.Cell):
                 embeddings = embeddings + position_embeddings
 
             if query_embeds is not None:
-                embeddings = ops.cat((query_embeds, embeddings), axis=1)
+                embeddings = ops.cat((query_embeds, embeddings), dim=1)
         else:
             embeddings = query_embeds
 
@@ -1031,7 +1034,7 @@ class InstructBlipQFormerModel(InstructBlipPreTrainedModel):
         extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
         return extended_attention_mask
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1152,6 +1155,7 @@ class InstructBlipQFormerModel(InstructBlipPreTrainedModel):
             cross_attentions=encoder_outputs.cross_attentions,
         )
 
+
 class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
     config_class = InstructBlipConfig
     main_input_name = "pixel_values"
@@ -1161,15 +1165,19 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
 
         self.vision_model = InstructBlipVisionModel(config.vision_config)
 
-        self.query_tokens = mindspore.Parameter(ops.zeros(1, config.num_query_tokens, config.qformer_config.hidden_size))
+        self.query_tokens = nn.Parameter(ops.zeros(1, config.num_query_tokens, config.qformer_config.hidden_size))
         self.qformer = InstructBlipQFormerModel(config.qformer_config)
 
-        self.language_projection = nn.Dense(config.qformer_config.hidden_size, config.text_config.hidden_size)
+        self.language_projection = nn.Linear(config.qformer_config.hidden_size, config.text_config.hidden_size)
 
         if config.use_decoder_only_language_model:
-            language_model = AutoModelForCausalLM.from_config(config.text_config)
+            language_model = AutoModelForCausalLM.from_config(
+                config.text_config, attn_implementation=config._attn_implementation
+            )
         else:
-            language_model = AutoModelForSeq2SeqLM.from_config(config.text_config)
+            language_model = AutoModelForSeq2SeqLM.from_config(
+                config.text_config, attn_implementation=config._attn_implementation
+            )
 
         if language_model._no_split_modules is not None:
             self._no_split_modules.extend(language_model._no_split_modules)
@@ -1191,7 +1199,7 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.language_model.set_output_embeddings(new_embeddings)
 
-    def get_output_embeddings(self) -> nn.Cell:
+    def get_output_embeddings(self) -> nn.Module:
         return self.language_model.get_output_embeddings()
 
     def get_encoder(self):
@@ -1205,7 +1213,7 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
             self.language_model.encoder.embed_tokens = self.language_model.shared
             self.language_model.decoder.embed_tokens = self.language_model.shared
 
-    def construct(
+    def forward(
         self,
         pixel_values: mindspore.Tensor,
         qformer_input_ids: mindspore.Tensor,
@@ -1220,6 +1228,44 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         return_dict: Optional[bool] = None,
         interpolate_pos_encoding: bool = False,
     ) -> Union[Tuple, InstructBlipForConditionalGenerationModelOutput]:
+        r"""
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the language modeling loss. Indices should be in `[-100, 0, ..., config.vocab_size -
+            1]`. All labels set to `-100` are ignored (masked), the loss is only computed for labels in `[0, ...,
+            config.vocab_size]`
+
+        Returns:
+
+        Examples:
+
+        ```python
+        >>> from transformers import InstructBlipProcessor, InstructBlipForConditionalGeneration
+        >>> import torch
+        >>> from PIL import Image
+        >>> import requests
+
+        >>> model = InstructBlipForConditionalGeneration.from_pretrained("Salesforce/instructblip-vicuna-7b")
+        >>> processor = InstructBlipProcessor.from_pretrained("Salesforce/instructblip-vicuna-7b")
+
+        >>> url = "https://raw.githubusercontent.com/salesforce/LAVIS/main/docs/_static/Confusing-Pictures.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw).convert("RGB")
+        >>> prompt = "What is unusual about this image?"
+        >>> inputs = processor(images=image, text=prompt, return_tensors="pt")
+
+        >>> outputs = model.generate(
+        ...     **inputs,
+        ...     do_sample=False,
+        ...     num_beams=5,
+        ...     max_length=256,
+        ...     min_length=1,
+        ...     top_p=0.9,
+        ...     repetition_penalty=1.5,
+        ...     length_penalty=1.0,
+        ...     temperature=1,
+        ... )
+        >>> generated_text = processor.batch_decode(outputs, skip_special_tokens=True)[0].strip()
+        >>> print(generated_text)
+        ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # step 1: forward the images through the vision encoder,
@@ -1237,11 +1283,11 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         image_attention_mask = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
 
         # difference with BLIP-2 here: we also feed the instruction prompt to the Q-Former
-        query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
+        query_tokens = self.query_tokens.broadcast_to((image_embeds.shape[0], -1, -1))
         query_attention_mask = ops.ones(query_tokens.shape[:-1], dtype=mindspore.int64)
         if qformer_attention_mask is None:
             qformer_attention_mask = ops.ones_like(qformer_input_ids)
-        qformer_attention_mask = ops.cat([query_attention_mask, qformer_attention_mask], axis=1)
+        qformer_attention_mask = ops.cat([query_attention_mask, qformer_attention_mask], dim=1)
         query_outputs = self.qformer(
             input_ids=qformer_input_ids,
             attention_mask=qformer_attention_mask,
@@ -1261,11 +1307,24 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         )
 
         inputs_embeds = self.language_model.get_input_embeddings()(input_ids)
-        inputs_embeds = ops.cat([language_model_inputs, inputs_embeds], axis=1)
-
         if attention_mask is None:
             attention_mask = ops.ones_like(input_ids)
-        attention_mask = ops.cat([language_model_attention_mask.astype(mindspore.bool_), attention_mask.astype(mindspore.bool_)], axis=1)
+
+        # if the model already has "image_token_index" then the input is expanded to account for image embeds
+        # otherwise we expand manually by concatenating
+        if getattr(self.config, "image_token_index", None) is not None:
+            special_image_mask = (input_ids == self.config.image_token_index).unsqueeze(-1).expand_as(inputs_embeds)
+            inputs_embeds[special_image_mask] = language_model_inputs.flatten()
+        else:
+            logger.warning_once(
+                "Expanding inputs for image tokens in InstructBLIP should be done in processing. "
+                "Please follow instruction here (https://gist.github.com/zucchini-nlp/e9f20b054fa322f84ac9311d9ab67042) to update your InstructBLIP model. "
+                "Using processors without these attributes in the config is deprecated and will throw an error in v4.47."
+            )
+            inputs_embeds = ops.cat([language_model_inputs, inputs_embeds], dim=1)
+            attention_mask = ops.cat(
+                [language_model_attention_mask.to(attention_mask.dtype), attention_mask], dim=1
+            )
 
         if self.config.use_decoder_only_language_model:
             outputs = self.language_model(
@@ -1284,7 +1343,10 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
                 shift_logits = logits[..., :-1, :]
                 shift_labels = labels[..., 1:]
 
-                loss = ops.cross_entropy(shift_logits.view(-1, self.config.text_config.vocab_size), shift_labels.view(-1))
+                # Flatten the tokens
+                loss_fct = CrossEntropyLoss(reduction="mean")
+
+                loss = loss_fct(shift_logits.view(-1, self.config.text_config.vocab_size), shift_labels.view(-1))
         else:
             outputs = self.language_model(
                 inputs_embeds=inputs_embeds,
@@ -1311,6 +1373,7 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
             language_model_outputs=outputs,
         )
 
+    @no_grad()
     def generate(
         self,
         pixel_values: mindspore.Tensor,
@@ -1341,9 +1404,6 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         Returns:
             captions (list): A list of strings of length batch_size * num_captions.
         """
-        if hasattr(self, "hf_device_map"):
-            # preprocess for `accelerate`
-            self._preprocess_accelerate()
 
         batch_size = pixel_values.shape[0]
         image_embeds = self.vision_model(
@@ -1354,13 +1414,11 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
 
         image_attention_mask = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
 
-        query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
+        query_tokens = self.query_tokens.broadcast_to((image_embeds.shape[0], -1, -1))
         query_attention_mask = ops.ones(query_tokens.shape[:-1], dtype=mindspore.int64)
         if qformer_attention_mask is None:
             qformer_attention_mask = ops.ones_like(qformer_input_ids)
-        qformer_attention_mask = ops.cat([query_attention_mask.astype(mindspore.bool_), qformer_attention_mask.astype(mindspore.bool_)], axis=1)
-
-
+        qformer_attention_mask = ops.cat([query_attention_mask, qformer_attention_mask], dim=1)
         query_outputs = self.qformer(
             input_ids=qformer_input_ids,
             attention_mask=qformer_attention_mask,
@@ -1379,21 +1437,36 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         if input_ids is None:
             input_ids = (
                 mindspore.Tensor([[self.config.text_config.bos_token_id]])
-                .repeat(batch_size, 1)
+                .tile((batch_size, 1))
             )
         if attention_mask is None:
             attention_mask = ops.ones_like(input_ids)
-        attention_mask = ops.cat([language_attention_mask, attention_mask], axis=1)
 
-        # concatenate query embeddings with prompt embeddings
         inputs_embeds = self.get_input_embeddings()(input_ids)
-        inputs_embeds = ops.cat([language_model_inputs, inputs_embeds], axis=1)
 
-        # add image_embeds length to max_length, so that the final max_length in counted only on token embeds
-        # -1 is to account for the prepended BOS after `generate.`
-        if not self.language_model.config.is_encoder_decoder:
-            generate_kwargs["max_length"] = generate_kwargs.get("max_length", 20) + language_model_inputs.shape[1] - 1
-            generate_kwargs["min_length"] = generate_kwargs.get("min_length", 0) + language_model_inputs.shape[1]
+        # if the model already has "image_token_index" then the input is expanded to account for image embeds
+        # otherwise we expand manually by concatenating
+        if getattr(self.config, "image_token_index", None) is not None:
+            special_image_mask = (input_ids == self.config.image_token_index).unsqueeze(-1).expand_as(inputs_embeds)
+            inputs_embeds[special_image_mask] = language_model_inputs.flatten()
+        else:
+            logger.warning_once(
+                "Expanding inputs for image tokens in InstructBLIP should be done in processing. "
+                "Please follow instruction here (https://gist.github.com/zucchini-nlp/e9f20b054fa322f84ac9311d9ab67042) to update your InstructBLIP model. "
+                "Using processors without these attributes in the config is deprecated and will throw an error in v4.47."
+            )
+            inputs_embeds = ops.cat([language_model_inputs, inputs_embeds], dim=1)
+            attention_mask = ops.cat(
+                [language_attention_mask, attention_mask], dim=1
+            )
+
+            # add image_embeds length to max_length, so that the final max_length in counted only on token embeds
+            # -1 is to account for the prepended BOS after `generate.`
+            if not self.language_model.config.is_encoder_decoder:
+                generate_kwargs["max_length"] = (
+                    generate_kwargs.get("max_length", 20) + language_model_inputs.shape[1] - 1
+                )
+                generate_kwargs["min_length"] = generate_kwargs.get("min_length", 0) + language_model_inputs.shape[1]
 
         outputs = self.language_model.generate(
             inputs_embeds=inputs_embeds,
@@ -1412,13 +1485,14 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
                 if self.config.text_config.architectures[0] == "LLaMAForCausalLM"
                 else self.config.text_config.bos_token_id
             )
-            bos_tokens = mindspore.Tensor([[bos_token_id]]).repeat(batch_size, 1)
+            bos_tokens = mindspore.Tensor([[bos_token_id]]).tile((batch_size, 1))
             if not isinstance(outputs, mindspore.Tensor):
-                outputs.sequences = ops.cat([bos_tokens, outputs.sequences], axis=-1)
+                outputs.sequences = ops.cat([bos_tokens, outputs.sequences], dim=-1)
             else:
-                outputs = ops.cat([bos_tokens, outputs], axis=-1)
+                outputs = ops.cat([bos_tokens, outputs], dim=-1)
 
         return outputs
+
 __all__ = [
     "InstructBlipQFormerModel",
     "InstructBlipVisionModel",

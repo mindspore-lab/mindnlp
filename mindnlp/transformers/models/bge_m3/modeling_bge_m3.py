@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
 
 from ...modeling_outputs import BaseModelOutputWithPoolingAndCrossAttentions, ModelOutput
 from ..xlm_roberta import (
@@ -57,7 +57,7 @@ class BgeM3Model(XLMRobertaPreTrainedModel):
     The BgeM3Model class represents a model that extends XLMRobertaPreTrainedModel.
     It includes methods for dense embedding, sparse embedding, Colbert embedding, and processing token weights
     and Colbert vectors.
-    The construct method processes input tensors to generate various outputs including last hidden state, dense output,
+    The forward method processes input tensors to generate various outputs including last hidden state, dense output,
     pooler output, Colbert output, sparse output, hidden states, past key values, attentions, and cross attentions.
     """
     config_class = BgeM3Config
@@ -78,11 +78,11 @@ class BgeM3Model(XLMRobertaPreTrainedModel):
             """
         super().__init__(config)
         self.roberta = XLMRobertaModel(config, add_pooling_layer=False)
-        self.colbert_linear = nn.Dense(
+        self.colbert_linear = nn.Linear(
             config.hidden_size,
             config.hidden_size if config.colbert_dim is None else config.colbert_dim,
         )
-        self.sparse_linear = nn.Dense(config.hidden_size, 1)
+        self.sparse_linear = nn.Linear(config.hidden_size, 1)
         self.sentence_pooling_method = config.sentence_pooling_method
 
         self.init_weights()
@@ -143,10 +143,10 @@ class BgeM3Model(XLMRobertaPreTrainedModel):
             self.config.vocab_size),
             dtype=token_weights.dtype,
         )
-        sparse_embedding = ops.scatter(sparse_embedding, axis=-1, index=input_ids.unsqueeze(-1), src=token_weights)
+        sparse_embedding = ops.scatter(sparse_embedding, dim=-1, index=input_ids.unsqueeze(-1), src=token_weights)
 
         unused_tokens = self.config.unused_tokens
-        sparse_embedding = ops.max(sparse_embedding, axis=1)[0]
+        sparse_embedding = ops.max(sparse_embedding, dim=1)[0]
         sparse_embedding[:, unused_tokens] *= 0.0
         return sparse_embedding
 
@@ -250,7 +250,7 @@ class BgeM3Model(XLMRobertaPreTrainedModel):
         return vecs
 
     # Copied from transformers.models.bert.modeling_bert.BertModel.forward
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,

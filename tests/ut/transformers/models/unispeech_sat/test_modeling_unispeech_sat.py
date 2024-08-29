@@ -22,7 +22,7 @@ import pytest
 from datasets import load_dataset
 
 from mindnlp.transformers import UniSpeechSatConfig
-from mindnlp.modules.functional import normalize
+from mindnlp.core.nn.functional import normalize
 from mindnlp.utils.testing_utils import (
     is_mindspore_available,
     require_soundfile,
@@ -421,7 +421,7 @@ class UniSpeechSatModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="UniSpeechSat does not support input and output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_retain_grad_hidden_states_attentions(self):
@@ -632,7 +632,7 @@ class UniSpeechSatRobustModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="UniSpeechSat does not support input and output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_retain_grad_hidden_states_attentions(self):

@@ -14,14 +14,12 @@
 # ============================================================================
 """Tensor Parallel mappings"""
 import mindspore
-from mindspore import nn
-from mindspore import ops
+from mindspore import nn, ops
 
 from mindspore.ops import constexpr
 from mindspore.communication import GlobalComm
 from mindspore.ops._primitive_cache import _get_cache_prim
 
-from mindnlp._legacy.ops import AllGather
 from .utils import concat_tensor_along_last_dim, split_tensor_along_last_dim, get_rank, get_group_size
 
 
@@ -94,7 +92,7 @@ def _gather(input_: mindspore.Tensor) -> mindspore.Tensor:
     if rank_size == 1:
         return input_
 
-    _all_gather = _get_cache_prim(AllGather)()
+    _all_gather = _get_cache_prim(ops.AllGather)()
     tensor = _all_gather(input_)
     # # Size and dimension.
     output = concat_tensor_along_last_dim(tensor, rank_size)
@@ -103,7 +101,7 @@ def _gather(input_: mindspore.Tensor) -> mindspore.Tensor:
 
 class _CopyToModelParallelRegion(nn.Cell):
     """Pass the input to the model parallel region."""
-    def construct(self, input_):
+    def forward(self, input_):
         r"""
         Constructs a new instance of the '_CopyToModelParallelRegion' class.
         
@@ -126,7 +124,7 @@ class _CopyToModelParallelRegion(nn.Cell):
 
 class _ReduceFromModelParallelRegion(nn.Cell):
     """All-redcue the input from the model parallel region."""
-    def construct(self, input_):
+    def forward(self, input_):
         r"""
         Constructs a new instance of '_ReduceFromModelParallelRegion' class.
         
@@ -149,7 +147,7 @@ class _ReduceFromModelParallelRegion(nn.Cell):
 
 class _ScatterToModelParallelRegion(nn.Cell):
     """Split the input and keep only the corresponding chuck to the rank."""
-    def construct(self, input_):
+    def forward(self, input_):
         r"""
         Constructs a scatter to model parallel region within the _ScatterToModelParallelRegion class.
         
@@ -171,9 +169,9 @@ class _ScatterToModelParallelRegion(nn.Cell):
 
 class _GatherFromModelParallelRegion(nn.Cell):
     """Gather the input from model parallel region and concatinate."""
-    def construct(self, input_):
+    def forward(self, input_):
         r"""
-        This method constructs a gather operation from the input.
+        This method forwards a gather operation from the input.
         
         Args:
             self (_GatherFromModelParallelRegion): The instance of the _GatherFromModelParallelRegion class.

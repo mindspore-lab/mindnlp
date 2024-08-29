@@ -27,11 +27,13 @@ from threading import Thread
 import numpy as np
 import mindspore
 from mindspore import Tensor, Parameter
-from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 from mindspore import dtype as mstype
 from mindnlp.utils import logging
 
+from mindnlp.configs import USE_PYBOOST
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from .configuration_baichuan import BaiChuanConfig
 from ...generation.utils import GenerationConfig
 from ...modeling_utils import PreTrainedModel
@@ -282,12 +284,12 @@ def _make_causal_mask(
         Tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min, dtype),
     )
     mask_cond = ops.arange(mask.shape[-1])
-    mask = ops.masked_fill(mask, Tensor(mask_cond < (mask_cond + 1).view(mask.shape[-1], 1)), 0)
+    mask = ops.masked_fill(mask, mask_cond < (mask_cond + 1).view(mask.shape[-1], 1), 0.)
     mask = mask.to(dtype)
 
     if past_key_values_length > 0:
         mask = ops.concat(
-            [ops.zeros((tgt_len, past_key_values_length), dtype=dtype), mask], axis=-1
+            [ops.zeros((tgt_len, past_key_values_length), dtype=dtype), mask], dim=-1
         )
     return ops.broadcast_to(
         mask[None, None, :, :], (bsz, 1, tgt_len, tgt_len + past_key_values_length)
@@ -347,7 +349,7 @@ def _gen_alibi_mask(n_head, max_pos):
         (n_head, -1, -1))
     alibi = alibi.view(n_head, 1, max_pos)
     alibi_mask = ops.triu(
-        _fill_with_neg_inf(ops.zeros((max_pos, max_pos))), 1
+        _fill_with_neg_inf(ops.zeros(max_pos, max_pos)), 1
     )
     alibi_mask = alibi_mask.unsqueeze(0) + alibi
     return alibi_mask
@@ -355,52 +357,50 @@ def _gen_alibi_mask(n_head, max_pos):
 def _buffered_future_mask(tensor, maxpos, alibi, attn_heads):
     """used in training only"""
     _future_mask = ops.triu(
-        _fill_with_neg_inf(ops.zeros([maxpos, maxpos])), 1
+        _fill_with_neg_inf(ops.zeros(maxpos, maxpos)), 1
     )
     _future_mask = _future_mask.unsqueeze(0) + alibi
-    _future_mask = _future_mask.to(tensor)
+    _future_mask = _future_mask.to(tensor.dtype)
     return _future_mask[:tensor.shape[0] * attn_heads, :maxpos, :maxpos]
 
 
-class RMSNorm(nn.Cell):
+class RMSNorm(nn.Module):
     """
     RMSNorm
     """
-    def __init__(self, hidden_size, epsilon=1e-6):
+    def __init__(self, hidden_size, eps=1e-6):
         """
         RMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
         self.weight = Parameter(ops.ones(hidden_size), 'weight')
-        self.variance_epsilon = epsilon
+        self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
-        """
-        This method constructs RMSNorm by normalizing the hidden states.
+    def forward(self, hidden_states):
+        """forwards the RMS normalization of the hidden states.
 
         Args:
-            self (RMSNorm): The instance of the RMSNorm class.
-            hidden_states (Tensor):
-                The input hidden states to be normalized. Should be a tensor of shape (batch_size, hidden_size).
+            self (RMSNorm): The instance of the LlamaRMSNorm class.
+            hidden_states (Union[Tensor, ndarray]): The input hidden states to be normalized.
+                Should be a tensor or numpy array of any shape.
 
         Returns:
-            None.
+            None: This method does not return any value. The normalization is applied in place.
 
         Raises:
-            ValueError: If the hidden_states tensor is not of the correct shape.
-            TypeError: If the data type of self.weight is not mindspore.float16 or mindspore.bfloat16.
+            ValueError: If the input hidden_states is not a valid tensor or numpy array.
+            RuntimeError: If an error occurs during the normalization process.
         """
-        variance = hidden_states.to(mindspore.float32).pow(2).mean(-1, keep_dims=True)
-        hidden_states = hidden_states * ops.rsqrt(variance + self.variance_epsilon)
+        if USE_PYBOOST:
+            return F.rms_norm(hidden_states, self.weight, self.variance_epsilon)
+        input_dtype = hidden_states.dtype
+        hidden_states = hidden_states.to(mindspore.float32)
+        variance = ops.mean(ops.pow(hidden_states, 2), -1, True)
+        hidden_states = ops.mul(hidden_states, ops.rsqrt(variance + self.variance_epsilon))
+        return ops.mul(self.weight.astype(input_dtype), hidden_states.astype(input_dtype))
 
-        # convert into half-precision if necessary
-        if self.weight.dtype in [mindspore.float16, mindspore.bfloat16]:
-            hidden_states = hidden_states.to(self.weight.dtype)
 
-        return self.weight * hidden_states
-
-
-class RotaryEmbedding(nn.Cell):
+class RotaryEmbedding(nn.Module):
     """
     RotaryEmbedding
     """
@@ -431,13 +431,13 @@ class RotaryEmbedding(nn.Cell):
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
         freqs = ops.einsum("i,j->ij", t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos()[None, None, :, :]
         self.sin_cached = emb.sin()[None, None, :, :]
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         """
-        Constructs the rotary embedding for a given sequence length.
+        forwards the rotary embedding for a given sequence length.
 
         Args:
             self (RotaryEmbedding): An instance of the RotaryEmbedding class.
@@ -450,7 +450,7 @@ class RotaryEmbedding(nn.Cell):
         Raises:
             ValueError: If seq_len is greater than the maximum sequence length cached.
 
-        This method constructs the rotary embedding for a given sequence length.
+        This method forwards the rotary embedding for a given sequence length.
         It updates the cached cosine and sine values based on the input sequence length.
 
         If the input sequence length (seq_len) is greater than the maximum sequence length cached (self.max_seq_len_cached),
@@ -480,7 +480,7 @@ class RotaryEmbedding(nn.Cell):
             t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
             freqs = ops.einsum("i,j->ij", t, self.inv_freq)
             # Different from paper, but it uses a different permutation in order to obtain the same calculation
-            emb = ops.cat((freqs, freqs), axis=-1)
+            emb = ops.cat((freqs, freqs), dim=-1)
             self.cos_cached = emb.cos()[None, None, :, :]
             self.sin_cached = emb.sin()[None, None, :, :]
         return (
@@ -493,7 +493,7 @@ def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
     x2 = x[..., x.shape[-1] // 2:]
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids):
@@ -510,7 +510,7 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids):
     return q_embed, k_embed
 
 
-class MLP(nn.Cell):
+class MLP(nn.Module):
     """
     MLP
     """
@@ -539,14 +539,14 @@ class MLP(nn.Cell):
             None.
         """
         super().__init__()
-        self.gate_proj = nn.Dense(hidden_size, intermediate_size, has_bias=False)
-        self.down_proj = nn.Dense(intermediate_size, hidden_size, has_bias=False)
-        self.up_proj = nn.Dense(hidden_size, intermediate_size, has_bias=False)
+        self.gate_proj = nn.Linear(hidden_size, intermediate_size, bias=False)
+        self.down_proj = nn.Linear(intermediate_size, hidden_size, bias=False)
+        self.up_proj = nn.Linear(hidden_size, intermediate_size, bias=False)
         self.act_fn = ACT2FN[hidden_act]
 
-    def construct(self, x):
+    def forward(self, x):
         """
-        Method 'construct' in class 'MLP' constructs a multi-layer perceptron.
+        Method 'forward' in class 'MLP' forwards a multi-layer perceptron.
 
         Args:
             self (object): The instance of the class.
@@ -561,7 +561,7 @@ class MLP(nn.Cell):
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
 
-class Attention(nn.Cell):
+class Attention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     def __init__(self, config: BaiChuanConfig):
         """
@@ -599,8 +599,8 @@ class Attention(nn.Cell):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.W_pack = nn.Dense(self.hidden_size, 3 * self.hidden_size, has_bias=False)
-        self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=False)
+        self.W_pack = nn.Linear(self.hidden_size, 3 * self.hidden_size, bias=False)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
         self.rotary_emb = RotaryEmbedding(self.head_dim, max_position_embeddings=self.max_position_embeddings)
 
     def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
@@ -623,7 +623,7 @@ class Attention(nn.Cell):
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
             self,
             hidden_states: Tensor,
             attention_mask: Optional[Tensor] = None,
@@ -633,7 +633,7 @@ class Attention(nn.Cell):
             use_cache: bool = False,
     ) -> Tuple[Tensor, Optional[Tensor], Optional[Tuple[Tensor]]]:
         """
-        Method 'construct' in the class 'Attention' processes hidden states using self-attention mechanism.
+        Method 'forward' in the class 'Attention' processes hidden states using self-attention mechanism.
 
         Args:
             self: The instance of the Attention class.
@@ -671,8 +671,8 @@ class Attention(nn.Cell):
 
         if past_key_value is not None:
             # reuse k, v, self_attention
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
 
         past_key_value = (key_states, value_states) if use_cache else None
 
@@ -693,7 +693,7 @@ class Attention(nn.Cell):
                                        Tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))
 
         # upcast attention to fp32
-        attn_weights = ops.softmax(attn_weights, axis=-1).astype(query_states.dtype)
+        attn_weights = F.softmax(attn_weights, dim=-1).astype(query_states.dtype)
         attn_output = ops.matmul(attn_weights, value_states)
 
         if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
@@ -713,13 +713,13 @@ class Attention(nn.Cell):
         return attn_output, attn_weights, past_key_value
 
 
-class BaiChuanAttention(nn.Cell):
+class BaiChuanAttention(nn.Module):
 
     """
     BaiChuanAttention class represents an attention mechanism component used in neural network models.
     It is designed to calculate attention weights and apply them to the input hidden states to generate the
     final output.
-    This class inherits from nn.Cell.
+    This class inherits from nn.Module.
 
     Attributes:
         config (BaiChuanConfig): An instance of BaiChuanConfig containing configuration parameters for the attention mechanism.
@@ -727,13 +727,13 @@ class BaiChuanAttention(nn.Cell):
         num_heads (int): The number of attention heads used in the attention mechanism.
         head_dim (int): The dimension of each attention head.
         max_position_embeddings (int): The maximum length of the input sequence.
-        W_pack (nn.Dense): A dense layer used for linear transformation.
-        o_proj (nn.Dense): A dense layer used for projecting the attention output.
+        W_pack (nn.Linear): A dense layer used for linear transformation.
+        o_proj (nn.Linear): A dense layer used for projecting the attention output.
 
     Methods:
         __init__: Initializes the BaiChuanAttention instance with the provided configuration.
         _shape: Reshapes the input tensor into the desired shape for further processing.
-        construct: Constructs the attention mechanism by calculating attention weights
+        forward: forwards the attention mechanism by calculating attention weights
             and output based on the input hidden states and additional parameters.
 
     Raises:
@@ -782,8 +782,8 @@ class BaiChuanAttention(nn.Cell):
             raise ValueError(
                 f"hidden_size {self.hidden_size} is not divisible by num_heads {self.num_heads}"
             )
-        self.W_pack = nn.Dense(self.hidden_size, 3 * self.hidden_size, has_bias=False)
-        self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=False)
+        self.W_pack = nn.Linear(self.hidden_size, 3 * self.hidden_size, bias=False)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
@@ -820,7 +820,7 @@ class BaiChuanAttention(nn.Cell):
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -829,7 +829,7 @@ class BaiChuanAttention(nn.Cell):
             use_cache: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         '''
-        Constructs the attention mechanism for the BaiChuanAttention class.
+        forwards the attention mechanism for the BaiChuanAttention class.
 
         Args:
             self (BaiChuanAttention): An instance of the BaiChuanAttention class.
@@ -869,8 +869,8 @@ class BaiChuanAttention(nn.Cell):
 
         if past_key_value is not None:
             # reuse k, v, self_attention
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
 
         past_key_value = (key_states, value_states) if use_cache else None
 
@@ -885,7 +885,7 @@ class BaiChuanAttention(nn.Cell):
             attn_weights = attn_weights + attention_mask.astype(attn_weights.dtype)
             attn_weights = ops.maximum(attn_weights, mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = F.softmax(attn_weights, dim=-1)
 
         attn_output = ops.matmul(attn_weights, value_states)
 
@@ -899,7 +899,7 @@ class BaiChuanAttention(nn.Cell):
         return attn_output, attn_weights, past_key_value
 
 
-class DecoderLayer(nn.Cell):
+class DecoderLayer(nn.Module):
     """
     DecoderLayer
     """
@@ -931,10 +931,10 @@ class DecoderLayer(nn.Cell):
             intermediate_size=config.intermediate_size,
             hidden_act=config.hidden_act,
         )
-        self.input_layernorm = RMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
-        self.post_attention_layernorm = RMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
+        self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
-    def construct(
+    def forward(
             self,
             hidden_states: Tensor,
             attention_mask: Optional[Tensor] = None,
@@ -987,11 +987,11 @@ class DecoderLayer(nn.Cell):
 
         return outputs
 
-class BaiChuanLayer(nn.Cell):
+class BaiChuanLayer(nn.Module):
 
     '''
     The BaiChuanLayer class represents a layer used for implementing a specific type of neural network cell.
-    This class inherits from the nn.Cell class.
+    This class inherits from the nn.Module class.
 
     Attributes:
         hidden_size (int): The size of the hidden layer.
@@ -1002,8 +1002,8 @@ class BaiChuanLayer(nn.Cell):
 
     Methods:
         __init__: Initializes the BaiChuanLayer class.
-        construct:
-            Constructs the BaiChuanLayer with the given parameters and returns the hidden states with
+        forward:
+            forwards the BaiChuanLayer with the given parameters and returns the hidden states with
             optional present key value computed during attention.
 
     Raises:
@@ -1040,10 +1040,10 @@ class BaiChuanLayer(nn.Cell):
             intermediate_size=config.intermediate_size,
             hidden_act=config.hidden_act,
         )
-        self.input_layernorm = RMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
-        self.post_attention_layernorm = RMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
+        self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -1052,7 +1052,7 @@ class BaiChuanLayer(nn.Cell):
             use_cache: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """
-        Constructs the BaiChuanLayer.
+        forwards the BaiChuanLayer.
 
         This method applies a series of transformations to the input hidden states to generate the output tensor.
 
@@ -1124,7 +1124,7 @@ class BaiChuanPreTrainedModel(PreTrainedModel):
             None.
         """
         std = self.config.initializer_range
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(
                 sigma=std, mean=0.0), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
@@ -1166,8 +1166,8 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=self.padding_idx)
-        self.layers = nn.CellList([DecoderLayer(config) for _ in range(config.num_hidden_layers)])
-        self.norm = RMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
+        self.layers = nn.ModuleList([DecoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1245,7 +1245,7 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
 
         return combined_attention_mask
 
-    def construct(
+    def forward(
             self,
             input_ids: Tensor = None,
             attention_mask: Optional[Tensor] = None,
@@ -1258,7 +1258,7 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         """
-        This method constructs the BaiChuan7bModel by processing the input data and generating model outputs.
+        This method forwards the BaiChuan7bModel by processing the input data and generating model outputs.
 
         Args:
             self (object): The instance of the class BaiChuan7bModel.
@@ -1279,7 +1279,7 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
             ValueError:
                 Raised if both input_ids and inputs_embeds are specified simultaneously,
                 if neither decoder_input_ids nor decoder_inputs_embeds are specified,
-                or if an invalid configuration is encountered during model construction.
+                or if an invalid configuration is encountered during model forwardion.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1319,7 +1319,7 @@ class BaiChuan7bModel(BaiChuanPreTrainedModel):
         # embed positions
         if attention_mask is None:
             attention_mask = ops.ones(
-                (batch_size, seq_length_with_past), dtype=mindspore.bool_
+                batch_size, seq_length_with_past, dtype=mindspore.bool_
             )
         attention_mask = self._prepare_decoder_attention_mask(
             attention_mask, (batch_size, seq_length), inputs_embeds, past_key_values_length
@@ -1378,14 +1378,14 @@ class BaiChuan13bModel(BaiChuanPreTrainedModel):
     """
     This class represents a BaiChuan13b model for natural language processing tasks. It is a subclass of the BaiChuanPreTrainedModel class.
     The BaiChuan13bModel class contains methods for initializing the model, getting and setting input embeddings,
-    generating an alibi mask, and constructing the model.
+    generating an alibi mask, and forwarding the model.
 
     Attributes:
         padding_idx (int): The index used for padding tokens in the embedding layer.
         vocab_size (int): The size of the vocabulary.
         n_head (int): The number of attention heads.
         embed_tokens (nn.Embedding): The embedding layer for input tokens.
-        layers (nn.CellList): A list of BaiChuanLayer instances representing the layers of the model.
+        layers (nn.ModuleList): A list of BaiChuanLayer instances representing the layers of the model.
         norm (RMSNorm): The normalization layer applied after the model layers.
         max_cache_pos (int): The maximum position of past key values for caching.
         first_run (bool): A flag indicating if it is the first run of the model.
@@ -1396,14 +1396,14 @@ class BaiChuan13bModel(BaiChuanPreTrainedModel):
         get_input_embeddings(self): Returns the input embeddings of the model.
         set_input_embeddings(self, value): Sets the input embeddings of the model.
         get_alibi_mask(self, tensor, seq_length_with_past): Generates an alibi mask based on the tensor and sequence length.
-        construct(self, input_ids, attention_mask, past_key_values, inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict):
-            Constructs the model with the given inputs and returns the model output.
+        forward(self, input_ids, attention_mask, past_key_values, inputs_embeds, use_cache, output_attentions, output_hidden_states, return_dict):
+            forwards the model with the given inputs and returns the model output.
 
     Note:
         - The BaiChuan13bModel class is designed to be used for natural language processing tasks, such as text classification or language generation.
         - The model architecture follows the BaiChuan13b configuration, which includes embedding layers, multiple layers of BaiChuanLayer, and normalization layers.
         - The alibi mask is used for attention calculations and is generated based on the input tensor and sequence length.
-        - The construct method is the main entry point for using the model, which takes various inputs and returns the model output.
+        - The forward method is the main entry point for using the model, which takes various inputs and returns the model output.
     """
     def __init__(self, config: BaiChuanConfig):
         """
@@ -1429,8 +1429,8 @@ class BaiChuan13bModel(BaiChuanPreTrainedModel):
         self.vocab_size = config.vocab_size
         self.n_head = config.num_attention_heads
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=self.padding_idx)
-        self.layers = nn.CellList([BaiChuanLayer(config) for _ in range(config.num_hidden_layers)])
-        self.norm = RMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
+        self.layers = nn.ModuleList([BaiChuanLayer(config) for _ in range(config.num_hidden_layers)])
+        self.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
         self.post_init()
         self.max_cache_pos = config.model_max_length
@@ -1506,7 +1506,7 @@ class BaiChuan13bModel(BaiChuanPreTrainedModel):
             mask = self.future_mask[:self.n_head, :seq_length_with_past, :seq_length_with_past]
         return mask
 
-    def construct(
+    def forward(
             self,
             input_ids: mindspore.Tensor = None,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -1518,7 +1518,7 @@ class BaiChuan13bModel(BaiChuanPreTrainedModel):
             return_dict: Optional[bool] = True,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         """
-        Constructs the BaiChuan13bModel.
+        forwards the BaiChuan13bModel.
 
         Args:
             self: The object instance.
@@ -1659,7 +1659,7 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
             self.model = BaiChuan7bModel(config)
             raise ValueError('BaiChuan model only support 7b and 13b, please check your config.')
 
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1740,7 +1740,7 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
         """
         return self.model
 
-    def construct(
+    def forward(
             self,
             input_ids: Tensor = None,
             attention_mask: Optional[Tensor] = None,
@@ -1754,7 +1754,7 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         """
-        Constructs the Causal Language Model for the BaiChuan model.
+        forwards the Causal Language Model for the BaiChuan model.
 
         Args:
             self (BaiChuanForCausalLM): The instance of the BaiChuanForCausalLM class.
@@ -1826,7 +1826,7 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Enable model parallelism
-            loss = ops.cross_entropy(shift_logits, shift_labels)
+            loss = F.cross_entropy(shift_logits, shift_labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]

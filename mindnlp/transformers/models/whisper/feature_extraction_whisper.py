@@ -15,14 +15,15 @@
 """
 Feature extractor class for Whisper
 """
+
 from typing import List, Optional, Union
 
 import numpy as np
 
-from mindnlp.utils import TensorType, logging
 from ...audio_utils import mel_filter_bank, spectrogram, window_function
 from ...feature_extraction_sequence_utils import SequenceFeatureExtractor
 from ...feature_extraction_utils import BatchFeature
+from ....utils import TensorType, logging
 
 
 logger = logging.get_logger(__name__)
@@ -36,23 +37,24 @@ class WhisperFeatureExtractor(SequenceFeatureExtractor):
     most of the main methods. Users should refer to this superclass for more information regarding those methods.
 
     This class extracts mel-filter bank features from raw speech using a custom numpy implementation of the `Short Time
-    Fourier Transform` which should match pytorch's `torch.stft` equivalent.
+    Fourier Transform` which should match pytorch's `ops.stft` equivalent.
 
     Args:
-        feature_size (`int`, defaults to 80):
+        feature_size (`int`, *optional*, defaults to 80):
             The feature dimension of the extracted features.
-        sampling_rate (`int`, defaults to 16000):
+        sampling_rate (`int`, *optional*, defaults to 16000):
             The sampling rate at which the audio files should be digitalized expressed in hertz (Hz).
-        hop_length (`int`, defaults to 160):
+        hop_length (`int`, *optional*, defaults to 160):
             Length of the overlaping windows for the STFT used to obtain the Mel Frequency coefficients.
-        chunk_length (`int`, defaults to 30):
+        chunk_length (`int`, *optional*, defaults to 30):
             The maximum number of chuncks of `sampling_rate` samples used to trim and pad longer or shorter audio
             sequences.
-        n_fft (`int`, defaults to 400):
+        n_fft (`int`, *optional*, defaults to 400):
             Size of the Fourier transform.
         padding_value (`float`, *optional*, defaults to 0.0):
             Padding value used to pad the audio. Should correspond to silences.
     """
+
     model_input_names = ["input_features"]
 
     def __init__(
@@ -66,25 +68,6 @@ class WhisperFeatureExtractor(SequenceFeatureExtractor):
         return_attention_mask=False,  # pad inputs to max length with silence token (zero) and no attention mask
         **kwargs,
     ):
-        """
-        Initializes a WhisperFeatureExtractor object.
-        
-        Args:
-            self: The instance of the class.
-            feature_size (int): The size of the feature vector.
-            sampling_rate (int): The sampling rate of the audio signal.
-            hop_length (int): The hop length for the short-time Fourier transform.
-            chunk_length (int): The length of each audio chunk in seconds.
-            n_fft (int): The number of FFT points.
-            padding_value (float): The value used for padding.
-            return_attention_mask (bool): Flag indicating whether to return an attention mask.
-        
-        Returns:
-            None.
-        
-        Raises:
-            None.
-        """
         super().__init__(
             feature_size=feature_size,
             sampling_rate=sampling_rate,
@@ -108,24 +91,29 @@ class WhisperFeatureExtractor(SequenceFeatureExtractor):
             mel_scale="slaney",
         )
 
-    def _np_extract_fbank_features(self, waveform: np.array) -> np.ndarray:
+    def _np_extract_fbank_features(self, waveform_batch: np.array) -> np.ndarray:
         """
         Compute the log-mel spectrogram of the provided audio, gives similar results to Whisper's original torch
         implementation with 1e-5 tolerance.
         """
-        log_spec = spectrogram(
-            waveform,
-            window_function(self.n_fft, "hann"),
-            frame_length=self.n_fft,
-            hop_length=self.hop_length,
-            power=2.0,
-            mel_filters=self.mel_filters,
-            log_mel="log10",
-        )
-        log_spec = log_spec[:, :-1]
-        log_spec = np.maximum(log_spec, log_spec.max() - 8.0)
-        log_spec = (log_spec + 4.0) / 4.0
-        return log_spec
+        log_spec_batch = []
+        for waveform in waveform_batch:
+            log_spec = spectrogram(
+                waveform,
+                window_function(self.n_fft, "hann"),
+                frame_length=self.n_fft,
+                hop_length=self.hop_length,
+                power=2.0,
+                mel_filters=self.mel_filters,
+                log_mel="log10",
+            )
+            log_spec = log_spec[:, :-1]
+            log_spec = np.maximum(log_spec, log_spec.max() - 8.0)
+            log_spec = (log_spec + 4.0) / 4.0
+            log_spec_batch.append(log_spec)
+        log_spec_batch = np.array(log_spec_batch)
+        return log_spec_batch
+
 
     @staticmethod
     # Copied from transformers.models.wav2vec2.feature_extraction_wav2vec2.Wav2Vec2FeatureExtractor.zero_mean_unit_var_norm
@@ -161,10 +149,12 @@ class WhisperFeatureExtractor(SequenceFeatureExtractor):
         max_length: Optional[int] = None,
         sampling_rate: Optional[int] = None,
         do_normalize: Optional[bool] = None,
+        return_token_timestamps: Optional[bool] = None,
         **kwargs,
     ) -> BatchFeature:
         """
-        Main method to featurize and prepare for the model one or several sequence(s).
+        Main method to featurize and prepare for the model one or several sequence(s). Implementation uses PyTorch for
+        the STFT computation if available, otherwise a slower NumPy based one.
 
         Args:
             raw_speech (`np.ndarray`, `List[float]`, `List[np.ndarray]`, `List[List[float]]`):
@@ -194,19 +184,22 @@ class WhisperFeatureExtractor(SequenceFeatureExtractor):
             return_tensors (`str` or [`~utils.TensorType`], *optional*):
                 If set, will return tensors instead of list of python integers. Acceptable values are:
 
-                - `'tf'`: Return TensorFlow `tf.constant` objects.
-                - `'pt'`: Return PyTorch `torch.Tensor` objects.
+                - `'ms'`: Return MindSpore `mindspore.Tensor` objects.
                 - `'np'`: Return Numpy `np.ndarray` objects.
             sampling_rate (`int`, *optional*):
                 The sampling rate at which the `raw_speech` input was sampled. It is strongly recommended to pass
                 `sampling_rate` at the forward call to prevent silent errors and allow automatic speech recognition
                 pipeline.
-            padding_value (`float`, defaults to 0.0):
+            padding_value (`float`, *optional*, defaults to 0.0):
                 The value that is used to fill the padding values / vectors.
             do_normalize (`bool`, *optional*, defaults to `False`):
                 Whether or not to zero-mean unit-variance normalize the input. Normalizing can help to significantly
                 improve the performance of the model.
+            return_token_timestamps (`bool`, *optional*, defaults to `None`):
+                Whether or not to return the number of frames of the input raw_speech.
+                These num_frames can be used by the model to compute word level timestamps.
         """
+
         if sampling_rate is not None:
             if sampling_rate != self.sampling_rate:
                 raise ValueError(
@@ -263,16 +256,21 @@ class WhisperFeatureExtractor(SequenceFeatureExtractor):
         # make sure list is in array format
         input_features = padded_inputs.get("input_features").transpose(2, 0, 1)
 
-        input_features = [self._np_extract_fbank_features(waveform) for waveform in input_features[0]]
+        extract_fbank_features = self._np_extract_fbank_features
+        input_features = extract_fbank_features(input_features[0])
 
         if isinstance(input_features[0], List):
             padded_inputs["input_features"] = [np.asarray(feature, dtype=np.float32) for feature in input_features]
+
         else:
             padded_inputs["input_features"] = input_features
 
         if return_attention_mask:
             # rescale from sample (48000) to feature (3000)
             padded_inputs["attention_mask"] = padded_inputs["attention_mask"][:, :: self.hop_length]
+
+        if return_token_timestamps is not None:
+            padded_inputs["num_frames"] = [len(raw_speech_i) // self.hop_length for raw_speech_i in raw_speech]
 
         if return_tensors is not None:
             padded_inputs = padded_inputs.convert_to_tensors(return_tensors)

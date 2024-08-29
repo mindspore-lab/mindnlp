@@ -26,7 +26,8 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindnlp.core import nn, ops
+    from mindnlp.core.nn import functional as F
 
     from mindnlp.transformers import DPTForDepthEstimation, DPTForSemanticSegmentation, DPTModel
     from mindnlp.transformers.models.auto.modeling_auto import MODEL_MAPPING_NAMES
@@ -201,7 +202,7 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="DPT does not use the nn.Embedding")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_model_get_set_embeddings(self):
@@ -209,7 +210,7 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
             self.assertTrue(x is None or isinstance(x, nn.Dense))
 
@@ -302,7 +303,7 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
             # instead, we can rely on cos distance for image/speech models, similar to `diffusers`
             if "input_ids" not in batched_input:
                 return lambda tensor1, tensor2: (
-                        1.0 - ops.cosine_similarity(tensor1.float().flatten(), tensor2.float().flatten(), dim=0,
+                        1.0 - F.cosine_similarity(tensor1.float().flatten(), tensor2.float().flatten(), dim=0,
                                                     eps=1e-38)
                 )
             return lambda tensor1, tensor2: ops.max(ops.abs(tensor1 - tensor2))

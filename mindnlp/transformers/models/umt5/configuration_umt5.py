@@ -14,9 +14,8 @@
 # limitations under the License.
 """UMT5 model configuration"""
 
-
-from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
+from ....utils import logging
 
 
 logger = logging.get_logger(__name__)
@@ -138,53 +137,5 @@ class UMT5Config(PretrainedConfig):
             decoder_start_token_id=decoder_start_token_id,
             **kwargs,
         )
-
-    @property
-    def hidden_size(self):
-        """
-        Returns the hidden size of the MT5Config.
-        
-        Args:
-            self: An instance of the MT5Config class.
-        
-        Returns:
-            int: The hidden size (d_model) of the MT5Config.
-        
-        Raises:
-            None.
-        """
-        return self.d_model
-
-    @property
-    def num_attention_heads(self):
-        """
-        This method, num_attention_heads, is a property method within the MT5Config class, and it takes one parameter, self.
-        
-        Args:
-            self (object): A reference to the instance of the class.
-            
-        Returns:
-            None: This method returns the value of 'num_heads' attribute.
-        
-        Raises:
-            This method does not raise any exceptions.
-        """
-        return self.num_heads
-
-    @property
-    def num_hidden_layers(self):
-        '''
-        Returns the number of hidden layers in the MT5Config.
-        
-        Args:
-            self: The instance of the MT5Config class.
-        
-        Returns:
-            None
-        
-        Raises:
-            This method does not raise any exceptions.
-        '''
-        return self.num_layers
 
 __all__ = ['UMT5Config']

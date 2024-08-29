@@ -12,25 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=arguments-differ
-# pylint: disable=too-many-arguments
-# pylint: disable=unused-argument
-# pylint: disable=missing-function-docstring
-# pylint: disable=too-many-instance-attributes
-# pylint: disable=consider-using-dict-items
-# pylint: disable=too-many-locals
-# pylint: disable=simplifiable-if-expression
 "Adalora Layer"
 import warnings
 from typing import Any, List, Optional
 
-from mindspore import nn, ops, Parameter, Tensor, get_grad
-from mindspore.common.initializer import initializer,  Normal
+from mindspore import Tensor, Parameter, get_grad
+from mindspore.common.initializer import initializer, Normal
 
-
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import ParameterDict, ModuleDict
 from mindnlp.peft.utils import transpose
-from mindnlp._legacy.abc import  ParameterDict, CellDict
 from mindnlp.transformers.ms_utils import Conv1D
 
 from ..tuners_utils import check_adapters_to_merge, BaseTunerLayer
@@ -39,17 +30,17 @@ from ..tuners_utils import check_adapters_to_merge, BaseTunerLayer
 class AdaLoraLayer(BaseTunerLayer):
     "AdaLoraLayer class for AdaLoraModel."
     # List all names of layers that may contain adapter weights
-    # Note: ranknum doesn't need to be included as it is not an nn.Cell
+    # Note: ranknum doesn't need to be included as it is not an nn.Module
     adapter_layer_names = ("lora_A", "lora_B", "lora_E", "lora_embedding_A", "lora_embedding_B")
     # other_param_names is defined in LoraLayer
 
-    def __init__(self, base_layer: nn.Cell) -> None:
+    def __init__(self, base_layer: nn.Module) -> None:
         r"""
         Initializes an instance of the AdaLoraLayer class.
         
         Args:
             self: The instance of the AdaLoraLayer class.
-            base_layer (nn.Cell): The base layer to be used for the AdaLoraLayer. It can be a Dense, Conv2d, Embedding, or Conv1D layer.
+            base_layer (nn.Module): The base layer to be used for the AdaLoraLayer. It can be a Dense, Conv2d, Embedding, or Conv1D layer.
                                   For Dense and Conv2d layers, it extracts the input and output channel dimensions.
                                   For Embedding layers, it extracts the vocabulary size and embedding size.
                                   For Conv1D layers, it extracts the weight shape if available, otherwise the weight shape.
@@ -66,15 +57,15 @@ class AdaLoraLayer(BaseTunerLayer):
         self.r = {}
         self.lora_alpha = {}
         self.scaling = {}
-        self.lora_dropout = CellDict()
+        self.lora_dropout = ModuleDict()
         self.lora_E = ParameterDict({})
         self.lora_A = ParameterDict({})
         self.lora_B = ParameterDict({})
         self.ranknum = ParameterDict({})
         # For Embedding layer
-        self.lora_embedding_A = CellDict()
-        self.lora_embedding_B = CellDict()
-        if isinstance(base_layer, nn.Dense):
+        self.lora_embedding_A = ModuleDict()
+        self.lora_embedding_B = ModuleDict()
+        if isinstance(base_layer, nn.Linear):
             in_features, out_features = base_layer.in_channels, base_layer.out_channels
         elif isinstance(base_layer, nn.Conv2d):
             in_features, out_features = base_layer.in_channels, base_layer.out_channels
@@ -186,12 +177,12 @@ operation.
             ))
 
 
-class SVDLinear(nn.Cell, AdaLoraLayer):
+class SVDLinear(nn.Module, AdaLoraLayer):
     "SVD-based adaptation by a dense layer"
     # SVD-based adaptation by a dense layer
     def __init__(
         self,
-        base_layer: nn.Cell,
+        base_layer: nn.Module,
         adapter_name: str,
         r: int = 0,
         lora_alpha: int = 1,
@@ -205,7 +196,7 @@ class SVDLinear(nn.Cell, AdaLoraLayer):
         
         Args:
             self: The object itself.
-            base_layer (nn.Cell): The base layer of the SVDLinear model.
+            base_layer (nn.Module): The base layer of the SVDLinear model.
             adapter_name (str): The name of the adapter.
             r (int, optional): The number of singular values to keep. Defaults to 0.
             lora_alpha (int, optional): The alpha value for the LORA algorithm. Defaults to 1.
@@ -304,15 +295,15 @@ class SVDLinear(nn.Cell, AdaLoraLayer):
             / (self.ranknum[adapter] + 1e-5)
         )
 
-    def construct(self, x: Tensor, *args: Any, **kwargs: Any) -> Tensor:
+    def forward(self, x: Tensor, *args: Any, **kwargs: Any) -> Tensor:
         r"""Constructs a tensor using the SVDLinear method.
         
         Args:
             self: An instance of the SVDLinear class.
-            x (Tensor): The input tensor for the construct method.
+            x (Tensor): The input tensor for the forward method.
         
         Returns:
-            Tensor: The constructed tensor.
+            Tensor: The forwarded tensor.
         
         Raises:
             None.
@@ -480,7 +471,7 @@ applied.
             # Budget decreasing with a cubic scheduler
             mul_coeff = 1 - (step - tinit) / (total_step - tfinal - tinit)
             budget = int((self.init_bgt - self.target_bgt) * (mul_coeff**3) + self.target_bgt)
-            mask_ind = True if step % self.peft_config.deltaT == 0 else False
+            mask_ind = step % self.peft_config.deltaT == 0
         return budget, mask_ind
 
     def update_ipt(self, model,gradient):
@@ -585,7 +576,7 @@ applied.
         for n, p in model.parameters_and_names():
             if f"lora_A.{self.adapter_name}" in n:
                 entry_ipt = self._element_score(n)
-                comb_ipt = ops.mean(entry_ipt, axis=1, keep_dims=True)
+                comb_ipt = ops.mean(entry_ipt, dim=1, keepdim=True)
                 name_m = n.replace("lora_A", "%s")
                 if name_m not in vector_ipt:
                     vector_ipt[name_m] = [comb_ipt]
@@ -593,7 +584,7 @@ applied.
                     vector_ipt[name_m].append(comb_ipt)
             if f"lora_B.{self.adapter_name}" in n:
                 entry_ipt = self._element_score(n)
-                comb_ipt = ops.mean(entry_ipt, axis=0, keep_dims=False).view(-1, 1)
+                comb_ipt = ops.mean(entry_ipt, dim=0, keepdim=False).view(-1, 1)
                 name_m = n.replace("lora_B", "%s")
                 if name_m not in vector_ipt:
                     vector_ipt[name_m] = [comb_ipt]
@@ -608,7 +599,7 @@ applied.
         # Calculate the score for each triplet
         for name_m in vector_ipt:
             ipt_E = value_ipt[name_m]
-            ipt_AB = ops.cat(vector_ipt[name_m], axis=1)
+            ipt_AB = ops.cat(vector_ipt[name_m], dim=1)
             sum_ipt = self._combine_ipt(ipt_E, ipt_AB)
             name_E = name_m % "lora_E"
             triplet_ipt[name_E] = sum_ipt.view(-1, 1)

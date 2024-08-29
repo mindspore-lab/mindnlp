@@ -19,9 +19,10 @@ from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import nn, ops
 from mindspore.common.initializer import Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _create_4d_causal_attention_mask, _prepare_4d_attention_mask
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling
@@ -39,7 +40,7 @@ _CHECKPOINT_FOR_DOC = "microsoft/xclip-base-patch32"
 # contrastive loss function, adapted from
 # https://sachinruk.github.io/blog/pytorch/pytorch%20lightning/loss%20function/gpu/2021/03/07/CLIP.html
 def contrastive_loss(logits: ms.Tensor) -> ms.Tensor:
-    return ops.cross_entropy(logits, ops.arange(len(logits)))
+    return F.cross_entropy(logits, ops.arange(len(logits)))
 
 
 # Copied from transformers.models.clip.modeling_clip.clip_loss with clip->x_clip
@@ -93,7 +94,7 @@ class XCLIPOutput(ModelOutput):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPVisionEmbeddings with CLIP->XCLIP
-class XCLIPVisionEmbeddings(nn.Cell):
+class XCLIPVisionEmbeddings(nn.Module):
     def __init__(self, config: XCLIPVisionConfig):
         super().__init__()
         self.config = config
@@ -108,7 +109,7 @@ class XCLIPVisionEmbeddings(nn.Cell):
             out_channels=self.embed_dim,
             kernel_size=self.patch_size,
             stride=self.patch_size,
-            has_bias=False,
+            bias=False,
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
@@ -118,7 +119,7 @@ class XCLIPVisionEmbeddings(nn.Cell):
         self.position_ids = ops.arange(
             self.num_positions).broadcast_to((1, -1))
 
-    def construct(self, pixel_values: ms.Tensor) -> ms.Tensor:
+    def forward(self, pixel_values: ms.Tensor) -> ms.Tensor:
         batch_size = pixel_values.shape[0]
         target_dtype = self.patch_embedding.weight.dtype
         patch_embeds = self.patch_embedding(pixel_values.to(
@@ -126,13 +127,13 @@ class XCLIPVisionEmbeddings(nn.Cell):
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
         class_embeds = self.class_embedding.expand(batch_size, 1, -1)
-        embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
+        embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
         embeddings = embeddings + self.position_embedding(self.position_ids)
         return embeddings
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPTextEmbeddings with CLIP->XCLIP
-class XCLIPTextEmbeddings(nn.Cell):
+class XCLIPTextEmbeddings(nn.Module):
     def __init__(self, config: XCLIPTextConfig):
         super().__init__()
         embed_dim = config.hidden_size
@@ -144,7 +145,7 @@ class XCLIPTextEmbeddings(nn.Cell):
         self.position_ids = ops.arange(
             config.max_position_embeddings).expand((1, -1))
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         position_ids: Optional[ms.Tensor] = None,
@@ -165,7 +166,7 @@ class XCLIPTextEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPAttention with CLIP->XCLIP
-class XCLIPAttention(nn.Cell):
+class XCLIPAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config):
@@ -182,15 +183,15 @@ class XCLIPAttention(nn.Cell):
         self.scale = self.head_dim**-0.5
         self.dropout = config.attention_dropout
 
-        self.k_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.v_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.q_proj = nn.Dense(self.embed_dim, self.embed_dim)
-        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: ms.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
@@ -243,7 +244,7 @@ class XCLIPAttention(nn.Cell):
             attn_weights = attn_weights.view(
                 bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit akward, but it's required to
@@ -257,7 +258,7 @@ class XCLIPAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(
+        attn_probs = F.dropout(
             attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
@@ -279,15 +280,15 @@ class XCLIPAttention(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPMLP with CLIP->XCLIP
-class XCLIPMLP(nn.Cell):
+class XCLIPMLP(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
-        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size)
-        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.fc1 = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.fc2 = nn.Linear(config.intermediate_size, config.hidden_size)
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
         hidden_states = self.fc2(hidden_states)
@@ -295,18 +296,18 @@ class XCLIPMLP(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPEncoderLayer with CLIP->XCLIP
-class XCLIPEncoderLayer(nn.Cell):
+class XCLIPEncoderLayer(nn.Module):
     def __init__(self, config: XCLIPConfig):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = XCLIPAttention(config)
         self.layer_norm1 = nn.LayerNorm(
-            self.embed_dim, epsilon=config.layer_norm_eps)
+            self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = XCLIPMLP(config)
         self.layer_norm2 = nn.LayerNorm(
-            self.embed_dim, epsilon=config.layer_norm_eps)
+            self.embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         attention_mask: ms.Tensor,
@@ -370,21 +371,21 @@ def drop_path(input: ms.Tensor, drop_prob: float = 0.0, training: bool = False) 
 
 
 # Copied from transformers.models.beit.modeling_beit.BeitDropPath with Beit->XCLIP
-class XCLIPDropPath(nn.Cell):
+class XCLIPDropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
 
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         super().__init__()
         self.drop_prob = drop_prob
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         return drop_path(hidden_states, self.drop_prob, self.training)
 
     def extra_repr(self) -> str:
         return "p={}".format(self.drop_prob)
 
 
-class XCLIPVisionEncoderLayer(nn.Cell):
+class XCLIPVisionEncoderLayer(nn.Module):
     """
     This corresponds to the `CrossFramelAttentionBlock` class in the original implementation.
     """
@@ -394,9 +395,9 @@ class XCLIPVisionEncoderLayer(nn.Cell):
         self.num_frames = config.num_frames
         self.embed_dim = config.hidden_size
 
-        self.message_fc = nn.Dense(self.embed_dim, self.embed_dim)
+        self.message_fc = nn.Linear(self.embed_dim, self.embed_dim)
         self.message_ln = nn.LayerNorm(
-            self.embed_dim, epsilon=config.layer_norm_eps)
+            self.embed_dim, eps=config.layer_norm_eps)
         self.message_attn = XCLIPAttention(config)
 
         self.drop_path = XCLIPDropPath(
@@ -404,12 +405,12 @@ class XCLIPVisionEncoderLayer(nn.Cell):
 
         self.self_attn = XCLIPAttention(config)
         self.layer_norm1 = nn.LayerNorm(
-            self.embed_dim, epsilon=config.layer_norm_eps)
+            self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = XCLIPMLP(config)
         self.layer_norm2 = nn.LayerNorm(
-            self.embed_dim, epsilon=config.layer_norm_eps)
+            self.embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         attention_mask: ms.Tensor,
@@ -443,7 +444,7 @@ class XCLIPVisionEncoderLayer(nn.Cell):
         # add dummy sequence dimension
         msg_token = msg_token.view(-1, 1, hidden_size)
 
-        hidden_states = ops.cat([hidden_states, msg_token], axis=1)
+        hidden_states = ops.cat([hidden_states, msg_token], dim=1)
 
         residual = hidden_states
 
@@ -545,14 +546,14 @@ class XCLIPPreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.LayerNorm):
             cell.bias.initialize('zeros')
             cell.weight.data.fill(1.0)
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.data.initialize(Normal(self.config.initializer_factor))
             if cell.bias is not None:
                 cell.bias.initialize('zeros')
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPEncoder with CLIP->XCLIP
-class XCLIPEncoder(nn.Cell):
+class XCLIPEncoder(nn.Module):
     """
     Transformer encoder consisting of `config.num_hidden_layers` self attention layers. Each layer is a
     [`XCLIPEncoderLayer`].
@@ -564,11 +565,11 @@ class XCLIPEncoder(nn.Cell):
     def __init__(self, config: XCLIPConfig):
         super().__init__()
         self.config = config
-        self.layers = nn.CellList([XCLIPEncoderLayer(config)
+        self.layers = nn.ModuleList([XCLIPEncoderLayer(config)
                                   for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         inputs_embeds,
         attention_mask: Optional[ms.Tensor] = None,
@@ -650,7 +651,7 @@ class XCLIPEncoder(nn.Cell):
         )
 
 
-class XCLIPTextTransformer(nn.Cell):
+class XCLIPTextTransformer(nn.Module):
     def __init__(self, config: XCLIPTextConfig):
         super().__init__()
         self.config = config
@@ -658,9 +659,9 @@ class XCLIPTextTransformer(nn.Cell):
         self.embeddings = XCLIPTextEmbeddings(config)
         self.encoder = XCLIPEncoder(config)
         self.final_layer_norm = nn.LayerNorm(
-            embed_dim, epsilon=config.layer_norm_eps)
+            embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -737,13 +738,13 @@ class XCLIPTextModel(XCLIPPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         return self.text_model.embeddings.token_embedding
 
     def set_input_embeddings(self, value):
         self.text_model.embeddings.token_embedding = value
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         attention_mask: Optional[ms.Tensor] = None,
@@ -781,7 +782,7 @@ class XCLIPTextModel(XCLIPPreTrainedModel):
         )
 
 
-class XCLIPVisionEncoder(nn.Cell):
+class XCLIPVisionEncoder(nn.Module):
     """
     Transformer encoder consisting of `config.num_hidden_layers` self attention layers. Each layer is a
     [`XCLIPVisionEncoderLayer`].
@@ -793,11 +794,11 @@ class XCLIPVisionEncoder(nn.Cell):
     def __init__(self, config: XCLIPConfig):
         super().__init__()
         self.config = config
-        self.layers = nn.CellList([XCLIPVisionEncoderLayer(
+        self.layers = nn.ModuleList([XCLIPVisionEncoderLayer(
             config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         inputs_embeds,
         attention_mask: Optional[ms.Tensor] = None,
@@ -879,7 +880,7 @@ class XCLIPVisionEncoder(nn.Cell):
         )
 
 
-class XCLIPVisionTransformer(nn.Cell):
+class XCLIPVisionTransformer(nn.Module):
     """
     This corresponds to the `CrossFrameCommunicationTransformer` class in the original implementation.
     """
@@ -890,12 +891,12 @@ class XCLIPVisionTransformer(nn.Cell):
         embed_dim = config.hidden_size
 
         self.embeddings = XCLIPVisionEmbeddings(config)
-        self.pre_layernorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.pre_layernorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
         self.encoder = XCLIPVisionEncoder(config)
         self.post_layernorm = nn.LayerNorm(
-            embed_dim, epsilon=config.layer_norm_eps)
+            embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         pixel_values: ms.Tensor,
         output_attentions: Optional[bool] = None,
@@ -948,10 +949,10 @@ class XCLIPVisionModel(XCLIPPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         return self.vision_model.embeddings.patch_embedding
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[ms.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -1043,7 +1044,7 @@ class XCLIPVisionModel(XCLIPPreTrainedModel):
         )
 
 
-class XCLIPMultiframeIntegrationTransformer(nn.Cell):
+class XCLIPMultiframeIntegrationTransformer(nn.Module):
     """
     This corresponds to the `MultiframeIntegrationTransformer` class in the original implementation.
     """
@@ -1055,7 +1056,7 @@ class XCLIPMultiframeIntegrationTransformer(nn.Cell):
             ms.numpy.empty((1, config.num_frames, config.hidden_size)))
         self.encoder = XCLIPEncoder(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         output_attentions: Optional[bool] = None,
@@ -1091,7 +1092,7 @@ class XCLIPMultiframeIntegrationTransformer(nn.Cell):
         )
 
 
-class XCLIPCrossAttention(nn.Cell):
+class XCLIPCrossAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config):
@@ -1102,18 +1103,18 @@ class XCLIPCrossAttention(nn.Cell):
         head_dim = dim // self.num_heads
         self.scale = head_dim**-0.5
 
-        self.q_proj = nn.Dense(dim, dim, has_bias=False)
-        self.k_proj = nn.Dense(dim, dim, has_bias=False)
-        self.v_proj = nn.Dense(dim, dim, has_bias=False)
+        self.q_proj = nn.Linear(dim, dim, bias=False)
+        self.k_proj = nn.Linear(dim, dim, bias=False)
+        self.v_proj = nn.Linear(dim, dim, bias=False)
 
         self.attn_drop = nn.Dropout(config.prompt_attention_dropout)
-        self.proj = nn.Dense(dim, dim)
+        self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(config.prompt_projection_dropout)
 
     def _shape(self, tensor: ms.Tensor, seq_len: int, batch_size: int):
         return tensor.view(batch_size, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(self, queries, keys, values):
+    def forward(self, queries, keys, values):
         """Input shape: Batch x Time x Channel"""
         batch_size, query_seq_len, hidden_size = queries.shape
         batch_size, key_seq_len, hidden_size = keys.shape
@@ -1134,7 +1135,7 @@ class XCLIPCrossAttention(nn.Cell):
         )
 
         attn = (queries @ keys.swapaxes(-2, -1)) * self.scale
-        attn = ops.softmax(attn, axis=-1)
+        attn = ops.softmax(attn, dim=-1)
         attn = self.attn_drop(attn)
 
         x = (attn @ values).swapaxes(1, 2).reshape(batch_size,
@@ -1144,42 +1145,42 @@ class XCLIPCrossAttention(nn.Cell):
         return x
 
 
-class PromptGeneratorLayer(nn.Cell):
+class PromptGeneratorLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
 
         embed_dim = config.projection_dim
         self.cross_attn = XCLIPCrossAttention(config)
         self.norm1 = nn.LayerNorm(
-            embed_dim, epsilon=config.text_config.layer_norm_eps)
+            embed_dim, eps=config.text_config.layer_norm_eps)
         self.norm3 = nn.LayerNorm(
-            embed_dim, epsilon=config.text_config.layer_norm_eps)
-        self.mlp = nn.SequentialCell([
-            nn.Dense(embed_dim, embed_dim * 4),
+            embed_dim, eps=config.text_config.layer_norm_eps)
+        self.mlp = nn.Sequential([
+            nn.Linear(embed_dim, embed_dim * 4),
             ACT2FN[config.prompt_hidden_act],
             nn.Dropout(config.prompt_attention_dropout),
-            nn.Dense(embed_dim * 4, embed_dim),
+            nn.Linear(embed_dim * 4, embed_dim),
         ])
 
-    def construct(self, x, visual):
+    def forward(self, x, visual):
         x = x + self.cross_attn(self.norm1(x), visual, visual)
         x = x + self.mlp(self.norm3(x))
         return x
 
 
-class XCLIPPromptGenerator(nn.Cell):
+class XCLIPPromptGenerator(nn.Module):
     """This corresponds to the `VideoSpecificPrompt` class in the original implementation."""
 
     def __init__(self, config):
         super().__init__()
         embed_dim = config.projection_dim
         self.layernorm = nn.LayerNorm(
-            embed_dim, epsilon=config.vision_config.layer_norm_eps)
-        self.decoder = nn.CellList([PromptGeneratorLayer(
+            embed_dim, eps=config.vision_config.layer_norm_eps)
+        self.decoder = nn.ModuleList([PromptGeneratorLayer(
             config) for _ in range(config.prompt_layers)])
         self.alpha = ms.Parameter(ops.ones(embed_dim) * config.prompt_alpha)
 
-    def construct(self, text, visual):
+    def forward(self, text, visual):
         visual = self.layernorm(visual)
         for layer in self.decoder:
             text = layer(text, visual)
@@ -1215,15 +1216,15 @@ class XCLIPModel(XCLIPPreTrainedModel):
         self.text_model = XCLIPTextTransformer(text_config)
         self.vision_model = XCLIPVisionTransformer(vision_config)
 
-        self.visual_projection = nn.Dense(
-            self.vision_embed_dim, self.projection_dim, has_bias=False)
-        self.text_projection = nn.Dense(
-            self.text_embed_dim, self.projection_dim, has_bias=False)
+        self.visual_projection = nn.Linear(
+            self.vision_embed_dim, self.projection_dim, bias=False)
+        self.text_projection = nn.Linear(
+            self.text_embed_dim, self.projection_dim, bias=False)
         self.logit_scale = ms.Parameter(
             ms.Tensor(self.config.logit_scale_init_value))
 
         self.prompts_visual_layernorm = nn.LayerNorm(
-            self.vision_embed_dim, epsilon=config.vision_config.layer_norm_eps)
+            self.vision_embed_dim, eps=config.vision_config.layer_norm_eps)
         self.prompts_visual_projection = ms.Parameter(
             ops.randn(self.vision_embed_dim, self.projection_dim))
 
@@ -1401,7 +1402,7 @@ class XCLIPModel(XCLIPPreTrainedModel):
 
         return video_embeds
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[ms.Tensor] = None,
         pixel_values: Optional[ms.Tensor] = None,

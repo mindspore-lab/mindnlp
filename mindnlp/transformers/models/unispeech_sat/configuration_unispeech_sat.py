@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2024 Huawei Technologies Co., Ltd
+# Copyright 2021 The Fairseq Authors and The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +17,9 @@
 import functools
 import operator
 
-from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
+from ....utils import logging
+
 
 logger = logging.get_logger(__name__)
 
@@ -174,63 +175,77 @@ class UniSpeechSatConfig(PretrainedConfig):
         num_clusters (`int`, *optional*, defaults to 504):
             Number of clusters for weak labeling. Only relevant when using an instance of
             [`UniSpeechSatForPreTraining`].
-    """
+
+    Example:
+
+    ```python
+    >>> from transformers import UniSpeechSatModel, UniSpeechSatConfig
+
+    >>> # Initializing a UniSpeechSat microsoft/unispeech-sat-base-100h-libri-ft style configuration
+    >>> configuration = UniSpeechSatConfig()
+
+    >>> # Initializing a model from the microsoft/unispeech-sat-base-100h-libri-ft style configuration
+    >>> model = UniSpeechSatModel(configuration)
+
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
+    ```"""
 
     model_type = "unispeech-sat"
 
     def __init__(
-            self,
-            vocab_size=32,
-            hidden_size=768,
-            num_hidden_layers=12,
-            num_attention_heads=12,
-            intermediate_size=3072,
-            hidden_act="gelu",
-            hidden_dropout=0.1,
-            activation_dropout=0.1,
-            attention_dropout=0.1,
-            feat_proj_dropout=0.0,
-            feat_quantizer_dropout=0.0,
-            final_dropout=0.1,
-            layerdrop=0.1,
-            initializer_range=0.02,
-            layer_norm_eps=1e-5,
-            feat_extract_norm="group",
-            feat_extract_activation="gelu",
-            conv_dim=(512, 512, 512, 512, 512, 512, 512),
-            conv_stride=(5, 2, 2, 2, 2, 2, 2),
-            conv_kernel=(10, 3, 3, 3, 3, 2, 2),
-            conv_bias=False,
-            num_conv_pos_embeddings=128,
-            num_conv_pos_embedding_groups=16,
-            do_stable_layer_norm=False,
-            apply_spec_augment=True,
-            mask_time_prob=0.05,
-            mask_time_length=10,
-            mask_time_min_masks=2,
-            mask_feature_prob=0.0,
-            mask_feature_length=10,
-            mask_feature_min_masks=0,
-            num_codevectors_per_group=320,
-            num_codevector_groups=2,
-            contrastive_logits_temperature=0.1,
-            num_negatives=100,
-            codevector_dim=256,
-            proj_codevector_dim=256,
-            diversity_loss_weight=0.1,
-            ctc_loss_reduction="mean",
-            ctc_zero_infinity=False,
-            use_weighted_layer_sum=False,
-            classifier_proj_size=256,
-            tdnn_dim=(512, 512, 512, 512, 1500),
-            tdnn_kernel=(5, 3, 3, 1, 1),
-            tdnn_dilation=(1, 2, 3, 1, 1),
-            xvector_output_dim=512,
-            pad_token_id=0,
-            bos_token_id=1,
-            eos_token_id=2,
-            num_clusters=504,
-            **kwargs,
+        self,
+        vocab_size=32,
+        hidden_size=768,
+        num_hidden_layers=12,
+        num_attention_heads=12,
+        intermediate_size=3072,
+        hidden_act="gelu",
+        hidden_dropout=0.1,
+        activation_dropout=0.1,
+        attention_dropout=0.1,
+        feat_proj_dropout=0.0,
+        feat_quantizer_dropout=0.0,
+        final_dropout=0.1,
+        layerdrop=0.1,
+        initializer_range=0.02,
+        layer_norm_eps=1e-5,
+        feat_extract_norm="group",
+        feat_extract_activation="gelu",
+        conv_dim=(512, 512, 512, 512, 512, 512, 512),
+        conv_stride=(5, 2, 2, 2, 2, 2, 2),
+        conv_kernel=(10, 3, 3, 3, 3, 2, 2),
+        conv_bias=False,
+        num_conv_pos_embeddings=128,
+        num_conv_pos_embedding_groups=16,
+        do_stable_layer_norm=False,
+        apply_spec_augment=True,
+        mask_time_prob=0.05,
+        mask_time_length=10,
+        mask_time_min_masks=2,
+        mask_feature_prob=0.0,
+        mask_feature_length=10,
+        mask_feature_min_masks=0,
+        num_codevectors_per_group=320,
+        num_codevector_groups=2,
+        contrastive_logits_temperature=0.1,
+        num_negatives=100,
+        codevector_dim=256,
+        proj_codevector_dim=256,
+        diversity_loss_weight=0.1,
+        ctc_loss_reduction="mean",
+        ctc_zero_infinity=False,
+        use_weighted_layer_sum=False,
+        classifier_proj_size=256,
+        tdnn_dim=(512, 512, 512, 512, 1500),
+        tdnn_kernel=(5, 3, 3, 1, 1),
+        tdnn_dilation=(1, 2, 3, 1, 1),
+        xvector_output_dim=512,
+        pad_token_id=0,
+        bos_token_id=1,
+        eos_token_id=2,
+        num_clusters=504,
+        **kwargs,
     ):
         super().__init__(**kwargs, pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id)
         self.hidden_size = hidden_size
@@ -261,9 +276,9 @@ class UniSpeechSatConfig(PretrainedConfig):
         self.use_weighted_layer_sum = use_weighted_layer_sum
 
         if (
-                (len(self.conv_stride) != self.num_feat_extract_layers)
-                or (len(self.conv_kernel) != self.num_feat_extract_layers)
-                or (len(self.conv_dim) != self.num_feat_extract_layers)
+            (len(self.conv_stride) != self.num_feat_extract_layers)
+            or (len(self.conv_kernel) != self.num_feat_extract_layers)
+            or (len(self.conv_dim) != self.num_feat_extract_layers)
         ):
             raise ValueError(
                 "Configuration for convolutional layers is incorrect. It is required that `len(config.conv_dim)` =="
@@ -307,7 +322,6 @@ class UniSpeechSatConfig(PretrainedConfig):
     @property
     def inputs_to_logits_ratio(self):
         return functools.reduce(operator.mul, self.conv_stride, 1)
-
 
 __all__ = [
     "UniSpeechSatConfig",

@@ -15,33 +15,33 @@
 """
 Web RAG demo quick start
 """
-
-import mindspore
-from langchain.vectorstores import FAISS
+import argparse
+from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import CharacterTextSplitter
 import streamlit as st
 
-from embedding import EmbeddingsFunAdapter
-
+import mindspore
 from mindnlp.transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+
+from embedding import EmbeddingsFunAdapter
 from text import TextLoader
 
 
 @st.cache_resource
-def load_knowledge_base():
-    loader = TextLoader("data/llm_knowledge.txt")
+def load_knowledge_base(file_name):
+    loader = TextLoader(file_name)
     texts = loader.load()
-    text_splitter = CharacterTextSplitter(chunk_size=512, chunk_overlap=0)
+    text_splitter = CharacterTextSplitter(separator='\n', chunk_size=256, chunk_overlap=0)
     split_docs = text_splitter.split_text(texts)
-    embeddings = EmbeddingsFunAdapter("moka-ai/m3e-base", device='GPU')
+    print(len(split_docs))
+    embeddings = EmbeddingsFunAdapter("AI-ModelScope/m3e-base", mirror='modelscope')
     faiss = FAISS.from_texts(split_docs, embeddings)
     return faiss
 
 
 @st.cache_resource
 def load_model_and_tokenizer():
-    mindspore.set_context(device_target='GPU')
-    model = AutoModelForSeq2SeqLM.from_pretrained("ZhipuAI/ChatGLM-6B", mirror='modelscope')
+    model = AutoModelForSeq2SeqLM.from_pretrained("ZhipuAI/ChatGLM-6B", mirror='modelscope', ms_dtype=mindspore.float16)
     model.set_train(False)
     tokenizer = AutoTokenizer.from_pretrained("ZhipuAI/ChatGLM-6B", mirror='modelscope')
     return tokenizer, model
@@ -70,8 +70,12 @@ def rag_pipeline(faiss, tokenizer, model, query, use_rag):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="args for RAG Demo")
+    parser.add_argument('filename', help="knowledge base file")
+    args = parser.parse_args()
+
     st.title("RAG Demo")
-    faiss = load_knowledge_base()
+    faiss = load_knowledge_base(args.filename)
     tokenizer, model = load_model_and_tokenizer()
 
     if 'answer' not in st.session_state:
@@ -109,4 +113,4 @@ if __name__ == '__main__':
 
     # 重新运行以刷新对话历史
     if submitted:
-        st.experimental_rerun()
+        st.rerun()

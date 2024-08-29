@@ -25,14 +25,22 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.utils import logging, get_default_dtype
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import CrossEntropyLoss
+from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
-from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutputWithPast
+from ...modeling_outputs import (
+    BaseModelOutputWithPast,
+    CausalLMOutputWithPast,
+    SequenceClassifierOutputWithPast,
+    TokenClassifierOutput,
+)
 from ...modeling_utils import PreTrainedModel
 from .configuration_starcoder2 import Starcoder2Config
 
@@ -61,7 +69,7 @@ def _get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(dim=-1, dtype=mindspore.int32)
     indices = ops.nonzero(attention_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
@@ -70,19 +78,19 @@ def _get_unpad_data(attention_mask):
 
 
 # Copied from transformers.models.mistral.modeling_mistral.MistralRotaryEmbedding with Mistral->Starcoder2
-class Starcoder2RotaryEmbedding(nn.Cell):
+class Starcoder2RotaryEmbedding(nn.Module):
 
     """
     The Starcoder2RotaryEmbedding class represents a rotary embedding module used for positional encoding in neural
-    network models. This class inherits from the nn.Cell class.
+    network models. This class inherits from the nn.Module class.
     
-    The class's constructor method initializes the Starcoder2RotaryEmbedding instance with the specified dimensions,
+    The class's forwardor method initializes the Starcoder2RotaryEmbedding instance with the specified dimensions,
     maximum position embeddings, and base value for the rotary embedding. It computes the inverse frequency and sets
     the cosine and sine cache for positional encoding.
 
     The _set_cos_sin_cache method sets the cosine and sine cache based on the maximum sequence length and data type.
 
-    The construct method applies the positional encoding to the input tensor based on the sequence length and returns
+    The forward method applies the positional encoding to the input tensor based on the sequence length and returns
     the cosine and sine embeddings.
 
     Note:
@@ -140,11 +148,11 @@ class Starcoder2RotaryEmbedding(nn.Cell):
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         """
         Construct and return the cosine and sine embeddings for the given sequence length.
 
@@ -154,7 +162,7 @@ class Starcoder2RotaryEmbedding(nn.Cell):
             seq_len (Optional[int]): The length of the sequence. If not provided, the default value is None.
 
         Returns:
-            Tuple[torch.Tensor, torch.Tensor]:
+            Tuple[mindspore.Tensor, mindspore.Tensor]:
                 A tuple containing the cosine and sine embeddings for the given sequence length.
 
                 - The cosine embedding is obtained by taking the first 'seq_len' elements from the cached cosine values.
@@ -182,7 +190,7 @@ def rotate_half(x):
     # x1 = x[..., : x.shape[-1] // 2]
     # x2 = x[..., x.shape[-1] // 2 :]
     x1, x2 = x.tensor_split(2, -1)
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 # Copied from transformers.models.mistral.modeling_mistral.apply_rotary_pos_emb
@@ -216,12 +224,12 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     return q_embed, k_embed
 
 
-class Starcoder2MLP(nn.Cell):
+class Starcoder2MLP(nn.Module):
 
     '''
     A class representing a multi-layer perceptron (MLP) for Starcoder2 model.
 
-    This class inherits from nn.Cell and implements the construction of the MLP for the Starcoder2 model.
+    This class inherits from nn.Module and implements the forwardion of the MLP for the Starcoder2 model.
     The MLP consists of fully connected layers with activation functions and residual dropout.
 
     Attributes:
@@ -231,7 +239,7 @@ class Starcoder2MLP(nn.Cell):
         __init__:
             Initializes the Starcoder2MLP with the given configuration.
 
-        construct:
+        forward:
             Constructs the multi-layer perceptron using the provided hidden states.
 
     '''
@@ -252,14 +260,14 @@ class Starcoder2MLP(nn.Cell):
         """
         super().__init__()
         embed_dim = config.hidden_size
-        self.c_fc = nn.Dense(embed_dim, config.intermediate_size, has_bias=config.use_bias)
-        self.c_proj = nn.Dense(config.intermediate_size, embed_dim, has_bias=config.use_bias)
+        self.c_fc = nn.Linear(embed_dim, config.intermediate_size, bias=config.use_bias)
+        self.c_proj = nn.Linear(config.intermediate_size, embed_dim, bias=config.use_bias)
         self.act = ACT2FN[config.hidden_act]
         self.residual_dropout = config.residual_dropout
 
-    def construct(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
+    def forward(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
         """
-        This method constructs the forward pass of the Starcoder2MLP model.
+        This method forwards the forward pass of the Starcoder2MLP model.
 
         Args:
             self (Starcoder2MLP): The instance of the Starcoder2MLP class.
@@ -275,7 +283,7 @@ class Starcoder2MLP(nn.Cell):
         hidden_states = self.c_fc(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.c_proj(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.residual_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.residual_dropout, training=self.training)
         return hidden_states
 
 
@@ -292,7 +300,7 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
-class Starcoder2Attention(nn.Cell):
+class Starcoder2Attention(nn.Module):
     """
     Multi-headed attention from 'Attention Is All You Need' paper. Modified to use sliding window attention: Longformer
     and "Generating Long Sequences with Sparse Transformers".
@@ -342,10 +350,10 @@ class Starcoder2Attention(nn.Cell):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.q_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=self.use_bias)
-        self.k_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=self.use_bias)
-        self.v_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=self.use_bias)
-        self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=self.use_bias)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=self.use_bias)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=self.use_bias)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=self.use_bias)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=self.use_bias)
 
         self.rotary_emb = Starcoder2RotaryEmbedding(
             self.head_dim,
@@ -353,7 +361,7 @@ class Starcoder2Attention(nn.Cell):
             base=self.rope_theta,
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -364,7 +372,7 @@ class Starcoder2Attention(nn.Cell):
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         '''
-        This method constructs the Starcoder2Attention layer.
+        This method forwards the Starcoder2Attention layer.
 
         Args:
             self (Starcoder2Attention): The instance of the Starcoder2Attention layer.
@@ -391,7 +399,7 @@ class Starcoder2Attention(nn.Cell):
             '''
         if "padding_mask" in kwargs:
             warnings.warn(
-                "Passing `padding_mask` is deprecated and will be removed in v4.37. Please make sure use `attention_mask` instead.`"
+                "Passing `padding_mask` is deprecated.37. Please make sure use `attention_mask` instead.`"
             )
         bsz, q_len, _ = hidden_states.shape
 
@@ -440,8 +448,8 @@ class Starcoder2Attention(nn.Cell):
             attn_weights = attn_weights + attention_mask
 
         # upcast attention to fp32
-        attn_weights = ops.softmax(attn_weights, axis=-1, dtype=mindspore.float32).to(query_states.dtype)
-        attn_weights = ops.dropout(attn_weights, p=self.attention_dropout, training=self.training)
+        attn_weights = ops.softmax(attn_weights, dim=-1, dtype=mindspore.float32).to(query_states.dtype)
+        attn_weights = F.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
 
         if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
@@ -454,7 +462,7 @@ class Starcoder2Attention(nn.Cell):
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
 
         attn_output = self.o_proj(attn_output)
-        attn_output = ops.dropout(attn_output, p=self.residual_dropout, training=self.training)
+        attn_output = F.dropout(attn_output, p=self.residual_dropout, training=self.training)
 
         if not output_attentions:
             attn_weights = None
@@ -467,11 +475,11 @@ STARCODER2_ATTENTION_CLASSES = {
 }
 
 
-class Starcoder2DecoderLayer(nn.Cell):
+class Starcoder2DecoderLayer(nn.Module):
 
     """
     The Starcoder2DecoderLayer class represents a single layer of the Starcoder2 decoder model.
-    This class inherits from nn.Cell and implements the operations required for the decoder layer.
+    This class inherits from nn.Module and implements the operations required for the decoder layer.
 
     Attributes:
         hidden_size (int): The size of the hidden state in the layer.
@@ -481,7 +489,7 @@ class Starcoder2DecoderLayer(nn.Cell):
         post_attention_layernorm (nn.LayerNorm): The layer normalization applied after the attention mechanism.
 
     Methods:
-        construct:
+        forward:
             Applies the operations of the decoder layer to the input hidden states and returns the output along with
             optional values based on the provided arguments.
 
@@ -525,11 +533,11 @@ class Starcoder2DecoderLayer(nn.Cell):
 
         self.mlp = Starcoder2MLP(config)
 
-        self.input_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.norm_epsilon)
-        self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.norm_epsilon)
+        self.input_layernorm = nn.LayerNorm(config.hidden_size, eps=config.norm_epsilon)
+        self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, eps=config.norm_epsilon)
 
     # Copied from transformers.models.mistral.modeling_mistral.MistralDecoderLayer.forward
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -591,7 +599,7 @@ class Starcoder2PreTrainedModel(PreTrainedModel):
     This class represents a Starcoder2PreTrainedModel, which is a subclass of PreTrainedModel.
 
     The Starcoder2PreTrainedModel class provides methods for initializing the weights of different types of cells.
-    The initialization process depends on the type of the cell. If the cell is an instance of nn.Dense, the weights are
+    The initialization process depends on the type of the cell. If the cell is an instance of nn.Linear, the weights are
     initialized using a normal distribution with a mean of 0 and a standard deviation defined by the `initializer_range`
     attribute of the configuration. If the cell has a bias, the bias is initialized with zeros.
 
@@ -600,7 +608,7 @@ class Starcoder2PreTrainedModel(PreTrainedModel):
     If the cell has a padding index, the weight corresponding to the padding index is set to 0.
 
     Note:
-        It is assumed that the `cell` parameter passed to the `_init_weights` method is an instance of either nn.Dense
+        It is assumed that the `cell` parameter passed to the `_init_weights` method is an instance of either nn.Linear
         or nn.Embedding.
 
     Please refer to the source code for more details on the implementation.
@@ -615,10 +623,10 @@ class Starcoder2PreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -665,11 +673,11 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.embedding_dropout = config.embedding_dropout
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [Starcoder2DecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
         # self._attn_implementation = config._attn_implementation
-        self.norm = nn.LayerNorm(config.hidden_size, epsilon=config.norm_epsilon)
+        self.norm = nn.LayerNorm(config.hidden_size, eps=config.norm_epsilon)
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
@@ -706,7 +714,7 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
         """
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -736,7 +744,7 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
             return_dict (bool, optional): Flag to indicate whether to return a dictionary. Defaults to None.
 
         Returns:
-            Union[Tuple, BaseModelOutputWithPast]: The constructed model output.
+            Union[Tuple, BaseModelOutputWithPast]: The forwarded model output.
 
         Raises:
             ValueError: If both input_ids and inputs_embeds are specified, or if neither of them is specified.
@@ -806,7 +814,7 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
         )
 
         hidden_states = inputs_embeds
-        hidden_states = ops.dropout(hidden_states, p=self.embedding_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.embedding_dropout, training=self.training)
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
@@ -861,7 +869,7 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
     It inherits from the Starcoder2PreTrainedModel.
 
     This class provides methods to initialize the model, get and set input embeddings, get and set output embeddings,
-    set the decoder, get the decoder, construct the model with various optional inputs, prepare inputs for generation,
+    set the decoder, get the decoder, forward the model with various optional inputs, prepare inputs for generation,
     and reorder the cache.
 
     Example:
@@ -900,7 +908,7 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
         super().__init__(config)
         self.model = Starcoder2Model(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1013,7 +1021,7 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
         """
         return self.model
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1084,7 +1092,7 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Ensure tensors are on the same device
-            loss = ops.cross_entropy(shift_logits, shift_labels)
+            loss = F.cross_entropy(shift_logits, shift_labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -1106,18 +1114,18 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
 
         Args:
             self: An instance of the Starcoder2ForCausalLM class.
-            input_ids (torch.Tensor): Tensor of shape (batch_size, sequence_length) containing the input IDs.
+            input_ids (mindspore.Tensor): Tensor of shape (batch_size, sequence_length) containing the input IDs.
             past_key_values (Cache, tuple, or None): Cache object or tuple of tensors containing the past key values.
                 If Cache object is provided, the cache_length, past_length, and max_cache_length are
                 extracted. If tuple is provided, cache_length and past_length are extracted from the first element.
                 If None, cache_length and past_length are calculated based on input_ids.
-            attention_mask (torch.Tensor or None): Tensor of shape (batch_size, sequence_length)
+            attention_mask (mindspore.Tensor or None): Tensor of shape (batch_size, sequence_length)
                 containing the attention mask. If not None and attention_mask.shape[1] is greater than
                 input_ids.shape[1], the input_ids are truncated accordingly. If attention_mask is not None and
                 past_length is less than input_ids.shape[1], the input_ids are sliced accordingly.
                 If max_cache_length is not None and attention_mask is not None and cache_length + input_ids.shape[1] is
                 greater than max_cache_length, the attention_mask is truncated accordingly.
-            inputs_embeds (torch.Tensor or None): Tensor of shape (batch_size, sequence_length, embedding_size)
+            inputs_embeds (mindspore.Tensor or None): Tensor of shape (batch_size, sequence_length, embedding_size)
                 containing the input embeddings. If not None and past_key_values is None, the model_inputs
                 dictionary is updated with 'inputs_embeds' key.
             **kwargs: Additional keyword arguments.
@@ -1199,7 +1207,7 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
         Args:
             past_key_values (tuple): A tuple containing the cache of past key values.
                 Each element in the tuple represents the past key values for a specific layer.
-            beam_idx (torch.Tensor): A tensor containing the beam indices for reordering the cache.
+            beam_idx (mindspore.Tensor): A tensor containing the beam indices for reordering the cache.
 
         Returns:
             None.
@@ -1220,9 +1228,9 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
     """
     This class represents a sequence classification model based on Starcoder2 architecture.
     It inherits functionality from Starcoder2PreTrainedModel.
-    The class includes methods for initializing the model, getting and setting input embeddings, and constructing
+    The class includes methods for initializing the model, getting and setting input embeddings, and forwarding
     the model for sequence classification.
-    The 'construct' method takes various input parameters like input_ids, attention_mask, position_ids, etc.,
+    The 'forward' method takes various input parameters like input_ids, attention_mask, position_ids, etc.,
     and returns the sequence classifier output.
     It supports computing loss based on different problem types such as regression, single-label classification,
     and multi-label classification.
@@ -1246,7 +1254,7 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = Starcoder2Model(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1285,7 +1293,7 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
         """
         self.model.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1352,13 +1360,13 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1371,9 +1379,85 @@ class Starcoder2ForSequenceClassification(Starcoder2PreTrainedModel):
             attentions=transformer_outputs.attentions,
         )
 
+class Starcoder2ForTokenClassification(Starcoder2PreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.model = Starcoder2Model(config)
+        if getattr(config, "classifier_dropout", None) is not None:
+            classifier_dropout = config.classifier_dropout
+        elif getattr(config, "hidden_dropout", None) is not None:
+            classifier_dropout = config.hidden_dropout
+        else:
+            classifier_dropout = 0.1
+        self.dropout = nn.Dropout(classifier_dropout)
+        self.score = nn.Linear(config.hidden_size, config.num_labels)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def get_input_embeddings(self):
+        return self.model.embed_tokens
+
+    def set_input_embeddings(self, value):
+        self.model.embed_tokens = value
+
+    def forward(
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        past_key_values: Optional[List[mindspore.Tensor]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple, TokenClassifierOutput]:
+        r"""
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.model(
+            input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        sequence_output = outputs[0]
+        sequence_output = self.dropout(sequence_output)
+        logits = self.score(sequence_output)
+
+        loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+        if not return_dict:
+            output = (logits,) + outputs[2:]
+            return ((loss,) + output) if loss is not None else output
+
+        return TokenClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
+
 __all__ = [
     "Starcoder2ForCausalLM",
     "Starcoder2Model",
     "Starcoder2PreTrainedModel",
     "Starcoder2ForSequenceClassification",
+    "Starcoder2ForTokenClassification"
 ]

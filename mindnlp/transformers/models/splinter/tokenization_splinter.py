@@ -86,7 +86,7 @@ class SplinterTokenizer(PreTrainedTokenizer):
             The token used for masking values. This is the token used when training this model with masked language
             modeling. This is the token which the model will try to predict.
         question_token (`str`, *optional*, defaults to `"[QUESTION]"`):
-            The token used for constructing question representations.
+            The token used for forwarding question representations.
         tokenize_chinese_chars (`bool`, *optional*, defaults to `True`):
             Whether or not to tokenize Chinese characters.
 

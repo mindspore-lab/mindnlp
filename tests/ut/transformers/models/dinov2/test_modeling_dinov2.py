@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch Dinov2 model."""
+"""Testing suite for the MindSpore Dinov2 model."""
 
 import unittest
 
@@ -29,12 +29,9 @@ import numpy as np
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn
-
+    from mindnlp.core import nn
     from mindnlp.transformers import Dinov2ForImageClassification, Dinov2Model, Dinov2Backbone, Dinov2PreTrainedModel
-
     from PIL import Image
-
     from mindnlp.transformers import AutoImageProcessor
 
 
@@ -245,11 +242,11 @@ class Dinov2ModelTest(ModelTesterMixin,  unittest.TestCase):
         pass
     
     # override since we have embeddings / LM heads over multiple codebooks
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
         for model_class in self.all_model_classes:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
             self.assertTrue(x is None or isinstance(x, nn.Dense))
     
@@ -257,7 +254,7 @@ class Dinov2ModelTest(ModelTesterMixin,  unittest.TestCase):
     #     config, _ = self.model_tester.prepare_config_and_inputs_for_common()
     #     for model_class in self.all_model_classes:
     #         model = model_class(config)
-    #         self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+    #         self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
     #         x = model.get_output_embeddings()
     #         self.assertTrue(x is None or isinstance(x, nn.Dense))
 

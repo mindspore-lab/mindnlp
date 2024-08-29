@@ -18,9 +18,11 @@
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...backbone_utils import BackboneMixin
 from ...activations import ACT2FN
@@ -47,9 +49,6 @@ _IMAGE_CLASS_CHECKPOINT = "facebook/convnextv2-tiny-1k-224"
 _IMAGE_CLASS_EXPECTED_OUTPUT = "tabby, tabby cat"
 
 
-#from ..deprecated._archive_maps import CONVNEXTV2_PRETRAINED_MODEL_ARCHIVE_LIST  # noqa: F401, E402
-
-
 # Copied from transformers.models.beit.modeling_beit.drop_path
 def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = False) -> mindspore.Tensor:
     """
@@ -66,27 +65,27 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
     keep_prob = 1 - drop_prob
     shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
     random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
-    random_tensor.floor_()  # binarize
+    random_tensor = random_tensor.floor()  # binarize
     output = input.div(keep_prob) * random_tensor
     return output
 
 
 # Copied from transformers.models.beit.modeling_beit.BeitDropPath with Beit->ConvNextV2
-class ConvNextV2DropPath(nn.Cell):
+class ConvNextV2DropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
 
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         super().__init__()
         self.drop_prob = drop_prob
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         return drop_path(hidden_states, self.drop_prob, self.training)
 
     def extra_repr(self) -> str:
         return "p={}".format(self.drop_prob)
 
 
-class ConvNextV2GRN(nn.Cell):
+class ConvNextV2GRN(nn.Module):
     """GRN (Global Response Normalization) layer"""
 
     def __init__(self, dim: int):
@@ -94,7 +93,7 @@ class ConvNextV2GRN(nn.Cell):
         self.weight = Parameter(ops.zeros(1, 1, 1, dim), 'weight')
         self.bias = Parameter(ops.zeros(1, 1, 1, dim), 'bias')
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         # Compute and normalize global spatial feature maps
         global_features = ops.norm(hidden_states, dim=(1, 2), keepdim =True)
         norm_features = global_features / (global_features.mean(axis =-1, keep_dims =True) + 1e-6)
@@ -104,7 +103,7 @@ class ConvNextV2GRN(nn.Cell):
 
 
 # Copied from transformers.models.convnext.modeling_convnext.ConvNextLayerNorm with ConvNext->ConvNextV2
-class ConvNextV2LayerNorm(nn.Cell):
+class ConvNextV2LayerNorm(nn.Module):
     r"""LayerNorm that supports two data formats: channels_last (default) or channels_first.
     The ordering of the dimensions in the inputs. channels_last corresponds to inputs with shape (batch_size, height,
     width, channels) while channels_first corresponds to inputs with shape (batch_size, channels, height, width).
@@ -112,24 +111,22 @@ class ConvNextV2LayerNorm(nn.Cell):
 
     def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
         super().__init__()
-        self.weight = Parameter(ops.ones(normalized_shape), 'weight')
-        self.bias = Parameter(ops.zeros(normalized_shape), 'bias')
+        self.weight = nn.Parameter(ops.ones(normalized_shape))
+        self.bias = nn.Parameter(ops.zeros(normalized_shape))
         self.eps = eps
         self.data_format = data_format
         if self.data_format not in ["channels_last", "channels_first"]:
             raise NotImplementedError(f"Unsupported data format: {self.data_format}")
         self.normalized_shape = (normalized_shape,)
-        self.layer_norm = ops.LayerNorm(begin_norm_axis=-1,
-                                        begin_params_axis=-1,
-                                        epsilon=self.eps)
-    def construct(self, x: mindspore.Tensor) -> mindspore.Tensor:
+
+    def forward(self, x: mindspore.Tensor) -> mindspore.Tensor:
         if self.data_format == "channels_last":
-            x, _, _ = self.layer_norm(x, self.weight, self.bias)
+            x = nn.functional.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
         elif self.data_format == "channels_first":
             input_dtype = x.dtype
             x = x.float()
-            u = x.mean(1, keep_dims =True)
-            s = (x - u).pow(2).mean(1, keep_dims =True)
+            u = x.mean(1, keep_dims=True)
+            s = (x - u).pow(2).mean(1, keep_dims=True)
             x = (x - u) / ops.sqrt(s + self.eps)
             x = x.to(dtype=input_dtype)
             x = self.weight[:, None, None] * x + self.bias[:, None, None]
@@ -137,7 +134,7 @@ class ConvNextV2LayerNorm(nn.Cell):
 
 
 # Copied from transformers.models.convnext.modeling_convnext.ConvNextEmbeddings with ConvNext->ConvNextV2
-class ConvNextV2Embeddings(nn.Cell):
+class ConvNextV2Embeddings(nn.Module):
     """This class is comparable to (and inspired by) the SwinEmbeddings class
     found in src/transformers/models/swin/modeling_swin.py.
     """
@@ -145,12 +142,12 @@ class ConvNextV2Embeddings(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.patch_embeddings = nn.Conv2d(
-            config.num_channels, config.hidden_sizes[0], kernel_size=config.patch_size, stride=config.patch_size, pad_mode='valid', has_bias=True
+            config.num_channels, config.hidden_sizes[0], kernel_size=config.patch_size, stride=config.patch_size
         )
         self.layernorm = ConvNextV2LayerNorm(config.hidden_sizes[0], eps=1e-6, data_format="channels_first")
         self.num_channels = config.num_channels
 
-    def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         num_channels = pixel_values.shape[1]
         if num_channels != self.num_channels:
             raise ValueError(
@@ -161,7 +158,7 @@ class ConvNextV2Embeddings(nn.Cell):
         return embeddings
 
 
-class ConvNextV2Layer(nn.Cell):
+class ConvNextV2Layer(nn.Module):
     """This corresponds to the `Block` class in the original implementation.
 
     There are two equivalent implementations: [DwConv, LayerNorm (channels_first), Conv, GELU,1x1 Conv]; all in (N, C,
@@ -178,16 +175,17 @@ class ConvNextV2Layer(nn.Cell):
     def __init__(self, config, dim, drop_path=0):
         super().__init__()
         # depthwise conv
-        self.dwconv = nn.Conv2d(dim, dim, kernel_size=7, padding=3, group=dim, pad_mode='pad', has_bias=True)
+        self.dwconv = nn.Conv2d(dim, dim, kernel_size=7, padding=3, groups=dim)
+
         self.layernorm = ConvNextV2LayerNorm(dim, eps=1e-6)
         # pointwise/1x1 convs, implemented with linear layers
-        self.pwconv1 = nn.Dense(dim, 4 * dim)
+        self.pwconv1 = nn.Linear(dim, 4 * dim)
         self.act = ACT2FN[config.hidden_act]
         self.grn = ConvNextV2GRN(4 * dim)
-        self.pwconv2 = nn.Dense(4 * dim, dim)
+        self.pwconv2 = nn.Linear(4 * dim, dim)
         self.drop_path = ConvNextV2DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         input = hidden_states
         x = self.dwconv(hidden_states)
         # (batch_size, num_channels, height, width) -> (batch_size, height, width, num_channels)
@@ -205,7 +203,7 @@ class ConvNextV2Layer(nn.Cell):
 
 
 # Copied from transformers.models.convnext.modeling_convnext.ConvNextStage with ConvNeXT->ConvNeXTV2, ConvNext->ConvNextV2
-class ConvNextV2Stage(nn.Cell):
+class ConvNextV2Stage(nn.Module):
     """ConvNeXTV2 stage, consisting of an optional downsampling layer + multiple residual blocks.
 
     Args:
@@ -220,28 +218,28 @@ class ConvNextV2Stage(nn.Cell):
         super().__init__()
 
         if in_channels != out_channels or stride > 1:
-            self.downsampling_layer = nn.SequentialCell(
+            self.downsampling_layer = nn.Sequential(
                 ConvNextV2LayerNorm(in_channels, eps=1e-6, data_format="channels_first"),
-                nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, pad_mode='valid', has_bias=True),
+                nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride),
             )
         else:
             self.downsampling_layer = nn.Identity()
         drop_path_rates = drop_path_rates or [0.0] * depth
-        self.layers = nn.SequentialCell(
+        self.layers = nn.Sequential(
             *[ConvNextV2Layer(config, dim=out_channels, drop_path=drop_path_rates[j]) for j in range(depth)]
         )
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.downsampling_layer(hidden_states)
         hidden_states = self.layers(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.convnext.modeling_convnext.ConvNextEncoder with ConvNext->ConvNextV2
-class ConvNextV2Encoder(nn.Cell):
+class ConvNextV2Encoder(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.stages = nn.CellList()
+        self.stages = nn.ModuleList()
         drop_path_rates = [
             x.tolist() for x in ops.linspace(0, config.drop_path_rate, sum(config.depths)).split(config.depths)
         ]
@@ -259,7 +257,7 @@ class ConvNextV2Encoder(nn.Cell):
             self.stages.append(stage)
             prev_chs = out_chs
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         output_hidden_states: Optional[bool] = False,
@@ -298,12 +296,12 @@ class ConvNextV2PreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
@@ -320,13 +318,13 @@ class ConvNextV2Model(ConvNextV2PreTrainedModel):
         self.encoder = ConvNextV2Encoder(config)
 
         # final layernorm layer
-        self.layernorm = nn.LayerNorm([config.hidden_sizes[-1]], epsilon=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm([config.hidden_sizes[-1]], eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
 
 
-    def construct(
+    def forward(
         self,
         pixel_values: mindspore.Tensor = None,
         output_hidden_states: Optional[bool] = None,
@@ -374,14 +372,14 @@ class ConvNextV2ForImageClassification(ConvNextV2PreTrainedModel):
 
         # Classifier head
         self.classifier = (
-            nn.Dense(config.hidden_sizes[-1], config.num_labels) if config.num_labels > 0 else nn.Identity()
+            nn.Linear(config.hidden_sizes[-1], config.num_labels) if config.num_labels > 0 else nn.Identity()
         )
 
         # Initialize weights and apply final processing
         self.post_init()
 
 
-    def construct(
+    def forward(
         self,
         pixel_values: mindspore.Tensor = None,
         labels: Optional[mindspore.Tensor] = None,
@@ -414,13 +412,14 @@ class ConvNextV2ForImageClassification(ConvNextV2PreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops. binary_cross_entropy_with_logitst(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
+
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -430,7 +429,6 @@ class ConvNextV2ForImageClassification(ConvNextV2PreTrainedModel):
             logits=logits,
             hidden_states=outputs.hidden_states,
         )
-
 
 
 # Copied from transformers.models.convnext.modeling_convnext.ConvNextBackbone with CONVNEXT->CONVNEXTV2,ConvNext->ConvNextV2,facebook/convnext-tiny-224->facebook/convnextv2-tiny-1k-224
@@ -447,12 +445,12 @@ class ConvNextV2Backbone(ConvNextV2PreTrainedModel, BackboneMixin):
         hidden_states_norms = {}
         for stage, num_channels in zip(self._out_features, self.channels):
             hidden_states_norms[stage] = ConvNextV2LayerNorm(num_channels, data_format="channels_first")
-        self.hidden_states_norms = nn.CellDict(hidden_states_norms)
+        self.hidden_states_norms = nn.ModuleDict(hidden_states_norms)
 
         # initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         pixel_values: mindspore.Tensor,
         output_hidden_states: Optional[bool] = None,

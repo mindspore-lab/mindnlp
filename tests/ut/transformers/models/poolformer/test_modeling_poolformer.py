@@ -135,7 +135,6 @@ class PoolFormerModelTest(ModelTesterMixin, unittest.TestCase):
     test_head_masking = False
     test_pruning = False
     test_resize_embeddings = False
-    test_torchscript = False
     has_attentions = False
 
     def setUp(self):
@@ -150,12 +149,12 @@ class PoolFormerModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model(*config_and_inputs)
 
-    @unittest.skip("PoolFormer does not use inputs_embeds")
+    @unittest.skip(reason="PoolFormer does not use inputs_embeds")
     def test_inputs_embeds(self):
         pass
 
-    @unittest.skip("PoolFormer does not have get_input_embeddings method and get_output_embeddings methods")
-    def test_model_common_attributes(self):
+    @unittest.skip(reason="PoolFormer does not have get_input_embeddings method and get_output_embeddings methods")
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_hidden_states_output(self):

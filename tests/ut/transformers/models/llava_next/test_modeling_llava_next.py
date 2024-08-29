@@ -29,7 +29,7 @@ from mindnlp.transformers import (
 )
 from mindnlp.utils import is_mindspore_available, is_vision_available
 from mindnlp.utils.testing_utils import require_mindspore, slow
-from mindnlp.utils.serialization import load
+from mindnlp.core.serialization import load
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester

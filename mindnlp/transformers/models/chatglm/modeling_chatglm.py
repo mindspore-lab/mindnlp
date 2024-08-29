@@ -21,10 +21,11 @@ import re
 from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindspore import Parameter
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from mindnlp.modules.functional import embedding
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
@@ -85,7 +86,7 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
         return scores
 
 
-class PrefixEncoder(nn.Cell):
+class PrefixEncoder(nn.Module):
     """
     The nn model to encode the prefix
     Input shape: (batch-size, prefix-length)
@@ -121,24 +122,24 @@ class PrefixEncoder(nn.Cell):
         if self.prefix_projection:
             # Use a two-layer MLP to encode the prefix
             self.embedding = nn.Embedding(config.pre_seq_len, config.hidden_size)
-            self.trans = nn.SequentialCell(
-                nn.Dense(config.hidden_size, config.hidden_size),
+            self.trans = nn.Sequential(
+                nn.Linear(config.hidden_size, config.hidden_size),
                 nn.Tanh(),
-                nn.Dense(config.hidden_size, config.num_layers * config.hidden_size * 2)
+                nn.Linear(config.hidden_size, config.num_layers * config.hidden_size * 2)
             )
         else:
             self.embedding = nn.Embedding(config.pre_seq_len, config.num_layers * config.hidden_size * 2)
 
-    def construct(self, prefix: mindspore.Tensor):
+    def forward(self, prefix: mindspore.Tensor):
         """
-        This method constructs the past key values for the prefix encoder.
+        This method forwards the past key values for the prefix encoder.
 
         Args:
             self (PrefixEncoder): The instance of the PrefixEncoder class.
             prefix (mindspore.Tensor): The input tensor representing the prefix sequence.
 
         Returns:
-            mindspore.Tensor: The past key values constructed based on the input prefix.
+            mindspore.Tensor: The past key values forwarded based on the input prefix.
 
         Raises:
             None
@@ -170,13 +171,13 @@ def gelu(x):
     Raises:
         None.
     """
-    return ops.gelu(x, approximate='tanh')
+    return F.gelu(x, approximate='tanh')
 
 
-class RotaryEmbedding(nn.Cell):
+class RotaryEmbedding(nn.Module):
 
     """
-    This class represents a rotary embedding layer that can be used in neural network models. It inherits from the nn.Cell class.
+    This class represents a rotary embedding layer that can be used in neural network models. It inherits from the nn.Module class.
 
     The RotaryEmbedding layer is designed to provide rotational positional encoding for input sequences.
     It utilizes sinusoidal functions to generate embeddings that capture the relative positions of elements
@@ -189,7 +190,7 @@ class RotaryEmbedding(nn.Cell):
         - learnable (bool, optional): Flag indicating whether the positional embeddings should be learnable. Default is False.
 
     Methods:
-        construct(x, seq_dim=1, seq_len=None):
+        forward(x, seq_dim=1, seq_len=None):
             Constructs the positional embeddings for the input sequence 'x'.
 
             Args:
@@ -245,7 +246,7 @@ class RotaryEmbedding(nn.Cell):
             self.sin_cached = None
         self.precision = precision
 
-    def construct(self, x, seq_dim=1, seq_len=None):
+    def forward(self, x, seq_dim=1, seq_len=None):
         """
         Constructs a RotaryEmbedding.
 
@@ -268,7 +269,7 @@ class RotaryEmbedding(nn.Cell):
             t = ops.arange(seq_len, dtype=self.inv_freq.dtype)
             freqs = ops.einsum('i,j->ij', t, self.inv_freq)
             # Different from paper, but it uses a different permutation in order to obtain the same calculation
-            emb = ops.cat((freqs, freqs), axis=-1)
+            emb = ops.cat((freqs, freqs), dim=-1)
             if self.precision == mindspore.bfloat16:
                 emb = emb.float()
 
@@ -320,7 +321,7 @@ def rotate_half(x):
         TypeError: If the input is not an array-like object.
     """
     x1, x2 = x[..., :x.shape[-1] // 2], x[..., x.shape[-1] // 2:]
-    return ops.cat((-x2, x1), axis=x1.ndim - 1)  # dim=-1 triggers a bug in earlier torch versions
+    return ops.cat((-x2, x1), dim=x1.ndim - 1)  # dim=-1 triggers a bug in earlier torch versions
 
 
 def apply_rotary_pos_emb_index(q, k, cos, sin, position_id):
@@ -341,8 +342,8 @@ def apply_rotary_pos_emb_index(q, k, cos, sin, position_id):
         None.
     """
     # position_id: [sq, b], q, k: [sq, b, np, hn], cos: [sq, 1, hn] -> [sq, b, 1, hn]
-    cos, sin = embedding(position_id, cos.squeeze(1)).unsqueeze(2), \
-        embedding(position_id, sin.squeeze(1)).unsqueeze(2)
+    cos, sin = F.embedding(position_id, cos.squeeze(1)).unsqueeze(2), \
+        F.embedding(position_id, sin.squeeze(1)).unsqueeze(2)
     q, k = (q * cos) + (rotate_half(q) * sin), (k * cos) + (rotate_half(k) * sin)
     return q, k
 
@@ -381,8 +382,8 @@ def attention_fn(
     """
     if layer_past is not None:
         past_key, past_value = layer_past[0], layer_past[1]
-        key_layer = ops.cat((past_key, key_layer), axis=0)
-        value_layer = ops.cat((past_value, value_layer), axis=0)
+        key_layer = ops.cat((past_key, key_layer), dim=0)
+        value_layer = ops.cat((past_value, value_layer), dim=0)
 
     # seqlen, batch, num_attention_heads, hidden_size_per_attention_head
     _, _, _, hidden_size = key_layer.shape
@@ -429,7 +430,7 @@ def attention_fn(
         # attention_scores = ops.select(ops.isinf(attention_scores), -10000.00, attention_scores.float())
         # if ops.isinf(attention_scores).any():
         #     exit()
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
         attention_probs = attention_probs.astype(dtype)
     # =========================
     # Context layer. [sq, b, hp]
@@ -477,17 +478,17 @@ def default_init(cls, *args, **kwargs):
     return cls(*args, **kwargs)
 
 
-class SelfAttention(nn.Cell):
+class SelfAttention(nn.Module):
 
     """
     Represents a self-attention mechanism within a neural network cell for processing sequential data.
-    This class inherits from the nn.Cell class.
+    This class inherits from the nn.Module class.
 
     The self-attention mechanism is responsible for computing attention scores between elements in the input sequence
     and using them to produce weighted context representations. This allows the model to focus on different parts of
     the input sequence depending on their relevance to the current task.
 
-    The SelfAttention class includes methods for splitting tensors, applying attention masks, and constructing the
+    The SelfAttention class includes methods for splitting tensors, applying attention masks, and forwarding the
     self-attention mechanism. It also encapsulates the initialization of the self-attention layer,
     including the configuration of attention heads and hidden layer sizes.
 
@@ -549,17 +550,17 @@ class SelfAttention(nn.Cell):
         self.inner_hidden_size = num_attention_heads * self.hidden_size_per_attention_head
 
         # Strided linear layer.
-        self.query_key_value = nn.Dense(
+        self.query_key_value = nn.Linear(
             hidden_size,
             3 * self.inner_hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
 
-        self.dense = nn.Dense(
+        self.dense = nn.Linear(
             self.inner_hidden_size,
             hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
 
@@ -596,14 +597,14 @@ class SelfAttention(nn.Cell):
         last_dim = tensor.ndim - 1
         last_dim_size = tensor.shape[last_dim] // num_partitions
         # Split.
-        tensor_list = ops.split(tensor, last_dim_size, axis=last_dim)
+        tensor_list = ops.split(tensor, last_dim_size, dim=last_dim)
         # Note: torch.split does not create contiguous tensors by default.
         if contiguous_split_chunks:
             return tuple(chunk for chunk in tensor_list)
 
         return tensor_list
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             position_ids,
@@ -633,16 +634,16 @@ class SelfAttention(nn.Cell):
         if self.position_encoding_2d:
             q1, q2 = query_layer.chunk(2, axis=(query_layer.ndim - 1))
             k1, k2 = key_layer.chunk(2, axis=(key_layer.ndim - 1))
-            cos, sin = self.rotary_emb(q1, seq_len=position_ids.max() + 1)
+            cos, sin = self.rotary_emb(q1, seq_len=position_ids.max().item() + 1)
             position_ids, block_position_ids = position_ids[:, 0, :].swapaxes(0, 1), \
                 position_ids[:, 1, :].swapaxes(0, 1)
             q1, k1 = apply_rotary_pos_emb_index(q1, k1, cos, sin, position_ids)
             q2, k2 = apply_rotary_pos_emb_index(q2, k2, cos, sin, block_position_ids)
-            query_layer = ops.concat([q1, q2], axis=(q1.ndim - 1))
-            key_layer = ops.concat([k1, k2], axis=(k1.ndim - 1))
+            query_layer = ops.concat([q1, q2], dim=(q1.ndim - 1))
+            key_layer = ops.concat([k1, k2], dim=(k1.ndim - 1))
         else:
             position_ids = position_ids.swapaxes(0, 1)
-            cos, sin = self.rotary_emb(value_layer, seq_len=position_ids.max() + 1)
+            cos, sin = self.rotary_emb(value_layer, seq_len=position_ids.max().item() + 1)
             # [seq_len, batch, num_attention_heads, hidden_size_per_attention_head]
             query_layer, key_layer = apply_rotary_pos_emb_index(query_layer, key_layer, cos, sin, position_ids)
 
@@ -667,25 +668,25 @@ class SelfAttention(nn.Cell):
         return outputs  # output, present, attention_probs
 
 
-class GEGLU(nn.Cell):
+class GEGLU(nn.Module):
 
     """
     GEGLU is a class that represents a gated linear unit based on the Gaussian Error Linear Unit (GELU) activation function.
 
-    This class inherits from the nn.Cell class.
+    This class inherits from the nn.Module class.
 
     Attributes:
         activation_fn: A function representing the GELU activation function.
 
     Methods:
         __init__: Initializes the GEGLU instance.
-        construct: Constructs the GEGLU network.
+        forward: Constructs the GEGLU network.
 
     Example:
         ```python
         >>> gelu = GEGLU()
         >>> x = Tensor([1, 2, 3, 4, 5, 6])
-        >>> output = gelu.construct(x)
+        >>> output = gelu.forward(x)
         ```
     """
     def __init__(self):
@@ -704,9 +705,9 @@ class GEGLU(nn.Cell):
             None.
         """
         super().__init__()
-        self.activation_fn = ops.gelu
+        self.activation_fn = F.gelu
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Constructs the GEGLU (Gated Exponential Linear Unit) transformation of the input tensor.
 
@@ -734,7 +735,7 @@ class GEGLU(nn.Cell):
             ```python
             >>> geglu_instance = GEGLU()
             >>> input_tensor = torch.tensor([[1, 2, 3], [4, 5, 6]])
-            >>> geglu_instance.construct(input_tensor)
+            >>> geglu_instance.forward(input_tensor)
             ```
         This will apply the GEGLU transformation to the input tensor `input_tensor` and return `None`.
 
@@ -744,26 +745,26 @@ class GEGLU(nn.Cell):
         return x1 * self.activation_fn(x2)
 
 
-class GLU(nn.Cell):
+class GLU(nn.Module):
 
     """
     GLU
 
-    This class represents a Gated Linear Unit (GLU) neural network layer. It inherits from the nn.Cell class.
+    This class represents a Gated Linear Unit (GLU) neural network layer. It inherits from the nn.Module class.
 
     Attributes:
         layer_id (int): The identifier for the layer.
         activation_func (function): The activation function used in the layer.
         hidden_size (int): The size of the hidden states.
         inner_hidden_size (int): The size of the intermediate hidden states. Defaults to 4 times the hidden size.
-        dense_h_to_4h (nn.Dense): The linear transformation from hidden states to intermediate hidden states.
-        dense_4h_to_h (nn.Dense): The linear transformation from intermediate hidden states to hidden states.
+        dense_h_to_4h (nn.Linear): The linear transformation from hidden states to intermediate hidden states.
+        dense_4h_to_h (nn.Linear): The linear transformation from intermediate hidden states to hidden states.
 
     Methods:
         __init__(self, hidden_size, inner_hidden_size=None, layer_id=None, bias=True, activation_func=gelu, params_dtype=mindspore.float32):
             Initializes a GLU instance.
 
-        construct(self, hidden_states):
+        forward(self, hidden_states):
             Constructs the forward pass of the GLU layer.
 
     """
@@ -795,21 +796,21 @@ class GLU(nn.Cell):
         if inner_hidden_size is None:
             inner_hidden_size = 4 * hidden_size
         self.inner_hidden_size = inner_hidden_size
-        self.dense_h_to_4h = nn.Dense(
+        self.dense_h_to_4h = nn.Linear(
             self.hidden_size,
             self.inner_hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
         # Project back to h.
-        self.dense_4h_to_h = nn.Dense(
+        self.dense_4h_to_h = nn.Linear(
             self.inner_hidden_size,
             self.hidden_size,
-            has_bias=bias,
+            bias=bias,
             dtype=params_dtype,
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         hidden_states: [seq_len, batch, hidden_size]
         """
@@ -823,17 +824,17 @@ class GLU(nn.Cell):
         return output
 
 
-class GLMBlock(nn.Cell):
+class GLMBlock(nn.Module):
 
     """
     The GLMBlock class represents a block within a GLM (Generative Language Model) model.
     It consists of layers for self-attention and multi-layer perceptron (MLP) processing.
 
-    This class inherits from the nn.Cell class and contains the necessary methods and attributes to perform
+    This class inherits from the nn.Module class and contains the necessary methods and attributes to perform
     self-attention and MLP operations within a GLM model.
 
     The GLMBlock class has an initialization method (__init__) that sets up the necessary layers and parameters for
-    self-attention and MLP processing. It also has a construct method that processes the input hidden states through
+    self-attention and MLP processing. It also has a forward method that processes the input hidden states through
     self-attention and MLP layers.
 
     The GLMBlock class is designed to be used as part of a larger GLM model to process input sequences and generate output predictions.
@@ -883,7 +884,7 @@ class GLMBlock(nn.Cell):
         self.layer_id = layer_id
 
         # Layernorm on the input data.
-        self.input_layernorm = layernorm([hidden_size], epsilon=layernorm_epsilon)
+        self.input_layernorm = layernorm([hidden_size], eps=layernorm_epsilon)
 
         self.position_encoding_2d = position_encoding_2d
 
@@ -899,7 +900,7 @@ class GLMBlock(nn.Cell):
         )
 
         # Layernorm on the input data.
-        self.post_attention_layernorm = layernorm([hidden_size], epsilon=layernorm_epsilon)
+        self.post_attention_layernorm = layernorm([hidden_size], eps=layernorm_epsilon)
 
         self.num_layers = num_layers
 
@@ -912,7 +913,7 @@ class GLMBlock(nn.Cell):
             params_dtype=params_dtype,
         )
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             position_ids,
@@ -976,7 +977,7 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["GLMBlock"]
     _keys_to_ignore_on_load_unexpected = [r'inv_freq']
 
-    def _init_weights(self, cell: nn.Cell):
+    def _init_weights(self, cell: nn.Module):
         """Initialize the weights."""
         return
 
@@ -1036,8 +1037,8 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
                 ops.zeros(context_length, dtype=mindspore.int64),
                 ops.arange(seq_length - context_length, dtype=mindspore.int64) + 1
             )) for context_length in context_lengths]
-            block_position_ids = ops.stack(block_position_ids, axis=0)
-            position_ids = ops.stack((position_ids, block_position_ids), axis=1)
+            block_position_ids = ops.stack(block_position_ids, dim=0)
+            position_ids = ops.stack((position_ids, block_position_ids), dim=1)
         else:
             position_ids = ops.arange(seq_length, dtype=mindspore.int64).unsqueeze(0).tile((batch_size, 1))
             for i, context_length in enumerate(context_lengths):
@@ -1124,12 +1125,12 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
                 position_encoding_2d=self.position_encoding_2d,
             )
 
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [get_layer(layer_id) for layer_id in range(self.num_layers)]
         )
 
         # Final layer norm before output.
-        self.final_layernorm = nn.LayerNorm([self.hidden_size], epsilon=self.layernorm_epsilon)
+        self.final_layernorm = nn.LayerNorm([self.hidden_size], eps=self.layernorm_epsilon)
 
         if self.pre_seq_len is not None:
             for param in self.parameters():
@@ -1206,7 +1207,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
             ValueError: If the batch_size is less than or equal to 0.
             TypeError: If the dtype is not a valid mindspore data type.
         """
-        prefix_tokens = self.prefix_tokens.unsqueeze(0).expand(batch_size, -1)
+        prefix_tokens = self.prefix_tokens.unsqueeze(0).broadcast_to((batch_size, -1))
         past_key_values = self.prefix_encoder(prefix_tokens).astype(dtype)
         past_key_values = past_key_values.view(
             batch_size,
@@ -1221,7 +1222,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         # past_key_values = [(v[0], v[1]) for v in past_key_values]
         return past_key_values
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             position_ids: Optional[mindspore.Tensor] = None,
@@ -1306,7 +1307,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         if self.pre_seq_len is not None and attention_mask is not None:
             prefix_attention_mask = ops.ones((batch_size, 1, input_ids.shape[-1], self.pre_seq_len))
             prefix_attention_mask = (prefix_attention_mask < 0.5).bool()
-            attention_mask = ops.cat((prefix_attention_mask, attention_mask), axis=3)
+            attention_mask = ops.cat((prefix_attention_mask, attention_mask), dim=3)
 
         # [seq_len, batch, hidden_size]
         hidden_states = inputs_embeds.swapaxes(0, 1)
@@ -1318,8 +1319,9 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         if attention_mask is None:
             attention_mask = ops.zeros((1, 1)).bool()
 
+        if isinstance(past_key_values[0], str):
+            past_key_values = past_key_values[1]
         for i, layer in enumerate(self.layers):
-
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
             layer_past = past_key_values[i]
@@ -1364,7 +1366,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
     This class represents a ChatGLM model for conditional generation, inheriting from ChatGLMPreTrainedModel.
 
     The class includes methods for initializing the model, updating model keyword arguments for generation,
-    preparing inputs for generation, constructing the model, reordering cache for beam search or beam sample,
+    preparing inputs for generation, forwarding the model, reordering cache for beam search or beam sample,
     processing model responses, and facilitating chat interactions. It also provides methods for streaming chat and generation.
 
     The model allows for quantization with a specified number of bits.
@@ -1375,7 +1377,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         set_output_embeddings: Sets new output embeddings.
         _update_model_kwargs_for_generation: Updates model keyword arguments for generation.
         prepare_inputs_for_generation: Prepares inputs for model generation.
-        construct: Constructs the model for generation and computes the loss if labels are provided.
+        forward: Constructs the model for generation and computes the loss if labels are provided.
         _reorder_cache: Reorders the past_key_values cache for beam search or beam sample.
         process_response: Processes the model response by replacing tokens and punctuations.
         chat: Conducts a chat interaction based on the query and history.
@@ -1411,10 +1413,10 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
 
         self.transformer = ChatGLMModel(config)
 
-        self.lm_head = nn.Dense(
+        self.lm_head = nn.Linear(
             config.hidden_size,
             config.vocab_size,
-            has_bias=False,
+            bias=False,
             dtype=mindspore.float16
         )
 
@@ -1481,7 +1483,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         """
         # update past_key_values
         model_kwargs["past_key_values"] = self._extract_past_from_model_output(
-            outputs, standardize_cache_format=standardize_cache_format
+            outputs
         )
 
         # update attention mask
@@ -1489,11 +1491,11 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             attention_mask = model_kwargs["attention_mask"]
             if attention_mask is not None and attention_mask.dtype == mindspore.bool_:
                 attention_mask = ops.cat(
-                    [attention_mask, attention_mask.new_ones((*attention_mask.shape[:3], 1))], axis=3)
+                    [attention_mask, ops.ones((*attention_mask.shape[:3], 1), dtype=attention_mask.dtype)], dim=3)
                 new_attention_mask = attention_mask[:, :, -1:].copy()
                 new_attention_mask[..., -1] = False
                 model_kwargs["attention_mask"] = ops.cat(
-                    [attention_mask, new_attention_mask], axis=2
+                    [attention_mask, new_attention_mask], dim=2
                 )
 
         # update position ids
@@ -1502,7 +1504,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             new_position_id = position_ids[..., -1:].copy()
             new_position_id[:, 1, :] += 1
             model_kwargs["position_ids"] = ops.cat(
-                [position_ids, new_position_id], axis=-1
+                [position_ids, new_position_id], dim=-1
             )
 
         return model_kwargs
@@ -1587,7 +1589,6 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                     mask_positions=mask_positions,
                     use_gmasks=use_gmasks
                 )
-
             return {
                 "input_ids": input_ids,
                 "past_key_values": past,
@@ -1595,7 +1596,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                 "attention_mask": attention_mask
             }
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             position_ids: Optional[mindspore.Tensor] = None,
@@ -1663,7 +1664,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1), ignore_index=-100)
+            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1), ignore_index=-100)
 
             lm_logits = lm_logits.to(hidden_states.dtype)
             loss = loss.to(hidden_states.dtype)
@@ -1931,14 +1932,14 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             next_token_scores = logits_warper(input_ids, next_token_scores)
 
             # sample
-            probs = ops.softmax(next_token_scores, axis=-1)
+            probs = ops.softmax(next_token_scores, dim=-1)
             if generation_config.do_sample:
                 next_tokens = ops.multinomial(probs, num_samples=1).squeeze(1)
             else:
                 next_tokens = ops.argmax(probs, dim=-1)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            input_ids = ops.cat([input_ids, next_tokens[:, None]], dim=-1)
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
             )

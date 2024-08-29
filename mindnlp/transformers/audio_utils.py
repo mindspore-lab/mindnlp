@@ -431,7 +431,7 @@ def spectrogram(
 
     Note: This function is not optimized for speed yet. It should be mostly compatible with `librosa.stft` and
     `torchaudio.functional.transforms.Spectrogram`, although it is more flexible due to the different ways spectrograms
-    can be constructed.
+    can be forwarded.
 
     Args:
         waveform (`np.ndarray` of shape `(length,)`):
@@ -710,7 +710,7 @@ def stft(frames: np.array, windowing_function: np.array, fft_window_size: int = 
             A spectrogram of shape `(num_frames, nb_frequency_bins)` obtained using the STFT algorithm
     """
     warnings.warn(
-        "The function `stft` is deprecated and will be removed in version 4.31.0 of Transformers",
+        "The function `stft` is deprecated.31.0 of Transformers",
         FutureWarning,
     )
     frame_size = frames.shape[1]

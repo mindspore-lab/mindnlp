@@ -15,13 +15,11 @@
 """
 Timesformer Model.
 """
-from . import configuration_timesformer, modeling_timesformer, image_processing_videomae
+from . import configuration_timesformer, modeling_timesformer
 from .configuration_timesformer import *
 from .modeling_timesformer import *
-from .image_processing_videomae import *
 
 
 __all__ = []
 __all__.extend(configuration_timesformer.__all__)
 __all__.extend(modeling_timesformer.__all__)
-__all__.extend(image_processing_videomae.__all__)

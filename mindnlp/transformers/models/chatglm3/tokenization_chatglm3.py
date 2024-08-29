@@ -218,7 +218,7 @@ class ChatGLM3Tokenizer(PreTrainedTokenizer):
     The 'ChatGLM3Tokenizer' class represents a tokenizer for a chat model that inherits from PreTrainedTokenizer.
     It provides methods for tokenizing, converting tokens to IDs, converting IDs to tokens, building model inputs
     with special tokens, padding, and saving the vocabulary.
-    The class also provides methods for constructing chat inputs, building single messages, and extracting prefix tokens.
+    The class also provides methods for forwarding chat inputs, building single messages, and extracting prefix tokens.
     Additionally, it offers properties for accessing special tokens and their IDs, as well as the vocabulary size.
     Furthermore, it provides a method for converting tokens to a string.
 
@@ -254,7 +254,7 @@ class ChatGLM3Tokenizer(PreTrainedTokenizer):
         _pad(encoded_inputs, max_length=None, padding_strategy=PaddingStrategy.DO_NOT_PAD, pad_to_multiple_of=None, return_attention_mask=None):
             Pads encoded inputs according to specified parameters.
 
-    The 'ChatGLM3Tokenizer' class provides a comprehensive set of methods for tokenization and model input construction,
+    The 'ChatGLM3Tokenizer' class provides a comprehensive set of methods for tokenization and model input forwardion,
     making it suitable for use in chat model applications.
     """
     vocab_files_names = {"vocab_file": "tokenizer.model"}

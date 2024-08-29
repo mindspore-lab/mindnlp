@@ -35,20 +35,20 @@ def ids_tensor(shape, vocab_size):
     for _ in range(total_dims):
         values.append(random.randint(0, vocab_size - 1))
 
-    return mindspore.tensor(data=values, dtype=mindspore.int64).view(shape)
+    return mindspore.tensor(values, dtype=mindspore.int64).view(shape)
 
 
 def get_model_and_tokenizer():
-    model = AutoModelForSeq2SeqLM.from_pretrained("THUDM/chatglm-6b", mirror='aifast').half()
+    model = AutoModelForSeq2SeqLM.from_pretrained("ZhipuAI/ChatGLM-6B", mirror='modelscope').half()
     model.set_train(False)
-    tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b", mirror='gitee')
+    tokenizer = AutoTokenizer.from_pretrained("ZhipuAI/ChatGLM-6B", mirror='modelscope')
     return model, tokenizer
 
 def get_model_and_tokenizer_random_init():
-    config = AutoConfig.from_pretrained("THUDM/chatglm-6b")
+    config = AutoConfig.from_pretrained("ZhipuAI/ChatGLM-6B", mirror='modelscope')
     model = AutoModelForSeq2SeqLM.from_config(config).half()
     model.set_train(False)
-    tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b")
+    tokenizer = AutoTokenizer.from_pretrained("ZhipuAI/ChatGLM-6B", mirror='modelscope')
     return model, tokenizer
 
 @require_mindspore
@@ -70,7 +70,6 @@ class ChatGLMGenerationTest(unittest.TestCase):
         for (prompt, expected_response) in zip(prompts, expected_responses):
             response, history = model.chat(tokenizer, prompt, history=history)
             print(repr(response))
-            break
             self.assertEquals(expected_response, response)
 
     @slow

@@ -15,10 +15,10 @@
 """
 MaskFormer Models init
 """
-from . import maskformer,maskformer_config
-from .maskformer_config import *
-from .maskformer import *
+from . import configuration_maskformer, modeling_maskformer
+from .configuration_maskformer import *
+from .modeling_maskformer import *
 
 __all__ = []
-__all__.extend(maskformer.__all__)
-__all__.extend(maskformer_config.__all__)
+__all__.extend(modeling_maskformer.__all__)
+__all__.extend(configuration_maskformer.__all__)

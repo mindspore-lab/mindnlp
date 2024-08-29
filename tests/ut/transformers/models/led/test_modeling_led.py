@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch LED model."""
+"""Testing suite for the MindSpore LED model."""
 
 import copy
 import tempfile
@@ -37,7 +37,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         MODEL_FOR_QUESTION_ANSWERING_MAPPING,
@@ -48,6 +48,7 @@ if is_mindspore_available():
         LEDTokenizer,
     )
     from mindnlp.transformers.models.led.modeling_led import LEDDecoder, LEDEncoder
+
 
 def prepare_led_inputs_dict(
     config,
@@ -196,8 +197,8 @@ class LEDModelTester:
         next_attn_mask = ids_tensor((self.batch_size, 3), 2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([attention_mask, next_attn_mask.astype(attention_mask.dtype)], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([attention_mask, next_attn_mask.astype(attention_mask.dtype)], dim=-1)
 
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["last_hidden_state"]
         output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[

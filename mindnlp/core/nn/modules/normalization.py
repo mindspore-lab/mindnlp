@@ -1,11 +1,12 @@
 """normalization"""
 import numbers
-import mindspore
-from mindspore import ops, Parameter
-from mindspore.common.initializer import initializer
+from mindspore import Parameter
 
-from mindnlp.configs import USE_PYBOOST
 from .module import Module
+from ..functional import group_norm, layer_norm
+from .. import init
+from ... import ops
+
 
 class LayerNorm(Module):
     r"""Applies Layer Normalization over a mini-batch of inputs as described in
@@ -63,28 +64,34 @@ class LayerNorm(Module):
 
     .. _`Layer Normalization`: https://arxiv.org/abs/1607.06450
     """
-    def __init__(self, normalized_shape, eps=1e-5, elementwise_affine=True):
+    def __init__(self, normalized_shape, eps=1e-5, elementwise_affine=True, bias: bool = True,dtype=None):
+        factory_kwargs = {'dtype': dtype}
         super(LayerNorm, self).__init__()
         if isinstance(normalized_shape, numbers.Integral):
             normalized_shape = (normalized_shape,)
         self.normalized_shape = tuple(normalized_shape)
         self.eps = eps
         self.elementwise_affine = elementwise_affine
-        self.weight = Parameter(initializer('ones', normalized_shape), 'weight', elementwise_affine)
-        self.bias = Parameter(initializer('zeros', normalized_shape), 'bias', elementwise_affine)
+        if self.elementwise_affine:
+            self.weight = Parameter(ops.empty(self.normalized_shape, **factory_kwargs))
+            if bias:
+                self.bias = Parameter(ops.empty(self.normalized_shape, **factory_kwargs))
+            else:
+                self.register_parameter('bias', None)
+        else:
+            self.register_parameter('weight', None)
+            self.register_parameter('bias', None)
 
-        self.layer_norm = ops.LayerNorm(begin_norm_axis=-1,
-                                           begin_params_axis=-1,
-                                           epsilon=self.eps)
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        if self.elementwise_affine:
+            init.ones_(self.weight)
+            if self.bias is not None:
+                init.zeros_(self.bias)
 
     def forward(self, input):
-        if USE_PYBOOST:
-            return mindspore.mint.nn.functional.layer_norm(input, self.normalized_shape, self.weight, self.bias, self.eps)
-        return self._forward(input)
-
-    def _forward(self, input):
-        y, _, _ = self.layer_norm(input, self.weight, self.bias)
-        return y
+        return layer_norm(input, self.normalized_shape, self.weight, self.bias, self.eps)
 
     def extra_repr(self):
         return '{normalized_shape}, eps={eps}, ' \
@@ -132,30 +139,18 @@ class GroupNorm(Module):
 
     .. _`Group Normalization`: https://arxiv.org/abs/1803.08494
     """
-    def __init__(self, num_groups, num_channels, eps=1e-5, affine=True):
+    def __init__(self, num_groups, num_channels, eps=1e-5, affine=True, dtype=None):
+        factory_kwargs = {'dtype': dtype}
         super(GroupNorm, self).__init__()
         self.num_groups = num_groups
         self.num_channels = num_channels
         self.eps = eps
         self.affine = affine
-        self.weight = Parameter(initializer('ones', (num_channels, )), 'weight', affine)
-        self.bias = Parameter(initializer('zeros', (num_channels, )), 'bias', affine)
+        self.weight = Parameter(ops.empty(num_channels, **factory_kwargs), 'weight', affine)
+        self.bias = Parameter(ops.empty(num_channels, **factory_kwargs),  'bias', affine)
 
     def forward(self, input):
-        if USE_PYBOOST:
-            return mindspore.mint.nn.functional.group_norm(input, self.num_groups, self.weight, self.bias, self.eps)
-        return self._forward(input)
-
-    def _forward(self, input):
-        batch, channel, height, width = input.shape
-        input = input.reshape(batch, self.num_groups, -1)
-        mean = ops.mean(input, axis=2, keep_dims=True)
-        var = ops.div(ops.sum(ops.square(ops.sub(input, mean)), 2, keepdim=True), (channel * height * width / self.num_groups))
-        std = ops.sqrt(var + self.eps)
-        input = ops.div(ops.sub(input, mean), std)
-        input = input.reshape(batch, channel, height, width)
-        output = ops.add(input * self.weight.reshape(-1, 1, 1), self.bias.reshape(-1, 1, 1))
-        return output
+        return group_norm(input, self.num_groups, self.weight, self.bias, self.eps)
 
     def extra_repr(self):
         return '{num_groups}, {num_channels}, eps={eps}, ' \

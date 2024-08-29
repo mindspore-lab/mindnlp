@@ -880,11 +880,11 @@ class Wav2Vec2Tokenizer(PreTrainedTokenizer):
             None
         
         Raises:
-            FutureWarning: This class is deprecated and will be removed in version 5 of Transformers.
+            FutureWarning: This class is deprecated.
                 Please use Wav2Vec2Processor or Wav2Vec2CTCTokenizer instead.
         """
         warnings.warn(
-            "The class `Wav2Vec2Tokenizer` is deprecated and will be removed in version 5 of Transformers. Please use"
+            "The class `Wav2Vec2Tokenizer` is deprecated. Please use"
             " `Wav2Vec2Processor` or `Wav2Vec2CTCTokenizer` instead.",
             FutureWarning,
         )

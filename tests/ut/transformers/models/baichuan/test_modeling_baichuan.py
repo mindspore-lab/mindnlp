@@ -29,6 +29,8 @@ from mindnlp.transformers.models.baichuan import BaiChuanConfig, BaiChuan7bModel
 from mindnlp.utils.testing_utils import slow
 from .....common import MindNLPTestCase
 
+
+
 class TestModelingBaiChuan(MindNLPTestCase):
     r"""
     Test BaiChuan

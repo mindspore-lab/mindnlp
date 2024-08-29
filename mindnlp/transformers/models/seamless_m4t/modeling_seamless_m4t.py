@@ -21,10 +21,12 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, XavierUniform, Uniform, HeNormal
 
-from mindnlp.utils import ModelOutput, logging, get_default_dtype
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import functional as F
+from mindnlp.utils import ModelOutput, logging
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
@@ -91,7 +93,7 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length) * mask
+    incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
     return incremental_indices.long() + padding_idx
 
 
@@ -179,12 +181,12 @@ def format_speech_generation_kwargs(kwargs):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2PositionalConvEmbedding with Wav2Vec2->SeamlessM4TConformer, feat_extract_activation->speech_encoder_hidden_act
-class SeamlessM4TConformerPositionalConvEmbedding(nn.Cell):
+class SeamlessM4TConformerPositionalConvEmbedding(nn.Module):
 
     """
     A Python class representing a SeamlessM4TConformerPositionalConvEmbedding, which is used for positional
     convolutional embedding within a Conformer neural network model.
-    This class inherits from nn.Cell and includes functionality for applying convolution operations with specific
+    This class inherits from nn.Module and includes functionality for applying convolution operations with specific
     configurations for padding and grouping.
 
     Attributes:
@@ -201,13 +203,13 @@ class SeamlessM4TConformerPositionalConvEmbedding(nn.Cell):
         __init__:
             Constructor method for initializing the SeamlessM4TConformerPositionalConvEmbedding instance.
 
-        construct:
+        forward:
             Method to perform the sequence of operations on the input hidden states, including convolution,
             padding, activation, and axis swapping.
 
     Usage:
         Instantiate an object of SeamlessM4TConformerPositionalConvEmbedding with a configuration object and utilize
-        the 'construct' method to process input hidden states.
+        the 'forward' method to process input hidden states.
     """
     def __init__(self, config):
         """
@@ -235,15 +237,15 @@ class SeamlessM4TConformerPositionalConvEmbedding(nn.Cell):
             config.hidden_size,
             kernel_size=config.num_conv_pos_embeddings,
             padding=config.num_conv_pos_embeddings // 2,
-            group=config.num_conv_pos_embedding_groups,
+            groups=config.num_conv_pos_embedding_groups,
         )
 
-        # self.conv = weight_norm(self.conv, name="weight", axis=2)
+        self.conv = nn.utils.weight_norm(self.conv, name="weight", dim=2)
 
         self.padding = SeamlessM4TConformerSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.speech_encoder_hidden_act]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the positional convolutional embedding for the SeamlessM4TConformerPositionalConvEmbedding class.
 
@@ -273,7 +275,7 @@ class SeamlessM4TConformerPositionalConvEmbedding(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2_conformer.modeling_wav2vec2_conformer.Wav2Vec2ConformerRotaryPositionalEmbedding with Wav2Vec2->SeamlessM4T, num_attention_heads->speech_encoder_attention_heads
-class SeamlessM4TConformerRotaryPositionalEmbedding(nn.Cell):
+class SeamlessM4TConformerRotaryPositionalEmbedding(nn.Module):
     """Rotary positional embedding
     Reference : https://blog.eleuther.ai/rotary-embeddings/ Paper: https://arxiv.org/pdf/2104.09864.pdf
     """
@@ -304,7 +306,7 @@ class SeamlessM4TConformerRotaryPositionalEmbedding(nn.Cell):
         self.cached_sequence_length = None
         self.cached_rotary_positional_embedding = None
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the rotary positional embeddings for the SeamlessM4TConformerRotaryPositionalEmbedding.
 
@@ -328,7 +330,7 @@ class SeamlessM4TConformerRotaryPositionalEmbedding(nn.Cell):
         # Embeddings are computed in the dtype of the inv_freq constant
         time_stamps = ops.arange(sequence_length).type_as(self.inv_freq)
         freqs = ops.einsum("i,j->ij", time_stamps, self.inv_freq)
-        embeddings = ops.cat((freqs, freqs), axis=-1)
+        embeddings = ops.cat((freqs, freqs), dim=-1)
 
         cos_embeddings = embeddings.cos()[:, None, None, :]
         sin_embeddings = embeddings.sin()[:, None, None, :]
@@ -338,7 +340,7 @@ class SeamlessM4TConformerRotaryPositionalEmbedding(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2_conformer.modeling_wav2vec2_conformer.Wav2Vec2ConformerRelPositionalEmbedding with Wav2Vec2->SeamlessM4T
-class SeamlessM4TConformerRelPositionalEmbedding(nn.Cell):
+class SeamlessM4TConformerRelPositionalEmbedding(nn.Module):
     """Relative positional encoding module."""
     def __init__(self, config):
         """
@@ -414,10 +416,10 @@ class SeamlessM4TConformerRelPositionalEmbedding(nn.Cell):
         # as in https://arxiv.org/abs/1901.02860
         pe_positive = ops.flip(pe_positive, [0]).unsqueeze(0)
         pe_negative = pe_negative[1:].unsqueeze(0)
-        pe = ops.cat([pe_positive, pe_negative], axis=1)
+        pe = ops.cat([pe_positive, pe_negative], dim=1)
         self.pe = pe.to(dtype=x.dtype)
 
-    def construct(self, hidden_states: mindspore.Tensor):
+    def forward(self, hidden_states: mindspore.Tensor):
         """
         Constructs the relative positional embeddings for the SeamlessM4TConformer model.
 
@@ -433,7 +435,7 @@ class SeamlessM4TConformerRelPositionalEmbedding(nn.Cell):
             None.
 
         Description:
-            This method takes the hidden states of the model and constructs the relative position embeddings.
+            This method takes the hidden states of the model and forwards the relative position embeddings.
             It first extends the positional encodings (pe) using the extend_pe() method. Then, it calculates the
             start and end indices for selecting the relevant portion of the positional encodings based on the length
             of the hidden states. Finally, it returns the relative position embeddings for the given hidden states.
@@ -452,7 +454,7 @@ class SeamlessM4TConformerRelPositionalEmbedding(nn.Cell):
             ```python
             >>> rel_pos_emb = SeamlessM4TConformerRelPositionalEmbedding()
             >>> hidden_states = mindspore.Tensor(...)
-            >>> relative_position_embeddings = rel_pos_emb.construct(hidden_states)
+            >>> relative_position_embeddings = rel_pos_emb.forward(hidden_states)
             ```
         """
         self.extend_pe(hidden_states)
@@ -464,19 +466,19 @@ class SeamlessM4TConformerRelPositionalEmbedding(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2_conformer.modeling_wav2vec2_conformer.Wav2Vec2ConformerSamePadLayer with Wav2Vec2->SeamlessM4T
-class SeamlessM4TConformerSamePadLayer(nn.Cell):
+class SeamlessM4TConformerSamePadLayer(nn.Module):
 
     """
     This class represents a seamless M4T Conformer layer with same padding.
 
-    Inherits from nn.Cell.
+    Inherits from nn.Module.
 
     Attributes:
         num_pad_remove (int): The number of padding elements to remove from the input sequence.
 
     Methods:
         __init__: Initializes the SeamlessM4TConformerSamePadLayer instance.
-        construct: Constructs the hidden states of the SeamlessM4TConformerSamePadLayer.
+        forward: Constructs the hidden states of the SeamlessM4TConformerSamePadLayer.
 
     """
     def __init__(self, num_conv_pos_embeddings):
@@ -496,7 +498,7 @@ class SeamlessM4TConformerSamePadLayer(nn.Cell):
         super().__init__()
         self.num_pad_remove = 1 if num_conv_pos_embeddings % 2 == 0 else 0
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the hidden states by removing padding from the input tensor.
 
@@ -520,11 +522,11 @@ class SeamlessM4TConformerSamePadLayer(nn.Cell):
         return hidden_states
 
 
-class SeamlessM4TConformerFeatureProjection(nn.Cell):
+class SeamlessM4TConformerFeatureProjection(nn.Module):
 
     """
     This class represents a feature projection module for the SeamlessM4TConformer model.
-    It inherits from the nn.Cell class.
+    It inherits from the nn.Module class.
 
     The feature projection module consists of a layer normalization, a dense projection layer,
     and a dropout layer. It takes in hidden states as input and applies layer normalization,
@@ -532,11 +534,11 @@ class SeamlessM4TConformerFeatureProjection(nn.Cell):
 
     Attributes:
         layer_norm (nn.LayerNorm): A layer normalization module that normalizes the input hidden states.
-        projection (nn.Dense): A dense projection layer that projects the normalized hidden states.
+        projection (nn.Linear): A dense projection layer that projects the normalized hidden states.
         dropout (nn.Dropout): A dropout layer that applies dropout to the projected hidden states.
 
     Methods:
-        construct(hidden_states):
+        forward(hidden_states):
             Applies the feature projection to the input hidden states.
 
             Args:
@@ -568,13 +570,13 @@ class SeamlessM4TConformerFeatureProjection(nn.Cell):
             None.
         """
         super().__init__()
-        self.layer_norm = nn.LayerNorm([config.feature_projection_input_dim], epsilon=config.layer_norm_eps)
-        self.projection = nn.Dense(config.feature_projection_input_dim, config.hidden_size)
+        self.layer_norm = nn.LayerNorm([config.feature_projection_input_dim], eps=config.layer_norm_eps)
+        self.projection = nn.Linear(config.feature_projection_input_dim, config.hidden_size)
         self.dropout = nn.Dropout(p=config.speech_encoder_dropout)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        Method to construct the feature projection in the SeamlessM4TConformerFeatureProjection class.
+        Method to forward the feature projection in the SeamlessM4TConformerFeatureProjection class.
 
         Args:
             self (SeamlessM4TConformerFeatureProjection): The instance of the SeamlessM4TConformerFeatureProjection
@@ -594,12 +596,12 @@ class SeamlessM4TConformerFeatureProjection(nn.Cell):
         return hidden_states
 
 
-class SeamlessM4TConformerFeedForward(nn.Cell):
+class SeamlessM4TConformerFeedForward(nn.Module):
 
     """
     The SeamlessM4TConformerFeedForward class represents a feed-forward neural network module for the
-    SeamlessM4TConformer model. It inherits from the nn.Cell class and contains methods for initializing the network
-    and constructing the feed-forward operations.
+    SeamlessM4TConformer model. It inherits from the nn.Module class and contains methods for initializing the network
+    and forwarding the feed-forward operations.
 
     Attributes:
         config: The configuration parameters for the feed-forward network.
@@ -611,7 +613,7 @@ class SeamlessM4TConformerFeedForward(nn.Cell):
             Initializes the SeamlessM4TConformerFeedForward module with the given configuration, activation function,
             and dropout probability.
 
-        construct:
+        forward:
             Constructs the feed-forward operations on the given hidden states, applying intermediate dense layers,
             activation functions, and dropout. Returns the processed hidden states.
     """
@@ -651,13 +653,13 @@ class SeamlessM4TConformerFeedForward(nn.Cell):
         act_fn = act_fn if act_fn is not None else config.speech_encoder_hidden_act
 
         self.intermediate_dropout = nn.Dropout(p=dropout)
-        self.intermediate_dense = nn.Dense(config.hidden_size, config.speech_encoder_intermediate_size)
+        self.intermediate_dense = nn.Linear(config.hidden_size, config.speech_encoder_intermediate_size)
         self.intermediate_act_fn = ACT2FN[act_fn] if isinstance(act_fn, str) else act_fn
 
-        self.output_dense = nn.Dense(config.speech_encoder_intermediate_size, config.hidden_size)
+        self.output_dense = nn.Linear(config.speech_encoder_intermediate_size, config.hidden_size)
         self.output_dropout = nn.Dropout(p=dropout)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the feed forward layer for the SeamlessM4TConformerFeedForward class.
 
@@ -671,7 +673,7 @@ class SeamlessM4TConformerFeedForward(nn.Cell):
         Raises:
             TypeError: If the input hidden_states is not a valid tensor.
             ValueError: If the input hidden_states is empty or has invalid shape.
-            RuntimeError: If there is an issue during the feed forward layer construction process.
+            RuntimeError: If there is an issue during the feed forward layer forwardion process.
         """
         hidden_states = self.intermediate_dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
@@ -682,7 +684,7 @@ class SeamlessM4TConformerFeedForward(nn.Cell):
         return hidden_states
 
 
-class SeamlessM4TConformerConvolutionModule(nn.Cell):
+class SeamlessM4TConformerConvolutionModule(nn.Module):
     """Convolution block used in the conformer block"""
     def __init__(self, config):
         """
@@ -715,17 +717,16 @@ class SeamlessM4TConformerConvolutionModule(nn.Cell):
             kernel_size=1,
             stride=1,
             padding=0,
-            has_bias=False,
+            bias=False,
         )
-        self.glu = nn.GLU(axis=1)
+        self.glu = nn.GLU(dim=1)
         self.depthwise_conv = nn.Conv1d(
             config.hidden_size,
             config.hidden_size,
             config.conv_depthwise_kernel_size,
             stride=1,
-            pad_mode="same",
-            group=config.hidden_size,
-            has_bias=False,
+            groups=config.hidden_size,
+            bias=False,
         )
         self.batch_norm = nn.BatchNorm1d(config.hidden_size)
         self.activation = ACT2FN[config.speech_encoder_hidden_act]
@@ -735,11 +736,11 @@ class SeamlessM4TConformerConvolutionModule(nn.Cell):
             kernel_size=1,
             stride=1,
             padding=0,
-            has_bias=False,
+            bias=False,
         )
         self.dropout = nn.Dropout(p=config.speech_encoder_dropout)
 
-    def construct(self, hidden_states, attention_mask=None):
+    def forward(self, hidden_states, attention_mask=None):
         """
         Constructs the SeamlessM4TConformerConvolutionModule.
 
@@ -785,7 +786,7 @@ class SeamlessM4TConformerConvolutionModule(nn.Cell):
         return hidden_states
 
 
-class SeamlessM4TConformerSelfAttention(nn.Cell):
+class SeamlessM4TConformerSelfAttention(nn.Module):
     """Construct a SeamlessM4TConformerSelfAttention object.
     Can be enhanced with rotary or relative position embeddings.
     """
@@ -810,23 +811,23 @@ class SeamlessM4TConformerSelfAttention(nn.Cell):
         self.num_heads = config.speech_encoder_attention_heads
         self.position_embeddings_type = config.position_embeddings_type if use_position_embeddings else None
 
-        self.linear_q = nn.Dense(config.hidden_size, config.hidden_size)
-        self.linear_k = nn.Dense(config.hidden_size, config.hidden_size)
-        self.linear_v = nn.Dense(config.hidden_size, config.hidden_size)
-        self.linear_out = nn.Dense(config.hidden_size, config.hidden_size)
+        self.linear_q = nn.Linear(config.hidden_size, config.hidden_size)
+        self.linear_k = nn.Linear(config.hidden_size, config.hidden_size)
+        self.linear_v = nn.Linear(config.hidden_size, config.hidden_size)
+        self.linear_out = nn.Linear(config.hidden_size, config.hidden_size)
 
         self.dropout = nn.Dropout(p=config.speech_encoder_dropout)
 
         if self.position_embeddings_type == "relative":
             # linear transformation for positional encoding
-            self.linear_pos = nn.Dense(config.hidden_size, config.hidden_size, has_bias=False)
+            self.linear_pos = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
             # these two learnable bias are used in matrix c and matrix d
             # as described in https://arxiv.org/abs/1901.02860 Section 3.3
             self.pos_bias_u = Parameter(ops.zeros(self.num_heads, self.head_size))
             self.pos_bias_v = Parameter(ops.zeros(self.num_heads, self.head_size))
 
     # Copied from transformers.models.wav2vec2_conformer.modeling_wav2vec2_conformer.Wav2Vec2ConformerSelfAttention.forward
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -907,7 +908,7 @@ class SeamlessM4TConformerSelfAttention(nn.Cell):
             scores = scores + attention_mask
 
         # => (batch, head, time1, time2)
-        probs = ops.softmax(scores, axis=-1)
+        probs = ops.softmax(scores, dim=-1)
         probs = self.dropout(probs)
 
         # => (batch, head, time1, d_k)
@@ -948,7 +949,7 @@ class SeamlessM4TConformerSelfAttention(nn.Cell):
         hidden_states = hidden_states.swapaxes(0, 1)
         rotated_states_begin = hidden_states[..., : self.head_size // 2]
         rotated_states_end = hidden_states[..., self.head_size // 2 :]
-        rotated_states = ops.cat((-rotated_states_end, rotated_states_begin), axis=rotated_states_begin.ndim - 1)
+        rotated_states = ops.cat((-rotated_states_end, rotated_states_begin), dim=rotated_states_begin.ndim - 1)
         hidden_states = (hidden_states * cos) + (rotated_states * sin)
         hidden_states = hidden_states.swapaxes(0, 1)
 
@@ -1001,7 +1002,7 @@ class SeamlessM4TConformerSelfAttention(nn.Cell):
 
         # 5. shift matrix b and matrix d
         zero_pad = ops.zeros((*scores_bd.shape[:3], 1), dtype=scores_bd.dtype)
-        scores_bd_padded = ops.cat([zero_pad, scores_bd], axis=-1)
+        scores_bd_padded = ops.cat([zero_pad, scores_bd], dim=-1)
         scores_bd_padded_shape = scores_bd.shape[:2] + (scores_bd.shape[3] + 1, scores_bd.shape[2])
         scores_bd_padded = scores_bd_padded.view(*scores_bd_padded_shape)
         scores_bd = scores_bd_padded[:, :, 1:].view_as(scores_bd)
@@ -1014,7 +1015,7 @@ class SeamlessM4TConformerSelfAttention(nn.Cell):
         return scores
 
 
-class SeamlessM4TConformerEncoderLayer(nn.Cell):
+class SeamlessM4TConformerEncoderLayer(nn.Module):
     """Conformer block based on https://arxiv.org/abs/2005.08100."""
     # Copied from transformers.models.wav2vec2_conformer.modeling_wav2vec2_conformer.Wav2Vec2ConformerEncoderLayer.__init__ with Wav2Vec2->SeamlessM4T, attention_dropout->speech_encoder_dropout, ops.nn->nn
     def __init__(self, config):
@@ -1056,7 +1057,7 @@ class SeamlessM4TConformerEncoderLayer(nn.Cell):
         self.ffn2 = SeamlessM4TConformerFeedForward(config)
         self.final_layer_norm = nn.LayerNorm([embed_dim])
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1065,7 +1066,7 @@ class SeamlessM4TConformerEncoderLayer(nn.Cell):
         conv_attention_mask: Optional[mindspore.Tensor] = None,
     ):
         """
-        The 'construct' method in the 'SeamlessM4TConformerEncoderLayer' class constructs the encoder layer of a
+        The 'forward' method in the 'SeamlessM4TConformerEncoderLayer' class forwards the encoder layer of a
         Conformer model.
 
         Args:
@@ -1080,7 +1081,7 @@ class SeamlessM4TConformerEncoderLayer(nn.Cell):
                 mask. Default is None.
 
         Returns:
-            Tuple[mindspore.Tensor, mindspore.Tensor]: The constructed hidden states after processing through the
+            Tuple[mindspore.Tensor, mindspore.Tensor]: The forwarded hidden states after processing through the
                 encoder layer, along with the attention weights.
 
         Raises:
@@ -1119,7 +1120,7 @@ class SeamlessM4TConformerEncoderLayer(nn.Cell):
         return hidden_states, attn_weigts
 
 
-class SeamlessM4TConformerEncoder(nn.Cell):
+class SeamlessM4TConformerEncoder(nn.Module):
 
     """
     This class represents a SeamlessM4TConformerEncoder which is responsible for encoding input sequences using a
@@ -1129,13 +1130,13 @@ class SeamlessM4TConformerEncoder(nn.Cell):
 
     Parameters:
         config: An object containing configuration parameters for the encoder.
-        Inherits from: nn.Cell
+        Inherits from: nn.Module
 
     Methods:
         __init__: Initializes the SeamlessM4TConformerEncoder with the provided configuration. Sets up positional
             embeddings based on the specified type, dropout, encoder layers, layer normalization, and
             gradient checkpointing.
-        construct: Constructs the encoder by processing the input hidden states through each encoder layer.
+        forward: Constructs the encoder by processing the input hidden states through each encoder layer.
             It applies dropout, handles attention masks, and computes relative position embeddings.
             Returns the encoded hidden states, hidden states history if enabled, and attention weights if requested.
 
@@ -1181,15 +1182,15 @@ class SeamlessM4TConformerEncoder(nn.Cell):
             self.embed_positions = None
 
         self.dropout = nn.Dropout(p=config.speech_encoder_dropout)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [SeamlessM4TConformerEncoderLayer(config) for _ in range(config.speech_encoder_layers)]
         )
 
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1280,13 +1281,13 @@ class SeamlessM4TConformerEncoder(nn.Cell):
         )
 
 
-class SeamlessM4TConformerAdapterLayer(nn.Cell):
+class SeamlessM4TConformerAdapterLayer(nn.Module):
 
     """
     The `SeamlessM4TConformerAdapterLayer` class is a Python class that represents a layer in the SeamlessM4TConformer
     adapter model. This layer is used to adapt the input hidden states using self-attention and feed-forward networks.
 
-    This class inherits from the `nn.Cell` class.
+    This class inherits from the `nn.Module` class.
 
     Attributes:
         `kernel_size` (int): The size of the kernel used in the convolutional layers.
@@ -1304,7 +1305,7 @@ class SeamlessM4TConformerAdapterLayer(nn.Cell):
     Methods:
         `_compute_sub_sample_lengths_from_attention_mask`: Computes the sub-sampled lengths of the hidden states
             based on the attention mask.
-        `construct`: Constructs the output hidden states by applying the adapter layer transformations to the
+        `forward`: Constructs the output hidden states by applying the adapter layer transformations to the
             input hidden states.
 
     Note:
@@ -1345,10 +1346,9 @@ class SeamlessM4TConformerAdapterLayer(nn.Cell):
             2 * embed_dim,
             self.kernel_size,
             stride=self.stride,
-            pad_mode='pad',
             padding=self.stride // 2,
         )
-        self.activation = nn.GLU(axis=1)
+        self.activation = nn.GLU(dim=1)
 
         # Self-Attention
         self.self_attn_layer_norm = nn.LayerNorm([embed_dim])
@@ -1357,7 +1357,6 @@ class SeamlessM4TConformerAdapterLayer(nn.Cell):
             2 * embed_dim,
             self.kernel_size,
             stride=self.stride,
-            pad_mode='pad',
             padding=self.stride // 2,
         )
         self.self_attn = SeamlessM4TConformerSelfAttention(config, use_position_embeddings=False)
@@ -1419,7 +1418,7 @@ class SeamlessM4TConformerAdapterLayer(nn.Cell):
 
         return seq_lens.astype(mindspore.float32).floor()
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1491,7 +1490,7 @@ class SeamlessM4TConformerAdapterLayer(nn.Cell):
         return hidden_states
 
 
-class SeamlessM4TConformerAdapter(nn.Cell):
+class SeamlessM4TConformerAdapter(nn.Module):
 
     """
     This class represents a seamless multi-task (M4T) Conformer adapter, designed for adapting transformer-based models
@@ -1499,7 +1498,7 @@ class SeamlessM4TConformerAdapter(nn.Cell):
     to adapt the model's hidden states for different tasks.
 
     Attributes:
-        layers (nn.CellList): A list of SeamlessM4TConformerAdapterLayer instances, each representing an adapter layer
+        layers (nn.ModuleList): A list of SeamlessM4TConformerAdapterLayer instances, each representing an adapter layer
             in the adapter stack.
 
     Methods:
@@ -1510,7 +1509,7 @@ class SeamlessM4TConformerAdapter(nn.Cell):
 
             - config (dict): A dictionary containing configuration parameters for the adapter.
 
-        construct:
+        forward:
             Constructs the adapter by applying each adapter layer in the stack to the input hidden states.
 
             Args:
@@ -1541,9 +1540,9 @@ class SeamlessM4TConformerAdapter(nn.Cell):
         """
         super().__init__()
 
-        self.layers = nn.CellList([SeamlessM4TConformerAdapterLayer(config) for _ in range(config.num_adapter_layers)])
+        self.layers = nn.ModuleList([SeamlessM4TConformerAdapterLayer(config) for _ in range(config.num_adapter_layers)])
 
-    def construct(self, hidden_states, attention_mask):
+    def forward(self, hidden_states, attention_mask):
         """
         Constructs the SeamlessM4TConformerAdapter by applying the layers to the input hidden states.
 
@@ -1572,7 +1571,7 @@ class SeamlessM4TConformerAdapter(nn.Cell):
 
 
 # Copied from transformers.models.m2m_100.modeling_m2m_100.M2M100SinusoidalPositionalEmbedding
-class SeamlessM4TSinusoidalPositionalEmbedding(nn.Cell):
+class SeamlessM4TSinusoidalPositionalEmbedding(nn.Module):
     """This module produces sinusoidal positional embeddings of any length."""
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None):
         """
@@ -1638,16 +1637,16 @@ class SeamlessM4TSinusoidalPositionalEmbedding(nn.Cell):
         emb = math.log(10000) / (half_dim - 1)
         emb = ops.exp(ops.arange(half_dim, dtype=mindspore.float32) * -emb)
         emb = ops.arange(num_embeddings, dtype=mindspore.float32).unsqueeze(1) * emb.unsqueeze(0)
-        emb = ops.cat([ops.sin(emb), ops.cos(emb)], axis=1).view(num_embeddings, -1)
+        emb = ops.cat([ops.sin(emb), ops.cos(emb)], dim=1).view(num_embeddings, -1)
         if embedding_dim % 2 == 1:
             # zero pad
-            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], axis=1)
+            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], dim=1)
         if padding_idx is not None:
             emb[padding_idx, :] = 0
 
         return emb.to(get_default_dtype())
 
-    def construct(
+    def forward(
         self, input_ids: mindspore.Tensor = None, inputs_embeds: mindspore.Tensor = None, past_key_values_length: int = 0
     ):
         '''
@@ -1702,7 +1701,7 @@ class SeamlessM4TSinusoidalPositionalEmbedding(nn.Cell):
         return position_ids.unsqueeze(0).expand(input_shape)+ past_key_values_length
 
 
-class SeamlessM4TAttention(nn.Cell):
+class SeamlessM4TAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     # Copied from transformers.models.bart.modeling_bart.BartAttention.__init__ with Bart->SeamlessM4T
     def __init__(
@@ -1750,10 +1749,10 @@ class SeamlessM4TAttention(nn.Cell):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
@@ -1775,7 +1774,7 @@ class SeamlessM4TAttention(nn.Cell):
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         encoder_hidden_states: Optional[mindspore.Tensor] = None,
@@ -1812,8 +1811,8 @@ class SeamlessM4TAttention(nn.Cell):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -1851,7 +1850,7 @@ class SeamlessM4TAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit awkward, but it's required to
@@ -1863,7 +1862,7 @@ class SeamlessM4TAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -1886,11 +1885,11 @@ class SeamlessM4TAttention(nn.Cell):
 
 
 # Copied from transformers.models.nllb_moe.modeling_nllb_moe.NllbMoeDenseActDense with NllbMoe->SeamlessM4T,DenseActDense->FeedForwardNetwork, d_model->hidden_size
-class SeamlessM4TFeedForwardNetwork(nn.Cell):
+class SeamlessM4TFeedForwardNetwork(nn.Module):
 
     """
     The SeamlessM4TFeedForwardNetwork class represents a feedforward network for the SeamlessM4T model.
-    It inherits from the nn.Cell class and is designed to handle feedforward operations for the SeamlessM4T model.
+    It inherits from the nn.Module class and is designed to handle feedforward operations for the SeamlessM4T model.
 
     Attributes:
         config (SeamlessM4TConfig): An instance of SeamlessM4TConfig class containing configuration parameters.
@@ -1900,11 +1899,11 @@ class SeamlessM4TFeedForwardNetwork(nn.Cell):
         __init__:
             Initializes the SeamlessM4TFeedForwardNetwork with the given configuration and feedforward network dimension.
 
-        construct:
+        forward:
             Constructs the feedforward network using the provided hidden states.
 
     Returns:
-        The constructed feedforward network for the SeamlessM4T model.
+        The forwarded feedforward network for the SeamlessM4T model.
     """
     def __init__(self, config: SeamlessM4TConfig, ffn_dim: int):
         '''
@@ -1924,12 +1923,12 @@ class SeamlessM4TFeedForwardNetwork(nn.Cell):
             ValueError: If ffn_dim is not a positive integer.
         '''
         super().__init__()
-        self.fc1 = nn.Dense(config.hidden_size, ffn_dim)
-        self.fc2 = nn.Dense(ffn_dim, config.hidden_size)
+        self.fc1 = nn.Linear(config.hidden_size, ffn_dim)
+        self.fc2 = nn.Linear(ffn_dim, config.hidden_size)
         self.dropout = nn.Dropout(p=config.activation_dropout)
         self.act = ACT2FN[config.activation_function]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the forward pass of the SeamlessM4TFeedForwardNetwork.
 
@@ -1957,14 +1956,14 @@ class SeamlessM4TFeedForwardNetwork(nn.Cell):
         return hidden_states
 
 
-class SeamlessM4TEncoderLayer(nn.Cell):
+class SeamlessM4TEncoderLayer(nn.Module):
 
     """
     The SeamlessM4TEncoderLayer class represents a single layer of the SeamlessM4T model encoder.
     It includes self-attention and feed-forward network components.
 
-    This class inherits from the nn.Cell class and is initialized with a SeamlessM4TConfig object, encoder_ffn_dim,
-    and encoder_attention_heads. The class also features a 'construct' method that takes hidden_states and
+    This class inherits from the nn.Module class and is initialized with a SeamlessM4TConfig object, encoder_ffn_dim,
+    and encoder_attention_heads. The class also features a 'forward' method that takes hidden_states and
     attention_mask as input and returns the output tensor.
 
     Attributes:
@@ -1977,7 +1976,7 @@ class SeamlessM4TEncoderLayer(nn.Cell):
         ffn_dropout (nn.Dropout): The dropout layer for the feed-forward network.
 
     Methods:
-        construct: Applies self-attention and feed-forward operations to the input hidden_states and returns
+        forward: Applies self-attention and feed-forward operations to the input hidden_states and returns
             the output tensor.
 
     Args:
@@ -2032,7 +2031,7 @@ class SeamlessM4TEncoderLayer(nn.Cell):
         self.ffn_layer_norm = nn.LayerNorm([config.hidden_size])
         self.ffn_dropout = nn.Dropout(p=config.activation_dropout)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -2073,13 +2072,13 @@ class SeamlessM4TEncoderLayer(nn.Cell):
         return outputs
 
 
-class SeamlessM4TDecoderLayer(nn.Cell):
+class SeamlessM4TDecoderLayer(nn.Module):
 
     """
     SeamlessM4TDecoderLayer represents a decoder layer in the SeamlessM4T model architecture for machine translation.
     This class implements the decoder layer functionality with self-attention, cross-attention, feed-forward network,
     and layer normalization.
-    It inherits from nn.Cell and is designed to be used within a larger Transformer model for translation tasks.
+    It inherits from nn.Module and is designed to be used within a larger Transformer model for translation tasks.
 
     Attributes:
         config (SeamlessM4TConfig): Configuration object containing parameters for the decoder layer.
@@ -2089,7 +2088,7 @@ class SeamlessM4TDecoderLayer(nn.Cell):
     Methods:
         __init__: Initializes the decoder layer with the specified configuration and optional parameters for the
             feed-forward network and attention heads.
-        construct: Executes the forward pass of the decoder layer, processing input hidden states and performing
+        forward: Executes the forward pass of the decoder layer, processing input hidden states and performing
             self-attention, cross-attention with encoder hidden states, and feed-forward network operations.
 
     Args:
@@ -2153,7 +2152,7 @@ class SeamlessM4TDecoderLayer(nn.Cell):
         self.ffn_layer_norm = nn.LayerNorm([config.hidden_size])
         self.ffn_dropout = nn.Dropout(p=config.activation_dropout)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2253,7 +2252,7 @@ class SeamlessM4TPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
@@ -2292,7 +2291,7 @@ class SeamlessM4TPreTrainedModel(PreTrainedModel):
                                               cell.weight.shape, cell.weight.dtype))
 
             if cell.bias is not None:
-                k = math.sqrt(cell.group / (cell.in_channels * cell.kernel_size[0]))
+                k = math.sqrt(cell.groups / (cell.in_channels * cell.kernel_size[0]))
                 cell.bias.set_data(initializer(Uniform(k),
                                    cell.bias.shape, cell.bias.dtype))
 
@@ -2344,7 +2343,7 @@ class SeamlessM4TPreTrainedModel(PreTrainedModel):
         # 1. First, let's compute last_hidden_states from hidden_states.
         # For each generation step, takes the hidden state from the last layer.
         # shape: (batch_size*vocab_size*num_return_sequences, # generation_steps, hidden_dim)
-        last_hidden_states = ops.concat([hidden_states[-1] for hidden_states in hidden_states], axis=1)
+        last_hidden_states = ops.concat([hidden_states[-1] for hidden_states in hidden_states], dim=1)
 
         # 2. In absence of `beam_indices`, we can assume that we come from e.g. greedy search, which is equivalent
         # to a beam search approach were the first (and only) beam is always selected
@@ -2392,14 +2391,14 @@ class SeamlessM4TSpeechEncoder(SeamlessM4TPreTrainedModel):
 
     Methods:
         __init__: Initializes the SeamlessM4TSpeechEncoder class with the given configuration.
-        construct: Constructs the speech encoder.
+        forward: Constructs the speech encoder.
 
     Note:
         Make sure to provide either `input_features` or `inputs_embeds` as an argument when calling the
-        `construct` method.
+        `forward` method.
 
     Raises:
-        ValueError: If both `input_features` and `inputs_embeds` are `None` in the `construct` method.
+        ValueError: If both `input_features` and `inputs_embeds` are `None` in the `forward` method.
 
     Returns:
         Union[Tuple, Wav2Vec2BaseModelOutput]: The output of the speech encoder, which includes the hidden states,
@@ -2433,7 +2432,7 @@ class SeamlessM4TSpeechEncoder(SeamlessM4TPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_features: Optional[mindspore.Tensor],
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2527,14 +2526,14 @@ class SeamlessM4TEncoder(SeamlessM4TPreTrainedModel):
         embed_scale (float): The scale factor for the embedding vectors.
         embed_tokens (nn.Embedding): The embedding layer for the input tokens.
         embed_positions (SeamlessM4TSinusoidalPositionalEmbedding): The positional embedding layer.
-        layers (nn.CellList): The list of encoder layers.
+        layers (nn.ModuleList): The list of encoder layers.
         layer_norm (nn.LayerNorm): The layer normalization layer.
         gradient_checkpointing (bool): A flag indicating whether to use gradient checkpointing during training.
 
     Methods:
         __init__: Initializes the SeamlessM4TEncoder instance.
 
-        construct: Constructs the encoder based on the input arguments and returns the encoded hidden states.
+        forward: Constructs the encoder based on the input arguments and returns the encoded hidden states.
     """
     def __init__(
         self,
@@ -2593,7 +2592,7 @@ class SeamlessM4TEncoder(SeamlessM4TPreTrainedModel):
                 )
             )
 
-        self.layers = nn.CellList(layers)
+        self.layers = nn.ModuleList(layers)
 
         self.layer_norm = nn.LayerNorm([config.hidden_size])
 
@@ -2601,7 +2600,7 @@ class SeamlessM4TEncoder(SeamlessM4TPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2674,7 +2673,7 @@ class SeamlessM4TEncoder(SeamlessM4TPreTrainedModel):
         else:
             hidden_states = inputs_embeds
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
@@ -2734,7 +2733,7 @@ class SeamlessM4TDecoder(SeamlessM4TPreTrainedModel):
     SeamlessM4TDecoder
 
     This class represents a decoder module for the SeamlessM4T model. It inherits from SeamlessM4TPreTrainedModel and
-    implements methods for initializing the decoder, constructing the decoder, and getting/setting input embeddings.
+    implements methods for initializing the decoder, forwarding the decoder, and getting/setting input embeddings.
 
     Attributes:
         config: An instance of SeamlessM4TConfig containing the configuration settings for the decoder.
@@ -2754,7 +2753,7 @@ class SeamlessM4TDecoder(SeamlessM4TPreTrainedModel):
         __init__: Initializes the SeamlessM4TDecoder with the given configuration and embed_tokens.
         get_input_embeddings: Returns the input embeddings.
         set_input_embeddings: Sets the input embeddings for the decoder.
-        construct: Constructs the decoder with the given input and optional arguments.
+        forward: Constructs the decoder with the given input and optional arguments.
 
     Args:
         input_ids: A mindspore.Tensor of shape (batch_size, sequence_length) representing input sequence token indices.
@@ -2830,7 +2829,7 @@ class SeamlessM4TDecoder(SeamlessM4TPreTrainedModel):
         11. Creates a list named 'layers'.
         12. Iterates 'config.decoder_layers' times and appends a 'SeamlessM4TDecoderLayer' object to 'layers',
         using 'config', 'config.decoder_attention_heads', and 'config.decoder_ffn_dim' as arguments.
-        13. Sets the 'layers' attribute to a 'nn.CellList' containing the objects in 'layers'.
+        13. Sets the 'layers' attribute to a 'nn.ModuleList' containing the objects in 'layers'.
         14. Creates a 'nn.LayerNorm' object named 'self.layer_norm' with a list containing 'config.hidden_size'
         as the argument.
         15. Sets the 'gradient_checkpointing' attribute to False.
@@ -2848,7 +2847,7 @@ class SeamlessM4TDecoder(SeamlessM4TPreTrainedModel):
 
         if embed_tokens is not None:
             # if embed_tokens defined, use its shape instead
-            self.embed_tokens = nn.Embedding(embed_tokens.vocab_size, embed_tokens.embedding_size, self.padding_idx)
+            self.embed_tokens = nn.Embedding(embed_tokens.num_embeddings, embed_tokens.embedding_dim, self.padding_idx)
             self.embed_tokens.weight = embed_tokens.weight
         else:
             self.embed_tokens = nn.Embedding(self.vocab_size, config.hidden_size, self.padding_idx)
@@ -2868,7 +2867,7 @@ class SeamlessM4TDecoder(SeamlessM4TPreTrainedModel):
                     decoder_ffn_dim=config.decoder_ffn_dim,
                 )
             )
-        self.layers = nn.CellList(layers)
+        self.layers = nn.ModuleList(layers)
         self.layer_norm = nn.LayerNorm([config.hidden_size])
 
         self.gradient_checkpointing = False
@@ -2906,7 +2905,7 @@ class SeamlessM4TDecoder(SeamlessM4TPreTrainedModel):
         """
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -3014,7 +3013,7 @@ class SeamlessM4TDecoder(SeamlessM4TPreTrainedModel):
 
         hidden_states = inputs_embeds + positions
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -3087,7 +3086,7 @@ class SeamlessM4TTextToUnitModel(SeamlessM4TPreTrainedModel):
     """
     This class represents a text-to-unit (T2U) model for seamless conversion and inference between natural language text
     and MindSpore tensor units. It inherits functionality from the SeamlessM4TPreTrainedModel class and provides methods
-    for initializing the model and constructing the T2U conversion process using encoder and decoder components.
+    for initializing the model and forwarding the T2U conversion process using encoder and decoder components.
     The class includes configurable parameters for input, attention, and output settings, as well as the option to
     return a dictionary of model outputs. The model supports the use of cached values and the generation of hidden
     states and attentions.
@@ -3120,7 +3119,7 @@ class SeamlessM4TTextToUnitModel(SeamlessM4TPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -3136,7 +3135,7 @@ class SeamlessM4TTextToUnitModel(SeamlessM4TPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], Seq2SeqModelOutput]:
         """
-        This method 'construct' in the class 'SeamlessM4TTextToUnitModel' constructs the text-to-unit model and takes
+        This method 'forward' in the class 'SeamlessM4TTextToUnitModel' forwards the text-to-unit model and takes
         the following parameters:
 
         Args:
@@ -3224,13 +3223,13 @@ class SeamlessM4TTextToUnitForConditionalGeneration(SeamlessM4TPreTrainedModel):
     It is a subclass of SeamlessM4TPreTrainedModel.
 
     The class provides methods for initializing the model, getting the encoder and decoder, setting the output and
-    input embeddings, constructing the model, preparing inputs for generation, preparing decoder input ids from labels,
+    input embeddings, forwarding the model, preparing inputs for generation, preparing decoder input ids from labels,
     reordering cache, and tying weights.
 
     Attributes:
         config (SeamlessM4TConfig): The configuration object for the model.
         model (SeamlessM4TTextToUnitModel): The SeamlessM4TTextToUnitModel instance used for text-to-unit conversion.
-        lm_head (nn.Dense): The linear layer for generating the language model output.
+        lm_head (nn.Linear): The linear layer for generating the language model output.
 
     Methods:
         __init__:
@@ -3247,7 +3246,7 @@ class SeamlessM4TTextToUnitForConditionalGeneration(SeamlessM4TPreTrainedModel):
             Returns the input embeddings of the model.
         set_input_embeddings:
             Sets the input embeddings of the model.
-        construct:
+        forward:
             Constructs the model for conditional text generation.
         prepare_inputs_for_generation:
             Prepares the inputs for text generation.
@@ -3297,7 +3296,7 @@ class SeamlessM4TTextToUnitForConditionalGeneration(SeamlessM4TPreTrainedModel):
 
         self.model = SeamlessM4TTextToUnitModel(config, embed_tokens_decoder)
 
-        self.lm_head = nn.Dense(config.hidden_size, config.t2u_vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.t2u_vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -3398,7 +3397,7 @@ class SeamlessM4TTextToUnitForConditionalGeneration(SeamlessM4TPreTrainedModel):
         """
         self.model.decoder.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -3482,7 +3481,7 @@ class SeamlessM4TTextToUnitForConditionalGeneration(SeamlessM4TPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]
@@ -3641,7 +3640,7 @@ HIFIGAN_START_DOCSTRING = r"""
     library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
     etc.)
 
-    This model is also a PyTorch [ops.nn.Cell](https://pyops.org/docs/stable/nn.html#ops.nn.Cell) subclass.
+    This model is also a PyTorch [ops.nn.Module](https://pyops.org/docs/stable/nn.html#ops.nn.Module) subclass.
     Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
     and behavior.
 
@@ -3654,11 +3653,11 @@ HIFIGAN_START_DOCSTRING = r"""
 
 
 # Copied from transformers.models.speecht5.modeling_speecht5.HifiGanResidualBlock
-class HifiGanResidualBlock(nn.Cell):
+class HifiGanResidualBlock(nn.Module):
 
     """
     This class represents a High Fidelity Generative Adversarial Network (HifiGan) Residual Block.
-    It is a subclass of nn.Cell and is used in the construction of the HifiGan model.
+    It is a subclass of nn.Module and is used in the forwardion of the HifiGan model.
 
     Attributes:
         channels (int): The number of input and output channels for the convolutional layers.
@@ -3679,13 +3678,13 @@ class HifiGanResidualBlock(nn.Cell):
         remove_weight_norm:
             Removes weight normalization from the convolutional layers.
 
-        construct:
+        forward:
             Constructs the HifiGanResidualBlock by applying the convolutional layers and residual connections to
             the input hidden states.
 
     Note:
-        The HifiGanResidualBlock class inherits from nn.Cell, which is a base class for all neural network modules
-        in MindSpore. It provides basic functionalities for constructing and managing neural networks.
+        The HifiGanResidualBlock class inherits from nn.Module, which is a base class for all neural network modules
+        in MindSpore. It provides basic functionalities for forwarding and managing neural networks.
     """
     def __init__(self, channels, kernel_size=3, dilation=(1, 3, 5), leaky_relu_slope=0.1):
         """
@@ -3710,7 +3709,7 @@ class HifiGanResidualBlock(nn.Cell):
         super().__init__()
         self.leaky_relu_slope = leaky_relu_slope
 
-        self.convs1 = nn.CellList(
+        self.convs1 = nn.ModuleList(
             [
                 nn.Conv1d(
                     channels,
@@ -3718,13 +3717,12 @@ class HifiGanResidualBlock(nn.Cell):
                     kernel_size,
                     stride=1,
                     dilation=dilation[i],
-                    pad_mode='pad',
                     padding=self.get_padding(kernel_size, dilation[i]),
                 )
                 for i in range(len(dilation))
             ]
         )
-        self.convs2 = nn.CellList(
+        self.convs2 = nn.ModuleList(
             [
                 nn.Conv1d(
                     channels,
@@ -3732,7 +3730,6 @@ class HifiGanResidualBlock(nn.Cell):
                     kernel_size,
                     stride=1,
                     dilation=1,
-                    pad_mode='pad',
                     padding=self.get_padding(kernel_size, 1),
                 )
                 for _ in range(len(dilation))
@@ -3796,7 +3793,7 @@ class HifiGanResidualBlock(nn.Cell):
         for layer in self.convs2:
             nn.utils.remove_weight_norm(layer)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs a single residual block in the HifiGan model.
 
@@ -3821,10 +3818,10 @@ class HifiGanResidualBlock(nn.Cell):
         return hidden_states
 
 
-class SeamlessM4TVariancePredictor(nn.Cell):
+class SeamlessM4TVariancePredictor(nn.Module):
 
     """
-    This class represents a variance predictor module used in the SeamlessM4T model. It is a subclass of the nn.Cell class.
+    This class represents a variance predictor module used in the SeamlessM4T model. It is a subclass of the nn.Module class.
 
     Attributes:
         conv1 (nn.Conv1d): A 1-dimensional convolutional layer that processes the input hidden states.
@@ -3833,10 +3830,10 @@ class SeamlessM4TVariancePredictor(nn.Cell):
         dropout_module (nn.Dropout): Dropout module that applies dropout to the normalized hidden states.
         conv2 (nn.Conv1d): A second 1-dimensional convolutional layer that further processes the hidden states.
         ln2 (nn.LayerNorm): Layer normalization applied to the output of the second convolutional layer.
-        proj (nn.Dense): A fully connected layer that projects the hidden states to a single output dimension.
+        proj (nn.Linear): A fully connected layer that projects the hidden states to a single output dimension.
 
     Methods:
-        construct:
+        forward:
             Applies the variance predictor module to the input hidden states.
 
     """
@@ -3869,7 +3866,6 @@ class SeamlessM4TVariancePredictor(nn.Cell):
             embed_dim,
             embed_dim,
             kernel_size=kernel_size,
-            pad_mode='pad',
             padding=(kernel_size - 1) // 2,
         )
         self.activation_fuction = nn.ReLU()
@@ -3879,13 +3875,12 @@ class SeamlessM4TVariancePredictor(nn.Cell):
             embed_dim,
             embed_dim,
             kernel_size=kernel_size,
-            pad_mode='pad',
             padding=1,
         )
         self.ln2 = nn.LayerNorm([embed_dim])
-        self.proj = nn.Dense(embed_dim, 1)
+        self.proj = nn.Linear(embed_dim, 1)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the SeamlessM4TVariancePredictor by processing the hidden_states tensor.
 
@@ -3910,13 +3905,13 @@ class SeamlessM4TVariancePredictor(nn.Cell):
         return self.proj(hidden_states).squeeze(axis=2)
 
 
-class SeamlessM4THifiGan(nn.Cell):
+class SeamlessM4THifiGan(nn.Module):
 
     """
     This class represents a SeamlessM4THifiGan, a neural network model for converting log-mel spectrograms into
     speech waveforms.
 
-    The class inherits from nn.Cell and contains methods for initializing the model and constructing the speech
+    The class inherits from nn.Module and contains methods for initializing the model and forwarding the speech
     waveform from input log-mel spectrograms.
 
     Attributes:
@@ -3932,23 +3927,23 @@ class SeamlessM4THifiGan(nn.Cell):
 
     Methods:
         `__init__`: Initializes the SeamlessM4THifiGan model with the given configuration.
-        `construct`: Converts log-mel spectrograms into speech waveforms.
+        `forward`: Converts log-mel spectrograms into speech waveforms.
 
     Usage:
         To use the SeamlessM4THifiGan model, create an instance of the class with a `config` object, then call the
-        `construct` method passing in the input log-mel spectrograms.
+        `forward` method passing in the input log-mel spectrograms.
 
     Example:
         ```python
         >>> config = SeamlessM4TConfig(...)
         >>> model = SeamlessM4THifiGan(config)
-        >>> waveform = model.construct(input_embeds)
+        >>> waveform = model.forward(input_embeds)
         ```
 
     Note:
         - The input log-mel spectrograms can be batched or un-batched, and the resulting speech waveform will have
         the corresponding shape.
-        - The `construct` method returns a mindspore.Tensor object containing the speech waveform.
+        - The `forward` method returns a mindspore.Tensor object containing the speech waveform.
 
     """
     def __init__(self, config: SeamlessM4TConfig):
@@ -3986,32 +3981,30 @@ class SeamlessM4THifiGan(nn.Cell):
             config.upsample_initial_channel,
             kernel_size=7,
             stride=1,
-            pad_mode='pad',
             padding=3,
         )
 
-        self.upsampler = nn.CellList()
+        self.upsampler = nn.ModuleList()
         for i, (upsample_rate, kernel_size) in enumerate(zip(config.upsample_rates, config.upsample_kernel_sizes)):
             self.upsampler.append(
-                nn.Conv1dTranspose(
+                nn.ConvTranspose1d(
                     config.upsample_initial_channel // (2**i),
                     config.upsample_initial_channel // (2 ** (i + 1)),
                     kernel_size=kernel_size,
                     stride=upsample_rate,
-                    pad_mode='pad',
                     padding=(kernel_size - upsample_rate) // 2,
                 )
             )
 
-        self.resblocks = nn.CellList()
+        self.resblocks = nn.ModuleList()
         for i in range(len(self.upsampler)):
             channels = config.upsample_initial_channel // (2 ** (i + 1))
             for kernel_size, dilation in zip(config.resblock_kernel_sizes, config.resblock_dilation_sizes):
                 self.resblocks.append(HifiGanResidualBlock(channels, kernel_size, dilation, config.leaky_relu_slope))
 
-        self.conv_post = nn.Conv1d(channels, 1, kernel_size=7, stride=1, pad_mode='pad', padding=3)
+        self.conv_post = nn.Conv1d(channels, 1, kernel_size=7, stride=1, padding=3)
 
-    def construct(self, input_embeds: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, input_embeds: mindspore.Tensor) -> mindspore.Tensor:
         r"""
         Converts a log-mel spectrogram into a speech waveform. Passing a batch of log-mel spectrograms returns a batch
         of speech waveforms. Passing a single, un-batched log-mel spectrogram returns a single, un-batched speech
@@ -4054,7 +4047,7 @@ class SeamlessM4TCodeHifiGan(PreTrainedModel):
     speaker embeddings, language embeddings, and the HiFi-GAN architecture.
 
     The class includes methods for computing output lengths after the duration layer and the HiFi-GAN convolutional
-    layers. It also provides functionality for constructing the model using input sequences, speaker IDs, and language
+    layers. It also provides functionality for forwarding the model using input sequences, speaker IDs, and language
     IDs, and initializing and applying weight normalization to the model's components.
 
     The class inherits from PreTrainedModel and contains methods for weight initialization, applying weight
@@ -4105,7 +4098,7 @@ class SeamlessM4TCodeHifiGan(PreTrainedModel):
         # take care of edge cases where no padding or too many padding
         unit_lengths = ops.clamp(unit_lengths, 0, dur_out.shape[1] - 1)
 
-        cumulative_dur_out = ops.cumsum(dur_out, axis=1)
+        cumulative_dur_out = ops.cumsum(dur_out, dim=1)
         unit_lengths = cumulative_dur_out.gather_elements(dim=1, index=unit_lengths.unsqueeze(1)).squeeze()
 
         return unit_lengths
@@ -4151,7 +4144,7 @@ class SeamlessM4TCodeHifiGan(PreTrainedModel):
 
         return input_lengths
 
-    def construct(
+    def forward(
         self, input_ids: mindspore.Tensor, spkr_id: mindspore.Tensor, lang_id: mindspore.Tensor
     ) -> Tuple[mindspore.Tensor]:
         """
@@ -4174,7 +4167,7 @@ class SeamlessM4TCodeHifiGan(PreTrainedModel):
         dur_out = ops.clamp(ops.round((ops.exp(log_dur_pred) - 1)).long(), min=1)
         # B x C x T
         if hidden_states.shape[0] == 1:
-            hidden_states = ops.repeat_interleave(hidden_states, dur_out.view(-1), axis=2)
+            hidden_states = ops.repeat_interleave(hidden_states, dur_out.view(-1), dim=2)
         else:
             # if batched sample, need to interleave per sample, and pad -> loss of parallelism
             if hidden_states.shape[0] > 1 and self.training:
@@ -4183,7 +4176,7 @@ class SeamlessM4TCodeHifiGan(PreTrainedModel):
                                forward pass because the samples are interleaved."""
                 )
             hidden_states = [
-                ops.repeat_interleave(hidden_state, duration, axis=-1).swapaxes(0, 1)
+                ops.repeat_interleave(hidden_state, duration, dim=-1).swapaxes(0, 1)
                 for (hidden_state, duration) in zip(hidden_states, dur_out)
             ]
 
@@ -4192,7 +4185,7 @@ class SeamlessM4TCodeHifiGan(PreTrainedModel):
 
         spkr = spkr.repeat(1, 1, hidden_states.shape[-1])
         lang = lang.repeat(1, 1, hidden_states.shape[-1])
-        hidden_states = ops.cat([lang, hidden_states, spkr], axis=1)
+        hidden_states = ops.cat([lang, hidden_states, spkr], dim=1)
 
         hidden_states = self.hifi_gan(hidden_states)
 
@@ -4203,7 +4196,7 @@ class SeamlessM4TCodeHifiGan(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights."""
-        if isinstance(cell, (nn.Dense, nn.Conv1d, nn.Conv1dTranspose)):
+        if isinstance(cell, (nn.Linear, nn.Conv1d, nn.Conv1dTranspose)):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
@@ -4314,7 +4307,7 @@ class SeamlessM4TForTextToText(SeamlessM4TPreTrainedModel):
     - `get_input_embeddings()`: Returns the input embeddings.
     - `set_input_embeddings(value)`: Sets the input embeddings to the given `value`.
     - `_tie_weights()`: Ties the weights of the word embeddings if specified in the configuration.
-    - `construct()`: Constructs the model by encoding the input text and decoding it to generate output.
+    - `forward()`: Constructs the model by encoding the input text and decoding it to generate output.
     - `generate()`: Generates sequences of token ids based on the input text.
     - `prepare_inputs_for_generation()`: Prepares the inputs for generation.
 
@@ -4355,7 +4348,7 @@ class SeamlessM4TForTextToText(SeamlessM4TPreTrainedModel):
 
         self.text_encoder = SeamlessM4TEncoder(config, self.shared)
         self.text_decoder = SeamlessM4TDecoder(config, self.shared)
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -4477,7 +4470,7 @@ class SeamlessM4TForTextToText(SeamlessM4TPreTrainedModel):
             self._tie_or_clone_weights(self.text_decoder.embed_tokens, self.shared)
             self._tie_or_clone_weights(self.lm_head, self.shared)
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -4579,7 +4572,7 @@ class SeamlessM4TForTextToText(SeamlessM4TPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             outputs = decoder_outputs + encoder_outputs
@@ -4811,7 +4804,7 @@ class SeamlessM4TForSpeechToText(SeamlessM4TPreTrainedModel):
     - `get_input_embeddings(self)`: Returns the input embeddings of the model.
     - `set_input_embeddings(self, value)`: Sets the input embeddings of the model with the given value.
     - `_tie_weights(self)`: Ties the word embeddings if specified in the configuration.
-    - `construct(self, input_features, attention_mask, decoder_input_ids, decoder_attention_mask, encoder_outputs,
+    - `forward(self, input_features, attention_mask, decoder_input_ids, decoder_attention_mask, encoder_outputs,
     past_key_values, inputs_embeds, decoder_inputs_embeds, labels, use_cache, output_attentions, output_hidden_states,
     return_dict, **kwargs)`: Constructs the model with the given inputs and returns the output.
     - `generate(self, input_features, tgt_lang, generation_config, logits_processor, stopping_criteria,
@@ -4851,7 +4844,7 @@ class SeamlessM4TForSpeechToText(SeamlessM4TPreTrainedModel):
         self.shared = nn.Embedding(config.vocab_size, config.hidden_size, config.pad_token_id)
         self.speech_encoder = SeamlessM4TSpeechEncoder(config)
         self.text_decoder = SeamlessM4TDecoder(config, self.shared)
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -4990,7 +4983,7 @@ class SeamlessM4TForSpeechToText(SeamlessM4TPreTrainedModel):
             self._tie_or_clone_weights(self.text_decoder.embed_tokens, self.shared)
             self._tie_or_clone_weights(self.lm_head, self.shared)
 
-    def construct(
+    def forward(
         self,
         input_features: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -5008,7 +5001,7 @@ class SeamlessM4TForSpeechToText(SeamlessM4TPreTrainedModel):
         **kwargs,
     ) -> Union[Seq2SeqLMOutput, Tuple[mindspore.Tensor]]:
         '''
-        This method constructs a SeamlessM4TForSpeechToText model for speech to text conversion.
+        This method forwards a SeamlessM4TForSpeechToText model for speech to text conversion.
 
         Args:
             self (SeamlessM4TForSpeechToText): The instance of the SeamlessM4TForSpeechToText class.
@@ -5091,7 +5084,7 @@ class SeamlessM4TForSpeechToText(SeamlessM4TPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             outputs = decoder_outputs + encoder_outputs
@@ -5326,7 +5319,7 @@ class SeamlessM4TForTextToSpeech(SeamlessM4TPreTrainedModel):
         get_input_embeddings: Returns the input embeddings for the text decoder.
         set_input_embeddings: Sets the input embeddings for the text encoder and decoder to the provided value.
         _tie_weights: Ties the weights of the text encoder, decoder, and LM head if specified in the configuration.
-        construct: Constructs the SeamlessM4T model for text-to-speech conversion.
+        forward: Constructs the SeamlessM4T model for text-to-speech conversion.
         generate: Generates translated audio waveforms based on input text.
         prepare_inputs_for_generation: Prepares inputs for generation during text-to-speech conversion.
         _reorder_cache: Reorders the cache for beam search during generation.
@@ -5363,7 +5356,7 @@ class SeamlessM4TForTextToSpeech(SeamlessM4TPreTrainedModel):
 
         self.text_encoder = SeamlessM4TEncoder(config, self.shared)
         self.text_decoder = SeamlessM4TDecoder(config, self.shared)
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -5495,7 +5488,7 @@ class SeamlessM4TForTextToSpeech(SeamlessM4TPreTrainedModel):
             self._tie_or_clone_weights(self.text_decoder.embed_tokens, self.shared)
             self._tie_or_clone_weights(self.lm_head, self.shared)
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -5531,7 +5524,7 @@ class SeamlessM4TForTextToSpeech(SeamlessM4TPreTrainedModel):
             return_dict (bool, optional): Indicates whether to use return dict. Default: None.
 
         Returns:
-            Union[Seq2SeqLMOutput, Tuple[mindspore.Tensor]]: The output of the 'construct' method.
+            Union[Seq2SeqLMOutput, Tuple[mindspore.Tensor]]: The output of the 'forward' method.
 
         Raises:
             None.
@@ -5595,7 +5588,7 @@ class SeamlessM4TForTextToSpeech(SeamlessM4TPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             outputs = decoder_outputs + encoder_outputs
@@ -5883,7 +5876,7 @@ class SeamlessM4TForSpeechToSpeech(SeamlessM4TPreTrainedModel):
         `set_input_embeddings`: Sets the input embeddings to the given value.
         `_tie_weights`: Ties the weights of the text decoder embeddings and the shared embeddings
             if `tie_word_embeddings` is set to `True` in the configuration.
-        `construct`: Constructs the speech-to-speech translation model and returns the output.
+        `forward`: Constructs the speech-to-speech translation model and returns the output.
         `generate`: Generates translated audio waveforms.
         `_reorder_cache`: Reorders the past key values for generation.
 
@@ -5921,7 +5914,7 @@ class SeamlessM4TForSpeechToSpeech(SeamlessM4TPreTrainedModel):
         self.shared = nn.Embedding(config.vocab_size, config.hidden_size, config.pad_token_id)
         self.speech_encoder = SeamlessM4TSpeechEncoder(config)
         self.text_decoder = SeamlessM4TDecoder(config, self.shared)
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -6042,7 +6035,7 @@ class SeamlessM4TForSpeechToSpeech(SeamlessM4TPreTrainedModel):
             self._tie_or_clone_weights(self.text_decoder.embed_tokens, self.shared)
             self._tie_or_clone_weights(self.lm_head, self.shared)
 
-    def construct(
+    def forward(
         self,
         input_features: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -6060,9 +6053,9 @@ class SeamlessM4TForSpeechToSpeech(SeamlessM4TPreTrainedModel):
         **kwargs,
     ) -> Union[Seq2SeqLMOutput, Tuple[mindspore.Tensor]]:
         """
-        Method 'construct' in the class 'SeamlessM4TForSpeechToSpeech'.
+        Method 'forward' in the class 'SeamlessM4TForSpeechToSpeech'.
 
-        This method constructs a sequence-to-sequence model for speech-to-speech translation.
+        This method forwards a sequence-to-sequence model for speech-to-speech translation.
 
         Args:
             self: The object instance.
@@ -6082,7 +6075,7 @@ class SeamlessM4TForSpeechToSpeech(SeamlessM4TPreTrainedModel):
             return_dict (Optional[bool]): Flag to indicate whether to return a dictionary of outputs.
 
         Returns:
-            Union[Seq2SeqLMOutput, Tuple[mindspore.Tensor]]: The constructed sequence-to-sequence model output.
+            Union[Seq2SeqLMOutput, Tuple[mindspore.Tensor]]: The forwarded sequence-to-sequence model output.
 
         Raises:
             None.
@@ -6152,7 +6145,7 @@ class SeamlessM4TForSpeechToSpeech(SeamlessM4TPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             outputs = decoder_outputs + encoder_outputs
@@ -6413,7 +6406,7 @@ class SeamlessM4TModel(SeamlessM4TPreTrainedModel):
     """
     SeamlessM4TModel represents a model for seamless multimodal translation and synthesis tasks.
     It provides methods for initializing the model, setting modality, retrieving encoders, handling embeddings,
-    constructing the model, generating translations and audio waveforms, and preparing inputs for generation.
+    forwarding the model, generating translations and audio waveforms, and preparing inputs for generation.
 
     Attributes:
         config: An object containing the configuration parameters for the model.
@@ -6427,7 +6420,7 @@ class SeamlessM4TModel(SeamlessM4TPreTrainedModel):
         get_input_embeddings: Get the input embeddings for the SeamlessM4TModel.
         set_input_embeddings: Sets the input embeddings for the SeamlessM4TModel.
         _tie_weights: Ties the weights of specified layers in the SeamlessM4TModel.
-        construct: Constructs the SeamlessM4TModel.
+        forward: Constructs the SeamlessM4TModel.
         generate: Generates translated token ids and/or translated audio waveforms.
         prepare_inputs_for_generation: Prepares inputs for generation.
         _reorder_cache: Reorders the cache of past key values for the SeamlessM4TModel.
@@ -6461,7 +6454,7 @@ class SeamlessM4TModel(SeamlessM4TPreTrainedModel):
         self.text_encoder = SeamlessM4TEncoder(config, self.shared)
         self.speech_encoder = SeamlessM4TSpeechEncoder(config)
         self.text_decoder = SeamlessM4TDecoder(config, self.shared)
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -6609,7 +6602,7 @@ class SeamlessM4TModel(SeamlessM4TPreTrainedModel):
             self._tie_or_clone_weights(self.text_decoder.embed_tokens, self.shared)
             self._tie_or_clone_weights(self.lm_head, self.shared)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         input_features: Optional[mindspore.Tensor] = None,
@@ -6777,7 +6770,7 @@ class SeamlessM4TModel(SeamlessM4TPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             outputs = decoder_outputs + encoder_outputs

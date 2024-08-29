@@ -19,11 +19,12 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.utils import logging, get_default_dtype
-from mindnlp.modules.functional import finfo
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import functional as F
+from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 from ...modeling_utils import PreTrainedModel
@@ -71,7 +72,7 @@ def create_sinusoidal_positions(num_pos: int, dim: int) -> mindspore.Tensor:
     """
     inv_freq = 1.0 / (10000 ** (ops.arange(0, dim, 2, dtype=mindspore.float32) / dim))
     sinusoid_inp = ops.einsum("i , j -> i j", ops.arange(num_pos, dtype=mindspore.int64).float(), inv_freq).float()
-    return ops.cat((ops.sin(sinusoid_inp), ops.cos(sinusoid_inp)), axis=1)
+    return ops.cat((ops.sin(sinusoid_inp), ops.cos(sinusoid_inp)), dim=1)
 
 
 # Copied from transformers.models.gptj.modeling_gptj.rotate_every_two
@@ -93,7 +94,7 @@ def rotate_every_two(x: mindspore.Tensor) -> mindspore.Tensor:
     """
     x1 = x[:, :, :, ::2]
     x2 = x[:, :, :, 1::2]
-    x = ops.stack((-x2, x1), axis=-1)
+    x = ops.stack((-x2, x1), dim=-1)
     return x.flatten(start_dim=-2)  # in einsum notation: rearrange(x, '... d j -> ... (d j)')
 
 
@@ -119,17 +120,17 @@ def apply_rotary_pos_emb(tensor: mindspore.Tensor, sin: mindspore.Tensor, cos: m
     return (tensor * cos) + (rotate_every_two(tensor) * sin)
 
 
-class CodeGenAttention(nn.Cell):
+class CodeGenAttention(nn.Module):
 
     ''' 
     Represents an attention mechanism for code generation tasks using the specified configuration.
     
-    This class inherits from the nn.Cell module and implements the attention mechanism for code generation tasks.
-    It includes methods for splitting and merging attention heads, performing attention calculations, and constructing
+    This class inherits from the nn.Module module and implements the attention mechanism for code generation tasks.
+    It includes methods for splitting and merging attention heads, performing attention calculations, and forwarding
     the attention mechanism using the specified inputs.
 
     The class includes methods for splitting and merging attention heads, performing attention calculations,
-    and constructing the attention mechanism using the specified inputs.
+    and forwarding the attention mechanism using the specified inputs.
     It also handles positional embeddings and caching for efficient computation.
 
     The methods included in the class are:
@@ -139,7 +140,7 @@ class CodeGenAttention(nn.Cell):
     - _merge_heads(self, tensor, num_attention_heads, attn_head_size): Merges the attention heads into the specified shape.
     - _attn(self, query, key, value, attention_mask=None, head_mask=None):
         Performs the attention calculation using the query, key, and value tensors, with optional attention and head masks.
-    - construct(self, hidden_states, layer_past=None, attention_mask=None, position_ids=None, head_mask=None, use_cache=False, output_attentions=False):
+    - forward(self, hidden_states, layer_past=None, attention_mask=None, position_ids=None, head_mask=None, use_cache=False, output_attentions=False):
         Constructs the attention mechanism using the specified inputs and optional configurations.
 
     The CodeGenAttention class provides a comprehensive solution for implementing attention mechanisms in code generation tasks,
@@ -163,7 +164,7 @@ class CodeGenAttention(nn.Cell):
         super().__init__()
 
         max_positions = config.max_position_embeddings
-        self.causal_mask = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.bool_)).view(
+        self.causal_mask = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.int32)).to(mindspore.bool_).view(
                 1, 1, max_positions, max_positions)
 
         self.attn_dropout = nn.Dropout(p=config.attn_pdrop)
@@ -178,9 +179,9 @@ class CodeGenAttention(nn.Cell):
                 f" `num_attention_heads`: {self.num_attention_heads})."
             )
         self.scale_attn = ops.sqrt(mindspore.tensor(self.head_dim, dtype=mindspore.float32)).to(get_default_dtype())
-        self.qkv_proj = nn.Dense(self.embed_dim, self.embed_dim * 3, has_bias=False)
+        self.qkv_proj = nn.Linear(self.embed_dim, self.embed_dim * 3, bias=False)
 
-        self.out_proj = nn.Dense(self.embed_dim, self.embed_dim, has_bias=False)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
         self.rotary_dim = config.rotary_dim
         pos_embd_dim = self.rotary_dim or self.embed_dim
         self.embed_positions = create_sinusoidal_positions(max_positions, pos_embd_dim)
@@ -260,7 +261,7 @@ class CodeGenAttention(nn.Cell):
         attn_weights = ops.matmul(query, key.swapaxes(-1, -2))
 
         attn_weights = attn_weights / self.scale_attn
-        mask_value = finfo(attn_weights.dtype, 'min')
+        mask_value = float(ops.finfo(attn_weights.dtype).min)
         # Need to be a tensor, otherwise we get error: `RuntimeError: expected scalar type float but found double`.
         mask_value = mindspore.tensor(mask_value, dtype=attn_weights.dtype)
         attn_weights = ops.where(causal_mask, attn_weights, mask_value)
@@ -281,7 +282,7 @@ class CodeGenAttention(nn.Cell):
 
         return attn_output, attn_weights
 
-    def construct(
+    def forward(
         self,
         hidden_states: Optional[mindspore.Tensor],
         layer_past: Optional[Tuple[mindspore.Tensor]] = None,
@@ -324,7 +325,7 @@ class CodeGenAttention(nn.Cell):
         qkv_split = qkv.reshape(qkv.shape[:-1] + (mp_num, -1))
 
         local_dim = self.head_dim * self.num_attention_heads // mp_num
-        query, value, key = ops.split(qkv_split, local_dim, axis=-1)
+        query, value, key = ops.split(qkv_split, local_dim, dim=-1)
         query = self._split_heads(query, self.num_attention_heads, self.head_dim, mp_num=mp_num)
         key = self._split_heads(key, self.num_attention_heads, self.head_dim, mp_num=mp_num)
 
@@ -338,7 +339,7 @@ class CodeGenAttention(nn.Cell):
         position_ids_shape = position_ids.shape
         sincos = embed_positions[position_ids.reshape(-1)].reshape(position_ids_shape + (embed_positions.shape[-1],))
 
-        sin, cos = ops.split(sincos, sincos.shape[-1] // 2, axis=-1)
+        sin, cos = ops.split(sincos, sincos.shape[-1] // 2, dim=-1)
 
         if self.rotary_dim is not None:
             k_rot = key[:, :, :, : self.rotary_dim]
@@ -350,8 +351,8 @@ class CodeGenAttention(nn.Cell):
             k_rot = apply_rotary_pos_emb(k_rot, sin, cos)
             q_rot = apply_rotary_pos_emb(q_rot, sin, cos)
 
-            key = ops.cat([k_rot, k_pass], axis=-1)
-            query = ops.cat([q_rot, q_pass], axis=-1)
+            key = ops.cat([k_rot, k_pass], dim=-1)
+            query = ops.cat([q_rot, q_pass], dim=-1)
         else:
             key = apply_rotary_pos_emb(key, sin, cos)
             query = apply_rotary_pos_emb(query, sin, cos)
@@ -362,8 +363,8 @@ class CodeGenAttention(nn.Cell):
         if layer_past is not None:
             past_key = layer_past[0]
             past_value = layer_past[1]
-            key = ops.cat((past_key, key), axis=-2)
-            value = ops.cat((past_value, value), axis=-2)
+            key = ops.cat((past_key, key), dim=-2)
+            value = ops.cat((past_value, value), dim=-2)
 
         if use_cache is True:
             # Note that this cast is quite ugly, but is not implemented before ROPE as k_rot in the original codebase is always in fp32.
@@ -386,12 +387,12 @@ class CodeGenAttention(nn.Cell):
 
 
 # Copied from transformers.models.gptj.modeling_gptj.GPTJMLP with GPTJ->CodeGen
-class CodeGenMLP(nn.Cell):
+class CodeGenMLP(nn.Module):
 
     """
     A class that implements a multi-layer perceptron (MLP) for code generation in machine learning tasks.
 
-    This class, named 'CodeGenMLP', is a subclass of the 'nn.Cell' class in the MindSpore framework.
+    This class, named 'CodeGenMLP', is a subclass of the 'nn.Module' class in the MindSpore framework.
     It is designed to be used in code generation applications within machine learning pipelines.
 
     The 'CodeGenMLP' class consists of several components, including fully connected layers, activation functions,
@@ -399,8 +400,8 @@ class CodeGenMLP(nn.Cell):
     transform and refine the data.
 
     Attributes:
-        fc_in (nn.Dense): A fully connected layer that maps the input tensor to an intermediate size.
-        fc_out (nn.Dense): A fully connected layer that maps the intermediate tensor to the output size.
+        fc_in (nn.Linear): A fully connected layer that maps the input tensor to an intermediate size.
+        fc_out (nn.Linear): A fully connected layer that maps the intermediate tensor to the output size.
         act (ACT2FN): An activation function defined in the 'config.activation_function'.
         dropout (nn.Dropout): A dropout layer with a dropout probability defined in 'config.resid_pdrop'.
 
@@ -410,7 +411,7 @@ class CodeGenMLP(nn.Cell):
             - intermediate_size (int): The size of the intermediate layer in the MLP.
             - config (object): A configuration object containing various settings for the MLP.
 
-        construct(self, hidden_states: Optional[mindspore.Tensor]) -> mindspore.Tensor: Constructs the forward pass of the MLP.
+        forward(self, hidden_states: Optional[mindspore.Tensor]) -> mindspore.Tensor: Constructs the forward pass of the MLP.
 
             - hidden_states (mindspore.Tensor): An optional input tensor of hidden states.
             - Returns:
@@ -422,7 +423,7 @@ class CodeGenMLP(nn.Cell):
         >>> mlp = CodeGenMLP(intermediate_size, config)
         ...
         >>> # Pass an input tensor through the MLP
-        >>> output = mlp.construct(hidden_states)
+        >>> output = mlp.forward(hidden_states)
         ```
     """
     def __init__(self, intermediate_size, config):  # in MLP: intermediate_size= 4 * embed_dim
@@ -447,13 +448,13 @@ class CodeGenMLP(nn.Cell):
         super().__init__()
         embed_dim = config.n_embd
 
-        self.fc_in = nn.Dense(embed_dim, intermediate_size)
-        self.fc_out = nn.Dense(intermediate_size, embed_dim)
+        self.fc_in = nn.Linear(embed_dim, intermediate_size)
+        self.fc_out = nn.Linear(intermediate_size, embed_dim)
 
         self.act = ACT2FN[config.activation_function]
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
-    def construct(self, hidden_states: Optional[mindspore.Tensor]) -> mindspore.Tensor:
+    def forward(self, hidden_states: Optional[mindspore.Tensor]) -> mindspore.Tensor:
         """
         Constructs the forward pass of the CodeGenMLP model.
 
@@ -487,11 +488,11 @@ class CodeGenMLP(nn.Cell):
 
 
 # Copied from transformers.models.gptj.modeling_gptj.GPTJBlock with GPTJ->CodeGen
-class CodeGenBlock(nn.Cell):
+class CodeGenBlock(nn.Module):
 
     """
     This class represents a code generation block in a neural network model.
-    It is a subclass of nn.Cell and contains methods for initializing and constructing the block.
+    It is a subclass of nn.Module and contains methods for initializing and forwarding the block.
 
     Attributes:
         ln_1 (nn.LayerNorm): The layer normalization module applied to the input hidden states.
@@ -506,7 +507,7 @@ class CodeGenBlock(nn.Cell):
 
             - config: A configuration object containing the necessary parameters for the block initialization.
 
-        construct(self, hidden_states, layer_past=None, attention_mask=None, position_ids=None, head_mask=None, use_cache=False, output_attentions=False):
+        forward(self, hidden_states, layer_past=None, attention_mask=None, position_ids=None, head_mask=None, use_cache=False, output_attentions=False):
             Constructs the block by performing attention mechanism, feed-forward computation, and residual addition.
 
             Args:
@@ -522,7 +523,7 @@ class CodeGenBlock(nn.Cell):
             Returns:
 
             - Union[Tuple[mindspore.Tensor], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor, ...]]]]:
-            - The constructed block outputs, which include the final hidden states and optionally attention matrices.
+            - The forwarded block outputs, which include the final hidden states and optionally attention matrices.
     """
     def __init__(self, config):
         """
@@ -545,11 +546,11 @@ class CodeGenBlock(nn.Cell):
         """
         super().__init__()
         inner_dim = config.n_inner if config.n_inner is not None else 4 * config.n_embd
-        self.ln_1 = nn.LayerNorm(config.n_embd, epsilon=config.layer_norm_epsilon)
+        self.ln_1 = nn.LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
         self.attn = CodeGenAttention(config)
         self.mlp = CodeGenMLP(inner_dim, config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: Optional[mindspore.Tensor],
         layer_past: Optional[Tuple[mindspore.Tensor]] = None,
@@ -615,12 +616,12 @@ class CodeGenPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -637,7 +638,7 @@ class CodeGenModel(CodeGenPreTrainedModel):
 
     """
     The `CodeGenModel` class is a Python class that represents a code generation model.
-    It is a subclass of `CodeGenPreTrainedModel` and provides functionality for constructing, setting and getting input
+    It is a subclass of `CodeGenPreTrainedModel` and provides functionality for forwarding, setting and getting input
     embeddings, and generating code outputs.
 
     Attributes:
@@ -684,8 +685,8 @@ class CodeGenModel(CodeGenPreTrainedModel):
         self.vocab_size = config.vocab_size
         self.wte = nn.Embedding(config.vocab_size, self.embed_dim)
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([CodeGenBlock(config) for _ in range(config.n_layer)])
-        self.ln_f = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_epsilon)
+        self.h = nn.ModuleList([CodeGenBlock(config) for _ in range(config.n_layer)])
+        self.ln_f = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_epsilon)
         self.rotary_dim = min(config.rotary_dim, config.n_ctx // config.num_attention_heads)
 
         self.gradient_checkpointing = False
@@ -725,7 +726,7 @@ class CodeGenModel(CodeGenPreTrainedModel):
         """
         self.wte = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -757,7 +758,7 @@ class CodeGenModel(CodeGenPreTrainedModel):
             return_dict (Optional[bool]): Whether to return the result as a dictionary. Default is None.
 
         Returns:
-            Union[Tuple, BaseModelOutputWithPast]: The constructed model output.
+            Union[Tuple, BaseModelOutputWithPast]: The forwarded model output.
 
         Raises:
             ValueError: If both input_ids and inputs_embeds are specified.
@@ -816,7 +817,7 @@ class CodeGenModel(CodeGenPreTrainedModel):
             # Since we are adding it to the raw scores before the softmax, this is
             # effectively the same as removing these entirely.
             attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
-            attention_mask = (1.0 - attention_mask) * finfo(self.dtype, 'min')
+            attention_mask = (1.0 - attention_mask) * float(ops.finfo(self.dtype).min)
 
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
@@ -895,14 +896,14 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
 
     Attributes:
         transformer (CodeGenModel): The transformer model for code generation.
-        lm_head (nn.Dense): The dense layer for predicting the next token in the language modeling task.
+        lm_head (nn.Linear): The dense layer for predicting the next token in the language modeling task.
 
     Methods:
         __init__: Initializes the CodeGenForCausalLM instance.
         get_output_embeddings: Returns the output embeddings of the LM head.
         set_output_embeddings: Sets the output embeddings of the LM head.
         prepare_inputs_for_generation: Prepares the input tensors for generation.
-        construct: Constructs the output of the model for a given set of inputs.
+        forward: Constructs the output of the model for a given set of inputs.
         _reorder_cache: Reorders the cache of past key values for beam search or beam sampling.
 
     """
@@ -924,7 +925,7 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
         """
         super().__init__(config)
         self.transformer = CodeGenModel(config)
-        self.lm_head = nn.Dense(config.n_embd, config.vocab_size)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1011,7 +1012,7 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
@@ -1025,7 +1026,7 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
             "token_type_ids": token_type_ids,
         }
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -1075,7 +1076,7 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
             loss = loss.to(hidden_states.dtype)
 

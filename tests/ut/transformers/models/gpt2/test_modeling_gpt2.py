@@ -31,7 +31,7 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor,
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         GPT2_PRETRAINED_MODEL_ARCHIVE_LIST,
@@ -237,8 +237,8 @@ class GPT2ModelTester:
         next_token_types = ids_tensor([self.batch_size, 1], self.type_vocab_size)
 
         # append to next input_ids and token_type_ids
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_token_type_ids = ops.cat([token_type_ids, next_token_types], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_token_type_ids = ops.cat([token_type_ids, next_token_types], dim=-1)
 
         output_from_no_past = model(next_input_ids, token_type_ids=next_token_type_ids)["last_hidden_state"]
         output_from_past = model(next_tokens, token_type_ids=next_token_types, past_key_values=past)[
@@ -277,10 +277,10 @@ class GPT2ModelTester:
         input_ids[:, -random_seq_idx_to_change] = random_other_next_tokens
 
         # append to next input_ids and attn_mask
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         attn_mask = ops.cat(
             [attn_mask, ops.ones((attn_mask.shape[0], 1), dtype=mindspore.int64)],
-            axis=1,
+            dim=1,
         )
 
         # get two different outputs
@@ -313,9 +313,9 @@ class GPT2ModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and token_type_ids
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_token_type_ids = ops.cat([token_type_ids, next_token_types], axis=-1)
-        next_attention_mask = ops.cat([input_mask, next_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_token_type_ids = ops.cat([token_type_ids, next_token_types], dim=-1)
+        next_attention_mask = ops.cat([input_mask, next_mask], dim=-1)
 
         output_from_no_past = model(
             next_input_ids, token_type_ids=next_token_type_ids, attention_mask=next_attention_mask
@@ -353,7 +353,7 @@ class GPT2ModelTester:
             self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
             return result.loss
 
-        grad_fn = mindspore.value_and_grad(forward, None, model.trainable_params())
+        grad_fn = mindspore.value_and_grad(forward, None, tuple(model.parameters()))
         grad_fn(input_ids, token_type_ids)
 
     def create_and_check_double_lm_head_model(
@@ -583,7 +583,7 @@ class GPT2ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
                 ops.full((input_ids.shape[0], input_ids.shape[1] - 1), 0, dtype=input_ids.dtype),
                 ops.full((input_ids.shape[0], 1), 500, dtype=input_ids.dtype),
             ],
-            axis=-1,
+            dim=-1,
         )
 
         outputs = model.generate(
@@ -643,7 +643,7 @@ class GPT2ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
                 ops.full((input_ids.shape[0], input_ids.shape[1] - 1), 0, dtype=input_ids.dtype),
                 ops.full((input_ids.shape[0], 1), 500, dtype=input_ids.dtype),
             ],
-            axis=-1,
+            dim=-1,
         )
 
         outputs = model.generate(

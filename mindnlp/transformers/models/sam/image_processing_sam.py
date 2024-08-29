@@ -151,7 +151,7 @@ class SamImageProcessor(BaseImageProcessor):
                 which uses {'height': 256, 'width': 256}. The size can be specified as a single integer,
                 representing both height and width.
             do_convert_rgb (bool): Determines whether conversion to RGB color space should be performed. Defaults to True.
-            **kwargs: Additional keyword arguments to be passed to the parent class constructor.
+            **kwargs: Additional keyword arguments to be passed to the parent class forwardor.
         
         Returns:
             None.

@@ -1099,7 +1099,7 @@ class AlbertConverter(SpmConverter):
         Raises:
             None
 
-        This method iterates over each 'piece' in the 'proto.pieces' list and constructs a new list by applying certain
+        This method iterates over each 'piece' in the 'proto.pieces' list and forwards a new list by applying certain
         conditions. If 'check_number_comma(piece.piece)' returns True for a 'piece', the resulting tuple in the new
         list will contain 'piece.piece' and 'piece.score'. Otherwise, the resulting tuple will contain 'piece.piece'
         and 'piece.score - 100'.
@@ -1706,7 +1706,7 @@ class NllbConverter(SpmConverter):
         `vocab(proto)`:
             This method generates the vocabulary for the NLLB model.
             It takes a `proto` parameter that represents the model prototype.
-            The method constructs the vocabulary list by combining the default tokens
+            The method forwards the vocabulary list by combining the default tokens
             ('<s>', '<pad>', '</s>', '<unk>') with the tokens and scores from the `proto` object.
             It also includes additional tokens specific to various languages. The method returns the generated vocabulary.
 
@@ -1716,8 +1716,8 @@ class NllbConverter(SpmConverter):
 
         `post_processor()`:
             This method returns the post-processor for the NLLB model.
-            It constructs a `TemplateProcessing` object with the template strings for single and pair conversions.
-            It also includes special tokens for the 'eng_Latn' language. The method returns the constructed post-processor object.
+            It forwards a `TemplateProcessing` object with the template strings for single and pair conversions.
+            It also includes special tokens for the 'eng_Latn' language. The method returns the forwarded post-processor object.
 
     Note:
         - The `NllbConverter` class does not have any instance-specific attributes or properties.
@@ -2844,7 +2844,7 @@ class XGLMConverter(SpmConverter):
         unk_id(proto): Returns the ID for unknown tokens in the XGLM model.
         post_processor(): Returns a post-processor object for template processing in the XGLM model.
 
-    The 'vocab' method constructs a vocabulary list that includes special tokens like '<s>', '<pad>', '<unk>', '</s>',
+    The 'vocab' method forwards a vocabulary list that includes special tokens like '<s>', '<pad>', '<unk>', '</s>',
     and additional user-defined tokens.
     The 'unk_id' method returns the ID assigned to unknown tokens in the model.
     The 'post_processor' method returns a processor object for template processing, including single and pair processing

@@ -12,10 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" MusicGen model configuration"""
+"""MusicGen model configuration"""
 
-from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
+from ....utils import logging
 from ..auto.configuration_auto import AutoConfig
 
 
@@ -27,7 +27,7 @@ class MusicgenDecoderConfig(PretrainedConfig):
     This is the configuration class to store the configuration of an [`MusicgenDecoder`]. It is used to instantiate a
     MusicGen decoder according to the specified arguments, defining the model architecture. Instantiating a
     configuration with the defaults will yield a similar configuration to that of the MusicGen
-    [facebook/musicgen-small](https://hf-mirror.com/facebook/musicgen-small) architecture.
+    [facebook/musicgen-small](https://huggingface.co/facebook/musicgen-small) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -74,6 +74,7 @@ class MusicgenDecoderConfig(PretrainedConfig):
             Number of channels in the audio data. Either 1 for mono or 2 for stereo. Stereo models generate a separate
             audio stream for the left/right output channels. Mono models generate a single audio stream output.
     """
+
     model_type = "musicgen_decoder"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -101,38 +102,6 @@ class MusicgenDecoderConfig(PretrainedConfig):
         tie_word_embeddings=False,
         **kwargs,
     ):
-        """
-        Initializes a MusicgenDecoderConfig object.
-        
-        Args:
-            self (MusicgenDecoderConfig): The instance of the class.
-            vocab_size (int, optional): The size of the vocabulary. Defaults to 2048.
-            max_position_embeddings (int, optional): The maximum number of position embeddings. Defaults to 2048.
-            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 24.
-            ffn_dim (int, optional): The dimension of the feed-forward network. Defaults to 4096.
-            num_attention_heads (int, optional): The number of attention heads. Defaults to 16.
-            layerdrop (float, optional): The probability of dropping a layer during training. Defaults to 0.0.
-            use_cache (bool, optional): Whether to use cache during decoding. Defaults to True.
-            activation_function (str, optional): The activation function to use. Defaults to 'gelu'.
-            hidden_size (int, optional): The size of the hidden layers. Defaults to 1024.
-            dropout (float, optional): The dropout probability. Defaults to 0.1.
-            attention_dropout (float, optional): The dropout probability for attention layers. Defaults to 0.0.
-            activation_dropout (float, optional): The dropout probability for activation layers. Defaults to 0.0.
-            initializer_factor (float, optional): The factor for initializing model weights. Defaults to 0.02.
-            scale_embedding (bool, optional): Whether to scale the embeddings. Defaults to False.
-            num_codebooks (int, optional): The number of codebooks for audio input. Defaults to 4.
-            audio_channels (int): The number of audio channels. Expected values are 1 (mono) or 2 (stereo).
-            pad_token_id (int, optional): The ID of the padding token. Defaults to 2048.
-            bos_token_id (int, optional): The ID of the beginning of sentence token. Defaults to 2048.
-            eos_token_id (int, optional): The ID of the end of sentence token. Defaults to None.
-            tie_word_embeddings (bool, optional): Whether to tie the word embeddings. Defaults to False.
-        
-        Returns:
-            None.
-        
-        Raises:
-            ValueError: If the number of audio channels is not 1 or 2.
-        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.hidden_size = hidden_size
@@ -175,66 +144,54 @@ class MusicgenConfig(PretrainedConfig):
         kwargs (*optional*):
             Dictionary of keyword arguments. Notably:
 
-            - **text_encoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that
-            defines the text encoder config.
-            - **audio_encoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that
-            defines the audio encoder config.
-            - **decoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that defines
-            the decoder config.
+                - **text_encoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that
+                  defines the text encoder config.
+                - **audio_encoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that
+                  defines the audio encoder config.
+                - **decoder** ([`PretrainedConfig`], *optional*) -- An instance of a configuration object that defines
+                  the decoder config.
 
     Example:
-        ```python
-        >>> from transformers import (
-        ...     MusicgenConfig,
-        ...     MusicgenDecoderConfig,
-        ...     T5Config,
-        ...     EncodecConfig,
-        ...     MusicgenForConditionalGeneration,
-        ... )
-        ...
-        >>> # Initializing text encoder, audio encoder, and decoder model configurations
-        >>> text_encoder_config = T5Config()
-        >>> audio_encoder_config = EncodecConfig()
-        >>> decoder_config = MusicgenDecoderConfig()
-        ...
-        >>> configuration = MusicgenConfig.from_sub_models_config(
-        ...     text_encoder_config, audio_encoder_config, decoder_config
-        ... )
-        ...
-        >>> # Initializing a MusicgenForConditionalGeneration (with random weights) from the facebook/musicgen-small style configuration
-        >>> model = MusicgenForConditionalGeneration(configuration)
-        ...
-        >>> # Accessing the model configuration
-        >>> configuration = model.config
-        >>> config_text_encoder = model.config.text_encoder
-        >>> config_audio_encoder = model.config.audio_encoder
-        >>> config_decoder = model.config.decoder
-        ...
-        >>> # Saving the model, including its configuration
-        >>> model.save_pretrained("musicgen-model")
-        ...
-        >>> # loading model and config from pretrained folder
-        >>> musicgen_config = MusicgenConfig.from_pretrained("musicgen-model")
-        >>> model = MusicgenForConditionalGeneration.from_pretrained("musicgen-model", config=musicgen_config)
-        ```
-    """
+
+    ```python
+    >>> from transformers import (
+    ...     MusicgenConfig,
+    ...     MusicgenDecoderConfig,
+    ...     T5Config,
+    ...     EncodecConfig,
+    ...     MusicgenForConditionalGeneration,
+    ... )
+
+    >>> # Initializing text encoder, audio encoder, and decoder model configurations
+    >>> text_encoder_config = T5Config()
+    >>> audio_encoder_config = EncodecConfig()
+    >>> decoder_config = MusicgenDecoderConfig()
+
+    >>> configuration = MusicgenConfig.from_sub_models_config(
+    ...     text_encoder_config, audio_encoder_config, decoder_config
+    ... )
+
+    >>> # Initializing a MusicgenForConditionalGeneration (with random weights) from the facebook/musicgen-small style configuration
+    >>> model = MusicgenForConditionalGeneration(configuration)
+
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
+    >>> config_text_encoder = model.config.text_encoder
+    >>> config_audio_encoder = model.config.audio_encoder
+    >>> config_decoder = model.config.decoder
+
+    >>> # Saving the model, including its configuration
+    >>> model.save_pretrained("musicgen-model")
+
+    >>> # loading model and config from pretrained folder
+    >>> musicgen_config = MusicgenConfig.from_pretrained("musicgen-model")
+    >>> model = MusicgenForConditionalGeneration.from_pretrained("musicgen-model", config=musicgen_config)
+    ```"""
+
     model_type = "musicgen"
     is_composition = True
 
     def __init__(self, **kwargs):
-        """
-        Initializes a new instance of the MusicgenConfig class.
-        
-        Args:
-            self: The instance of the class.
-        
-        Returns:
-            None.
-        
-        Raises:
-            ValueError: If the configuration is not initialized with 'text_encoder', 'audio_encoder', and 'decoder' config.
-        
-        """
         super().__init__(**kwargs)
         if "text_encoder" not in kwargs or "audio_encoder" not in kwargs or "decoder" not in kwargs:
             raise ValueError("Config has to be initialized with text_encoder, audio_encoder and decoder config")
@@ -267,6 +224,7 @@ class MusicgenConfig(PretrainedConfig):
         Returns:
             [`MusicgenConfig`]: An instance of a configuration object
         """
+
         return cls(
             text_encoder=text_encoder_config.to_dict(),
             audio_encoder=audio_encoder_config.to_dict(),
@@ -277,18 +235,23 @@ class MusicgenConfig(PretrainedConfig):
     @property
     # This is a property because you might want to change the codec model on the fly
     def sampling_rate(self):
-        """
-        Returns the sampling rate of the audio encoder.
-        
-        Args:
-            self: An instance of the MusicgenConfig class.
-        
-        Returns:
-            None.
-        
-        Raises:
-            None.
-        """
         return self.audio_encoder.sampling_rate
+
+    @property
+    def _attn_implementation(self):
+        # This property is made private for now (as it cannot be changed and a PreTrainedModel.use_attn_implementation method needs to be implemented.)
+        if hasattr(self, "_attn_implementation_internal"):
+            if self._attn_implementation_internal is None:
+                # `config.attn_implementation` should never be None, for backward compatibility.
+                return "eager"
+            else:
+                return self._attn_implementation_internal
+        else:
+            return "eager"
+
+    @_attn_implementation.setter
+    def _attn_implementation(self, value):
+        self._attn_implementation_internal = value
+        self.decoder._attn_implementation = value
 
 __all__ = ['MusicgenConfig', 'MusicgenDecoderConfig']

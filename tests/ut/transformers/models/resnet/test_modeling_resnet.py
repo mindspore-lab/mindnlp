@@ -197,7 +197,7 @@ class ResNetModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="ResNet does not support input and output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_model(self):

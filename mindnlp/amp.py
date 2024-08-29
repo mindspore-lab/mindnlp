@@ -174,7 +174,6 @@ decorator for functions to apply automatic mixed precision to the decorated func
         Raises:
             No specific exceptions are raised by this method.
         """
-        print('amp', self.enabled)
         _set_amp(self.enabled, self.dtype)
         return self
 

@@ -17,13 +17,13 @@
 """
 LUKE Model init
 """
-from . import luke, luke_config, tokenization_luke
+from . import configuration_luke, modeling_luke, tokenization_luke
 
-from .luke import *
-from .luke_config import *
+from .modeling_luke import *
+from .configuration_luke import *
 from .tokenization_luke import *
 
 __all__= []
-__all__.extend(luke.__all__)
-__all__.extend(luke_config.__all__)
+__all__.extend(modeling_luke.__all__)
+__all__.extend(configuration_luke.__all__)
 __all__.extend(tokenization_luke.__all__)

@@ -1,6 +1,7 @@
 """array op"""
 import mindspore
 from mindspore import ops
+from mindspore.ops._primitive_cache import _get_cache_prim
 
 from mindnlp.configs import USE_PYBOOST
 
@@ -49,14 +50,30 @@ def gather(input, dim, index):
         return mindspore.mint.gather(input, dim, index)
     return ops.gather_elements(input, dim, index)
 
+def gather_nd(input, indices):
+    return ops.gather_nd(input, indices)
+
 # hsplit
 
 
 # hstack
+def hstack(tensors):
+    return ops.hstack(tensors)
 
+
+# index_fill
+def index_fill(input, dim, index, value):
+    return ops.index_fill(input, dim, index, value)
 
 # index_add
+def index_add(input, dim, index, source, *, alpha=1):
+    if USE_PYBOOST:
+        return mindspore.ops.auto_generate.gen_ops_prim.index_add_ext_op(input, index, source, dim, alpha)
+    return ops.index_add(input, index, source, dim)
 
+def inplace_index_add(input, dim, index, source):
+    _inplace = _get_cache_prim(ops.InplaceIndexAdd)(dim)
+    return _inplace(input, index, source)
 
 # index_copy
 
@@ -65,10 +82,14 @@ def gather(input, dim, index):
 
 
 # index_select
-
+def index_select(input, dim, index):
+    if USE_PYBOOST:
+        return mindspore.mint.index_select(input, dim, index)
+    return ops.index_select(input, dim, index)
 
 # masked_select
-
+def masked_select(input, mask):
+    return ops.masked_select(input, mask)
 
 # movedim
 
@@ -89,7 +110,13 @@ def narrow(input, dim, start, length):
 def nonzero(input, *, as_tuple=False):
     if USE_PYBOOST:
         return mindspore.mint.nonzero(input, as_tuple)
-    return ops.nonzero(input, as_tuple)
+    _nonzero = _get_cache_prim(ops.NonZero)()
+    out = _nonzero(input)
+    if as_tuple:
+        if 0 in out.shape:
+            return (out, out)
+        return unbind(out, 1)
+    return out
 
 # permute
 def permute(input, dims):
@@ -119,8 +146,9 @@ def select(input, dim, index):
 # scatter
 def scatter(input, dim, index, src):
     if USE_PYBOOST:
-        reduce = mindspore.ops.auto_generate.gen_arg_handler.str_to_enum('Scatter', 'reduce', "none")
-        return mindspore.ops.auto_generate.gen_ops_prim.scatter_op(input, dim, index, src, reduce)
+        return mindspore.ops.auto_generate.gen_ops_prim.scatter_op(input, dim, index, src, 0)
+    if not isinstance(src, mindspore.Tensor):
+        src = ops.full(index.shape, src, dtype=input.dtype)
     return ops.tensor_scatter_elements(input, index, src, dim)
 
 # diagonal_scatter
@@ -140,6 +168,14 @@ def scatter_add(input, dim, index, src):
 
 # scatter_reduce
 
+
+# scatter_nd_update
+def scatter_nd_update(input, indices, update):
+    return ops.scatter_nd_update(input, indices, update)
+
+
+def scatter_update(input, indices, updates):
+    return ops.scatter_update(input, indices, updates)
 
 # split
 def split(tensor, split_size_or_sections, dim=0):
@@ -204,6 +240,9 @@ def unsqueeze(input, dim):
 # vsplit
 
 # vstack
+def vstack(input):
+    return ops.vstack(input)
+
 
 # where
 def where(condition, input, other):
@@ -263,3 +302,12 @@ def getitem(tensor, slice):
     slices = _slice_helper(slice)
     # input_x, begin, end, strides, begin_mask=0, end_mask=0, ellipsis_mask=0, new_axis_mask=0, shrink_axis_mask=0
     return ops.strided_slice(tensor, *slices)
+
+def tensor_scatter_add(input, indeices, updates):
+    return ops.tensor_scatter_add(input, indeices, updates)
+
+def tensor_scatter_max(input, indeices, updates):
+    return ops.tensor_scatter_max(input, indeices, updates)
+
+def tensor_scatter_min(input, indeices, updates):
+    return ops.tensor_scatter_min(input, indeices, updates)

@@ -144,7 +144,7 @@ class UnivNetModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -217,7 +217,7 @@ class UnivNetModelTest(ModelTesterMixin, unittest.TestCase):
             )
 
 
-# @slow
+@slow
 class UnivNetModelIntegrationTests(unittest.TestCase):
     def tearDown(self):
         super().tearDown()
@@ -270,7 +270,6 @@ class UnivNetModelIntegrationTests(unittest.TestCase):
         inputs = {
             "input_features": spectrogram,
             "noise_sequence": noise_sequence,
-            "generator": seed,
         }
 
         return inputs

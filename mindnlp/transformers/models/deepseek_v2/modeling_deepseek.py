@@ -24,11 +24,11 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindspore import ops
-from mindspore import nn
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.transformers.activations import ACT2FN
 from mindnlp.transformers.cache_utils import Cache, DynamicCache
 from mindnlp.transformers.modeling_attn_mask_utils import (
@@ -62,7 +62,7 @@ def _get_unpad_data(attention_mask):
     indices = ops.nonzero(attention_mask.flatten()).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
     cu_seqlens = ops.pad(
-        ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0)
+        ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0)
     )
     return (
         indices,
@@ -71,7 +71,7 @@ def _get_unpad_data(attention_mask):
     )
 
 
-class DeepseekV2RMSNorm(nn.Cell):
+class DeepseekV2RMSNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
         """
         DeepseekV2RMSNorm is equivalent to T5LayerNorm
@@ -80,7 +80,7 @@ class DeepseekV2RMSNorm(nn.Cell):
         self.weight = mindspore.Parameter(ops.ones(hidden_size), 'weight')
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
         variance = hidden_states.pow(2).mean(-1, keep_dims=True)
@@ -91,7 +91,7 @@ class DeepseekV2RMSNorm(nn.Cell):
 ALL_LAYERNORM_LAYERS.append(DeepseekV2RMSNorm)
 
 
-class DeepseekV2RotaryEmbedding(nn.Cell):
+class DeepseekV2RotaryEmbedding(nn.Module):
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         super().__init__()
 
@@ -117,11 +117,11 @@ class DeepseekV2RotaryEmbedding(nn.Cell):
         freqs = ops.outer(t, self.inv_freq)
         """Different from paper, but it uses a different permutation 
            in order to obtain the same calculation"""
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         # x: [bs, num_attention_heads, seq_len, head_size]
         if self.max_seq_len_cached is None or seq_len > self.max_seq_len_cached:
             self._set_cos_sin_cache(seq_len=seq_len, dtype=x.dtype)
@@ -151,7 +151,7 @@ class DeepseekV2LinearScalingRotaryEmbedding(DeepseekV2RotaryEmbedding):
         t = ops.arange(start=0, end=self.max_seq_len_cached, dtype=self.inv_freq.dtype)
         t = t / self.scaling_factor
         freqs = ops.outer(t, self.inv_freq)
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
@@ -186,7 +186,7 @@ class DeepseekV2DynamicNTKScalingRotaryEmbedding(DeepseekV2RotaryEmbedding):
         t = ops.arange(start=0, end=self.max_seq_len_cached, dtype=self.inv_freq.dtype)
 
         freqs = ops.outer(t, self.inv_freq)
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
@@ -284,7 +284,7 @@ class DeepseekV2YarnRotaryEmbedding(DeepseekV2RotaryEmbedding):
             / yarn_get_mscale(int(self.scaling_factor), self.mscale_all_dim)
         )
 
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = (emb.cos() * _mscale).to(dtype)
         self.sin_cached = (emb.sin() * _mscale).to(dtype)
 
@@ -294,7 +294,7 @@ def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
     x2 = x[..., x.shape[-1] // 2:]
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 # Copied from transformers.models.llama.modeling_llama.apply_rotary_pos_emb
@@ -337,7 +337,7 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     return q_embed, k_embed
 
 
-class DeepseekV2MLP(nn.Cell):
+class DeepseekV2MLP(nn.Module):
     def __init__(self, config, hidden_size=None, intermediate_size=None):
         super().__init__()
         self.config = config
@@ -346,17 +346,17 @@ class DeepseekV2MLP(nn.Cell):
             config.intermediate_size if intermediate_size is None else intermediate_size
         )
 
-        self.gate_proj = nn.Dense(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.up_proj = nn.Dense(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.down_proj = nn.Dense(self.intermediate_size, self.hidden_size, has_bias=False)
+        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
         self.act_fn = ACT2FN[config.hidden_act]
 
-    def construct(self, x):
+    def forward(self, x):
         down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
         return down_proj
 
 
-class MoEGate(nn.Cell):
+class MoEGate(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -378,14 +378,14 @@ class MoEGate(nn.Cell):
             'weight'
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         bsz, seq_len, h = hidden_states.shape
         hidden_states = hidden_states.view(-1, h)
         logits = ops.dense(
             hidden_states.type(mindspore.float32), self.weight.type(mindspore.float32), None
         )
         if self.scoring_func == "softmax":
-            scores = ops.softmax(logits, axis=-1, dtype=mindspore.float32)
+            scores = ops.softmax(logits, dim=-1, dtype=mindspore.float32)
         else:
             raise NotImplementedError(
                 f"insupportable scoring function for MoE gating: {self.scoring_func}"
@@ -456,7 +456,7 @@ class MoEGate(nn.Cell):
         return topk_idx, topk_weight, aux_loss
 
 
-class DeepseekV2MoE(nn.Cell):
+class DeepseekV2MoE(nn.Module):
     """
     A mixed expert module containing shared experts.
     """
@@ -469,7 +469,7 @@ class DeepseekV2MoE(nn.Cell):
         self.ep_size = 1
         self.experts_per_rank = config.n_routed_experts
         self.ep_rank = 0
-        self.experts = nn.CellList(
+        self.experts = nn.ModuleList(
             [
                 DeepseekV2MLP(
                     config, intermediate_size=config.moe_intermediate_size
@@ -483,7 +483,7 @@ class DeepseekV2MoE(nn.Cell):
                 config=config, intermediate_size=intermediate_size
             )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         identity = hidden_states
         orig_shape = hidden_states.shape
         topk_idx, topk_weight, aux_loss = self.gate(hidden_states)
@@ -521,7 +521,7 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
 
 
 # Copied from transformers.models.llama.modeling_llama.LlamaAttention with Llama->DeepseekV2
-class DeepseekV2Attention(nn.Cell):
+class DeepseekV2Attention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config: DeepseekV2Config, layer_idx: Optional[int] = None):
@@ -552,35 +552,35 @@ class DeepseekV2Attention(nn.Cell):
         self.is_causal = True
 
         if self.q_lora_rank is None:
-            self.q_proj = nn.Dense(
-                self.hidden_size, self.num_heads * self.q_head_dim, has_bias=False
+            self.q_proj = nn.Linear(
+                self.hidden_size, self.num_heads * self.q_head_dim, bias=False
             )
         else:
-            self.q_a_proj = nn.Dense(
-                self.hidden_size, config.q_lora_rank, has_bias=config.attention_bias
+            self.q_a_proj = nn.Linear(
+                self.hidden_size, config.q_lora_rank, bias=config.attention_bias
             )
             self.q_a_layernorm = DeepseekV2RMSNorm(config.q_lora_rank)
-            self.q_b_proj = nn.Dense(
-                config.q_lora_rank, self.num_heads * self.q_head_dim, has_bias=False
+            self.q_b_proj = nn.Linear(
+                config.q_lora_rank, self.num_heads * self.q_head_dim, bias=False
             )
 
-        self.kv_a_proj_with_mqa = nn.Dense(
+        self.kv_a_proj_with_mqa = nn.Linear(
             self.hidden_size,
             config.kv_lora_rank + config.qk_rope_head_dim,
-            has_bias=config.attention_bias,
+            bias=config.attention_bias,
         )
         self.kv_a_layernorm = DeepseekV2RMSNorm(config.kv_lora_rank)
-        self.kv_b_proj = nn.Dense(
+        self.kv_b_proj = nn.Linear(
             config.kv_lora_rank,
             self.num_heads
             * (self.q_head_dim - self.qk_rope_head_dim + self.v_head_dim),
-            has_bias=False,
+            bias=False,
         )
 
-        self.o_proj = nn.Dense(
+        self.o_proj = nn.Linear(
             self.num_heads * self.v_head_dim,
             self.hidden_size,
-            has_bias=config.attention_bias,
+            bias=config.attention_bias,
         )
         self._init_rope()
 
@@ -644,7 +644,7 @@ class DeepseekV2Attention(nn.Cell):
             .swapaxes(1, 2)
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -656,7 +656,7 @@ class DeepseekV2Attention(nn.Cell):
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         if "padding_mask" in kwargs:
             warnings.warn(
-                "Passing `padding_mask` is deprecated and will be removed in v4.37. "
+                "Passing `padding_mask` is deprecated.37. "
                 "Please make sure use `attention_mask` instead.`"
             )
         bsz, q_len, _ = hidden_states.shape
@@ -667,12 +667,12 @@ class DeepseekV2Attention(nn.Cell):
             q = self.q_b_proj(self.q_a_layernorm(self.q_a_proj(hidden_states)))
         q = q.view(bsz, q_len, self.num_heads, self.q_head_dim).swapaxes(1, 2)
         q_nope, q_pe = ops.split(
-            q, [self.qk_nope_head_dim, self.qk_rope_head_dim], axis=-1
+            q, [self.qk_nope_head_dim, self.qk_rope_head_dim], dim=-1
         )
 
         compressed_kv = self.kv_a_proj_with_mqa(hidden_states)
         compressed_kv, k_pe = ops.split(
-            compressed_kv, [self.kv_lora_rank, self.qk_rope_head_dim], axis=-1
+            compressed_kv, [self.kv_lora_rank, self.qk_rope_head_dim], dim=-1
         )
         k_pe = k_pe.view(bsz, q_len, 1, self.qk_rope_head_dim).swapaxes(1, 2)
         kv = (
@@ -682,7 +682,7 @@ class DeepseekV2Attention(nn.Cell):
         )
 
         k_nope, value_states = ops.split(
-            kv, [self.qk_nope_head_dim, self.v_head_dim], axis=-1
+            kv, [self.qk_nope_head_dim, self.v_head_dim], dim=-1
         )
         kv_seq_len = value_states.shape[-2]
         if past_key_value is not None:
@@ -734,9 +734,9 @@ class DeepseekV2Attention(nn.Cell):
 
         # upcast attention to fp32
         attn_weights = ops.softmax(
-            attn_weights, axis=-1, dtype=mindspore.float32
+            attn_weights, dim=-1, dtype=mindspore.float32
         ).to(query_states.dtype)
-        attn_weights = ops.dropout(
+        attn_weights = F.dropout(
             attn_weights, p=self.attention_dropout, training=self.training
         )
         attn_output = ops.matmul(attn_weights, value_states)
@@ -764,7 +764,7 @@ ATTENTION_CLASSES = {
 }
 
 
-class DeepseekV2DecoderLayer(nn.Cell):
+class DeepseekV2DecoderLayer(nn.Module):
     def __init__(self, config: DeepseekV2Config, layer_idx: int):
         super().__init__()
         self.hidden_size = config.hidden_size
@@ -789,7 +789,7 @@ class DeepseekV2DecoderLayer(nn.Cell):
             config.hidden_size, eps=config.rms_norm_eps
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -817,7 +817,7 @@ class DeepseekV2DecoderLayer(nn.Cell):
         """
         if "padding_mask" in kwargs:
             warnings.warn(
-                "Passing `padding_mask` is deprecated and will be removed in v4.37. "
+                "Passing `padding_mask` is deprecated.37. "
                 "Please make sure use `attention_mask` instead.`"
             )
         residual = hidden_states
@@ -858,7 +858,7 @@ DeepseekV2_START_DOCSTRING = r"""
     library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
     etc.)
 
-    This model is also a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) subclass.
+    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
     Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
     and behavior.
 
@@ -881,10 +881,10 @@ class DeepseekV2PreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             embedding_table = np.random.normal(0.0, self.config.initializer_range, cell.embedding_table)
@@ -980,7 +980,7 @@ class DeepseekV2Model(DeepseekV2PreTrainedModel):
         self.embed_tokens = nn.Embedding(
             config.vocab_size, config.hidden_size, self.padding_idx
         )
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [
                 DeepseekV2DecoderLayer(config, layer_idx)
                 for layer_idx in range(config.num_hidden_layers)
@@ -999,7 +999,7 @@ class DeepseekV2Model(DeepseekV2PreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1155,7 +1155,7 @@ class DeepseekV2ForCausalLM(DeepseekV2PreTrainedModel):
         super().__init__(config)
         self.model = DeepseekV2Model(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1178,7 +1178,7 @@ class DeepseekV2ForCausalLM(DeepseekV2PreTrainedModel):
     def get_decoder(self):
         return self.model
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1232,7 +1232,7 @@ class DeepseekV2ForCausalLM(DeepseekV2PreTrainedModel):
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Enable model parallelism
-            loss = ops.cross_entropy(shift_logits, shift_labels)
+            loss = F.cross_entropy(shift_logits, shift_labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -1328,7 +1328,7 @@ class DeepseekV2ForSequenceClassification(DeepseekV2PreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = DeepseekV2Model(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1339,7 +1339,7 @@ class DeepseekV2ForSequenceClassification(DeepseekV2PreTrainedModel):
     def set_input_embeddings(self, value):
         self.model.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1411,16 +1411,16 @@ class DeepseekV2ForSequenceClassification(DeepseekV2PreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
 
-                loss = ops.cross_entropy(
+                loss = F.cross_entropy(
                     pooled_logits.view(-1, self.num_labels), labels.view(-1)
                 )
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output

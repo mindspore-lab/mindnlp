@@ -1,11 +1,12 @@
 """batch norm"""
 from typing import Optional
 import mindspore
-from mindspore import ops, Tensor, Parameter
-from mindspore.common.initializer import initializer
+from mindspore import Tensor, Parameter
 
-from mindnlp.configs import USE_PYBOOST
 from .module import Module
+from .. import init
+from ... import ops
+from .. import functional as F
 
 class _NormBase(Module):
     """Common base of _InstanceNorm and _BatchNorm."""
@@ -36,8 +37,8 @@ class _NormBase(Module):
         self.momentum = momentum
         self.affine = affine
         self.track_running_stats = track_running_stats
-        self.weight = Parameter(initializer('ones', (num_features,)), 'weight', affine)
-        self.bias = Parameter(initializer('zeros', (num_features,)), 'bias', affine)
+        self.weight = Parameter(ops.empty(num_features, **factory_kwargs), 'weight', affine)
+        self.bias = Parameter(ops.empty(num_features, **factory_kwargs), 'bias', affine)
         if self.track_running_stats:
             self.register_buffer('running_mean', ops.zeros(num_features,))
             self.register_buffer('running_var', ops.ones(num_features,))
@@ -50,6 +51,20 @@ class _NormBase(Module):
             self.register_buffer("running_mean", None)
             self.register_buffer("running_var", None)
             self.register_buffer("num_batches_tracked", None)
+
+    def reset_running_stats(self) -> None:
+        if self.track_running_stats:
+            # running_mean/running_var/num_batches... are registered at runtime depending
+            # if self.track_running_stats is on
+            init.zeros_(self.running_mean)  # type: ignore[union-attr]
+            init.ones_(self.running_var)  # type: ignore[union-attr]
+            init.zeros_(self.num_batches_tracked)  # type: ignore[union-attr,operator]
+
+    def reset_parameters(self) -> None:
+        self.reset_running_stats()
+        if self.affine:
+            init.ones_(self.weight)
+            init.zeros_(self.bias)
 
     def _check_input_dim(self, input):
         raise NotImplementedError
@@ -110,21 +125,7 @@ class _BatchNorm(_NormBase):
         passed when the update should occur (i.e. in training mode when they are tracked), or when buffer stats are
         used for normalization (i.e. in eval mode when buffers are not None).
         """
-        if USE_PYBOOST:
-            return mindspore.mint.nn.functional.batch_norm(
-                input,
-                # If buffers are not to be tracked, ensure that they won't be updated
-                self.running_mean
-                if not self.training or self.track_running_stats
-                else None,
-                self.running_var if not self.training or self.track_running_stats else None,
-                self.weight,
-                self.bias,
-                bn_training,
-                exponential_average_factor,
-                self.eps,
-            )
-        return ops.batch_norm(
+        return F.batch_norm(
             input,
             # If buffers are not to be tracked, ensure that they won't be updated
             self.running_mean

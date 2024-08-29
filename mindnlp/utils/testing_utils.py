@@ -60,6 +60,9 @@ from .import_utils import (
     is_pytesseract_available,
     is_vision_available,
     is_g2p_en_available,
+    is_levenshtein_available,
+    is_nltk_available,
+    is_ftfy_available
 )
 from .generic import strtobool
 
@@ -182,6 +185,34 @@ def parse_int_from_env(key, default=None):
         except ValueError as exc:
             raise ValueError(f"If set, {key} must be a int.") from exc
     return _value
+
+
+def require_ftfy(test_case):
+    """
+    Decorator marking a test that requires ftfy. These tests are skipped when ftfy isn't installed.
+    """
+    return unittest.skipUnless(is_ftfy_available(), "test requires ftfy")(test_case)
+
+
+def require_levenshtein(test_case):
+    """
+    Decorator marking a test that requires Levenshtein.
+
+    These tests are skipped when Levenshtein isn't installed.
+
+    """
+    return unittest.skipUnless(is_levenshtein_available(), "test requires Levenshtein")(test_case)
+
+
+def require_nltk(test_case):
+    """
+    Decorator marking a test that requires NLTK.
+
+    These tests are skipped when NLTK isn't installed.
+
+    """
+    return unittest.skipUnless(is_nltk_available(), "test requires NLTK")(test_case)
+
 
 def require_vision(test_case):
     """

@@ -239,7 +239,7 @@ class XLNetModelTester:
             token_labels,
     ):
         model = XLNetModel(config=config)
-
+        model.eval()
         # first forward pass
         causal_mask = mindspore.ops.ones(
             (input_ids_1.shape[0],
@@ -251,6 +251,9 @@ class XLNetModelTester:
         outputs_cache = model(input_ids_1, use_mems=True, perm_mask=causal_mask)
         outputs_no_cache = model(input_ids_1, use_mems=False, perm_mask=causal_mask)
         outputs_conf = model(input_ids_1)
+
+   
+
 
         self.parent.assertTrue(len(outputs_cache) == len(outputs_conf))
         self.parent.assertTrue(len(outputs_cache) == len(outputs_no_cache) + 1)
@@ -269,8 +272,9 @@ class XLNetModelTester:
         single_mask = mindspore.ops.ones((input_ids_1.shape[0], 1, 1), dtype=mindspore.float32)
 
         # second forward pass
-        output_from_no_past = model(next_input_ids, perm_mask=causal_mask)["last_hidden_state"]
-        output_from_past = model(next_tokens, mems=mems, perm_mask=single_mask)["last_hidden_state"]
+        
+        output_from_no_past = model(next_input_ids,use_mems=False,  perm_mask=causal_mask)["last_hidden_state"]
+        output_from_past = model(next_tokens, mems=mems,perm_mask=single_mask)["last_hidden_state"]
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
@@ -280,7 +284,20 @@ class XLNetModelTester:
         # test that outputs are equal for slice
         output_from_past_slice_np = output_from_past_slice.asnumpy()
         output_from_no_past_slice_np = output_from_no_past_slice.asnumpy()
+
+
+        # for attr,value in model.__dict__.items():
+        #     #if  isinstance(value,mindspore.nn.cell):
+        #     print(f"Layer:{attr}")
+        #     print(value)
+
+
         self.parent.assertTrue(np.allclose(output_from_past_slice_np, output_from_no_past_slice_np, atol=1e-3))
+
+       
+
+
+
 
     def create_and_check_xlnet_base_model_with_att_output(
             self,

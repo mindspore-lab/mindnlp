@@ -763,13 +763,13 @@ class CodeLlamaTokenizer(PreTrainedTokenizer):
     def __setstate__(self, d):
         """
         This method '__setstate__' is defined within the 'CodeLlamaTokenizer' class to set the internal state of the
-        object based on the provided dictionary 'd'. It reconstructs the object's state including the SentencePiece
+        object based on the provided dictionary 'd'. It reforwards the object's state including the SentencePiece
         model by loading it from a serialized proto.
 
         Args:
             self (CodeLlamaTokenizer): The instance of the CodeLlamaTokenizer class.
             d (dict): A dictionary containing the state information to be set.
-                It should include the necessary attributes for the object's state reconstruction.
+                It should include the necessary attributes for the object's state reforwardion.
 
         Returns:
             None: This method does not return any value explicitly.

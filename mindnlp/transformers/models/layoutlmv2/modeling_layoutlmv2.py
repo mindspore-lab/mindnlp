@@ -19,13 +19,14 @@ from typing import Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindspore import nn, ops, Parameter, Tensor
+from mindspore import Tensor, Parameter
+
 from mindspore.common.initializer import Normal, initializer, Constant
-from mindspore.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
 
-from mindnlp.transformers.ms_utils import apply_chunking_to_forward
-from mindnlp.utils import logging
-
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
+from ...ms_utils import apply_chunking_to_forward
+from ....utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -49,7 +50,7 @@ LAYOUTLMV2_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-class LayoutLMv2Embeddings(nn.Cell):
+class LayoutLMv2Embeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
     def __init__(self, config):
         """
@@ -87,7 +88,7 @@ class LayoutLMv2Embeddings(nn.Cell):
         self.w_position_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.shape_size)
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
 
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         self.position_ids = mindspore.Tensor(np.arange(0, config.max_position_embeddings)).broadcast_to(
@@ -131,12 +132,12 @@ class LayoutLMv2Embeddings(nn.Cell):
                 h_position_embeddings,
                 w_position_embeddings,
             ],
-            axis=-1,
+            dim=-1,
         )
         return spatial_position_embeddings
 
 
-class LayoutLMv2SelfAttention(nn.Cell):
+class LayoutLMv2SelfAttention(nn.Module):
     """
     LayoutLMv2SelfAttention is the self-attention layer for LayoutLMv2. It is based on the implementation of
     """
@@ -177,13 +178,13 @@ class LayoutLMv2SelfAttention(nn.Cell):
         self.has_spatial_attention_bias = config.has_spatial_attention_bias
 
         if config.fast_qkv:
-            self.qkv_linear = nn.Dense(config.hidden_size, 3 * self.all_head_size, has_bias=False)
+            self.qkv_linear = nn.Linear(config.hidden_size, 3 * self.all_head_size, bias=False)
             self.q_bias = Parameter(initializer(Constant(0.0), [1, 1, self.all_head_size], mindspore.float32))
             self.v_bias = Parameter(initializer(Constant(0.0), [1, 1, self.all_head_size], mindspore.float32))
         else:
-            self.query = nn.Dense(config.hidden_size, self.all_head_size)
-            self.key = nn.Dense(config.hidden_size, self.all_head_size)
-            self.value = nn.Dense(config.hidden_size, self.all_head_size)
+            self.query = nn.Linear(config.hidden_size, self.all_head_size)
+            self.key = nn.Linear(config.hidden_size, self.all_head_size)
+            self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
@@ -221,7 +222,7 @@ class LayoutLMv2SelfAttention(nn.Cell):
         """
         if self.fast_qkv:
             qkv = self.qkv_linear(hidden_states)
-            q, k, v = ops.chunk(qkv, 3, axis=-1)
+            q, k, v = ops.chunk(qkv, 3, dim=-1)
             if q.ndimension() == self.q_bias.ndimension():
                 q = q + self.q_bias
                 v = v + self.v_bias
@@ -235,7 +236,7 @@ class LayoutLMv2SelfAttention(nn.Cell):
             v = self.value(hidden_states)
         return q, k, v
 
-    def construct(
+    def forward(
             self,
             hidden_states,
             attention_mask=None,
@@ -292,7 +293,7 @@ class LayoutLMv2SelfAttention(nn.Cell):
             attention_scores.astype(mindspore.float32), ops.stop_gradient(attention_mask.astype(mindspore.bool_)),
             float("-1e10")
         )
-        attention_probs = ops.softmax(attention_scores, axis=-1, dtype=mindspore.float32).type_as(value_layer)
+        attention_probs = ops.softmax(attention_scores, dim=-1, dtype=mindspore.float32).type_as(value_layer)
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
         attention_probs = self.dropout(attention_probs)
@@ -310,7 +311,7 @@ class LayoutLMv2SelfAttention(nn.Cell):
         return outputs
 
 
-class LayoutLMv2Attention(nn.Cell):
+class LayoutLMv2Attention(nn.Module):
     """
     LayoutLMv2Attention is the attention layer for LayoutLMv2. It is based on the implementation of
     """
@@ -332,7 +333,7 @@ class LayoutLMv2Attention(nn.Cell):
         self.self = LayoutLMv2SelfAttention(config)
         self.output = LayoutLMv2SelfOutput(config)
 
-    def construct(
+    def forward(
             self,
             hidden_states,
             attention_mask=None,
@@ -342,8 +343,8 @@ class LayoutLMv2Attention(nn.Cell):
             rel_2d_pos=None,
     ):
         """
-        This method 'construct' is defined in the class 'LayoutLMv2Attention' and is responsible for
-        constructing the attention mechanism in the LayoutLMv2 model.
+        This method 'forward' is defined in the class 'LayoutLMv2Attention' and is responsible for
+        forwarding the attention mechanism in the LayoutLMv2 model.
 
         Args:
             self (LayoutLMv2Attention): The instance of the LayoutLMv2Attention class.
@@ -373,7 +374,7 @@ class LayoutLMv2Attention(nn.Cell):
         return outputs
 
 
-class LayoutLMv2SelfOutput(nn.Cell):
+class LayoutLMv2SelfOutput(nn.Module):
     """
     LayoutLMv2SelfOutput is the output layer for LayoutLMv2Attention. It is based on the implementation of BertSelfOutput.
     """
@@ -397,11 +398,11 @@ class LayoutLMv2SelfOutput(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         """
         Constructs the self-attention output of the LayoutLMv2 transformer model.
 
@@ -414,7 +415,7 @@ class LayoutLMv2SelfOutput(nn.Cell):
 
         Returns:
             torch.Tensor: The output tensor of shape (batch_size, sequence_length, hidden_size).
-                This tensor represents the constructed self-attention output.
+                This tensor represents the forwarded self-attention output.
 
         Raises:
             None.
@@ -426,7 +427,7 @@ class LayoutLMv2SelfOutput(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate with Bert->LayoutLMv2
-class LayoutLMv2Intermediate(nn.Cell):
+class LayoutLMv2Intermediate(nn.Module):
     """
     LayoutLMv2Intermediate is a simple feedforward network. It is based on the implementation of BertIntermediate.
     """
@@ -454,15 +455,15 @@ class LayoutLMv2Intermediate(nn.Cell):
                 is not found in the ACT2FN dictionary.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
-        Method 'construct' in the class 'LayoutLMv2Intermediate'.
+        Method 'forward' in the class 'LayoutLMv2Intermediate'.
 
         Args:
             self: LayoutLMv2Intermediate object.
@@ -484,7 +485,7 @@ class LayoutLMv2Intermediate(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->LayoutLM
-class LayoutLMv2Output(nn.Cell):
+class LayoutLMv2Output(nn.Module):
     """
     LayoutLMv2Output is the output layer for LayoutLMv2Intermediate. It is based on the implementation of BertOutput.
     """
@@ -505,11 +506,11 @@ class LayoutLMv2Output(nn.Cell):
             RuntimeError: If an error occurs during the initialization process.
         """
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the LayoutLMv2Output for the given hidden states and input tensor.
 
@@ -521,7 +522,7 @@ class LayoutLMv2Output(nn.Cell):
                 This tensor is expected to have the same shape as the hidden states.
 
         Returns:
-            mindspore.Tensor: A tensor representing the constructed LayoutLMv2Output.
+            mindspore.Tensor: A tensor representing the forwarded LayoutLMv2Output.
                 This tensor has the same shape as the hidden states.
 
         Raises:
@@ -533,7 +534,7 @@ class LayoutLMv2Output(nn.Cell):
         return hidden_states
 
 
-class LayoutLMv2Layer(nn.Cell):
+class LayoutLMv2Layer(nn.Module):
     """
     LayoutLMv2Layer is made up of self-attention and feedforward network. It is based on the implementation of BertLayer.
     """
@@ -562,7 +563,7 @@ class LayoutLMv2Layer(nn.Cell):
         self.intermediate = LayoutLMv2Intermediate(config)
         self.output = LayoutLMv2Output(config)
 
-    def construct(
+    def forward(
             self,
             hidden_states,
             attention_mask=None,
@@ -685,7 +686,7 @@ def relative_position_bucket(
     return ret
 
 
-class LayoutLMv2Encoder(nn.Cell):
+class LayoutLMv2Encoder(nn.Module):
     """
     LayoutLMv2Encoder is a stack of LayoutLMv2Layer. It is based on the implementation of BertEncoder.
     """
@@ -705,7 +706,7 @@ class LayoutLMv2Encoder(nn.Cell):
         '''
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([LayoutLMv2Layer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([LayoutLMv2Layer(config) for _ in range(config.num_hidden_layers)])
 
         self.has_relative_attention_bias = config.has_relative_attention_bias
         self.has_spatial_attention_bias = config.has_spatial_attention_bias
@@ -713,13 +714,13 @@ class LayoutLMv2Encoder(nn.Cell):
         if self.has_relative_attention_bias:
             self.rel_pos_bins = config.rel_pos_bins
             self.max_rel_pos = config.max_rel_pos
-            self.rel_pos_bias = nn.Dense(self.rel_pos_bins, config.num_attention_heads, has_bias=False)
+            self.rel_pos_bias = nn.Linear(self.rel_pos_bins, config.num_attention_heads, bias=False)
 
         if self.has_spatial_attention_bias:
             self.max_rel_2d_pos = config.max_rel_2d_pos
             self.rel_2d_pos_bins = config.rel_2d_pos_bins
-            self.rel_pos_x_bias = nn.Dense(self.rel_2d_pos_bins, config.num_attention_heads, has_bias=False)
-            self.rel_pos_y_bias = nn.Dense(self.rel_2d_pos_bins, config.num_attention_heads, has_bias=False)
+            self.rel_pos_x_bias = nn.Linear(self.rel_2d_pos_bins, config.num_attention_heads, bias=False)
+            self.rel_pos_y_bias = nn.Linear(self.rel_2d_pos_bins, config.num_attention_heads, bias=False)
 
         self.gradient_checkpointing = False
 
@@ -787,7 +788,7 @@ class LayoutLMv2Encoder(nn.Cell):
         rel_2d_pos = rel_pos_x + rel_pos_y
         return rel_2d_pos
 
-    def construct(
+    def forward(
             self,
             hidden_states,
             attention_mask=None,
@@ -799,7 +800,7 @@ class LayoutLMv2Encoder(nn.Cell):
             position_ids=None,
     ):
         """
-        This method constructs the LayoutLMv2Encoder.
+        This method forwards the LayoutLMv2Encoder.
 
         Args:
             self: The instance of the class LayoutLMv2Encoder.
@@ -888,10 +889,10 @@ class LayoutLMv2PreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -903,7 +904,7 @@ class LayoutLMv2PreTrainedModel(PreTrainedModel):
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
-class LayoutLMv2VisualBackbone(nn.Cell):
+class LayoutLMv2VisualBackbone(nn.Module):
     """
     LayoutLMv2VisualBackbone is a visual backbone for LayoutLMv2. It is based on the implementation of VisualBackboneBase.
     """
@@ -931,53 +932,34 @@ class LayoutLMv2VisualBackbone(nn.Cell):
             )
         num_channels = len(self.cfg.MODEL.PIXEL_MEAN)
 
-        self.pixel_mean = Parameter(
-            mindspore.Tensor(self.cfg.MODEL.PIXEL_MEAN).reshape((num_channels, 1, 1)),
-            name="pixel_mean",
-            requires_grad=False,
+        self.register_buffer(
+            "pixel_mean",
+            mindspore.Tensor(self.cfg.MODEL.PIXEL_MEAN).view(num_channels, 1, 1),
+            persistent=False,
         )
-        self.pixel_std = Parameter(
-            mindspore.Tensor(self.cfg.MODEL.PIXEL_STD).reshape((num_channels, 1, 1)),
-            name="pixel_std",
-            requires_grad=False,
+        self.register_buffer(
+            "pixel_std", mindspore.Tensor(self.cfg.MODEL.PIXEL_STD).view(num_channels, 1, 1), persistent=False
         )
-
         self.out_feature_key = "p2"
-        self.pool_shape = tuple(config.image_feature_pool_shape[:2])  # (7,7)
+        # if torch.are_deterministic_algorithms_enabled():
+        #     logger.warning("using `AvgPool2d` instead of `AdaptiveAvgPool2d`")
+        #     input_shape = (224, 224)
+        #     backbone_stride = self.backbone.output_shape()[self.out_feature_key].stride
+        #     self.pool = nn.AvgPool2d(
+        #         (
+        #             math.ceil(math.ceil(input_shape[0] / backbone_stride) / config.image_feature_pool_shape[0]),
+        #             math.ceil(math.ceil(input_shape[1] / backbone_stride) / config.image_feature_pool_shape[1]),
+        #         )
+        #     )
+        # else:
+        self.pool = nn.AdaptiveAvgPool2d(tuple(config.image_feature_pool_shape[:2]))
         if len(config.image_feature_pool_shape) == 2:
-            config.image_feature_pool_shape.append(
-                self.backbone.output_shape()[self.out_feature_key].channels
-            )
+            config.image_feature_pool_shape.append(self.backbone.output_shape()[self.out_feature_key].channels)
+        assert self.backbone.output_shape()[self.out_feature_key].channels == config.image_feature_pool_shape[2]
 
-        input_shape = (224, 224)
-        outsize = config.image_feature_pool_shape[0]  # (7,7)
-        insize = (input_shape[0] + 4 - 1) // 4
-        shape_info = self.backbone.output_shape()[self.out_feature_key]
-        channels = shape_info.channels
-        stride = insize // outsize
-        kernel = insize - (outsize - 1) * stride
-
-        self.weight = mindspore.Tensor(np.ones([channels, 1, kernel, kernel]), dtype=mindspore.float32) / (
-                kernel * kernel)
-        self.conv2d = ops.Conv2D(channels, kernel, stride=stride, group=channels)
-
-    def pool(self, features):
+    def forward(self, images):
         """
-        To enhance performance, customize the AdaptiveAvgPool2d layer
-        """
-        features = self.conv2d(features, self.weight)
-        return features
-
-    def freeze(self):
-        """
-        Freeze parameters
-        """
-        for param in self.trainable_params():
-            param.requires_grad = False
-
-    def construct(self, images):
-        """
-        This method 'construct' is defined within the class 'LayoutLMv2VisualBackbone'
+        This method 'forward' is defined within the class 'LayoutLMv2VisualBackbone'
         and is responsible for processing images through the visual backbone network.
 
         Args:
@@ -1013,7 +995,7 @@ class LayoutLMv2VisualBackbone(nn.Cell):
         return features.flatten(start_dim=2).transpose(0, 2, 1)
 
 
-class LayoutLMv2Pooler(nn.Cell):
+class LayoutLMv2Pooler(nn.Module):
     """
     LayoutLMv2Pooler is a simple feedforward network. It is based on the implementation of BertPooler.
     """
@@ -1032,10 +1014,10 @@ class LayoutLMv2Pooler(nn.Cell):
             None.
         """
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the pooled output tensor for the LayoutLMv2Pooler class.
 
@@ -1095,10 +1077,10 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         self.embeddings = LayoutLMv2Embeddings(config)
         if self.use_visual_backbone is True:
             self.visual = LayoutLMv2VisualBackbone(config)
-            self.visual_proj = nn.Dense(config.image_feature_pool_shape[-1], config.hidden_size)
+            self.visual_proj = nn.Linear(config.image_feature_pool_shape[-1], config.hidden_size)
         if self.has_visual_segment_embedding:
             self.visual_segment_embedding = Parameter(nn.Embedding(1, config.hidden_size).weight[0])
-        self.visual_LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.visual_LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.visual_dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         self.encoder = LayoutLMv2Encoder(config)
@@ -1259,8 +1241,8 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
                 visual_bbox_x[1:].broadcast_to(expand_shape),
                 visual_bbox_y[1:].broadcast_to(expand_shape[::-1]).transpose((1, 0)),
             ],
-            axis=-1,
-        ).reshape((expand_shape[0] * expand_shape[1], ops.shape(bbox)[-1]))
+            dim=-1,
+        ).reshape((expand_shape[0] * expand_shape[1], bbox.shape[-1]))
         visual_bbox = visual_bbox.broadcast_to(
             (visual_shape[0], visual_bbox.shape[0], visual_bbox.shape[1])
         )
@@ -1300,7 +1282,7 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             bbox: Optional[mindspore.Tensor] = None,
@@ -1361,14 +1343,14 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         # final_shape = ops.Size(final_shape)
 
         visual_bbox = self._calc_visual_bbox(self.config.image_feature_pool_shape, bbox, final_shape)
-        final_bbox = ops.cat([bbox, visual_bbox], axis=1)
+        final_bbox = ops.cat([bbox, visual_bbox], dim=1)
 
         if attention_mask is None:
             attention_mask = ops.ones(input_shape)
 
         visual_attention_mask = ops.ones(tuple(visual_shape), dtype=mindspore.float32)
         attention_mask = attention_mask.astype(visual_attention_mask.dtype)
-        final_attention_mask = ops.cat([attention_mask, visual_attention_mask], axis=1)
+        final_attention_mask = ops.cat([attention_mask, visual_attention_mask], dim=1)
 
         if token_type_ids is None:
             token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
@@ -1382,7 +1364,7 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
             (input_shape[0], visual_shape[1])
         )
         position_ids = position_ids.astype(visual_position_ids.dtype)
-        final_position_ids = ops.cat([position_ids, visual_position_ids], axis=1)
+        final_position_ids = ops.cat([position_ids, visual_position_ids], dim=1)
 
         if bbox is None:
             bbox = ops.zeros(tuple(list(input_shape) + [4]), dtype=mindspore.int64)
@@ -1400,19 +1382,18 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
             bbox=visual_bbox,
             position_ids=visual_position_ids,
         )
-        final_emb = ops.cat([text_layout_emb, visual_emb], axis=1)
+        final_emb = ops.cat([text_layout_emb, visual_emb], dim=1)
 
         extended_attention_mask = final_attention_mask.unsqueeze(1).unsqueeze(2)
 
         extended_attention_mask = extended_attention_mask.to(dtype=self.dtype)
-        extended_attention_mask = (1.0 - extended_attention_mask) * mindspore.tensor(
-            np.finfo(mindspore.dtype_to_nptype(self.dtype)).min)
+        extended_attention_mask = (1.0 - extended_attention_mask) * float(ops.finfo(self.dtype).min)
 
         if head_mask is not None:
-            if head_mask.dim() == 1:
+            if head_mask.ndim == 1:
                 head_mask = head_mask.unsqueeze(0).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
                 head_mask = head_mask.broadcast_to(self.config.num_hidden_layers, -1, -1, -1, -1)
-            elif head_mask.dim() == 2:
+            elif head_mask.ndim == 2:
                 head_mask = head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
             head_mask_dtype = next(iter(self.parameters_dict().items()))[1].dtype
             head_mask = head_mask.to(dtype=head_mask_dtype)
@@ -1471,7 +1452,7 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
         self.num_labels = config.num_labels
         self.layoutlmv2 = LayoutLMv2Model(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size * 3, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size * 3, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1492,7 +1473,7 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
         """
         return self.layoutlmv2.embeddings.word_embeddings
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             bbox: Optional[mindspore.Tensor] = None,
@@ -1541,7 +1522,7 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
             >>> outputs = model(**encoding, labels=sequence_label)
             ...
             >>> loss, logits = outputs.loss, outputs.logits
-            >>> predicted_idx = logits.argmax(axis=-1).item()
+            >>> predicted_idx = logits.argmax(dim=-1).item()
             >>> predicted_answer = dataset.info.features["label"].names[4]
             >>> predicted_idx, predicted_answer
             (4, 'advertisement')
@@ -1568,8 +1549,8 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
             self.config.image_feature_pool_shape, bbox, final_shape
         )
 
-        visual_position_ids = ops.arange(0, visual_shape[1], dtype=mindspore.int64).repeat(
-            input_shape[0], 1
+        visual_position_ids = ops.arange(0, visual_shape[1], dtype=mindspore.int64).tile(
+            (input_shape[0], 1)
         )
 
         initial_image_embeddings = self.layoutlmv2._calc_img_embeddings(
@@ -1606,7 +1587,7 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
         pooled_final_image_embeddings = final_image_embeddings.mean(axis=1)
         # concatenate with cls_final_output
         sequence_output = ops.cat(
-            [cls_final_output, pooled_initial_image_embeddings, pooled_final_image_embeddings], axis=1
+            [cls_final_output, pooled_initial_image_embeddings, pooled_final_image_embeddings], dim=1
         )
         sequence_output = self.dropout(sequence_output)
         logits = self.classifier(sequence_output)
@@ -1673,7 +1654,7 @@ class LayoutLMv2ForTokenClassification(LayoutLMv2PreTrainedModel):
         self.num_labels = config.num_labels
         self.layoutlmv2 = LayoutLMv2Model(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1693,7 +1674,7 @@ class LayoutLMv2ForTokenClassification(LayoutLMv2PreTrainedModel):
         """
         return self.layoutlmv2.embeddings.word_embeddings
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             bbox: Optional[mindspore.Tensor] = None,
@@ -1826,7 +1807,7 @@ class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
         self.num_labels = config.num_labels
         config.has_visual_segment_embedding = has_visual_segment_embedding
         self.layoutlmv2 = LayoutLMv2Model(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1848,7 +1829,7 @@ class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
         """
         return self.layoutlmv2.embeddings.word_embeddings
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             bbox: Optional[mindspore.Tensor] = None,

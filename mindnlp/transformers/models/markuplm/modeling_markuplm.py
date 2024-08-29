@@ -19,9 +19,10 @@ import os
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn,ops
-
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -45,7 +46,7 @@ from .configuration_markuplm import MarkupLMConfig
 logger = logging.get_logger(__name__)
 
 
-class XPathEmbeddings(nn.Cell):
+class XPathEmbeddings(nn.Module):
     """Construct the embeddings from xpath tags and subscripts.
 
     We drop tree-id in this version, as its info can be covered by xpath.
@@ -55,29 +56,29 @@ class XPathEmbeddings(nn.Cell):
         super(XPathEmbeddings, self).__init__()
         self.max_depth = config.max_depth
 
-        self.xpath_unitseq2_embeddings = nn.Dense(config.xpath_unit_hidden_size * self.max_depth, config.hidden_size)
+        self.xpath_unitseq2_embeddings = nn.Linear(config.xpath_unit_hidden_size * self.max_depth, config.hidden_size)
 
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
         self.activation = nn.ReLU()
-        self.xpath_unitseq2_inner = nn.Dense(config.xpath_unit_hidden_size * self.max_depth, 4 * config.hidden_size)
-        self.inner2emb = nn.Dense(4 * config.hidden_size, config.hidden_size)
+        self.xpath_unitseq2_inner = nn.Linear(config.xpath_unit_hidden_size * self.max_depth, 4 * config.hidden_size)
+        self.inner2emb = nn.Linear(4 * config.hidden_size, config.hidden_size)
 
-        self.xpath_tag_sub_embeddings = nn.CellList(
+        self.xpath_tag_sub_embeddings = nn.ModuleList(
             [
                 nn.Embedding(config.max_xpath_tag_unit_embeddings, config.xpath_unit_hidden_size)
                 for _ in range(self.max_depth)
             ]
         )
 
-        self.xpath_subs_sub_embeddings = nn.CellList(
+        self.xpath_subs_sub_embeddings = nn.ModuleList(
             [
                 nn.Embedding(config.max_xpath_subs_unit_embeddings, config.xpath_unit_hidden_size)
                 for _ in range(self.max_depth)
             ]
         )
 
-    def construct(self, xpath_tags_seq=None, xpath_subs_seq=None):
+    def forward(self, xpath_tags_seq=None, xpath_subs_seq=None):
         xpath_tags_embeddings = []
         xpath_subs_embeddings = []
 
@@ -85,8 +86,8 @@ class XPathEmbeddings(nn.Cell):
             xpath_tags_embeddings.append(self.xpath_tag_sub_embeddings[i](xpath_tags_seq[:, :, i]))
             xpath_subs_embeddings.append(self.xpath_subs_sub_embeddings[i](xpath_subs_seq[:, :, i]))
 
-        xpath_tags_embeddings = ops.cat(xpath_tags_embeddings, axis=-1)
-        xpath_subs_embeddings = ops.cat(xpath_subs_embeddings, axis=-1)
+        xpath_tags_embeddings = ops.cat(xpath_tags_embeddings, dim=-1)
+        xpath_subs_embeddings = ops.cat(xpath_subs_embeddings, dim=-1)
 
         xpath_embeddings = xpath_tags_embeddings + xpath_subs_embeddings
 
@@ -108,11 +109,11 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length) * mask
+    incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
     return incremental_indices.long() + padding_idx
 
 
-class MarkupLMEmbeddings(nn.Cell):
+class MarkupLMEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
@@ -127,7 +128,7 @@ class MarkupLMEmbeddings(nn.Cell):
 
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
 
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
         self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
@@ -155,7 +156,7 @@ class MarkupLMEmbeddings(nn.Cell):
         )
         return position_ids.unsqueeze(0).broadcast_to(input_shape)
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         xpath_tags_seq=None,
@@ -207,14 +208,14 @@ class MarkupLMEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfOutput with Bert->MarkupLM
-class MarkupLMSelfOutput(nn.Cell):
+class MarkupLMSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
@@ -222,30 +223,30 @@ class MarkupLMSelfOutput(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate
-class MarkupLMIntermediate(nn.Cell):
+class MarkupLMIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->MarkupLM
-class MarkupLMOutput(nn.Cell):
+class MarkupLMOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
@@ -253,13 +254,13 @@ class MarkupLMOutput(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPooler
-class MarkupLMPooler(nn.Cell):
+class MarkupLMPooler(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -269,17 +270,17 @@ class MarkupLMPooler(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPredictionHeadTransform with Bert->MarkupLM
-class MarkupLMPredictionHeadTransform(nn.Cell):
+class MarkupLMPredictionHeadTransform(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
@@ -287,14 +288,14 @@ class MarkupLMPredictionHeadTransform(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertLMPredictionHead with Bert->MarkupLM
-class MarkupLMLMPredictionHead(nn.Cell):
+class MarkupLMLMPredictionHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.transform = MarkupLMPredictionHeadTransform(config)
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
 
@@ -304,25 +305,25 @@ class MarkupLMLMPredictionHead(nn.Cell):
     def _tie_weights(self):
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOnlyMLMHead with Bert->MarkupLM
-class MarkupLMOnlyMLMHead(nn.Cell):
+class MarkupLMOnlyMLMHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.predictions = MarkupLMLMPredictionHead(config)
 
-    def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfAttention with Bert->MarkupLM
-class MarkupLMSelfAttention(nn.Cell):
+class MarkupLMSelfAttention(nn.Module):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -335,9 +336,9 @@ class MarkupLMSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
         self.position_embedding_type = position_embedding_type or getattr(
@@ -354,7 +355,7 @@ class MarkupLMSelfAttention(nn.Cell):
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -383,8 +384,8 @@ class MarkupLMSelfAttention(nn.Cell):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -433,7 +434,7 @@ class MarkupLMSelfAttention(nn.Cell):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -463,7 +464,7 @@ MARKUPLM_SELF_ATTENTION_CLASSES = {
 
 
 # Copied from transformers.models.bert.modeling_bert.BertAttention with Bert->MarkupLM,BERT->MARKUPLM
-class MarkupLMAttention(nn.Cell):
+class MarkupLMAttention(nn.Module):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         self.self = MARKUPLM_SELF_ATTENTION_CLASSES[config._attn_implementation](
@@ -490,7 +491,7 @@ class MarkupLMAttention(nn.Cell):
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -515,7 +516,7 @@ class MarkupLMAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertLayer with Bert->MarkupLM
-class MarkupLMLayer(nn.Cell):
+class MarkupLMLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -530,7 +531,7 @@ class MarkupLMLayer(nn.Cell):
         self.intermediate = MarkupLMIntermediate(config)
         self.output = MarkupLMOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -602,14 +603,14 @@ class MarkupLMLayer(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertEncoder with Bert->MarkupLM
-class MarkupLMEncoder(nn.Cell):
+class MarkupLMEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([MarkupLMLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([MarkupLMLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -706,12 +707,12 @@ class MarkupLMPreTrainedModel(PreTrainedModel):
     # Copied from transformers.models.bert.modeling_bert.BertPreTrainedModel._init_weights with Bert->MarkupLM
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             import numpy as np
@@ -730,7 +731,7 @@ class MarkupLMPreTrainedModel(PreTrainedModel):
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
     # def _init_weights(self, module):
     #     """Initialize the weights"""
-    #     if isinstance(module, nn.Dense):
+    #     if isinstance(module, nn.Linear):
     #         # Slightly different from the TF version which uses truncated_normal for initialization
     #         # cf https://github.com/pytorch/pytorch/pull/5617
     #         module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
@@ -777,7 +778,7 @@ class MarkupLMModel(MarkupLMPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         xpath_tags_seq: Optional[mindspore.Tensor] = None,
@@ -924,12 +925,12 @@ class MarkupLMForQuestionAnswering(MarkupLMPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.markuplm = MarkupLMModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         xpath_tags_seq: Optional[mindspore.Tensor] = None,
@@ -1020,8 +1021,8 @@ class MarkupLMForQuestionAnswering(MarkupLMPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
@@ -1048,12 +1049,12 @@ class MarkupLMForTokenClassification(MarkupLMPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         xpath_tags_seq: Optional[mindspore.Tensor] = None,
@@ -1116,7 +1117,7 @@ class MarkupLMForTokenClassification(MarkupLMPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(
+            loss = F.cross_entropy(
                 prediction_scores.view(-1, self.config.num_labels),
                 labels.view(-1),
             )
@@ -1144,12 +1145,12 @@ class MarkupLMForSequenceClassification(MarkupLMPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         xpath_tags_seq: Optional[mindspore.Tensor] = None,
@@ -1223,13 +1224,13 @@ class MarkupLMForSequenceClassification(MarkupLMPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output

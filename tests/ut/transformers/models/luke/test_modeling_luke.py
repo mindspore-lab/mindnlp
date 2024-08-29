@@ -1,7 +1,6 @@
 # coding=utf-8
-# Copyright 2021 The Eleuther AI and HuggingFace Inc. team. All rights reserved.
-# Copyright 2023 Huawei Technologies Co., Ltd
-
+# Copyright 2021 The HuggingFace Inc. team. All rights reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,262 +12,895 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-# pylint:disable=R0904
-"""Test LUKE"""
-import gc
-import os
+"""Testing suite for the MindSpore LUKE model."""
+
 import unittest
 
-import mindspore
-import numpy as np
-from mindspore import Tensor
+from mindnlp.transformers import LukeConfig
+from mindnlp.utils.testing_utils import require_mindspore, slow, is_mindspore_available
 
-from mindnlp.transformers.models.luke import luke_config, luke
-from .....common import MindNLPTestCase
+from ...test_configuration_common import ConfigTester
+from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask
+# from ...test_pipeline_mixin import PipvelineTesterMixin
 
 
-class TestModelingLUKE(MindNLPTestCase):
-    r"""
-    Test LUKE
-    """
+if is_mindspore_available():
+    import mindspore
+    from mindspore.common.api import _no_grad
+    from mindnlp.core import ops
+
+    from mindnlp.transformers import (
+        LukeForEntityClassification,
+        LukeForEntityPairClassification,
+        LukeForEntitySpanClassification,
+        LukeForMaskedLM,
+        LukeForMultipleChoice,
+        LukeForQuestionAnswering,
+        LukeForSequenceClassification,
+        LukeForTokenClassification,
+        LukeModel,
+        LukeTokenizer,
+    )
+
+
+class LukeModelTester:
+    def __init__(
+        self,
+        parent,
+        batch_size=13,
+        seq_length=7,
+        is_training=True,
+        entity_length=3,
+        mention_length=5,
+        use_attention_mask=True,
+        use_token_type_ids=True,
+        use_entity_ids=True,
+        use_entity_attention_mask=True,
+        use_entity_token_type_ids=True,
+        use_entity_position_ids=True,
+        use_labels=True,
+        vocab_size=99,
+        entity_vocab_size=10,
+        entity_emb_size=6,
+        hidden_size=32,
+        num_hidden_layers=2,
+        num_attention_heads=4,
+        intermediate_size=37,
+        hidden_act="gelu",
+        hidden_dropout_prob=0.1,
+        attention_probs_dropout_prob=0.1,
+        max_position_embeddings=512,
+        type_vocab_size=16,
+        type_sequence_label_size=2,
+        initializer_range=0.02,
+        num_labels=3,
+        num_choices=4,
+        num_entity_classification_labels=9,
+        num_entity_pair_classification_labels=6,
+        num_entity_span_classification_labels=4,
+        use_entity_aware_attention=True,
+        scope=None,
+    ):
+        self.parent = parent
+        self.batch_size = batch_size
+        self.seq_length = seq_length
+        self.is_training = is_training
+        self.entity_length = entity_length
+        self.mention_length = mention_length
+        self.use_attention_mask = use_attention_mask
+        self.use_token_type_ids = use_token_type_ids
+        self.use_entity_ids = use_entity_ids
+        self.use_entity_attention_mask = use_entity_attention_mask
+        self.use_entity_token_type_ids = use_entity_token_type_ids
+        self.use_entity_position_ids = use_entity_position_ids
+        self.use_labels = use_labels
+        self.vocab_size = vocab_size
+        self.entity_vocab_size = entity_vocab_size
+        self.entity_emb_size = entity_emb_size
+        self.hidden_size = hidden_size
+        self.num_hidden_layers = num_hidden_layers
+        self.num_attention_heads = num_attention_heads
+        self.intermediate_size = intermediate_size
+        self.hidden_act = hidden_act
+        self.hidden_dropout_prob = hidden_dropout_prob
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.max_position_embeddings = max_position_embeddings
+        self.type_vocab_size = type_vocab_size
+        self.type_sequence_label_size = type_sequence_label_size
+        self.initializer_range = initializer_range
+        self.num_labels = num_labels
+        self.num_choices = num_choices
+        self.num_entity_classification_labels = num_entity_classification_labels
+        self.num_entity_pair_classification_labels = num_entity_pair_classification_labels
+        self.num_entity_span_classification_labels = num_entity_span_classification_labels
+        self.scope = scope
+        self.use_entity_aware_attention = use_entity_aware_attention
+
+        self.encoder_seq_length = seq_length
+        self.key_length = seq_length
+        self.num_hidden_states_types = 2  # hidden_states and entity_hidden_states
+
+    def prepare_config_and_inputs(self):
+        # prepare words
+        input_ids = ids_tensor([self.batch_size, self.seq_length], self.vocab_size)
+
+        attention_mask = None
+        if self.use_attention_mask:
+            attention_mask = random_attention_mask([self.batch_size, self.seq_length])
+
+        token_type_ids = None
+        if self.use_token_type_ids:
+            token_type_ids = ids_tensor([self.batch_size, self.seq_length], self.type_vocab_size)
+
+        # prepare entities
+        entity_ids = ids_tensor([self.batch_size, self.entity_length], self.entity_vocab_size)
+
+        entity_attention_mask = None
+        if self.use_entity_attention_mask:
+            entity_attention_mask = random_attention_mask([self.batch_size, self.entity_length])
+
+        entity_token_type_ids = None
+        if self.use_token_type_ids:
+            entity_token_type_ids = ids_tensor([self.batch_size, self.entity_length], self.type_vocab_size)
+
+        entity_position_ids = None
+        if self.use_entity_position_ids:
+            entity_position_ids = ids_tensor(
+                [self.batch_size, self.entity_length, self.mention_length], self.mention_length
+            )
+
+        sequence_labels = None
+        token_labels = None
+        choice_labels = None
+        entity_labels = None
+        entity_classification_labels = None
+        entity_pair_classification_labels = None
+        entity_span_classification_labels = None
+
+        if self.use_labels:
+            sequence_labels = ids_tensor([self.batch_size], self.type_sequence_label_size)
+            token_labels = ids_tensor([self.batch_size, self.seq_length], self.num_labels)
+            choice_labels = ids_tensor([self.batch_size], self.num_choices)
+
+            entity_labels = ids_tensor([self.batch_size, self.entity_length], self.entity_vocab_size)
+
+            entity_classification_labels = ids_tensor([self.batch_size], self.num_entity_classification_labels)
+            entity_pair_classification_labels = ids_tensor(
+                [self.batch_size], self.num_entity_pair_classification_labels
+            )
+            entity_span_classification_labels = ids_tensor(
+                [self.batch_size, self.entity_length], self.num_entity_span_classification_labels
+            )
+
+        config = self.get_config()
+
+        return (
+            config,
+            input_ids,
+            attention_mask,
+            token_type_ids,
+            entity_ids,
+            entity_attention_mask,
+            entity_token_type_ids,
+            entity_position_ids,
+            sequence_labels,
+            token_labels,
+            choice_labels,
+            entity_labels,
+            entity_classification_labels,
+            entity_pair_classification_labels,
+            entity_span_classification_labels,
+        )
+
+    def get_config(self):
+        return LukeConfig(
+            vocab_size=self.vocab_size,
+            entity_vocab_size=self.entity_vocab_size,
+            entity_emb_size=self.entity_emb_size,
+            hidden_size=self.hidden_size,
+            num_hidden_layers=self.num_hidden_layers,
+            num_attention_heads=self.num_attention_heads,
+            intermediate_size=self.intermediate_size,
+            hidden_act=self.hidden_act,
+            hidden_dropout_prob=self.hidden_dropout_prob,
+            attention_probs_dropout_prob=self.attention_probs_dropout_prob,
+            max_position_embeddings=self.max_position_embeddings,
+            type_vocab_size=self.type_vocab_size,
+            is_decoder=False,
+            initializer_range=self.initializer_range,
+            use_entity_aware_attention=self.use_entity_aware_attention,
+        )
+
+    def create_and_check_model(
+        self,
+        config,
+        input_ids,
+        attention_mask,
+        token_type_ids,
+        entity_ids,
+        entity_attention_mask,
+        entity_token_type_ids,
+        entity_position_ids,
+        sequence_labels,
+        token_labels,
+        choice_labels,
+        entity_labels,
+        entity_classification_labels,
+        entity_pair_classification_labels,
+        entity_span_classification_labels,
+    ):
+        model = LukeModel(config=config)
+        model.eval()
+        # test with words + entities
+        result = model(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+        )
+        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
+        self.parent.assertEqual(
+            result.entity_last_hidden_state.shape, (self.batch_size, self.entity_length, self.hidden_size)
+        )
+
+        # test with words only
+        result = model(input_ids, token_type_ids=token_type_ids)
+        result = model(input_ids)
+        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
+
+    def create_and_check_for_masked_lm(
+        self,
+        config,
+        input_ids,
+        attention_mask,
+        token_type_ids,
+        entity_ids,
+        entity_attention_mask,
+        entity_token_type_ids,
+        entity_position_ids,
+        sequence_labels,
+        token_labels,
+        choice_labels,
+        entity_labels,
+        entity_classification_labels,
+        entity_pair_classification_labels,
+        entity_span_classification_labels,
+    ):
+        config.num_labels = self.num_entity_classification_labels
+        model = LukeForMaskedLM(config)
+        model.eval()
+
+        result = model(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+            labels=token_labels,
+            entity_labels=entity_labels,
+        )
+        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
+        if entity_ids is not None:
+            self.parent.assertEqual(
+                result.entity_logits.shape, (self.batch_size, self.entity_length, self.entity_vocab_size)
+            )
+        else:
+            self.parent.assertIsNone(result.entity_logits)
+
+    def create_and_check_for_entity_classification(
+        self,
+        config,
+        input_ids,
+        attention_mask,
+        token_type_ids,
+        entity_ids,
+        entity_attention_mask,
+        entity_token_type_ids,
+        entity_position_ids,
+        sequence_labels,
+        token_labels,
+        choice_labels,
+        entity_labels,
+        entity_classification_labels,
+        entity_pair_classification_labels,
+        entity_span_classification_labels,
+    ):
+        config.num_labels = self.num_entity_classification_labels
+        model = LukeForEntityClassification(config)
+        model.eval()
+
+        result = model(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+            labels=entity_classification_labels,
+        )
+        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_entity_classification_labels))
+
+    def create_and_check_for_entity_pair_classification(
+        self,
+        config,
+        input_ids,
+        attention_mask,
+        token_type_ids,
+        entity_ids,
+        entity_attention_mask,
+        entity_token_type_ids,
+        entity_position_ids,
+        sequence_labels,
+        token_labels,
+        choice_labels,
+        entity_labels,
+        entity_classification_labels,
+        entity_pair_classification_labels,
+        entity_span_classification_labels,
+    ):
+        config.num_labels = self.num_entity_pair_classification_labels
+        model = LukeForEntityClassification(config)
+        model.eval()
+
+        result = model(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+            labels=entity_pair_classification_labels,
+        )
+        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_entity_pair_classification_labels))
+
+    def create_and_check_for_entity_span_classification(
+        self,
+        config,
+        input_ids,
+        attention_mask,
+        token_type_ids,
+        entity_ids,
+        entity_attention_mask,
+        entity_token_type_ids,
+        entity_position_ids,
+        sequence_labels,
+        token_labels,
+        choice_labels,
+        entity_labels,
+        entity_classification_labels,
+        entity_pair_classification_labels,
+        entity_span_classification_labels,
+    ):
+        config.num_labels = self.num_entity_span_classification_labels
+        model = LukeForEntitySpanClassification(config)
+        model.eval()
+
+        entity_start_positions = ids_tensor([self.batch_size, self.entity_length], self.seq_length)
+        entity_end_positions = ids_tensor([self.batch_size, self.entity_length], self.seq_length)
+
+        result = model(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+            entity_start_positions=entity_start_positions,
+            entity_end_positions=entity_end_positions,
+            labels=entity_span_classification_labels,
+        )
+        self.parent.assertEqual(
+            result.logits.shape, (self.batch_size, self.entity_length, self.num_entity_span_classification_labels)
+        )
+
+    def create_and_check_for_question_answering(
+        self,
+        config,
+        input_ids,
+        attention_mask,
+        token_type_ids,
+        entity_ids,
+        entity_attention_mask,
+        entity_token_type_ids,
+        entity_position_ids,
+        sequence_labels,
+        token_labels,
+        choice_labels,
+        entity_labels,
+        entity_classification_labels,
+        entity_pair_classification_labels,
+        entity_span_classification_labels,
+    ):
+        model = LukeForQuestionAnswering(config=config)
+        model.eval()
+        result = model(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+            start_positions=sequence_labels,
+            end_positions=sequence_labels,
+        )
+        self.parent.assertEqual(result.start_logits.shape, (self.batch_size, self.seq_length))
+        self.parent.assertEqual(result.end_logits.shape, (self.batch_size, self.seq_length))
+
+    def create_and_check_for_sequence_classification(
+        self,
+        config,
+        input_ids,
+        attention_mask,
+        token_type_ids,
+        entity_ids,
+        entity_attention_mask,
+        entity_token_type_ids,
+        entity_position_ids,
+        sequence_labels,
+        token_labels,
+        choice_labels,
+        entity_labels,
+        entity_classification_labels,
+        entity_pair_classification_labels,
+        entity_span_classification_labels,
+    ):
+        config.num_labels = self.num_labels
+        model = LukeForSequenceClassification(config)
+        model.eval()
+        result = model(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+            labels=sequence_labels,
+        )
+        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
+
+    def create_and_check_for_token_classification(
+        self,
+        config,
+        input_ids,
+        attention_mask,
+        token_type_ids,
+        entity_ids,
+        entity_attention_mask,
+        entity_token_type_ids,
+        entity_position_ids,
+        sequence_labels,
+        token_labels,
+        choice_labels,
+        entity_labels,
+        entity_classification_labels,
+        entity_pair_classification_labels,
+        entity_span_classification_labels,
+    ):
+        config.num_labels = self.num_labels
+        model = LukeForTokenClassification(config=config)
+        model.eval()
+        result = model(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+            labels=token_labels,
+        )
+        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.num_labels))
+
+    def create_and_check_for_multiple_choice(
+        self,
+        config,
+        input_ids,
+        attention_mask,
+        token_type_ids,
+        entity_ids,
+        entity_attention_mask,
+        entity_token_type_ids,
+        entity_position_ids,
+        sequence_labels,
+        token_labels,
+        choice_labels,
+        entity_labels,
+        entity_classification_labels,
+        entity_pair_classification_labels,
+        entity_span_classification_labels,
+    ):
+        config.num_choices = self.num_choices
+        model = LukeForMultipleChoice(config=config)
+        model.eval()
+        multiple_choice_inputs_ids = input_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
+        multiple_choice_token_type_ids = token_type_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
+        multiple_choice_attention_mask = attention_mask.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
+        multiple_choice_entity_ids = entity_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
+        multiple_choice_entity_token_type_ids = (
+            entity_token_type_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
+        )
+        multiple_choice_entity_attention_mask = (
+            entity_attention_mask.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
+        )
+        multiple_choice_entity_position_ids = (
+            entity_position_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1, -1))
+        )
+        result = model(
+            multiple_choice_inputs_ids,
+            attention_mask=multiple_choice_attention_mask,
+            token_type_ids=multiple_choice_token_type_ids,
+            entity_ids=multiple_choice_entity_ids,
+            entity_attention_mask=multiple_choice_entity_attention_mask,
+            entity_token_type_ids=multiple_choice_entity_token_type_ids,
+            entity_position_ids=multiple_choice_entity_position_ids,
+            labels=choice_labels,
+        )
+        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_choices))
+
+    def prepare_config_and_inputs_for_common(self):
+        config_and_inputs = self.prepare_config_and_inputs()
+        (
+            config,
+            input_ids,
+            attention_mask,
+            token_type_ids,
+            entity_ids,
+            entity_attention_mask,
+            entity_token_type_ids,
+            entity_position_ids,
+            sequence_labels,
+            token_labels,
+            choice_labels,
+            entity_labels,
+            entity_classification_labels,
+            entity_pair_classification_labels,
+            entity_span_classification_labels,
+        ) = config_and_inputs
+        inputs_dict = {
+            "input_ids": input_ids,
+            "token_type_ids": token_type_ids,
+            "attention_mask": attention_mask,
+            "entity_ids": entity_ids,
+            "entity_token_type_ids": entity_token_type_ids,
+            "entity_attention_mask": entity_attention_mask,
+            "entity_position_ids": entity_position_ids,
+        }
+        return config, inputs_dict
+
+
+@require_mindspore
+class LukeModelTest(ModelTesterMixin, unittest.TestCase):
+    all_model_classes = (
+        (
+            LukeModel,
+            LukeForMaskedLM,
+            LukeForEntityClassification,
+            LukeForEntityPairClassification,
+            LukeForEntitySpanClassification,
+            LukeForQuestionAnswering,
+            LukeForSequenceClassification,
+            LukeForTokenClassification,
+            LukeForMultipleChoice,
+        )
+        if is_mindspore_available()
+        else ()
+    )
+    pipeline_model_mapping = (
+        {
+            "feature-extraction": LukeModel,
+            "fill-mask": LukeForMaskedLM,
+            "question-answering": LukeForQuestionAnswering,
+            "text-classification": LukeForSequenceClassification,
+            "token-classification": LukeForTokenClassification,
+            "zero-shot": LukeForSequenceClassification,
+        }
+        if is_mindspore_available()
+        else {}
+    )
+    test_pruning = False
+    test_resize_embeddings = True
+    test_head_masking = True
+
+    # TODO: Fix the failed tests
+    def is_pipeline_test_to_skip(
+        self, pipeline_test_casse_name, config_class, model_architecture, tokenizer_name, processor_name
+    ):
+        if pipeline_test_casse_name in ["QAPipelineTests", "ZeroShotClassificationPipelineTests"]:
+            return True
+
+        return False
+
+    def _prepare_for_class(self, inputs_dict, model_class, return_labels=False):
+        entity_inputs_dict = {k: v for k, v in inputs_dict.items() if k.startswith("entity")}
+        inputs_dict = {k: v for k, v in inputs_dict.items() if not k.startswith("entity")}
+
+        inputs_dict = super()._prepare_for_class(inputs_dict, model_class, return_labels=return_labels)
+        if model_class == LukeForMultipleChoice:
+            entity_inputs_dict = {
+                k: v.unsqueeze(1).broadcast_to((-1, self.model_tester.num_choices, -1))
+                if v.ndim == 2
+                else v.unsqueeze(1).broadcast_to((-1, self.model_tester.num_choices, -1, -1))
+                for k, v in entity_inputs_dict.items()
+            }
+        inputs_dict.update(entity_inputs_dict)
+
+        if model_class == LukeForEntitySpanClassification:
+            inputs_dict["entity_start_positions"] = ops.zeros(
+                (self.model_tester.batch_size, self.model_tester.entity_length), dtype=mindspore.int64
+            )
+            inputs_dict["entity_end_positions"] = ops.ones(
+                (self.model_tester.batch_size, self.model_tester.entity_length), dtype=mindspore.int64
+            )
+
+        if return_labels:
+            if model_class in (
+                LukeForEntityClassification,
+                LukeForEntityPairClassification,
+                LukeForSequenceClassification,
+                LukeForMultipleChoice,
+            ):
+                inputs_dict["labels"] = ops.zeros(
+                    self.model_tester.batch_size, dtype=mindspore.int64
+                )
+            elif model_class == LukeForEntitySpanClassification:
+                inputs_dict["labels"] = ops.zeros(
+                    (self.model_tester.batch_size, self.model_tester.entity_length),
+                    dtype=mindspore.int64,
+                )
+            elif model_class == LukeForTokenClassification:
+                inputs_dict["labels"] = ops.zeros(
+                    (self.model_tester.batch_size, self.model_tester.seq_length),
+                    dtype=mindspore.int64,
+                )
+            elif model_class == LukeForMaskedLM:
+                inputs_dict["labels"] = ops.zeros(
+                    (self.model_tester.batch_size, self.model_tester.seq_length),
+                    dtype=mindspore.int64,
+                )
+                inputs_dict["entity_labels"] = ops.zeros(
+                    (self.model_tester.batch_size, self.model_tester.entity_length),
+                    dtype=mindspore.int64,
+                )
+
+        return inputs_dict
 
     def setUp(self):
-        """
-        Set up.
-        """
-        self.config = luke_config.LukeConfig(vocab_size=1000, num_hidden_layers=2)
+        self.model_tester = LukeModelTester(self)
+        self.config_tester = ConfigTester(self, config_class=LukeConfig, hidden_size=37)
 
-    def test_luke_embeddings(self):
-        r"""
-        Test LukeEmbeddings
-        """
-        model = luke.LukeEmbeddings(self.config)
-        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (1, 128)), mindspore.int32)
-        outputs = model(input_ids)
-        assert outputs.shape == (1, 128, 128)
+    def test_config(self):
+        self.config_tester.run_common_tests()
 
-    def test_luke_entity_embeddings(self):
-        r"""
-        Test LukeEntityEmbeddings
-        """
-        model = luke.LukeEntityEmbeddings(self.config)
-        entity_ids = Tensor(np.random.randint(0, self.config.entity_vocab_size, (1,)), mindspore.int32)
-        position_ids = Tensor(np.random.randn(1, 2), mindspore.int32)
-        outputs = model(entity_ids, position_ids)
-        assert outputs.shape == (1, 128)
+    def test_model(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_model(*config_and_inputs)
 
-    def test_luke_self_attention(self):
-        r"""
-        Test LukeSelfAttention
-        """
-        model = luke.LukeSelfAttention(self.config)
-        word_hidden_states = Tensor(np.random.randn(1, 2, 128), mindspore.float32)
-        entity_hidden_states = Tensor(np.random.randn(1, 4, 128), mindspore.float32)
-        outputs = model(word_hidden_states, entity_hidden_states)
-        assert outputs[0].shape == (1, 2, 128)
-        assert outputs[1].shape == (1, 4, 128)
+    @slow
+    def test_model_from_pretrained(self):
+        model_name = "studio-ousia/luke-base"
+        model = LukeModel.from_pretrained(model_name)
+        self.assertIsNotNone(model)
 
-    def test_luke_self_output(self):
-        r"""
-        Test LukeSelfOutput
-        """
-        model = luke.LukeSelfOutput(self.config)
-        hidden_states = Tensor(np.random.randn(2, 128), mindspore.float32)
-        input_tensor = Tensor(np.random.randn(2, 128), mindspore.float32)
-        outputs = model(hidden_states, input_tensor)
-        assert outputs.shape == (2, 128)
+    def test_for_masked_lm(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_for_masked_lm(*config_and_inputs)
 
-    def test_luke_attention(self):
-        r"""
-        Test LukeAttention
-        """
-        model = luke.LukeAttention(self.config)
-        word_hidden_states = Tensor(np.random.randn(1, 2, 128), mindspore.float32)
-        entity_hidden_states = Tensor(np.random.randn(1, 4, 128), mindspore.float32)
-        outputs = model(word_hidden_states, entity_hidden_states)
-        assert outputs[0].shape == (1, 2, 128)
-        assert outputs[1].shape == (1, 4, 128)
+    def test_for_masked_lm_with_word_only(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        config_and_inputs = (*config_and_inputs[:4], *((None,) * len(config_and_inputs[4:])))
+        self.model_tester.create_and_check_for_masked_lm(*config_and_inputs)
 
-    def test_luke_intermediate(self):
-        r"""
-        Test LukeIntermediate
-        """
-        model = luke.LukeIntermediate(self.config)
-        hidden_states = Tensor(np.random.randn(1, 128), mindspore.float32)
-        output = model(hidden_states)
-        assert output.shape == (1, 3072)
+    def test_for_question_answering(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_for_question_answering(*config_and_inputs)
 
-    def test_luke_output(self):
-        r"""
-        Test LukeOutput
-        """
-        model = luke.LukeOutput(self.config)
-        hidden_states = Tensor(np.random.randn(1, 3072), mindspore.float32)
-        input_tensor = Tensor(np.random.rand(2, 128), mindspore.float32)
-        output = model(hidden_states, input_tensor)
-        assert output.shape == (2, 128)
+    def test_for_sequence_classification(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_for_sequence_classification(*config_and_inputs)
 
-    def test_luke_layer(self):
-        r"""
-        Test LukeLayer
-        """
-        model = luke.LukeLayer(self.config)
-        word_hidden_states = Tensor(np.random.randn(1, 2, 128), mindspore.float32)
-        entity_hidden_states = Tensor(np.random.randn(1, 4, 128), mindspore.float32)
-        outputs = model(word_hidden_states, entity_hidden_states)
-        assert outputs[0].shape == (1, 2, 128)
-        assert outputs[1].shape == (1, 4, 128)
+    def test_for_token_classification(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_for_token_classification(*config_and_inputs)
 
-    def test_luke_encoder(self):
-        r"""
-        test_LukeEncoder
-        """
-        model = luke.LukeEncoder(self.config)
-        word_hidden_states = Tensor(np.random.randn(1, 2, 128), mindspore.float32)
-        entity_hidden_states = Tensor(np.random.randn(1, 4, 128), mindspore.float32)
-        outputs = model(word_hidden_states, entity_hidden_states, return_dict=False)
-        assert outputs[0].shape == (1, 2, 128)
-        assert outputs[1].shape == (1, 4, 128)
+    def test_for_multiple_choice(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_for_multiple_choice(*config_and_inputs)
 
-    def test_luke_pooler(self):
-        r"""
-        Test LukePooler
-        """
-        model = luke.LukePooler(self.config)
-        hidden_states = Tensor(np.random.randn(128, 128, 128), mindspore.float32)
-        output = model(hidden_states)
-        assert output.shape == (128, 128)
+    def test_for_entity_classification(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_for_entity_classification(*config_and_inputs)
 
-    def test_entity_prediction_head_transform(self):
-        r"""
-        Test EntityPredictionHeadTransform
-        """
-        model = luke.EntityPredictionHeadTransform(self.config)
-        hidden_states = Tensor(np.random.randn(2, 128), mindspore.float32)
-        output = model(hidden_states)
-        assert output.shape == (2, 256)
+    def test_for_entity_pair_classification(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_for_entity_pair_classification(*config_and_inputs)
 
-    def test_entity_prediction_head(self):
-        r"""
-        Test EntityPredictionHead
-        """
-        model = luke.EntityPredictionHead(self.config)
-        hidden_states = Tensor(np.random.randn(2, 128), dtype=mindspore.float32)
-        output = model(hidden_states)
-        assert output.shape == (2, 500)
+    def test_for_entity_span_classification(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_for_entity_span_classification(*config_and_inputs)
 
-    def test_luke_model(self):
-        r"""
-        Test LukeModel
-        """
-        model = luke.LukeModel(self.config)
-        input_ids = Tensor(np.random.randint(0, 10, (2, 4)), dtype=mindspore.int32)
-        outputs = model(input_ids, return_dict=False)
-        assert outputs[0].shape == (2, 4, 128)
+    def test_attention_outputs(self):
+        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+        config.return_dict = True
 
-    def test_luke_lm_head(self):
-        r"""
-        Test LukeLMHead
-        """
-        model = luke.LukeLMHead(self.config)
-        features = Tensor(np.random.randn(2, 128), mindspore.float32)
-        output = model(features)
-        assert output.shape == (2, self.config.vocab_size)
+        seq_length = self.model_tester.seq_length
+        entity_length = self.model_tester.entity_length
+        key_length = seq_length + entity_length
 
-    def test_luke_for_masked_lm(self):
-        r"""
-        Test LukeForMaskedLM
-        """
-        model = luke.LukeForMaskedLM(self.config)
-        input_ids = Tensor(np.random.randint(0, 10, (2, 4)), mindspore.int32)
-        outputs = model(input_ids)
-        assert outputs[0].shape == (2, 4, self.config.vocab_size)
+        for model_class in self.all_model_classes:
+            inputs_dict["output_attentions"] = True
+            inputs_dict["output_hidden_states"] = False
+            config.return_dict = True
+            model = model_class(config)
+            model.eval()
+            with _no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            attentions = outputs.attentions
+            self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
-    def test_luke_for_entity_classification(self):
-        r"""
-        Test LukeForEntityClassification
-        """
-        model = luke.LukeForEntityClassification(self.config)
-        input_ids = Tensor(np.random.randint(0, 10, (2, 128)), mindspore.int32)
-        entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
-        position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
-        outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
-        assert outputs[0].shape == (2, 2)
+            # check that output_attentions also work using config
+            del inputs_dict["output_attentions"]
+            config.output_attentions = True
+            model = model_class(config)
+            model.eval()
+            with _no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            attentions = outputs.attentions
+            self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
-    def test_luke_for_entity_pair_classification(self):
-        r"""
-        Test LukeForEntityPairClassification
-        """
-        model = luke.LukeForEntityPairClassification(self.config)
-        input_ids = Tensor(np.random.randint(0, 10, (2, 128)), mindspore.int32)
-        entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
-        position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
-        outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
-        assert outputs[0].shape == (2, 2)
+            self.assertListEqual(
+                list(attentions[0].shape[-3:]),
+                [self.model_tester.num_attention_heads, seq_length + entity_length, key_length],
+            )
+            out_len = len(outputs)
 
-    def test_luke_for_entity_span_classification(self):
-        r"""
-        Test LukeForEntitySpanClassification
-        """
-        model = luke.LukeForEntitySpanClassification(self.config)
-        input_ids = Tensor(np.random.randint(0, 5, (2, 5)), mindspore.int32)
-        entity_ids = Tensor(np.random.randint(0, 5, (2, 2)), mindspore.int32)
-        position_ids = Tensor(np.random.randint(0, 5, (2, 2)), mindspore.int32)
-        entity_start_positions = Tensor(np.random.randint(0, 5, (2, 2)), mindspore.int32)
-        entity_end_positions = Tensor(np.random.randint(0, 5, (2, 2)), mindspore.int32)
-        outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids,
-                        entity_start_positions=entity_start_positions, entity_end_positions=entity_end_positions)
-        assert outputs[0].shape == (2, 2, 2)
+            # Check attention is always last and order is fine
+            inputs_dict["output_attentions"] = True
+            inputs_dict["output_hidden_states"] = True
+            model = model_class(config)
+            model.eval()
+            with _no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
-    def test_luke_for_sequence_classification(self):
-        r"""
-        Test LukeForSequenceClassification
-        """
-        model = luke.LukeForSequenceClassification(self.config)
-        input_ids = Tensor(np.random.randint(0, 10, (2, 5)), mindspore.int32)
-        entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
-        position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
-        outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
-        assert outputs[0].shape == (2, 2)
+            added_hidden_states = self.model_tester.num_hidden_states_types
+            self.assertEqual(out_len + added_hidden_states, len(outputs))
 
-    def test_luke_for_token_classification(self):
-        r"""
-        Test LukeForTokenClassification
-        """
-        model = luke.LukeForTokenClassification(self.config)
-        input_ids = Tensor(np.random.randint(0, 10, (2, 5)), mindspore.int32)
-        entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
-        position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
-        outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
-        assert outputs[0].shape == (2, 5, 2)
+            self_attentions = outputs.attentions
 
-    def test_luke_for_question_answering(self):
-        r"""
-        Test LukeForQuestionAnswering
-        """
-        model = luke.LukeForQuestionAnswering(self.config)
-        input_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
-        entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
-        position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
-        outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
-        assert outputs[0].shape == (2, 2)
+            self.assertEqual(len(self_attentions), self.model_tester.num_hidden_layers)
+            self.assertListEqual(
+                list(self_attentions[0].shape[-3:]),
+                [self.model_tester.num_attention_heads, seq_length + entity_length, key_length],
+            )
 
-    def test_luke_for_multiple_choice(self):
-        r"""
-        Test LukeForMultipleChoice
-        """
-        model = luke.LukeForMultipleChoice(self.config)
-        input_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
-        entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
-        position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
-        outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
-        assert outputs[0].shape == (1, 2)
+    def test_entity_hidden_states_output(self):
+        def check_hidden_states_output(inputs_dict, config, model_class):
+            model = model_class(config)
+            model.eval()
 
-    def tearDown(self) -> None:
-        gc.collect()
+            with _no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
-    @classmethod
-    def tearDownClass(cls):
-        if os.path.exists("~/.mindnlp"):
-            os.removedirs("~/.mindnlp")
+            entity_hidden_states = outputs.entity_hidden_states
+
+            expected_num_layers = getattr(
+                self.model_tester, "expected_num_hidden_layers", self.model_tester.num_hidden_layers + 1
+            )
+            self.assertEqual(len(entity_hidden_states), expected_num_layers)
+
+            entity_length = self.model_tester.entity_length
+
+            self.assertListEqual(
+                list(entity_hidden_states[0].shape[-2:]),
+                [entity_length, self.model_tester.hidden_size],
+            )
+
+        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+
+        for model_class in self.all_model_classes:
+            inputs_dict["output_hidden_states"] = True
+            check_hidden_states_output(inputs_dict, config, model_class)
+
+            # check that output_hidden_states also work using config
+            del inputs_dict["output_hidden_states"]
+            config.output_hidden_states = True
+
+            check_hidden_states_output(inputs_dict, config, model_class)
+
+    @unittest.skip(
+        reason="This architecure seem to not compute gradients properly when using GC, check: https://github.com/huggingface/transformers/pull/27124"
+    )
+    def test_training_gradient_checkpointing(self):
+        pass
+
+    @unittest.skip(
+        reason="This architecure seem to not compute gradients properly when using GC, check: https://github.com/huggingface/transformers/pull/27124"
+    )
+    def test_training_gradient_checkpointing_use_reentrant(self):
+        pass
+
+    @unittest.skip(
+        reason="This architecure seem to not compute gradients properly when using GC, check: https://github.com/huggingface/transformers/pull/27124"
+    )
+    def test_training_gradient_checkpointing_use_reentrant_false(self):
+        pass
+
+
+@require_mindspore
+class LukeModelIntegrationTests(unittest.TestCase):
+    @slow
+    def test_inference_base_model(self):
+        model = LukeModel.from_pretrained("studio-ousia/luke-base").eval()
+
+        tokenizer = LukeTokenizer.from_pretrained("studio-ousia/luke-base", task="entity_classification")
+        text = (
+            "Top seed Ana Ivanovic said on Thursday she could hardly believe her luck as a fortuitous netcord helped"
+            " the new world number one avoid a humiliating second- round exit at Wimbledon ."
+        )
+        span = (39, 42)
+        encoding = tokenizer(text, entity_spans=[span], add_prefix_space=True, return_tensors="ms")
+
+        # move all values to device
+        for key, value in encoding.items():
+            encoding[key] = encoding[key]
+
+        outputs = model(**encoding)
+
+        # Verify word hidden states
+        expected_shape = (1, 42, 768)
+        self.assertEqual(outputs.last_hidden_state.shape, expected_shape)
+
+        expected_slice = mindspore.tensor(
+            [[0.0037, 0.1368, -0.0091], [0.1099, 0.3329, -0.1095], [0.0765, 0.5335, 0.1179]]
+        )
+        self.assertTrue(ops.allclose(outputs.last_hidden_state[0, :3, :3], expected_slice, atol=1e-4))
+
+        # Verify entity hidden states
+        expected_shape = (1, 1, 768)
+        self.assertEqual(outputs.entity_last_hidden_state.shape, expected_shape)
+
+        expected_slice = mindspore.tensor([[0.1457, 0.1044, 0.0174]])
+        self.assertTrue(ops.allclose(outputs.entity_last_hidden_state[0, :3, :3], expected_slice, atol=1e-4))
+
+    @slow
+    def test_inference_large_model(self):
+        model = LukeModel.from_pretrained("studio-ousia/luke-large").eval()
+
+        tokenizer = LukeTokenizer.from_pretrained("studio-ousia/luke-large", task="entity_classification")
+        text = (
+            "Top seed Ana Ivanovic said on Thursday she could hardly believe her luck as a fortuitous netcord helped"
+            " the new world number one avoid a humiliating second- round exit at Wimbledon ."
+        )
+        span = (39, 42)
+        encoding = tokenizer(text, entity_spans=[span], add_prefix_space=True, return_tensors="ms")
+
+        # move all values to device
+        for key, value in encoding.items():
+            encoding[key] = encoding[key]
+
+        outputs = model(**encoding)
+
+        # Verify word hidden states
+        expected_shape = (1, 42, 1024)
+        self.assertEqual(outputs.last_hidden_state.shape, expected_shape)
+
+        expected_slice = mindspore.tensor(
+            [[0.0133, 0.0865, 0.0095], [0.3093, -0.2576, -0.7418], [-0.1720, -0.2117, -0.2869]]
+        )
+        self.assertTrue(ops.allclose(outputs.last_hidden_state[0, :3, :3], expected_slice, atol=1e-4))
+
+        # Verify entity hidden states
+        expected_shape = (1, 1, 1024)
+        self.assertEqual(outputs.entity_last_hidden_state.shape, expected_shape)
+
+        expected_slice = mindspore.tensor([[0.0466, -0.0106, -0.0179]])
+        self.assertTrue(ops.allclose(outputs.entity_last_hidden_state[0, :3, :3], expected_slice, atol=1e-4))

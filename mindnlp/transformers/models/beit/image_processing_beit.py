@@ -131,12 +131,12 @@ class BeitImageProcessor(BaseImageProcessor):
         Raises:
             FutureWarning:
                 If the 'reduce_labels' parameter is used.
-                This parameter is deprecated and will be removed in a future version.
+                This parameter is deprecated.
                 Please use 'do_reduce_labels' instead.
         """
         if "reduce_labels" in kwargs:
             warnings.warn(
-                "The `reduce_labels` parameter is deprecated and will be removed in a future version. Please use"
+                "The `reduce_labels` parameter is deprecated. Please use"
                 " `do_reduce_labels` instead.",
                 FutureWarning,
             )

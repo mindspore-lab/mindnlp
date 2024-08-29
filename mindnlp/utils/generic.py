@@ -26,17 +26,8 @@ from contextlib import ExitStack
 import numpy as np
 import mindspore
 from mindspore.common.api import _pynative_executor
-from mindnlp.configs import DEFAULT_DTYPE
 from .import_utils import is_mindspore_available
 
-def set_default_dtype(dtype):
-    "set default dtype"
-    global DEFAULT_DTYPE
-    DEFAULT_DTYPE = dtype
-
-def get_default_dtype():
-    "get default dtype"
-    return DEFAULT_DTYPE
 
 def is_tensor(x):
     """
@@ -553,7 +544,7 @@ def find_labels(model_class):
         model_class (`type`): The class of the model.
     """
     model_name = model_class.__name__
-    signature = inspect.signature(model_class.construct)  # TensorFlow models
+    signature = inspect.signature(model_class.forward)  # TensorFlow models
 
     if "QuestionAnswering" in model_name:
         return [p for p in signature.parameters if "label" in p or p in ("start_positions", "end_positions")]
@@ -567,7 +558,7 @@ def can_return_loss(model_class):
     Args:
         model_class (`type`): The class of the model.
     """
-    signature = inspect.signature(model_class.construct)  # TensorFlow models
+    signature = inspect.signature(model_class.forward)  # TensorFlow models
 
     for p in signature.parameters:
         if p == "return_loss" and signature.parameters[p].default is True:

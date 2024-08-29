@@ -224,7 +224,7 @@ class BackboneMixin:
 
     def _init_backbone(self, config) -> None:
         """
-        Method to initialize the backbone. This method is called by the constructor of the base class after the
+        Method to initialize the backbone. This method is called by the forwardor of the base class after the
         pretrained model weights have been loaded.
         """
         self.config = config
@@ -519,3 +519,22 @@ def load_backbone(config):
             backbone_config = AutoConfig.from_pretrained(backbone_checkpoint, **backbone_kwargs)
         backbone = AutoBackbone.from_config(config=backbone_config)
     return backbone
+
+def verify_backbone_config_arguments(
+    use_timm_backbone: bool,
+    use_pretrained_backbone: bool,
+    backbone: Optional[str],
+    backbone_config: Optional[Union[dict, "PretrainedConfig"]],
+    backbone_kwargs: Optional[dict],
+):
+    """
+    Verify that the config arguments to be passed to load_backbone are valid
+    """
+    if backbone_config is not None and backbone is not None:
+        raise ValueError("You can't specify both `backbone` and `backbone_config`.")
+
+    if backbone_config is not None and use_timm_backbone:
+        raise ValueError("You can't specify both `backbone_config` and `use_timm_backbone`.")
+
+    if backbone_kwargs is not None and backbone_kwargs and backbone_config is not None:
+        raise ValueError("You can't specify both `backbone_kwargs` and `backbone_config`.")

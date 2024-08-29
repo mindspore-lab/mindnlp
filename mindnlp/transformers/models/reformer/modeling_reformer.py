@@ -25,9 +25,11 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter, ParameterTuple
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     DUMMY_INPUTS,
     DUMMY_MASK,
@@ -53,7 +55,7 @@ REFORMER_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-# Define named tuples for nn.Cells here
+# Define named tuples for nn.Modules here
 LSHSelfAttentionOutput = namedtuple("LSHSelfAttentionOutput", ["hidden_states", "attention_probs", "buckets"])
 LocalSelfAttentionOutput = namedtuple("LocalSelfAttentionOutput", ["hidden_states", "attention_probs"])
 AttentionOutput = namedtuple("AttentionOutput", ["hidden_states", "attention_probs", "buckets"])
@@ -83,9 +85,9 @@ def _stable_argsort(vector, dim):
     # this function scales the vector so that ops.argsort is stable.
     # ops.argsort is not stable on its own
     scale_offset = ops.arange(vector.shape[dim]).view(1, 1, -1)
-    scale_offset = scale_offset.expand(vector.shape)
+    scale_offset = scale_offset.broadcast_to(vector.shape)
     scaled_vector = vector.shape[dim] * vector + (scale_offset % vector.shape[dim])
-    return ops.argsort(scaled_vector, axis=dim)
+    return ops.argsort(scaled_vector, dim=dim)
 
 
 def _get_least_common_mult_chunk_len(config):
@@ -154,37 +156,19 @@ def _get_min_chunk_len(config):
     )
 
 
-class AxialPositionEmbeddings(nn.Cell):
+class AxialPositionEmbeddings(nn.Module):
     """
     Constructs axial position embeddings. Useful for very long input sequences to save memory and time.
     """
+
     def __init__(self, config):
-        """
-        This method initializes an instance of the AxialPositionEmbeddings class.
-
-        Args:
-            self: The instance of the AxialPositionEmbeddings class.
-            config:
-                An object containing configuration parameters for the axial position embeddings.
-
-                - axial_pos_shape: A list of integers representing the shape of the axial positions.
-                - axial_pos_embds_dim: A list of integers representing the dimensions of the axial position embeddings.
-                - hidden_dropout_prob: A float value representing the dropout probability.
-                - hidden_size: An integer representing the hidden size of the model.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If the sum of axial_pos_embds_dim does not match the hidden_size specified in the configuration.
-        """
         super().__init__()
         self.axial_pos_shape = config.axial_pos_shape
         self.axial_pos_embds_dim = config.axial_pos_embds_dim
         self.dropout = config.hidden_dropout_prob
 
         self.least_common_mult_chunk_length = _get_least_common_mult_chunk_len(config)
-        self.weights = []
+        self.weights = nn.ParameterList()
 
         if sum(self.axial_pos_embds_dim) != config.hidden_size:
             raise ValueError(
@@ -200,37 +184,15 @@ class AxialPositionEmbeddings(nn.Cell):
             ax_shape = tuple(ax_shape) + (axial_pos_embd_dim,)
 
             # create tensor and init
-            self.weights.append(Parameter(ops.ones(ax_shape, dtype=mindspore.float32), name=f'weights.{axis}'))
+            self.weights.append(nn.Parameter(ops.ones(ax_shape, dtype=mindspore.float32)))
 
-        self.weights = ParameterTuple(self.weights)
-
-    def construct(self, position_ids):
-        """
-        This method constructs position encodings based on the given position IDs and axial position weights.
-
-        Args:
-            self: The instance of the AxialPositionEmbeddings class.
-            position_ids (torch.Tensor): A 2D tensor representing the position IDs of the input sequences.
-              It has a shape of (batch_size, sequence_length).
-
-        Returns:
-            None: This method does not return any value.
-
-        Raises:
-            ValueError:
-                Raised if the following conditions are met:
-
-                1. During training, if the product of the axial_pos_shape factors does not match the sequence length.
-                2. During training and dropout is enabled, if the operation cannot be performed.
-                3. During inference, if the product of the axial_pos_shape factors is less than the sequence length.
-                4. During inference, if the required position encodings columns exceed the available columns.
-        """
+    def forward(self, position_ids):
         # broadcast weights to correct shape
         batch_size = position_ids.shape[0]
         sequence_length = position_ids.shape[1]
 
         broadcasted_weights = [
-            weight.expand((batch_size,) + self.axial_pos_shape + weight.shape[-1:]) for weight in self.weights
+            weight.broadcast_to((batch_size,) + self.axial_pos_shape + weight.shape[-1:]) for weight in self.weights
         ]
 
         if self.training is True:
@@ -243,11 +205,11 @@ class AxialPositionEmbeddings(nn.Cell):
                 )
 
             if self.dropout > 0:
-                weights = ops.cat(broadcasted_weights, axis=-1)
+                weights = ops.cat(broadcasted_weights, dim=-1)
                 # permute weights so that 2D correctly drops dims 1 and 2
-                transposed_weights = weights.swapaxes(2, 1)
+                transposed_weights = weights.transpose(2, 1)
                 # drop entire matrix of last two dims (prev dims 1 and 2)
-                dropped_transposed_weights = ops.dropout2d(
+                dropped_transposed_weights = nn.functional.dropout2d(
                     transposed_weights, p=self.dropout, training=self.training
                 )
                 dropped_weights = dropped_transposed_weights.swapaxes(2, 1)
@@ -257,7 +219,7 @@ class AxialPositionEmbeddings(nn.Cell):
             else:
                 position_encodings = ops.cat(
                     [ops.reshape(weight, (batch_size, sequence_length, -1)) for weight in broadcasted_weights],
-                    axis=-1,
+                    dim=-1,
                 )
 
         else:
@@ -274,7 +236,7 @@ class AxialPositionEmbeddings(nn.Cell):
 
             # cut to columns that are needed
             position_encodings = ops.cat(
-                [weight[:, :required_pos_encodings_columns] for weight in broadcasted_weights], axis=-1
+                [weight[:, :required_pos_encodings_columns] for weight in broadcasted_weights], dim=-1
             )
             position_encodings = ops.reshape(position_encodings, (batch_size, -1, position_encodings.shape[-1]))
 
@@ -284,13 +246,13 @@ class AxialPositionEmbeddings(nn.Cell):
                     ops.index_select(position_encodings[i], 0, position_ids[i]).unsqueeze(0)
                     for i in range(batch_size)
                 ],
-                axis=0,
+                dim=0,
             )
 
         return position_encodings
 
 
-class PositionEmbeddings(nn.Cell):
+class PositionEmbeddings(nn.Module):
     """Constructs conventional position embeddings of shape `[max_pos_embeddings, hidden_size]`."""
     def __init__(self, config):
         """
@@ -315,28 +277,28 @@ class PositionEmbeddings(nn.Cell):
         self.dropout = config.hidden_dropout_prob
         self.embedding = nn.Embedding(config.max_position_embeddings, config.hidden_size)
 
-    def construct(self, position_ids):
+    def forward(self, position_ids):
         """
         Constructs position embeddings based on given position IDs.
 
         Args:
             self (PositionEmbeddings): The instance of the PositionEmbeddings class.
-            position_ids (Tensor): A tensor containing the position IDs for which embeddings need to be constructed.
+            position_ids (Tensor): A tensor containing the position IDs for which embeddings need to be forwarded.
                 It should be a 1D tensor of integers representing the positions.
 
         Returns:
-            position_embeddings: The method returns the constructed position embeddings.
+            position_embeddings: The method returns the forwarded position embeddings.
 
         Raises:
             ValueError: If the position_ids tensor is not provided or is not a valid 1D tensor.
             TypeError: If the dropout rate is not a float or the training flag is not a boolean.
         """
         position_embeddings = self.embedding(position_ids)
-        position_embeddings = ops.dropout(position_embeddings, p=self.dropout, training=self.training)
+        position_embeddings = F.dropout(position_embeddings, p=self.dropout, training=self.training)
         return position_embeddings
 
 
-class ReformerEmbeddings(nn.Cell):
+class ReformerEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
     def __init__(self, config):
         """
@@ -368,7 +330,7 @@ class ReformerEmbeddings(nn.Cell):
             AxialPositionEmbeddings(config) if config.axial_pos_embds else PositionEmbeddings(config)
         )
 
-    def construct(self, input_ids=None, position_ids=None, inputs_embeds=None, start_idx_pos_encodings=0):
+    def forward(self, input_ids=None, position_ids=None, inputs_embeds=None, start_idx_pos_encodings=0):
         """
         Constructs the embeddings for the Reformer model.
 
@@ -402,7 +364,7 @@ class ReformerEmbeddings(nn.Cell):
             position_ids = ops.arange(
                 start_idx_pos_encodings, start_idx_pos_encodings + seq_length, dtype=mindspore.int64
             )
-            position_ids = position_ids.unsqueeze(0).expand(input_shape)
+            position_ids = position_ids.unsqueeze(0).broadcast_to(input_shape)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -414,7 +376,7 @@ class ReformerEmbeddings(nn.Cell):
             )
 
         # dropout
-        embeddings = ops.dropout(inputs_embeds, p=self.dropout, training=self.training)
+        embeddings = F.dropout(inputs_embeds, p=self.dropout, training=self.training)
 
         # add positional embeddings
         position_embeddings = self.position_embeddings(position_ids)
@@ -424,7 +386,7 @@ class ReformerEmbeddings(nn.Cell):
 
 class EfficientAttentionMixin:
     """
-    A few utilities for nn.Cells in Reformer, to be used as a mixin.
+    A few utilities for nn.Modules in Reformer, to be used as a mixin.
     """
     def _look_adjacent(self, vectors, num_chunks_before, num_chunks_after):
         """
@@ -446,8 +408,8 @@ class EfficientAttentionMixin:
             if i == 0:
                 slices.append(vectors)
             else:
-                slices.append(ops.cat([vectors[:, :, i:, ...], vectors[:, :, :i, ...]], axis=2))
-        return ops.cat(slices, axis=3)
+                slices.append(ops.cat([vectors[:, :, i:, ...], vectors[:, :, :i, ...]], dim=2))
+        return ops.cat(slices, dim=3)
 
     def _split_hidden_size_dim(self, x, num_attn_heads, attn_head_size):
         """
@@ -478,15 +440,15 @@ class EfficientAttentionMixin:
         raise ValueError(f"Input vector rank should be one of [3, 4], but is: {len(vectors.shape)}")
 
 
-class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
+class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
 
     """
     This class represents a self-attention mechanism using Locality Sensitive Hashing (LSH) for efficient attention
     computation.
-    It inherits from nn.Cell, EfficientAttentionMixin.
+    It inherits from nn.Module, EfficientAttentionMixin.
 
     The class implements LSH self-attention mechanism for neural networks. It includes methods for initializing the
-    LSH attention layer, constructing the attention mechanism, computing attention masks, hashing vectors, and other
+    LSH attention layer, forwarding the attention mechanism, computing attention masks, hashing vectors, and other
     related operations.
 
     Attributes:
@@ -512,7 +474,7 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
         mask_value_float32: Float32 value for general masking.
 
     Methods:
-        construct: Constructs the LSH self-attention mechanism based on input hidden states and optional parameters.
+        forward: Constructs the LSH self-attention mechanism based on input hidden states and optional parameters.
         _query_per_attn_head: Computes query vectors per attention head.
         _value_per_attn_head: Computes value vectors per attention head.
         _hash_vectors: Hashes input vectors into buckets for attention computation.
@@ -565,8 +527,8 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
         self.hidden_size = config.hidden_size
 
         # projection matrices
-        self.query_key = nn.Dense(self.hidden_size, self.all_head_size, has_bias=False)
-        self.value = nn.Dense(self.hidden_size, self.all_head_size, has_bias=False)
+        self.query_key = nn.Linear(self.hidden_size, self.all_head_size, bias=False)
+        self.value = nn.Linear(self.hidden_size, self.all_head_size, bias=False)
 
         # save mask value here. Need fp32 and fp16 mask values
         self.self_mask_value_float16 = mindspore.tensor(-1e3)
@@ -574,7 +536,7 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
         self.mask_value_float16 = mindspore.tensor(-1e4)
         self.mask_value_float32 = mindspore.tensor(-1e9)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -668,9 +630,9 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
                     self.attention_head_size,
                 )
                 # repeat query vectors across hash dimension
-                query_vectors = query_vectors.unsqueeze(2).repeat(1, 1, num_hashes, 1, 1)
+                query_vectors = query_vectors.unsqueeze(2).tile((1, 1, num_hashes, 1, 1))
             else:
-                key_value_hidden_states = ops.cat([past_states, hidden_states], axis=1)
+                key_value_hidden_states = ops.cat([past_states, hidden_states], dim=1)
 
                 query_key_vectors = self.query_key(key_value_hidden_states)
                 value_vectors = self.value(key_value_hidden_states)
@@ -760,8 +722,8 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
             sorted_bucket_idx_per_hash = sorted_bucket_idx
         else:
             # get sequence length indices
-            sorted_bucket_idx_per_hash = ops.arange(sequence_length).repeat(
-                batch_size, self.num_attention_heads, 1
+            sorted_bucket_idx_per_hash = ops.arange(sequence_length).tile(
+                (batch_size, self.num_attention_heads, 1)
             )
 
         # scale key vectors
@@ -812,7 +774,7 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
                     self.attention_head_size,
                 ).unsqueeze(-1)
 
-                probs_vectors = ops.exp(logits - ops.logsumexp(logits, axis=2, keep_dims=True))
+                probs_vectors = ops.exp(logits - ops.logsumexp(logits, dim=2, keepdim=True))
                 out_vectors = ops.sum(out_vectors * probs_vectors, dim=2)
                 # free memory
                 del probs_vectors
@@ -944,7 +906,7 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
         rotated_vectors = ops.einsum("bmtd,mdhr->bmhtr", vectors, random_rotations)
 
         if isinstance(self.num_buckets, int) or len(self.num_buckets) == 1:
-            rotated_vectors = ops.cat([rotated_vectors, -rotated_vectors], axis=-1)
+            rotated_vectors = ops.cat([rotated_vectors, -rotated_vectors], dim=-1)
             buckets = ops.argmax(rotated_vectors, dim=-1)
         else:
             # Get the buckets for them and combine.
@@ -952,7 +914,7 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
             for bucket_factor in self.num_buckets:
                 rotated_vectors_factor = rotated_vectors[..., cur_sum : cur_sum + (bucket_factor // 2)]
                 cur_sum = cur_sum + bucket_factor // 2
-                rotated_vectors_factor = ops.cat([rotated_vectors_factor, -rotated_vectors_factor], axis=-1)
+                rotated_vectors_factor = ops.cat([rotated_vectors_factor, -rotated_vectors_factor], dim=-1)
                 if buckets is None:
                     buckets = ops.argmax(rotated_vectors_factor, dim=-1)
                 else:
@@ -964,7 +926,7 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
             # add an extra bucket for padding tokens only
             num_buckets = num_buckets + 1
             # assign padding tokens extra bucket
-            buckets_mask = attention_mask.to(mindspore.bool_)[:, None, None, :].expand(buckets.shape)
+            buckets_mask = attention_mask.to(mindspore.bool_)[:, None, None, :].broadcast_to(buckets.shape)
             buckets = ops.where(
                 buckets_mask, buckets, mindspore.tensor(num_buckets - 1, dtype=mindspore.int64)
             )
@@ -977,7 +939,7 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
         offsets = (offsets * num_buckets).view((1, 1, -1, 1))
 
         # expand to batch size and num attention heads
-        offsets = offsets.expand((batch_size, self.num_attention_heads) + offsets.shape[-2:])
+        offsets = offsets.broadcast_to((batch_size, self.num_attention_heads) + offsets.shape[-2:])
         offset_buckets = (buckets + offsets).flatten(start_dim=2, end_dim=3)
 
         return offset_buckets
@@ -1007,7 +969,7 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
         indices = (
             ops.arange(sorted_bucket_idx.shape[-1])
             .view(1, 1, -1)
-            .expand(sorted_bucket_idx.shape)
+            .broadcast_to(sorted_bucket_idx.shape)
         )
 
         # get undo sort
@@ -1110,7 +1072,7 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
             query_bucket_idx = (query_key_dots.shape[-1] - 1) * ops.ones_like(query_key_dots)[:, :, :, -1]
             key_value_bucket_idx = ops.arange(
                 query_key_dots.shape[-1], dtype=mindspore.int64
-            )[None, None, :].expand(query_bucket_idx.shape[:2] + (-1,))
+            )[None, None, :].broadcast_to(query_bucket_idx.shape[:2] + (-1,))
         else:
             query_bucket_idx = key_value_bucket_idx = sorted_bucket_idx_per_hash
 
@@ -1155,7 +1117,7 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
         # free memory
         del self_mask
 
-        logits = ops.logsumexp(query_key_dots, axis=-1, keep_dims=True)
+        logits = ops.logsumexp(query_key_dots, dim=-1, keepdim=True)
         # dots shape is `[batch_size, num_attn_heads, num_hashes * seq_len // chunk_length, chunk_length, chunk_length * (1 + num_chunks_before + num_chunks_after)]`
         attention_probs = ops.exp(query_key_dots - logits)
 
@@ -1163,7 +1125,7 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
         del query_key_dots
 
         # dropout
-        attention_probs = ops.dropout(attention_probs, p=self.dropout, training=self.training)
+        attention_probs = F.dropout(attention_probs, p=self.dropout, training=self.training)
 
         # Mask heads if we want to
         if head_mask is not None:
@@ -1213,11 +1175,11 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
             if not do_standard_self_attention:
                 # expand attn_mask to fit with key_value_bucket_idx shape
                 attention_mask = attention_mask[:, None, :]
-                attention_mask = attention_mask.expand(query_indices.shape[:-1] + (-1,))
+                attention_mask = attention_mask.broadcast_to(query_indices.shape[:-1] + (-1,))
                 # extract attention mask from LSH sorted key_indices
-                attention_mask = ops.gather_elements(attention_mask, -1, key_indices)
+                attention_mask = ops.gather(attention_mask, -1, key_indices)
 
-            attention_mask = attention_mask.unsqueeze(-2).expand(query_key_dot_shape)
+            attention_mask = attention_mask.unsqueeze(-2).broadcast_to(query_key_dot_shape)
 
         # Causal mask
         if self.is_decoder is True:
@@ -1225,7 +1187,7 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
 
             # add attention mask if not None
             if attention_mask is not None:
-                attention_mask = causal_mask & attention_mask
+                attention_mask = (causal_mask.int() & attention_mask.int()).bool()
             else:
                 attention_mask = causal_mask
 
@@ -1261,7 +1223,7 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
             IndexError: If there is an index error during the computation.
         """
         # concat hidden states
-        hidden_states = ops.cat([past_states, hidden_states], axis=1)
+        hidden_states = ops.cat([past_states, hidden_states], dim=1)
 
         # batch_size hidden
         batch_size = hidden_states.shape[0]
@@ -1279,7 +1241,7 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
         )
 
         # concat buckets
-        concat_buckets = ops.cat([past_buckets, query_buckets.unsqueeze(-1)], axis=-1)
+        concat_buckets = ops.cat([past_buckets, query_buckets.unsqueeze(-1)], dim=-1)
 
         # hash-based sort
         bucket_idx = _stable_argsort(concat_buckets, dim=-1)
@@ -1383,16 +1345,16 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
         total_chunk_size = self.chunk_length * (1 + self.num_chunks_before + self.num_chunks_after)
 
         # expand start indices and add correct chunk offset via arange
-        expanded_start_indices = start_indices_chunk.unsqueeze(-1).expand(indices.shape[0], total_chunk_size)
+        expanded_start_indices = start_indices_chunk.unsqueeze(-1).broadcast_to((indices.shape[0], total_chunk_size))
         chunk_sequence_indices = expanded_start_indices + ops.arange(
             total_chunk_size, dtype=mindspore.int64
-        ).unsqueeze(0).expand(indices.shape[0], total_chunk_size)
+        ).unsqueeze(0).broadcast_to((indices.shape[0], total_chunk_size))
 
         # make sure that circular logic holds via % seq len
         chunk_sequence_indices = chunk_sequence_indices.flatten() % sequence_length
 
         # expand indices and set indices correctly
-        indices = indices.unsqueeze(1).expand((indices.shape[0], total_chunk_size, -1)).flatten(start_dim=0, end_dim=1).copy()
+        indices = indices.unsqueeze(1).broadcast_to((indices.shape[0], total_chunk_size, -1)).flatten(start_dim=0, end_dim=1).copy()
         indices[:, -1] = chunk_sequence_indices
 
         return indices
@@ -1405,29 +1367,29 @@ class LSHSelfAttention(nn.Cell, EfficientAttentionMixin):
         vectors = vectors / sqrt_num
         return vectors
 
-    def _len_norm(self, x, epsilon=1e-6):
+    def _len_norm(self, x, eps=1e-6):
         """
         length normalization
         """
-        variance = ops.mean(x**2, -1, keep_dims=True)
-        norm_x = x * ops.rsqrt(variance + epsilon)
+        variance = ops.mean(x**2, -1, keepdim=True)
+        norm_x = x * ops.rsqrt(variance + eps)
         return norm_x
 
     def _gather_by_expansion(self, vectors, idxs, num_hashes):
         """
         expand dims of idxs and vectors for all hashes and gather
         """
-        expanded_idxs = idxs.unsqueeze(-1).expand(-1, -1, -1, self.attention_head_size)
-        vectors = vectors.repeat(1, 1, num_hashes, 1)
-        return ops.gather_elements(vectors, 2, expanded_idxs)
+        expanded_idxs = idxs.unsqueeze(-1).broadcast_to((-1, -1, -1, self.attention_head_size))
+        vectors = vectors.tile((1, 1, num_hashes, 1))
+        return ops.gather(vectors, 2, expanded_idxs)
 
 
-class ReverseSort(nn.Cell):
+class ReverseSort(nn.Module):
     """
     After chunked attention is applied which sorted clusters, original ordering has to be restored. Since customized
     backward function is used for Reformer, the gradients of the output vectors have to be explicitly sorted here.
     """
-    def construct(self, out_vectors, logits, sorted_bucket_idx, undo_sorted_bucket_idx):
+    def forward(self, out_vectors, logits, sorted_bucket_idx, undo_sorted_bucket_idx):
 
         """
         Constructs and returns modified vectors and logits based on the given parameters.
@@ -1450,9 +1412,9 @@ class ReverseSort(nn.Cell):
         self.sorted_bucket_idx = sorted_bucket_idx
 
         # undo sort to have correct order for next layer
-        expanded_undo_sort_indices = undo_sorted_bucket_idx.unsqueeze(-1).expand(out_vectors.shape)
-        out_vectors = ops.gather_elements(out_vectors, 2, expanded_undo_sort_indices)
-        logits = ops.gather_elements(logits, 2, undo_sorted_bucket_idx)
+        expanded_undo_sort_indices = undo_sorted_bucket_idx.unsqueeze(-1).broadcast_to(out_vectors.shape)
+        out_vectors = ops.gather(out_vectors, 2, expanded_undo_sort_indices)
+        logits = ops.gather(logits, 2, undo_sorted_bucket_idx)
         return out_vectors, logits
 
     def bprop(self, out_vectors, logits, sorted_bucket_idx, undo_sorted_bucket_idx, outputs, grads):
@@ -1480,19 +1442,19 @@ class ReverseSort(nn.Cell):
         # get parameters saved in ctx
         sorted_bucket_idx = self.sorted_bucket_idx
 
-        expanded_sort_indices = sorted_bucket_idx.unsqueeze(-1).expand(grad_out_vectors.shape)
+        expanded_sort_indices = sorted_bucket_idx.unsqueeze(-1).broadcast_to(grad_out_vectors.shape)
         # reverse sort of forward
-        grad_out_vectors = ops.gather_elements(grad_out_vectors, 2, expanded_sort_indices)
-        grad_logits = ops.gather_elements(grad_logits, 2, sorted_bucket_idx)
+        grad_out_vectors = ops.gather(grad_out_vectors, 2, expanded_sort_indices)
+        grad_logits = ops.gather(grad_logits, 2, sorted_bucket_idx)
 
         # return grad and `None` fillers for last 2 forward args
         return grad_out_vectors, grad_logits, None, None
 
 
-class LocalSelfAttention(nn.Cell, EfficientAttentionMixin):
+class LocalSelfAttention(nn.Module, EfficientAttentionMixin):
 
     """
-    The `LocalSelfAttention` class is a subclass of `nn.Cell` and `EfficientAttentionMixin` that represents
+    The `LocalSelfAttention` class is a subclass of `nn.Module` and `EfficientAttentionMixin` that represents
     a local self-attention mechanism. This mechanism is commonly used in transformer-based models for
     processing sequential data.
 
@@ -1506,15 +1468,15 @@ class LocalSelfAttention(nn.Cell, EfficientAttentionMixin):
         `attention_head_size` (int): The size of each attention head.
         `all_head_size` (int): The total size of all attention heads.
         `hidden_size` (int): The hidden size of the input.
-        `query` (nn.Dense): The dense layer used for computing query vectors.
-        `key` (nn.Dense): The dense layer used for computing key vectors.
-        `value` (nn.Dense): The dense layer used for computing value vectors.
+        `query` (nn.Linear): The dense layer used for computing query vectors.
+        `key` (nn.Linear): The dense layer used for computing key vectors.
+        `value` (nn.Linear): The dense layer used for computing value vectors.
         `dropout` (float): The dropout rate for attention probabilities.
         `mask_value_float16` (mindspore.tensor): The mask value for float16 data type.
         `mask_value_float32` (mindspore.tensor): The mask value for float32 data type.
 
     Methods:
-        `construct`: Computes the local self-attention mechanism for the given hidden states.
+        `forward`: Computes the local self-attention mechanism for the given hidden states.
         `_compute_attn_mask`: Computes the attention mask based on query and key indices.
         `_retrieve_relevant_hidden_states`: Retrieves the relevant hidden states from previous states.
 
@@ -1560,9 +1522,9 @@ class LocalSelfAttention(nn.Cell, EfficientAttentionMixin):
         self.hidden_size = config.hidden_size
 
         # projection matrices
-        self.query = nn.Dense(self.hidden_size, self.all_head_size, has_bias=False)
-        self.key = nn.Dense(self.hidden_size, self.all_head_size, has_bias=False)
-        self.value = nn.Dense(self.hidden_size, self.all_head_size, has_bias=False)
+        self.query = nn.Linear(self.hidden_size, self.all_head_size, bias=False)
+        self.key = nn.Linear(self.hidden_size, self.all_head_size, bias=False)
+        self.value = nn.Linear(self.hidden_size, self.all_head_size, bias=False)
 
         self.dropout = float(config.local_attention_probs_dropout_prob)
 
@@ -1570,7 +1532,7 @@ class LocalSelfAttention(nn.Cell, EfficientAttentionMixin):
         self.mask_value_float16 = mindspore.tensor(-1e4)
         self.mask_value_float32 = mindspore.tensor(-1e9)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1615,7 +1577,7 @@ class LocalSelfAttention(nn.Cell, EfficientAttentionMixin):
             key_value_hidden_states = self._retrieve_relevant_hidden_states(
                 past_buckets_states[1], self.chunk_length, self.num_chunks_before
             )
-            key_value_hidden_states = ops.cat([key_value_hidden_states, hidden_states], axis=1)
+            key_value_hidden_states = ops.cat([key_value_hidden_states, hidden_states], dim=1)
 
             # only query vector for last token
             query_vectors = self.query(hidden_states)
@@ -1656,8 +1618,8 @@ class LocalSelfAttention(nn.Cell, EfficientAttentionMixin):
         key_vectors = key_vectors / np.sqrt(self.attention_head_size)
 
         # get sequence length indices
-        indices = ops.arange(sequence_length).repeat(
-            batch_size, self.num_attention_heads, 1
+        indices = ops.arange(sequence_length).tile(
+            (batch_size, self.num_attention_heads, 1)
         )
 
         # if one should do normal n^2 self-attention
@@ -1723,14 +1685,14 @@ class LocalSelfAttention(nn.Cell, EfficientAttentionMixin):
         del mask
 
         # softmax
-        logits = ops.logsumexp(query_key_dots, axis=-1, keep_dims=True)
+        logits = ops.logsumexp(query_key_dots, dim=-1, keepdim=True)
         attention_probs = ops.exp(query_key_dots - logits)
 
         # free memory
         del logits
 
         # dropout
-        attention_probs = ops.dropout(attention_probs, p=self.dropout, training=self.training)
+        attention_probs = F.dropout(attention_probs, p=self.dropout, training=self.training)
 
         # Mask heads if we want to
         if head_mask is not None:
@@ -1792,7 +1754,7 @@ class LocalSelfAttention(nn.Cell, EfficientAttentionMixin):
                 attention_mask = self._split_seq_length_dim_to(attention_mask, -1, self.chunk_length, 1)
                 attention_mask = self._look_adjacent(attention_mask, self.num_chunks_before, self.num_chunks_after)
             # create attn_mask
-            attention_mask = attention_mask.unsqueeze(-2).expand(query_key_dots_shape)
+            attention_mask = attention_mask.unsqueeze(-2).broadcast_to(query_key_dots_shape)
 
         # Causal mask
         if self.is_decoder is True:
@@ -1800,7 +1762,7 @@ class LocalSelfAttention(nn.Cell, EfficientAttentionMixin):
 
             # add attention mask if not None
             if attention_mask is not None:
-                attention_mask = causal_mask & attention_mask
+                attention_mask = (causal_mask.int() & attention_mask.int()).bool()
             else:
                 attention_mask = causal_mask
 
@@ -1833,21 +1795,21 @@ class LocalSelfAttention(nn.Cell, EfficientAttentionMixin):
         return previous_hidden_states[:, start_position:]
 
 
-class ReformerSelfOutput(nn.Cell):
+class ReformerSelfOutput(nn.Module):
 
     """
     This class represents the self-attention output module of the Reformer model.
 
-    The ReformerSelfOutput class inherits from the nn.Cell class and is responsible for processing the hidden states
+    The ReformerSelfOutput class inherits from the nn.Module class and is responsible for processing the hidden states
     of the Reformer model's self-attention layer. It applies a linear transformation followed by dropout to the
     input hidden states.
 
     Attributes:
         dropout (float): The dropout probability used during the forward pass.
-        dense (nn.Dense): The linear transformation layer that maps the input hidden states to the output.
+        dense (nn.Linear): The linear transformation layer that maps the input hidden states to the output.
 
     Methods:
-        construct(hidden_states): Applies the linear transformation and dropout to the input hidden states.
+        forward(hidden_states): Applies the linear transformation and dropout to the input hidden states.
 
     Example:
         ```python
@@ -1857,7 +1819,7 @@ class ReformerSelfOutput(nn.Cell):
         ...
         >>> # Apply the self-attention output module to the hidden states
         >>> hidden_states = torch.randn(batch_size, sequence_length, hidden_size)
-        >>> output = reformer_self_output.construct(hidden_states)
+        >>> output = reformer_self_output.forward(hidden_states)
         ```
     Note:
         This class assumes that the input hidden_states have already been processed by the self-attention module
@@ -1887,9 +1849,9 @@ class ReformerSelfOutput(nn.Cell):
         all_head_size = config.num_attention_heads * config.attention_head_size
         self.dropout = float(config.hidden_dropout_prob)
 
-        self.dense = nn.Dense(all_head_size, config.hidden_size, has_bias=False)
+        self.dense = nn.Linear(all_head_size, config.hidden_size, bias=False)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
 
         """Constructs the output of the Reformer self-attention layer.
 
@@ -1903,7 +1865,7 @@ class ReformerSelfOutput(nn.Cell):
         Raises:
             None
 
-        This method takes in the input hidden states and processes them to construct the output of the Reformer
+        This method takes in the input hidden states and processes them to forward the output of the Reformer
         self-attention layer. The hidden states are first passed through a dense layer to transform the dimensions.
         Then, a dropout operation is applied to the transformed hidden states with a dropout probability specified by
         the instance variable 'dropout'. The dropout operation is only applied during training.
@@ -1914,15 +1876,15 @@ class ReformerSelfOutput(nn.Cell):
             operations in the model.
         """
         hidden_states = self.dense(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         return hidden_states
 
 
-class ReformerAttention(nn.Cell):
+class ReformerAttention(nn.Module):
 
     """
     This class represents a ReformerAttention module, which is used in the Reformer model for attention mechanisms.
-    It inherits from the nn.Cell class.
+    It inherits from the nn.Module class.
 
     Attributes:
         layer_id (int): The ID of the attention layer.
@@ -1933,7 +1895,7 @@ class ReformerAttention(nn.Cell):
         output (ReformerSelfOutput): The module responsible for the final output of the self-attention mechanism.
 
     Methods:
-        construct: Applies the ReformerAttention module to the input hidden_states and returns the attention output.
+        forward: Applies the ReformerAttention module to the input hidden_states and returns the attention output.
 
     Note:
         - Only 'lsh' and 'local' attention layer types are supported. The attention layer types can be selected from
@@ -1963,7 +1925,7 @@ class ReformerAttention(nn.Cell):
         self.layer_id = layer_id
         self.attn_layers = config.attn_layers
 
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         if len(set(self.attn_layers)) == 1 and self.attn_layers[0] == "lsh":
             self.self_attention = LSHSelfAttention(config)
@@ -1982,7 +1944,7 @@ class ReformerAttention(nn.Cell):
             )
         self.output = ReformerSelfOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1996,7 +1958,7 @@ class ReformerAttention(nn.Cell):
     ):
 
         """
-        This method constructs the attention output in the ReformerAttention class.
+        This method forwards the attention output in the ReformerAttention class.
 
         Args:
             self: Reference to the class instance.
@@ -2057,13 +2019,13 @@ class ReformerAttention(nn.Cell):
                     else buckets
                 )
             else:
-                past_buckets = ops.cat([past_buckets_states[self.layer_id][0], buckets], axis=-1)
+                past_buckets = ops.cat([past_buckets_states[self.layer_id][0], buckets], dim=-1)
 
             if past_buckets_states[self.layer_id][1] is None:
                 # padded input should not be cached
                 past_states = hidden_states[:, :orig_sequence_length]
             else:
-                past_states = ops.cat([past_buckets_states[self.layer_id][1], hidden_states], axis=1)
+                past_states = ops.cat([past_buckets_states[self.layer_id][1], hidden_states], dim=1)
 
             past_buckets_states[self.layer_id] = (past_buckets, past_states)
         # compute attention feed forward output
@@ -2076,7 +2038,7 @@ class ReformerAttention(nn.Cell):
         )
 
 
-class ReformerFeedForwardDense(nn.Cell):
+class ReformerFeedForwardDense(nn.Module):
 
     """
     ReformerFeedForwardDense represents a feedforward dense layer used in a Reformer model for neural network operations.
@@ -2084,14 +2046,14 @@ class ReformerFeedForwardDense(nn.Cell):
     Attributes:
         dropout (float): The dropout rate for the hidden states.
         act_fn (function): The activation function used for the hidden states.
-        dense (nn.Dense): The dense layer for transforming hidden states.
+        dense (nn.Linear): The dense layer for transforming hidden states.
 
     Methods:
         __init__: Initializes the ReformerFeedForwardDense instance with the provided configuration.
-        construct: Constructs the feedforward dense layer by applying dense transformation, dropout,
+        forward: Constructs the feedforward dense layer by applying dense transformation, dropout,
             and activation function to the hidden states.
 
-    This class inherits from nn.Cell and includes methods to initialize and construct the feedforward dense layer in
+    This class inherits from nn.Module and includes methods to initialize and forward the feedforward dense layer in
     a Reformer model.
     """
     def __init__(self, config):
@@ -2125,9 +2087,9 @@ class ReformerFeedForwardDense(nn.Cell):
         else:
             self.act_fn = config.hidden_act
 
-        self.dense = nn.Dense(config.hidden_size, config.feed_forward_size)
+        self.dense = nn.Linear(config.hidden_size, config.feed_forward_size)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
 
         """
         Constructs the feedforward dense layer for the Reformer model.
@@ -2145,25 +2107,25 @@ class ReformerFeedForwardDense(nn.Cell):
             RuntimeError: If an error occurs during the dropout operation.
         """
         hidden_states = self.dense(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = self.act_fn(hidden_states)
         return hidden_states
 
 
-class ReformerFeedForwardOutput(nn.Cell):
+class ReformerFeedForwardOutput(nn.Module):
 
     """
     Represents the output of the feed forward layer in a Reformer neural network.
 
-    This class inherits from nn.Cell and contains methods for initializing and constructing the feed forward layer output.
+    This class inherits from nn.Module and contains methods for initializing and forwarding the feed forward layer output.
 
     Attributes:
         dropout (float): The dropout rate for the hidden units.
-        dense (nn.Dense): The fully connected layer for transforming input hidden states.
+        dense (nn.Linear): The fully connected layer for transforming input hidden states.
 
     Methods:
         __init__: Initializes the ReformerFeedForwardOutput with the given configuration.
-        construct: Constructs the output of the feed forward layer using the provided hidden states.
+        forward: Constructs the output of the feed forward layer using the provided hidden states.
     """
     def __init__(self, config):
 
@@ -2188,9 +2150,9 @@ class ReformerFeedForwardOutput(nn.Cell):
         super().__init__()
         self.dropout = float(config.hidden_dropout_prob)
 
-        self.dense = nn.Dense(config.feed_forward_size, config.hidden_size)
+        self.dense = nn.Linear(config.feed_forward_size, config.hidden_size)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
 
         """
         Constructs the output of the feed-forward layer in the Reformer model.
@@ -2207,16 +2169,16 @@ class ReformerFeedForwardOutput(nn.Cell):
             RuntimeError: If an error occurs during the computation of the output tensor.
         """
         hidden_states = self.dense(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         return hidden_states
 
 
-class ChunkReformerFeedForward(nn.Cell):
+class ChunkReformerFeedForward(nn.Module):
 
     """
     This class represents a feed-forward module for chunked reformer attention output in a neural network.
 
-    The ChunkReformerFeedForward class inherits from the nn.Cell class and is designed to process attention output
+    The ChunkReformerFeedForward class inherits from the nn.Module class and is designed to process attention output
     in a chunked manner. It applies layer normalization, dense transformation, and output transformation to the input
     hidden states.
 
@@ -2236,7 +2198,7 @@ class ChunkReformerFeedForward(nn.Cell):
 
             - config (object): The configuration object containing hyperparameters and settings for the module.
 
-        construct(self, attention_output):
+        forward(self, attention_output):
             Constructs the output of the ChunkReformerFeedForward module.
 
             Args:
@@ -2245,10 +2207,10 @@ class ChunkReformerFeedForward(nn.Cell):
 
             Returns:
 
-            - Tensor: The constructed output tensor after applying layer normalization, dense transformation,
+            - Tensor: The forwarded output tensor after applying layer normalization, dense transformation,
             and output transformation.
 
-        construct_chunk(self, hidden_states):
+        forward_chunk(self, hidden_states):
             Constructs a chunk of the ChunkReformerFeedForward module.
 
             Args:
@@ -2257,7 +2219,7 @@ class ChunkReformerFeedForward(nn.Cell):
 
             Returns:
 
-            - Tensor: The constructed chunk of the feed-forward module after applying layer normalization,
+            - Tensor: The forwarded chunk of the feed-forward module after applying layer normalization,
             dense transformation, and output transformation.
     """
     def __init__(self, config):
@@ -2285,11 +2247,11 @@ class ChunkReformerFeedForward(nn.Cell):
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
 
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dense = ReformerFeedForwardDense(config)
         self.output = ReformerFeedForwardOutput(config)
 
-    def construct(self, attention_output):
+    def forward(self, attention_output):
 
         """
         Constructs the feed-forward chunk reformer for the given attention output.
@@ -2307,13 +2269,13 @@ class ChunkReformerFeedForward(nn.Cell):
             RuntimeError: If there is an issue with applying chunking during the forward pass.
         """
         return apply_chunking_to_forward(
-            self.construct_chunk,
+            self.forward_chunk,
             self.chunk_size_feed_forward,
             self.seq_len_dim,
             attention_output,
         )
 
-    def construct_chunk(self, hidden_states):
+    def forward_chunk(self, hidden_states):
 
         """
         Constructs a chunk of reformer feed forward layer.
@@ -2334,11 +2296,11 @@ class ChunkReformerFeedForward(nn.Cell):
         return self.output(hidden_states)
 
 
-class ReformerLayer(nn.Cell):
+class ReformerLayer(nn.Module):
 
     """
     Represents a Reformer layer that consists of an attention mechanism and a feed forward network.
-    This class inherits from nn.Cell.
+    This class inherits from nn.Module.
 
     Attributes:
         attention_seed (int): Seed for the attention layer to ensure deterministic dropout behavior.
@@ -2348,7 +2310,7 @@ class ReformerLayer(nn.Cell):
         __init__: Initializes the ReformerLayer with attention and feed forward components.
         _init_attention_seed: Sets a new seed for the attention layer to ensure deterministic dropout behavior.
         _init_feed_forward_seed: Sets a new seed for the feed forward layer to ensure deterministic dropout behavior.
-        construct: Constructs the Reformer layer by applying attention and feed forward operations and returning the output.
+        forward: Constructs the Reformer layer by applying attention and feed forward operations and returning the output.
 
     Raises:
         None.
@@ -2400,7 +2362,7 @@ class ReformerLayer(nn.Cell):
 
         mindspore.set_seed(self.feed_forward_seed)
 
-    def construct(
+    def forward(
         self,
         prev_attn_output,
         hidden_states,
@@ -2549,13 +2511,13 @@ class ReformerLayer(nn.Cell):
     #     )
 
 
-class _ReversibleFunction(nn.Cell):
+class _ReversibleFunction(nn.Module):
     """
     To prevent PyTorch from performing the usual backpropagation, a customized backward function is implemented here.
     This way it is made sure that no memory expensive activations are saved during the forward pass. This function is
     heavily inspired by https://github.com/lucidrains/reformer-pytorch/blob/master/reformer_pytorch/reversible.py
     """
-    def construct(
+    def forward(
         self,
         hidden_states,
         layers,
@@ -2572,13 +2534,13 @@ class _ReversibleFunction(nn.Cell):
     ):
 
         """
-        This method 'construct' is defined within the class '_ReversibleFunction' and is responsible for constructing
+        This method 'forward' is defined within the class '_ReversibleFunction' and is responsible for forwarding
         the output based on the provided input parameters.
 
         Args:
             self: The instance of the class.
             hidden_states (Tensor): The input hidden states.
-            layers (List[Layer]): List of layers to be applied during the construction process.
+            layers (List[Layer]): List of layers to be applied during the forwardion process.
             attention_mask (Tensor): The attention mask to be applied during computations.
             head_mask (List[Tensor]): List of head masks for each layer.
             num_hashes (int): The number of hashes used in computations.
@@ -2599,7 +2561,7 @@ class _ReversibleFunction(nn.Cell):
         all_buckets = ()
 
         # split duplicated tensor
-        hidden_states, attn_output = ops.chunk(hidden_states, 2, axis=-1)
+        hidden_states, attn_output = ops.chunk(hidden_states, 2, dim=-1)
 
         for layer_id, (layer, layer_head_mask) in enumerate(zip(layers, head_mask)):
             if output_hidden_states is True:
@@ -2636,7 +2598,7 @@ class _ReversibleFunction(nn.Cell):
         # ctx.attention_mask = attention_mask
 
         # Concatenate 2 RevNet outputs
-        return ops.cat([attn_output, hidden_states], axis=-1)
+        return ops.cat([attn_output, hidden_states], dim=-1)
 
     # @staticmethod
     # def backward(ctx, grad_hidden_states):
@@ -2678,27 +2640,27 @@ class _ReversibleFunction(nn.Cell):
     #         )
 
     #     assert all_buckets == (), "buckets have to be empty after backpropagation"
-    #     grad_hidden_states = ops.cat([output.grad_attn_output, output.grad_hidden_states], axis=-1)
+    #     grad_hidden_states = ops.cat([output.grad_attn_output, output.grad_hidden_states], dim=-1)
 
     #     # num of return vars has to match num of forward() args
     #     # return gradient for hidden_states arg and None for other args
     #     return grad_hidden_states, None, None, None, None, None, None, None, None, None, None, None
 
 
-class ReformerEncoder(nn.Cell):
+class ReformerEncoder(nn.Module):
 
     """
     The 'ReformerEncoder' class is a Python class that represents the encoder component of the Reformer model.
-    It inherits from the 'nn.Cell' class.
+    It inherits from the 'nn.Module' class.
 
     Attributes:
         dropout (float): The dropout probability for the hidden states.
-        layers (nn.CellList): A list of 'ReformerLayer' instances representing the layers of the encoder.
+        layers (nn.ModuleList): A list of 'ReformerLayer' instances representing the layers of the encoder.
         layer_norm (nn.LayerNorm): A layer normalization module.
 
     Methods:
         __init__: Initializes a new instance of the 'ReformerEncoder' class.
-        construct: Constructs the encoder by applying the Reformer layers to the input hidden states.
+        forward: Constructs the encoder by applying the Reformer layers to the input hidden states.
 
     """
     def __init__(self, config):
@@ -2730,12 +2692,12 @@ class ReformerEncoder(nn.Cell):
         super().__init__()
         self.dropout = float(config.hidden_dropout_prob)
 
-        self.layers = nn.CellList([ReformerLayer(config, i) for i in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([ReformerLayer(config, i) for i in range(config.num_hidden_layers)])
         # Reformer is using Rev Nets, thus last layer outputs are concatenated and
         # Layer Norm is done over 2 * hidden_size
-        self.layer_norm = nn.LayerNorm(2 * config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(2 * config.hidden_size, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -2794,7 +2756,7 @@ class ReformerEncoder(nn.Cell):
             past_buckets_states = [((None), (None)) for i in range(len(self.layers))]
 
         # concat same tensor for reversible ResNet
-        hidden_states = ops.cat([hidden_states, hidden_states], axis=-1)
+        hidden_states = ops.cat([hidden_states, hidden_states], dim=-1)
         hidden_states = _ReversibleFunction()(
             hidden_states,
             self.layers,
@@ -2813,7 +2775,7 @@ class ReformerEncoder(nn.Cell):
         hidden_states = self.layer_norm(hidden_states)
 
         # Apply dropout
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         return ReformerEncoderOutput(
             hidden_states=hidden_states,
@@ -2823,23 +2785,23 @@ class ReformerEncoder(nn.Cell):
         )
 
 
-class ReformerOnlyLMHead(nn.Cell):
+class ReformerOnlyLMHead(nn.Module):
 
     """
     The class 'ReformerOnlyLMHead' represents a language model head for the Reformer model.
-    It inherits from the 'nn.Cell' class and contains methods for initialization, construction, chunking,
+    It inherits from the 'nn.Module' class and contains methods for initialization, forwardion, chunking,
     and weight tying.
 
     Attributes:
         seq_len_dim (int): The dimension representing the sequence length.
         chunk_size_lm_head (int): The chunk size for the language model head.
-        decoder (nn.Dense): The dense layer for decoding hidden states.
+        decoder (nn.Linear): The dense layer for decoding hidden states.
         bias (Parameter): The bias parameter for the decoder.
 
     Methods:
         __init__: Initializes the ReformerOnlyLMHead instance with the provided configuration.
-        construct: Constructs the language model head using chunking for the given hidden states.
-        construct_chunk: Constructs a chunk of the language model head for the given hidden states.
+        forward: Constructs the language model head using chunking for the given hidden states.
+        forward_chunk: Constructs a chunk of the language model head for the given hidden states.
         _tie_weights: Ties the weights of the bias to the decoder bias.
     """
     def __init__(self, config):
@@ -2862,11 +2824,11 @@ class ReformerOnlyLMHead(nn.Cell):
         # Layer Norm is done over 2 * hidden_size
         self.seq_len_dim = 1
         self.chunk_size_lm_head = config.chunk_size_lm_head
-        self.decoder = nn.Dense(2 * config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(2 * config.hidden_size, config.vocab_size, bias=False)
         self.bias = Parameter(initializer('zeros', (config.vocab_size,)), 'bias')
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
 
         """
         Constructs the LM head output for the Reformer model.
@@ -2885,9 +2847,9 @@ class ReformerOnlyLMHead(nn.Cell):
             TypeError: If the input hidden_states is not a valid tensor.
             ValueError: If the input hidden_states has an incorrect shape.
         """
-        return apply_chunking_to_forward(self.construct_chunk, self.chunk_size_lm_head, self.seq_len_dim, hidden_states)
+        return apply_chunking_to_forward(self.forward_chunk, self.chunk_size_lm_head, self.seq_len_dim, hidden_states)
 
-    def construct_chunk(self, hidden_states):
+    def forward_chunk(self, hidden_states):
 
         """
         Args:
@@ -2962,12 +2924,12 @@ class ReformerPreTrainedModel(PreTrainedModel):
         if isinstance(cell, AxialPositionEmbeddings):
             for weight in cell.weights:
                 weight.set_data(initializer(Normal(self.config.axial_norm_std), weight.shape, weight.dtype))
-        elif isinstance(cell, nn.Dense):
+        elif isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -3078,7 +3040,7 @@ class ReformerModel(ReformerPreTrainedModel):
         get_input_embeddings: Retrieves the input embeddings layer of the model.
         set_input_embeddings: Sets the input embeddings layer of the model.
         _prune_heads: Prunes the attention heads of the model.
-        construct: Constructs the Reformer model with the given input and configurations.
+        forward: Constructs the Reformer model with the given input and configurations.
         _pad_to_mult_of_chunk_length: Pads the input tensors to be a multiple of the chunk length according to
             the Reformer model configuration.
     """
@@ -3156,7 +3118,7 @@ class ReformerModel(ReformerPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -3356,31 +3318,31 @@ class ReformerModel(ReformerPreTrainedModel):
         if attention_mask is not None:
             pad_attention_mask = ops.zeros(input_shape[0], padding_length, dtype=attention_mask.dtype)
 
-            attention_mask = ops.cat([attention_mask, pad_attention_mask], axis=-1)
+            attention_mask = ops.cat([attention_mask, pad_attention_mask], dim=-1)
         else:
             attention_mask = ops.cat(
                 [
                     ops.ones(input_shape, dtype=mindspore.bool_),
                     ops.zeros((input_shape[0], padding_length), dtype=mindspore.bool_),
                 ],
-                axis=-1,
+                dim=-1,
             )
 
         # Extend `input_ids` with padding to match least common multiple chunk_length
         if input_ids is not None:
-            input_ids = ops.cat([input_ids, padded_input_ids], axis=-1)
+            input_ids = ops.cat([input_ids, padded_input_ids], dim=-1)
             input_shape = input_ids.shape
 
             # Pad position ids if given
             if position_ids is not None:
                 padded_position_ids = ops.arange(input_shape[-1], padded_seq_length, dtype=mindspore.int64)
-                padded_position_ids = position_ids.unsqueeze(0).expand(input_shape[0], padding_length)
-                position_ids = ops.cat([position_ids, padded_position_ids], axis=-1)
+                padded_position_ids = position_ids.unsqueeze(0).broadcast_to((input_shape[0], padding_length))
+                position_ids = ops.cat([position_ids, padded_position_ids], dim=-1)
 
         # Extend `inputs_embeds` with padding to match least common multiple chunk_length
         if inputs_embeds is not None:
             padded_inputs_embeds = self.embeddings(padded_input_ids, position_ids)
-            inputs_embeds = ops.cat([inputs_embeds, padded_inputs_embeds], axis=-2)
+            inputs_embeds = ops.cat([inputs_embeds, padded_inputs_embeds], dim=-2)
             input_shape = inputs_embeds.shape
         return input_ids, inputs_embeds, attention_mask, position_ids, input_shape
 
@@ -3403,7 +3365,7 @@ class ReformerModelWithLMHead(ReformerPreTrainedModel):
         __init__: Initializes the ReformerModelWithLMHead instance with the given configuration.
         get_output_embeddings: Retrieves the decoder of the lm_head.
         set_output_embeddings: Sets the decoder of the lm_head to the provided new_embeddings.
-        construct: Constructs the Reformer model with the given inputs and returns the output.
+        forward: Constructs the Reformer model with the given inputs and returns the output.
         prepare_inputs_for_generation: Prepares the inputs for generation by selecting the last token and
             returning a dictionary of inputs.
         _reorder_cache: Reorders the past key values for beam search.
@@ -3499,7 +3461,7 @@ class ReformerModelWithLMHead(ReformerPreTrainedModel):
         """
         self.lm_head.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
@@ -3546,7 +3508,7 @@ class ReformerModelWithLMHead(ReformerPreTrainedModel):
             shift_logits = logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(-1, self.config.vocab_size), shift_labels.view(-1))
+            loss = F.cross_entropy(shift_logits.view(-1, self.config.vocab_size), shift_labels.view(-1))
 
         if not return_dict:
             output = (logits,) + reformer_outputs[1:]
@@ -3645,8 +3607,8 @@ class ReformerForMaskedLM(ReformerPreTrainedModel):
 
     This class inherits from `ReformerPreTrainedModel` and utilizes the Reformer architecture and a language modeling head for
     masking language modeling tasks. The class is capable of generating output embeddings and setting new embeddings with
-    the provided methods, `get_output_embeddings()` and `set_output_embeddings()`, respectively, and the `construct()`
-    method constructs the model and computes the masked language modeling loss if the `labels` argument is provided.
+    the provided methods, `get_output_embeddings()` and `set_output_embeddings()`, respectively, and the `forward()`
+    method forwards the model and computes the masked language modeling loss if the `labels` argument is provided.
 
     The `ReformerForMaskedLM` class takes a `config` argument, which is an instance of `ReformerConfig`. The class
     implements the `__init__()` method that initializes the parent class with the provided `config`. The method also
@@ -3656,7 +3618,7 @@ class ReformerForMaskedLM(ReformerPreTrainedModel):
 
     - `get_output_embeddings()`: Returns the decoder for the language modeling head.
     - `set_output_embeddings(new_embeddings)`: Sets the decoder for the language modeling head to `new_embeddings`.
-    - `construct(input_ids=None, position_ids=None, attention_mask=None, head_mask=None, inputs_embeds=None,
+    - `forward(input_ids=None, position_ids=None, attention_mask=None, head_mask=None, inputs_embeds=None,
     num_hashes=None, labels=None, output_hidden_states=None, output_attentions=None, return_dict=None)`:
     Constructs the model and computes the masked language modeling loss if the `labels` argument is provided.
     This method takes several optional input arguments and returns a tuple with the following elements:
@@ -3695,7 +3657,7 @@ class ReformerForMaskedLM(ReformerPreTrainedModel):
         >>> model.set_output_embeddings(new_embeddings)
         ...
         >>> # Constructing the model and computing the masked language modeling loss
-        >>> masked_lm_loss, logits, hidden_states, attentions = model.construct(input_ids, position_ids, attention_mask,
+        >>> masked_lm_loss, logits, hidden_states, attentions = model.forward(input_ids, position_ids, attention_mask,
         ...     head_mask, inputs_embeds, num_hashes, labels, output_hidden_states, output_attentions, return_dict)
         ```
 
@@ -3766,7 +3728,7 @@ class ReformerForMaskedLM(ReformerPreTrainedModel):
         """
         self.lm_head.decoder = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
@@ -3817,7 +3779,7 @@ class ReformerForMaskedLM(ReformerPreTrainedModel):
             >>> # retrieve index of [MASK]
             >>> mask_token_index = (inputs.input_ids == tokenizer.mask_token_id)[0].nonzero(as_tuple=True)[0]
             ...
-            >>> predicted_token_id = logits[0, mask_token_index].argmax(axis=-1)
+            >>> predicted_token_id = logits[0, mask_token_index].argmax(dim=-1)
             >>> predicted_token = tokenizer.decode(predicted_token_id)
             ```
 
@@ -3852,7 +3814,7 @@ class ReformerForMaskedLM(ReformerPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + reformer_outputs[1:]
@@ -3891,7 +3853,7 @@ class ReformerForSequenceClassification(ReformerPreTrainedModel):
             The classification head that takes the encoded sequence and produces the final logits.
 
     Methods:
-        `construct`:
+        `forward`:
             Constructs the sequence classification model and performs forward propagation.
 
             Parameters:
@@ -3933,12 +3895,12 @@ class ReformerForSequenceClassification(ReformerPreTrainedModel):
         ...     'attention_mask': ms.Tensor([[1, 1, 1, 1, 1]])
         ... }
         ...
-        >>> outputs = model.construct(**inputs)
+        >>> outputs = model.forward(**inputs)
         >>> logits = outputs.logits
-        >>> predicted_class_id = logits.argmax(axis=1).item()
+        >>> predicted_class_id = logits.argmax(dim=1).item()
         >>> label = model.config.id2label[predicted_class_id]
         >>> ```
-        >>> To train a model on `num_labels` classes, you can pass `num_labels=num_labels` to the `ReformerForSequenceClassification` constructor:
+        >>> To train a model on `num_labels` classes, you can pass `num_labels=num_labels` to the `ReformerForSequenceClassification` forwardor:
         >>> ```python
         >>> num_labels = len(model.config.id2label)
         >>> model = ReformerForSequenceClassification(config, num_labels=num_labels)
@@ -3949,7 +3911,7 @@ class ReformerForSequenceClassification(ReformerPreTrainedModel):
         ...     'labels': ms.Tensor([1])
         ... }
         ...
-        >>> outputs = model.construct(**inputs)
+        >>> outputs = model.forward(**inputs)
         >>> loss = outputs.loss
         ```
     """
@@ -3984,7 +3946,7 @@ class ReformerForSequenceClassification(ReformerPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
@@ -4064,13 +4026,13 @@ class ReformerForSequenceClassification(ReformerPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -4084,7 +4046,7 @@ class ReformerForSequenceClassification(ReformerPreTrainedModel):
         )
 
 
-class ReformerClassificationHead(nn.Cell):
+class ReformerClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
     def __init__(self, config):
 
@@ -4108,14 +4070,14 @@ class ReformerClassificationHead(nn.Cell):
             RuntimeError: If there is an issue with the initialization of the Dense and Dropout layers.
         """
         super().__init__()
-        self.dense = nn.Dense(2 * config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(2 * config.hidden_size, config.hidden_size)
         classifier_dropout = (
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
+        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(self, hidden_states, **kwargs):
+    def forward(self, hidden_states, **kwargs):
 
         """
         Constructs the classification head for the Reformer model.
@@ -4146,21 +4108,21 @@ class ReformerForQuestionAnswering(ReformerPreTrainedModel):
     This class represents a Reformer model for question answering tasks. It is a subclass of the ReformerPreTrainedModel.
 
     The ReformerForQuestionAnswering class implements the necessary methods to perform question answering on a
-    given input sequence. It includes an initialization method, a construction method, and helper methods.
+    given input sequence. It includes an initialization method, a forwardion method, and helper methods.
 
     The initialization method (__init__) takes a configuration object as input and initializes the Reformer model,
     as well as the necessary layers for question answering. The number of labels is also set in this method.
 
-    The construction method (construct) takes various input tensors and parameters and performs question answering.
+    The forwardion method (forward) takes various input tensors and parameters and performs question answering.
     It utilizes the Reformer model to obtain the sequence output, which is then passed through a dense layer for
     classification. The start and end logits are obtained from the output and are returned along with other relevant
     outputs.
 
-    The construct method also allows optional inputs for start_positions and end_positions, which are used to compute
+    The forward method also allows optional inputs for start_positions and end_positions, which are used to compute
     the token classification loss. The loss is calculated using the cross-entropy loss function. If start_positions and
     end_positions are provided, the total loss is computed as the average of the start and end losses.
 
-    The construct method returns the start and end logits, along with other relevant outputs, depending on the value of
+    The forward method returns the start and end logits, along with other relevant outputs, depending on the value of
     the return_dict parameter. If return_dict is False, a tuple of outputs is returned. If return_dict is True,
     a QuestionAnsweringModelOutput object is returned, containing the start_logits, end_logits, hidden_states,
     and attentions.
@@ -4195,12 +4157,12 @@ class ReformerForQuestionAnswering(ReformerPreTrainedModel):
 
         self.reformer = ReformerModel(config)
         # 2 * config.hidden_size because we use reversible residual layers
-        self.qa_outputs = nn.Dense(2 * config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(2 * config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
@@ -4259,8 +4221,8 @@ class ReformerForQuestionAnswering(ReformerPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

@@ -20,9 +20,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
@@ -74,21 +76,21 @@ class BioGptLearnedPositionalEmbedding(nn.Embedding):
         self.offset = 2
         super().__init__(num_embeddings + self.offset, embedding_dim)
 
-    def construct(self, attention_mask: mindspore.Tensor, past_key_values_length: int = 0):
+    def forward(self, attention_mask: mindspore.Tensor, past_key_values_length: int = 0):
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         attention_mask = attention_mask.long()
 
         # create positions depending on attention_mask
-        positions = (ops.cumsum(attention_mask, axis=1).type_as(attention_mask) * attention_mask).long() - 1
+        positions = (ops.cumsum(attention_mask, dim=1).type_as(attention_mask) * attention_mask).long() - 1
 
         # cut positions if `past_key_values_length` is > 0
         positions = positions[:, past_key_values_length:]
 
-        return super().construct(positions + self.offset)
+        return super().forward(positions + self.offset)
 
 
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->BioGpt
-class BioGptAttention(nn.Cell):
+class BioGptAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     def __init__(
         self,
@@ -136,10 +138,10 @@ class BioGptAttention(nn.Cell):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
@@ -159,7 +161,7 @@ class BioGptAttention(nn.Cell):
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         key_value_states: Optional[mindspore.Tensor] = None,
@@ -197,8 +199,8 @@ class BioGptAttention(nn.Cell):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -236,7 +238,7 @@ class BioGptAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -257,7 +259,7 @@ class BioGptAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -279,7 +281,7 @@ class BioGptAttention(nn.Cell):
         return attn_output, attn_weights_reshaped, past_key_value
 
 
-class BioGptDecoderLayer(nn.Cell):
+class BioGptDecoderLayer(nn.Module):
 
     """
     This class represents a BioGptDecoderLayer, which is a component of a BioGptDecoder in a Transformer-based model.
@@ -292,12 +294,12 @@ class BioGptDecoderLayer(nn.Cell):
         activation_fn (function): The activation function.
         activation_dropout (float): The dropout rate for the activation function.
         self_attn_layer_norm (nn.LayerNorm): The layer normalization for the self-attention output.
-        fc1 (nn.Dense): The first fully connected layer.
-        fc2 (nn.Dense): The second fully connected layer.
+        fc1 (nn.Linear): The first fully connected layer.
+        fc2 (nn.Linear): The second fully connected layer.
         final_layer_norm (nn.LayerNorm): The final layer normalization.
 
     Methods:
-        construct(hidden_states, attention_mask, layer_head_mask, past_key_value, output_attentions, use_cache):
+        forward(hidden_states, attention_mask, layer_head_mask, past_key_value, output_attentions, use_cache):
             Performs the decoding operation on the input hidden states.
 
     """
@@ -343,11 +345,11 @@ class BioGptDecoderLayer(nn.Cell):
 
         self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
 
-        self.fc1 = nn.Dense(self.embed_dim, config.intermediate_size)
-        self.fc2 = nn.Dense(config.intermediate_size, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.intermediate_size)
+        self.fc2 = nn.Linear(config.intermediate_size, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -386,7 +388,7 @@ class BioGptDecoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         # Fully Connected
@@ -394,9 +396,9 @@ class BioGptDecoderLayer(nn.Cell):
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         outputs = (hidden_states,)
@@ -421,12 +423,12 @@ class BioGptPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -444,10 +446,10 @@ class BioGptModel(BioGptPreTrainedModel):
     """
     BioGptModel represents a GPT (Generative Pre-trained Transformer) model customized for bioinformatics tasks.
     This class inherits from BioGptPreTrainedModel and implements methods for initializing the model,
-    setting input embeddings, and constructing the model for inference or training.
+    setting input embeddings, and forwarding the model for inference or training.
     The model includes parameters for layer dropout, hidden dropout probability, embedding dimensions,
     padding index, and layer normalization.
-    The construct method processes input data, applies attention masks, computes positional embeddings,
+    The forward method processes input data, applies attention masks, computes positional embeddings,
     and iterates through decoder layers to generate model output.
     Additionally, the class supports gradient checkpointing and caching for efficient training.
     """
@@ -481,7 +483,7 @@ class BioGptModel(BioGptPreTrainedModel):
         self.embed_tokens = nn.Embedding(config.vocab_size, self.embed_dim, self.padding_idx)
         self.embed_positions = BioGptLearnedPositionalEmbedding(config.max_position_embeddings, self.embed_dim)
 
-        self.layers = nn.CellList([BioGptDecoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([BioGptDecoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.layer_norm = nn.LayerNorm(self.embed_dim)
 
         self.gradient_checkpointing = False
@@ -524,7 +526,7 @@ class BioGptModel(BioGptPreTrainedModel):
         """
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -589,7 +591,7 @@ class BioGptModel(BioGptPreTrainedModel):
 
         if attention_mask is None:
             attention_mask = ops.ones(
-                (inputs_embeds.shape[0], inputs_embeds.shape[1] + past_key_values_length),
+                inputs_embeds.shape[0], inputs_embeds.shape[1] + past_key_values_length,
                 dtype=mindspore.bool_,
             )
         elif attention_mask.shape[1] != past_key_values_length + input_shape[1]:
@@ -607,7 +609,7 @@ class BioGptModel(BioGptPreTrainedModel):
 
         hidden_states = inputs_embeds + positions
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -688,7 +690,7 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
     """
     BioGptForCausalLM represents a BioGpt model for Causal Language Modeling.
     This class inherits from BioGptPreTrainedModel and provides methods for initializing the model,
-    constructing the model, and preparing inputs for generation.
+    forwarding the model, and preparing inputs for generation.
 
     Attributes:
         config: The configuration for the BioGptForCausalLM model.
@@ -697,7 +699,7 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
         __init__(config): Initializes the BioGptForCausalLM model with the given configuration.
         get_output_embeddings(): Returns the output projection layer for the model.
         set_output_embeddings(new_embeddings): Sets the output projection layer to the new embeddings.
-        construct(input_ids, attention_mask, head_mask, inputs_embeds, past_key_values, labels, use_cache,
+        forward(input_ids, attention_mask, head_mask, inputs_embeds, past_key_values, labels, use_cache,
             output_attentions, output_hidden_states, return_dict):
             Constructs the BioGptForCausalLM model with the given input parameters and returns the model output.
         prepare_inputs_for_generation(input_ids, attention_mask, inputs_embeds, past_key_values, **kwargs):
@@ -728,7 +730,7 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
         super().__init__(config)
 
         self.biogpt = BioGptModel(config)
-        self.output_projection = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.output_projection = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -766,7 +768,7 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
         """
         self.output_projection = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -808,7 +810,7 @@ class BioGptForCausalLM(BioGptPreTrainedModel):
             # we are doing next-token prediction; shift prediction scores and input ids by one
             shifted_prediction_scores = prediction_scores[:, :-1, :]
             labels = labels[:, 1:]
-            lm_loss = ops.cross_entropy(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            lm_loss = F.cross_entropy(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores,) + outputs[1:]
@@ -902,7 +904,7 @@ class BioGptForTokenClassification(BioGptPreTrainedModel):
 
     """
     This class represents a BioGpt model for token classification, inheriting from BioGptPreTrainedModel.
-    It includes methods for initializing the model and constructing token classification outputs based on input data.
+    It includes methods for initializing the model and forwarding token classification outputs based on input data.
     The model utilizes a transformer architecture for processing input sequences and generating classification predictions.
     The class provides functionality for computing loss based on predicted logits and actual labels, as well as
     handling optional parameters for caching, attention masks, and return dictionary configurations.
@@ -937,11 +939,11 @@ class BioGptForTokenClassification(BioGptPreTrainedModel):
         else:
             classifier_dropout = config.hidden_dropout_prob
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
@@ -989,9 +991,9 @@ class BioGptForTokenClassification(BioGptPreTrainedModel):
                 active_labels = ops.where(
                     active_loss, labels.view(-1), mindspore.tensor(-100).type_as(labels)
                 )
-                loss = ops.cross_entropy(active_logits, active_labels)
+                loss = F.cross_entropy(active_logits, active_labels)
             else:
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + transformer_outputs[2:]
@@ -1010,12 +1012,12 @@ class BioGptForSequenceClassification(BioGptPreTrainedModel):
     '''
     This class represents a BioGpt model for sequence classification tasks.
     It inherits from the BioGptPreTrainedModel and includes methods for initialization,
-    constructing the model, getting input embeddings, and setting input embeddings.
+    forwarding the model, getting input embeddings, and setting input embeddings.
 
     The __init__ method initializes the BioGptForSequenceClassification instance with a BioGptConfig
     and sets the number of labels, BioGptModel, and score.
 
-    The construct method takes input tensors for the model and returns the sequence classifier output with past key values.
+    The forward method takes input tensors for the model and returns the sequence classifier output with past key values.
     It also handles labels for computing the sequence classification/regression loss and handles different problem types
     such as regression, single-label classification, and multi-label classification.
 
@@ -1047,12 +1049,12 @@ class BioGptForSequenceClassification(BioGptPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.biogpt = BioGptModel(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1119,13 +1121,13 @@ class BioGptForSequenceClassification(BioGptPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output

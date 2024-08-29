@@ -127,7 +127,7 @@ class SegformerImageProcessor(BaseImageProcessor):
         """
         if "reduce_labels" in kwargs:
             warnings.warn(
-                "The `reduce_labels` parameter is deprecated and will be removed in a future version. Please use "
+                "The `reduce_labels` parameter is deprecated. Please use "
                 "`do_reduce_labels` instead.",
                 FutureWarning,
             )

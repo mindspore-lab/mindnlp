@@ -16,14 +16,10 @@
 
 from typing import Optional, Tuple, Union
 
-# import torch
-# from torch import nn
-# from torch.nn import CrossEntropyLoss
 import mindspore
-from mindspore import ops
-from mindspore import nn
+from mindnlp.core import nn
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-
 from ...configuration_utils import PretrainedConfig
 from ...modeling_outputs import BaseModelOutput, Seq2SeqLMOutput
 from ...modeling_utils import PreTrainedModel
@@ -60,7 +56,7 @@ SPEECH_ENCODER_DECODER_START_DOCSTRING = r"""
     library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
     etc.)
 
-    This model is also a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) subclass.
+    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
     Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
     and behavior.
 
@@ -246,7 +242,7 @@ class SpeechEncoderDecoderModel(PreTrainedModel):
             and self.decoder.config.cross_attention_hidden_size is None
         ):
             # encoder outputs might need to be projected to different dimension for decoder
-            self.enc_to_dec_proj = nn.Dense(self.encoder.config.hidden_size, self.decoder.config.hidden_size)
+            self.enc_to_dec_proj = nn.Linear(self.encoder.config.hidden_size, self.decoder.config.hidden_size)
 
         if self.encoder.get_output_embeddings() is not None:
             raise ValueError(
@@ -435,7 +431,7 @@ class SpeechEncoderDecoderModel(PreTrainedModel):
 
     # @add_start_docstrings_to_model_forward(SPEECH_ENCODER_DECODER_INPUTS_DOCSTRING)
     # @replace_return_docstrings(output_type=Seq2SeqLMOutput, config_class=_CONFIG_FOR_DOC)
-    def construct(
+    def forward(
         self,
         inputs: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -552,7 +548,7 @@ class SpeechEncoderDecoderModel(PreTrainedModel):
         loss = None
         if labels is not None:
             logits = decoder_outputs.logits if return_dict else decoder_outputs[0]
-            loss = ops.cross_entropy(logits.reshape(-1, self.decoder.config.vocab_size), labels.reshape(-1))
+            loss = F.cross_entropy(logits.reshape(-1, self.decoder.config.vocab_size), labels.reshape(-1))
 
         if not return_dict:
             if loss is not None:

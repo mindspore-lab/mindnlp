@@ -59,7 +59,7 @@ class LlamaConfig():
         self.norm_eps = norm_eps
 
 
-class RMSNorm(nn.Cell):
+class RMSNorm(nn.Module):
     '''
     RMSNorm
     '''
@@ -126,7 +126,7 @@ def apply_rotary_emb(
     return xq_out.astype(x_q.dtype), xk_out.astype(x_k.dtype)
 
 
-class Attention(nn.Cell):
+class Attention(nn.Module):
     '''
     Attention
     '''
@@ -217,7 +217,7 @@ class Attention(nn.Cell):
         return self.w_o(output)
 
 
-class FeedForward(nn.Cell):
+class FeedForward(nn.Module):
     '''
     FeedForward
     '''
@@ -246,7 +246,7 @@ class FeedForward(nn.Cell):
         return self.w_2(ops.silu(self.w_1(_x)) * self.w_3(_x))
 
 
-class TransformerBlock(nn.Cell):
+class TransformerBlock(nn.Module):
     '''
     TransformerBlock
     '''
@@ -270,7 +270,7 @@ class TransformerBlock(nn.Cell):
         return out
 
 
-class Transformer(nn.Cell):
+class Transformer(nn.Module):
     '''
     Transformer
     '''
@@ -284,7 +284,7 @@ class Transformer(nn.Cell):
             config.vocab_size, config.dim, dtype=mindspore.float16
         )
 
-        self.layers = nn.CellList()
+        self.layers = nn.ModuleList()
         for layer_id in range(config.n_layers):
             self.layers.append(TransformerBlock(layer_id, config))
         self.norm = RMSNorm(config.dim, eps=config.norm_eps)

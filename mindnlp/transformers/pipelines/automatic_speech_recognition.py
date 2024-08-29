@@ -720,7 +720,7 @@ class AutomaticSpeechRecognitionPipeline(ChunkPipeline):
                 total_n, left, right = stride
                 # Total_n might be < logits.shape[1]
                 # because of padding, that's why
-                # we need to reconstruct this information
+                # we need to reforward this information
                 # This won't work with left padding (which doesn't exist right now)
                 right_n = total_n - right
                 items = items[:, left:right_n]

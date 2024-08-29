@@ -19,9 +19,11 @@ import copy
 import warnings
 from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindspore import Parameter
 from mindspore.common.api import _no_grad
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
@@ -134,7 +136,7 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
         return scores
 
 
-class PrefixEncoder(nn.Cell):
+class PrefixEncoder(nn.Module):
     """
     The nn model to encode the prefix
     Input shape: (batch-size, prefix-length)
@@ -167,24 +169,24 @@ class PrefixEncoder(nn.Cell):
             # Use a two-layer MLP to encode the prefix
             kv_size = config.num_layers * config.kv_channels * config.multi_query_group_num * 2
             self.embedding = nn.Embedding(config.pre_seq_len, kv_size)
-            self.trans = nn.SequentialCell([
-                nn.Dense(kv_size, config.hidden_size),
+            self.trans = nn.Sequential([
+                nn.Linear(kv_size, config.hidden_size),
                 nn.Tanh(),
-                nn.Dense(config.hidden_size, kv_size)
+                nn.Linear(config.hidden_size, kv_size)
             ])
         else:
             self.embedding = nn.Embedding(config.pre_seq_len,
                                           config.num_layers * config.kv_channels * config.multi_query_group_num * 2)
 
-    def construct(self, prefix: mindspore.Tensor):
+    def forward(self, prefix: mindspore.Tensor):
         """
         Construct the past key values for the PrefixEncoder.
 
-        This method takes two parameters: self and prefix. It constructs the past key values based on the given prefix.
+        This method takes two parameters: self and prefix. It forwards the past key values based on the given prefix.
 
         Args:
             self (PrefixEncoder): An instance of the PrefixEncoder class.
-            prefix (mindspore.Tensor): The prefix tensor used to construct the past key values.
+            prefix (mindspore.Tensor): The prefix tensor used to forward the past key values.
                 It can be either an embedding tensor or a token tensor.
 
                 - If self.prefix_projection is True, prefix should be an embedding tensor.
@@ -221,24 +223,24 @@ def split_tensor_along_last_dim(
     last_dim = tensor.ndim - 1
     last_dim_size = tensor.shape[last_dim] // num_partitions
     # Split.
-    tensor_list = ops.split(tensor, last_dim_size, axis=last_dim)
+    tensor_list = ops.split(tensor, last_dim_size, dim=last_dim)
     return tensor_list
 
 
-class RotaryEmbedding(nn.Cell):
+class RotaryEmbedding(nn.Module):
 
     """
     This class represents a Rotary Position Embedding module that enhances the Transformer model.
     It provides a mechanism to incorporate positional information into the model's input embeddings, improving its
     ability to understand the order and relationships between elements in a sequence.
 
-    The RotaryEmbedding class inherits from the nn.Cell class, a base class for all neural network modules in the MindSpore framework.
+    The RotaryEmbedding class inherits from the nn.Module class, a base class for all neural network modules in the MindSpore framework.
 
     The RotaryEmbedding class contains the following methods:
 
     - __init__(self, dim, original_impl=False, dtype=None): Initializes a RotaryEmbedding object.
-    - construct_impl(self, seq_len: int, n_elem: int, dtype: mindspore.dtype, base: int = 10000): Constructs the rotary position embeddings.
-    - construct(self, max_seq_len, offset=0): Constructs the rotary position embeddings with the given maximum sequence length.
+    - forward_impl(self, seq_len: int, n_elem: int, dtype: mindspore.dtype, base: int = 10000): Constructs the rotary position embeddings.
+    - forward(self, max_seq_len, offset=0): Constructs the rotary position embeddings with the given maximum sequence length.
 
     For more information on the RotaryEmbedding class and its usage, refer to the original implementation at:
     https://github.com/labmlai/annotated_deep_learning_paper_implementations/blob/master/labml_nn/transformers/rope/__init__.py
@@ -268,7 +270,7 @@ class RotaryEmbedding(nn.Cell):
         self.dim = dim
         self.original_impl = original_impl
 
-    def construct_impl(
+    def forward_impl(
             self, seq_len: int, n_elem: int, dtype: mindspore.dtype, base: int = 10000
     ):
         """Enhanced Transformer with Rotary Position Embedding.
@@ -286,21 +288,21 @@ class RotaryEmbedding(nn.Cell):
         # Calculate the product of position index and $\theta_i$
         idx_theta = ops.outer(seq_idx, theta).float()
 
-        cache = ops.stack([ops.cos(idx_theta), ops.sin(idx_theta)], axis=-1)
+        cache = ops.stack([ops.cos(idx_theta), ops.sin(idx_theta)], dim=-1)
 
         # this is to mimic the behaviour of complex32, else we will get different results
         if dtype in (mindspore.float16, mindspore.bfloat16, mindspore.int8):
             cache = cache.bfloat16() if dtype == mindspore.bfloat16 else cache.half()
         return cache
 
-    def construct(self, max_seq_len, offset=0):
+    def forward(self, max_seq_len, offset=0):
         """
         Constructs a rotary embedding for a given maximum sequence length.
 
         Args:
             self (RotaryEmbedding): An instance of the RotaryEmbedding class.
             max_seq_len (int): The maximum length of the sequence to be embedded.
-            offset (int, optional): The offset value to be used in the embedding construction. Defaults to 0.
+            offset (int, optional): The offset value to be used in the embedding forwardion. Defaults to 0.
 
         Returns:
             None.
@@ -308,7 +310,7 @@ class RotaryEmbedding(nn.Cell):
         Raises:
             None.
         """
-        return self.construct_impl(max_seq_len, self.dim, dtype=self.inv_freq.dtype)
+        return self.forward_impl(max_seq_len, self.dim, dtype=self.inv_freq.dtype)
 
 
 def apply_rotary_pos_emb(x: mindspore.Tensor, rope_cache: mindspore.Tensor) -> mindspore.Tensor:
@@ -341,64 +343,14 @@ def apply_rotary_pos_emb(x: mindspore.Tensor, rope_cache: mindspore.Tensor) -> m
         -1,
     )
     x_out2 = x_out2.flatten(start_dim=3)
-    return ops.cat((x_out2, x_pass), axis=-1)
+    return ops.cat((x_out2, x_pass), dim=-1)
 
+LayerNorm = nn.LayerNorm
 
-class LayerNorm(nn.LayerNorm):
-
-    """
-    This class represents a layer normalization operation in a neural network.
-
-    Layer normalization is a technique used to normalize the activations of a neural network layer.
-    It helps in improving the training performance and generalization of deep neural networks. The LayerNorm
-    class inherits from the nn.LayerNorm class, which provides the basic functionality for layer normalization.
-
-    The LayerNorm class takes the following parameters:
-
-    - normalized_shape: The shape of the input tensor to be normalized.
-    - begin_norm_axis: The axis of the input tensor from which normalization should begin. The default value is -1, indicating the last axis.
-    - begin_params_axis: The axis of the input tensor from which parameter initialization should begin. The default value is -1, indicating the last axis.
-    - gamma_init: The initialization method for the scaling factor parameter. The default value is 'ones', which initializes all elements of the scaling factor to 1.
-    - beta_init: The initialization method for the bias parameter. The default value is 'zeros', which initializes all elements of the bias to 0.
-    - eps: A small value added to the denominator for numerical stability. The default value is 1e-07.
-    - dtype: The data type of the input tensor. The default value is mindspore.float32.
-
-    The LayerNorm class initializes an instance of the class by calling the __init__ method of the nn.LayerNorm class with the provided parameters.
-
-    Example:
-        ```python
-        >>> # Create a LayerNorm instance with normalized_shape=(256,), begin_norm_axis=1, and gamma_init='ones'
-        >>> layer_norm = LayerNorm(normalized_shape=(256,), begin_norm_axis=1, gamma_init='ones')
-        ```
-    """
-    def __init__(self, normalized_shape, begin_norm_axis=-1, begin_params_axis=-1,
-                 gamma_init='ones', beta_init='zeros', eps=1e-7, dtype=mindspore.float32):
-        """
-        Initializes an instance of the LayerNorm class.
-
-        Args:
-            self: The object instance.
-            normalized_shape (tuple): The shape of the input tensor to be normalized.
-            begin_norm_axis (int, optional): The axis from which the normalization is applied. Defaults to -1.
-            begin_params_axis (int, optional): The axis from which the parameter initialization is applied. Defaults to -1.
-            gamma_init (str or initializer, optional): The initializer for the gamma parameter. Defaults to 'ones'.
-            beta_init (str or initializer, optional): The initializer for the beta parameter. Defaults to 'zeros'.
-            eps (float, optional): A small value added to the variance to avoid division by zero. Defaults to 1e-07.
-            dtype (mindspore.dtype, optional): The data type of the input tensor. Defaults to mindspore.float32.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
-        super().__init__([normalized_shape], begin_norm_axis, begin_params_axis, gamma_init, beta_init, eps, dtype)
-
-
-class RMSNorm(nn.Cell):
+class RMSNorm(nn.Module):
 
     """
-    RMSNorm is a normalization technique implemented as a Python class that inherits from nn.Cell.
+    RMSNorm is a normalization technique implemented as a Python class that inherits from nn.Module.
     It is designed to normalize the hidden states of a neural network using the Root Mean Square (RMS) method.
 
     The RMSNorm class has the following attributes:
@@ -409,7 +361,7 @@ class RMSNorm(nn.Cell):
 
     Methods:
         __init__(self, normalized_shape, eps=1e-05, dtype=None, **kwargs): Initializes the RMSNorm instance with the provided parameters.
-        construct(self, hidden_states: mindspore.Tensor): Normalizes the given hidden states using the RMS method.
+        forward(self, hidden_states: mindspore.Tensor): Normalizes the given hidden states using the RMS method.
 
     Usage Example:
         ```python
@@ -417,13 +369,13 @@ class RMSNorm(nn.Cell):
         >>> import mindspore.nn as nn
         >>> import mindspore
         ...
-        >>> class RMSNorm(nn.Cell):
+        >>> class RMSNorm(nn.Module):
         >>>     def __init__(self, normalized_shape, eps=1e-05, dtype=None, **kwargs):
         >>>         super().__init__()
         >>>         self.weight = mindspore.Parameter(ops.zeros(normalized_shape, dtype=dtype))
         >>>         self.eps = eps
         ...
-        >>>     def construct(self, hidden_states: mindspore.Tensor):
+        >>>     def forward(self, hidden_states: mindspore.Tensor):
         >>>         input_dtype = hidden_states.dtype
         >>>         variance = hidden_states.to(mindspore.float32).pow(2).mean(-1, keep_dims=True)
         >>>         hidden_states = hidden_states * ops.rsqrt(variance + self.eps)
@@ -450,7 +402,7 @@ class RMSNorm(nn.Cell):
         self.weight = Parameter(ops.zeros(normalized_shape, dtype=dtype))
         self.eps = eps
 
-    def construct(self, hidden_states: mindspore.Tensor):
+    def forward(self, hidden_states: mindspore.Tensor):
         """
         Constructs the RMSNorm of the given hidden states.
 
@@ -480,7 +432,7 @@ class RMSNorm(nn.Cell):
             ```python
             >>> rms_norm = RMSNorm()
             >>> hidden_states = mindspore.Tensor(np.random.randn(3, 5, 10), dtype=mindspore.float32)
-            >>> rms_norm.construct(hidden_states)
+            >>> rms_norm.forward(hidden_states)
             ```
         """
         input_dtype = hidden_states.dtype
@@ -490,12 +442,12 @@ class RMSNorm(nn.Cell):
         return (self.weight * hidden_states).to(input_dtype)
 
 
-class CoreAttention(nn.Cell):
+class CoreAttention(nn.Module):
 
     """
     The CoreAttention class represents a core component of attention mechanism for neural network models.
     This class is used to perform attention operations on query, key, and value layers.
-    It inherits from the nn.Cell class.
+    It inherits from the nn.Module class.
 
     Attributes:
         config (ChatGLM2Config): The configuration for the attention mechanism.
@@ -503,11 +455,11 @@ class CoreAttention(nn.Cell):
 
     Methods:
         __init__: Initializes the CoreAttention instance with the provided configuration and layer number.
-        construct: Constructs the attention mechanism by performing attention operations on the input query, key,
+        forward: Constructs the attention mechanism by performing attention operations on the input query, key,
             and value layers with the optional attention mask.
 
     The __init__ method initializes the CoreAttention instance with the given configuration and layer number.
-    The construct method performs attention operations on the query, key, and value layers, and optionally applies
+    The forward method performs attention operations on the query, key, and value layers, and optionally applies
     the attention mask.
 
     Note:
@@ -552,7 +504,7 @@ class CoreAttention(nn.Cell):
 
         self.attention_dropout = nn.Dropout(p=config.attention_dropout)
 
-    def construct(self, query_layer, key_layer, value_layer, attention_mask):
+    def forward(self, query_layer, key_layer, value_layer, attention_mask):
         """
         Constructs the attention layer of the CoreAttention class.
 
@@ -586,7 +538,7 @@ class CoreAttention(nn.Cell):
             >>> key = torch.randn(2, 5, 10)
             >>> value = torch.randn(2, 5, 10)
             >>> attention = CoreAttention()
-            >>> attention.construct(query, key, value, None)
+            >>> attention.forward(query, key, value, None)
             ```
         """
         # wait for flash attention
@@ -636,7 +588,7 @@ class CoreAttention(nn.Cell):
             attention_mask = ~attention_mask
         if attention_mask is not None:
             attention_scores = attention_scores.masked_fill(attention_mask, float("-inf"))
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
         attention_probs = attention_probs.astype(value_layer.dtype)
 
         # This is actually dropping out entire tokens to attend to, which might
@@ -668,7 +620,7 @@ class CoreAttention(nn.Cell):
         return context_layer
 
 
-class SelfAttention(nn.Cell):
+class SelfAttention(nn.Module):
     """Parallel self-attention layer abstract class.
 
     Self-attention layer takes input with size [s, b, h]
@@ -705,17 +657,17 @@ class SelfAttention(nn.Cell):
             self.qkv_hidden_size = (
                     self.projection_size + 2 * self.hidden_size_per_attention_head * config.multi_query_group_num
             )
-        self.query_key_value = nn.Dense(config.hidden_size, self.qkv_hidden_size,
-                                        has_bias=config.add_bias_linear or config.add_qkv_bias,
+        self.query_key_value = nn.Linear(config.hidden_size, self.qkv_hidden_size,
+                                        bias=config.add_bias_linear or config.add_qkv_bias,
                                         **_config_to_kwargs(config))
 
         self.core_attention = CoreAttention(config, self.layer_number)
 
         # Output.
-        self.dense = nn.Dense(self.projection_size, config.hidden_size, has_bias=config.add_bias_linear,
+        self.dense = nn.Linear(self.projection_size, config.hidden_size, bias=config.add_bias_linear,
                               **_config_to_kwargs(config))
 
-    def construct(
+    def forward(
             self, hidden_states, attention_mask, rotary_pos_emb, kv_cache=None, use_cache=True
     ):
         """
@@ -796,8 +748,8 @@ class SelfAttention(nn.Cell):
         # adjust key and value for inference
         if kv_cache is not None:
             cache_k, cache_v = kv_cache
-            key_layer = ops.cat((cache_k, key_layer), axis=0)
-            value_layer = ops.cat((cache_v, value_layer), axis=0)
+            key_layer = ops.cat((cache_k, key_layer), dim=0)
+            value_layer = ops.cat((cache_v, value_layer), dim=0)
         if use_cache:
             kv_cache = (key_layer, value_layer)
         else:
@@ -853,7 +805,7 @@ def _config_to_kwargs(args):
     return common_kwargs
 
 
-class MLP(nn.Cell):
+class MLP(nn.Module):
     """MLP.
 
     MLP will take the input with h hidden state, project it to 4*h
@@ -879,28 +831,28 @@ class MLP(nn.Cell):
         self.add_bias = config.add_bias_linear
 
         # Project to 4h. If using swiglu double the output width, see https://arxiv.org/pdf/2002.05202.pdf
-        self.dense_h_to_4h = nn.Dense(
+        self.dense_h_to_4h = nn.Linear(
             config.hidden_size,
             config.ffn_hidden_size * 2,
-            has_bias=self.add_bias,
+            bias=self.add_bias,
             **_config_to_kwargs(config)
         )
 
         def swiglu(x):
-            x = ops.chunk(x, 2, axis=-1)
+            x = ops.chunk(x, 2, dim=-1)
             return ops.silu(x[0]) * x[1]
 
         self.activation_func = swiglu
 
         # Project back to h.
-        self.dense_4h_to_h = nn.Dense(
+        self.dense_4h_to_h = nn.Linear(
             config.ffn_hidden_size,
             config.hidden_size,
-            has_bias=self.add_bias,
+            bias=self.add_bias,
             **_config_to_kwargs(config)
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the output of the MLP.
 
@@ -909,10 +861,10 @@ class MLP(nn.Cell):
             hidden_states (Tensor): The hidden states input to the MLP.
                 This should be a tensor of shape (batch_size, hidden_dim), where batch_size is the number of samples
                 in the batch and hidden_dim is the dimension of the hidden states.
-                The hidden states serve as the input to the MLP for constructing the output.
+                The hidden states serve as the input to the MLP for forwarding the output.
 
         Returns:
-            output (Tensor): The output tensor constructed by the MLP. This is a tensor of shape (batch_size, hidden_dim),
+            output (Tensor): The output tensor forwarded by the MLP. This is a tensor of shape (batch_size, hidden_dim),
                 where batch_size is the number of samples in the batch and hidden_dim is the dimension of the hidden
                 states. The output tensor represents the result of applying the MLP layers to the input hidden states.
 
@@ -927,7 +879,7 @@ class MLP(nn.Cell):
         return output
 
 
-class GLMBlock(nn.Cell):
+class GLMBlock(nn.Module):
     """A single transformer layer.
 
     Transformer layer takes input with size [s, b, h] and returns an
@@ -978,7 +930,7 @@ class GLMBlock(nn.Cell):
         # MLP
         self.mlp = MLP(config)
 
-    def construct(
+    def forward(
             self, hidden_states, attention_mask, rotary_pos_emb, kv_cache=None, use_cache=True,
     ):
         """
@@ -1028,7 +980,7 @@ class GLMBlock(nn.Cell):
         else:
             residual = hidden_states
 
-        layernorm_input = ops.dropout(attention_output, p=self.hidden_dropout, training=self.training)
+        layernorm_input = F.dropout(attention_output, p=self.hidden_dropout, training=self.training)
         layernorm_input = residual + layernorm_input
 
         # Layer norm post the self attention.
@@ -1043,13 +995,13 @@ class GLMBlock(nn.Cell):
         else:
             residual = layernorm_input
 
-        output = ops.dropout(mlp_output, p=self.hidden_dropout, training=self.training)
+        output = F.dropout(mlp_output, p=self.hidden_dropout, training=self.training)
         output = residual + output
 
         return output, kv_cache
 
 
-class GLMTransformer(nn.Cell):
+class GLMTransformer(nn.Module):
     """Transformer class."""
     def __init__(self, config: ChatGLM2Config):
         '''
@@ -1082,7 +1034,7 @@ class GLMTransformer(nn.Cell):
         def build_layer(layer_number):
             return GLMBlock(config, layer_number)
 
-        self.layers = nn.CellList([build_layer(i + 1) for i in range(self.num_layers)])
+        self.layers = nn.ModuleList([build_layer(i + 1) for i in range(self.num_layers)])
 
         if self.post_layer_norm:
             LayerNormFunc = RMSNorm if config.rmsnorm else LayerNorm
@@ -1110,7 +1062,7 @@ class GLMTransformer(nn.Cell):
         """
         return self.layers[layer_number]
 
-    def construct(
+    def forward(
             self, hidden_states, attention_mask, rotary_pos_emb, kv_caches=None,
             use_cache: Optional[bool] = True,
             output_hidden_states: Optional[bool] = False,
@@ -1211,7 +1163,7 @@ class ChatGLM2PreTrainedModel(PreTrainedModel):
         if past_key_values:
             past_length = past_key_values[0][0].shape[0]
         if past_length:
-            full_attention_mask = ops.cat((ops.ones(batch_size, seq_length, past_length), full_attention_mask), axis=-1)
+            full_attention_mask = ops.cat((ops.ones(batch_size, seq_length, past_length), full_attention_mask), dim=-1)
         if padding_mask is not None:
             full_attention_mask = full_attention_mask * padding_mask.unsqueeze(1)
         if not past_length and padding_mask is not None:
@@ -1240,7 +1192,7 @@ class ChatGLM2PreTrainedModel(PreTrainedModel):
         return position_ids
 
 
-class Embedding(nn.Cell):
+class Embedding(nn.Module):
     """Language model embeddings."""
     def __init__(self, config: ChatGLM2Config):
         """
@@ -1272,7 +1224,7 @@ class Embedding(nn.Cell):
         )
         self.fp32_residual_connection = config.fp32_residual_connection
 
-    def construct(self, input_ids):
+    def forward(self, input_ids):
         """
         Construct word embeddings from input_ids.
 
@@ -1302,11 +1254,11 @@ class ChatGLM2Model(ChatGLM2PreTrainedModel):
     """
     This class represents the ChatGLM2Model, which is used for natural language processing tasks.
     It inherits from the ChatGLM2PreTrainedModel and contains methods for initializing the model, getting input
-    embeddings, getting prompts, constructing the model, and quantizing the model's weights.
+    embeddings, getting prompts, forwarding the model, and quantizing the model's weights.
     The class contains attributes for embedding, number of layers, multi-query group number, key-value channels,
     sequence length, rotary position embedding, encoder, output layer, prefix sequence length, prefix projection,
     prefix tokens, prefix encoder, and dropout.
-    The methods included are __init__, get_input_embeddings, get_prompt, construct, and quantize.
+    The methods included are __init__, get_input_embeddings, get_prompt, forward, and quantize.
     """
     def __init__(self, config: ChatGLM2Config, empty_init=True):
         """
@@ -1344,7 +1296,7 @@ class ChatGLM2Model(ChatGLM2PreTrainedModel):
         self.rotary_pos_emb = RotaryEmbedding(rotary_dim // 2, original_impl=config.original_rope,
                                               dtype=config.ms_dtype)
         self.encoder = init_method(GLMTransformer, config, **init_kwargs)
-        self.output_layer = init_method(nn.Dense, config.hidden_size, config.padded_vocab_size, has_bias=False,
+        self.output_layer = init_method(nn.Linear, config.hidden_size, config.padded_vocab_size, bias=False,
                                         dtype=config.ms_dtype, **init_kwargs)
         self.pre_seq_len = config.pre_seq_len
         self.prefix_projection = config.prefix_projection
@@ -1399,7 +1351,7 @@ class ChatGLM2Model(ChatGLM2PreTrainedModel):
         past_key_values = past_key_values.permute([2, 1, 0, 3, 4]).split(2)
         return past_key_values
 
-    def construct(
+    def forward(
             self,
             input_ids,
             position_ids: Optional[mindspore.Tensor] = None,
@@ -1450,7 +1402,7 @@ class ChatGLM2Model(ChatGLM2PreTrainedModel):
                                                   dtype=inputs_embeds.dtype)
             if attention_mask is not None:
                 attention_mask = ops.cat([attention_mask.new_ones((batch_size, self.pre_seq_len), dtype=attention_mask.dtype),
-                                            attention_mask], axis=-1)
+                                            attention_mask], dim=-1)
 
         if full_attention_mask is None:
             if (attention_mask is not None and not attention_mask.all()) or (past_key_values and seq_length != 1):
@@ -1503,7 +1455,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
     """A Python class representing a conditional generation model for chat-based tasks using ChatGLM2.
 
     This class inherits from ChatGLM2PreTrainedModel and includes methods to initialize the model, update model keyword
-    arguments for generation, prepare inputs for generation, construct the model, reorder cache, process response,
+    arguments for generation, prepare inputs for generation, forward the model, reorder cache, process response,
     build inputs, build stream inputs, chat, stream chat, stream generate, and quantize the model.
 
     The methods in this class enable the generation of responses for chat-based queries, handling of input data, and
@@ -1561,14 +1513,14 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
         '''
         # update past_key_values
         model_kwargs["past_key_values"] = self._extract_past_from_model_output(
-            outputs, standardize_cache_format=standardize_cache_format
+            outputs
         )
 
         # update attention mask
         if "attention_mask" in model_kwargs:
             attention_mask = model_kwargs["attention_mask"]
             model_kwargs["attention_mask"] = ops.cat(
-                [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1), dtype=attention_mask.dtype)], axis=-1
+                [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1), dtype=attention_mask.dtype)], dim=-1
             )
 
         # update position ids
@@ -1577,7 +1529,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
             new_position_id = position_ids[..., -1:].copy()
             new_position_id += 1
             model_kwargs["position_ids"] = ops.cat(
-                [position_ids, new_position_id], axis=-1
+                [position_ids, new_position_id], dim=-1
             )
 
         model_kwargs["is_first_forward"] = False
@@ -1639,7 +1591,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
             "use_cache": use_cache
         }
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             position_ids: Optional[mindspore.Tensor] = None,
@@ -1717,7 +1669,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1),
+            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1),
                                      ignore_index=-100)
 
             lm_logits = lm_logits.to(hidden_states.dtype)
@@ -1915,7 +1867,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
                 past_length -= self.transformer.pre_seq_len
             inputs['position_ids'] = inputs.position_ids + past_length # mindspore do not support `x += 1`
             attention_mask = inputs.attention_mask
-            attention_mask = ops.cat((attention_mask.new_ones((1, past_length), dtype=attention_mask.dtype), attention_mask), axis=1)
+            attention_mask = ops.cat((attention_mask.new_ones((1, past_length), dtype=attention_mask.dtype), attention_mask), dim=1)
             inputs['attention_mask'] = attention_mask
         for outputs in self.stream_generate(**inputs, past_key_values=past_key_values,
                                             return_past_key_values=return_past_key_values, **gen_kwargs):
@@ -1962,7 +1914,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
 
         Raises:
             UserWarning: If using `max_length`'s default value to control generation length.
-                This behavior is deprecated and will be removed in v5 of Transformers.
+                This behavior is deprecated.
                 It is recommended to use `max_new_tokens` instead.
             UserWarning: If both `max_new_tokens` and `max_length` are set. `max_new_tokens` takes precedence.
             UserWarning: If the input length exceeds `max_length` and may lead to unexpected behavior.
@@ -2045,14 +1997,14 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
             next_token_scores = logits_warper(input_ids, next_token_scores)
 
             # sample
-            probs = ops.softmax(next_token_scores, axis=-1)
+            probs = ops.softmax(next_token_scores, dim=-1)
             if generation_config.do_sample:
                 next_tokens = ops.multinomial(probs, num_samples=1).squeeze(1)
             else:
                 next_tokens = ops.argmax(probs, dim=-1)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            input_ids = ops.cat([input_ids, next_tokens[:, None]], dim=-1)
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
             )
@@ -2094,7 +2046,7 @@ class ChatGLM2ForSequenceClassification(ChatGLM2PreTrainedModel):
     empty initialization. It initializes the model with the provided configuration and sets up the transformer and
     classifier head layers.
 
-    The construct method takes various input tensors and parameters for generating the sequence classification output.
+    The forward method takes various input tensors and parameters for generating the sequence classification output.
     It returns a sequence classifier output with past states if the return_dict parameter is set, or a tuple of tensors
     including logits and transformer outputs. The method also handles the calculation of loss based on the provided labels and problem type.
     
@@ -2122,7 +2074,7 @@ class ChatGLM2ForSequenceClassification(ChatGLM2PreTrainedModel):
         self.num_labels = config.num_labels
         self.transformer = ChatGLM2Model(config, empty_init=empty_init)
 
-        self.classifier_head = nn.Dense(config.hidden_size, config.num_labels, has_bias=True, dtype=mindspore.float16)
+        self.classifier_head = nn.Linear(config.hidden_size, config.num_labels, bias=True, dtype=mindspore.float16)
         if config.classifier_dropout is not None:
             self.dropout = nn.Dropout(p=config.classifier_dropout)
         else:
@@ -2132,7 +2084,7 @@ class ChatGLM2ForSequenceClassification(ChatGLM2PreTrainedModel):
         if self.config.quantization_bit:
             self.quantize(self.config.quantization_bit, empty_init=True)
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             position_ids: Optional[mindspore.Tensor] = None,
@@ -2199,13 +2151,13 @@ class ChatGLM2ForSequenceClassification(ChatGLM2PreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze().float(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze().float(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits.float(), labels)
+                    loss = F.mse_loss(logits.float(), labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels).float(), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels).float(), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits.float(), labels.view(-1, self.num_labels))
+                loss = F.binary_cross_entropy_with_logits(logits.float(), labels.view(-1, self.num_labels))
 
         if not return_dict:
             output = (logits,) + transformer_outputs[1:]

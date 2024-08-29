@@ -40,7 +40,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindnlp.core import nn, ops
 
     from mindnlp.transformers import (
         CLIPSegForImageSegmentation, 
@@ -57,7 +57,6 @@ if is_mindspore_available():
 
 if is_vision_available():
     from PIL import Image
-
 
 class CLIPSegVisionModelTester:
     def __init__(
@@ -161,7 +160,7 @@ class CLIPSegVisionModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="SegFormer does not have get_input_embeddings method and get_output_embeddings methods")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_model_get_set_embeddings(self):
@@ -169,7 +168,7 @@ class CLIPSegVisionModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
             self.assertTrue(x is None or isinstance(x, nn.Linear))
 
@@ -178,7 +177,7 @@ class CLIPSegVisionModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -458,7 +457,7 @@ class CLIPSegModelTest(ModelTesterMixin, unittest.TestCase):
             if model_class.__name__ == "CLIPSegForImageSegmentation":
                 batch_size, _, height, width = inputs_dict["pixel_values"].shape
                 inputs_dict["labels"] = ops.zeros(
-                    [batch_size, height, width], dtype=mindspore.float32
+                    batch_size, height, width, dtype=mindspore.float32
                 )
 
         return inputs_dict
@@ -506,7 +505,7 @@ class CLIPSegModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip("SegFormer does not have get_input_embeddings method and get_output_embeddings methods")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(

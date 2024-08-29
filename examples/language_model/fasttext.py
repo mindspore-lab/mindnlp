@@ -29,7 +29,7 @@ from mindnlp import load_dataset, process
 from mindnlp.transforms import BasicTokenizer
 
 
-class FasttextModel(nn.Cell):
+class FasttextModel(nn.Module):
     """
     FastText model
     """

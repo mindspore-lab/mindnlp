@@ -37,6 +37,7 @@ class TextLoader:
             with open(self.file_path) as f:
                 text = f.read()
         except Exception as e:
-            raise RuntimeError(f"Error loading {self.file_path}") from e
+            with open(self.file_path, encoding='gbk') as f:
+                text = f.read()
 
         return text

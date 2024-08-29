@@ -12,41 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=unused-variable
-# pylint: disable=unused-argument
-# pylint: disable=redefined-builtin
-# pylint: disable=invalid-name
-# pylint: disable=consider-using-enumerate
-""" Testing suite for the Mindspore Hubert model. """
+"""Testing suite for the MindSpore Hubert model."""
 
 import math
+import os
+import pickle
+import tempfile
 import unittest
 import pytest
-import numpy as np
-
-from datasets import load_dataset
-
-import mindspore as ms
-import mindspore.ops as F
-import mindspore.numpy as mnp
-from mindspore import Tensor
 
 from mindnlp.transformers import HubertConfig
-from mindnlp.transformers import (
-    HubertForCTC,
-    HubertForSequenceClassification,
-    HubertModel,
-    Wav2Vec2FeatureExtractor,
-    Wav2Vec2Processor,
-)
-from mindnlp.transformers.models.hubert.modeling_hubert import _compute_mask_indices
-from mindnlp.utils.testing_utils import (
-    is_mindspore_available,
-    require_mindspore,
-    slow,
-)
+from mindnlp.utils.testing_utils import require_soundfile, require_mindspore, slow
+from mindnlp.utils import is_mindspore_available
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import (
@@ -56,8 +33,21 @@ from ...test_modeling_common import (
     ids_tensor,
     random_attention_mask,
 )
+# from ...test_pipeline_mixin import PipelineTesterMixin
 
-mnp.allclose = lambda x, y, *args, **kwargs: np.allclose(x.asnumpy(), y.asnumpy(), *args, **kwargs)
+
+if is_mindspore_available():
+    import mindspore
+    from mindnlp.core import ops, nn, no_grad, get_default_dtype
+
+    from mindnlp.transformers import (
+        HubertForCTC,
+        HubertForSequenceClassification,
+        HubertModel,
+        Wav2Vec2FeatureExtractor,
+        Wav2Vec2Processor,
+    )
+    from mindnlp.transformers.models.hubert.modeling_hubert import _compute_mask_indices
 
 
 class HubertModelTester:
@@ -122,7 +112,9 @@ class HubertModelTester:
     def prepare_config_and_inputs(self):
         input_values = floats_tensor([self.batch_size, self.seq_length], scale=1.0)
         attention_mask = random_attention_mask([self.batch_size, self.seq_length])
+
         config = self.get_config()
+
         return config, input_values, attention_mask
 
     def get_config(self):
@@ -150,7 +142,7 @@ class HubertModelTester:
 
     def create_and_check_model(self, config, input_values, attention_mask):
         model = HubertModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(input_values, attention_mask=attention_mask)
         self.parent.assertEqual(
             result.last_hidden_state.shape, (self.batch_size, self.output_seq_length, self.hidden_size)
@@ -160,13 +152,14 @@ class HubertModelTester:
         # test does not pass for models making use of `group_norm`
         # check: https://github.com/pytorch/fairseq/issues/3227
         model = HubertModel(config=config)
-        model.set_train(False)
+        model.eval()
 
         input_values = input_values[:3]
-        attention_mask = F.ones(input_values.shape, dtype=ms.bool_)
+        attention_mask = ops.ones(input_values.shape, dtype=mindspore.bool_)
+
+        input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
 
         # pad input
-        input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
         for i in range(len(input_lengths)):
             input_values[i, input_lengths[i] :] = 0.0
             attention_mask[i, input_lengths[i] :] = 0.0
@@ -178,18 +171,20 @@ class HubertModelTester:
             output = model(input_slice).last_hidden_state
 
             batch_output = batch_outputs[i : i + 1, : output.shape[1]]
-            self.parent.assertTrue(mnp.allclose(output, batch_output, atol=1e-3))
+            self.parent.assertTrue(ops.allclose(output, batch_output, atol=1e-3))
 
     def check_ctc_loss(self, config, input_values, *args):
         model = HubertForCTC(config=config)
-        model.set_train(False) # make sure that dropout is disabled
+
+        # make sure that dropout is disabled
+        model.eval()
 
         input_values = input_values[:3]
-        attention_mask = F.ones(input_values.shape, dtype=ms.int64)
+        attention_mask = ops.ones(input_values.shape, dtype=mindspore.int64)
 
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
-        max_length_labels = model._get_feat_extract_output_lengths(ms.tensor(input_lengths))
-        labels = ids_tensor((input_values.shape[0], min(max_length_labels).item() - 1), model.config.vocab_size)
+        max_length_labels = model._get_feat_extract_output_lengths(mindspore.tensor(input_lengths))
+        labels = ids_tensor((input_values.shape[0], min(max_length_labels.tolist()) - 1), model.config.vocab_size)
 
         # pad input
         for i in range(len(input_lengths)):
@@ -207,10 +202,12 @@ class HubertModelTester:
 
     def check_seq_classifier_loss(self, config, input_values, *args):
         model = HubertForSequenceClassification(config=config)
-        model.set_train(False) # make sure that dropout is disabled
+
+        # make sure that dropout is disabled
+        model.eval()
 
         input_values = input_values[:3]
-        attention_mask = F.ones(input_values.shape, dtype=ms.int64)
+        attention_mask = ops.ones(input_values.shape, dtype=mindspore.int64)
 
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
         labels = ids_tensor((input_values.shape[0], 1), len(model.config.id2label))
@@ -230,39 +227,41 @@ class HubertModelTester:
     def check_ctc_training(self, config, input_values, *args):
         config.ctc_zero_infinity = True
         model = HubertForCTC(config=config)
-        model.set_train(True)
+        model.train()
 
         # freeze feature encoder
         model.freeze_feature_encoder()
 
         input_values = input_values[:3]
+
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
-        max_length_labels = model._get_feat_extract_output_lengths(ms.tensor(input_lengths))
-        labels = ids_tensor((input_values.shape[0], max(max_length_labels).item() - 2), model.config.vocab_size)
+        max_length_labels = model._get_feat_extract_output_lengths(mindspore.tensor(input_lengths))
+        labels = ids_tensor((input_values.shape[0], max(max_length_labels.tolist()) - 2), model.config.vocab_size)
 
         # pad input
         for i in range(len(input_lengths)):
             input_values[i, input_lengths[i] :] = 0.0
 
-            if max_length_labels[i].item() < labels.shape[-1]:
+            if max_length_labels[i] < labels.shape[-1]:
                 # it's important that we make sure that target lengths are at least
                 # one shorter than logit lengths to prevent -inf
-                labels[i, max_length_labels[i].item() - 1 :] = -100
+                labels[i, max_length_labels[i] - 1 :] = -100
 
         loss = model(input_values, labels=labels).loss
-        self.parent.assertFalse(F.isinf(loss).item())
+        self.parent.assertFalse(ops.isinf(loss).item())
 
-        # TODO: backward()
+        loss.backward()
 
     def check_seq_classifier_training(self, config, input_values, *args):
         config.ctc_zero_infinity = True
         model = HubertForSequenceClassification(config=config)
-        model.set_train(True)
+        model.train()
 
         # freeze everything but the classification head
         model.freeze_base_model()
 
         input_values = input_values[:3]
+
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
         labels = ids_tensor((input_values.shape[0], 1), len(model.config.id2label))
 
@@ -271,18 +270,19 @@ class HubertModelTester:
             input_values[i, input_lengths[i] :] = 0.0
 
         loss = model(input_values, labels=labels).loss
-        self.parent.assertFalse(F.isinf(loss).item())
+        self.parent.assertFalse(ops.isinf(loss).item())
 
-        # TODO: backward()
+        loss.backward()
 
     def check_labels_out_of_vocab(self, config, input_values, *args):
         model = HubertForCTC(config)
-        model.set_train(True)
+        model.train()
 
         input_values = input_values[:3]
+
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
-        max_length_labels = model._get_feat_extract_output_lengths(ms.tensor(input_lengths))
-        labels = ids_tensor((input_values.shape[0], max(max_length_labels).item() - 2), model.config.vocab_size + 100)
+        max_length_labels = model._get_feat_extract_output_lengths(mindspore.tensor(input_lengths))
+        labels = ids_tensor((input_values.shape[0], max(max_length_labels.tolist()) - 2), model.config.vocab_size + 100)
 
         with pytest.raises(ValueError):
             model(input_values, labels=labels)
@@ -302,6 +302,8 @@ class HubertModelTest(ModelTesterMixin, unittest.TestCase):
             "automatic-speech-recognition": HubertForCTC,
             "feature-extraction": HubertModel,
         }
+        if is_mindspore_available()
+        else {}
     )
     fx_compatible = True
     test_pruning = False
@@ -326,12 +328,10 @@ class HubertModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.check_seq_classifier_loss(*config_and_inputs)
 
-    @unittest.skip('ignore train temporarily')
     def test_ctc_train(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.check_ctc_training(*config_and_inputs)
 
-    @unittest.skip('ignore train temporarily')
     def test_seq_classifier_train(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.check_seq_classifier_training(*config_and_inputs)
@@ -340,23 +340,22 @@ class HubertModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.check_labels_out_of_vocab(*config_and_inputs)
 
-    # Hubert has no inputs_embeds
+    @unittest.skip(reason="Hubert has no inputs_embeds")
     def test_inputs_embeds(self):
         pass
 
-    # `input_ids` is renamed to `input_values`
+    @unittest.skip(reason="Hubert has no inputs_embeds")
     def test_forward_signature(self):
         pass
 
     # Hubert cannot resize token embeddings
     # since it has no tokens embeddings
+    @unittest.skip(reason="Hubert has no tokens embeddings")
     def test_resize_tokens_embeddings(self):
         pass
 
-    # Hubert has no inputs_embeds
-    # and thus the `get_input_embeddings` fn
-    # is not implemented
-    def test_model_common_attributes(self):
+    @unittest.skip(reason="Hubert has no inputs_embeds")
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_initialization(self):
@@ -365,7 +364,7 @@ class HubertModelTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            for name, param in model.parameters_and_names():
+            for name, param in model.named_parameters():
                 uniform_init_parms = [
                     "conv.weight",
                     "conv.parametrizations.weight",
@@ -384,6 +383,19 @@ class HubertModelTest(ModelTesterMixin, unittest.TestCase):
                             [0.0, 1.0],
                             msg=f"Parameter {name} of model {model_class} seems not properly initialized",
                         )
+
+    # overwrite from test_modeling_common
+    def _mock_init_weights(self, module):
+        if hasattr(module, "weight") and module.weight is not None:
+            module.weight.data.fill_(3)
+        if hasattr(module, "weight_g") and module.weight_g is not None:
+            module.weight_g.data.fill_(3)
+        if hasattr(module, "weight_v") and module.weight_v is not None:
+            module.weight_v.data.fill_(3)
+        if hasattr(module, "bias") and module.bias is not None:
+            module.bias.data.fill_(3)
+        if hasattr(module, "masked_spec_embed") and module.masked_spec_embed is not None:
+            module.masked_spec_embed.data.fill_(3)
 
     @unittest.skip(reason="Feed forward chunking is not implemented")
     def test_feed_forward_chunking(self):
@@ -426,12 +438,10 @@ class HubertRobustModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.check_seq_classifier_loss(*config_and_inputs)
 
-    @unittest.skip('ignore train temporarily')
     def test_ctc_train(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.check_ctc_training(*config_and_inputs)
 
-    @unittest.skip('ignore train temporarily')
     def test_seq_classifier_train(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.check_seq_classifier_training(*config_and_inputs)
@@ -440,23 +450,20 @@ class HubertRobustModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.check_labels_out_of_vocab(*config_and_inputs)
 
-    # Hubert has no inputs_embeds
+    @unittest.skip(reason="Hubert has no inputs_embeds")
     def test_inputs_embeds(self):
         pass
 
-    # `input_ids` is renamed to `input_values`
+    @unittest.skip(reason="Hubert has input_values instead of input_ids")
     def test_forward_signature(self):
         pass
 
-    # Hubert cannot resize token embeddings
-    # since it has no tokens embeddings
+    @unittest.skip(reason="Hubert has no tokens embeddings")
     def test_resize_tokens_embeddings(self):
         pass
 
-    # Hubert has no inputs_embeds
-    # and thus the `get_input_embeddings` fn
-    # is not implemented
-    def test_model_common_attributes(self):
+    @unittest.skip(reason="Hubert has no inputs_embeds")
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_initialization(self):
@@ -465,7 +472,7 @@ class HubertRobustModelTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            for name, param in model.parameters_and_names():
+            for name, param in model.named_parameters():
                 uniform_init_parms = [
                     "conv.weight",
                     "conv.parametrizations.weight",
@@ -484,6 +491,19 @@ class HubertRobustModelTest(ModelTesterMixin, unittest.TestCase):
                             [0.0, 1.0],
                             msg=f"Parameter {name} of model {model_class} seems not properly initialized",
                         )
+
+    # overwrite from test_modeling_common
+    def _mock_init_weights(self, module):
+        if hasattr(module, "weight") and module.weight is not None:
+            module.weight.data.fill_(3)
+        if hasattr(module, "weight_g") and module.weight_g is not None:
+            module.weight_g.data.fill_(3)
+        if hasattr(module, "weight_v") and module.weight_v is not None:
+            module.weight_v.data.fill_(3)
+        if hasattr(module, "bias") and module.bias is not None:
+            module.bias.data.fill_(3)
+        if hasattr(module, "masked_spec_embed") and module.masked_spec_embed is not None:
+            module.masked_spec_embed.data.fill_(3)
 
     @unittest.skip(reason="Feed forward chunking is not implemented")
     def test_feed_forward_chunking(self):
@@ -504,7 +524,7 @@ class HubertUtilsTest(unittest.TestCase):
         mask_length = 1
 
         mask = _compute_mask_indices((batch_size, sequence_length), mask_prob, mask_length)
-        mask = Tensor.from_numpy(mask)
+        mask = ops.from_numpy(mask)
 
         self.assertListEqual(mask.sum(axis=-1).tolist(), [mask_prob * sequence_length for _ in range(batch_size)])
 
@@ -515,7 +535,7 @@ class HubertUtilsTest(unittest.TestCase):
         mask_length = 4
 
         mask = _compute_mask_indices((batch_size, sequence_length), mask_prob, mask_length)
-        mask = Tensor.from_numpy(mask)
+        mask = ops.from_numpy(mask)
 
         # because of overlap mask don't have to add up exactly to `mask_prob * sequence_length`, but have to be smaller or equal
         for batch_sum in mask.sum(axis=-1):
@@ -523,33 +543,42 @@ class HubertUtilsTest(unittest.TestCase):
 
 
 @require_mindspore
+@require_soundfile
 @slow
 class HubertModelIntegrationTest(unittest.TestCase):
     def _load_datasamples(self, num_samples):
-        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation", trust_remote_code=True)
+        from datasets import load_dataset
+
+        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
         # automatic decoding with librispeech
         speech_samples = ds.sort("id").filter(
             lambda x: x["id"] in [f"1272-141231-000{i}" for i in range(num_samples)]
         )[:num_samples]["audio"]
+
         return [x["array"] for x in speech_samples]
 
     def _load_superb(self, task, num_samples):
+        from datasets import load_dataset
+
         ds = load_dataset("anton-l/superb_dummy", task, split="test", trust_remote_code=True)
+
         return ds[:num_samples]
 
     def test_inference_ctc_batched(self):
-        model = HubertForCTC.from_pretrained("facebook/hubert-large-ls960-ft").half()
+        model = HubertForCTC.from_pretrained("facebook/hubert-large-ls960-ft", ms_dtype=mindspore.float16)
         processor = Wav2Vec2Processor.from_pretrained("facebook/hubert-large-ls960-ft", do_lower_case=True)
 
         input_speech = self._load_datasamples(2)
+
         inputs = processor(input_speech, return_tensors="ms", padding=True)
 
         input_values = inputs.input_values.half()
         attention_mask = inputs.attention_mask
 
-        logits = model(input_values, attention_mask=attention_mask).logits
+        with no_grad():
+            logits = model(input_values, attention_mask=attention_mask).logits
 
-        predicted_ids = F.argmax(logits, dim=-1)
+        predicted_ids = ops.argmax(logits, dim=-1)
         predicted_trans = processor.batch_decode(predicted_ids)
 
         EXPECTED_TRANSCRIPTIONS = [
@@ -559,109 +588,130 @@ class HubertModelIntegrationTest(unittest.TestCase):
         self.assertListEqual(predicted_trans, EXPECTED_TRANSCRIPTIONS)
 
     def test_inference_keyword_spotting(self):
-        # NOTE: 原仓库代码用 float16 的精度也过不了测试 :(
-        model = HubertForSequenceClassification.from_pretrained("superb/hubert-base-superb-ks")#.half()
+        model = HubertForSequenceClassification.from_pretrained(
+            "superb/hubert-base-superb-ks", ms_dtype=mindspore.float16
+        )
         processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/hubert-base-superb-ks")
         input_data = self._load_superb("ks", 4)
         inputs = processor(input_data["speech"], return_tensors="ms", padding=True)
 
-        input_values = inputs.input_values#.half()
+        input_values = inputs.input_values.half()
         attention_mask = inputs.attention_mask
-        outputs = model(input_values, attention_mask=attention_mask)
-        predicted_logits, predicted_ids = F.max(outputs.logits, axis=-1)
+        with no_grad():
+            outputs = model(input_values, attention_mask=attention_mask)
+        predicted_logits, predicted_ids = ops.max(outputs.logits, dim=-1)
 
         expected_labels = [2, 6, 10, 9]
         # s3prl logits for the same batch
-        expected_logits = Tensor([7.6692, 17.7795, 11.1562, 11.8232], dtype=ms.float32) # ms.float16
+        expected_logits = mindspore.tensor([7.6692, 17.7795, 11.1562, 11.8232], dtype=mindspore.float16)
 
         self.assertListEqual(predicted_ids.tolist(), expected_labels)
-        self.assertTrue(mnp.allclose(predicted_logits, expected_logits, atol=3e-2))
+        self.assertTrue(ops.allclose(predicted_logits, expected_logits, atol=3e-2))
 
     def test_inference_intent_classification(self):
-        model = HubertForSequenceClassification.from_pretrained("superb/hubert-base-superb-ic").half()
+        model = HubertForSequenceClassification.from_pretrained(
+            "superb/hubert-base-superb-ic", ms_dtype=mindspore.float16
+        )
         processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/hubert-base-superb-ic")
         input_data = self._load_superb("ic", 4)
         inputs = processor(input_data["speech"], return_tensors="ms", padding=True)
 
         input_values = inputs.input_values.half()
         attention_mask = inputs.attention_mask
-        outputs = model(input_values, attention_mask=attention_mask)
+        with no_grad():
+            outputs = model(input_values, attention_mask=attention_mask)
 
-        predicted_logits_action, predicted_ids_action = F.max(outputs.logits[:, :6], axis=-1)
-        predicted_logits_object, predicted_ids_object = F.max(outputs.logits[:, 6:20], axis=-1)
-        predicted_logits_location, predicted_ids_location = F.max(outputs.logits[:, 20:24], axis=-1)
+        predicted_logits_action, predicted_ids_action = ops.max(outputs.logits[:, :6], dim=-1)
+        predicted_logits_object, predicted_ids_object = ops.max(outputs.logits[:, 6:20], dim=-1)
+        predicted_logits_location, predicted_ids_location = ops.max(outputs.logits[:, 20:24], dim=-1)
 
         expected_labels_action = [1, 0, 4, 3]
-        expected_logits_action = Tensor([5.9052, 12.5865, 4.4840, 10.0240], dtype=ms.float16)
+        expected_logits_action = mindspore.tensor(
+            [5.9052, 12.5865, 4.4840, 10.0240], dtype=mindspore.float16
+        )
         expected_labels_object = [1, 10, 3, 4]
-        expected_logits_object = Tensor([5.5316, 11.7946, 8.1672, 23.2415], dtype=ms.float16)
+        expected_logits_object = mindspore.tensor(
+            [5.5316, 11.7946, 8.1672, 23.2415], dtype=mindspore.float16
+        )
         expected_labels_location = [0, 0, 0, 1]
-        expected_logits_location = Tensor([5.2053, 8.9577, 10.0447, 8.1481], dtype=ms.float16)
+        expected_logits_location = mindspore.tensor(
+            [5.2053, 8.9577, 10.0447, 8.1481], dtype=mindspore.float16
+        )
 
         self.assertListEqual(predicted_ids_action.tolist(), expected_labels_action)
         self.assertListEqual(predicted_ids_object.tolist(), expected_labels_object)
         self.assertListEqual(predicted_ids_location.tolist(), expected_labels_location)
 
         # TODO: lower the tolerance after merging the padding fix https://github.com/pytorch/fairseq/pull/3572
-        self.assertTrue(mnp.allclose(predicted_logits_action, expected_logits_action, atol=3e-1))
-        self.assertTrue(mnp.allclose(predicted_logits_object, expected_logits_object, atol=3e-1))
-        self.assertTrue(mnp.allclose(predicted_logits_location, expected_logits_location, atol=3e-1))
+        self.assertTrue(ops.allclose(predicted_logits_action, expected_logits_action, atol=3e-1))
+        self.assertTrue(ops.allclose(predicted_logits_object, expected_logits_object, atol=3e-1))
+        self.assertTrue(ops.allclose(predicted_logits_location, expected_logits_location, atol=3e-1))
 
     def test_inference_speaker_identification(self):
-        # NOTE: 原仓库代码用 float16 的精度也过不了测试 :(
-        model = HubertForSequenceClassification.from_pretrained("superb/hubert-base-superb-sid")#.half()
+        model = HubertForSequenceClassification.from_pretrained(
+            "superb/hubert-base-superb-sid", ms_dtype=mindspore.float16
+        )
         processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/hubert-base-superb-sid")
         input_data = self._load_superb("si", 4)
 
         output_logits = []
-        for example in input_data["speech"]:
-            input = processor(example, return_tensors="ms", padding=True)
-            output = model(input.input_values, attention_mask=None)  #.half()
-            output_logits.append(output.logits[0])
-        output_logits = F.stack(output_logits)
-        predicted_logits, predicted_ids = F.max(output_logits, axis=-1)
+        with no_grad():
+            for example in input_data["speech"]:
+                input = processor(example, return_tensors="ms", padding=True)
+                output = model(input.input_values.half(), attention_mask=None)
+                output_logits.append(output.logits[0])
+
+        output_logits = ops.stack(output_logits)
+        predicted_logits, predicted_ids = ops.max(output_logits, dim=-1)
 
         expected_labels = [5, 1, 1, 3]
         # s3prl logits for the same batch
-        expected_logits = Tensor(
-            [78231.5547, 123166.6094, 122785.4141, 84851.2969], dtype=ms.float32    # ms.float16
+        expected_logits = mindspore.tensor(
+            [78231.5547, 123166.6094, 122785.4141, 84851.2969], dtype=mindspore.float16
         )
 
         self.assertListEqual(predicted_ids.tolist(), expected_labels)
         # TODO: lower the tolerance after merging the padding fix https://github.com/pytorch/fairseq/pull/3572
-        self.assertTrue(mnp.allclose(predicted_logits, expected_logits, atol=10))
+        self.assertTrue(ops.allclose(predicted_logits, expected_logits, atol=10))
 
     def test_inference_emotion_recognition(self):
-        model = HubertForSequenceClassification.from_pretrained("superb/hubert-base-superb-er").half()
+        model = HubertForSequenceClassification.from_pretrained(
+            "superb/hubert-base-superb-er", ms_dtype=mindspore.float16
+        )
         processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/hubert-base-superb-er")
         input_data = self._load_superb("er", 4)
         inputs = processor(input_data["speech"], return_tensors="ms", padding=True)
 
         input_values = inputs.input_values.half()
         attention_mask = inputs.attention_mask
-        outputs = model(input_values, attention_mask=attention_mask)
-        predicted_logits, predicted_ids = F.max(outputs.logits, axis=-1)
+        with no_grad():
+            outputs = model(input_values, attention_mask=attention_mask)
+        predicted_logits, predicted_ids = ops.max(outputs.logits, dim=-1)
 
         expected_labels = [1, 1, 2, 2]
         # s3prl logits for the same batch
-        expected_logits = Tensor([2.8384, 2.3389, 3.8564, 4.5558], dtype=ms.float16)
+        expected_logits = mindspore.tensor([2.8384, 2.3389, 3.8564, 4.5558], dtype=mindspore.float16)
 
         self.assertListEqual(predicted_ids.tolist(), expected_labels)
         # TODO: lower the tolerance after merging the padding fix https://github.com/pytorch/fairseq/pull/3572
-        self.assertTrue(mnp.allclose(predicted_logits, expected_logits, atol=1e-1))
+        self.assertTrue(ops.allclose(predicted_logits, expected_logits, atol=1e-1))
 
     def test_inference_distilhubert(self):
-        model = HubertModel.from_pretrained("ntu-spml/distilhubert").half()
+        model = HubertModel.from_pretrained("ntu-spml/distilhubert")
         processor = Wav2Vec2FeatureExtractor.from_pretrained("ntu-spml/distilhubert")
 
         # TODO: can't test on batched inputs due to incompatible padding https://github.com/pytorch/fairseq/pull/3572
         input_speech = self._load_datasamples(1)
+
         inputs = processor(input_speech, return_tensors="ms", padding=True)
-        input_values = inputs.input_values.half()
-        outputs = model(input_values).last_hidden_state
+
+        input_values = inputs.input_values
+
+        with no_grad():
+            outputs = model(input_values).last_hidden_state
 
         # expected outputs taken from the original SEW implementation
-        expected_outputs_first = Tensor(
+        expected_outputs_first = mindspore.tensor(
             [
                 [
                     [-0.3505, 0.1167, 0.0608, 0.1294],
@@ -671,7 +721,7 @@ class HubertModelIntegrationTest(unittest.TestCase):
                 ]
             ],
         )
-        expected_outputs_last = Tensor(
+        expected_outputs_last = mindspore.tensor(
             [
                 [
                     [-0.0732, 0.0255, 0.0529, -0.1372],
@@ -683,6 +733,7 @@ class HubertModelIntegrationTest(unittest.TestCase):
         )
         expected_output_sum = -3776.0730
 
-        self.assertTrue(mnp.allclose(outputs[:, :4, :4], expected_outputs_first, atol=5e-3))
-        self.assertTrue(mnp.allclose(outputs[:, -4:, -4:], expected_outputs_last, atol=5e-3))
+        self.assertTrue(ops.allclose(outputs[:, :4, :4], expected_outputs_first, atol=5e-3))
+        self.assertTrue(ops.allclose(outputs[:, -4:, -4:], expected_outputs_last, atol=5e-3))
+        print(outputs.sum() - expected_output_sum)
         self.assertTrue(abs(outputs.sum() - expected_output_sum) < 0.1)

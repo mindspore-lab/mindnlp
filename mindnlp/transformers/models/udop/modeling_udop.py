@@ -12,35 +12,37 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch UDOP model."""
+"""MindSpore UDOP model."""
 
 import collections
-import logging
 import math
 import random
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Sequence, Tuple, Union
-import numpy as np
+
 import mindspore
-from mindspore import Tensor, nn, ops
-from mindspore.common.initializer import initializer, Normal,TruncatedNormal
-from mindnlp.utils import (
-    ModelOutput,
-)
-from mindnlp.transformers.modeling_outputs import (
+from mindspore import Tensor
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import CrossEntropyLoss
+
+from .configuration_udop import UdopConfig
+from ...modeling_outputs import (
     Seq2SeqLMOutput,
     Seq2SeqModelOutput,
 )
-from .configuration_udop import UdopConfig
+
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
+from ....utils import (
+    ModelOutput,
+    logging,
+)
 
 
-
-logger = logging.getLogger(__name__)
+logger = logging.get_logger(__name__)
 
 
 _CONFIG_FOR_DOC = "UdopConfig"
@@ -99,12 +101,12 @@ def get_visual_bbox(image_size=224, patch_size=16):
 
     visual_bbox_input = ops.stack(
         [
-            visual_bbox_x[:-1].repeat(image_feature_pool_shape[0], 1),
-            visual_bbox_y[:-1].repeat(image_feature_pool_shape[1], 1).swapaxes(0, 1),
-            visual_bbox_x[1:].repeat(image_feature_pool_shape[0], 1),
-            visual_bbox_y[1:].repeat(image_feature_pool_shape[1], 1).swapaxes(0, 1),
+            visual_bbox_x[:-1].tile((image_feature_pool_shape[0], 1)),
+            ops.transpose(visual_bbox_y[:-1].tile((image_feature_pool_shape[1], 1)), 0, 1),
+            visual_bbox_x[1:].tile((image_feature_pool_shape[0], 1)),
+            ops.transpose(visual_bbox_y[1:].tile((image_feature_pool_shape[1], 1)), 0, 1),
         ],
-        axis=-1,
+        dim=-1,
     )
 
     visual_bbox_input = visual_bbox_input.view(-1, 4)
@@ -117,11 +119,11 @@ def pad_sequence(seq, target_len, pad_value=0):
         n = seq.shape[0]
     else:
         n = len(seq)
-        seq = mindspore.Tensor(seq)
+        seq = mindspore.tensor(seq)
     m = target_len - n
     if m > 0:
         ret = ops.stack([pad_value] * m).to(seq)
-        seq = ops.cat([seq, ret], axis=0)
+        seq = ops.cat([seq, ret], dim=0)
     return seq[:target_len]
 
 
@@ -157,7 +159,7 @@ def combine_image_text_embeddings(
     bbox = bbox.to(mindspore.float64)
     target_seg = (bbox.mean(-1) == 0.0) | (bbox.mean(-1) == 1.0)
     repeated_vision_embeds = ops.gather(
-        image_embeddings, 1, ocr_points.unsqueeze(-1).repeat(1, 1, image_embeddings.shape[-1])
+        image_embeddings, 1, ocr_points.unsqueeze(-1).tile((1, 1, image_embeddings.shape[-1]))
     )
     repeated_vision_embeds[target_seg] = 0.0
     inputs_embeds += repeated_vision_embeds
@@ -165,10 +167,10 @@ def combine_image_text_embeddings(
     patch_inds = ops.full_like(image_embeddings[:, :, 0], True).bool()
     ind = ops.cat(
         [
-            ops.arange(len(ocr_points))[:, None].repeat(1, ocr_points.shape[-1])[:, :, None].to(ocr_points),
+            ops.arange(len(ocr_points))[:, None].tile((1, ocr_points.shape[-1]))[:, :, None].to(ocr_points),
             ocr_points[:, :, None],
         ],
-        axis=-1,
+        dim=-1,
     )
     ind = ind.flatten(0, 1)
     rows, cols = zip(*ind)
@@ -178,11 +180,11 @@ def combine_image_text_embeddings(
 
     if visual_bbox is None:
         visual_bbox = get_visual_bbox(image_size=image_size, patch_size=patch_size)
-        visual_bbox = visual_bbox.unsqueeze(0).repeat(image_embeddings.shape[0], 1, 1)
+        visual_bbox = visual_bbox.unsqueeze(0).tile((image_embeddings.shape[0], 1, 1))
 
     visual_bbox = [visual_bbox[i][patch_inds[i]] for i in range(len(patch_inds))]
     if attention_mask is not None:
-        visual_attention_mask = [mindspore.Tensor([1] * len(item)).to(attention_mask) for item in visual_bbox]
+        visual_attention_mask = [mindspore.tensor([1] * len(item)).to(attention_mask) for item in visual_bbox]
 
     if max_len == 0:
         max_len = image_embeddings.shape[1]
@@ -204,7 +206,7 @@ def combine_image_text_embeddings(
     return inputs_embeds, bbox, attention_mask
 
 
-class UdopPatchEmbeddings(nn.Cell):
+class UdopPatchEmbeddings(nn.Module):
     """2D Image to Patch Embeddings"""
 
     def __init__(self, config):
@@ -222,7 +224,7 @@ class UdopPatchEmbeddings(nn.Cell):
 
         self.proj = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size)
 
-    def construct(self, pixel_values):
+    def forward(self, pixel_values):
         batch_size, num_channels, height, width = pixel_values.shape
         if height != self.image_size[0] or width != self.image_size[1]:
             raise ValueError(
@@ -230,7 +232,7 @@ class UdopPatchEmbeddings(nn.Cell):
                 f" ({self.image_size[0]}*{self.image_size[1]})."
             )
         embeddings = self.proj(pixel_values)
-        embeddings = embeddings.flatten(2).swapaxes(1, 2)
+        embeddings = ops.transpose(embeddings.flatten(2), 1, 2)
         return embeddings
 
 
@@ -245,90 +247,64 @@ class UdopPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _keep_in_fp32_modules = ["wo"]
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
         factor = self.config.initializer_factor  # Used for testing weights initialization
-        if isinstance(cell, UdopLayerNorm):
-            cell.weight.data.set_data(initializer("ones",cell.weight.data.shape,cell.weight.data.dtype))
-            #odule.weight.data.fill_(factor * 1.0)
-        elif isinstance(cell, nn.Embedding):
-            weights = np.random.normal(0.0, factor, cell.weight.data.shape)
-            if cell.padding_idx:
-                weights[cell.padding_idx] = 0
-
-            cell.weight.data.set_data(Tensor(weights, cell.weight.data.dtype))
-            # module.weight.data.normal_(mean=0.0, std=factor)
-            # if module.padding_idx is not None:
-            #     module.weight.data[module.padding_idx].zero_()
-        elif isinstance(cell, nn.Conv2d):
+        if isinstance(module, UdopLayerNorm):
+            nn.init.constant_(module.weight, factor * 1.0)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=factor)
+            if module.padding_idx is not None:
+                module.weight[module.padding_idx] = 0
+        elif isinstance(module, nn.Conv2d):
             # Upcast the input in `fp32` and cast it back to desired `dtype` to avoid
             # `trunc_normal_cpu` not implemented in `half` issues
-            cell.weight.data.to(mindspore.float32).set_data(initializer(TruncatedNormal(factor),cell.weight.data.shape,cell.weight.data.dtype)).to(cell.weight.dtype)
-            # cell.weight.data = nn.init.trunc_normal_(module.weight.data.to(mindspore.float32), mean=0.0, std=factor).to(
-            #     cell.weight.dtype
-            # )
-            if cell.has_bias:
-                cell.bias.data.set_data(initializer("zeros",cell.bias.data.shape,cell.bias.data.dtype))
-                #module.bias.data.zero_()
-        elif isinstance(cell, RelativePositionBiasBase):
+            nn.init.trunc_normal_(module.weight, mean=0.0, std=factor)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, RelativePositionBiasBase):
             factor = self.config.initializer_factor
             d_model = self.config.d_model
-            cell.relative_attention_bias.weight.data.set_data(initializer(Normal(factor * ((d_model) ** -0.5)),cell.relative_attention_bias.weight.data.shape,cell.relative_attention_bias.weight.data.dtype))
-        elif isinstance(cell, UdopModel):
+            nn.init.normal_(module.relative_attention_bias.weight, mean=0.0, std=factor * ((d_model) ** -0.5))
+        elif isinstance(module, UdopModel):
             # Mesh TensorFlow embeddings initialization
             # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L1624
-            cell.shared.weight.data.set_data(initializer(Normal(factor*1.0),cell.shared.weight.data.shape,cell.shared.weight.data.dtype))
-        elif isinstance(cell, UdopForConditionalGeneration):
-            if hasattr(cell, "lm_head") and not self.config.tie_word_embeddings:
-                cell.lm_head.weight.data.set_data(initializer(Normal(factor*1.0),cell.lm_head.weight.data.shape,cell.lm_head.weight.data.dtype))
-                #module.lm_head.weight.data.normal_(mean=0.0, std=factor * 1.0)
-        elif isinstance(cell, UdopDenseActDense):
+            nn.init.normal_(module.shared.weight, mean=0.0, std=factor * 1.0)
+        elif isinstance(module, UdopForConditionalGeneration):
+            if hasattr(module, "lm_head") and not self.config.tie_word_embeddings:
+                nn.init.normal_(module.lm_head.weight, mean=0.0, std=factor * 1.0)
+        elif isinstance(module, UdopDenseActDense):
             # Mesh TensorFlow FF initialization
             # See https://github.com/tensorflow/mesh/blob/master/mesh_tensorflow/transformer/transformer_layers.py#L56
             # and https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L89
-            cell.wi.weight.data.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),cell.wi.weight.data.shape,cell.wi.weight.data.dtype))
-            #module.wi.weight.data.normal_(mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
-            if hasattr(cell.wi, "bias") and cell.wi.has_bias:
-                cell.wi.bias.data.set_data(initializer("zeros",cell.wi.bias.data.shape,cell.wi.bias.data.dtype))
-                #module.wi.bias.data.zero_()
-            cell.wo.weight.data.set_data(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)),cell.wo.weight.data.shape,cell.wo.weight.data.dtype))
-            #module.wo.weight.data.normal_(mean=0.0, std=factor * ((self.config.d_ff) ** -0.5))
-            if hasattr(cell.wo, "bias") and cell.wo.has_bias:
-                cell.wo.bias.data.set_data(initializer("zeros",cell.wo.bias.data.shape,cell.wo.bias.data.dtype))
-                #module.wo.bias.data.zero_()
-        elif isinstance(cell, UdopDenseGatedActDense):
-            cell.wi_0.weight.data.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),cell.wi_0.weight.data.shape,cell.wi_0.weight.data.dtype))
-            #module.wi_0.weight.data.normal_(mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
-            if hasattr(cell.wi_0, "bias") and cell.wi_0.has_bias:
-                cell.wi_0.bias.data.set_data(initializer("zeros",cell.wi_0.bias.data.shape,cell.wi_0.bias.data.dtype))
-                #module.wi_0.bias.data.zero_()
-            cell.wi_1.weight.data.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),cell.wi_1.weight.data.shape,cell.wi_1.weight.data.dtype))
-            #module.wi_1.weight.data.normal_(mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
-            if hasattr(cell.wi_1, "bias") and cell.wi_1.has_bias:
-                cell.wi_1.bias.data.set_data(initializer("zeros",cell.wi_1.bias.data.shape,cell.wi_1.bias.data.dtype))
-                #module.wi_1.bias.data.zero_()
-            cell.wo.weight.data.set_data(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)),cell.wo.weight.data.shape,cell.wo.weight.data.dtype))
-            #module.wo.weight.data.normal_(mean=0.0, std=factor * ((self.config.d_ff) ** -0.5))
-            if hasattr(cell.wo, "bias") and cell.wo.has_bias:
-                cell.wo.bias.data.set_data(initializer("zeros",cell.wo.bias.data.shape,cell.wo.bias.data.dtype))
-                #module.wo.bias.data.zero_()
-        elif isinstance(cell, UdopAttention):
+            nn.init.normal_(module.wi.weight, mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+            if hasattr(module.wi, "bias") and module.wi.bias is not None:
+                nn.init.zeros_(module.wi.bias)
+            nn.init.normal_(module.wo.weight, mean=0.0, std=factor * ((self.config.d_ff) ** -0.5))
+            if hasattr(module.wo, "bias") and module.wo.bias is not None:
+                nn.init.zeros_(module.wo.bias)
+        elif isinstance(module, UdopDenseGatedActDense):
+            nn.init.normal_(module.wi_0.weight, mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+            if hasattr(module.wi_0, "bias") and module.wi_0.bias is not None:
+                nn.init.zeros_(module.wi_0.bias)
+            nn.init.normal_(module.wi_1.weight, mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+            if hasattr(module.wi_1, "bias") and module.wi_1.bias is not None:
+                nn.init.zeros_(module.wi_1.bias)
+            nn.init.normal_(module.wo.weight, mean=0.0, std=factor * ((self.config.d_ff) ** -0.5))
+            if hasattr(module.wo, "bias") and module.wo.bias is not None:
+                nn.init.zeros_(module.wo.bias)
+        elif isinstance(module, UdopAttention):
             # Mesh TensorFlow attention initialization to avoid scaling before softmax
             # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/transformer/attention.py#L136
             d_model = self.config.d_model
             key_value_proj_dim = self.config.d_kv
             n_heads = self.config.num_heads
-            cell.q.weight.data.set_data(initializer(Normal(factor * ((d_model * key_value_proj_dim) ** -0.5)),cell.q.weight.data.shape,cell.q.weight.data.dtype))
-            cell.k.weight.data.set_data(initializer(Normal(factor * (d_model**-0.5)),cell.k.weight.data.shape,cell.k.weight.data.dtype))
-            cell.v.weight.data.set_data(initializer(Normal(factor * (d_model**-0.5)),cell.v.weight.data.shape,cell.v.weight.data.dtype))
-            cell.o.weight.data.set_data(initializer(Normal(factor * ((n_heads * key_value_proj_dim) ** -0.5)),cell.o.weight.data.shape,cell.o.weight.data.dtype))
-            #module.q.weight.data.normal_(mean=0.0, std=factor * ((d_model * key_value_proj_dim) ** -0.5))
-            #module.k.weight.data.normal_(mean=0.0, std=factor * (d_model**-0.5))
-            #module.v.weight.data.normal_(mean=0.0, std=factor * (d_model**-0.5))
-            #module.o.weight.data.normal_(mean=0.0, std=factor * ((n_heads * key_value_proj_dim) ** -0.5))
-            if cell.has_relative_attention_bias:
-                cell.relative_attention_bias.weight.data.set_data(initializer(Normal(factor * ((d_model) ** -0.5)),cell.relative_attention_bias.weight.data.shape,cell.relative_attention_bias.weight.data.dtype))
-                #module.relative_attention_bias.weight.data.normal_(mean=0.0, std=factor * ((d_model) ** -0.5))
+            nn.init.normal_(module.q.weight, mean=0.0, std=factor * ((d_model * key_value_proj_dim) ** -0.5))
+            nn.init.normal_(module.k.weight, mean=0.0, std=factor * (d_model**-0.5))
+            nn.init.normal_(module.v.weight, mean=0.0, std=factor * (d_model**-0.5))
+            nn.init.normal_(module.o.weight, mean=0.0, std=factor * ((n_heads * key_value_proj_dim) ** -0.5))
+            if module.has_relative_attention_bias:
+                nn.init.normal_(module.relative_attention_bias.weight, mean=0.0, std=factor * ((d_model) ** -0.5))
 
     # Copied from transformers.models.prophetnet.modeling_prophetnet.ProphetNetPreTrainedModel._shift_right with ProphetNet->Udop
     def _shift_right(self, input_ids):
@@ -355,22 +331,22 @@ class UdopPreTrainedModel(PreTrainedModel):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5LayerNorm with T5->Udop
-class UdopLayerNorm(nn.Cell):
+class UdopLayerNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
         """
         Construct a layernorm module in the Udop style. No bias and no subtraction of mean.
         """
         super().__init__()
-        self.weight = mindspore.Parameter(ops.ones(hidden_size),name="weight")
+        self.weight = nn.Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # Udop uses a layer_norm which only scales and doesn't shift, which is also known as Root Mean
         # Square Layer Normalization https://arxiv.org/abs/1910.07467 thus varience is calculated
         # w/o mean and there is no bias. Additionally we want to make sure that the accumulation for
         # half-precision inputs is done in fp32
 
-        variance = hidden_states.to(mindspore.float32).pow(2).mean(-1, keep_dims=True)
+        variance = ops.mean(hidden_states.to(mindspore.float32).pow(2), -1, keepdim=True)
         hidden_states = hidden_states * ops.rsqrt(variance + self.variance_epsilon)
 
         # convert into half-precision if necessary
@@ -381,15 +357,15 @@ class UdopLayerNorm(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5DenseActDense with T5->Udop
-class UdopDenseActDense(nn.Cell):
+class UdopDenseActDense(nn.Module):
     def __init__(self, config: UdopConfig):
         super().__init__()
-        self.wi = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
-        self.dropout = nn.Dropout(p =config.dropout_rate)
+        self.wi = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, bias=False)
+        self.dropout = nn.Dropout(config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.wi(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -404,16 +380,16 @@ class UdopDenseActDense(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5DenseGatedActDense with T5->Udop
-class UdopDenseGatedActDense(nn.Cell):
+class UdopDenseGatedActDense(nn.Module):
     def __init__(self, config: UdopConfig):
         super().__init__()
-        self.wi_0 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wi_1 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
+        self.wi_0 = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wi_1 = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, bias=False)
         self.dropout = nn.Dropout(config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_gelu = self.act(self.wi_0(hidden_states))
         hidden_linear = self.wi_1(hidden_states)
         hidden_states = hidden_gelu * hidden_linear
@@ -434,7 +410,7 @@ class UdopDenseGatedActDense(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5LayerFF with T5->Udop
-class UdopLayerFF(nn.Cell):
+class UdopLayerFF(nn.Module):
     def __init__(self, config: UdopConfig):
         super().__init__()
         if config.is_gated_act:
@@ -443,9 +419,9 @@ class UdopLayerFF(nn.Cell):
             self.DenseReluDense = UdopDenseActDense(config)
 
         self.layer_norm = UdopLayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.dropout = nn.Dropout(p =config.dropout_rate)
+        self.dropout = nn.Dropout(config.dropout_rate)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         forwarded_states = self.layer_norm(hidden_states)
         forwarded_states = self.DenseReluDense(forwarded_states)
         hidden_states = hidden_states + self.dropout(forwarded_states)
@@ -453,7 +429,7 @@ class UdopLayerFF(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5Attention with T5->Udop
-class UdopAttention(nn.Cell):
+class UdopAttention(nn.Module):
     def __init__(self, config: UdopConfig, has_relative_attention_bias=False):
         super().__init__()
         self.is_decoder = config.is_decoder
@@ -467,10 +443,10 @@ class UdopAttention(nn.Cell):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Dense(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
@@ -556,7 +532,7 @@ class UdopAttention(nn.Cell):
         values = values.permute([2, 0, 1]).unsqueeze(0)  # shape (1, num_heads, query_length, key_length)
         return values
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         mask=None,
@@ -589,11 +565,11 @@ class UdopAttention(nn.Cell):
 
         def shape(states):
             """projection"""
-            return states.view(batch_size, -1, self.n_heads, self.key_value_proj_dim).swapaxes(1, 2)
+            return ops.transpose(states.view(batch_size, -1, self.n_heads, self.key_value_proj_dim), 1, 2)
 
         def unshape(states):
             """reshape"""
-            return states.swapaxes(1, 2).view(batch_size, -1, self.inner_dim)
+            return ops.transpose(states, 1, 2).view(batch_size, -1, self.inner_dim)
 
         def project(hidden_states, proj_layer, key_value_states, past_key_value):
             """projects hidden states correctly to key/query states"""
@@ -610,7 +586,7 @@ class UdopAttention(nn.Cell):
                 if key_value_states is None:
                     # self-attn
                     # (batch_size, n_heads, key_length, dim_per_head)
-                    hidden_states = ops.cat([past_key_value, hidden_states], axis=2)
+                    hidden_states = ops.cat([past_key_value, hidden_states], dim=2)
                 elif past_key_value.shape[2] != key_value_states.shape[1]:
                     # checking that the `sequence_length` of the `past_key_value` is the same as
                     # the provided `key_value_states` to support prefix tuning
@@ -635,8 +611,8 @@ class UdopAttention(nn.Cell):
 
         # compute scores
         scores = ops.matmul(
-            query_states, key_states.swapaxes(3, 2)
-        )  # equivalent of torch.einsum("bnqd,bnkd->bnqk", query_states, key_states), compatible with onnx op>9
+            query_states, ops.transpose(key_states, 3, 2)
+        )  # equivalent of ops.einsum("bnqd,bnkd->bnqk", query_states, key_states), compatible with onnx op>9
 
         if position_bias is None:
             if not self.has_relative_attention_bias:
@@ -664,10 +640,10 @@ class UdopAttention(nn.Cell):
             position_bias_masked = position_bias
 
         scores += position_bias_masked
-        attn_weights = ops.softmax(scores.float(), axis=-1).type_as(
+        attn_weights = nn.functional.softmax(scores.float(), dim=-1).type_as(
             scores
         )  # (batch_size, n_heads, seq_length, key_length)
-        attn_weights = ops.dropout(
+        attn_weights = nn.functional.dropout(
             attn_weights, p=self.dropout, training=self.training
         )  # (batch_size, n_heads, seq_length, key_length)
 
@@ -687,14 +663,14 @@ class UdopAttention(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5LayerSelfAttention with T5->Udop
-class UdopLayerSelfAttention(nn.Cell):
+class UdopLayerSelfAttention(nn.Module):
     def __init__(self, config, has_relative_attention_bias=False):
         super().__init__()
         self.SelfAttention = UdopAttention(config, has_relative_attention_bias=has_relative_attention_bias)
         self.layer_norm = UdopLayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.dropout = nn.Dropout(p= config.dropout_rate)
+        self.dropout = nn.Dropout(config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -720,14 +696,14 @@ class UdopLayerSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5LayerCrossAttention with T5->Udop
-class UdopLayerCrossAttention(nn.Cell):
+class UdopLayerCrossAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.EncDecAttention = UdopAttention(config, has_relative_attention_bias=False)
         self.layer_norm = UdopLayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.dropout = nn.Dropout(p = config.dropout_rate)
+        self.dropout = nn.Dropout(config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         key_value_states,
@@ -757,18 +733,18 @@ class UdopLayerCrossAttention(nn.Cell):
 
 
 # Copied from transformers.models.t5.modeling_t5.T5Block with T5->Udop
-class UdopBlock(nn.Cell):
+class UdopBlock(nn.Module):
     def __init__(self, config, has_relative_attention_bias=False):
         super().__init__()
         self.is_decoder = config.is_decoder
-        self.layer = nn.CellList()
+        self.layer = nn.ModuleList()
         self.layer.append(UdopLayerSelfAttention(config, has_relative_attention_bias=has_relative_attention_bias))
         if self.is_decoder:
             self.layer.append(UdopLayerCrossAttention(config))
 
         self.layer.append(UdopLayerFF(config))
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -813,16 +789,13 @@ class UdopBlock(nn.Cell):
         attention_outputs = self_attention_outputs[2:]  # Keep self-attention outputs and relative position weights
 
         # clamp inf values to enable fp16 training
-        if hidden_states.dtype == mindspore.float16 and ops.isinf(hidden_states).any():
-            clamp_value = mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max) - 1000
+        if hidden_states.dtype == mindspore.float16:
+            clamp_value = ops.where(
+                ops.isinf(hidden_states).any(),
+                float(ops.finfo(hidden_states.dtype).max) - 1000,
+                float(ops.finfo(hidden_states.dtype).max),
+            )
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
-        # if hidden_states.dtype == mindspore.float16:
-        #     clamp_value = ops.where(
-        #         ops.isinf(hidden_states).any(),
-        #         finfo(hidden_states.dtype).max - 1000,
-        #         finfo(hidden_states.dtype).max,
-        #     )
-        #     hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         do_cross_attention = self.is_decoder and encoder_hidden_states is not None
         if do_cross_attention:
@@ -847,16 +820,13 @@ class UdopBlock(nn.Cell):
             hidden_states = cross_attention_outputs[0]
 
             # clamp inf values to enable fp16 training
-            if hidden_states.dtype == mindspore.float16 and ops.isinf(hidden_states).any():
-                clamp_value = mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max) - 1000
+            if hidden_states.dtype == mindspore.float16:
+                clamp_value = ops.where(
+                    ops.isinf(hidden_states).any(),
+                    float(ops.finfo(hidden_states.dtype).max) - 1000,
+                    float(ops.finfo(hidden_states.dtype).max),
+                )
                 hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
-            # if hidden_states.dtype == mindspore.float16:
-            #     clamp_value = torch.where(
-            #         torch.isinf(hidden_states).any(),
-            #         torch.finfo(hidden_states.dtype).max - 1000,
-            #         torch.finfo(hidden_states.dtype).max,
-            #     )
-            #     hidden_states = torch.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
             # Combine self attn and cross attn key value states
             if present_key_value_state is not None:
@@ -869,16 +839,13 @@ class UdopBlock(nn.Cell):
         hidden_states = self.layer[-1](hidden_states)
 
         # clamp inf values to enable fp16 training
-        if hidden_states.dtype == mindspore.float16 and ops.isinf(hidden_states).any():
-            clamp_value = mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max) - 1000
+        if hidden_states.dtype == mindspore.float16:
+            clamp_value = ops.where(
+                ops.isinf(hidden_states).any(),
+                float(ops.finfo(hidden_states.dtype).max) - 1000,
+                float(ops.finfo(hidden_states.dtype).max),
+            )
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
-        # if hidden_states.dtype == mindspore.float16:
-        #     clamp_value = ops.where(
-        #         ops.isinf(hidden_states).any(),
-        #         ops.finfo(hidden_states.dtype).max - 1000,
-        #         ops.finfo(hidden_states.dtype).max,
-        #     )
-        #     hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
 
@@ -890,7 +857,7 @@ class UdopBlock(nn.Cell):
         return outputs  # hidden-states, present_key_value_states, (self-attention position bias), (self-attention weights), (cross-attention position bias), (cross-attention weights)
 
 
-class UdopCellEmbeddings(nn.Cell):
+class UdopCellEmbeddings(nn.Module):
     def __init__(self, max_2d_position_embeddings=501, hidden_size=1024):
         super(UdopCellEmbeddings, self).__init__()
         self.max_2d_position_embeddings = max_2d_position_embeddings
@@ -898,7 +865,7 @@ class UdopCellEmbeddings(nn.Cell):
         self.x_position_embeddings = nn.Embedding(max_2d_position_embeddings, hidden_size)
         self.y_position_embeddings = nn.Embedding(max_2d_position_embeddings, hidden_size)
 
-    def construct(self, bbox):
+    def forward(self, bbox):
         bbox = ops.clip(bbox, 0.0, 1.0)
         bbox = (bbox * (self.max_2d_position_embeddings - 1)).long()
         left_position_embeddings = self.x_position_embeddings(bbox[:, :, 0])
@@ -922,7 +889,7 @@ get_relative_position_bucket = UdopAttention._relative_position_bucket
 AUGMENTATION_RANGE = (0.80, 1.25)
 
 
-class RelativePositionBiasBase(nn.Cell, ABC):
+class RelativePositionBiasBase(nn.Module, ABC):
     """
     Base class of relative biases.
 
@@ -997,12 +964,12 @@ class RelativePositionBiasBase(nn.Cell, ABC):
 
         return relative_position.to(mindspore.int64)
 
-    def construct(self, attention_mask: Optional[Tensor] = None, bbox: Optional[Dict[str, Any]] = None) -> Tensor:
+    def forward(self, attention_mask: Optional[Tensor] = None, bbox: Optional[Dict[str, Any]] = None) -> Tensor:
         # re-using pretrained model with subsequent addition of prefix_bucket
         if self.expand and self.prefix_bucket:
             new_bias = nn.Embedding(self.relative_attention_num_buckets + 2, self.num_heads)
-            new_bias.weight.data[: self.relative_attention_num_buckets] = self.relative_attention_bias.weight.data
-            new_bias.weight.data[self.relative_attention_num_buckets :] = 0.1
+            new_bias.weight[: self.relative_attention_num_buckets] = self.relative_attention_bias.weight
+            new_bias.weight[self.relative_attention_num_buckets :] = 0.1
             self.relative_attention_bias = new_bias
             self.expand = False
 
@@ -1010,11 +977,11 @@ class RelativePositionBiasBase(nn.Cell, ABC):
 
         if self.prefix_bucket:
             if rp_bucket.shape[0] == 1 and attention_mask.shape[0] > 1:
-                rp_bucket = rp_bucket.repeat(attention_mask.shape[0], 1, 1)
+                rp_bucket = rp_bucket.tile((attention_mask.shape[0], 1, 1))
             # based on assumption that prefix bboxes are negative
             is_prefix = bbox[:, :, 1] < 0
             num_prefix = is_prefix.sum(-1)
-            for idx, num_prefix_row in enumerate(num_prefix.cpu().numpy()):
+            for idx, num_prefix_row in enumerate(num_prefix.asnumpy()):
                 rp_bucket[idx, :num_prefix_row, num_prefix_row:] = self.relative_attention_num_buckets
                 rp_bucket[idx, num_prefix_row:, :num_prefix_row] = self.relative_attention_num_buckets + 1
 
@@ -1058,7 +1025,7 @@ class RelativePositionBiasHorizontal(RelativePositionBiasBase):
         if bbox is None:
             raise ValueError("Bbox is required for horizontal relative position bias")
         # get x positions of left point of bbox
-        horizontal_position: Tensor = bbox[:, :, [0, 2]].mean(axis=-1)
+        horizontal_position: Tensor = ops.mean(bbox[:, :, [0, 2]], dim=-1)
 
         return self.get_relative_position(horizontal_position)
 
@@ -1077,12 +1044,12 @@ class RelativePositionBiasVertical(RelativePositionBiasBase):
         if bbox is None:
             raise ValueError("Bbox is required for vertical relative position bias")
         # get y positions of middle of bbox
-        vertical_position: Tensor = bbox[:, :, [1, 3]].mean(axis=-1)
+        vertical_position: Tensor = ops.mean(bbox[:, :, [1, 3]], dim=-1)
 
         return self.get_relative_position(vertical_position)
 
 
-class RelativePositionBiasAggregated(nn.Cell):
+class RelativePositionBiasAggregated(nn.Module):
     def __init__(self, modules: Sequence[RelativePositionBiasBase]):
         """
         Class which sums up various computed biases.
@@ -1092,9 +1059,9 @@ class RelativePositionBiasAggregated(nn.Cell):
                 List of relative bias modules.
         """
         super().__init__()
-        self.biases = nn.CellList(modules)
+        self.biases = nn.ModuleList(modules)
 
-    def construct(
+    def forward(
         self, attention_mask: Optional[Tensor] = None, bbox: Optional[Dict[str, Any]] = None
     ) -> Union[float, Tensor]:
         output = 0.0
@@ -1148,12 +1115,12 @@ class UdopStack(UdopPreTrainedModel):
         self._max_length = config.max_length
         self.num_layers = config.num_layers
 
-        self.block = nn.CellList(
+        self.block = nn.ModuleList(
             [UdopBlock(config, has_relative_attention_bias=bool(i == 0)) for i in range(self.num_layers)]
         )
         self.final_layer_norm = UdopLayerNorm(config.d_model, eps=config.layer_norm_epsilon)
 
-        self.dropout = nn.Dropout(p = config.dropout_rate)
+        self.dropout = nn.Dropout(config.dropout_rate)
 
         if not self.is_decoder:
             self.cell_2d_embedding = UdopCellEmbeddings(config.max_2d_position_embeddings, config.hidden_size)
@@ -1182,7 +1149,7 @@ class UdopStack(UdopPreTrainedModel):
     def set_input_embeddings(self, new_embeddings):
         self.embed_tokens = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -1380,6 +1347,7 @@ class UdopModel(UdopPreTrainedModel):
         "encoder.embed_tokens.weight",
         "decoder.embed_tokens.weight",
         "encoder.embed_patches.proj.weight",
+        "encoder.embed_patches.proj.bias",
         "encoder.relative_bias.biases.0.relative_attention_bias.weight",
         "decoder.relative_bias.biases.0.relative_attention_bias.weight",
     ]
@@ -1420,7 +1388,7 @@ class UdopModel(UdopPreTrainedModel):
     def get_decoder(self):
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: Tensor = None,
         attention_mask: Tensor = None,
@@ -1466,7 +1434,7 @@ class UdopModel(UdopPreTrainedModel):
         >>> boxes = example["bboxes"]
         >>> inputs = processor(image, words, boxes=boxes, return_tensors="pt")
 
-        >>> decoder_input_ids = mindspore.Tensor([[model.config.decoder_start_token_id]])
+        >>> decoder_input_ids = mindspore.tensor([[model.config.decoder_start_token_id]])
 
         >>> # forward pass
         >>> outputs = model(**inputs, decoder_input_ids=decoder_input_ids)
@@ -1534,6 +1502,7 @@ class UdopForConditionalGeneration(UdopPreTrainedModel):
         "encoder.embed_tokens.weight",
         "decoder.embed_tokens.weight",
         "encoder.embed_patches.proj.weight",
+        "encoder.embed_patches.proj.bias",
         "encoder.relative_bias.biases.0.relative_attention_bias.weight",
         "decoder.relative_bias.biases.0.relative_attention_bias.weight",
         "lm_head.weight",
@@ -1559,7 +1528,7 @@ class UdopForConditionalGeneration(UdopPreTrainedModel):
         self.decoder = UdopStack(decoder_config, self.shared)
 
         # The weights of the language modeling head are shared with those of the encoder and decoder
-        self.lm_head = nn.Dense(config.d_model, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1584,7 +1553,7 @@ class UdopForConditionalGeneration(UdopPreTrainedModel):
     def get_decoder(self):
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: Tensor = None,
         attention_mask: Tensor = None,
@@ -1607,7 +1576,7 @@ class UdopForConditionalGeneration(UdopPreTrainedModel):
         labels: Optional[Tensor] = None,
     ) -> Tuple[Tensor, ...]:
         r"""
-        labels (`mindspore.int64Tensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the language modeling loss. Indices should be in `[-100, 0, ..., config.vocab_size -
             1]`. All labels set to `-100` are ignored (masked), the loss is only computed for labels in `[0, ...,
             config.vocab_size]`.
@@ -1696,9 +1665,9 @@ class UdopForConditionalGeneration(UdopPreTrainedModel):
 
         loss = None
         if labels is not None:
-            # loss_fct = CrossEntropyLoss(ignore_index=-100)
-            # loss = loss_fct(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1),ignore_index=-100)
-            loss = ops.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1),ignore_index=-100)
+            loss_fct = CrossEntropyLoss(ignore_index=-100)
+            loss = loss_fct(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1))
+
         if not return_dict:
             output = (lm_logits,) + decoder_outputs[2:] + (encoder_outputs[0],) + encoder_outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -1781,6 +1750,7 @@ class UdopEncoderModel(UdopPreTrainedModel):
     _tied_weights_keys = [
         "encoder.embed_tokens.weight",
         "encoder.embed_patches.proj.weight",
+        "encoder.embed_patches.proj.bias",
         "encoder.relative_bias.biases.0.relative_attention_bias.weight",
     ]
 
@@ -1818,7 +1788,7 @@ class UdopEncoderModel(UdopPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.block[layer].layer[0].SelfAttention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Tensor = None,
         bbox: Dict[str, Any] = None,
@@ -1879,7 +1849,10 @@ class UdopEncoderModel(UdopPreTrainedModel):
         )
 
         return encoder_outputs
-__all__ = ["UdopForConditionalGeneration",
-        "UdopPreTrainedModel",
-        "UdopModel",
-        "UdopEncoderModel",]
+
+__all__ = [
+    "UdopForConditionalGeneration",
+    "UdopPreTrainedModel",
+    "UdopModel",
+    "UdopEncoderModel"
+]

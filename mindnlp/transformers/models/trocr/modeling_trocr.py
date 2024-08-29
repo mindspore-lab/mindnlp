@@ -20,9 +20,10 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops
-from mindspore.common.initializer import (initializer, Normal)
-from mindspore.ops import cross_entropy
+from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -47,15 +48,15 @@ class TrOCRLearnedPositionalEmbedding(nn.Embedding):
         self.offset = 2
         super().__init__(num_embeddings + self.offset, embedding_dim)
 
-    def construct(self, ids: mindspore.Tensor, past_key_values_length: int = 0):
+    def forward(self, ids: mindspore.Tensor, past_key_values_length: int = 0):
         """`input_ids' shape is expected to be [bsz x seqlen]."""
 
         bsz, seq_len = ids.shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
-        ).expand(bsz, -1)
+        ).broadcast_to((bsz, -1))
 
-        return super().construct(positions + self.offset)
+        return super().forward(positions + self.offset)
 
 
 class TrOCRScaledWordEmbedding(nn.Embedding):
@@ -68,11 +69,11 @@ class TrOCRScaledWordEmbedding(nn.Embedding):
         super().__init__(num_embeddings, embedding_dim, padding_idx=padding_idx)
         self.embed_scale = embed_scale
 
-    def construct(self, ids: mindspore.Tensor):
-        return super().construct(ids) * self.embed_scale
+    def forward(self, ids: mindspore.Tensor):
+        return super().forward(ids) * self.embed_scale
 
 
-class TrOCRSinusoidalPositionalEmbedding(nn.Cell):
+class TrOCRSinusoidalPositionalEmbedding(nn.Module):
     """This module produces sinusoidal positional embeddings of any length."""
 
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None):
@@ -95,16 +96,16 @@ class TrOCRSinusoidalPositionalEmbedding(nn.Cell):
         emb = ops.exp(ops.arange(half_dim, dtype=mindspore.int64).float() * -emb)
         emb = ops.arange(num_embeddings, dtype=mindspore.int64).\
                   float().unsqueeze(1) * emb.unsqueeze(0)
-        emb = ops.cat([ops.sin(emb), ops.cos(emb)], axis=1).view(num_embeddings, -1)
+        emb = ops.cat([ops.sin(emb), ops.cos(emb)], dim=1).view(num_embeddings, -1)
         if embedding_dim % 2 == 1:
             # zero pad
-            emb = ops.cat([emb, ops.zeros((num_embeddings, 1))], axis=1)
+            emb = ops.cat([emb, ops.zeros((num_embeddings, 1))], dim=1)
         if padding_idx is not None:
             emb[padding_idx, :] = 0
 
         return emb.to(mindspore.float32)
 
-    def construct(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
+    def forward(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
         bsz, seq_len = input_ids.shape
         # Create the position ids from the input token ids. Any padded tokens remain padded.
         position_ids = self.create_position_ids_from_input_ids(
@@ -115,9 +116,8 @@ class TrOCRSinusoidalPositionalEmbedding(nn.Cell):
         if self.weights is None or max_pos > self.weights.shape[0]:
             # recompute/expand embeddings if needed
             self.weights = self.get_embedding(max_pos, self.embedding_dim, self.padding_idx)
-        self.weights = self.weights.to(self._float_tensor)
 
-        x = self.weights.index_select(0, position_ids.view(-1)).view(bsz, seq_len, -1).detach()
+        x = self.weights.index_select(0, position_ids.view(-1)).view(bsz, seq_len, -1)
 
         return x
 
@@ -134,12 +134,12 @@ class TrOCRSinusoidalPositionalEmbedding(nn.Cell):
         # The series of casts and type-conversions here
         # are carefully balanced to both work with ONNX export and XLA.
         mask = input_ids.ne(padding_idx).int()
-        incremental_indices = (ops.cumsum(mask, axis=1).
+        incremental_indices = (ops.cumsum(mask, dim=1).
                                type_as(mask) + past_key_values_length) * mask
         return incremental_indices.long() + padding_idx
 
 
-class TrOCRAttention(nn.Cell):
+class TrOCRAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper."""
 
     def __init__(
@@ -170,16 +170,16 @@ class TrOCRAttention(nn.Cell):
         self.scaling = self.head_dim ** -0.5
         self.is_decoder = is_decoder
 
-        self.k_proj = nn.Dense(self.kdim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(self.vdim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(self.kdim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(self.vdim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             key_value_states: Optional[mindspore.Tensor] = None,
@@ -210,8 +210,8 @@ class TrOCRAttention(nn.Cell):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -257,7 +257,7 @@ class TrOCRAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -279,7 +279,7 @@ class TrOCRAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -299,7 +299,7 @@ class TrOCRAttention(nn.Cell):
         return attn_output, attn_weights_reshaped, past_key_value
 
 
-class TrOCRDecoderLayer(nn.Cell):
+class TrOCRDecoderLayer(nn.Module):
     """
     A class of TrOCR decoder layer.
     """
@@ -333,11 +333,11 @@ class TrOCRDecoderLayer(nn.Cell):
             )
             self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim])
 
-        self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
+        self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm([self.embed_dim])
 
-    def construct(
+    def forward(
             self,
             hidden_states: mindspore.Tensor,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -390,7 +390,7 @@ class TrOCRDecoderLayer(nn.Cell):
             output_attentions=output_attentions,
         )
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
@@ -412,7 +412,7 @@ class TrOCRDecoderLayer(nn.Cell):
                 output_attentions=output_attentions,
             )
 
-            hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states = self.encoder_attn_layer_norm(hidden_states)
 
@@ -422,11 +422,11 @@ class TrOCRDecoderLayer(nn.Cell):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states,
+        hidden_states = F.dropout(hidden_states,
                                     p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
@@ -449,10 +449,10 @@ class TrOCRPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, module):
         std = self.config.init_std
-        if isinstance(module, (nn.Dense, nn.Conv1d)):
+        if isinstance(module, (nn.Linear, nn.Conv1d)):
             module.weight.set_data(initializer(
                 Normal(sigma=std, mean=0.0), module.weight.shape, module.weight.dtype))
-            if module.has_bias:
+            if module.bias is not None:
                 module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))
         elif isinstance(module, nn.Embedding):
             emb_weight = np.random.normal(0, std, module.weight.shape)
@@ -496,7 +496,7 @@ class TrOCRDecoder(TrOCRPreTrainedModel):
         else:
             self.layernorm_embedding = None
 
-        self.layers = nn.CellList([TrOCRDecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layers = nn.ModuleList([TrOCRDecoderLayer(config) for _ in range(config.decoder_layers)])
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
@@ -508,7 +508,7 @@ class TrOCRDecoder(TrOCRPreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
-    def construct(
+    def forward(
             self,
             input_ids=None,
             attention_mask=None,
@@ -656,7 +656,7 @@ class TrOCRDecoder(TrOCRPreTrainedModel):
         if self.layernorm_embedding is not None:
             hidden_states = self.layernorm_embedding(hidden_states)
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         input_shape = input.shape
 
@@ -796,7 +796,7 @@ class TrOCRDecoderWrapper(TrOCRPreTrainedModel):
         super().__init__(config)
         self.decoder = TrOCRDecoder(config)
 
-    def construct(self, *args, **kwargs):
+    def forward(self, *args, **kwargs):
         return self.decoder(*args, **kwargs)
 
 
@@ -830,7 +830,7 @@ class TrOCRForCausalLM(TrOCRPreTrainedModel):
         super().__init__(config)
         self.model = TrOCRDecoderWrapper(config)
 
-        self.output_projection = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.output_projection = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -853,7 +853,7 @@ class TrOCRForCausalLM(TrOCRPreTrainedModel):
     def get_decoder(self):
         return self.model.decoder
 
-    def construct(
+    def forward(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
             attention_mask: Optional[mindspore.Tensor] = None,
@@ -989,7 +989,7 @@ class TrOCRForCausalLM(TrOCRPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]

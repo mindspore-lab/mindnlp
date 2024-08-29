@@ -20,10 +20,11 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindspore import Tensor, Parameter
-from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 from mindspore import dtype as mstype
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from .configuration_internlm import InternLMConfig
 from ...activations import ACT2FN
@@ -54,7 +55,7 @@ def _make_causal_mask(
 
     if past_key_values_length > 0:
         mask = ops.concat(
-            [ops.zeros((tgt_len, past_key_values_length), dtype=dtype), mask], axis=-1
+            [ops.zeros((tgt_len, past_key_values_length), dtype=dtype), mask], dim=-1
         )
     return ops.broadcast_to(
         mask[None, None, :, :], (bsz, 1, tgt_len, tgt_len + past_key_values_length)
@@ -79,19 +80,19 @@ def _expand_mask(mask: Tensor, dtype: mstype, tgt_len: Optional[int] = None):
     )
 
 # Copied from transformers.models.llama.modeling_llama.LlamaRMSNorm with Llama->InternLM
-class InternLMRMSNorm(nn.Cell):
+class InternLMRMSNorm(nn.Module):
     """
     RMSNorm
     """
-    def __init__(self, hidden_size, epsilon=1e-6):
+    def __init__(self, hidden_size, eps=1e-6):
         """
         RMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
         self.weight = Parameter(ops.ones(hidden_size), 'weight')
-        self.variance_epsilon = epsilon
+        self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the RMS normalization of hidden states.
         
@@ -115,7 +116,7 @@ class InternLMRMSNorm(nn.Cell):
 
         return self.weight * hidden_states
 
-class InternLMRotaryEmbedding(nn.Cell):
+class InternLMRotaryEmbedding(nn.Module):
     """
     RotaryEmbedding
     """
@@ -143,27 +144,27 @@ class InternLMRotaryEmbedding(nn.Cell):
         freqs = ops.einsum("i,j->ij", t, self.inv_freq)
         # Different from paper,
         # but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos()[None, None, :, :]
         self.sin_cached = emb.sin()[None, None, :, :]
 
-    def construct(self, x, seq_len=None):
+    def forward(self, x, seq_len=None):
         '''
-        This method constructs the rotary embeddings for the input sequence.
+        This method forwards the rotary embeddings for the input sequence.
         
         Args:
             self (InternLMRotaryEmbedding): The instance of the InternLMRotaryEmbedding class.
             x:
-                The input tensor for which the rotary embeddings are to be constructed.
+                The input tensor for which the rotary embeddings are to be forwarded.
 
                 - Type: tensor
-                - Purpose: This parameter represents the input tensor for which the rotary embeddings are to be constructed.
+                - Purpose: This parameter represents the input tensor for which the rotary embeddings are to be forwarded.
             seq_len (int, optional):
                 The length of the input sequence.
 
                 - Type: int
                 - Purpose: This parameter represents the length of the input sequence for which the rotary embeddings
-                    are to be constructed. If not provided, it defaults to None.
+                    are to be forwarded. If not provided, it defaults to None.
         
         Returns:
             None.
@@ -179,7 +180,7 @@ class InternLMRotaryEmbedding(nn.Cell):
             t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
             freqs = ops.einsum("i,j->ij", t, self.inv_freq)
             # Different from paper, but it uses a different permutation in order to obtain the same calculation
-            emb = ops.cat((freqs, freqs), axis=-1)
+            emb = ops.cat((freqs, freqs), dim=-1)
             self.cos_cached = emb.cos()[None, None, :, :]
             self.sin_cached = emb.sin()[None, None, :, :]
         return (
@@ -277,7 +278,7 @@ class InternLMDynamicNTKScalingRotaryEmbedding(InternLMRotaryEmbedding):
 
         freqs = ops.einsum("i,j->ij", t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
+        emb = ops.cat((freqs, freqs), dim=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
@@ -285,7 +286,7 @@ def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
     x2 = x[..., x.shape[-1] // 2:]
-    return ops.cat((-x2, x1), axis=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids):
     """
@@ -300,7 +301,7 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids):
     k_embed = (k * cos) + (rotate_half(k) * sin)
     return q_embed, k_embed
 
-class InternLMMLP(nn.Cell):
+class InternLMMLP(nn.Module):
     """
     MLP
     """
@@ -328,12 +329,12 @@ class InternLMMLP(nn.Cell):
             ValueError: If the hidden_act parameter does not correspond to a supported activation function.
         """
         super().__init__()
-        self.gate_proj = nn.Dense(hidden_size, intermediate_size, has_bias=False)
-        self.down_proj = nn.Dense(intermediate_size, hidden_size, has_bias=False)
-        self.up_proj = nn.Dense(hidden_size, intermediate_size, has_bias=False)
+        self.gate_proj = nn.Linear(hidden_size, intermediate_size, bias=False)
+        self.down_proj = nn.Linear(intermediate_size, hidden_size, bias=False)
+        self.up_proj = nn.Linear(hidden_size, intermediate_size, bias=False)
         self.act_fn = ACT2FN[hidden_act]
 
-    def construct(self, x):
+    def forward(self, x):
         """
         Constructs the output of the InternLMMLP model.
 
@@ -349,7 +350,7 @@ class InternLMMLP(nn.Cell):
         """
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
-class InternLMAttention(nn.Cell):
+class InternLMAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     def __init__(self, config: InternLMConfig):
         """
@@ -404,10 +405,10 @@ class InternLMAttention(nn.Cell):
                 f" and `num_heads`: {self.num_heads})."
             )
 
-        self.q_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=config.bias)
-        self.k_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=config.bias)
-        self.v_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=config.bias)
-        self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=config.bias)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.bias)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.bias)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.bias)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.bias)
         self._init_rope()
 
     def _init_rope(self):
@@ -458,7 +459,7 @@ class InternLMAttention(nn.Cell):
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -505,8 +506,8 @@ class InternLMAttention(nn.Cell):
 
         if past_key_value is not None:
             # reuse k, v, self_attention
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
 
         past_key_value = (key_states, value_states) if use_cache else None
         kv_seq_len = key_states.shape[-2]
@@ -526,7 +527,7 @@ class InternLMAttention(nn.Cell):
             attn_weights = attn_weights + attention_mask
             attn_weights = ops.maximum(attn_weights,Tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))
 
-        attn_weights = ops.softmax(attn_weights, axis=-1).astype(query_states.dtype)
+        attn_weights = ops.softmax(attn_weights, dim=-1).astype(query_states.dtype)
         attn_output = ops.matmul(attn_weights, value_states)
 
         if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
@@ -549,7 +550,7 @@ class InternLMAttention(nn.Cell):
 INTERNLM_ATTENTION_CLASSES = {
     "eager": InternLMAttention,
 }
-class InternLMDecoderLayer(nn.Cell):
+class InternLMDecoderLayer(nn.Module):
     """
     DecoderLayer
     """
@@ -582,10 +583,10 @@ class InternLMDecoderLayer(nn.Cell):
             intermediate_size=config.intermediate_size,
             hidden_act=config.hidden_act,
         )
-        self.input_layernorm = InternLMRMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
-        self.post_attention_layernorm = InternLMRMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
+        self.input_layernorm = InternLMRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.post_attention_layernorm = InternLMRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
-    def construct(
+    def forward(
             self,
             hidden_states: Tensor,
             attention_mask: Optional[Tensor] = None,
@@ -677,9 +678,9 @@ class InternLMPreTrainedModel(PreTrainedModel):
             None.
 
         This method initializes the weights of the given cell based on the configuration specified in `self.config`.
-        It supports two types of cells: `nn.Dense` and `nn.Embedding`.
+        It supports two types of cells: `nn.Linear` and `nn.Embedding`.
 
-        For `nn.Dense` cells, the weights are initialized using a normal distribution with mean 0 and standard deviation
+        For `nn.Linear` cells, the weights are initialized using a normal distribution with mean 0 and standard deviation
         `self.config.initializer_range`.
         The weights are set using the `set_data` method of the `weight` attribute of the cell.
         If the cell has a bias attribute (`cell.bias`), it is initialized with zeros using the `set_data` method as well.
@@ -693,7 +694,7 @@ class InternLMPreTrainedModel(PreTrainedModel):
             This method modifies the weights of the cell in-place and does not return any value.
         """
         std = self.config.initializer_range
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(
                 sigma=std, mean=0.0), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
@@ -761,8 +762,8 @@ class InternLMModel(InternLMPreTrainedModel):
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=self.padding_idx)
 
-        self.layers = nn.CellList([InternLMDecoderLayer(config) for _ in range(config.num_hidden_layers)])
-        self.norm = InternLMRMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
+        self.layers = nn.ModuleList([InternLMDecoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.norm = InternLMRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
         # Initialize weights and apply final processing
         self.gradient_checkpointing = False
@@ -840,7 +841,7 @@ class InternLMModel(InternLMPreTrainedModel):
 
         return combined_attention_mask
 
-    def construct(
+    def forward(
             self,
             input_ids: Tensor = None,
             attention_mask: Optional[Tensor] = None,
@@ -979,11 +980,11 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
 
     This class extends the InternLMPreTrainedModel class and provides additional functionality specific to
     causal language modeling tasks. It includes methods for initializing the model, setting and getting
-    input and output embeddings, setting the decoder, constructing the model, and preparing inputs for generation.
+    input and output embeddings, setting the decoder, forwarding the model, and preparing inputs for generation.
 
     Attributes:
         model (InternLMModel): The underlying InternLM model.
-        lm_head (nn.Dense): The linear layer for mapping hidden states to the vocabulary space.
+        lm_head (nn.Linear): The linear layer for mapping hidden states to the vocabulary space.
 
     Methods:
         __init__: Initializes the InternLMForCausalLM instance.
@@ -993,7 +994,7 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
         set_output_embeddings: Sets the output embeddings of the model.
         set_decoder: Sets the decoder for the model.
         get_decoder: Returns the decoder of the model.
-        construct: Constructs the model and computes the masked language modeling loss.
+        forward: Constructs the model and computes the masked language modeling loss.
         prepare_inputs_for_generation: Prepares inputs for generation by modifying the input_ids, attention_mask,
             and position_ids.
 
@@ -1016,7 +1017,7 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
         >>> model.set_decoder(decoder_model)
         ...
         >>> # Generate text
-        >>> model.construct(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)
+        >>> model.forward(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)
         >>> generated_text = model.prepare_inputs_for_generation(input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs)
         ```
     """
@@ -1047,7 +1048,7 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
         super().__init__(config)
         self.model = InternLMModel(config)
 
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1166,7 +1167,7 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
         """
         return self.model
 
-    def construct(
+    def forward(
             self,
             input_ids: Tensor = None,
             attention_mask: Optional[Tensor] = None,
@@ -1233,7 +1234,7 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Enable model parallelism
-            loss = ops.cross_entropy(shift_logits, shift_labels)
+            loss = F.cross_entropy(shift_logits, shift_labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -1338,7 +1339,7 @@ class InternLMForSequenceClassification(InternLMPreTrainedModel):
     The get_input_embeddings method returns the embedded tokens of the model, while the set_input_embeddings method
     allows for setting new input embeddings.
 
-    The construct method is responsible for processing input data and generating classification outputs.
+    The forward method is responsible for processing input data and generating classification outputs.
     It takes several optional parameters, including input_ids, attention_mask, position_ids, past_key_values,
     inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict.
     The method returns either a tuple or a SequenceClassifierOutputWithPast object, depending on the value of the
@@ -1374,7 +1375,7 @@ class InternLMForSequenceClassification(InternLMPreTrainedModel):
                 - num_labels (int): The number of labels for classification.
                 This value determines the size of the output layer.
                 - hidden_size (int): The size of the hidden layers in the model.
-                This value is used in the `nn.Dense` layer.
+                This value is used in the `nn.Linear` layer.
 
         Returns:
             None.
@@ -1385,7 +1386,7 @@ class InternLMForSequenceClassification(InternLMPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = InternLMModel(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1428,7 +1429,7 @@ class InternLMForSequenceClassification(InternLMPreTrainedModel):
         """
         self.model.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1494,13 +1495,13 @@ class InternLMForSequenceClassification(InternLMPreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output
