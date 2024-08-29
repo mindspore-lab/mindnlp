@@ -117,7 +117,7 @@ class GemmaConfig(PretrainedConfig):
         rope_theta=10000.0,
         attention_bias=False,
         attention_dropout=0.0,
-        sliding_window=4096,
+        sliding_window = 4096,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -137,7 +137,7 @@ class GemmaConfig(PretrainedConfig):
         self.attention_bias = attention_bias
         self.attention_dropout = attention_dropout
         self.sliding_window = sliding_window
-
+        
         super().__init__(
             pad_token_id=pad_token_id,
             bos_token_id=bos_token_id,
