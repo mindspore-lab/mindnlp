@@ -612,7 +612,6 @@ def download(
         return pointer_path
 
     url = build_download_url(repo_id, filename, revision, repo_type=repo_type, mirror=mirror)
-
     token = HF_TOKEN if not token else token
 
     headers = None
