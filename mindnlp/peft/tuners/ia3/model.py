@@ -28,7 +28,7 @@ from dataclasses import asdict
 from enum import Enum
 from typing import Optional
 
-from mindspore import nn
+from mindnlp.core import nn
 
 from mindnlp.transformers.ms_utils import Conv1D
 from mindnlp.peft.utils import (
