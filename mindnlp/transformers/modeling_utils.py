@@ -4003,7 +4003,7 @@ def find_tied_parameters(model: nn.Module, **kwargs):
     </Tip>
 
     Args:
-        model (`torch.nn.Module`): The model to inspect.
+        model (`nn.Module`): The model to inspect.
 
     Returns:
         List[List[str]]: A list of lists of parameter names being all tied together.
@@ -4012,7 +4012,7 @@ def find_tied_parameters(model: nn.Module, **kwargs):
 
     ```py
     >>> from collections import OrderedDict
-    >>> import torch.nn as nn
+    >>> import nn as nn
 
     >>> model = nn.Sequential(OrderedDict([("linear1", nn.Linear(4, 4)), ("linear2", nn.Linear(4, 4))]))
     >>> model.linear2.weight = model.linear1.weight
