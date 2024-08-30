@@ -39,6 +39,7 @@ from mindspore import Tensor
 from mindspore.train.serialization import _exec_save, _parse_ckpt_proto, tensor_to_np_type, tensor_to_ms_type
 
 import safetensors
+import safetensors.numpy
 from safetensors import deserialize
 
 from mindnlp.configs import SUPPORT_BF16
@@ -1348,7 +1349,7 @@ def safe_load_file(filename):
             dtype = _MS_TYPES[v["dtype"]]
             if (not SUPPORT_BF16 and dtype != mindspore.bfloat16) or SUPPORT_BF16:
                 arr = Tensor.convert_bytes_to_tensor(bytes(v["data"]), tuple(v["shape"]), dtype)
-                result[k] = arr
+                result[k] = Tensor(arr)
             else:
                 raise TypeError('Do not support bfloat16 on current device, use numpy as convert buffer to boost load.')
         return result
