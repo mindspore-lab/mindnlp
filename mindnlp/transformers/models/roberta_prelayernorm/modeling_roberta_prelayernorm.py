@@ -1044,8 +1044,6 @@ class RobertaPreLayerNormLMHead(nn.Module):
         # if self.decoder.bias.device.type == "meta":
         # self.decoder.bias = self.bias
         # else:
-        print('tie weights')
-        print(self.bias.asnumpy())
         self.bias = self.decoder.bias
 
 
