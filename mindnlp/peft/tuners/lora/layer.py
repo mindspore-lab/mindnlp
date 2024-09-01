@@ -25,7 +25,7 @@ from mindnlp.core.nn import ParameterDict, functional as F
 from ....transformers.ms_utils import Conv1D
 from ..tuners_utils import BaseTunerLayer, check_adapters_to_merge
 from ...utils.other import transpose
-
+from .dora import DoraConv2dLayer, DoraEmbeddingLayer, DoraLinearLayer
 from .config import LoraConfig
 
 
@@ -72,7 +72,7 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
     # All names of other parameters that may contain adapter-related parameters
     other_param_names = ("r", "lora_alpha", "scaling", "lora_dropout")
 
-    def __init__(self, base_layer: nn.Module, **kwargs) -> None:
+    def __init__(self, base_layer: nn.Module,ephemeral_gpu_offload: bool = False, **kwargs) -> None:
         r"""
         __init__
         
@@ -106,8 +106,9 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
         self._disable_adapters = False
         self.merged_adapters = []
         self.use_dora: dict[str, bool] = {}
-        self.lora_magnitude_vector: Optional[ParameterDict] = None  # for DoRA
+        self.lora_magnitude_vector = nn.ModuleDict()  # for DoRA
         self._caches: dict[str, Any] = {}
+        self.ephemeral_gpu_offload: bool = ephemeral_gpu_offload
         self.kwargs = kwargs
 
         base_layer = self.get_base_layer()
@@ -204,6 +205,7 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
 
         if use_dora:
             self.dora_init(adapter_name)
+
             self.use_dora[adapter_name] = True
         else:
             self.use_dora[adapter_name] = False
@@ -245,6 +247,30 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
             # initialize a the same way as the default for nn.Linear and b to zero
             nn.init.zeros_(self.lora_embedding_A[adapter_name])
             nn.init.normal_(self.lora_embedding_B[adapter_name])
+    def dora_init(self, adapter_name: str) -> None:
+        if not self.lora_magnitude_vector:
+            # first dora layer being added, add lora_magnitude_vector to the list of learnable parameters
+            self.adapter_layer_names = self.adapter_layer_names[:] + ("lora_magnitude_vector",)
+
+        dora_layer = DoraLinearLayer(fan_in_fan_out=getattr(self, "fan_in_fan_out", False))
+        lora_A = self.lora_A[adapter_name].weight
+        lora_B = self.lora_B[adapter_name].weight
+        place_on_cpu = self.ephemeral_gpu_offload and (lora_A.device.type == "cpu" or lora_B.device.type == "cpu")
+        # if self.ephemeral_gpu_offload:
+        #     if lora_A.device.type in ["cuda", "xpu"]:
+        #         lora_B = lora_B.to(lora_A.device)
+        #     else:
+        #         if lora_B.device.type not in ["cuda", "xpu"]:
+        #             if is_xpu_available():
+        #                 lora_B = lora_B.to("xpu")
+        #             else:
+        #                 lora_B = lora_B.to("cuda")
+        #         lora_A = lora_A.to(lora_B.device)
+        scaling = self.scaling[adapter_name]
+        dora_layer.update_layer(
+            base_layer=self.get_base_layer(), lora_A=lora_A, lora_B=lora_B, scaling=scaling, place_on_cpu=place_on_cpu
+        )
+        self.lora_magnitude_vector[adapter_name] = dora_layer
 
     def _get_weight_norm(self, weight, lora_weight, scaling) -> mindspore.Tensor:
         r"""
@@ -632,6 +658,35 @@ with 'lora.'.
         output_tensor = transpose(weight_B @ weight_A, self.fan_in_fan_out) * self.scaling[adapter]
 
         return output_tensor
+    
+    def _apply_dora(self, x, lora_A, lora_B, scaling, active_adapter):
+        """
+        For DoRA on Linear layers, calculate the extra output from LoRA with DoRA applied. This should be added on top of the base layer
+        output.
+        """
+        base_layer = self.get_base_layer()  # Get the base linear layer
+        weight = base_layer.weight  # Base layer's weight
+        
+        # Compute LoRA weight
+        lora_weight = ops.mm(lora_B.weight.flatten(start_dim=1), lora_A.weight.flatten(start_dim=1))
+        lora_weight = lora_weight.reshape(weight.shape)
+        
+        # Magnitude scaling and weight normalization
+        magnitude = self.lora_magnitude_vector[active_adapter]
+        weight_norm = self._get_weight_norm(weight, lora_weight, scaling)
+        mag_norm_scale = magnitude / weight_norm
+        
+        # Base layer's output
+        base_output = ops.matmul(x, weight.t())  # Linear transformation (x @ weight.T)
+        
+        # LoRA's output
+        lora_output = lora_B(lora_A(x))
+        
+        # Result with DoRA applied
+        result_dora = (mag_norm_scale - 1) * base_output + mag_norm_scale * lora_output * scaling
+        
+        return result_dora
+
 
     def forward(self, x: mindspore.Tensor, *args: Any, **kwargs: Any) -> mindspore.Tensor:
         r"""
@@ -674,7 +729,13 @@ with 'lora.'.
                     result = result + lora_B(lora_A(dropout(x))) * scaling
                 else:
                     x = dropout(x)
-                    result = result + self._apply_dora(x, lora_A, lora_B, scaling, active_adapter)
+                    result = result + self.lora_magnitude_vector[active_adapter](
+                        x,
+                        lora_A=lora_A,
+                        lora_B=lora_B,
+                        scaling=scaling,
+                        base_layer=self.get_base_layer(),
+                    )
 
             result = result.to(torch_result_dtype)
 
@@ -812,6 +873,18 @@ adaptation and specialization.
             self.to(dtype=weight.dtype)
 
         self.set_adapter(self.active_adapters)
+
+    def dora_init(self, adapter_name: str) -> None:
+        if self.lora_magnitude_vector is None:
+            # first dora layer being added, add lora_magnitude_vector to the list of learnable parameters
+            self.adapter_layer_names = self.adapter_layer_names[:] + ("lora_magnitude_vector",)
+
+        dora_layer = DoraConv2dLayer(fan_in_fan_out=False)
+        lora_A = self.lora_A[adapter_name].weight
+        lora_B = self.lora_B[adapter_name].weight
+        scaling = self.scaling[adapter_name]
+        dora_layer.update_layer(base_layer=self.get_base_layer(), lora_A=lora_A, lora_B=lora_B, scaling=scaling)
+        self.lora_magnitude_vector[adapter_name] = dora_layer
 
     def merge(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> None:
         """
@@ -1147,7 +1220,7 @@ class Conv2d(nn.Module, LoraLayer):
             self.to(dtype=weight.dtype)
 
         if use_dora:
-            self.dora_init(adapter_name)
+            # self.dora_init(adapter_name)
             self.use_dora[adapter_name] = True
         else:
             self.use_dora[adapter_name] = False
@@ -1157,6 +1230,7 @@ class Conv2d(nn.Module, LoraLayer):
     def merge(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> None:
         """
         Merge the active adapter weights inside the base weights
+
 
         Args:
             safe_merge (`bool`, *optional*):
