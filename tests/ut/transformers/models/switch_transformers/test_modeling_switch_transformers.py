@@ -17,30 +17,31 @@
 import copy
 import tempfile
 import unittest
-import numpy as np
 
 from mindnlp.transformers import SwitchTransformersConfig
 from mindnlp.utils.testing_utils import (
     require_tokenizers,
     require_mindspore,
     slow,
-    is_mindspore_available,
+    is_mindspore_available
 )
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, ids_tensor
+# from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops, nn
 
     from mindnlp.transformers import (
         AutoTokenizer,
         SwitchTransformersEncoderModel,
         SwitchTransformersForConditionalGeneration,
         SwitchTransformersModel,
+        SwitchTransformersTop1Router,
     )
     from mindnlp.transformers.models.switch_transformers.modeling_switch_transformers import (
         load_balancing_loss_func,
@@ -106,7 +107,7 @@ class SwitchTransformersModelTester:
         self.router_jitter_noise = router_jitter_noise
 
     def get_large_model_config(self):
-        return SwitchTransformersConfig.from_pretrained("google/switch-base-8", ms_dtype=mindspore.float16)
+        return SwitchTransformersConfig.from_pretrained("google/switch-base-8")
 
     def prepare_config_and_inputs(self):
         input_ids = ids_tensor([self.batch_size, self.encoder_seq_length], self.vocab_size)
@@ -184,14 +185,14 @@ class SwitchTransformersModelTester:
         lm_labels,
     ):
         model = SwitchTransformersModel(config=config)
-        model.set_train(False)
+        model.eval()
 
         # make sure that lm_labels are correctly padded from the right
-        lm_labels.masked_fill((lm_labels == self.decoder_start_token_id), self.eos_token_id)
+        lm_labels = lm_labels.masked_fill((lm_labels == self.decoder_start_token_id), self.eos_token_id)
 
         # add casaul pad token mask
         triangular_mask = ops.tril(lm_labels.new_ones(lm_labels.shape)).logical_not()
-        lm_labels.masked_fill(triangular_mask, self.pad_token_id)
+        lm_labels = lm_labels.masked_fill(triangular_mask, self.pad_token_id)
         decoder_input_ids = model._shift_right(lm_labels)
 
         for i, (decoder_input_ids_slice, lm_labels_slice) in enumerate(zip(decoder_input_ids, lm_labels)):
@@ -222,7 +223,7 @@ class SwitchTransformersModelTester:
         lm_labels,
     ):
         model = SwitchTransformersModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids=input_ids,
             decoder_input_ids=decoder_input_ids,
@@ -250,7 +251,7 @@ class SwitchTransformersModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = SwitchTransformersForConditionalGeneration(config=config).set_train(False)
+        model = SwitchTransformersForConditionalGeneration(config=config).eval()
         outputs = model(
             input_ids=input_ids,
             decoder_input_ids=decoder_input_ids,
@@ -270,7 +271,7 @@ class SwitchTransformersModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = SwitchTransformersModel(config=config).get_decoder().set_train(False)
+        model = SwitchTransformersModel(config=config).get_decoder().eval()
         # first forward pass
         outputs = model(input_ids, use_cache=True, output_router_logits=False)
         outputs_use_cache_conf = model(input_ids, output_router_logits=False)
@@ -285,7 +286,7 @@ class SwitchTransformersModelTester:
         next_tokens = ids_tensor((self.batch_size, 1), config.vocab_size)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
 
         output_from_no_past = model(next_input_ids, output_router_logits=False)["last_hidden_state"]
         output_from_past = model(next_tokens, past_key_values=past_key_values, output_router_logits=False)[
@@ -298,7 +299,7 @@ class SwitchTransformersModelTester:
         output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_decoder_model_attention_mask_past(
         self,
@@ -310,7 +311,7 @@ class SwitchTransformersModelTester:
         lm_labels,
     ):
         model = SwitchTransformersModel(config=config).get_decoder()
-        model.set_train(False)
+        model.eval()
 
         # create attention mask
         attn_mask = ops.ones(input_ids.shape, dtype=mindspore.int64)
@@ -332,10 +333,10 @@ class SwitchTransformersModelTester:
         input_ids[:, -random_seq_idx_to_change] = random_other_next_tokens
 
         # append to next input_ids and attn_mask
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         attn_mask = ops.cat(
             [attn_mask, ops.ones((attn_mask.shape[0], 1), dtype=mindspore.int64)],
-            axis=1,
+            dim=1,
         )
 
         # get two different outputs
@@ -352,7 +353,7 @@ class SwitchTransformersModelTester:
         output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_decoder_model_past_large_inputs(
         self,
@@ -363,7 +364,7 @@ class SwitchTransformersModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = SwitchTransformersModel(config=config).get_decoder().set_train(False)
+        model = SwitchTransformersModel(config=config).get_decoder().eval()
         # first forward pass
         outputs = model(input_ids, attention_mask=attention_mask, use_cache=True, output_router_logits=False)
 
@@ -374,8 +375,8 @@ class SwitchTransformersModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([attention_mask, next_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([attention_mask, next_mask], dim=-1)
 
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask, output_router_logits=False)[
             "last_hidden_state"
@@ -395,7 +396,7 @@ class SwitchTransformersModelTester:
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     @slow
     def create_and_check_generate_with_past_key_values(
@@ -411,13 +412,13 @@ class SwitchTransformersModelTester:
         This test does not pass for small models due to precision errors. It is therefore only run for slightly larger models.
         """
         model = (
-            SwitchTransformersForConditionalGeneration.from_pretrained("google/switch-base-8", ms_dtype=mindspore.float16).set_train(False)
+            SwitchTransformersForConditionalGeneration.from_pretrained("google/switch-base-8").eval()
         )
-        mindspore.dataset.config.set_seed(0)
+        mindspore.manual_seed(0)
         output_without_past_cache = model.generate(
             input_ids[:1], num_beams=2, max_length=5, do_sample=True, use_cache=False
         )
-        mindspore.dataset.config.set_seed(0)
+        mindspore.manual_seed(0)
         output_with_past_cache = model.generate(input_ids[:1], num_beams=2, max_length=5, do_sample=True)
         self.parent.assertTrue(ops.all(output_with_past_cache == output_without_past_cache))
 
@@ -430,7 +431,7 @@ class SwitchTransformersModelTester:
         decoder_attention_mask,
         lm_labels,
     ):
-        model = SwitchTransformersModel(config=config).half().set_train(False)
+        model = SwitchTransformersModel(config=config).half().eval()
         output = model(input_ids, decoder_input_ids=input_ids, attention_mask=attention_mask)["last_hidden_state"]
         self.parent.assertFalse(ops.isnan(output).any().item())
 
@@ -444,16 +445,17 @@ class SwitchTransformersModelTester:
         lm_labels,
     ):
         for model_class in [SwitchTransformersModel, SwitchTransformersForConditionalGeneration]:
-            mindspore.dataset.config.set_seed(0)
-            model = model_class(config=config).set_train(False)
+            mindspore.manual_seed(0)
+            mindspore.set_seed(0)
+            model = model_class(config=config).eval()
             # load state dict copies weights but does not tie them
-            mindspore.load_param_into_net(model.encoder, model.decoder.parameters_dict(), \
-                                          strict_load=False)
+            model.encoder.load_state_dict(model.decoder.state_dict(), strict=False)
 
-            mindspore.dataset.config.set_seed(0)
+            mindspore.manual_seed(0)
+            mindspore.set_seed(0)
             tied_config = copy.deepcopy(config)
             tied_config.tie_encoder_decoder = True
-            tied_model = model_class(config=tied_config).set_train(False)
+            tied_model = model_class(config=tied_config).eval()
 
             model_result = model(
                 input_ids=input_ids,
@@ -471,26 +473,27 @@ class SwitchTransformersModelTester:
 
             # check that models has less parameters
             self.parent.assertLess(
-                tied_model.num_parameters(), model.num_parameters()
+                sum(p.numel() for p in tied_model.parameters()), sum(p.numel() for p in model.parameters())
             )
             random_slice_idx = ids_tensor((1,), model_result[0].shape[-1]).item()
 
             # check that outputs are equal
+            print(model_result[0][0, :, random_slice_idx], tied_model_result[0][0, :, random_slice_idx])
             self.parent.assertTrue(
-                np.allclose(
-                    model_result[0][0, :, random_slice_idx].asnumpy(), tied_model_result[0][0, :, random_slice_idx].asnumpy(), atol=1e-4
+                ops.allclose(
+                    model_result[0][0, :, random_slice_idx], tied_model_result[0][0, :, random_slice_idx], atol=1e-4
                 )
             )
 
             # check that outputs after saving and loading are equal
             with tempfile.TemporaryDirectory() as tmpdirname:
                 tied_model.save_pretrained(tmpdirname)
-                tied_model = model_class.from_pretrained(tmpdirname, ms_dtype=mindspore.float16)
-                tied_model.set_train(False)
+                tied_model = model_class.from_pretrained(tmpdirname)
+                tied_model.eval()
 
                 # check that models has less parameters
                 self.parent.assertLess(
-                    tied_model.num_parameters(), model.num_parameters()
+                    sum(p.numel() for p in tied_model.parameters()), sum(p.numel() for p in model.parameters())
                 )
                 random_slice_idx = ids_tensor((1,), model_result[0].shape[-1]).item()
 
@@ -503,9 +506,9 @@ class SwitchTransformersModelTester:
 
                 # check that outputs are equal
                 self.parent.assertTrue(
-                    np.allclose(
-                        model_result[0][0, :, random_slice_idx].asnumpy(),
-                        tied_model_result[0][0, :, random_slice_idx].asnumpy(),
+                    ops.allclose(
+                        model_result[0][0, :, random_slice_idx],
+                        tied_model_result[0][0, :, random_slice_idx],
                         atol=1e-4,
                     )
                 )
@@ -517,7 +520,7 @@ class SwitchTransformersModelTester:
         prev_vocab_size = config.vocab_size
 
         config.tie_word_embeddings = False
-        model = SwitchTransformersForConditionalGeneration(config=config).set_train(False)
+        model = SwitchTransformersForConditionalGeneration(config=config).eval()
         model.resize_token_embeddings(prev_vocab_size - 10)
 
         self.parent.assertEqual(model.get_input_embeddings().weight.shape[0], prev_vocab_size - 10)
@@ -554,7 +557,6 @@ class SwitchTransformersModelTest(ModelTesterMixin, GenerationTesterMixin, unitt
     all_generative_model_classes = (SwitchTransformersForConditionalGeneration,) if is_mindspore_available() else ()
     pipeline_model_mapping = (
         {
-            "conversational": SwitchTransformersForConditionalGeneration,
             "feature-extraction": SwitchTransformersModel,
             "summarization": SwitchTransformersForConditionalGeneration,
             "text2text-generation": SwitchTransformersForConditionalGeneration,
@@ -653,7 +655,6 @@ class SwitchTransformersModelTest(ModelTesterMixin, GenerationTesterMixin, unitt
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_encoder_decoder_shared_weights(*config_and_inputs)
 
-    # @unittest.skipIf(torch_device == "cpu", "Cant do half precision")
     def test_model_fp16_forward(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model_fp16_forward(*config_and_inputs)
@@ -665,7 +666,7 @@ class SwitchTransformersModelTest(ModelTesterMixin, GenerationTesterMixin, unitt
     @slow
     def test_model_from_pretrained(self):
         model_name = "google/switch-base-8"
-        model = SwitchTransformersModel.from_pretrained(model_name, ms_dtype=mindspore.float16)
+        model = SwitchTransformersModel.from_pretrained(model_name)
         self.assertIsNotNone(model)
 
     def test_generate_with_head_masking(self):
@@ -673,7 +674,7 @@ class SwitchTransformersModelTest(ModelTesterMixin, GenerationTesterMixin, unitt
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         config = config_and_inputs[0]
         max_length = config_and_inputs[1].shape[-1] + 3
-        model = SwitchTransformersForConditionalGeneration(config).set_train(False)
+        model = SwitchTransformersForConditionalGeneration(config).eval()
 
         head_masking = {
             "head_mask": ops.zeros(config.num_layers, config.num_heads),
@@ -700,6 +701,12 @@ class SwitchTransformersModelTest(ModelTesterMixin, GenerationTesterMixin, unitt
             # We check the state of decoder_attentions and cross_attentions just from the last step
             attn_weights = out[attn_name] if attn_name == attention_names[0] else out[attn_name][-1]
             self.assertEqual(sum([w.sum().item() for w in attn_weights]), 0.0)
+
+    @unittest.skip(
+        reason="This architecure has tied weights by default and there is no way to remove it, check: https://github.com/huggingface/transformers/pull/31771#issuecomment-2210915245"
+    )
+    def test_load_save_without_tied_weights(self):
+        pass
 
 
 class SwitchTransformersEncoderOnlyModelTester:
@@ -745,7 +752,7 @@ class SwitchTransformersEncoderOnlyModelTester:
         self.is_training = is_training
 
     def get_large_model_config(self):
-        return SwitchTransformersConfig.from_pretrained("switch_base_8", ms_dtype=mindspore.float16)
+        return SwitchTransformersConfig.from_pretrained("google/switch-base-8")
 
     def prepare_config_and_inputs(self):
         input_ids = ids_tensor([self.batch_size, self.encoder_seq_length], self.vocab_size)
@@ -774,7 +781,7 @@ class SwitchTransformersEncoderOnlyModelTester:
 
     def create_and_check_model(self, config, input_ids, attention_mask):
         model = SwitchTransformersEncoderModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -785,7 +792,7 @@ class SwitchTransformersEncoderOnlyModelTester:
         self.parent.assertEqual(encoder_output.shape, (self.batch_size, self.encoder_seq_length, self.hidden_size))
 
     def create_and_check_model_fp16_forward(self, config, input_ids, attention_mask):
-        model = SwitchTransformersEncoderModel(config=config).half().set_train(False)
+        model = SwitchTransformersEncoderModel(config=config).half().eval()
         output = model(input_ids, attention_mask=attention_mask)["last_hidden_state"]
         self.parent.assertFalse(ops.isnan(output).any().item())
 
@@ -818,10 +825,15 @@ class SwitchTransformersEncoderOnlyModelTest(ModelTesterMixin, unittest.TestCase
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model(*config_and_inputs)
 
-    # @unittest.skipIf(torch_device == "cpu", "Cant do half precision")
     def test_model_fp16_forward(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model_fp16_forward(*config_and_inputs)
+
+    @unittest.skip(
+        reason="This architecure has tied weights by default and there is no way to remove it, check: https://github.com/huggingface/transformers/pull/31771#issuecomment-2210915245"
+    )
+    def test_load_save_without_tied_weights(self):
+        pass
 
 
 def use_task_specific_params(model, task):
@@ -840,7 +852,7 @@ class TestAsymmetricSwitchTransformers(unittest.TestCase):
             decoder_attention_mask,
             lm_labels,
         ) = inputs
-        model = SwitchTransformersForConditionalGeneration(config=config).set_train(False)
+        model = SwitchTransformersForConditionalGeneration(config=config).eval()
         outputs = model(
             input_ids=input_ids,
             decoder_input_ids=decoder_input_ids,
@@ -933,6 +945,68 @@ class SwitchTransformerRouterTest(unittest.TestCase):
         loss = router_z_loss_func(logits)
         self.assertAlmostEqual(loss.item(), 13.786719, places=5)
 
+    def test_equivalency_token_chose_masked_router(self):
+        r"""
+        This test tests the equivalency between the `SwitchTransformersTop1Router`
+        originally implemented from here: TODO: provide link
+        """
+
+        input_tokens = mindspore.Tensor(
+            [
+                [
+                    [0.6433916, 0.18188512, 0.02240455, 0.563781],
+                    [0.5526401, 0.0958724, 0.34253013, 0.03644359],
+                    [0.08744538, 0.7909105, 0.35205448, 0.53364205],
+                ],
+                [
+                    [0.02900076, 0.4168595, 0.5802449, 0.91486526],
+                    [0.27414513, 0.14991808, 0.9383501, 0.5209162],
+                    [0.51207185, 0.90618336, 0.7309413, 0.95533276],
+                ],
+            ]
+        )
+
+        model = SwitchTransformersTop1Router(self.config)
+
+        model.classifier.weight = mindspore.Parameter(
+            mindspore.Tensor(
+                [
+                    [0.02008116, 0.00620062],
+                    [-0.00811031, -0.00031623],
+                    [-0.03542127, 0.02703803],
+                    [0.02335377, -0.02971946],
+                ],
+            ).t()
+        )
+
+        expert_index, _, router_logits = model(input_tokens)
+        router_probs = ops.softmax(router_logits, dim=-1)
+
+        router_z_loss = router_z_loss_func(router_logits)
+        auxiliary_loss = load_balancing_loss_func(router_probs, ops.argmax(expert_index, dim=-1))
+
+        self.assertAlmostEqual(auxiliary_loss.item(), 1.000308, places=5)
+        self.assertAlmostEqual(router_z_loss.item(), 0.4789799, places=5)
+
+        # self.assertTrue(ops.allclose(expert_index.bool().unsqueeze(-1), expected_dispatch_mask))
+
+    def test_max_routing_capacity(self):
+        model = SwitchTransformersTop1Router(self.config)
+        seq_len = 128
+        batch_size = 4
+        hidden_states = ops.stack(batch_size * [ops.rand((seq_len, self.config.hidden_size))])
+
+        router_probs, router_logits = model._compute_router_probabilities(hidden_states)
+        expert_index = ops.argmax(router_probs, dim=-1)
+        expert_index = nn.functional.one_hot(expert_index, num_classes=self.config.num_experts)
+
+        token_priority = ops.cumsum(expert_index, dim=-2)
+        expert_capacity_mask = token_priority <= self.config.expert_capacity
+        expert_index = expert_index * expert_capacity_mask
+
+        assert ops.sum(expert_index) <= batch_size * self.config.num_experts * self.config.expert_capacity
+
+
 @slow
 @require_mindspore
 @require_tokenizers
@@ -943,7 +1017,7 @@ class SwitchTransformerModelIntegrationTests(unittest.TestCase):
         and `transformers` implementation of Switch-C transformers. We only check the logits
         of the first batch.
         """
-        model = SwitchTransformersModel.from_pretrained("google/switch-base-8", ms_dtype=mindspore.float16)
+        model = SwitchTransformersModel.from_pretrained("google/switch-base-8", ms_dtype=mindspore.bfloat16)
         input_ids = ops.ones((32, 64), dtype=mindspore.int64)
         decoder_input_ids = ops.ones((32, 64), dtype=mindspore.int64)
 
@@ -957,12 +1031,12 @@ class SwitchTransformerModelIntegrationTests(unittest.TestCase):
                 0.390625, -0.203125, -0.122559, -0.180664, 0.0437012,
                 -0.349609, -0.0250244, -0.104004, -0.15918, -0.133789
             ]
-        ).to(mindspore.float16)
+        ).to(mindspore.bfloat16)
         # fmt: on
-        hf_logits = model(input_ids, decoder_input_ids=decoder_input_ids).last_hidden_state
+        hf_logits = model(input_ids, decoder_input_ids=decoder_input_ids).last_hidden_state.cpu()
         hf_logits = hf_logits[0, 0, :30]
 
-        np.allclose(hf_logits.asnumpy(), EXPECTED_MEAN_LOGITS.asnumpy(), rtol=6e-3, atol=9e-3)
+        assert ops.allclose(hf_logits, EXPECTED_MEAN_LOGITS, rtol=6e-3, atol=9e-3)
 
     @unittest.skip(
         "Unless we stop stripping left and right by default for all special tokens, the expected ids obtained here will not match the original ones. Wait for https://github.com/huggingface/transformers/pull/23909 to be merged"
@@ -971,12 +1045,12 @@ class SwitchTransformerModelIntegrationTests(unittest.TestCase):
         # Generate test using the smalled switch-C model.
 
         model = SwitchTransformersForConditionalGeneration.from_pretrained(
-            "google/switch-base-8", ms_dtype=mindspore.float16
-        ).set_train(False)
-        tokenizer = AutoTokenizer.from_pretrained("google-t5/t5-small", use_fast=False, legacy=False, ms_dtype=mindspore.float16)
+            "google/switch-base-8", ms_dtype=mindspore.bfloat16
+        ).eval()
+        tokenizer = AutoTokenizer.from_pretrained("google-t5/t5-small", use_fast=False, legacy=False)
 
         input_ids = tokenizer(
-            "The human walks into a bar and orders a <extra_id_0>", return_tensors="ms"
+            "The human walks into a bar and orders a <extra_id_0>", return_tensors="pt"
         ).input_ids
         sequences = model.generate(input_ids)
         output_str = tokenizer.batch_decode(sequences, skip_special_tokens=True)[0]
@@ -984,7 +1058,7 @@ class SwitchTransformerModelIntegrationTests(unittest.TestCase):
 
         input_ids = tokenizer(
             "A <extra_id_0> walks into a bar and orders a <extra_id_1> with <extra_id_2> pinch of <extra_id_3>.",
-            return_tensors="ms",
+            return_tensors="pt",
         ).input_ids
         sequences = model.generate(input_ids)
         output_str = tokenizer.batch_decode(sequences, skip_special_tokens=False)[0]
@@ -998,14 +1072,14 @@ class SwitchTransformerModelIntegrationTests(unittest.TestCase):
     def test_small_batch_generate(self):
         BATCH_SIZE = 4
         model = SwitchTransformersForConditionalGeneration.from_pretrained(
-            "google/switch-base-8", ms_dtype=mindspore.float16
-        ).set_train(False)
-        tokenizer = AutoTokenizer.from_pretrained("google-t5/t5-small", use_fast=False, legacy=False, ms_dtype=mindspore.float16)
+            "google/switch-base-8", ms_dtype=mindspore.bfloat16
+        ).eval()
+        tokenizer = AutoTokenizer.from_pretrained("google-t5/t5-small", use_fast=False, legacy=False)
 
         inputs = [
             "A <extra_id_0> walks into a bar and orders a <extra_id_1> with <extra_id_2> pinch of <extra_id_3>."
         ] * BATCH_SIZE
-        encoded_input = tokenizer.batch_encode_plus(inputs, return_tensors="ms")
+        encoded_input = tokenizer.batch_encode_plus(inputs, return_tensors="pt")
 
         sequences = model.generate(**encoded_input)
         batch_output = tokenizer.batch_decode(sequences, skip_special_tokens=False)
