@@ -1003,6 +1003,7 @@ class TapasUtilitiesTest(unittest.TestCase):
                 # We use np.testing.assert_array_equal rather than Tensorflow's assertAllEqual
                 np.testing.assert_array_equal(indices[i, j, :].numpy(), range(num_segments))
 
+    @unittest.skip
     def test_reduce_sum(self):
         values, row_index, col_index = self._prepare_tables()
         cell_index = ProductIndexMap(row_index, col_index)

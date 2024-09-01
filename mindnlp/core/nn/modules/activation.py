@@ -79,6 +79,60 @@ class ReLU(Module):
     def forward(self, input: Tensor) -> Tensor:
         return F.relu(input)
 
+
+class LeakyReLU(Module):
+    r"""Applies the LeakyReLU function element-wise.
+
+    .. math::
+        \text{LeakyReLU}(x) = \max(0, x) + \text{negative\_slope} * \min(0, x)
+
+
+    or
+
+    .. math::
+        \text{LeakyReLU}(x) =
+        \begin{cases}
+        x, & \text{ if } x \geq 0 \\
+        \text{negative\_slope} \times x, & \text{ otherwise }
+        \end{cases}
+
+    Args:
+        negative_slope: Controls the angle of the negative slope (which is used for
+          negative input values). Default: 1e-2
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(*)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(*)`, same shape as the input
+
+    .. image:: ../scripts/activation_images/LeakyReLU.png
+
+    Examples::
+
+        >>> m = nn.LeakyReLU(0.1)
+        >>> input = torch.randn(2)
+        >>> output = m(input)
+    """
+
+    __constants__ = ['inplace', 'negative_slope']
+    inplace: bool
+    negative_slope: float
+
+    def __init__(self, negative_slope: float = 1e-2, inplace: bool = False) -> None:
+        super().__init__()
+        self.negative_slope = negative_slope
+        self.inplace = inplace
+
+    def forward(self, input: Tensor) -> Tensor:
+        return F.leaky_relu(input, self.negative_slope)
+
+    def extra_repr(self) -> str:
+        inplace_str = ', inplace=True' if self.inplace else ''
+        return f'negative_slope={self.negative_slope}{inplace_str}'
+
+
+
 class Tanh(Module):
     def forward(self, input: Tensor) -> Tensor:
         return F.tanh(input)
