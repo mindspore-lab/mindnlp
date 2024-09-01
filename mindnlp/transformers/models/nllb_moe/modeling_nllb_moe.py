@@ -441,6 +441,7 @@ class NllbMoeTop2Router(nn.Module):
                 This is used later for computing router z-loss.
         """
         self.input_dtype = hidden_states.dtype
+        self.dtype = hidden_states.dtype
         batch_size, sequence_length, hidden_dim = hidden_states.shape
         hidden_states = hidden_states.reshape(
             (batch_size * sequence_length), hidden_dim
@@ -466,12 +467,6 @@ class NllbMoeDenseActDense(nn.Module):
         # print(f"hidden_state shape: {hidden_states.shape}")
         if hidden_states.shape[0] == 0:
             return hidden_states
-            hidden_states_type = hidden_states.dtype
-            hidden_states = ops.rand(16, 0)
-            hidden_states = hidden_states.to(hidden_states_type)
-            hidden_states = hidden_states.transpose()
-            # print(hidden_states.shape)
-            # print(hidden_states)
 
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.act(hidden_states)
@@ -480,8 +475,7 @@ class NllbMoeDenseActDense(nn.Module):
             isinstance(self.fc2.weight, mindspore.Tensor)
             and hidden_states.dtype != self.fc2.weight.dtype
             and (
-                self.fc2.weight.dtype != mindspore.int8
-                and self.fc2.weight.dtype != mindspore.uint8
+                self.fc2.weight.dtype not in (mindspore.int8, mindspore.uint8)
             )
         ):
             hidden_states = hidden_states.to(self.fc2.weight.dtype)
@@ -1428,9 +1422,7 @@ class NllbMoeDecoder(NllbMoePreTrainedModel):
             dropout_probability = ops.rand([])
 
             skip_the_layer = (
-                True
-                if self.training and (dropout_probability < self.layerdrop)
-                else False
+                (self.training and (dropout_probability < self.layerdrop))
             )
             if not skip_the_layer:
                 layer_head_mask = head_mask[idx] if head_mask is not None else None

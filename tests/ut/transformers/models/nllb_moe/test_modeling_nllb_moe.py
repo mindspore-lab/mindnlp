@@ -461,10 +461,12 @@ class NllbMoeModelIntegrationTests(unittest.TestCase):
         print('------------------------------------')
         print('Model output:')
         print(output.logits[1, 0, :30])
-        print('GT:')
+
         EXPECTED_LOGTIS = mindspore.Tensor([-0.3059, 0.0000, 9.3029, 0.6456, -0.9148, 1.7836, 0.6478, 0.9438, -0.5272, -0.6617, -1.2717, 0.4564, 0.1345, -0.2301, -1.0140, 1.1427, -1.5535, 0.1337, 0.2082, -0.8112, -0.3842, -0.3377, 0.1256, 0.6450, -0.0452, 0.0219, 1.4274, -0.4991, -0.2063, -0.4409,])  # fmt: skip
+        print('GT:')
         print(EXPECTED_LOGTIS)
         print('------------------------------------')
+
         self.assertTrue(ops.allclose(output.logits[1, 0, :30], EXPECTED_LOGTIS, rtol=6e-3, atol=9e-3))
 
     @unittest.skip(reason="This requires 300GB of RAM")
