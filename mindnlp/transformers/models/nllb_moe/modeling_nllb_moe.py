@@ -465,6 +465,7 @@ class NllbMoeDenseActDense(nn.Module):
     def forward(self, hidden_states):
         # print(f"hidden_state shape: {hidden_states.shape}")
         if hidden_states.shape[0] == 0:
+            return hidden_states
             hidden_states_type = hidden_states.dtype
             hidden_states = ops.rand(16, 0)
             hidden_states = hidden_states.to(hidden_states_type)

@@ -429,7 +429,7 @@ class NllbMoeModelIntegrationTests(unittest.TestCase):
     @cached_property
     def big_model(self):
         return NllbMoeForConditionalGeneration.from_pretrained(
-            "facebook/nllb-moe-54b"
+            "facebook/nllb-moe-54b" # 240G
         )
 
     def inference_no_head(self):
@@ -442,8 +442,8 @@ class NllbMoeModelIntegrationTests(unittest.TestCase):
         EXPECTED_ENCODER_STATE = mindspore.Tensor([ 0.3920, -0.1974, -0.0279,  0.3463, -0.8306, -1.0629, -0.4643,  2.0563, 1.1123,  0.3566, -0.9291, -0.3840, -0.2527, -0.9858,  1.5185, -1.1346, 0.0323, -0.9103, -0.3647, -0.4462, -0.9720, -0.3541,  0.1777, -0.4647, 1.6970, -0.9062,  0.2727, -1.0737,  0.8785,  0.4324])
         EXPECTED_DECODER_STATE = mindspore.Tensor([-6.0425e-02, -2.0015e-01,  6.0575e-02, -8.6366e-01, -1.1310e+00, 6.8369e-01,  7.5615e-01,  7.3555e-01,  2.3071e-01,  1.5954e+00, -7.0728e-01, -2.2647e-01, -1.3292e+00,  4.8246e-01, -6.9153e-01, -1.8199e-02, -7.3664e-01,  1.5902e-03,  1.0760e-01,  1.0298e-01, -9.3933e-01, -4.6567e-01,  8.0417e-01,  1.5243e+00,  5.5844e-01, -9.9239e-02,  1.4885e+00,  7.1527e-02, -5.2612e-01,  9.4435e-02])
         # fmt: on
-        assert ops.allclose(output.encoder_last_hidden_state[1, 0, :30], EXPECTED_ENCODER_STATE, rtol=6e-3, atol=9e-3) is True
-        assert ops.allclose(output.last_hidden_state[1, 0, :30], EXPECTED_DECODER_STATE, rtol=6e-3, atol=9e-3) is True
+        self.assertTrue(ops.allclose(output.encoder_last_hidden_state[1, 0, :30], EXPECTED_ENCODER_STATE, rtol=6e-3, atol=9e-3))
+        self.assertTrue(ops.allclose(output.last_hidden_state[1, 0, :30], EXPECTED_DECODER_STATE, rtol=6e-3, atol=9e-3))
 
     def test_inference_logits(self):
         r"""
@@ -451,14 +451,21 @@ class NllbMoeModelIntegrationTests(unittest.TestCase):
         and `transformers` implementation of NLLB-MoE transformers. We only check the logits
         of the second sample of the batch, as it is padded.
         """
+        # 18G
         model = NllbMoeForConditionalGeneration.from_pretrained(
             "hf-internal-testing/random-nllb-moe-2-experts"
         ).eval()
         with no_grad():
             output = model(**self.model_inputs)
 
+        print('------------------------------------')
+        print('Model output:')
+        print(output.logits[1, 0, :30])
+        print('GT:')
         EXPECTED_LOGTIS = mindspore.Tensor([-0.3059, 0.0000, 9.3029, 0.6456, -0.9148, 1.7836, 0.6478, 0.9438, -0.5272, -0.6617, -1.2717, 0.4564, 0.1345, -0.2301, -1.0140, 1.1427, -1.5535, 0.1337, 0.2082, -0.8112, -0.3842, -0.3377, 0.1256, 0.6450, -0.0452, 0.0219, 1.4274, -0.4991, -0.2063, -0.4409,])  # fmt: skip
-        assert ops.allclose(output.logits[1, 0, :30], EXPECTED_LOGTIS, rtol=6e-3, atol=9e-3) is True
+        print(EXPECTED_LOGTIS)
+        print('------------------------------------')
+        self.assertTrue(ops.allclose(output.logits[1, 0, :30], EXPECTED_LOGTIS, rtol=6e-3, atol=9e-3))
 
     @unittest.skip(reason="This requires 300GB of RAM")
     def test_large_logits(self):
@@ -472,9 +479,9 @@ class NllbMoeModelIntegrationTests(unittest.TestCase):
         EXPECTED_LOGTIS = mindspore.Tensor([ 0.3834,  0.2057,  4.5399,  0.8301,  0.4810,  0.9325,  0.9928,  0.9574,  0.5517,  0.9156,  0.2698,  0.6728,  0.7121,  0.3080,  0.4693,  0.5756,  1.0407,  0.2219,  0.3714,  0.5699,  0.5547,  0.8472,  0.3178,  0.1286,  0.1791,  0.9391,  0.5153, -0.2146,  0.1689,  0.6816])
         # fmt: on
 
-        assert ops.allclose(output.encoder_last_hidden_state[1, 0, :30], EXPECTED_ENCODER_STATE, rtol=6e-3, atol=9e-3) is True
-        assert ops.allclose(output.last_hidden_state[1, 0, :30], EXPECTED_DECODER_STATE, rtol=6e-3, atol=9e-3) is True
-        assert ops.allclose(output.logits[1, 0, :30], EXPECTED_LOGTIS, rtol=6e-3, atol=9e-3) is True
+        self.assertTrue(ops.allclose(output.encoder_last_hidden_state[1, 0, :30], EXPECTED_ENCODER_STATE, rtol=6e-3, atol=9e-3))
+        self.assertTrue(ops.allclose(output.last_hidden_state[1, 0, :30], EXPECTED_DECODER_STATE, rtol=6e-3, atol=9e-3))
+        self.assertTrue(ops.allclose(output.logits[1, 0, :30], EXPECTED_LOGTIS, rtol=6e-3, atol=9e-3))
 
     @unittest.skip(reason="This requires 300GB of RAM")
     def test_seq_to_seq_generation(self):
@@ -652,10 +659,22 @@ class NllbMoeRouterTest(unittest.TestCase):
         # `sampling` and `random` do not affect the mask of the top_1 router
         # fmt: on
 
-        assert ops.allclose(router_probs_all, EXPECTED_ROUTER_ALL, rtol=1e-4, atol=1e-4) is True
-        assert ops.allclose(router_probs_sp, EXPECTED_ROUTER_SP, rtol=1e-4, atol=1e-4) is True
-        assert ops.allclose(router_probs, EXPECTED_ROUTER, rtol=1e-4, atol=1e-4) is True
+        self.assertTrue(
+            ops.allclose(router_probs_all, EXPECTED_ROUTER_ALL, rtol=1e-4, atol=1e-4)
+        )
+        self.assertTrue(
+            ops.allclose(router_probs_sp, EXPECTED_ROUTER_SP, rtol=1e-4, atol=1e-4)
+        )
+        self.assertTrue(
+            ops.allclose(router_probs, EXPECTED_ROUTER, rtol=1e-4, atol=1e-4)
+        )
+        self.assertTrue(
+            ops.allclose(top_1_mask_all, EXPECTED_TOP_1_ALL, rtol=1e-4, atol=1e-4)
+        )
+        self.assertTrue(
+            ops.allclose(top_1_mask_sp, EXPECTED_TOP_1_SP, rtol=1e-4, atol=1e-4)
+        )
+        self.assertTrue(
+            ops.allclose(top_1_mask, EXPECTED_TOP_1_SP, rtol=1e-4, atol=1e-4)
+        )
 
-        assert ops.allclose(top_1_mask_all, EXPECTED_TOP_1_ALL, rtol=1e-4, atol=1e-4) is True
-        assert ops.allclose(top_1_mask_sp, EXPECTED_TOP_1_SP, rtol=1e-4, atol=1e-4) is True
-        assert ops.allclose(top_1_mask, EXPECTED_TOP_1_SP, rtol=1e-4, atol=1e-4) is True
