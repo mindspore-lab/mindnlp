@@ -429,10 +429,6 @@ class SamModelTest(ModelTesterMixin, unittest.TestCase):
     def test_hidden_states_output(self):
         pass
 
-    def check_pt_tf_outputs(self, tf_outputs, pt_outputs, model_class, tol=5e-5, name="outputs", attributes=None):
-        # Use a slightly higher default tol to make the tests non-flaky
-        super().check_pt_tf_outputs(tf_outputs, pt_outputs, model_class, tol=tol, name=name, attributes=attributes)
-
     @slow
     def test_model_from_pretrained(self):
         model_name = "facebook/sam-vit-huge"
@@ -441,13 +437,13 @@ class SamModelTest(ModelTesterMixin, unittest.TestCase):
 
 
 def prepare_image():
-    img_url = "https://huggingface.co/ybelkada/segment-anything/resolve/main/assets/car.png"
+    img_url = "https://hf-mirror.com/ybelkada/segment-anything/resolve/main/assets/car.png"
     raw_image = Image.open(requests.get(img_url, stream=True).raw).convert("RGB")
     return raw_image
 
 
 def prepare_dog_img():
-    img_url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/transformers/model_doc/dog-sam.png"
+    img_url = "https://hf-mirror.com/datasets/huggingface/documentation-images/resolve/main/transformers/model_doc/dog-sam.png"
     raw_image = Image.open(requests.get(img_url, stream=True).raw).convert("RGB")
     return raw_image
 
@@ -682,6 +678,7 @@ class SamModelIntegrationTest(unittest.TestCase):
         with no_grad():
             outputs = model(**inputs)
         scores_single = outputs.iou_scores.squeeze()
+
         self.assertTrue(ops.allclose(scores_batched[1, :], scores_single, atol=1e-4))
 
     def test_inference_mask_generation_two_points_point_batch(self):
