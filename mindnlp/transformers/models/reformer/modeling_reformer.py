@@ -678,7 +678,7 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
 
             # create simple indices to scatter to, to have undo sort
             indices = (
-                ops.arange(sorted_bucket_idx.shape[-1])
+                ops.arange(sorted_bucket_idx.shape[-1], dtype=sorted_bucket_idx.dtype)
                 .view(1, 1, -1)
                 .broadcast_to(sorted_bucket_idx.shape)
             )
