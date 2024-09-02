@@ -31,7 +31,8 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, Tensor
+    from mindspore import Tensor
+    from mindnlp.core import nn
 
 
     from mindnlp.transformers import ViTMAEForPreTraining, ViTMAEModel
