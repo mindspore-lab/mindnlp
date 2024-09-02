@@ -162,6 +162,7 @@ class DPTViTHybridEmbeddings(nn.Module):
     def forward(
             self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False, return_dict: bool = False
     ) -> mindspore.Tensor:
+        print("1")
         batch_size, num_channels, height, width = pixel_values.shape
         if num_channels != self.num_channels:
             raise ValueError(
@@ -192,6 +193,7 @@ class DPTViTHybridEmbeddings(nn.Module):
 
         # add positional encoding to each token
         embeddings = embeddings + position_embeddings
+        print("1 output")
 
         if not return_dict:
             return embeddings, output_hidden_states
@@ -235,6 +237,7 @@ class DPTViTEmbeddings(nn.Module):
         return posemb
 
     def forward(self, pixel_values, return_dict=False):
+        print("2")
         batch_size, num_channels, height, width = pixel_values.shape
 
         # possibly interpolate position encodings to handle varying image sizes
@@ -258,6 +261,7 @@ class DPTViTEmbeddings(nn.Module):
 
         if not return_dict:
             return (embeddings,)
+        print("2 output")
 
         return BaseModelOutputWithIntermediateActivations(last_hidden_states=embeddings)
 
@@ -285,6 +289,7 @@ class DPTViTPatchEmbeddings(nn.Module):
 
 
     def forward(self, pixel_values):
+        print("3")
         batch_size, num_channels, height, width = pixel_values.shape
         if num_channels != self.num_channels:
             raise ValueError(
@@ -322,6 +327,7 @@ class DPTViTSelfAttention(nn.Module):
     def forward(
             self, hidden_states, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False
     ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
+        print("4")
         mixed_query_layer = self.query(hidden_states)
 
         key_layer = self.transpose_for_scores(self.key(hidden_states))
@@ -368,6 +374,7 @@ class DPTViTSelfOutput(nn.Module):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+        print("5")
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -407,6 +414,7 @@ class DPTViTAttention(nn.Module):
             head_mask: Optional[mindspore.Tensor] = None,
             output_attentions: bool = False,
     ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
+        print("6")
         self_outputs = self.attention(hidden_states, head_mask, output_attentions)
 
         attention_output = self.output(self_outputs[0], hidden_states)
@@ -426,6 +434,7 @@ class DPTViTIntermediate(nn.Module):
             self.intermediate_act_fn = config.hidden_act
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        print("7")
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
 
@@ -440,6 +449,7 @@ class DPTViTOutput(nn.Module):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+        print("8")
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -469,6 +479,7 @@ class DPTViTLayer(nn.Module):
             head_mask: Optional[mindspore.Tensor] = None,
             output_attentions: bool = False,
     ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
+        print("9")
         self_attention_outputs = self.attention(
             self.layernorm_before(hidden_states),  # in ViT, layernorm is applied before self-attention
             head_mask,
@@ -508,6 +519,7 @@ class DPTViTEncoder(nn.Module):
             output_hidden_states: bool = False,
             return_dict: bool = True,
     ) -> Union[tuple, BaseModelOutput]:
+        print("10")
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
 
@@ -612,6 +624,7 @@ class DPTReassembleStage(nn.Module):
 
     def forward(self, hidden_states: List[mindspore.Tensor], patch_height=None, patch_width=None) \
             -> List[mindspore.Tensor]:
+        print("11")
         """
         Args:
             hidden_states (`List[mindspore.Tensor]`, each of shape `(batch_size, sequence_length + 1, hidden_size)`):
@@ -675,6 +688,7 @@ class DPTReassembleLayer(nn.Module):
             self.resize = nn.Conv2d(channels, channels, kernel_size=3, stride=int(1 / factor), padding=1)
 
     def forward(self, hidden_state):
+        print("12")
         hidden_state = self.projection(hidden_state)
         hidden_state = self.resize(hidden_state)
         return hidden_state
@@ -688,6 +702,7 @@ class DPTFeatureFusionStage(nn.Module):
             self.layers.append(DPTFeatureFusionLayer(config))
 
     def forward(self, hidden_states):
+        print("13")
         # reversing the hidden_states, we start from the last
         hidden_states = hidden_states[::-1]
 
@@ -747,6 +762,7 @@ class DPTPreActResidualLayer(nn.Module):
             self.batch_norm2 = nn.BatchNorm2d(config.fusion_hidden_size)
 
     def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
+        print("14")
         residual = hidden_state
         hidden_state = self.activation1(hidden_state)
 
@@ -785,6 +801,7 @@ class DPTFeatureFusionLayer(nn.Module):
         self.residual_layer2 = DPTPreActResidualLayer(config)
 
     def forward(self, hidden_state, residual=None):
+        print("15")
         if residual is not None:
             if hidden_state.shape != residual.shape:
                 residual = F.interpolate(
@@ -878,6 +895,7 @@ class DPTModel(DPTPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPoolingAndIntermediateActivations]:
+        print("16")
         """
         Args:
             pixel_values (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
@@ -949,6 +967,7 @@ class DPTViTPooler(nn.Module):
         self.activation = nn.Tanh()
 
     def forward(self, hidden_states):
+        print("17")
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -988,6 +1007,7 @@ class DPTNeck(nn.Module):
 
     def forward(self, hidden_states: List[mindspore.Tensor], patch_height=None, patch_width=None) \
             -> List[mindspore.Tensor]:
+        print("18")
         """
         Args:
             hidden_states (`List[mindspore.Tensor]`, each of shape `(batch_size, sequence_length, hidden_size)` or
@@ -1039,6 +1059,7 @@ class DPTDepthEstimationHead(nn.Module):
         )
 
     def forward(self, hidden_states: List[mindspore.Tensor]) -> mindspore.Tensor:
+        print("19")
         # use last features
         hidden_states = hidden_states[self.config.head_in_index]
 
@@ -1093,6 +1114,7 @@ class DPTForDepthEstimation(DPTPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], DepthEstimatorOutput]:
+
         r"""
         Args:
             pixel_values (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
@@ -1119,6 +1141,7 @@ class DPTForDepthEstimation(DPTPreTrainedModel):
         Returns:
             mindnlp.transformers.modeling_outputs.DepthEstimatorOutput or tuple(mindspore.Tensor)
         """
+        print("20")
         loss = None
         if labels is not None:
             raise NotImplementedError("Training is not implemented yet")
@@ -1202,6 +1225,7 @@ class DPTSemanticSegmentationHead(nn.Module):
         )
 
     def forward(self, hidden_states: List[mindspore.Tensor]) -> mindspore.Tensor:
+        print("21")
         # use last features
         hidden_states = hidden_states[self.config.head_in_index]
 
@@ -1224,6 +1248,7 @@ class DPTAuxiliaryHead(nn.Module):
         )
 
     def forward(self, hidden_states):
+        print("22")
         logits = self.head(hidden_states)
 
         return logits
@@ -1266,6 +1291,7 @@ class DPTForSemanticSegmentation(DPTPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], SemanticSegmenterOutput]:
+        print("23")
         r"""
         Args:
             pixel_values (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):

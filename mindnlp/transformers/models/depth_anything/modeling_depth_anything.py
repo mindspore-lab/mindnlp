@@ -16,25 +16,13 @@
 
 from typing import List, Optional, Tuple, Union
 
-# import torch
-# import torch.utils.checkpoint
-# from torch import nn
-
 import mindspore
 from mindnlp.core import nn
 from mindnlp.core.nn import functional as F
 from ...backbone_utils import load_backbone
-
-# from ...file_utils import (
-#     add_start_docstrings,
-#     add_start_docstrings_to_model_forward,
-#     replace_return_docstrings,
-# )
-
 from ...modeling_outputs import DepthEstimatorOutput
 from ...modeling_utils import PreTrainedModel
 from ....utils import logging, no_grad
-# from ...utils.backbone_utils import load_backbone
 from .configuration_depth_anything import DepthAnythingConfig
 
 logger = logging.get_logger(__name__)
@@ -86,9 +74,11 @@ class DepthAnythingReassembleLayer(nn.Module):
 
     # Copied from transformers.models.dpt.modeling_dpt.DPTReassembleLayer.forward
     def forward(self, hidden_state):
+        print("第一层输入:")  #损失1e-2
         hidden_state = self.projection(hidden_state)
         hidden_state = self.resize(hidden_state)
-
+        # 和transformers的不同
+        print("第一层输出:")
         return hidden_state
 
 
@@ -117,6 +107,7 @@ class DepthAnythingReassembleStage(nn.Module):
 
     def forward(self, hidden_states: List[mindspore.Tensor], patch_height=None, patch_width=None) -> List[
         mindspore.Tensor]:
+        print("第二层输入")  #存在较小差距
         """
         Args:
             hidden_states (`List[mindspore.Tensor]`, each of shape `(batch_size, sequence_length + 1, hidden_size)`):
@@ -132,7 +123,7 @@ class DepthAnythingReassembleStage(nn.Module):
             hidden_state = hidden_state.permute(0, 3, 1, 2)
             hidden_state = self.layers[i](hidden_state)
             out.append(hidden_state)
-
+            print("第二层输出")
         return out
 
 
@@ -169,11 +160,13 @@ class DepthAnythingPreActResidualLayer(nn.Module):
         )
 
     def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
+        print("第三层输入")
         residual = hidden_state
         hidden_state = self.activation1(hidden_state)
         hidden_state = self.convolution1(hidden_state)
         hidden_state = self.activation2(hidden_state)
         hidden_state = self.convolution2(hidden_state)
+        print("第三层输出")
 
         return hidden_state + residual
 
@@ -195,24 +188,46 @@ class DepthAnythingFeatureFusionLayer(nn.Module):
         self.residual_layer2 = DepthAnythingPreActResidualLayer(config)
 
     def forward(self, hidden_state, residual=None, size=None):
+        print("第四层输入")
+        # 存在差异
         if residual is not None:
             if hidden_state.shape != residual.shape:
-                residual = nn.functional.interpolate(
-                    residual, size=(hidden_state.shape[2.0], hidden_state.shape[3.0]), mode="bilinear", align_corners=False
+                residual = F.interpolate(
+                    residual, size=(hidden_state.shape[2], hidden_state.shape[3]), mode="bilinear", align_corners=False,
+                    recompute_scale_factor=False
                 )
+                # 跟transformers一样打印不出值
             hidden_state = hidden_state + self.residual_layer1(residual)
 
         hidden_state = self.residual_layer2(hidden_state)
+        # modifier= {"scale_factor": 2.} if size is None else {"size": size}
+        # hidden_state = F.interpolate(
+        #     hidden_state,
+        #     **modifier,
+        #     mode="bilinear",
+        #     align_corners=True,
+        # )
 
-        modifier = {"scale_factor": 2} if size is None else {"size": size}
-
-        hidden_state = nn.functional.interpolate(
-            hidden_state,
-            **modifier,
-            mode="bilinear",
-            align_corners=True,
-        )
+        if size is None:
+            modifier = {"scale_factor": 2.}
+            hidden_state = F.interpolate(
+                hidden_state,
+                **modifier,
+                mode="bilinear",
+                align_corners=True,
+                recompute_scale_factor=True
+            )
+        else:
+            modifier = {"size": size}
+            hidden_state = F.interpolate(
+                hidden_state,
+                **modifier,
+                mode="bilinear",
+                align_corners=True,
+                recompute_scale_factor=False
+            )
         hidden_state = self.projection(hidden_state)
+        print("第四层输出")
 
         return hidden_state
 
@@ -226,6 +241,7 @@ class DepthAnythingFeatureFusionStage(nn.Module):
             self.layers.append(DepthAnythingFeatureFusionLayer(config))
 
     def forward(self, hidden_states, size=None):
+        print("第五层输入")
         # reversing the hidden_states, we start from the last
         hidden_states = hidden_states[::-1]
 
@@ -242,6 +258,7 @@ class DepthAnythingFeatureFusionStage(nn.Module):
             fused_hidden_state = layer(fused_hidden_state, hidden_state, size=size)
 
             fused_hidden_states.append(fused_hidden_state)
+            print("第五层输出")
 
         return fused_hidden_states
 
@@ -271,7 +288,7 @@ class DepthAnythingPreTrainedModel(PreTrainedModel):
             nn.init.ones_(module.weight)
 
 
-class DepthAnythingNeck(nn.Module):
+class DepthAnythingNeck(nn.Module):  # 此处出现差距
     """
     DepthAnythingNeck. A neck is a module that is normally used between the backbone and the head. It takes a list of tensors as
     input and produces another list of tensors as output. For DepthAnything, it includes 2 stages:
@@ -298,11 +315,14 @@ class DepthAnythingNeck(nn.Module):
 
     def forward(self, hidden_states: List[mindspore.Tensor], patch_height=None, patch_width=None) -> List[
         mindspore.Tensor]:
+
         """
         Args:
             hidden_states (`List[mindspore.Tensor]`, each of shape `(batch_size, sequence_length, hidden_size)` or `(batch_size, hidden_size, height, width)`):
                 List of hidden states from the backbone.
         """
+        print("第六层输入")  #存在较小的差距
+
         if not isinstance(hidden_states, (tuple, list)):
             raise TypeError("hidden_states should be a tuple or list of tensors")
 
@@ -316,7 +336,7 @@ class DepthAnythingNeck(nn.Module):
 
         # fusion blocks
         output = self.fusion_stage(features)
-
+        print("第六层输出")
         return output
 
 
@@ -341,20 +361,23 @@ class DepthAnythingDepthEstimationHead(nn.Module):
         self.activation2 = nn.ReLU()
 
     def forward(self, hidden_states: List[mindspore.Tensor], patch_height, patch_width) -> mindspore.Tensor:
+        print("第七层输入")
         hidden_states = hidden_states[self.head_in_index]
 
         predicted_depth = self.conv1(hidden_states)
-        predicted_depth = nn.functional.interpolate(
+        predicted_depth = F.interpolate(
             predicted_depth,
             (int(patch_height * self.patch_size), int(patch_width * self.patch_size)),
             mode="bilinear",
             align_corners=True,
         )
+
         predicted_depth = self.conv2(predicted_depth)
         predicted_depth = self.activation1(predicted_depth)
         predicted_depth = self.conv3(predicted_depth)
         predicted_depth = self.activation2(predicted_depth)
-        predicted_depth = predicted_depth.squeeze(1)  # shape (batch_size, height, width)
+        predicted_depth = predicted_depth.squeeze(axis=1)  # shape (batch_size, height, width)
+        print("第七层输出")
 
         return predicted_depth
 
@@ -388,8 +411,8 @@ class DepthAnythingForDepthEstimation(DepthAnythingPreTrainedModel):
 
         Examples:
         ```python
-        >>> from transformers import AutoImageProcessor, AutoModelForDepthEstimation
-        >>> import torch
+        >>> from mindnlp.transformers import AutoImageProcessor, AutoModelForDepthEstimation
+        >>> import mindspore
         >>> import numpy as np
         >>> from PIL import Image
         >>> import requests
@@ -420,20 +443,32 @@ class DepthAnythingForDepthEstimation(DepthAnythingPreTrainedModel):
         >>> formatted = (output * 255 / np.max(output)).astype("uint8")
         >>> depth = Image.fromarray(formatted)
         ```"""
+        print("第八层输入")
+
         loss = None
         if labels is not None:
             raise NotImplementedError("Training is not implemented yet")
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
+
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        # print("pixel_values:", pixel_values)
+        # print("output_hidden_states",output_hidden_states)
+        # print("output_attentions:", output_attentions)
 
         outputs = self.backbone.forward_with_filtered_kwargs(
             pixel_values, output_hidden_states=output_hidden_states, output_attentions=output_attentions
         )
+        print(type(self.backbone))
+        # print("output", outputs)
+
         hidden_states = outputs.feature_maps
+
+        # print("hidden_states", hidden_states)
 
         _, _, height, width = pixel_values.shape
         patch_size = self.config.patch_size
@@ -445,11 +480,13 @@ class DepthAnythingForDepthEstimation(DepthAnythingPreTrainedModel):
         predicted_depth = self.head(hidden_states, patch_height, patch_width)
 
         if not return_dict:
+            print("第八层输出1")
             if output_hidden_states:
                 output = (predicted_depth,) + outputs[1:]
             else:
                 output = (predicted_depth,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
+        print("第八层输出2")
 
         return DepthEstimatorOutput(
             loss=loss,

@@ -1,7 +1,6 @@
 """
 depth_anything Models
 """
-
 from . import modeling_depth_anything, configuration_depth_anything
 from .modeling_depth_anything import *
 from .configuration_depth_anything import *

@@ -266,8 +266,7 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     return _layer_norm(input, weight, bias)[0]
 
 
-def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corners=None, recompute_scale_factor=None,
-                antialias=False):
+def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corners=None, recompute_scale_factor=None, antialias=False):
     return ops.interpolate(input, size, scale_factor, mode, align_corners, recompute_scale_factor)
 
 

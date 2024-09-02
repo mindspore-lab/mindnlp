@@ -81,7 +81,7 @@ class Dinov2Embeddings(nn.Module):
         patch_pos_embed = patch_pos_embed.reshape(1, int(math.sqrt(num_positions)), int(math.sqrt(num_positions)), dim)
         patch_pos_embed = patch_pos_embed.permute(0, 3, 1, 2)
         target_dtype = patch_pos_embed.dtype
-        patch_pos_embed = ops.interpolate(
+        patch_pos_embed = F.interpolate(
             patch_pos_embed.to(dtype=mindspore.float32),
             scale_factor=(float(height / math.sqrt(num_positions)), float(width / math.sqrt(num_positions))),
             mode="bicubic",

@@ -74,6 +74,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("data2vec-audio","Data2VecAudioConfig"),
         ("dbrx", "DbrxConfig"),
         ("deit", "DeiTConfig"),
+        ("depth_anything", "DepthAnythingConfig"),
         ("deberta", "DebertaConfig"),
         ("deberta-v2", "DebertaV2Config"),
         ("deepseek_v2", "DeepseekV2Config"),
@@ -215,6 +216,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("xlm-prophetnet", "XLMProphetNetConfig"),
         ("xlnet", "XLNetConfig"),
         ("xmod", "XmodConfig"),
+        ("zoedepth", "ZoeDepthConfig"),
     ]
 )
 
@@ -500,6 +502,8 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("deformable_detr", "Deformable DETR"),
         ("deepseek_v2", "Deepseek_v2"),
         ("deit", "DeiT"),
+        ("depth_anything", "Depth Anything"),
+        ("depth_anything_v2", "Depth Anything V2"),
         ("deplot", "DePlot"),
         ("deta", "DETA"),
         ("detr", "DETR"),
@@ -718,6 +722,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("xmod", "X-MOD"),
         ("yolos", "YOLOS"),
         ("yoso", "YOSO"),
+        ("zoedepth", "ZoeDepth"),
     ]
 )
 
