@@ -17,7 +17,7 @@
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn
+from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
@@ -34,7 +34,7 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     """
     Shift input ids one token to the right.
     """
-    shifted_input_ids = input_ids.new_zeros(input_ids.shape)
+    shifted_input_ids = ops.zeros(input_ids.shape, dtype=input_ids.dtype)
     shifted_input_ids[:, 1:] = input_ids[:, :-1].copy()
     if decoder_start_token_id is None:
         raise ValueError("Make sure to set the decoder_start_token_id attribute of the model's configuration.")

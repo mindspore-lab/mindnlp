@@ -196,6 +196,51 @@ class Softmax(Module):
         return f'dim={self.dim}'
 
 
+class LogSoftmax(Module):
+    r"""Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional input Tensor.
+
+    The LogSoftmax formulation can be simplified as:
+
+    .. math::
+        \text{LogSoftmax}(x_{i}) = \log\left(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} \right)
+
+    Shape:
+        - Input: :math:`(*)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(*)`, same shape as the input
+
+    Args:
+        dim (int): A dimension along which LogSoftmax will be computed.
+
+    Returns:
+        a Tensor of the same dimension and shape as the input with
+        values in the range [-inf, 0)
+
+    Examples::
+
+        >>> m = nn.LogSoftmax(dim=1)
+        >>> input = torch.randn(2, 3)
+        >>> output = m(input)
+    """
+
+    __constants__ = ['dim']
+    dim: Optional[int]
+
+    def __init__(self, dim: Optional[int] = None) -> None:
+        super().__init__()
+        self.dim = dim
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        if not hasattr(self, 'dim'):
+            self.dim = None
+
+    def forward(self, input: Tensor) -> Tensor:
+        return F.log_softmax(input, self.dim)
+
+    def extra_repr(self):
+        return f'dim={self.dim}'
+
 class Sigmoid(Module):
     r"""Applies the Sigmoid function element-wise.
 
