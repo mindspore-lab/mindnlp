@@ -1,5 +1,4 @@
 :::mindnlp.transformers.models.bloom.configuration_bloom.BloomConfig
-:::mindnlp.transformers.models.bloom.modeling_bloom.BLOOM_PRETRAINED_MODEL_ARCHIVE_LIST
 :::mindnlp.transformers.models.bloom.modeling_bloom.BloomForCausalLM
 :::mindnlp.transformers.models.bloom.modeling_bloom.BloomModel
 :::mindnlp.transformers.models.bloom.modeling_bloom.BloomPreTrainedModel

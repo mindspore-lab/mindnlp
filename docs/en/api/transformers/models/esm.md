@@ -1,5 +1,4 @@
 :::mindnlp.transformers.models.esm.configuration_esm
-:::mindnlp.transformers.models.esm.modeling_esm.ESM_PRETRAINED_MODEL_ARCHIVE_LIST
 :::mindnlp.transformers.models.esm.modeling_esm.EsmForMaskedLM
 :::mindnlp.transformers.models.esm.modeling_esm.EsmForSequenceClassification
 :::mindnlp.transformers.models.esm.modeling_esm.EsmForTokenClassification
