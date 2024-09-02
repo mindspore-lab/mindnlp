@@ -38,7 +38,7 @@ import mindspore
 from mindspore.dataset import Dataset, BatchDataset, PaddedBatchDataset
 
 from mindnlp.core import nn, ops, optim
-from ...core.serialization import safe_load_file, safe_save_file, save, save_checkpoint
+from ...core.serialization import safe_load_file, safe_save_file, save, save_checkpoint, load
 from ...peft import PeftModel
 from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_SAFE_WEIGHTS_NAME, \
     WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
@@ -459,13 +459,13 @@ class Trainer:
             optimizer_grouped_parameters = [
                 {
                     "params": [
-                        p for p in opt_model.parameters() if (p.name in decay_parameters and p.requires_grad)
+                        p for n, p in opt_model.named_parameters() if (n in decay_parameters and p.requires_grad)
                     ],
                     "weight_decay": self.args.weight_decay,
                 },
                 {
                     "params": [
-                        p for p in opt_model.parameters() if (p.name not in decay_parameters and p.requires_grad)
+                        p for n, p in opt_model.named_parameters() if (n not in decay_parameters and p.requires_grad)
                     ],
                     "weight_decay": 0.0,
                 },
@@ -753,7 +753,6 @@ class Trainer:
         inner_training_loop = find_executable_batch_size(
             self._inner_training_loop, self._train_batch_size, args.auto_find_batch_size
         )
-
         return inner_training_loop(
             args=args,
             resume_from_checkpoint=resume_from_checkpoint,
@@ -1332,10 +1331,9 @@ indicating whether to prefer safe tensors.
         )
         if checkpoint_file_exists and os.path.isfile(os.path.join(checkpoint, SCHEDULER_NAME)):
             # Load in optimizer and scheduler states
-            mindspore.load_param_into_net(self.optimizer, mindspore.load_checkpoint(os.path.join(checkpoint, OPTIMIZER_NAME)))
+            self.optimizer.load_state_dict(load(os.path.join(checkpoint, OPTIMIZER_NAME)))
             # with warnings.catch_warnings(record=True) as caught_warnings:
-            with open(os.path.join(checkpoint, SCHEDULER_NAME), 'r') as fp:
-                self.lr_scheduler.load_state_dict(json.load(fp))
+            self.lr_scheduler.load_state_dict(load(os.path.join(checkpoint, SCHEDULER_NAME)))
 
             # reissue_pt_warnings(caught_warnings)
 
@@ -1379,7 +1377,10 @@ indicating whether to prefer safe tensors.
             return self.compute_loss(model, inputs)
 
         if getattr(self, 'grad_fn', None) is None or self.model_reload:
-            self.grad_fn = mindspore.value_and_grad(forward, None, tuple(model.parameters()))
+            weights = ()
+            for group in self.optimizer.param_groups:
+                weights += tuple(group['params'])
+            self.grad_fn = mindspore.value_and_grad(forward, None, weights)
 
         loss, grads = self.grad_fn(inputs)
 

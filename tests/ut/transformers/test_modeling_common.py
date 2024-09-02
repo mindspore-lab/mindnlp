@@ -2406,6 +2406,7 @@ class ModelTesterMixin:
                                 is_special_classes
                                 and any(len(re.findall(target, name)) > 0 for target in special_param_names)
                             ):
+                                print(name)
                                 self.assertIn(
                                     param_mean,
                                     [0.0, 1.0],

@@ -157,6 +157,8 @@ from . import (
     musicgen_melody,
     mvp,
     nezha,
+    nllb,
+    nllb_moe,
     nougat,
     nystromformer,
     olmo,
@@ -228,6 +230,7 @@ from . import (
     vit_mae,
     vit_msn,
     vitdet,
+    vitmatte,
     vits,
     vivit,
     wav2vec2,
@@ -388,6 +391,8 @@ from .musicgen import *
 from .musicgen_melody import *
 from .mvp import *
 from .nezha import *
+from .nllb import *
+from .nllb_moe import *
 from .nougat import *
 from .nystromformer import *
 from .olmo import *
@@ -460,6 +465,7 @@ from .vit_hybrid import *
 from .vit_mae import *
 from .vit_msn import *
 from .vitdet import *
+from .vitmatte import *
 from .vivit import *
 from .whisper import *
 from .wav2vec2 import *
@@ -619,6 +625,8 @@ __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
 __all__.extend(mvp.__all__)
 __all__.extend(nezha.__all__)
+__all__.extend(nllb.__all__)
+__all__.extend(nllb_moe.__all__)
 __all__.extend(nougat.__all__)
 __all__.extend(nystromformer.__all__)
 __all__.extend(olmo.__all__)
@@ -692,6 +700,7 @@ __all__.extend(vit_hybrid.__all__)
 __all__.extend(vit_mae.__all__)
 __all__.extend(vit_msn.__all__)
 __all__.extend(vitdet.__all__)
+__all__.extend(vitmatte.__all__)
 __all__.extend(vivit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)

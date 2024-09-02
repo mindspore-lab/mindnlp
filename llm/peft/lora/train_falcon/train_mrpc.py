@@ -145,7 +145,6 @@ def eval_model(model, optimizer, criterion, eval_dataloader):
 if __name__ == "__main__":
 
     # 设置gpu
-    # mindspore.set_context(device_target="GPU", device_id=5)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--save_dir",

@@ -14,14 +14,14 @@
 
 
 import unittest
-import numpy as np
+
 from mindnlp.transformers import ReformerConfig
 from mindnlp.utils.testing_utils import (
     require_sentencepiece,
     require_tokenizers,
+    is_mindspore_available,
     require_mindspore,
     slow,
-    is_mindspore_available
 )
 
 from ...generation.test_utils import GenerationTesterMixin
@@ -32,11 +32,9 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor,
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import Parameter
-    from mindnlp.core import ops
+    from mindnlp.core import nn, ops, no_grad
 
     from mindnlp.transformers import (
-        REFORMER_PRETRAINED_MODEL_ARCHIVE_LIST,
         ReformerForMaskedLM,
         ReformerForQuestionAnswering,
         ReformerForSequenceClassification,
@@ -197,8 +195,7 @@ class ReformerModelTester:
 
     def create_and_check_reformer_model(self, config, input_ids, input_mask, choice_labels):
         model = ReformerModel(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask)
         result = model(input_ids)
 
@@ -208,31 +205,25 @@ class ReformerModelTester:
         )
 
     def create_and_check_reformer_model_with_lm_backward(self, config, input_ids, input_mask, choice_labels):
-        if not self.is_training:
-            return
-
         config.is_decoder = False
         config.lsh_num_chunks_after = 1
         model = ReformerForMaskedLM(config=config)
-
-        model.set_train()
+        model.train()
         loss = model(input_ids, attention_mask=input_mask, labels=input_ids)["loss"]
-        # loss.backward()
+        loss.backward()
 
     def create_and_check_reformer_with_lm(self, config, input_ids, input_mask, choice_labels):
         config.lsh_num_chunks_after = 0
         config.is_decoder = True
         model = ReformerModelWithLMHead(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, labels=input_ids)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
     def create_and_check_reformer_with_mlm(self, config, input_ids, input_mask, choice_labels):
         config.is_decoder = False
         model = ReformerForMaskedLM(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, labels=input_ids)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
@@ -248,12 +239,12 @@ class ReformerModelTester:
             config.lsh_attn_chunk_length = self.seq_length
 
         model = ReformerModel(config=config)
-
-        model.set_train(False)
+        model.eval()
         # set all position encodings to zero so that postions don't matter
-        embedding = model.embeddings.position_embeddings.embedding
-        embedding.weight = Parameter(ops.zeros(embedding.weight.shape))
-        embedding.weight.requires_grad = False
+        with no_grad():
+            embedding = model.embeddings.position_embeddings.embedding
+            embedding.weight = nn.Parameter(ops.zeros(embedding.weight.shape))
+            embedding.weight.requires_grad = False
 
         half_seq_len = self.seq_length // 2
         roll = self.chunk_length
@@ -281,14 +272,14 @@ class ReformerModelTester:
         output_padded = model(input_ids_padded, attention_mask=attn_mask)[0][:, :half_seq_len]
         output_padded_rolled = model(input_ids_roll, attention_mask=attn_mask_roll)[0][:, roll : half_seq_len + roll]
 
-        self.parent.assertTrue(np.allclose(output_padded.asnumpy(), output_padded_rolled.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_padded, output_padded_rolled, atol=1e-3))
 
     def create_and_check_reformer_layer_dropout_seed(
         self, config, input_ids, input_mask, choice_labels, is_decoder=False
     ):
         config.is_decoder = is_decoder
         layer = ReformerLayer(config)
-        layer.set_train()
+        layer.train()
         shape = (
             self.batch_size,
             self.seq_length,
@@ -306,30 +297,29 @@ class ReformerModelTester:
         next_attn_output = layer_outputs.attn_output
         next_hidden_states = layer_outputs.hidden_states
 
+        mindspore.manual_seed(layer.attention_seed)
         mindspore.set_seed(layer.attention_seed)
         attn_outputs = layer.attention(hidden_states, attention_mask=input_mask)
         self.parent.assertTrue(
-            np.allclose(
-                (prev_attn_output + attn_outputs.hidden_states).asnumpy(),
-                next_attn_output.asnumpy(),
+            ops.allclose(
+                prev_attn_output + attn_outputs.hidden_states,
+                next_attn_output,
                 atol=1e-3,
             )
         )
 
+        mindspore.manual_seed(layer.feed_forward_seed)
         mindspore.set_seed(layer.feed_forward_seed)
         feed_forward_hidden_states = layer.feed_forward(next_attn_output)
         self.parent.assertTrue(
-            np.allclose(
-                next_hidden_states.asnumpy(),
-                (hidden_states + feed_forward_hidden_states).asnumpy(),
+            ops.allclose(
+                next_hidden_states,
+                hidden_states + feed_forward_hidden_states,
                 atol=1e-3,
             )
         )
 
     def create_and_check_reformer_feed_backward_chunking(self, config, input_ids, input_mask, choice_labels):
-        if not self.is_training:
-            return
-
         # disable dropout
         config.hidden_dropout_prob = 0
         config.local_attention_probs_dropout_prob = 0
@@ -337,41 +327,42 @@ class ReformerModelTester:
         config.lsh_num_chunks_after = 1
         config.is_decoder = False
 
+        mindspore.manual_seed(0)
         mindspore.set_seed(0)
         model = ReformerForMaskedLM(config=config)
-
-        model.set_train()
-
+        model.train()
+        model.zero_grad()
         loss_no_chunk, output_no_chunk = model(input_ids, labels=input_ids, attention_mask=input_mask)[:2]
-        # loss_no_chunk.backward()
-        # grad_slice_word_no_chunk = model.reformer.embeddings.word_embeddings.weight.grad[0, :5]
-        # grad_slice_position_factor_1_no_chunk = model.reformer.embeddings.position_embeddings.weights[0][1, 0, -5:]
-        # grad_slice_position_factor_2_no_chunk = model.reformer.embeddings.position_embeddings.weights[1][0, 1, :5]
+        loss_no_chunk.backward()
+        grad_slice_word_no_chunk = model.reformer.embeddings.word_embeddings.weight.grad[0, :5]
+        grad_slice_position_factor_1_no_chunk = model.reformer.embeddings.position_embeddings.weights[0][1, 0, -5:]
+        grad_slice_position_factor_2_no_chunk = model.reformer.embeddings.position_embeddings.weights[1][0, 1, :5]
 
         config.chunk_size_lm_head = 1
         config.chunk_size_feed_forward = 1
 
+        mindspore.manual_seed(0)
         mindspore.set_seed(0)
         model = ReformerForMaskedLM(config=config)
-
-        model.set_train()
+        model.train()
+        model.zero_grad()
         loss_chunk, output_chunk = model(input_ids, labels=input_ids, attention_mask=input_mask)[:2]
-        # loss_chunk.backward()
-        # grad_slice_word_chunk = model.reformer.embeddings.word_embeddings.weight.grad[0, :5]
-        # grad_slice_position_factor_1_chunk = model.reformer.embeddings.position_embeddings.weights[0][1, 0, -5:]
-        # grad_slice_position_factor_2_chunk = model.reformer.embeddings.position_embeddings.weights[1][0, 1, :5]
-        self.parent.assertTrue(np.allclose(loss_chunk.asnumpy(), loss_no_chunk.asnumpy(), atol=1e-3))
-        # self.parent.assertTrue(np.allclose(grad_slice_word_no_chunk.asnumpy(), grad_slice_word_chunk.asnumpy(), atol=1e-3))
-        # self.parent.assertTrue(
-        #     np.allclose(grad_slice_position_factor_1_chunk.asnumpy(), grad_slice_position_factor_1_no_chunk.asnumpy(), atol=1e-3)
-        # )
-        # self.parent.assertTrue(
-        #     np.allclose(grad_slice_position_factor_2_chunk.asnumpy(), grad_slice_position_factor_2_no_chunk.asnumpy(), atol=1e-3)
-        # )
+        loss_chunk.backward()
+        grad_slice_word_chunk = model.reformer.embeddings.word_embeddings.weight.grad[0, :5]
+        grad_slice_position_factor_1_chunk = model.reformer.embeddings.position_embeddings.weights[0][1, 0, -5:]
+        grad_slice_position_factor_2_chunk = model.reformer.embeddings.position_embeddings.weights[1][0, 1, :5]
+        self.parent.assertTrue(ops.allclose(loss_chunk, loss_no_chunk, atol=1e-3))
+        self.parent.assertTrue(ops.allclose(grad_slice_word_no_chunk, grad_slice_word_chunk, atol=1e-3))
+        self.parent.assertTrue(
+            ops.allclose(grad_slice_position_factor_1_chunk, grad_slice_position_factor_1_no_chunk, atol=1e-3)
+        )
+        self.parent.assertTrue(
+            ops.allclose(grad_slice_position_factor_2_chunk, grad_slice_position_factor_2_no_chunk, atol=1e-3)
+        )
 
     def create_and_check_reformer_random_seed(self, config, input_ids, input_mask, choice_labels):
         layer = ReformerLayer(config)
-        layer.set_train()
+        layer.train()
 
         shape = (
             self.batch_size,
@@ -387,6 +378,7 @@ class ReformerModelTester:
             layer_outputs = layer(attn_output, hidden_states, attention_mask=input_mask)
             attn_output = layer_outputs.attn_output
             hidden_states = layer_outputs.hidden_states
+            mindspore.manual_seed(layer.attention_seed)
             mindspore.set_seed(layer.attention_seed)
             seeds.append(layer.attention_seed)
         self.parent.assertGreater(len(set(seeds)), 70)
@@ -396,15 +388,15 @@ class ReformerModelTester:
             layer_outputs = layer(attn_output, hidden_states, attention_mask=input_mask)
             attn_output = layer_outputs.attn_output
             hidden_states = layer_outputs.hidden_states
+            mindspore.manual_seed(layer.feed_forward_seed)
             mindspore.set_seed(layer.feed_forward_seed)
             seeds.append(layer.feed_forward_seed)
         self.parent.assertGreater(len(set(seeds)), 70)
 
     def create_and_check_reformer_model_fp16_forward(self, config, input_ids, input_mask, choice_labels):
         model = ReformerModel(config=config)
-
         model.half()
-        model.set_train(False)
+        model.eval()
         output = model(input_ids, attention_mask=input_mask)["last_hidden_state"]
         self.parent.assertFalse(ops.isnan(output).any().item())
 
@@ -416,8 +408,7 @@ class ReformerModelTester:
         config.max_length = 20
 
         model = ReformerModelWithLMHead(config=config)
-
-        model.set_train(False)
+        model.eval()
         output = model.generate()
         self.parent.assertIsNotNone(output)
 
@@ -425,9 +416,8 @@ class ReformerModelTester:
         config.is_decoder = True
         config.lsh_num_chunks_after = 0
         model = ReformerModelWithLMHead(config=config)
-
         model.half()
-        model.set_train(False)
+        model.eval()
         # only use last 10 inputs for generation
         output = model.generate(input_ids[:, -10:], attention_mask=input_mask, do_sample=False)
         self.parent.assertFalse(ops.isnan(output).any().item())
@@ -439,15 +429,13 @@ class ReformerModelTester:
         config.lsh_num_chunks_after = 1
         config.is_decoder = False
         model = ReformerForMaskedLM(config=config)
-
-        model.set_train(False)
+        model.eval()
         output_logits = model(input_ids, attention_mask=input_mask)["logits"]
         self.parent.assertTrue(output_logits.shape[1] == input_ids.shape[-1])
 
     def create_and_check_reformer_for_question_answering(self, config, input_ids, input_mask, choice_labels):
         model = ReformerForQuestionAnswering(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -462,8 +450,7 @@ class ReformerModelTester:
         config.lsh_num_chunks_before = 1
         config.lsh_num_chunks_after = 0
         model = ReformerModelWithLMHead(config=config)
-
-        model.set_train(False)
+        model.eval()
         input_ids_first = input_ids[:, :-1]
         input_ids_second = input_ids[:, -1:]
 
@@ -475,12 +462,12 @@ class ReformerModelTester:
         outputs_without_cache = model(input_ids)["logits"][:, -1]
 
         # select random slice idx
-        random_slice_idx = ops.randint(0, outputs_without_cache.shape[-1], (1,)).item()
+        random_slice_idx = ops.randint(0, outputs_without_cache.shape[-1], (1, 1)).item()
 
         # outputs should be similar within range
         self.parent.assertTrue(
-            np.allclose(
-                outputs_with_cache[:, 0, random_slice_idx].asnumpy(), outputs_without_cache[:, random_slice_idx].asnumpy(), atol=1e-2
+            ops.allclose(
+                outputs_with_cache[:, 0, random_slice_idx], outputs_without_cache[:, random_slice_idx], atol=1e-2
             )
         )
 
@@ -496,8 +483,7 @@ class ReformerModelTester:
         config.is_decoder = is_decoder
         sequence_labels = ids_tensor([self.batch_size], config.num_labels)
         model = ReformerForSequenceClassification(config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, labels=sequence_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
@@ -515,6 +501,8 @@ class ReformerTesterMixin:
         self.model_tester.create_and_check_reformer_model(*config_and_inputs)
 
     def test_reformer_lm_model_backward(self):
+        if not self.model_tester.is_training:
+            self.skipTest(reason="model_tester.is_training is set to False")
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_reformer_model_with_lm_backward(*config_and_inputs)
 
@@ -536,7 +524,10 @@ class ReformerTesterMixin:
         self.model_tester.create_and_check_reformer_layer_dropout_seed(*config_and_inputs, is_decoder=True)
         self.model_tester.create_and_check_reformer_layer_dropout_seed(*config_and_inputs, is_decoder=False)
 
+    @unittest.skip
     def test_reformer_chunking_backward_equality(self):
+        if not self.model_tester.is_training:
+            self.skipTest(reason="model_tester.is_training is set to False")
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_reformer_feed_backward_chunking(*config_and_inputs)
 
@@ -561,34 +552,25 @@ class ReformerTesterMixin:
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_reformer_random_seed(*config_and_inputs)
 
-    @require_mindspore
     def test_reformer_model_fp16_forward(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_reformer_model_fp16_forward(*config_and_inputs)
 
-    @require_mindspore
     def test_reformer_model_fp16_generate(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_reformer_model_fp16_generate(*config_and_inputs)
 
-    @unittest.skip(
-        reason=(
-            "Reformer does not work with data parallel (DP)"
-        )
-    )
-    def test_multi_gpu_data_parallel_forward(self):
-        pass
 
     def test_for_sequence_classification(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_reformer_for_sequence_classification(*config_and_inputs, is_decoder=False)
 
+    @unittest.skip(reason="Reformer cannot keep gradients in attentions or hidden states")
     def test_retain_grad_hidden_states_attentions(self):
-        # reformer cannot keep gradients in attentions or hidden states
         return
 
+    @unittest.skip(reason="Reformer cannot resize embeddings that easily")
     def test_resize_embeddings_untied(self):
-        # reformer cannot resize embeddings that easily
         return
 
 
@@ -611,9 +593,9 @@ class ReformerLocalAttnModelTest(ReformerTesterMixin, GenerationTesterMixin, Mod
 
     @slow
     def test_model_from_pretrained(self):
-        for model_name in REFORMER_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = ReformerModelWithLMHead.from_pretrained(model_name)
-            self.assertIsNotNone(model)
+        model_name = "google/reformer-crime-and-punishment"
+        model = ReformerModelWithLMHead.from_pretrained(model_name)
+        self.assertIsNotNone(model)
 
     def _check_attentions_for_generate(
         self, batch_size, attentions, min_length, max_length, config, use_cache=False, num_beam_groups=1
@@ -678,9 +660,21 @@ class ReformerLocalAttnModelTest(ReformerTesterMixin, GenerationTesterMixin, Mod
                 [expected_shape] * len(iter_hidden_states),
             )
 
-    @unittest.skip("The model doesn't support left padding")  # and it's not used enough to be worth fixing :)
+    @unittest.skip(reason="The model doesn't support left padding")  # and it's not used enough to be worth fixing :)
     def test_left_padding_compatibility(self):
         pass
+
+    def _get_input_ids_and_config(self, batch_size=2):
+        # override because overwise we hit max possible seq length for model (4*8=32)
+        # decreasing the seq_length in tester causes errors for "training_tests", those need exactly max seq length
+        # NOTE: seq_length has to be multiple of 4, otherwise it fails for other tests
+        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+        input_ids = inputs_dict[self.input_name]
+        input_ids = input_ids[:batch_size, :16]
+        attention_mask = ops.ones_like(input_ids, dtype=mindspore.int64)[:batch_size, :16]
+        config.eos_token_id = None
+        config.forced_eos_token_id = None
+        return config, input_ids, attention_mask
 
 
 @require_mindspore
@@ -831,15 +825,15 @@ class ReformerLSHAttnModelTest(
                 [expected_shape] * len(iter_hidden_states),
             )
 
-    @unittest.skip("Fails because the sequence length is not a multiple of 4")
+    @unittest.skip(reason="Fails because the sequence length is not a multiple of 4")
     def test_problem_types(self):
         pass
 
-    @unittest.skip("Fails because the sequence length is not a multiple of 4")
+    @unittest.skip(reason="Fails because the sequence length is not a multiple of 4")
     def test_past_key_values_format(self):
         pass
 
-    @unittest.skip("The model doesn't support left padding")  # and it's not used enough to be worth fixing :)
+    @unittest.skip(reason="The model doesn't support left padding")  # and it's not used enough to be worth fixing :)
     def test_left_padding_compatibility(self):
         pass
 
@@ -977,7 +971,6 @@ class ReformerIntegrationTests(unittest.TestCase):
                 [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0],
             ],
             dtype=mindspore.int64,
-
         )
 
         input_ids = mindspore.tensor(
@@ -1052,16 +1045,231 @@ class ReformerIntegrationTests(unittest.TestCase):
                 ],
             ],
             dtype=mindspore.int64,
-
         )
 
         return input_ids, mask
+
+    @unittest.skip
+    def test_lsh_layer_forward(self):
+        config = self._get_basic_config_and_input()
+        config["lsh_num_chunks_before"] = 0
+        config["attn_layers"] = ["lsh"]
+        config["is_decoder"] = False
+        hidden_states = self._get_hidden_states()
+        mindspore.manual_seed(0)
+        mindspore.set_seed(0)
+        layer = ReformerLayer(ReformerConfig(**config))
+        layer.eval()
+        reformer_output = layer(prev_attn_output=hidden_states.copy(), hidden_states=hidden_states)
+        output_slice = reformer_output.hidden_states[0, 0, :5]
+        expected_output_slice = mindspore.tensor(
+            [1.6879, -1.3083, -0.4708, 1.3555, -0.6292],
+            dtype=mindspore.float32,
+        )
+        self.assertTrue(ops.allclose(output_slice, expected_output_slice, atol=1e-3))
+
+    @unittest.skip
+    def test_lsh_layer_forward_complex(self):
+        config = self._get_basic_config_and_input()
+        config["lsh_num_chunks_before"] = 0
+        config["attn_layers"] = ["lsh"]
+        config["num_buckets"] = [2, 4]
+        attn_mask = self._get_attn_mask()
+        hidden_states = self._get_hidden_states()
+        mindspore.manual_seed(0)
+        mindspore.set_seed(0)
+        layer = ReformerLayer(ReformerConfig(**config))
+        layer.eval()
+        reformer_output = layer(
+            prev_attn_output=hidden_states.copy(),
+            hidden_states=hidden_states,
+            attention_mask=attn_mask,
+        )
+        output_slice = reformer_output.hidden_states[0, 0, :5]
+        expected_output_slice = mindspore.tensor(
+            [1.6439, -1.2306, -0.5108, 1.3006, -0.6537],
+            dtype=mindspore.float32,
+        )
+        self.assertTrue(ops.allclose(output_slice, expected_output_slice, atol=1e-3))
+
+    @unittest.skip
+    def test_local_layer_forward(self):
+        config = self._get_basic_config_and_input()
+        config["local_num_chunks_before"] = 0
+        config["attn_layers"] = ["local"]
+        config["is_decoder"] = False
+        hidden_states = self._get_hidden_states()
+        mindspore.manual_seed(0)
+        mindspore.set_seed(0)
+        layer = ReformerLayer(ReformerConfig(**config))
+        layer.eval()
+        reformer_output = layer(prev_attn_output=hidden_states, hidden_states=hidden_states)
+        output_slice = reformer_output.hidden_states[0, 0, :5]
+        expected_output_slice = mindspore.tensor(
+            [1.4212, -2.0576, -0.9688, 1.4599, -0.1344],
+            dtype=mindspore.float32,
+        )
+        self.assertTrue(ops.allclose(output_slice, expected_output_slice, atol=1e-3))
+
+    @unittest.skip
+    def test_local_layer_forward_complex(self):
+        config = self._get_basic_config_and_input()
+        config["local_num_chunks_before"] = 0
+        config["attn_layers"] = ["local"]
+        attn_mask = self._get_attn_mask()
+        hidden_states = self._get_hidden_states()
+        mindspore.manual_seed(0)
+        mindspore.set_seed(0)
+        layer = ReformerLayer(ReformerConfig(**config))
+        layer.eval()
+        reformer_output = layer(
+            prev_attn_output=hidden_states,
+            hidden_states=hidden_states,
+            attention_mask=attn_mask,
+        )
+        output_slice = reformer_output.hidden_states[0, 0, :5]
+        expected_output_slice = mindspore.tensor(
+            [1.4750, -2.0235, -0.9743, 1.4463, -0.1269],
+            dtype=mindspore.float32,
+        )
+        self.assertTrue(ops.allclose(output_slice, expected_output_slice, atol=1e-3))
+
+    @unittest.skip
+    def test_lsh_model_forward(self):
+        config = self._get_basic_config_and_input()
+        config["attn_layers"] = ["lsh", "lsh", "lsh", "lsh"]
+        config["num_buckets"] = [2, 4]
+        mindspore.manual_seed(123)
+        mindspore.set_seed(123)
+        model = ReformerModel(ReformerConfig(**config))
+        model.eval()
+        input_ids, attn_mask = self._get_input_ids_and_mask()
+        hidden_states = model(input_ids=input_ids, attention_mask=attn_mask)[0]
+        output_slice = hidden_states[0, 0, :5]
+        expected_output_slice = mindspore.tensor(
+            [-0.9896, -0.9396, -1.0831, -0.0597, 0.2456],
+            dtype=mindspore.float32,
+        )
+        print(output_slice)
+        self.assertTrue(ops.allclose(output_slice, expected_output_slice, atol=1e-3))
+
+    @unittest.skip
+    def test_local_model_forward(self):
+        config = self._get_basic_config_and_input()
+        config["attn_layers"] = ["local", "local", "local", "local"]
+        mindspore.manual_seed(0)
+        mindspore.set_seed(0)
+        model = ReformerModel(ReformerConfig(**config))
+        model.eval()
+        input_ids, attn_mask = self._get_input_ids_and_mask()
+        hidden_states = model(input_ids=input_ids, attention_mask=attn_mask)[0]
+        output_slice = hidden_states[0, 0, :5]
+        expected_output_slice = mindspore.tensor(
+            [-1.6791, 0.7171, 0.1594, 0.4063, 1.2584],
+            dtype=mindspore.float32,
+        )
+        self.assertTrue(ops.allclose(output_slice, expected_output_slice, atol=1e-3))
+
+    @unittest.skip
+    def test_lm_model_forward(self):
+        config = self._get_basic_config_and_input()
+        config["attn_layers"] = ["local", "lsh", "local", "lsh", "local", "lsh"]
+        config["num_buckets"] = [2, 4]
+        config["is_decoder"] = False
+        mindspore.manual_seed(0)
+        mindspore.set_seed(0)
+        model = ReformerForMaskedLM(ReformerConfig(**config))
+        model.eval()
+        input_ids, attn_mask = self._get_input_ids_and_mask()
+        hidden_states = model(input_ids=input_ids, attention_mask=attn_mask)[0]
+        output_slice = hidden_states[1, -1, :5]
+        expected_output_slice = mindspore.tensor(
+            [0.1018, -0.2026, 0.2116, 0.0270, -0.1233],
+            dtype=mindspore.float32,
+        )
+
+        self.assertTrue(ops.allclose(output_slice, expected_output_slice, atol=1e-3))
+
+    @unittest.skip
+    def test_local_lm_model_grad(self):
+        config = self._get_basic_config_and_input()
+        config["attn_layers"] = ["local", "local", "local", "local"]
+        config["hidden_dropout_prob"] = 0.0
+        config["local_attention_probs_dropout_prob"] = 0.0
+        mindspore.manual_seed(0)
+        mindspore.set_seed(0)
+        model = ReformerModelWithLMHead(ReformerConfig(**config))
+        model.train()
+        model.zero_grad()
+        input_ids, _ = self._get_input_ids_and_mask()
+        loss = model(input_ids=input_ids, labels=input_ids)[0]
+
+        self.assertTrue(ops.allclose(loss, mindspore.tensor(5.8019, dtype=mindspore.float32), atol=1e-3))
+        loss.backward()
+
+        # check last grads to cover all proable errors
+        grad_slice_word = model.reformer.embeddings.word_embeddings.weight.grad[0, :5]
+        expected_grad_slice_word = mindspore.tensor(
+            [-0.0005, -0.0001, -0.0002, -0.0006, -0.0006],
+            dtype=mindspore.float32,
+        )
+        grad_slice_position_factor_1 = model.reformer.embeddings.position_embeddings.weights[0][1, 0, -5:]
+        expected_grad_slice_pos_fac_1 = mindspore.tensor(
+            [-0.5235, 0.5704, 0.0922, -0.3140, 0.9928],
+            dtype=mindspore.float32,
+        )
+        grad_slice_position_factor_2 = model.reformer.embeddings.position_embeddings.weights[1][0, 1, :5]
+        expected_grad_slice_pos_fac_2 = mindspore.tensor(
+            [1.7960, 1.7668, 0.5593, 0.0907, 1.8342],
+            dtype=mindspore.float32,
+        )
+        self.assertTrue(ops.allclose(grad_slice_word, expected_grad_slice_word, atol=1e-3))
+        self.assertTrue(ops.allclose(grad_slice_position_factor_1, expected_grad_slice_pos_fac_1, atol=1e-3))
+        self.assertTrue(ops.allclose(grad_slice_position_factor_2, expected_grad_slice_pos_fac_2, atol=1e-3))
+
+    @unittest.skip
+    def test_lsh_lm_model_grad(self):
+        config = self._get_basic_config_and_input()
+        config["attn_layers"] = ["lsh", "lsh", "lsh", "lsh"]
+        config["hidden_dropout_prob"] = 0.0
+        config["lsh_attention_probs_dropout_prob"] = 0.0
+        config["num_buckets"] = [2, 4]
+        config["num_hashes"] = 6
+        mindspore.manual_seed(0)
+        mindspore.set_seed(0)
+        model = ReformerModelWithLMHead(ReformerConfig(**config))
+        model.train()
+        model.zero_grad()
+        input_ids, _ = self._get_input_ids_and_mask()
+        loss = model(input_ids=input_ids, labels=input_ids)[0]
+
+        self.assertTrue(ops.allclose(loss, mindspore.tensor(5.7854, dtype=mindspore.float32), atol=1e-3))
+        loss.backward()
+        # check last grads to cover all proable errors
+        grad_slice_word = model.reformer.embeddings.word_embeddings.weight.grad[0, :5]
+        expected_grad_slice_word = mindspore.tensor(
+            [0.0004, 0.0003, 0.0006, -0.0004, 0.0002],
+            dtype=mindspore.float32,
+        )
+        grad_slice_position_factor_1 = model.reformer.embeddings.position_embeddings.weights[0][1, 0, -5:]
+        expected_grad_slice_pos_fac_1 = mindspore.tensor(
+            [-0.3792, 0.5593, -1.6993, 0.2033, 0.4131],
+            dtype=mindspore.float32,
+        )
+        grad_slice_position_factor_2 = model.reformer.embeddings.position_embeddings.weights[1][0, 1, :5]
+        expected_grad_slice_pos_fac_2 = mindspore.tensor(
+            [-1.4212, -0.3201, -1.1944, 0.1258, 0.2856],
+            dtype=mindspore.float32,
+        )
+        self.assertTrue(ops.allclose(grad_slice_word, expected_grad_slice_word, atol=1e-3))
+        self.assertTrue(ops.allclose(grad_slice_position_factor_1, expected_grad_slice_pos_fac_1, atol=1e-3))
+        self.assertTrue(ops.allclose(grad_slice_position_factor_2, expected_grad_slice_pos_fac_2, atol=1e-3))
 
     @slow
     def test_pretrained_generate_crime_and_punish(self):
         model = ReformerModelWithLMHead.from_pretrained("google/reformer-crime-and-punishment")
         tokenizer = ReformerTokenizer.from_pretrained("google/reformer-crime-and-punishment")
-        model.set_train(False)
+        model.eval()
 
         input_ids = tokenizer.encode("A few months later", return_tensors="ms")
         output_ids = model.generate(
@@ -1078,7 +1286,7 @@ class ReformerIntegrationTests(unittest.TestCase):
     def test_pretrained_generate_use_cache_equality(self):
         model = ReformerModelWithLMHead.from_pretrained("google/reformer-crime-and-punishment")
         tokenizer = ReformerTokenizer.from_pretrained("google/reformer-crime-and-punishment")
-        model.set_train(False)
+        model.eval()
         input_ids = tokenizer.encode("A few months later", return_tensors="ms")
         output_ids_with_cache = model.generate(input_ids, max_length=130, num_hashes=8, use_cache=False)
         output_ids_without_cache = model.generate(input_ids, max_length=130, num_hashes=8, use_cache=True)

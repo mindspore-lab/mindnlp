@@ -217,6 +217,11 @@ def mse_loss(input, target, reduction='mean'):
 def l1_loss(input, target, reduction='mean'):
     return ops.l1_loss(input, target, reduction)
 
+def kl_div(logits, labels, reduction='mean', log_target=False):
+    if log_target:
+        labels = ops.log(labels)
+    return ops.kl_div(logits, labels, reduction)
+
 def softmax(input, dim=-1, *, dtype=None):
     if USE_PYBOOST:
         return mindspore.mint.softmax(input, dim, dtype=dtype)
@@ -265,6 +270,16 @@ def normalize(input, p=2.0, dim=1, eps=1e-6):
     return input / ops.norm(input, ord=p, dim=dim, keepdim=True)
 
 def batch_norm(input, running_mean, running_var, weight=None, bias=None, training=False, momentum=0.1, eps=1e-05):
+
+    if running_mean is None:
+        running_mean = ops.ones(input.shape[1])
+    if running_var is None:
+        running_var = ops.zeros(input.shape[1])
+    if weight is None:
+        weight = ops.ones(input.shape[1])
+    if bias is None:
+        bias = ops.zeros(input.shape[1])
+
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.batch_norm(
             input,
@@ -276,16 +291,6 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None, trainin
             momentum,
             eps
         )
-
-    if running_mean is None:
-        running_mean = ops.ones(input.shape[1])
-    if running_var is None:
-        running_var = ops.zeros(input.shape[1])
-    if weight is None:
-        weight = ops.ones(input.shape[1])
-    if bias is None:
-        bias = ops.zeros(input.shape[1])
-
     return ops.batch_norm(
         input,
         running_mean,

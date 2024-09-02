@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" MindSpore BiT model. Also supports backbone for ViT hybrid."""
+"""MindSpore BiT model. Also supports backbone for ViT hybrid."""
 
 import collections
 import math
@@ -20,10 +20,10 @@ from typing import Optional, Tuple
 
 import numpy as np
 import mindspore
-from mindspore.common.initializer import initializer, HeNormal
-
+from mindspore import Tensor
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BackboneOutput,
@@ -32,7 +32,9 @@ from ...modeling_outputs import (
     ImageClassifierOutputWithNoAttention,
 )
 from ...modeling_utils import PreTrainedModel
-from ....utils import logging
+from ....utils import (
+    logging,
+)
 from ...backbone_utils import BackboneMixin
 from .configuration_bit import BitConfig
 
@@ -139,6 +141,7 @@ class WeightStandardizedConv2d(nn.Conv2d):
         )
         return hidden_state
 
+
 class BitGroupNormActivation(nn.GroupNorm):
     r"""
     A module that combines group normalization with an activation function.
@@ -156,30 +159,14 @@ class BitGroupNormActivation(nn.GroupNorm):
         hidden_state = self.activation(hidden_state)
         return hidden_state
 
+
 class DynamicPad2d(nn.Module):
     r"""
     A module that wraps dynamic padding of any input, given the parameters of the convolutional layer and the input
     hidden states.
     """
+
     def __init__(self, kernel_size, stride, dilation, value=0):
-        """Initializes an instance of the DynamicPad2d class.
-
-        Args:
-            self (DynamicPad2d): The current instance of the DynamicPad2d class.
-            kernel_size (int or tuple): The size of the kernel used for padding.
-                If an int is provided, it is converted to a tuple with the same value in both dimensions. (default: 0)
-            stride (int or tuple): The stride used for padding.
-                If an int is provided, it is converted to a tuple with the same value in both dimensions. (default: 0)
-            dilation (int or tuple): The dilation used for padding.
-                If an int is provided, it is converted to a tuple with the same value in both dimensions. (default: 0)
-            value (int): The value used for padding. (default: 0)
-
-        Returns:
-            None
-
-        Raises:
-            None
-        """
         super().__init__()
         # Safety checkers
         if isinstance(kernel_size, int):
@@ -202,24 +189,6 @@ class DynamicPad2d(nn.Module):
         self.compute_padding = compute_padding
 
     def __call__(self, input):
-        """
-        This method is called when an instance of the DynamicPad2d class is used as a function.
-        It performs dynamic padding on the input tensor based on the kernel size, stride, dilation, and value specified
-        in the class instance.
-
-        Args:
-            self (DynamicPad2d): The instance of the DynamicPad2d class.
-            input (tensor): The input tensor to be dynamically padded.
-                It should be a tensor with shape [batch_size, channels, height, width].
-
-        Returns:
-            None: This method does not return any value explicitly.
-                However, it modifies the input tensor in place by applying dynamic padding.
-
-        Raises:
-            ValueError: If the input tensor does not have the expected shape [batch_size, channels, height, width].
-            RuntimeError: If an error occurs during the dynamic padding process.
-        """
         # Get width and height
         input_height, input_width = input.shape[-2:]
 
@@ -229,7 +198,7 @@ class DynamicPad2d(nn.Module):
 
         # apply pad
         if padding_height > 0 or padding_width > 0:
-            input = ops.pad(
+            input = nn.functional.pad(
                 input,
                 [
                     padding_width // 2,
@@ -242,8 +211,9 @@ class DynamicPad2d(nn.Module):
         return input
 
 
-class BitMaxPool2d(nn.Module):
+class BitMaxPool2d(nn.MaxPool2d):
     """Tensorflow like 'SAME' wrapper for 2D max pooling"""
+
     def __init__(
         self,
         kernel_size: int,
@@ -254,69 +224,19 @@ class BitMaxPool2d(nn.Module):
         padding_value=0,
         use_dynamic_padding=True,
     ):
-        """
-        Initializes a BitMaxPool2d object.
-
-        Args:
-            self (BitMaxPool2d): The BitMaxPool2d instance.
-            kernel_size (int): The size of the sliding window kernel. Can be a single integer or a tuple of two integers.
-            stride (int, optional): The stride of the sliding window kernel.
-                Can be a single integer or a tuple of two integers. Defaults to None.
-            dilation (int, optional): The dilation rate of the sliding window kernel.
-                Can be a single integer or a tuple of two integers. Defaults to 1.
-            ceil_mode (bool, optional): Whether to use ceil mode for the output size calculation.
-                Defaults to False.
-            padding (tuple, optional): The padding to be applied to the input.
-                Can be a tuple of two integers or a single integer. Defaults to (0, 0).
-            padding_value (int, optional): The value used for padding if `use_dynamic_padding` is True. Defaults to 0.
-            use_dynamic_padding (bool, optional): Whether to apply dynamic padding using `DynamicPad2d` or not.
-                Defaults to True.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
-        super().__init__()
-        self.padding = padding
-        self.kernel_size = kernel_size if isinstance(kernel_size, collections.abc.Iterable) else (kernel_size, kernel_size)
-        self.stride = stride if isinstance(stride, collections.abc.Iterable) else (stride, stride)
-        self.dilation = dilation if isinstance(dilation, collections.abc.Iterable) else (dilation, dilation)
-        self.dilation = dilation
-        self.ceil_mode = ceil_mode
-        self.pad_mode = 'pad' if sum(padding) > 0 else 'valid'
+        kernel_size = kernel_size if isinstance(kernel_size, collections.abc.Iterable) else (kernel_size, kernel_size)
+        stride = stride if isinstance(stride, collections.abc.Iterable) else (stride, stride)
+        dilation = dilation if isinstance(dilation, collections.abc.Iterable) else (dilation, dilation)
+        super().__init__(kernel_size, stride, padding, dilation, ceil_mode)
         if use_dynamic_padding:
             self.pad = DynamicPad2d(kernel_size, stride, dilation, padding_value)
         else:
             self.pad = nn.Identity()
 
     def forward(self, hidden_states):
-        """
-        Constructs a BitMaxPool2d object.
-
-        This method takes two parameters: self and hidden_states.
-
-        Args:
-            self (BitMaxPool2d): The current instance of the BitMaxPool2d class.
-            hidden_states (Tensor): The input tensor of shape (batch_size, channels, height, width)
-                representing the hidden states.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If the input tensor `hidden_states` is not a 4-dimensional tensor.
-            ValueError: If the input tensor `hidden_states` has a negative height or width.
-            ValueError: If the kernel size is not a positive integer or a tuple of two positive integers.
-            ValueError: If the stride is not a positive integer or a tuple of two positive integers.
-            ValueError: If the padding is not a tuple of two non-negative integers.
-            ValueError: If the dilation is not a positive integer or a tuple of two positive integers.
-            TypeError: If the ceil_mode is not a boolean value.
-        """
         hidden_states = self.pad(hidden_states)
         return nn.functional.max_pool2d(
-            hidden_states, self.kernel_size, self.stride, self.padding, self.dilation, ceil_mode=self.ceil_mode
+            hidden_states, self.kernel_size, self.stride, self.padding, self.dilation, self.ceil_mode
         )
 
 
@@ -324,20 +244,8 @@ class BitEmbeddings(nn.Module):
     """
     BiT Embeddings (stem) composed of a single aggressive convolution.
     """
+
     def __init__(self, config: BitConfig):
-        """
-        Initializes an instance of the BitEmbeddings class.
-
-        Args:
-            self: The instance of the class.
-            config (BitConfig): A BitConfig object containing configuration parameters.
-
-        Returns:
-            None
-
-        Raises:
-            None
-        """
         super().__init__()
 
         self.convolution = WeightStandardizedConv2d(
@@ -364,30 +272,7 @@ class BitEmbeddings(nn.Module):
 
         self.num_channels = config.num_channels
 
-    def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
-        """
-        Constructs the bit embeddings for the given pixel values.
-
-        Args:
-            self (BitEmbeddings): An instance of the BitEmbeddings class.
-            pixel_values (mindspore.Tensor):
-                A tensor containing pixel values.
-                The pixel_values parameter should be of shape (batch_size, num_channels, height, width).
-
-                - batch_size (int): The number of images in the batch.
-                - num_channels (int): The number of channels in each image.
-                - height (int): The height of each image.
-                - width (int): The width of each image.
-
-                The pixel_values should have the same number of channels as the configuration set in the class.
-                Raises a ValueError if the number of channels does not match.
-
-        Returns:
-            mindspore.Tensor: The forwarded bit embeddings tensor.
-
-        Raises:
-            ValueError: If the channel dimension of the pixel values does not match with the one set in the configuration.
-        """
+    def forward(self, pixel_values: Tensor) -> Tensor:
         num_channels = pixel_values.shape[1]
         if num_channels != self.num_channels:
             raise ValueError(
@@ -429,87 +314,19 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
 # Copied from transformers.models.beit.modeling_beit.BeitDropPath with Beit->Bit
 class BitDropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
+
     def __init__(self, drop_prob: Optional[float] = None) -> None:
-        """
-        Initializes a new instance of the BitDropPath class.
-
-        Args:
-            self: The instance of the BitDropPath class.
-            drop_prob (Optional[float]): The probability of dropping a bit. If not provided, the default value is None.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         super().__init__()
         self.drop_prob = drop_prob
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-        """
-        Constructs a new tensor by applying drop path regularization to the given hidden states.
-
-        Args:
-            self (BitDropPath): An instance of the BitDropPath class.
-            hidden_states (mindspore.Tensor): The input tensor of shape (batch_size, ..., hidden_size).
-                It represents the hidden states of a neural network layer.
-
-        Returns:
-            mindspore.Tensor: A tensor of the same shape and dtype as the input tensor.
-                It contains the modified hidden states after applying drop path regularization.
-
-        Raises:
-            TypeError: If the input tensor is not an instance of mindspore.Tensor.
-            ValueError: If the shape of the input tensor is invalid or incompatible with the neural network layer.
-            RuntimeError: If the drop path regularization is attempted during inference mode.
-
-        Note:
-            Drop path regularization randomly sets a fraction of the hidden unit activations to zero during training,
-            which helps in regularization and prevents overfitting to the training data. The drop probability
-            is specified by the 'drop_prob' attribute of the BitDropPath instance.
-
-        Example:
-            ```python
-            >>> drop_path = BitDropPath()
-            >>> hidden_states = mindspore.Tensor(np.random.randn(32, 64, 256), mindspore.float32)
-            >>> output = drop_path.forward(hidden_states)
-            ```
-        """
         return drop_path(hidden_states, self.drop_prob, self.training)
 
     def extra_repr(self) -> str:
-        """
-        Returns a string representation of the BitDropPath object.
-
-        Args:
-            self (BitDropPath): The BitDropPath object itself.
-
-        Returns:
-            str: A string representation of the BitDropPath object, containing the probability of dropping a bit.
-
-        Raises:
-            None.
-
-        This method returns a string representation of the BitDropPath object, specifically the probability of
-        dropping a bit.
-        The returned string is formatted as 'p=drop_prob', where 'drop_prob' is the probability of dropping a bit.
-        """
         return "p={}".format(self.drop_prob)
 
 
 def make_div(value, divisor=8):
-    """
-    Args:
-        value (int): The input value for which the division needs to be performed.
-        divisor (int, optional): The divisor used for division. Defaults to 8.
-
-    Returns:
-        int: The new value after performing the division operation.
-
-    Raises:
-        None
-    """
     min_value = divisor
     new_value = max(min_value, int(value + divisor / 2) // divisor * divisor)
     if new_value < 0.9 * value:
@@ -524,6 +341,7 @@ class BitPreActivationBottleneckLayer(nn.Module):
 
     Except it puts the stride on 3x3 conv when available.
     """
+
     def __init__(
         self,
         config,
@@ -537,29 +355,6 @@ class BitPreActivationBottleneckLayer(nn.Module):
         drop_path_rate=0.0,
         is_first_layer=False,
     ):
-        """
-        Initializes a BitPreActivationBottleneckLayer instance.
-
-        Args:
-            self: The instance of the class.
-            config: A configuration object containing settings for the layer.
-            in_channels (int): Number of input channels.
-            out_channels (int, optional): Number of output channels. If not provided, defaults to in_channels.
-            bottle_ratio (float): Ratio used for bottleneck layer compression.
-            stride (int): Stride value for convolution operations.
-            dilation (int): Dilation rate for convolution operations.
-            first_dilation (int, optional): Dilation rate for the first convolution layer.
-                Defaults to dilation if not provided.
-            groups (int): Number of groups for grouped convolutions.
-            drop_path_rate (float): Probability of applying drop path regularization.
-            is_first_layer (bool): Flag indicating if the layer is the first in the network.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         super().__init__()
 
         first_dilation = first_dilation or dilation
@@ -592,21 +387,6 @@ class BitPreActivationBottleneckLayer(nn.Module):
         self.drop_path = BitDropPath(drop_path_rate) if drop_path_rate > 0 else nn.Identity()
 
     def forward(self, hidden_states):
-        """
-        The 'forward' method initializes the BitPreActivationBottleneckLayer class.
-
-        Args:
-            self (object): The instance of the BitPreActivationBottleneckLayer class.
-            hidden_states (tensor): A tensor representing the hidden states.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If the downsample operation encounters an issue.
-            RuntimeError: If the convolutions encounter runtime issues.
-            TypeError: If the input parameters are of incorrect types.
-        """
         hidden_states_preact = self.norm1(hidden_states)
 
         # shortcut branch
@@ -624,6 +404,7 @@ class BitPreActivationBottleneckLayer(nn.Module):
 
 class BitBottleneckLayer(nn.Module):
     """Non Pre-activation bottleneck block, equivalent to V1.5/V1b bottleneck. Used for ViT Hybrid."""
+
     def __init__(
         self,
         config,
@@ -637,28 +418,6 @@ class BitBottleneckLayer(nn.Module):
         drop_path_rate=0.0,
         is_first_layer=False,
     ):
-        """
-        Initializes a BitBottleneckLayer object.
-
-        Args:
-            self: The BitBottleneckLayer object being initialized.
-            config: An object containing configuration parameters.
-            in_channels (int): The number of input channels.
-            out_channels (int, optional): The number of output channels. If not provided, it defaults to the value of in_channels.
-            bottle_ratio (float): The ratio of the bottleneck width to the output channels.
-            stride (int): The stride value for the convolutional layers.
-            dilation (int): The dilation value for the middle convolutional layer.
-            first_dilation (int, optional): The dilation value for the first convolutional layer. If not provided, it defaults to the value of dilation.
-            groups (int): The number of groups for the middle convolutional layer.
-            drop_path_rate (float): The dropout rate for the drop path layer.
-            is_first_layer (bool): Indicates if this is the first layer of the network.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         super().__init__()
         first_dilation = first_dilation or dilation
 
@@ -696,23 +455,6 @@ class BitBottleneckLayer(nn.Module):
         self.activation = ACT2FN[config.hidden_act]
 
     def forward(self, hidden_states):
-        """
-        The 'forward' method in the class 'BitBottleneckLayer' performs a series of operations on
-        the input 'hidden_states' to forward a new hidden state and returns the result.
-
-        Args:
-            self: The instance of the BitBottleneckLayer class.
-            hidden_states (Tensor): The input hidden states on which the method operates.
-                It is of type Tensor and represents the intermediate hidden states of the model.
-                There are no specific restrictions on the input.
-
-        Returns:
-            Tensor: The updated hidden states after the operations have been performed.
-                It is of type Tensor and represents the modified hidden states.
-
-        Raises:
-            None
-        """
         # shortcut branch
         shortcut = hidden_states
         if self.downsample is not None:
@@ -734,45 +476,6 @@ class BitBottleneckLayer(nn.Module):
 
 
 class BitDownsampleConv(nn.Module):
-
-    """
-    This class represents a BitDownsampleConv module in a neural network. It is a subclass of nn.Module.
-
-    BitDownsampleConv applies down-sampling to the input tensor using a combination of weight-standardized convolution
-    and bit group normalization activation.
-
-    Attributes:
-        conv (WeightStandardizedConv2d): An instance of the WeightStandardizedConv2d class that performs
-            a weight-standardized convolution operation on the input tensor.
-        norm (nn.Identity or BitGroupNormActivation): An instance of either nn.Identity or BitGroupNormActivation class,
-            depending on the value of the preact parameter. If preact is True, nn.Identity is used, otherwise
-            BitGroupNormActivation is used for applying bit group normalization activation.
-
-    Methods:
-        __init__(self, config, in_channels, out_channels, stride=1, preact=True):
-            Initializes a BitDownsampleConv instance with the specified parameters.
-
-            Args:
-
-            - config (Config): The configuration object containing various settings.
-
-                - in_channels (int): The number of input channels.
-                - out_channels (int): The number of output channels.
-                - stride (int, optional): The stride value for the convolution operation. Defaults to 1.
-                - preact (bool, optional): If True, nn.Identity is used for normalization,
-                otherwise BitGroupNormActivation is used. Defaults to True.
-
-        forward(self, x):
-            Applies down-sampling to the input tensor x by performing weight-standardized convolution followed by normalization.
-
-            Args:
-
-            - x (Tensor): The input tensor to be down-sampled.
-
-            Returns:
-
-            - Tensor: The down-sampled output tensor.
-    """
     def __init__(
         self,
         config,
@@ -781,23 +484,6 @@ class BitDownsampleConv(nn.Module):
         stride=1,
         preact=True,
     ):
-        """
-        Initializes an instance of the BitDownsampleConv class.
-
-        Args:
-            self (BitDownsampleConv): The instance of the class.
-            config: The configuration object containing various settings.
-            in_channels (int): The number of input channels.
-            out_channels (int): The number of output channels.
-            stride (int): The stride for the convolution operation. Default is 1.
-            preact (bool): Indicates whether to apply preactivation. Default is True.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         super().__init__()
         self.conv = WeightStandardizedConv2d(
             in_channels, out_channels, 1, stride=stride, eps=1e-8, padding=config.global_padding
@@ -809,19 +495,6 @@ class BitDownsampleConv(nn.Module):
         )
 
     def forward(self, x):
-        """
-        Constructs the BitDownsampleConv object.
-
-        Args:
-            self (BitDownsampleConv): The instance of the BitDownsampleConv class.
-            x (any): The input data to be processed. It can be of any type.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         return self.norm(self.conv(x))
 
 
@@ -829,6 +502,7 @@ class BitStage(nn.Module):
     """
     A ResNet v2 stage composed by stacked layers.
     """
+
     def __init__(
         self,
         config,
@@ -840,25 +514,6 @@ class BitStage(nn.Module):
         bottle_ratio=0.25,
         layer_dropout=None,
     ):
-        """
-        Args:
-            self (object): The instance of the class.
-            config (object): The configuration object containing the hyperparameters for the network.
-            in_channels (int): The number of input channels for the layer.
-            out_channels (int): The number of output channels for the layer.
-            stride (int): The value specifying the stride for the convolution operation.
-            dilation (int): The value specifying the dilation for the convolution operation.
-            depth (int): The depth of the layer.
-            bottle_ratio (float, optional): The ratio of bottleneck channels to the output channels. Default is 0.25.
-            layer_dropout (float, None): The dropout rate for the layer. If None, no dropout is applied.
-
-        Returns:
-            None.
-
-        Raises:
-            NotImplementedError: If the layer type specified in the config is not supported.
-            ValueError: If the dilation value is not 1 or 2.
-        """
         super().__init__()
 
         first_dilation = 1 if dilation in (1, 2) else 2
@@ -910,23 +565,7 @@ class BitStage(nn.Module):
 
         return stride, drop_path_rate, is_first_layer
 
-    def forward(self, input: mindspore.Tensor) -> mindspore.Tensor:
-        """
-        Construct method in the BitStage class.
-
-        Args:
-            self: BitStage instance.
-                The instance of the BitStage class.
-            input: mindspore.Tensor
-                The input tensor to be processed.
-
-        Returns:
-            mindspore.Tensor
-                The processed tensor after going through the BitStage layers.
-
-        Raises:
-            None
-        """
+    def forward(self, input: Tensor) -> Tensor:
         hidden_state = input
         for _, layer in enumerate(self.layers):
             hidden_state = layer(hidden_state)
@@ -934,46 +573,7 @@ class BitStage(nn.Module):
 
 
 class BitEncoder(nn.Module):
-
-    """
-    The `BitEncoder` class is a subclass of `nn.Module` and represents an encoder module for the Bit model.
-    It is responsible for encoding the input hidden state through a series of stages.
-
-    Attributes:
-        stages (nn.ModuleList): A list of BitStage instances representing each stage of the encoder.
-
-
-    Methods:
-        __init__:
-            Initializes a new instance of the `BitEncoder` class.
-
-        _get_updated_hyperparameters:
-            Calculates and returns the updated hyperparameters for the given stage.
-
-        forward:
-            Constructs the encoder module by iterating through each stage and applying them to the input hidden state.
-
-    """
     def __init__(self, config: BitConfig):
-        """
-        Initializes an instance of the BitEncoder class.
-
-        Args:
-            self: The BitEncoder instance.
-            config (BitConfig): The configuration object that specifies the hyperparameters for the BitEncoder.
-                The config parameter must be an instance of the BitConfig class and should contain the following attributes:
-
-                - embedding_size (int): The size of the input embeddings.
-                - depths (list[int]): A list of integers representing the depths of each BitStage.
-                - hidden_sizes (list[int]): A list of integers representing the hidden sizes of each BitStage.
-                - drop_path_rate (float): The drop path rate for the BitStages.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         super().__init__()
         self.stages = nn.ModuleList([])
 
@@ -1009,26 +609,9 @@ class BitEncoder(nn.Module):
             prev_chs = out_channels
             current_stride *= stride
 
-            setattr(self.stages, str(stage_idx), stage)
+            self.stages.add_module(str(stage_idx), stage)
 
     def _get_updated_hyperparameters(self, stage_idx, current_stride, current_hidden_size, dilation, config):
-        """
-        This method '_get_updated_hyperparameters' updates the hyperparameters based on the given parameters.
-
-        Args:
-            self (object): The instance of the BitEncoder class.
-            stage_idx (int): The index of the current stage. It is used to determine the stride value.
-            current_stride (int): The current stride value used for calculations.
-            current_hidden_size (int): The current hidden size value used for calculations.
-            dilation (int): The dilation value used for calculations.
-            config (object): The configuration object containing width factor and output stride values.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         out_channels = make_div(current_hidden_size * config.width_factor)
         stride = 1 if stage_idx == 0 else 2
         if current_stride >= config.output_stride:
@@ -1037,27 +620,8 @@ class BitEncoder(nn.Module):
         return out_channels, stride, dilation
 
     def forward(
-        self, hidden_state: mindspore.Tensor, output_hidden_states: bool = False, return_dict: bool = True
+        self, hidden_state: Tensor, output_hidden_states: bool = False, return_dict: bool = True
     ) -> BaseModelOutputWithNoAttention:
-        """
-        Constructs the BitEncoder model.
-
-        Args:
-            self (BitEncoder): An instance of the BitEncoder class.
-            hidden_state (mindspore.Tensor): The initial hidden state tensor.
-            output_hidden_states (bool, optional): Whether to output hidden states at each stage.
-                Defaults to False.
-            return_dict (bool, optional): Whether to return the output as a dictionary.
-                Defaults to True.
-
-        Returns:
-            BaseModelOutputWithNoAttention: An instance of the BaseModelOutputWithNoAttention class
-                containing the last hidden state and the hidden states at each stage.
-
-        Raises:
-            None.
-
-        """
         hidden_states = () if output_hidden_states else None
 
         for stage_module in self.stages:
@@ -1083,67 +647,29 @@ class BitPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
+
     config_class = BitConfig
     base_model_prefix = "bit"
     main_input_name = "pixel_values"
+    _no_split_modules = ["BitEmbeddings"]
 
-    def _init_weights(self, cell):
-        """
-        This method initializes the weights of the given cell based on its type.
-
-        Args:
-            self: The instance of the BitPreTrainedModel class.
-            cell: An instance of a neural network cell (e.g., nn.Conv2d, nn.BatchNorm2d, nn.GroupNorm).
-                It represents the cell for which the weights are initialized.
-
-        Returns:
-            None.
-
-        Raises:
-            TypeError: If the 'cell' parameter is not an instance of nn.Conv2d, nn.BatchNorm2d, or nn.GroupNorm.
-            ValueError: If the 'cell' parameter is provided with an unsupported type.
-            RuntimeError: If the weight initialization fails due to any runtime issues.
-        """
-        if isinstance(cell, nn.Conv2d):
-            cell.weight.set_data(initializer(HeNormal(), cell.weight.shape, cell.weight.dtype))
-        elif isinstance(cell, (nn.BatchNorm2d, nn.GroupNorm)):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+    def _init_weights(self, module):
+        if isinstance(module, nn.Conv2d):
+            nn.init.kaiming_normal_(module.weight, mode="fan_out", nonlinearity="relu")
+        # copied from the `reset_parameters` method of `class Linear(Module)` in `torch`.
+        elif isinstance(module, nn.Linear):
+            nn.init.kaiming_uniform_(module.weight, a=math.sqrt(5))
+            if module.bias is not None:
+                fan_in, _ = nn.init._calculate_fan_in_and_fan_out(module.weight)
+                bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
+                nn.init.uniform_(module.bias, -bound, bound)
+        elif isinstance(module, (nn.BatchNorm2d, nn.GroupNorm)):
+            nn.init.constant_(module.weight, 1)
+            nn.init.constant_(module.bias, 0)
 
 
 class BitModel(BitPreTrainedModel):
-
-    """
-    The BitModel class represents a model for processing pixel values using Bit embeddings and encoding techniques.
-    It inherits from the BitPreTrainedModel and includes methods for initialization and
-    forwarding the model output with pooling and no attention.
-
-    Attributes:
-        config: The configuration for the model.
-        embedder: Instance of BitEmbeddings for embedding the input pixel values.
-        encoder: Instance of BitEncoder for encoding the embedded values.
-        norm: Instance of BitGroupNormActivation for applying normalization to the hidden state.
-        pooler: Instance of nn.AdaptiveAvgPool2d for pooling the last hidden state.
-
-    Methods:
-        __init__(self, config): Initializes the BitModel with the provided configuration.
-        forward(self, pixel_values, output_hidden_states, return_dict): Constructs the model output with pooling
-            and no attention based on the input pixel values and optional flags for outputting hidden states and
-            using a return dictionary.
-    """
     def __init__(self, config):
-        """Initializes a BitModel instance.
-
-        Args:
-            self (BitModel): An instance of the BitModel class.
-            config (object): A configuration object containing various settings for the model.
-
-        Returns:
-            None
-
-        Raises:
-            None
-        """
         super().__init__(config)
         self.config = config
 
@@ -1161,30 +687,8 @@ class BitModel(BitPreTrainedModel):
         self.post_init()
 
     def forward(
-        self, pixel_values: mindspore.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
+        self, pixel_values: Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
     ) -> BaseModelOutputWithPoolingAndNoAttention:
-        """
-        Constructs the BitModel by processing the given pixel values.
-
-        Args:
-            self: The instance of the BitModel class.
-            pixel_values (mindspore.Tensor): The input tensor containing pixel values.
-            output_hidden_states (bool, optional): Whether to include the hidden states in the output. Defaults to None.
-            return_dict (bool, optional): Whether to return the output as a dictionary. Defaults to None.
-
-        Returns:
-            BaseModelOutputWithPoolingAndNoAttention: An object containing the forwarded BitModel output,
-                including the last hidden state, pooled output, and hidden states.
-
-        Raises:
-            None.
-
-        Note:
-            - The `output_hidden_states` parameter,
-            if provided, overrides the `output_hidden_states` configuration of the BitModel instance.
-            - The `return_dict` parameter,
-            if provided, overrides the `use_return_dict` configuration of the BitModel instance.
-        """
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
@@ -1213,48 +717,7 @@ class BitModel(BitPreTrainedModel):
 
 
 class BitForImageClassification(BitPreTrainedModel):
-
-    """
-    BitForImageClassification is a class that represents a model for image classification using a Bit (Big Transfer) architecture.
-    It inherits from BitPreTrainedModel and provides functionalities for image classification tasks.
-
-    Attributes:
-        num_labels (int): The number of labels for classification.
-        bit (BitModel): BitModel instance for feature extraction.
-        classifier (nn.Sequential): Neural network layers for classification.
-
-    Methods:
-        __init__:
-            Initializes the BitForImageClassification instance with the given configuration.
-
-        forward:
-            Constructs the image classifier model with optional inputs and returns the output with or without attention.
-
-            Parameters:
-
-            - pixel_values (mindspore.Tensor): Tensor of shape `(batch_size, channels, height, width)` representing input images.
-            - labels (mindspore.Tensor): Tensor of shape `(batch_size,)` representing labels for classification/regression.
-                Indices should be in `[0, ..., config.num_labels - 1]`. For classification, a classification loss is computed (Cross-Entropy).
-            - output_hidden_states (bool): Flag to indicate whether to output hidden states.
-            - return_dict (bool): Flag to specify the format of the returned output.
-
-        Returns:
-            ImageClassifierOutputWithNoAttention: Output containing loss, logits, and hidden states if specified.
-    """
     def __init__(self, config):
-        """
-        Initializes an instance of the BitForImageClassification class.
-
-        Args:
-            self (BitForImageClassification): The current instance of the BitForImageClassification class.
-            config: The configuration object containing various settings for the model.
-
-        Returns:
-            None
-
-        Raises:
-            None
-        """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.bit = BitModel(config)
@@ -1274,10 +737,9 @@ class BitForImageClassification(BitPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> ImageClassifierOutputWithNoAttention:
         r"""
-        Args:
-            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-                config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1298,14 +760,17 @@ class BitForImageClassification(BitPreTrainedModel):
                 else:
                     self.config.problem_type = "multi_label_classification"
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = F.mse_loss(logits, labels)
+                    loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = F.binary_cross_entropy_with_logits(logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1315,55 +780,7 @@ class BitForImageClassification(BitPreTrainedModel):
 
 
 class BitBackbone(BitPreTrainedModel, BackboneMixin):
-
-    """
-    A BitBackbone class represents the backbone of a Bit model, which is a pre-trained image classification model.
-
-    This class inherits from the BitPreTrainedModel and BackboneMixin classes.
-
-    The BitBackbone class has the following methods:
-
-    - __init__(self, config): Initializes the BitBackbone instance with the provided configuration.
-    - forward(self, pixel_values, output_hidden_states, return_dict): Constructs the backbone model and returns the feature maps and hidden states.
-
-    Example:
-        ```python
-        >>> from transformers import AutoImageProcessor, AutoBackbone
-        >>> from PIL import Image
-        >>> import requests
-        ...
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-        ...
-        >>> processor = AutoImageProcessor.from_pretrained("google/resnetnv2-50")
-        >>> model = AutoBackbone.from_pretrained("google/resnetnv2-50")
-        ...
-        >>> inputs = processor(image, return_tensors="pt")
-        >>> outputs = model(**inputs)
-        ```
-
-    Note:
-        In the above example, the BitBackbone class is used to extract feature maps and hidden states from an image using a pre-trained Bit model.
-    """
     def __init__(self, config):
-        """
-        Initializes an instance of the BitBackbone class.
-
-        Args:
-            self: The instance of the BitBackbone class.
-            config:
-                A configuration object containing the settings for the BitBackbone model.
-                It should be an instance of the Config class and contain the following attributes:
-
-                - embedding_size (int): The size of the input embedding.
-                - hidden_sizes (list): A list of integers representing the sizes of hidden layers.
-                
-        Returns:
-            None
-
-        Raises:
-            None
-        """
         super().__init__(config)
         super()._init_backbone(config)
 
@@ -1374,29 +791,28 @@ class BitBackbone(BitPreTrainedModel, BackboneMixin):
         self.post_init()
 
     def forward(
-        self, pixel_values: mindspore.Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
+        self, pixel_values: Tensor, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None
     ) -> BackboneOutput:
         """
         Returns:
-            BackboneOutput
 
-        Example:
-            ```python
-            >>> from transformers import AutoImageProcessor, AutoBackbone
-            >>> import torch
-            >>> from PIL import Image
-            >>> import requests
-            ...
-            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-            >>> image = Image.open(requests.get(url, stream=True).raw)
-            ...
-            >>> processor = AutoImageProcessor.from_pretrained("google/resnetnv2-50")
-            >>> model = AutoBackbone.from_pretrained("google/resnetnv2-50")
-            ...
-            >>> inputs = processor(image, return_tensors="pt")
-            >>> outputs = model(**inputs)
-            ```
-        """
+        Examples:
+
+        ```python
+        >>> from transformers import AutoImageProcessor, AutoBackbone
+        >>> import torch
+        >>> from PIL import Image
+        >>> import requests
+
+        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        >>> image = Image.open(requests.get(url, stream=True).raw)
+
+        >>> processor = AutoImageProcessor.from_pretrained("google/bit-50")
+        >>> model = AutoBackbone.from_pretrained("google/bit-50")
+
+        >>> inputs = processor(image, return_tensors="pt")
+        >>> outputs = model(**inputs)
+        ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
