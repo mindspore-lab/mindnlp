@@ -1,4 +1,3 @@
-:::mindnlp.transformers.models.codegen.modeling_codegen.CODEGEN_PRETRAINED_MODEL_ARCHIVE_LIST
 :::mindnlp.transformers.models.codegen.modeling_codegen.CodeGenForCausalLM
 :::mindnlp.transformers.models.codegen.modeling_codegen.CodeGenModel
 :::mindnlp.transformers.models.codegen.modeling_codegen.CodeGenPreTrainedModel
