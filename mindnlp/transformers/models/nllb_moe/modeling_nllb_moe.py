@@ -464,7 +464,6 @@ class NllbMoeDenseActDense(nn.Module):
         self.act = ACT2FN[config.activation_function]
 
     def forward(self, hidden_states):
-        # print(f"hidden_state shape: {hidden_states.shape}")
         if hidden_states.shape[0] == 0:
             return hidden_states
 

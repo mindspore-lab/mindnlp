@@ -451,21 +451,13 @@ class NllbMoeModelIntegrationTests(unittest.TestCase):
         and `transformers` implementation of NLLB-MoE transformers. We only check the logits
         of the second sample of the batch, as it is padded.
         """
-        # 18G
         model = NllbMoeForConditionalGeneration.from_pretrained(
             "hf-internal-testing/random-nllb-moe-2-experts"
         ).eval()
         with no_grad():
             output = model(**self.model_inputs)
 
-        print('------------------------------------')
-        print('Model output:')
-        print(output.logits[1, 0, :30])
-
         EXPECTED_LOGTIS = mindspore.Tensor([-0.3059, 0.0000, 9.3029, 0.6456, -0.9148, 1.7836, 0.6478, 0.9438, -0.5272, -0.6617, -1.2717, 0.4564, 0.1345, -0.2301, -1.0140, 1.1427, -1.5535, 0.1337, 0.2082, -0.8112, -0.3842, -0.3377, 0.1256, 0.6450, -0.0452, 0.0219, 1.4274, -0.4991, -0.2063, -0.4409,])  # fmt: skip
-        print('GT:')
-        print(EXPECTED_LOGTIS)
-        print('------------------------------------')
 
         self.assertTrue(ops.allclose(output.logits[1, 0, :30], EXPECTED_LOGTIS, rtol=6e-3, atol=9e-3))
 
@@ -589,8 +581,7 @@ class NllbMoeRouterTest(unittest.TestCase):
         )
 
         EXPECTED_MEAN_FAIRSEQ_HIDDEN_STATES = mindspore.Tensor([[7.0340e-04,  2.7997e-03, -1.3351e-02, -7.6705e-03, -3.5089e-03, 3.9773e-03,  7.4593e-03,  1.2566e-02,  3.5860e-03, -2.7448e-02,-1.3731e-02, -1.0534e-02, -1.3606e-02, -1.5048e-02, -2.8914e-03,-5.0371e-03, -1.3963e-03,  6.0076e-03, -1.1380e-02, -1.4620e-02, 5.2401e-03,  8.4660e-04, -1.5319e-03, -1.6735e-02,  1.1302e-02, 3.6119e-03,  4.6084e-03, -1.3458e-02,  7.7792e-05,  1.4312e-02, 4.9107e-03, -5.0936e-03], [-4.4538e-03,  3.1026e-03,  1.4121e-04, -4.8121e-03, -5.6279e-03, 7.2493e-03,  3.9769e-03,  1.1114e-02, -1.5666e-03, -2.3477e-02, 8.7268e-03,  1.3446e-02, -2.8845e-05, -1.7287e-02,  8.7619e-03, -4.5316e-03, -1.2164e-02,  5.7461e-03, -4.5861e-03, -9.3907e-03, 2.9808e-02,  8.9206e-04, -7.6232e-04, -1.4173e-02,  3.0208e-03, 1.5310e-02,  9.7717e-03,  3.1014e-03,  7.8042e-03,  8.0197e-03, 3.4784e-03, -7.1728e-03]])  # fmt: skip
-        # print(f"hidden_states mean:\n{hidden_states.mean(1)}")
-        # print(f"ans:\n{EXPECTED_MEAN_FAIRSEQ_HIDDEN_STATES}")
+
         self.assertTrue(
             ops.allclose(
                 hidden_states.mean(1), EXPECTED_MEAN_FAIRSEQ_HIDDEN_STATES, 1e-4
@@ -618,7 +609,6 @@ class NllbMoeRouterTest(unittest.TestCase):
         top_1_mask, _ = router.route_tokens(logits, padding_mask=mask)
         # check that the routing is batch first. One of the last token is routed while expert capacity is very small
         # this means that it had a greater probability of being routed
-        # print(top_1_mask)
         assert top_1_mask[-1, 0] == 1
 
     def test_second_expert_policy(self):
