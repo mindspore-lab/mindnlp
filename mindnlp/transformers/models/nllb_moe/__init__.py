@@ -1,3 +1,5 @@
+# Copyright 2023 The HuggingFace Team. All rights reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,14 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
-NLLB init
+NLLB-MoE Model init
 """
 
-from . import tokenization_nllb, tokenization_nllb_fast
-from .tokenization_nllb import *
-from .tokenization_nllb_fast import *
+from . import configuration_nllb_moe, modeling_nllb_moe
+from .configuration_nllb_moe import *
+from .modeling_nllb_moe import *
 
 __all__ = []
-__all__.extend(tokenization_nllb.__all__)
-__all__.extend(tokenization_nllb_fast.__all__)
+__all__.extend(configuration_nllb_moe.__all__)
+__all__.extend(modeling_nllb_moe.__all__)

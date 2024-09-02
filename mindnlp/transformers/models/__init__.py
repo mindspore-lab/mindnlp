@@ -157,6 +157,8 @@ from . import (
     musicgen_melody,
     mvp,
     nezha,
+    nllb,
+    nllb_moe,
     nougat,
     nystromformer,
     olmo,
@@ -389,6 +391,8 @@ from .musicgen import *
 from .musicgen_melody import *
 from .mvp import *
 from .nezha import *
+from .nllb import *
+from .nllb_moe import *
 from .nougat import *
 from .nystromformer import *
 from .olmo import *
@@ -621,6 +625,8 @@ __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
 __all__.extend(mvp.__all__)
 __all__.extend(nezha.__all__)
+__all__.extend(nllb.__all__)
+__all__.extend(nllb_moe.__all__)
 __all__.extend(nougat.__all__)
 __all__.extend(nystromformer.__all__)
 __all__.extend(olmo.__all__)
