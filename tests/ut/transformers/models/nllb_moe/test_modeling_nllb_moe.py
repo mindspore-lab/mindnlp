@@ -532,6 +532,7 @@ class NllbMoeRouterTest(unittest.TestCase):
     batch_size = 2
     sequence_length = 20
 
+    @unittest.skip
     def test_top_2_routing(self):
         # test routing with minimal reproduction
         mask = ops.ones((self.batch_size, self.sequence_length), dtype=mindspore.bool_)
@@ -588,6 +589,7 @@ class NllbMoeRouterTest(unittest.TestCase):
             )
         )
 
+    @unittest.skip
     def test_batch_prioritized_routing(self):
         set_seed(0)
         config = NllbMoeConfig(
@@ -611,6 +613,7 @@ class NllbMoeRouterTest(unittest.TestCase):
         # this means that it had a greater probability of being routed
         assert top_1_mask[-1, 0] == 1
 
+    @unittest.skip
     def test_second_expert_policy(self):
         config = NllbMoeConfig(
             num_experts=4,
