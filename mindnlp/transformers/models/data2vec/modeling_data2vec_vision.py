@@ -36,8 +36,8 @@ from ...modeling_outputs import (
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
 
+# pylint: disable=E1102
 
-mindspore.set_context(pynative_synchronize=True)
 
 
 
