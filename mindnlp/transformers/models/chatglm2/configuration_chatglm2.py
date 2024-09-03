@@ -78,7 +78,7 @@ class ChatGLM2Config(PretrainedConfig):
             prefix_projection (bool, optional): Whether to use prefix projection. Defaults to False.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None: This method does not raise any exceptions.

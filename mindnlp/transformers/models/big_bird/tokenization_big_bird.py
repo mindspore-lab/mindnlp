@@ -85,13 +85,12 @@ class BigBirdTokenizer(PreTrainedTokenizer):
             - `enable_sampling`: Enable subword regularization.
             - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
 
-              - `nbest_size = {0,1}`: No sampling is performed.
-              - `nbest_size > 1`: samples from the nbest_size results.
-              - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                - `nbest_size = {0,1}`: No sampling is performed.
+                - `nbest_size > 1`: samples from the nbest_size results.
+                - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
                 using forward-filtering-and-backward-sampling algorithm.
-
             - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-              BPE-dropout.
+            BPE-dropout.
     """
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
@@ -114,7 +113,7 @@ class BigBirdTokenizer(PreTrainedTokenizer):
     ) -> None:
         """
         Initializes an instance of the BigBirdTokenizer class.
-        
+
         Args:
             self: The instance of the BigBirdTokenizer class.
             vocab_file (str): Path to the vocabulary file.
@@ -127,10 +126,10 @@ class BigBirdTokenizer(PreTrainedTokenizer):
             cls_token (str, optional): The token representing classification. Defaults to '[CLS]'.
             sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional arguments for the SentencePieceProcessor. Defaults to None.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -195,29 +194,29 @@ class BigBirdTokenizer(PreTrainedTokenizer):
     def vocab_size(self):
         """
         Method to retrieve the vocabulary size of the BigBirdTokenizer.
-        
+
         Args:
             self (BigBirdTokenizer): The instance of the BigBirdTokenizer class.
                 This parameter is required to access the tokenizer's properties.
-                
+
         Returns:
-            None. The method returns the vocabulary size as an integer value.
-        
+            None: The method returns the vocabulary size as an integer value.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.sp_model.get_piece_size()
 
     def get_vocab(self):
         """
         This method returns the vocabulary for the BigBirdTokenizer.
-        
+
         Args:
             self (BigBirdTokenizer): The instance of the BigBirdTokenizer class.
-            
+
         Returns:
             dict: A dictionary containing the vocabulary, where keys are tokens and values are their corresponding ids.
-        
+
         Raises:
             None
         """
@@ -227,17 +226,18 @@ class BigBirdTokenizer(PreTrainedTokenizer):
 
     def __getstate__(self):
         """
-        The '__getstate__' method in the 'BigBirdTokenizer' class is used to retrieve the current state of the object for serialization. This method takes one parameter, 'self', which refers to the instance of
-the 'BigBirdTokenizer' class.
-        
+        The '__getstate__' method in the 'BigBirdTokenizer' class is used to retrieve the current state of the object
+        for serialization. This method takes one parameter, 'self', which refers to the instance of
+        the 'BigBirdTokenizer' class.
+
         Args:
             self (BigBirdTokenizer): The instance of the 'BigBirdTokenizer' class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -246,18 +246,18 @@ the 'BigBirdTokenizer' class.
     def __setstate__(self, d):
         """
         Sets the state of the BigBirdTokenizer object based on the provided dictionary.
-        
+
         Args:
             self (BigBirdTokenizer): The instance of the BigBirdTokenizer class.
             d (dict): The dictionary containing the state information.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
-        
-        This method sets the state of the BigBirdTokenizer object by assigning the dictionary 'd' to the '__dict__' attribute of the instance. 
+
+        This method sets the state of the BigBirdTokenizer object by assigning the dictionary 'd' to the '__dict__' attribute of the instance.
         If the instance does not have the 'sp_model_kwargs' attribute, it is initialized as an empty dictionary.
         The SentencePieceProcessor object 'sp_model' is then created and assigned to the 'sp_model' attribute of the instance.
         The 'sp_model_kwargs' dictionary is used to pass any additional keyword arguments to the SentencePieceProcessor initialization.
@@ -315,17 +315,19 @@ the 'BigBirdTokenizer' class.
     ) -> str:
         """
         Decode the token IDs into a human-readable string.
-        
+
         Args:
             self: The BigBirdTokenizer instance.
             token_ids (List[int]): A list of token IDs to be decoded into a string.
             skip_special_tokens (bool, optional): Whether to skip special tokens during decoding. Defaults to False.
-            clean_up_tokenization_spaces (bool, optional): Whether to clean up tokenization spaces in the decoded text. Defaults to None.
-            spaces_between_special_tokens (bool, optional): Whether to include spaces between special tokens in the decoded text. Defaults to True.
-        
+            clean_up_tokenization_spaces (bool, optional): Whether to clean up tokenization spaces in the decoded text.
+                Defaults to None.
+            spaces_between_special_tokens (bool, optional):
+                Whether to include spaces between special tokens in the decoded text. Defaults to True.
+
         Returns:
             str: The decoded string representation of the input token IDs.
-        
+
         Raises:
             None.
             """
@@ -373,17 +375,17 @@ the 'BigBirdTokenizer' class.
     def save_vocabulary(
         self, save_directory: str, filename_prefix: Optional[str] = None
     ) -> Tuple[str]:
-        ''' 
+        '''
         Save the vocabulary to a specified directory with an optional filename prefix.
-        
+
         Args:
             self (BigBirdTokenizer): The instance of the BigBirdTokenizer class.
             save_directory (str): The directory where the vocabulary will be saved.
             filename_prefix (Optional[str]): An optional prefix to be added to the filename of the vocabulary. Defaults to None.
-        
+
         Returns:
             Tuple[str]: A tuple containing the path to the saved vocabulary file.
-        
+
         Raises:
             OSError: If the save_directory is not a valid directory.
             IOError: If the vocabulary file cannot be copied or written to the specified location.
@@ -470,8 +472,10 @@ the 'BigBirdTokenizer' class.
     ) -> List[int]:
         """
         Create a mask from the two sequences passed to be used in a sequence-pair classification task. A BERT sequence
-        pair mask has the following format: :: 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 | first sequence | second
-        sequence | If `token_ids_1` is `None`, this method only returns the first portion of the mask (0s).
+        pair mask has the following format:
+        ```0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 | first sequence | second sequence |```
+
+        If `token_ids_1` is `None`, this method only returns the first portion of the mask (0s).
 
         Args:
             token_ids_0 (`List[int]`):

@@ -62,34 +62,34 @@ class MossConfig(PretrainedConfig):
         Initialize a MossConfig object.
         
         Args:
-        - vocab_size (int): The size of the vocabulary.
-        - n_positions (int): The number of positions.
-        - n_ctx (int): The context size.
-        - n_embd (int): The embedding size.
-        - n_layer (int): The number of layers.
-        - n_head (int): The number of attention heads.
-        - rotary_dim (int): The dimension for rotary embeddings.
-        - n_inner (int): The inner dimension size (if applicable).
-        - activation_function (str): The activation function used.
-        - resid_pdrop (float): The dropout probability for residual connections.
-        - embd_pdrop (float): The dropout probability for embeddings.
-        - attn_pdrop (float): The dropout probability for attention layers.
-        - layer_norm_epsilon (float): The epsilon value for layer normalization.
-        - initializer_range (float): The range for parameter initialization.
-        - use_cache (bool): Flag indicating whether to use cache.
-        - bos_token_id (int): The ID for the beginning of sequence token.
-        - eos_token_id (int): The ID for the end of sequence token.
-        - tie_word_embeddings (bool): Flag indicating whether word embeddings should be tied.
-        - wbits (int): The number of bits for weight quantization.
-        - groupsize (int): The group size for quantization.
-        
+            vocab_size (int): The size of the vocabulary.
+            n_positions (int): The number of positions.
+            n_ctx (int): The context size.
+            n_embd (int): The embedding size.
+            n_layer (int): The number of layers.
+            n_head (int): The number of attention heads.
+            rotary_dim (int): The dimension for rotary embeddings.
+            n_inner (int): The inner dimension size (if applicable).
+            activation_function (str): The activation function used.
+            resid_pdrop (float): The dropout probability for residual connections.
+            embd_pdrop (float): The dropout probability for embeddings.
+            attn_pdrop (float): The dropout probability for attention layers.
+            layer_norm_epsilon (float): The epsilon value for layer normalization.
+            initializer_range (float): The range for parameter initialization.
+            use_cache (bool): Flag indicating whether to use cache.
+            bos_token_id (int): The ID for the beginning of sequence token.
+            eos_token_id (int): The ID for the end of sequence token.
+            tie_word_embeddings (bool): Flag indicating whether word embeddings should be tied.
+            wbits (int): The number of bits for weight quantization.
+            groupsize (int): The group size for quantization.
+
         Returns:
-        None
-        
+            None
+
         Raises:
-        - ValueError: If an invalid parameter value is provided.
-        - TypeError: If the input types are incorrect.
-        - RuntimeError: If an unexpected error occurs during initialization.
+            ValueError: If an invalid parameter value is provided.
+            TypeError: If the input types are incorrect.
+            RuntimeError: If an unexpected error occurs during initialization.
         """
         self.vocab_size = vocab_size
         self.n_ctx = n_ctx

@@ -20,10 +20,12 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from mindnlp.modules.functional import finfo
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
@@ -83,17 +85,17 @@ class MarianSinusoidalPositionalEmbedding(nn.Embedding):
         return out
 
     @mindspore._no_grad()
-    def construct(self, input_ids_shape: ops.Size, past_key_values_length: int = 0) -> mindspore.Tensor:
+    def forward(self, input_ids_shape, past_key_values_length: int = 0) -> mindspore.Tensor:
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         bsz, seq_len = input_ids_shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         )
-        return super().construct(positions)
+        return super().forward(positions)
 
 
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->Marian
-class MarianAttention(nn.Cell):
+class MarianAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     def __init__(
         self,
@@ -139,10 +141,10 @@ class MarianAttention(nn.Cell):
         self.is_decoder = is_decoder
         self.is_causal = is_causal
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
@@ -155,14 +157,14 @@ class MarianAttention(nn.Cell):
             bsz (int): The batch size. It should be a positive integer.
         
         Returns:
-            None: This method does not return any value explicitly.
+            None.
         
         Raises:
             None
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         key_value_states: Optional[mindspore.Tensor] = None,
@@ -200,8 +202,8 @@ class MarianAttention(nn.Cell):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -239,7 +241,7 @@ class MarianAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -260,7 +262,7 @@ class MarianAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -284,7 +286,7 @@ class MarianAttention(nn.Cell):
 
 
 # Copied from transformers.models.bart.modeling_bart.BartEncoderLayer with Bart->Marian, BART->MARIAN
-class MarianEncoderLayer(nn.Cell):
+class MarianEncoderLayer(nn.Module):
     def __init__(self, config: MarianConfig):
         super().__init__()
         self.embed_dim = config.d_model
@@ -299,11 +301,11 @@ class MarianEncoderLayer(nn.Cell):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
-        self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
-        self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
+        self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm([self.embed_dim])
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -317,22 +319,22 @@ class MarianEncoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
         if hidden_states.dtype == mindspore.float16 and (
             ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any()
         ):
-            clamp_value = finfo(hidden_states.dtype, 'max') - 1000
+            clamp_value = ops.finfo(hidden_states.dtype).max - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -346,7 +348,7 @@ MARIAN_ATTENTION_CLASSES = {"eager": MarianAttention}
 
 
 # Copied from transformers.models.bart.modeling_bart.BartDecoderLayer with Bart->Marian, BART->MARIAN
-class MarianDecoderLayer(nn.Cell):
+class MarianDecoderLayer(nn.Module):
     def __init__(self, config: MarianConfig):
         super().__init__()
         self.embed_dim = config.d_model
@@ -372,11 +374,11 @@ class MarianDecoderLayer(nn.Cell):
             config=config,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim])
-        self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
+        self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm([self.embed_dim])
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -401,7 +403,7 @@ class MarianDecoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
@@ -421,7 +423,7 @@ class MarianDecoderLayer(nn.Cell):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states = self.encoder_attn_layer_norm(hidden_states)
 
@@ -431,9 +433,9 @@ class MarianDecoderLayer(nn.Cell):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
@@ -454,11 +456,11 @@ class MarianPreTrainedModel(PreTrainedModel):
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, cell: Union[nn.Dense, nn.Embedding, MarianSinusoidalPositionalEmbedding]):
+    def _init_weights(self, cell: Union[nn.Linear, nn.Embedding, MarianSinusoidalPositionalEmbedding]):
         std = self.config.init_std
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, MarianSinusoidalPositionalEmbedding):
             pass
@@ -509,7 +511,7 @@ class MarianEncoder(MarianPreTrainedModel):
         self.embed_positions = MarianSinusoidalPositionalEmbedding(
             config.max_position_embeddings, embed_dim, self.padding_idx
         )
-        self.layers = nn.CellList([MarianEncoderLayer(config) for _ in range(config.encoder_layers)])
+        self.layers = nn.ModuleList([MarianEncoderLayer(config) for _ in range(config.encoder_layers)])
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
@@ -521,7 +523,7 @@ class MarianEncoder(MarianPreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -553,7 +555,6 @@ class MarianEncoder(MarianPreTrainedModel):
 
                 - 1 indicates the head is **not masked**,
                 - 0 indicates the head is **masked**.
-
             inputs_embeds (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
                 This is useful if you want more control over how to convert `input_ids` indices into associated vectors
@@ -591,7 +592,7 @@ class MarianEncoder(MarianPreTrainedModel):
         embed_pos = self.embed_positions(input_shape)
 
         hidden_states = inputs_embeds + embed_pos
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
@@ -675,7 +676,7 @@ class MarianDecoder(MarianPreTrainedModel):
         self.embed_positions = MarianSinusoidalPositionalEmbedding(
             config.max_position_embeddings, config.d_model, self.padding_idx
         )
-        self.layers = nn.CellList([MarianDecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layers = nn.ModuleList([MarianDecoderLayer(config) for _ in range(config.decoder_layers)])
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
@@ -687,7 +688,7 @@ class MarianDecoder(MarianPreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -715,8 +716,8 @@ class MarianDecoder(MarianPreTrainedModel):
             attention_mask (`torch.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
+               - 1 for tokens that are **not masked**,
+               - 0 for tokens that are **masked**.
 
                 [What are attention masks?](../glossary#attention-mask)
             encoder_hidden_states (`torch.FloatTensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
@@ -807,7 +808,7 @@ class MarianDecoder(MarianPreTrainedModel):
 
         hidden_states = inputs_embeds + positions
 
-        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -982,7 +983,7 @@ class MarianModel(MarianPreTrainedModel):
 
         return model_embeds
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1001,28 +1002,30 @@ class MarianModel(MarianPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Seq2SeqModelOutput:
         r"""
+
         Returns:
+            `Seq2SeqModelOutput`
 
         Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, MarianModel
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-de")
-        >>> model = MarianModel.from_pretrained("Helsinki-NLP/opus-mt-en-de")
-
-        >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
-        >>> decoder_inputs = tokenizer(
-        ...     "<pad> Studien haben gezeigt dass es hilfreich ist einen Hund zu besitzen",
-        ...     return_tensors="pt",
-        ...     add_special_tokens=False,
-        ... )
-        >>> outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_inputs.input_ids)
-
-        >>> last_hidden_states = outputs.last_hidden_state
-        >>> list(last_hidden_states.shape)
-        [1, 26, 512]
-        ```"""
+            ```python
+            >>> from transformers import AutoTokenizer, MarianModel
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-de")
+            >>> model = MarianModel.from_pretrained("Helsinki-NLP/opus-mt-en-de")
+            ...
+            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
+            >>> decoder_inputs = tokenizer(
+            ...     "<pad> Studien haben gezeigt dass es hilfreich ist einen Hund zu besitzen",
+            ...     return_tensors="pt",
+            ...     add_special_tokens=False,
+            ... )
+            >>> outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_inputs.input_ids)
+            ...
+            >>> last_hidden_states = outputs.last_hidden_state
+            >>> list(last_hidden_states.shape)
+            [1, 26, 512]
+            ```
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1095,7 +1098,7 @@ class MarianMTModel(MarianPreTrainedModel):
 
         target_vocab_size = config.vocab_size if config.share_encoder_decoder_embeddings else config.decoder_vocab_size
         self.final_logits_bias=mindspore.Parameter(ops.zeros((1, target_vocab_size)),requires_grad=False)
-        self.lm_head = nn.Dense(config.d_model, target_vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, target_vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1172,7 +1175,7 @@ class MarianMTModel(MarianPreTrainedModel):
             new_bias = self.final_logits_bias[:, :new_num_tokens]
         else:
             extra_bias = ops.zeros((1, new_num_tokens - old_num_tokens))
-            new_bias = ops.cat([self.final_logits_bias, extra_bias], axis=1)
+            new_bias = ops.cat([self.final_logits_bias, extra_bias], dim=1)
         self.final_logits_bias=mindspore.Parameter(new_bias)
     def get_output_embeddings(self):
         return self.lm_head
@@ -1206,7 +1209,7 @@ class MarianMTModel(MarianPreTrainedModel):
             if hasattr(cell, "_tie_weights"):
                 cell._tie_weights()
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1226,13 +1229,14 @@ class MarianMTModel(MarianPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Seq2SeqLMOutput:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
-            config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
-            (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
+                config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
+                (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
-
+            `Seq2SeqLMOutput`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1266,7 +1270,7 @@ class MarianMTModel(MarianPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.decoder_vocab_size), labels.view(-1))
+            masked_lm_loss = F.cross_entropy(lm_logits.view(-1, self.config.decoder_vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]
@@ -1347,7 +1351,7 @@ class MarianDecoderWrapper(MarianPreTrainedModel):
         super().__init__(config)
         self.decoder = MarianDecoder(config)
 
-    def construct(self, *args, **kwargs):
+    def forward(self, *args, **kwargs):
         return self.decoder(*args, **kwargs)
 
 
@@ -1362,7 +1366,7 @@ class MarianForCausalLM(MarianPreTrainedModel):
         super().__init__(config)
         self.model = MarianDecoderWrapper(config)
 
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1385,7 +1389,7 @@ class MarianForCausalLM(MarianPreTrainedModel):
     def get_decoder(self):
         return self.model.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1427,7 +1431,7 @@ class MarianForCausalLM(MarianPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]

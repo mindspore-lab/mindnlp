@@ -81,16 +81,16 @@ class RobertaTokenizerFast(PreTrainedTokenizerFast):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import RobertaTokenizerFast
-
-    >>> tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
-    >>> tokenizer("Hello world")["input_ids"]
-    [0, 31414, 232, 2]
-
-    >>> tokenizer(" Hello world")["input_ids"]
-    [0, 20920, 232, 2]
-    ```
+    Example:
+        ```python
+        >>> from transformers import RobertaTokenizerFast
+        ...
+        >>> tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
+        >>> tokenizer("Hello world")["input_ids"]
+        [0, 31414, 232, 2]
+        >>> tokenizer(" Hello world")["input_ids"]
+        [0, 20920, 232, 2]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.
@@ -178,7 +178,7 @@ class RobertaTokenizerFast(PreTrainedTokenizerFast):
     ):
         """
         Initializes a new instance of the `RobertaTokenizerFast` class.
-        
+
         Args:
             self: The instance of the class itself.
             vocab_file (str, optional): The path to the vocabulary file. Default is None.
@@ -192,13 +192,14 @@ class RobertaTokenizerFast(PreTrainedTokenizerFast):
             unk_token (str, optional): The unknown token. Default is '<unk>'.
             pad_token (str, optional): The padding token. Default is '<pad>'.
             mask_token (str or AddedToken, optional): The masking token. Default is '<mask>'.
-            add_prefix_space (bool, optional): Specifies if a space should be added as a prefix to each token. Default is False.
+            add_prefix_space (bool, optional): Specifies if a space should be added as a prefix to each token.
+                Default is False.
             trim_offsets (bool, optional): Specifies if offsets should be trimmed. Default is True.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -261,8 +262,9 @@ class RobertaTokenizerFast(PreTrainedTokenizerFast):
     @property
     def mask_token(self) -> str:
         """
-        `str`: Mask token, to use when training a model with masked-language modeling. Log an error if used while not
-        having been set.
+        Return:
+            `str`: Mask token, to use when training a model with masked-language modeling. Log an error if used while not
+            having been set.
 
         Roberta tokenizer has a special mask token to be usable in the fill-mask pipeline. The mask token will greedily
         comprise the space before the *<mask>*.
@@ -287,17 +289,20 @@ class RobertaTokenizerFast(PreTrainedTokenizerFast):
 
     def _batch_encode_plus(self, *args, **kwargs) -> BatchEncoding:
         """
-        This method, _batch_encode_plus, is a part of the RobertaTokenizerFast class and is responsible for batch encoding inputs.
-        
+        This method, _batch_encode_plus, is a part of the RobertaTokenizerFast class and is responsible for batch
+        encoding inputs.
+
         Args:
-        - self: This parameter represents the instance of the class and is required for accessing the class attributes and methods.
-        
+            self: This parameter represents the instance of the class and is required for accessing the class
+                attributes and methods.
+
         Returns:
-        - BatchEncoding: This method returns a BatchEncoding object that contains the batch-encoded inputs.
-        
+            BatchEncoding: This method returns a BatchEncoding object that contains the batch-encoded inputs.
+
         Raises:
-        - AssertionError: This method may raise an AssertionError if the condition 'self.add_prefix_space or not is_split_into_words' is not met, indicating that the class needs to be instantiated with
-add_prefix_space=True to use it with pretokenized inputs.
+            AssertionError: This method may raise an AssertionError if the condition 'self.add_prefix_space or not
+                is_split_into_words' is not met, indicating that the class needs to be instantiated with
+                add_prefix_space=True to use it with pretokenized inputs.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
         assert self.add_prefix_space or not is_split_into_words, (
@@ -310,18 +315,19 @@ add_prefix_space=True to use it with pretokenized inputs.
     def _encode_plus(self, *args, **kwargs) -> BatchEncoding:
         """
         Encodes the inputs into a batch of tokenized sequences using the fast version of the Roberta tokenizer.
-        
+
         Args:
             self (RobertaTokenizerFast): An instance of the RobertaTokenizerFast class.
-            
+
         Returns:
             BatchEncoding: A dictionary-like object containing the encoded sequences.
-            
+
         Raises:
             AssertionError: If `is_split_into_words` is `True` but `add_prefix_space` is `False`.
-            
+
         Note:
-            This method is intended to be used with pretokenized inputs. To use it with pretokenized inputs, the `add_prefix_space` parameter of the `RobertaTokenizerFast` class should be set to `True`.
+            This method is intended to be used with pretokenized inputs. To use it with pretokenized inputs,
+            the `add_prefix_space` parameter of the `RobertaTokenizerFast` class should be set to `True`.
         """
         is_split_into_words = kwargs.get("is_split_into_words", False)
 
@@ -335,22 +341,24 @@ add_prefix_space=True to use it with pretokenized inputs.
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
         """
         Saves the tokenizer's vocabulary to disk.
-        
+
         Args:
             self (RobertaTokenizerFast): An instance of the RobertaTokenizerFast class.
             save_directory (str): The directory path where the vocabulary files will be saved.
-            filename_prefix (Optional[str], default=None): An optional prefix to add to the filenames of the vocabulary files.
-                If not provided, no prefix will be added.
-            
+            filename_prefix (Optional[str], default=None): An optional prefix to add to the filenames of the
+                vocabulary files. If not provided, no prefix will be added.
+
         Returns:
             Tuple[str]: A tuple containing the filenames of the saved vocabulary files.
-        
+
         Raises:
             None.
-        
+
         Note:
             The saved vocabulary files will be stored in the specified directory with the following filenames:
-            - If a filename prefix is provided, the files will be named as: "{filename_prefix}_vocab.json" and "{filename_prefix}_merges.txt".
+
+            - If a filename prefix is provided, the files will be named as: "{filename_prefix}_vocab.json" and
+            "{filename_prefix}_merges.txt".
             - If no filename prefix is provided, the files will be named as: "vocab.json" and "merges.txt".
         """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
@@ -359,38 +367,45 @@ add_prefix_space=True to use it with pretokenized inputs.
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
         """
         Builds inputs with special tokens for the RobertaTokenizerFast class.
-        
+
         Args:
             self (RobertaTokenizerFast): The instance of the RobertaTokenizerFast class.
             token_ids_0 (List[int]): The list of token IDs for the first sequence.
             token_ids_1 (List[int], optional): The list of token IDs for the second sequence. Defaults to None.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
-        
+
         Description:
-        This method takes in two sequences of token IDs, token_ids_0 and token_ids_1, and builds a new list of token IDs with special tokens added. The special tokens include the beginning of sequence
-(bos_token_id) and the end of sequence (eos_token_id).
-        
-        The method first adds the bos_token_id to the beginning of the token_ids_0 list, followed by all the token IDs in token_ids_0, and then adds the eos_token_id to the end of the list. If token_ids_1 is
-provided, the method appends the eos_token_id, followed by all the token IDs in token_ids_1, and finally adds another eos_token_id to the end of the list.
-        
-        If token_ids_1 is not provided, the method simply returns the list output containing the special tokens and token_ids_0. If token_ids_1 is provided, the method returns the list output containing the
-special tokens, token_ids_0, special tokens, and token_ids_1.
-        
-        Example usage:
-            tokenizer = RobertaTokenizerFast()
-            token_ids_0 = [10, 20, 30]
-            token_ids_1 = [40, 50, 60]
-            output = tokenizer.build_inputs_with_special_tokens(token_ids_0, token_ids_1)
-            print(output)
-            # Output: [0, 10, 20, 30, 2, 2, 40, 50, 60, 2]
-        
+            This method takes in two sequences of token IDs, token_ids_0 and token_ids_1, and builds a new list of
+            token IDs with special tokens added. The special tokens include the beginning of sequence
+            (bos_token_id) and the end of sequence (eos_token_id).
+
+            The method first adds the bos_token_id to the beginning of the token_ids_0 list, followed by all the
+            token IDs in token_ids_0, and then adds the eos_token_id to the end of the list.
+            If token_ids_1 is provided, the method appends the eos_token_id, followed by all the token IDs in
+            token_ids_1, and finally adds another eos_token_id to the end of the list.
+
+            If token_ids_1 is not provided, the method simply returns the list output containing the special tokens
+            and token_ids_0. If token_ids_1 is provided, the method returns the list output containing the
+            special tokens, token_ids_0, special tokens, and token_ids_1.
+
+        Example:
+            ```python
+            >>> tokenizer = RobertaTokenizerFast()
+            >>> token_ids_0 = [10, 20, 30]
+            >>> token_ids_1 = [40, 50, 60]
+            >>> output = tokenizer.build_inputs_with_special_tokens(token_ids_0, token_ids_1)
+            >>> print(output)
+            >>> # Output: [0, 10, 20, 30, 2, 2, 40, 50, 60, 2]
+            ```
+
         Note:
-        - The bos_token_id and eos_token_id are specific token IDs used to mark the beginning and end of a sequence respectively.
+            The bos_token_id and eos_token_id are specific token IDs used to mark the beginning and end of a sequence
+            respectively.
         """
         output = [self.bos_token_id] + token_ids_0 + [self.eos_token_id]
         if token_ids_1 is None:

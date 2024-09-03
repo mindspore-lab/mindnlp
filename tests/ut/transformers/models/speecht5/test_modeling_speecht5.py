@@ -194,7 +194,7 @@ class SpeechT5ModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -216,7 +216,7 @@ class SpeechT5ModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     # this model has no input embeddings
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_retain_grad_hidden_states_attentions(self):
@@ -493,7 +493,7 @@ class SpeechT5ForSpeechToTextTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -915,7 +915,7 @@ class SpeechT5ForTextToSpeechTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -1533,7 +1533,7 @@ class SpeechT5ForSpeechToSpeechTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -1633,7 +1633,7 @@ class SpeechT5ForSpeechToSpeechTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     # this model has no input embeddings
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     # skipped because there is always dropout in SpeechT5SpeechDecoderPrenet
@@ -1805,7 +1805,7 @@ class SpeechT5HifiGanTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -1827,7 +1827,7 @@ class SpeechT5HifiGanTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     # this model has no input embeddings
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     # skip as this model doesn't support all arguments tested

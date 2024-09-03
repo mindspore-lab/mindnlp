@@ -32,7 +32,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         MODEL_FOR_PRETRAINING_MAPPING,
@@ -371,8 +371,8 @@ class BigBirdModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([input_mask, next_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([input_mask, next_mask], dim=-1)
 
         output_from_no_past = model(
             next_input_ids,
@@ -494,13 +494,13 @@ class BigBirdModelTester:
 
         model.set_train(False)
         multiple_choice_inputs_ids = (
-            input_ids.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
+            ops.broadcast_to(input_ids.unsqueeze(1), (-1, self.num_choices, -1))
         )
         multiple_choice_token_type_ids = (
-            token_type_ids.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
+            ops.broadcast_to(token_type_ids.unsqueeze(1), (-1, self.num_choices, -1))
         )
         multiple_choice_input_mask = (
-            input_mask.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
+            ops.broadcast_to(input_mask.unsqueeze(1), (-1, self.num_choices, -1))
         )
         result = model(
             multiple_choice_inputs_ids,
@@ -620,7 +620,7 @@ class BigBirdModelTest(ModelTesterMixin, unittest.TestCase):
         if return_labels:
             if model_class in get_values(MODEL_FOR_PRETRAINING_MAPPING):
                 inputs_dict["labels"] = ops.zeros(
-                    (self.model_tester.batch_size, self.model_tester.seq_length),
+                    self.model_tester.batch_size, self.model_tester.seq_length,
                     dtype=mindspore.int64,
                 )
                 inputs_dict["next_sentence_label"] = ops.zeros(
@@ -861,7 +861,7 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
         hidden_states = model.embeddings(input_ids)
 
         batch_size, seqlen, _ = hidden_states.shape
-        attn_mask = ops.ones((batch_size, seqlen), dtype=mindspore.float32)
+        attn_mask = ops.ones(batch_size, seqlen, dtype=mindspore.float32)
         to_seq_length = from_seq_length = seqlen
         from_block_size = to_block_size = config.block_size
 
@@ -900,7 +900,7 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
                 output_attentions=True,
             )
 
-            context_layer = context_layer.contiguous().view(
+            context_layer = context_layer.view(
                 batch_size, from_seq_length, -1
             )
             cl = ops.einsum("bhqk,bhkd->bhqd", attention_probs, value_layer)

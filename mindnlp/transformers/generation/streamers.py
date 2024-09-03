@@ -53,16 +53,15 @@ class TextStreamer(BaseStreamer):
         decode_kwargs (`dict`, *optional*):
             Additional keyword arguments to pass to the tokenizer's `decode` method.
 
-    Examples:
-
+    Example:
         ```python
         >>> from transformers import AutoModelForCausalLM, AutoTokenizer, TextStreamer
-
+        ...
         >>> tok = AutoTokenizer.from_pretrained("openai-community/gpt2")
         >>> model = AutoModelForCausalLM.from_pretrained("openai-community/gpt2")
         >>> inputs = tok(["An increasing sequence: one,"], return_tensors="pt")
         >>> streamer = TextStreamer(tok)
-
+        ...
         >>> # Despite returning the usual output, the streamer will also print the generated text to stdout.
         >>> _ = model.generate(**inputs, streamer=streamer, max_new_tokens=20)
         An increasing sequence: one, two, three, four, five, six, seven, eight, nine, ten, eleven,
@@ -71,18 +70,18 @@ class TextStreamer(BaseStreamer):
     def __init__(self, tokenizer: "AutoTokenizer", skip_prompt: bool = False, **decode_kwargs):
         """
         Initializes an instance of the TextStreamer class.
-        
+
         Args:
             tokenizer (AutoTokenizer): An instance of AutoTokenizer used for tokenization.
             skip_prompt (bool, optional): A flag indicating whether to skip the prompt. Defaults to False.
             **decode_kwargs: Additional keyword arguments for decoding.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If tokenizer is not an instance of AutoTokenizer.
-            - ValueError: If skip_prompt is not a boolean.
+            TypeError: If tokenizer is not an instance of AutoTokenizer.
+            ValueError: If skip_prompt is not a boolean.
         """
         self.tokenizer = tokenizer
         self.skip_prompt = skip_prompt
@@ -193,17 +192,16 @@ class TextIteratorStreamer(TextStreamer):
         decode_kwargs (`dict`, *optional*):
             Additional keyword arguments to pass to the tokenizer's `decode` method.
 
-    Examples:
-
+    Example:
         ```python
         >>> from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
         >>> from threading import Thread
-
+        ...
         >>> tok = AutoTokenizer.from_pretrained("openai-community/gpt2")
         >>> model = AutoModelForCausalLM.from_pretrained("openai-community/gpt2")
         >>> inputs = tok(["An increasing sequence: one,"], return_tensors="pt")
         >>> streamer = TextIteratorStreamer(tok)
-
+        ...
         >>> # Run the generation in a separate thread, so that we can fetch the generated text in a non-blocking way.
         >>> generation_kwargs = dict(inputs, streamer=streamer, max_new_tokens=20)
         >>> thread = Thread(target=model.generate, kwargs=generation_kwargs)
@@ -250,13 +248,14 @@ class TextIteratorStreamer(TextStreamer):
         Docstring for method '__iter__' in the class 'TextIteratorStreamer'.
         
         Args:
-            self (object): The instance of the class TextIteratorStreamer. This parameter is required to access the object's attributes and methods.
+            self (object): The instance of the class TextIteratorStreamer.
+                This parameter is required to access the object's attributes and methods.
         
         Returns:
-            None. This method returns None as it is meant to be an iterator and does not explicitly return a value.
+            None: This method returns None as it is meant to be an iterator and does not explicitly return a value.
         
         Raises:
-            No exceptions are raised within this method.
+            None.
         """
         return self
 
@@ -265,18 +264,20 @@ class TextIteratorStreamer(TextStreamer):
         Method to retrieve the next value from the text queue in the TextIteratorStreamer class.
         
         Args:
-            self: An instance of the TextIteratorStreamer class.
-                Type: TextIteratorStreamer
-                Purpose: Represents the current instance of the TextIteratorStreamer class.
-                Restrictions: This parameter is automatically passed when the method is called.
+            self:
+                An instance of the TextIteratorStreamer class.
+
+                - Type: TextIteratorStreamer
+                - Purpose: Represents the current instance of the TextIteratorStreamer class.
+                - Restrictions: This parameter is automatically passed when the method is called.
         
         Returns:
             None: This method does not explicitly return a value. It retrieves the next value from the text queue
-            and processes it accordingly within the context of the TextIteratorStreamer class.
+                and processes it accordingly within the context of the TextIteratorStreamer class.
         
         Raises:
             StopIteration: Raised when the retrieved value from the text queue is equal to the stop signal,
-            indicating the end of iteration.
+                indicating the end of iteration.
         """
         value = self.text_queue.get(timeout=self.timeout)
         if value == self.stop_signal:

@@ -266,7 +266,8 @@ class SamVisionConfig(PretrainedConfig):
             window_size (int, optional): The size of the attention window. Defaults to 14.
             global_attn_indexes (list[int], optional): The list of indexes for global attention. Defaults to [2, 5, 8, 11].
             num_pos_feats (int, optional): The number of positional features. Defaults to 128.
-            mlp_dim (int, optional): The size of the hidden layer in the feed-forward network. If not provided, it is calculated as int(hidden_size * mlp_ratio).
+            mlp_dim (int, optional): The size of the hidden layer in the feed-forward network. If not provided,
+                it is calculated as int(hidden_size * mlp_ratio).
         
         Returns:
             None.
@@ -319,33 +320,33 @@ class SamConfig(PretrainedConfig):
             Dictionary of keyword arguments.
 
     Example:
+        ```python
+        >>> from transformers import (
+        ...     SamVisionConfig,
+        ...     SamPromptEncoderConfig,
+        ...     SamMaskDecoderConfig,
+        ...     SamModel,
+        ... )
+        ...
+        >>> # Initializing a SamConfig with `"facebook/sam-vit-huge"` style configuration
+        >>> configuration = SamConfig()
+        ...
+        >>> # Initializing a SamModel (with random weights) from the `"facebook/sam-vit-huge"` style configuration
+        >>> model = SamModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ...
+        >>> # We can also initialize a SamConfig from a SamVisionConfig, SamPromptEncoderConfig, and SamMaskDecoderConfig
+        ...
+        >>> # Initializing SAM vision, SAM Q-Former and language model configurations
+        >>> vision_config = SamVisionConfig()
+        >>> prompt_encoder_config = SamPromptEncoderConfig()
+        >>> mask_decoder_config = SamMaskDecoderConfig()
 
-    ```python
-    >>> from transformers import (
-    ...     SamVisionConfig,
-    ...     SamPromptEncoderConfig,
-    ...     SamMaskDecoderConfig,
-    ...     SamModel,
-    ... )
-
-    >>> # Initializing a SamConfig with `"facebook/sam-vit-huge"` style configuration
-    >>> configuration = SamConfig()
-
-    >>> # Initializing a SamModel (with random weights) from the `"facebook/sam-vit-huge"` style configuration
-    >>> model = SamModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-
-    >>> # We can also initialize a SamConfig from a SamVisionConfig, SamPromptEncoderConfig, and SamMaskDecoderConfig
-
-    >>> # Initializing SAM vision, SAM Q-Former and language model configurations
-    >>> vision_config = SamVisionConfig()
-    >>> prompt_encoder_config = SamPromptEncoderConfig()
-    >>> mask_decoder_config = SamMaskDecoderConfig()
-
-    >>> config = SamConfig(vision_config, prompt_encoder_config, mask_decoder_config)
-    ```"""
+        >>> config = SamConfig(vision_config, prompt_encoder_config, mask_decoder_config)
+        ```
+    """
     model_type = "sam"
 
     def __init__(
@@ -361,16 +362,19 @@ class SamConfig(PretrainedConfig):
         
         Args:
             self: The current instance of the SamConfig class.
-            vision_config (SamVisionConfig or None): The configuration for vision. If provided, it should be an instance of SamVisionConfig. Defaults to None.
-            prompt_encoder_config (SamPromptEncoderConfig or None): The configuration for prompt encoder. If provided, it should be an instance of SamPromptEncoderConfig. Defaults to None.
-            mask_decoder_config (SamMaskDecoderConfig or None): The configuration for mask decoder. If provided, it should be an instance of SamMaskDecoderConfig. Defaults to None.
+            vision_config (SamVisionConfig or None): The configuration for vision. If provided,
+                it should be an instance of SamVisionConfig. Defaults to None.
+            prompt_encoder_config (SamPromptEncoderConfig or None): The configuration for prompt encoder.
+                If provided, it should be an instance of SamPromptEncoderConfig. Defaults to None.
+            mask_decoder_config (SamMaskDecoderConfig or None): The configuration for mask decoder.
+                If provided, it should be an instance of SamMaskDecoderConfig. Defaults to None.
             initializer_range (float): The range for weight initialization. Defaults to 0.02.
         
         Returns:
-            None. This method initializes the instance with the provided configurations and initializer range.
+            None.
         
         Raises:
-            N/A
+            None.
         """
         super().__init__(**kwargs)
         vision_config = vision_config if vision_config is not None else {}

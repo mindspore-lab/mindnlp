@@ -44,7 +44,6 @@ if is_mindspore_available():
     import mindspore
     from mindspore import ops
 
-    mindspore.set_context(pynative_synchronize=True)
     from mindnlp.transformers import (
         SEWForCTC,
         SEWForSequenceClassification,
@@ -378,7 +377,7 @@ class SEWModelTest(ModelTesterMixin, unittest.TestCase):
     # SEW has no inputs_embeds
     # and thus the `get_input_embeddings` fn
     # is not implemented
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip("No support for low_cpu_mem_usage=True.")

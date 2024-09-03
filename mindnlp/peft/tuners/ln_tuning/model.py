@@ -43,7 +43,7 @@ class LNTuningModel(BaseTuner):
     The method is described in detail in https://arxiv.org/abs/2312.11420.
 
     Args:
-        model ([`mindspore.nn.Cell`]): The model to be adapted.
+        model ([`mindspore.nn.Module`]): The model to be adapted.
         config ([`LNTuningConfig`]): The configuration of the Lora model.
         adapter_name (`str`): The name of the adapter, defaults to `"default"`.
 
@@ -79,22 +79,22 @@ class LNTuningModel(BaseTuner):
     def __getattr__(self, name: str):
         """Forward missing attributes to the wrapped module."""
         try:
-            return super().__getattr__(name)  # defer to nn.Cell's logic
+            return super().__getattr__(name)  # defer to nn.Module's logic
         except AttributeError:
             return getattr(self.model, name)
 
-    # TODO: here need to handle the cells_to_save rather than the target_cells
+    # TODO: here need to handle the cells_to_save rather than the target_modules
     @staticmethod
     def _prepare_adapter_config(
         peft_config: PeftConfig, model_config: dict
     ) -> PeftConfig:
-        if peft_config.target_cells is None:
+        if peft_config.target_modules is None:
             if (
                 model_config["model_type"]
                 not in TRANSFORMERS_MODELS_TO_LNTUNING_TARGET_MODULES_MAPPING
             ):
-                raise ValueError("Please specify `target_cells` in `peft_config`")
-            peft_config.target_cells = set(
+                raise ValueError("Please specify `target_modules` in `peft_config`")
+            peft_config.target_modules = set(
                 TRANSFORMERS_MODELS_TO_LNTUNING_TARGET_MODULES_MAPPING[
                     model_config["model_type"]
                 ]
@@ -219,5 +219,5 @@ class LNTuningModel(BaseTuner):
         progressbar: bool = False,
         safe_merge: bool = False,
         adapter_names: Optional[list[str]] = None,
-    ) -> nn.Cell:
+    ) -> nn.Module:
         return self._unload_and_optionally_merge(merge=True)

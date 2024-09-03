@@ -26,7 +26,7 @@ from mindspore import ops
 from mindnlp.transformers import XCLIPConfig, XCLIPTextConfig, XCLIPVisionConfig
 from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow
 from mindnlp.utils import is_mindspore_available, is_vision_available
-from mindnlp.utils.serialization import safe_load_file, safe_save_file
+from mindnlp.core.serialization import safe_load_file, safe_save_file
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_tensor, ids_tensor, random_attention_mask
@@ -159,12 +159,12 @@ class XCLIPVisionModelTest(ModelTesterMixin, unittest.TestCase):
     def test_inputs_embeds(self):
         pass
 
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
             self.assertTrue(x is None or isinstance(x, nn.Linear))
 
@@ -173,7 +173,7 @@ class XCLIPVisionModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -222,9 +222,6 @@ class XCLIPVisionModelTest(ModelTesterMixin, unittest.TestCase):
         for model_class in self.all_model_classes:
             if not model_class.supports_gradient_checkpointing:
                 continue
-
-            print("Model class:", model_class)
-
             config.gradient_checkpointing = True
             model = model_class(config)
             self.assertTrue(model.is_gradient_checkpointing)
@@ -543,7 +540,7 @@ class XCLIPModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="XCLIPModel does not have input/output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(reason="XCLIPModel does not support feedforward chunking")

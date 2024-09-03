@@ -43,16 +43,16 @@ class BlenderbotTokenizerFast(PreTrainedTokenizerFast):
     This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
     be encoded differently whether it is at the beginning of the sentence (without space) or not:
 
-    ```python
-    >>> from transformers import BlenderbotTokenizerFast
-
-    >>> tokenizer = BlenderbotTokenizerFast.from_pretrained("facebook/blenderbot-3B")
-    >>> tokenizer("Hello world")["input_ids"]
-    [6950, 1085, 2]
-
-    >>> tokenizer(" Hello world")["input_ids"]
-    [6950, 1085, 2]
-    ```
+    Example:
+        ```python
+        >>> from transformers import BlenderbotTokenizerFast
+        ...
+        >>> tokenizer = BlenderbotTokenizerFast.from_pretrained("facebook/blenderbot-3B")
+        >>> tokenizer("Hello world")["input_ids"]
+        [6950, 1085, 2]
+        >>> tokenizer(" Hello world")["input_ids"]
+        [6950, 1085, 2]
+        ```
 
     You can get around that behavior by passing `add_prefix_space=True` when instantiating this tokenizer or when you
     call it on some text, but since the model was not pretrained this way, it might yield a decrease in performance.

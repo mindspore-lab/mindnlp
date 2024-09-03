@@ -17,22 +17,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-""" MindSpore Qwen2 model."""
+"""MindSpore Qwen2 model."""
+
 import math
 from typing import List, Optional, Tuple, Union
 
-import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
-from mindspore.common.initializer import initializer, Normal
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from mindnlp.core.nn import functional as F
 
-from mindnlp.utils import logging, get_default_dtype
 from ...activations import ACT2FN
-from ...cache_utils import Cache, DynamicCache
-from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
-from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutputWithPast
+from ...cache_utils import Cache, DynamicCache, StaticCache
+from ...modeling_attn_mask_utils import AttentionMaskConverter
+from ...modeling_outputs import (
+    BaseModelOutputWithPast,
+    CausalLMOutputWithPast,
+    SequenceClassifierOutputWithPast,
+    TokenClassifierOutput,
+)
 from ...modeling_utils import PreTrainedModel
+from ....utils import logging
+from ....configs import SUPPORT_VIEW, USE_PYBOOST
 from .configuration_qwen2 import Qwen2Config
 
 
@@ -42,129 +48,98 @@ logger = logging.get_logger(__name__)
 _CHECKPOINT_FOR_DOC = "Qwen/Qwen2-7B-beta"
 _CONFIG_FOR_DOC = "Qwen2Config"
 
-QWEN2_PRETRAINED_MODEL_ARCHIVE_LIST = [
-    "Qwen/Qwen2-7B-beta",
-    # See all Qwen2 models at https://hf-mirror.com/models?filter=qwen2
-]
 
-
-# Copied from transformers.models.llama.modeling_llama._get_unpad_data
-def _get_unpad_data(attention_mask):
+def _prepare_4d_causal_attention_mask_with_cache_position(
+    attention_mask: mindspore.Tensor,
+    sequence_length: int,
+    target_length: int,
+    dtype: mindspore.dtype,
+    min_dtype: float,
+    cache_position: mindspore.Tensor,
+    batch_size: int,
+):
     """
+    Creates a causal 4D mask of shape `(batch_size, 1, query_length, key_value_length)` from a 2D mask of shape
+    `(batch_size, key_value_length)`, or if the input `attention_mask` is already 4D, do nothing.
+
     Args:
-        attention_mask (Tensor): A tensor representing the attention mask for the input sequences.
-            Its purpose is to indicate which tokens in the input sequences should be attended to and which should be ignored.
-            It should be a 2D tensor with a shape of (batch_size, sequence_length) and contain binary values (0 or 1).
-    
-    Returns:
-        Tuple of Tensors: The function returns a tuple containing the following:
-            - indices (Tensor): A 1D tensor containing the indices of the non-zero elements in the flattened attention_mask tensor.
-            - cu_seqlens (Tensor): A 1D tensor representing the cumulative sum of the sequence lengths in the batch, padded with a zero at the beginning.
-            - max_seqlen_in_batch (int): The maximum sequence length in the batch.
-    
-    Raises:
-        None
+        attention_mask (`mindspore.Tensor`):
+            A 2D attention mask of shape `(batch_size, key_value_length)` or a 4D attention mask of shape `(batch_size, 1, query_length, key_value_length)`.
+        sequence_length (`int`):
+            The sequence length being processed.
+        target_length (`int`):
+            The target length: when generating with static cache, the mask should be as long as the static cache, to account for the 0 padding, the part of the cache that is not filled yet.
+        min_dtype (`float`):
+            The minimum value representable with the dtype `dtype`.
+        cache_position (`mindspore.Tensor`):
+            Indices depicting the position of the input sequence tokens in the sequence.
+        batch_size (`mindspore.Tensor`):
+            Batch size.
     """
-    seqlens_in_batch = attention_mask.sum(dim=-1, dtype=mindspore.int32)
-    indices = ops.nonzero(attention_mask.flatten()).flatten()
-    max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
-    return (
-        indices,
-        cu_seqlens,
-        max_seqlen_in_batch,
-    )
+    if attention_mask is not None and attention_mask.ndim == 4:
+        # In this case we assume that the mask comes already in inverted form and requires no inversion or slicing.
+        causal_mask = attention_mask
+    else:
+        causal_mask = ops.full((sequence_length, target_length), fill_value=min_dtype, dtype=dtype)
+        if sequence_length != 1:
+            causal_mask = ops.triu(causal_mask, diagonal=1)
+        causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
+        causal_mask = causal_mask[None, None, :, :].broadcast_to((batch_size, 1, -1, -1))
+        if attention_mask is not None:
+            if SUPPORT_VIEW:
+                causal_mask = causal_mask.contiguous()  # copy to contiguous memory for in-place edit
+            else:
+                causal_mask = causal_mask.copy()
+            mask_length = attention_mask.shape[-1]
+            # padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
+            padding_mask = ops.narrow(causal_mask, -1, 0, mask_length) + attention_mask[:, None, None, :]
+            padding_mask = padding_mask == 0
+            # causal_mask[:, :, :, :mask_length] = ops.narrow(causal_mask, -1, 0, mask_length).masked_fill(
+            #     padding_mask, min_dtype
+            # )
+            if mask_length >= causal_mask.shape[-1]:
+                causal_mask = causal_mask.masked_fill(padding_mask, min_dtype)
+            else:
+                causal_mask = ops.cat(
+                                [ops.narrow(causal_mask, -1, 0, mask_length).masked_fill(padding_mask, min_dtype),
+                                ops.narrow(causal_mask, -1, mask_length, causal_mask.shape[-1] - mask_length)],
+                                dim=-1
+                            )
 
+    return causal_mask
 
 # Copied from transformers.models.llama.modeling_llama.LlamaRMSNorm with Llama->Qwen2
-class Qwen2RMSNorm(nn.Cell):
-
-    """
-    Qwen2RMSNorm is a custom normalization layer that inherits from nn.Cell. It is equivalent to T5LayerNorm and is designed to normalize the input hidden states.
-    
-    This class initializes with the specified hidden_size and an optional epsilon value for variance smoothing. The normalization process involves scaling the hidden states based on the calculated variance and
-the provided weight parameter.
-    
-    The construct method takes hidden_states as input and performs the normalization operation, ensuring that the output matches the input data type. The normalized hidden_states are then multiplied by the
-weight parameter to produce the final output.
-    
-    Note: This docstring is based on the provided information and does not include actual code or signatures.
-    """
+class Qwen2RMSNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
         """
         Qwen2RMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
-        self.weight = Parameter(ops.ones(hidden_size))
+        self.weight = nn.Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
-        """
-        Constructs the RMS normalization of hidden states.
-        
-        Args:
-            self (Qwen2RMSNorm): The instance of the Qwen2RMSNorm class.
-            hidden_states (Tensor): The input hidden states to be normalized.
-                Should be a tensor of any shape with dtype compatible with float32.
-        
-        Returns:
-            None. The method modifies the hidden_states tensor in-place.
-        
-        Raises:
-            ValueError: If hidden_states is not a valid tensor.
-            TypeError: If hidden_states dtype is not compatible with float32.
-        """
+    def forward(self, hidden_states):
+        if not self.training and USE_PYBOOST:
+            return F.rms_norm(hidden_states, self.weight, self.variance_epsilon)
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
-        variance = hidden_states.pow(2).mean(-1, keep_dims=True)
+        variance = ops.mean(hidden_states.pow(2), -1, keepdim=True)
         hidden_states = hidden_states * ops.rsqrt(variance + self.variance_epsilon)
         return self.weight * hidden_states.to(input_dtype)
 
+    def extra_repr(self):
+        return f"{tuple(self.weight.shape)}, eps={self.variance_epsilon}"
 
-# Copied from transformers.models.mistral.modeling_mistral.MistralRotaryEmbedding with Mistral->Qwen2
-class Qwen2RotaryEmbedding(nn.Cell):
-
-    """
-    Represents a Qwen2RotaryEmbedding module that inherits from nn.Cell. This module implements the Qwen2Rotary embedding as described in the code.
-    
-    Attributes:
-        dim (int): The dimension of the embedding.
-        max_position_embeddings (int): The maximum position embeddings.
-        base (int): The base value used in the embedding calculation.
-    
-    Methods:
-        _set_cos_sin_cache(self, seq_len, dtype): Sets the cosine and sine cache for the given sequence length and data type.
-        construct(self, x, seq_len=None): Constructs the Qwen2Rotary embedding for the input with optional sequence length.
-    
-    Note:
-        The Qwen2RotaryEmbedding module provides functionality for Qwen2Rotary embedding calculation, including setting cosine and sine cache and constructing the embedding.
-    """
+# Copied from transformers.models.mixtral.modeling_mixtral.MixtralRotaryEmbedding with Mixtral->Qwen2
+class Qwen2RotaryEmbedding(nn.Module):
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
-        """
-        Initializes a new instance of the Qwen2RotaryEmbedding class.
-        
-        Args:
-            self: The object itself.
-            dim (int): The dimensionality of the embedding vectors.
-            max_position_embeddings (int, optional): The maximum number of position embeddings to generate. Defaults to 2048.
-            base (int, optional): The base value used in the calculation of inverse frequency. Defaults to 10000.
-        
-        Returns:
-            None. This method does not return any value.
-        
-        Raises:
-            None.
-        
-        This method initializes the Qwen2RotaryEmbedding object with the specified dimensionality, maximum position embeddings, and base value. It calculates the inverse frequency based on the dimensionality
-and stores it in the 'inv_freq' attribute. Additionally, it sets the cosine and sine cache based on the maximum position embeddings.
-        """
         super().__init__()
 
         self.dim = dim
         self.max_position_embeddings = max_position_embeddings
         self.base = base
         inv_freq = 1.0 / (self.base ** (ops.arange(0, self.dim, 2, dtype=mindspore.int64).float() / self.dim))
-        self.inv_freq = inv_freq
+        self.register_buffer("inv_freq", inv_freq, persistent=False)
 
         # Build here to make `torch.jit.trace` work.
         self._set_cos_sin_cache(
@@ -172,45 +147,16 @@ and stores it in the 'inv_freq' attribute. Additionally, it sets the cosine and 
         )
 
     def _set_cos_sin_cache(self, seq_len, dtype):
-        """
-        Sets the cosine and sine cache for the Qwen2RotaryEmbedding class.
-        
-        Args:
-            self (Qwen2RotaryEmbedding): The instance of the Qwen2RotaryEmbedding class.
-            seq_len (int): The length of the sequence.
-            dtype (dtype): The desired data type for the cache.
-        
-        Returns:
-            None. This method updates the 'cos_cached' and 'sin_cached' attributes of the Qwen2RotaryEmbedding instance.
-        
-        Raises:
-            None.
-        """
         self.max_seq_len_cached = seq_len
         t = ops.arange(self.max_seq_len_cached, dtype=mindspore.int64).type_as(self.inv_freq)
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
-        self.cos_cached = emb.cos().to(dtype)
-        self.sin_cached = emb.sin().to(dtype)
+        emb = ops.cat((freqs, freqs), dim=-1)
+        self.register_buffer("cos_cached", emb.cos().to(dtype), persistent=False)
+        self.register_buffer("sin_cached", emb.sin().to(dtype), persistent=False)
 
-    def construct(self, x, seq_len=None):
-        """
-        Constructs the Qwen2RotaryEmbedding for the given input tensor 'x' and sequence length 'seq_len'.
-        
-        Args:
-            self: The instance of the Qwen2RotaryEmbedding class.
-            x: A tensor representing the input data.
-            seq_len: An optional integer representing the length of the sequence. Defaults to None.
-        
-        Returns:
-            None. This method modifies the internal state of the Qwen2RotaryEmbedding instance.
-        
-        Raises:
-            ValueError: If 'seq_len' is not a positive integer.
-            TypeError: If the data type of 'x' is not supported for the internal calculations.
-        """
+    def forward(self, x, seq_len=None):
         # x: [bs, num_attention_heads, seq_len, head_size]
         if seq_len > self.max_seq_len_cached:
             self._set_cos_sin_cache(seq_len=seq_len, dtype=x.dtype)
@@ -226,11 +172,10 @@ def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     # x1 = x[..., : x.shape[-1] // 2]
     # x2 = x[..., x.shape[-1] // 2 :]
-    x1, x2 = x.tensor_split(2, -1)
-    return ops.cat((-x2, x1), axis=-1)
+    x1, x2 = ops.split(x, x.shape[-1] // 2, dim=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
-
-# Copied from transformers.models.mistral.modeling_mistral.apply_rotary_pos_emb
+# Copied from transformers.models.mixtral.modeling_mixtral.apply_rotary_pos_emb
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     """Applies Rotary Position Embedding to the query and key tensors.
 
@@ -252,80 +197,27 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     Returns:
         `tuple(mindspore.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
-    cos = cos[position_ids].unsqueeze(unsqueeze_dim)
-    sin = sin[position_ids].unsqueeze(unsqueeze_dim)
+    position_ids = (position_ids + cos.shape[0]) % cos.shape[0]
+    cos = F.embedding(position_ids, cos).unsqueeze(unsqueeze_dim)
+    sin = F.embedding(position_ids, sin).unsqueeze(unsqueeze_dim)
     q_embed = (q * cos) + (rotate_half(q) * sin)
     k_embed = (k * cos) + (rotate_half(k) * sin)
     return q_embed, k_embed
 
 
 # Copied from transformers.models.mistral.modeling_mistral.MistralMLP with Mistral->Qwen2
-class Qwen2MLP(nn.Cell):
-
-    """
-    Qwen2MLP is a Python class that represents a multi-layer perceptron (MLP) with specific configurations for gate, up, and down projections.
-    This class inherits from nn.Cell and is designed to be used in neural network models for deep learning applications.
-    
-    Attributes:
-        config: A configuration object containing settings for the hidden size and intermediate size of the MLP.
-        hidden_size: An integer representing the size of the hidden layer in the MLP.
-        intermediate_size: An integer representing the size of the intermediate layer in the MLP.
-        gate_proj: An instance of nn.Dense for projecting input data to the intermediate size with no bias.
-        up_proj: An instance of nn.Dense for projecting input data to the intermediate size with no bias.
-        down_proj: An instance of nn.Dense for projecting data from the intermediate size back to the hidden size with no bias.
-        act_fn: An activation function determined by the configuration settings.
-    
-    Methods:
-        construct: A method that takes input data x and performs the forward pass through the MLP using the defined projections and activation function.
-    
-    Note:
-        The Qwen2MLP class is intended to be used as part of a larger neural network model and provides a configurable multi-layer perceptron with specific projection and activation settings.
-    """
+class Qwen2MLP(nn.Module):
     def __init__(self, config):
-        """
-        Initializes an instance of the Qwen2MLP class.
-        
-        Args:
-            self: The instance of the class.
-            config: An object containing configuration parameters for the MLP. It should have the following attributes:
-                - hidden_size: An integer specifying the size of the hidden layer.
-                - intermediate_size: An integer specifying the size of the intermediate layer.
-                - hidden_act: A string specifying the activation function to be used in the hidden layer.
-                
-        Returns:
-            None
-            
-        Raises:
-            None
-        """
         super().__init__()
-        self.config = config
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size
-        self.gate_proj = nn.Dense(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.up_proj = nn.Dense(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.down_proj = nn.Dense(self.intermediate_size, self.hidden_size, has_bias=False)
+        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
         self.act_fn = ACT2FN[config.hidden_act]
 
-    def construct(self, x):
-        """
-        Constructs a new object using the Qwen2MLP class.
-        
-        Args:
-            self: An instance of the Qwen2MLP class.
-            x: The input parameter of type 'Any', representing the data to be processed.
-        
-        Returns:
-            This method returns None.
-        
-        Raises:
-            None.
-        
-        This method constructs a new object by performing a series of operations on the input data 'x'. It first applies the 'gate_proj' function to 'x' and then applies the 'act_fn' function to the result.
-The output of 'act_fn' is multiplied element-wise with the result of applying the 'down_proj' function to 'x'. Finally, the result is multiplied with the output of applying the 'up_proj' function to 'x'. The
-constructed object is returned as None.
-        """
-        return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+    def forward(self, hidden_state):
+        return self.down_proj(self.act_fn(self.gate_proj(hidden_state)) * self.up_proj(hidden_state))
 
 
 # Copied from transformers.models.llama.modeling_llama.repeat_kv
@@ -337,31 +229,17 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     batch, num_key_value_heads, slen, head_dim = hidden_states.shape
     if n_rep == 1:
         return hidden_states
-    hidden_states = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)
+    hidden_states = hidden_states[:, :, None, :, :].broadcast_to((batch, num_key_value_heads, n_rep, slen, head_dim))
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
-class Qwen2Attention(nn.Cell):
+class Qwen2Attention(nn.Module):
     """
     Multi-headed attention from 'Attention Is All You Need' paper. Modified to use sliding window attention: Longformer
     and "Generating Long Sequences with Sparse Transformers".
     """
+
     def __init__(self, config: Qwen2Config, layer_idx: Optional[int] = None):
-        """
-        Initializes an instance of the Qwen2Attention class.
-        
-        Args:
-            self: The instance of the class.
-            config (Qwen2Config): An instance of the Qwen2Config class containing configuration parameters for the attention mechanism.
-            layer_idx (Optional[int]): The index of the layer. Defaults to None. If None, a warning is logged as it may lead to errors during forward call if caching is used. It is recommended to provide a
-valid layer index when creating the class.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            ValueError: If the `hidden_size` is not divisible by `num_heads`.
-        """
         super().__init__()
         self.config = config
         self.layer_idx = layer_idx
@@ -387,10 +265,10 @@ valid layer index when creating the class.
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.q_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=True)
-        self.k_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
-        self.v_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
-        self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=False)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=True)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=True)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=True)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
 
         self.rotary_emb = Qwen2RotaryEmbedding(
             self.head_dim,
@@ -398,45 +276,25 @@ valid layer index when creating the class.
             base=self.rope_theta,
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
         past_key_value: Optional[Cache] = None,
         output_attentions: bool = False,
-        **kwargs,
+        use_cache: bool = False,
+        cache_position: Optional[mindspore.Tensor] = None,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-        '''
-        This method constructs the Qwen2Attention layer.
-        
-        Args:
-            self: The instance of the class.
-            hidden_states (mindspore.Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor]): An optional tensor of shape (batch_size, 1, sequence_length, key_value_sequence_length) containing indices to be masked.
-            position_ids (Optional[mindspore.Tensor]): An optional tensor of shape (batch_size, sequence_length) containing the position indices of each token in the input sequence.
-            past_key_value (Optional[Cache]): An optional object representing the cached key and value tensors from previous time steps.
-            output_attentions (bool): A flag indicating whether to return the attention weights.
-        
-        Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]: A tuple containing:
-                - attn_output (mindspore.Tensor): The output tensor of shape (batch_size, sequence_length, hidden_size).
-                - attn_weights (Optional[mindspore.Tensor]): The attention weights tensor of shape (batch_size, num_heads, sequence_length, key_value_sequence_length), if output_attentions is True, else None.
-                - past_key_value (Optional[Tuple[mindspore.Tensor]]): The updated key and value tensors, if past_key_value is not None and caching is enabled, else None.
-        
-        Raises:
-            ValueError: If the cache structure has changed and the layer index is not provided, if the shape of attention weights or attention mask is incorrect, or if the shape of the output tensor is not as
-expected.
-        '''
         bsz, q_len, _ = hidden_states.shape
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
-        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1, 2)
-        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1, 2)
+        query_states = ops.transpose(query_states.view(bsz, q_len, self.num_heads, self.head_dim), 1, 2)
+        key_states = ops.transpose(key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim), 1, 2)
+        value_states = ops.transpose(value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim), 1, 2)
 
         kv_seq_len = key_states.shape[-2]
         if past_key_value is not None:
@@ -451,14 +309,14 @@ expected.
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
 
         if past_key_value is not None:
-            cache_kwargs = {"sin": sin, "cos": cos}  # Specific to RoPE models
+            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}  # Specific to RoPE models
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
         # repeat k/v heads if n_kv_heads < n_heads
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
-        attn_weights = ops.matmul(query_states, key_states.swapaxes(2, 3)) / math.sqrt(self.head_dim)
+        attn_weights = ops.matmul(query_states, ops.transpose(key_states, 2, 3)) / math.sqrt(self.head_dim)
 
         if attn_weights.shape != (bsz, self.num_heads, q_len, kv_seq_len):
             raise ValueError(
@@ -466,17 +324,13 @@ expected.
                 f" {attn_weights.shape}"
             )
 
-        if attention_mask is not None:
-            if attention_mask.shape != (bsz, 1, q_len, kv_seq_len):
-                raise ValueError(
-                    f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.shape}"
-                )
-
-            attn_weights = attn_weights + attention_mask
+        if attention_mask is not None:  # no matter the length, we just slice it
+            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
+            attn_weights = attn_weights + causal_mask
 
         # upcast attention to fp32
-        attn_weights = ops.softmax(attn_weights, axis=-1, dtype=mindspore.float32).to(query_states.dtype)
-        attn_weights = ops.dropout(attn_weights, p=self.attention_dropout, training=self.training)
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=mindspore.float32).to(query_states.dtype)
+        attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
 
         if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
@@ -485,7 +339,7 @@ expected.
                 f" {attn_output.shape}"
             )
 
-        attn_output = attn_output.swapaxes(1, 2)
+        attn_output = ops.transpose(attn_output, 1, 2)
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
 
         attn_output = self.o_proj(attn_output)
@@ -501,58 +355,23 @@ QWEN2_ATTENTION_CLASSES = {
 }
 
 
-class Qwen2DecoderLayer(nn.Cell):
-
-    """
-    Qwen2DecoderLayer is a class representing a single layer of the Qwen2 decoder. It inherits from nn.Cell and contains methods for initializing the layer and constructing the layer's operations.
-    
-    Attributes:
-        hidden_size (int): The size of the hidden state.
-        self_attn (QWEN2_ATTENTION_CLASSES): The self-attention mechanism used in the layer.
-        mlp (Qwen2MLP): The multi-layer perceptron used in the layer.
-        input_layernorm (Qwen2RMSNorm): The layer normalization applied to the input.
-        post_attention_layernorm (Qwen2RMSNorm): The layer normalization applied after the attention mechanism.
-    
-    Methods:
-        __init__(config: Qwen2Config, layer_idx: int): Initializes the Qwen2DecoderLayer with the given configuration and layer index.
-        construct(hidden_states: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
-output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, **kwargs) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: 
-            Applies the layer operations to the input hidden_states and returns the resulting output tensor along with optional additional tensors, such as attention weights and present key value.
-    
-    Args:
-        hidden_states (mindspore.Tensor): Input to the layer of shape (batch, seq_len, embed_dim).
-        attention_mask (mindspore.Tensor, optional): Attention mask of size (batch, sequence_length) where padding elements are indicated by 0.
-        output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers.
-        use_cache (bool, optional): If set to True, past_key_values key value states are returned and can be used to speed up decoding.
-        past_key_value (Tuple(mindspore.Tensor), optional): Cached past key and value projection states.
-    
-    Returns:
-        Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]: The output tensor and optional additional tensors based on the input arguments.
-    """
+class Qwen2DecoderLayer(nn.Module):
     def __init__(self, config: Qwen2Config, layer_idx: int):
-        """
-        Initializes a Qwen2DecoderLayer object.
-        
-        Args:
-            self (Qwen2DecoderLayer): The instance of the Qwen2DecoderLayer class.
-            config (Qwen2Config): An object containing configuration settings for the decoder layer.
-            layer_idx (int): An integer representing the index of the layer.
-        
-        Returns:
-            None. This method initializes the Qwen2DecoderLayer object with the provided settings.
-        
-        Raises:
-            None.
-        """
         super().__init__()
         self.hidden_size = config.hidden_size
-        self.self_attn = QWEN2_ATTENTION_CLASSES["eager"](config, layer_idx)
+
+        if config.sliding_window and config._attn_implementation != "flash_attention_2":
+            logger.warning_once(
+                f"Sliding Window Attention is enabled but not implemented for `{config._attn_implementation}`; "
+                "unexpected results may be encountered."
+            )
+        self.self_attn = QWEN2_ATTENTION_CLASSES[config._attn_implementation](config, layer_idx)
 
         self.mlp = Qwen2MLP(config)
         self.input_layernorm = Qwen2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = Qwen2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -560,6 +379,7 @@ output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, **
         past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = False,
+        cache_position: Optional[mindspore.Tensor] = None,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """
@@ -574,7 +394,13 @@ output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, **
                 If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
                 (see `past_key_values`).
             past_key_value (`Tuple(mindspore.Tensor)`, *optional*): cached past key and value projection states
+            cache_position (`mindspore.Tensor` of shape `(sequence_length)`, *optional*):
+                Indices depicting the position of the input sequence tokens in the sequence.
+            kwargs (`dict`, *optional*):
+                Arbitrary kwargs to be ignored, used for FSDP and other methods that injects code
+                into the model
         """
+
         residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)
@@ -587,6 +413,7 @@ output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, **
             past_key_value=past_key_value,
             output_attentions=output_attentions,
             use_cache=use_cache,
+            cache_position=cache_position,
         )
         hidden_states = residual + hidden_states
 
@@ -608,59 +435,23 @@ output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, **
 
 
 class Qwen2PreTrainedModel(PreTrainedModel):
-
-    """
-    This class represents a Qwen2PreTrainedModel, which is a subclass of PreTrainedModel. It provides methods for initializing the weights of the model's cells.
-    
-    Methods:
-    - _init_weights(self, cell): Initializes the weights of a given cell.
-        - Parameters:
-            - cell: The cell to initialize the weights for.
-        - Returns: None
-        
-    Details:
-    The _init_weights method initializes the weights of the specified cell. It first checks the type of the cell. If it is of type nn.Dense, it sets the weight data using the initializer function. The
-initializer function takes the following parameters:
-        - Normal(self.config.initializer_range): A normal distribution initializer with the specified range.
-        - cell.weight.shape: The shape of the weight tensor.
-        - cell.weight.dtype: The data type of the weight tensor.
-    If the cell has a bias, it also sets the bias data using the initializer function with the following parameters:
-        - 'zeros': A zero initializer.
-        - cell.bias.shape: The shape of the bias tensor.
-        - cell.bias.dtype: The data type of the bias tensor.
-    
-    If the cell is of type nn.Embedding, it generates random weights using the numpy random.normal function. The parameters for the random.normal function are:
-        - 0.0: The mean of the normal distribution.
-        - self.config.initializer_range: The standard deviation of the normal distribution.
-        - cell.weight.shape: The shape of the weight tensor.
-    If the cell has a padding_idx, it sets the value at that index to 0.
-    
-    Finally, the initialized weights are set to the cell using the Tensor function with the following parameters:
-        - weight: The initialized weight tensor.
-        - cell.weight.dtype: The data type of the weight tensor.
-    """
     config_class = Qwen2Config
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
     _no_split_modules = ["Qwen2DecoderLayer"]
     _skip_keys_device_placement = "past_key_values"
-    _supports_flash_attn_2 = True
-    _supports_sdpa = True
     _supports_cache_class = True
 
-    def _init_weights(self, cell):
-        """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+    def _init_weights(self, module):
+        std = self.config.initializer_range
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
 
 
 class Qwen2Model(Qwen2PreTrainedModel):
@@ -670,36 +461,17 @@ class Qwen2Model(Qwen2PreTrainedModel):
     Args:
         config: Qwen2Config
     """
+
     def __init__(self, config: Qwen2Config):
-        """
-        Initializes a Qwen2Model instance.
-        
-        Args:
-            self (Qwen2Model): The instance of the Qwen2Model class.
-            config (Qwen2Config): An instance of Qwen2Config containing configuration parameters for the model.
-                It specifies the model configuration including the vocabulary size, hidden size, number of hidden layers, padding token id,
-                and RMS normalization epsilon.
-                The config object should have the following attributes:
-                    - pad_token_id (int): The token id for padding.
-                    - vocab_size (int): The size of the vocabulary.
-                    - hidden_size (int): The size of the hidden layers.
-                    - num_hidden_layers (int): The number of hidden layers in the model.
-                    - rms_norm_eps (float): Epsilon value for RMS normalization.
-        
-        Returns:
-            None. This method initializes the Qwen2Model instance with the provided configuration parameters.
-        
-        Raises:
-            None.
-        """
         super().__init__(config)
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [Qwen2DecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
+        self._attn_implementation = config._attn_implementation
         self.norm = Qwen2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
         self.gradient_checkpointing = False
@@ -707,42 +479,12 @@ class Qwen2Model(Qwen2PreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-        """
-        Method to retrieve the input embeddings from the Qwen2Model class.
-        
-        Args:
-            self: An instance of the Qwen2Model class.
-                This parameter refers to the current instance of the Qwen2Model class.
-                It is used to access the embed tokens for input embeddings.
-        
-        Returns:
-            None
-                This method returns None as it simply provides access to the input embeddings.
-        
-        Raises:
-            No specific exceptions are raised by this method.
-        """
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
-        """
-        Sets the input embeddings for the Qwen2Model.
-        
-        Args:
-            self: An instance of the Qwen2Model class.
-            value: The input embeddings to be set for the model. This should be of type torch.Tensor.
-        
-        Returns:
-            None. This method does not return any value.
-        
-        Raises:
-            None.
-        
-        This method sets the input embeddings for the Qwen2Model by assigning the provided 'value' to the 'embed_tokens' attribute of the model instance.
-        """
         self.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -753,29 +495,8 @@ class Qwen2Model(Qwen2PreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        cache_position: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-        """
-        Construct method in the Qwen2Model class.
-        
-        Args:
-        - self (Qwen2Model): The instance of the Qwen2Model class.
-        - input_ids (mindspore.Tensor, optional): The input tensor containing token IDs. Default is None.
-        - attention_mask (mindspore.Tensor, optional): An optional tensor specifying the attention mask. Default is None.
-        - position_ids (mindspore.Tensor, optional): An optional tensor specifying the position IDs. Default is None.
-        - past_key_values (List[mindspore.Tensor], optional): An optional list of tensors for past key values. Default is None.
-        - inputs_embeds (mindspore.Tensor, optional): An optional tensor containing input embeddings. Default is None.
-        - use_cache (bool, optional): A flag indicating whether to use caching. Default is None.
-        - output_attentions (bool, optional): A flag indicating whether to output attentions. Default is None.
-        - output_hidden_states (bool, optional): A flag indicating whether to output hidden states. Default is None.
-        - return_dict (bool, optional): A flag indicating whether to return a dictionary. Default is None.
-        
-        Returns:
-        Union[Tuple, BaseModelOutputWithPast]: Returns a tuple or BaseModelOutputWithPast object containing model outputs.
-        
-        Raises:
-        - ValueError: Raised if both input_ids and inputs_embeds are specified, or if neither is specified.
-        - Warning: Raised if `use_cache=True` is incompatible with gradient checkpointing.
-        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -784,15 +505,10 @@ class Qwen2Model(Qwen2PreTrainedModel):
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        # retrieve input_ids and inputs_embeds
-        if input_ids is not None and inputs_embeds is not None:
-            raise ValueError("You cannot specify both decoder_input_ids and decoder_inputs_embeds at the same time")
-        if input_ids is not None:
-            batch_size, seq_length = input_ids.shape
-        elif inputs_embeds is not None:
-            batch_size, seq_length, _ = inputs_embeds.shape
-        else:
-            raise ValueError("You have to specify either decoder_input_ids or decoder_inputs_embeds")
+        if (input_ids is None) ^ (inputs_embeds is not None):
+            raise ValueError(
+                "You cannot specify both input_ids and inputs_embeds at the same time, and must specify either one"
+            )
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -801,32 +517,28 @@ class Qwen2Model(Qwen2PreTrainedModel):
                 )
                 use_cache = False
 
-        past_key_values_length = 0
-
-        if use_cache:
-            use_legacy_cache = not isinstance(past_key_values, Cache)
-            if use_legacy_cache:
-                past_key_values = DynamicCache.from_legacy_cache(past_key_values)
-            past_key_values_length = past_key_values.get_usable_length(seq_length)
-
-        if position_ids is None:
-            position_ids = ops.arange(
-                past_key_values_length, seq_length + past_key_values_length, dtype=mindspore.int64
+        use_legacy_cache = False
+        if use_cache and not isinstance(past_key_values, Cache) and not self.training:
+            use_legacy_cache = True
+            past_key_values = DynamicCache.from_legacy_cache(past_key_values)
+            logger.warning_once(
+                "We detected that you are passing `past_key_values` as a tuple and this is deprecated.43. "
+                "Please use an appropriate `Cache` class (https://huggingface.co/docs/transformers/v4.41.3/en/internal/generation_utils#transformers.Cache)"
             )
-            position_ids = position_ids.unsqueeze(0).view(-1, seq_length)
-        else:
-            position_ids = position_ids.view(-1, seq_length).long()
 
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
 
-        # 4d mask is passed through the layers
-        attention_mask = _prepare_4d_causal_attention_mask(
-            attention_mask,
-            (batch_size, seq_length),
-            inputs_embeds,
-            past_key_values_length,
-            sliding_window=self.config.sliding_window,
+        if cache_position is None:
+            past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
+            cache_position = ops.arange(
+                past_seen_tokens, past_seen_tokens + inputs_embeds.shape[1]
+            )
+        if position_ids is None:
+            position_ids = cache_position.unsqueeze(0)
+
+        causal_mask = self._update_causal_mask(
+            attention_mask, inputs_embeds, cache_position, past_key_values, output_attentions
         )
 
         hidden_states = inputs_embeds
@@ -840,14 +552,27 @@ class Qwen2Model(Qwen2PreTrainedModel):
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
-            layer_outputs = decoder_layer(
-                hidden_states,
-                attention_mask=attention_mask,
-                position_ids=position_ids,
-                past_key_value=past_key_values,
-                output_attentions=output_attentions,
-                use_cache=use_cache,
-            )
+            if self.gradient_checkpointing and self.training:
+                layer_outputs = self._gradient_checkpointing_func(
+                    decoder_layer.__call__,
+                    hidden_states,
+                    causal_mask,
+                    position_ids,
+                    past_key_values,
+                    output_attentions,
+                    use_cache,
+                    cache_position,
+                )
+            else:
+                layer_outputs = decoder_layer(
+                    hidden_states,
+                    attention_mask=causal_mask,
+                    position_ids=position_ids,
+                    past_key_value=past_key_values,
+                    output_attentions=output_attentions,
+                    use_cache=use_cache,
+                    cache_position=cache_position,
+                )
 
             hidden_states = layer_outputs[0]
 
@@ -876,217 +601,94 @@ class Qwen2Model(Qwen2PreTrainedModel):
             attentions=all_self_attns,
         )
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaModel._update_causal_mask
+    def _update_causal_mask(
+        self,
+        attention_mask: mindspore.Tensor,
+        input_tensor: mindspore.Tensor,
+        cache_position: mindspore.Tensor,
+        past_key_values: Cache,
+        output_attentions: bool,
+    ):
+
+        if self.config._attn_implementation == "flash_attention_2":
+            if attention_mask is not None and 0.0 in attention_mask:
+                return attention_mask
+            return None
+
+        # For SDPA, when possible, we will rely on its `is_causal` argument instead of its `attn_mask` argument, in
+        # order to dispatch on Flash Attention 2. This feature is not compatible with static cache, as SDPA will fail
+        # to infer the attention mask.
+        past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
+        using_static_cache = isinstance(past_key_values, StaticCache)
+
+        # When output attentions is True, sdpa implementation's forward method calls the eager implementation's forward
+        if self.config._attn_implementation == "sdpa" and not using_static_cache and not output_attentions:
+            if AttentionMaskConverter._ignore_causal_mask_sdpa(
+                attention_mask,
+                inputs_embeds=input_tensor,
+                past_key_values_length=past_seen_tokens,
+                is_training=self.training,
+            ):
+                return None
+
+        dtype = input_tensor.dtype
+        min_dtype = float(ops.finfo(dtype).min)
+        sequence_length = input_tensor.shape[1]
+        if using_static_cache:
+            target_length = past_key_values.get_max_length()
+        else:
+            target_length = (
+                attention_mask.shape[-1]
+                if isinstance(attention_mask, mindspore.Tensor)
+                else past_seen_tokens + sequence_length + 1
+            )
+
+        # In case the provided `attention` mask is 2D, we generate a causal mask here (4D).
+        causal_mask = _prepare_4d_causal_attention_mask_with_cache_position(
+            attention_mask,
+            sequence_length=sequence_length,
+            target_length=target_length,
+            dtype=dtype,
+            min_dtype=min_dtype,
+            cache_position=cache_position,
+            batch_size=input_tensor.shape[0],
+        )
+
+        return causal_mask
+
 
 class Qwen2ForCausalLM(Qwen2PreTrainedModel):
-
-    """
-    This class represents a Qwen2 model for causal language modeling (LM). It is a subclass of Qwen2PreTrainedModel. The Qwen2ForCausalLM class provides methods for initializing the model, setting and getting
-input and output embeddings, setting and getting the decoder, constructing the model, and preparing inputs for generation.
-    
-    To initialize an instance of the Qwen2ForCausalLM class, a configuration object should be passed as a parameter to the constructor. The model's architecture and settings are defined by this configuration.
-    
-    The Qwen2ForCausalLM class has the following methods:
-    
-    - `__init__(self, config)`: Initializes the Qwen2ForCausalLM instance with the given configuration.
-    
-    - `get_input_embeddings(self)`: Returns the input embeddings of the model.
-    
-    - `set_input_embeddings(self, value)`: Sets the input embeddings of the model to the given value.
-    
-    - `get_output_embeddings(self)`: Returns the output embeddings of the model.
-    
-    - `set_output_embeddings(self, new_embeddings)`: Sets the output embeddings of the model to the given new_embeddings.
-    
-    - `set_decoder(self, decoder)`: Sets the decoder of the model to the given decoder.
-    
-    - `get_decoder(self)`: Returns the decoder of the model.
-    
-    - `construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)`: Constructs the model using the
-provided input arguments. This method returns a tuple of outputs, including the logits and optionally the loss, past key values, hidden states, and attentions.
-    
-    - `prepare_inputs_for_generation(self, input_ids, past_key_values, attention_mask, inputs_embeds, **kwargs)`: Prepares the inputs for generation. This method takes input_ids, past_key_values,
-attention_mask, inputs_embeds, and additional keyword arguments as input and returns a dictionary of model inputs.
-    
-    - `_reorder_cache(past_key_values, beam_idx)`: Reorders the past key values according to the given beam indices. This method is static and is used internally in the class.
-    
-    Example usage:
-    
-    
-    from transformers import Qwen2ForCausalLM, Qwen2Config
-    
-    # Create a configuration object
-    config = Qwen2Config(vocab_size=100, hidden_size=512)
-    
-    # Initialize a Qwen2ForCausalLM instance
-    model = Qwen2ForCausalLM(config)
-    
-    # Set the input embeddings
-    embeddings = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
-    model.set_input_embeddings(embeddings)
-    
-    # Get the output embeddings
-    output_embeddings = model.get_output_embeddings()
-    
-    # Set the decoder
-    decoder = Qwen2Model(config)
-    model.set_decoder(decoder)
-    
-    # Get the decoder
-    decoder = model.get_decoder()
-    
-    # Construct the model
-    input_ids = [1, 2, 3]
-    attention_mask = [1, 1, 1]
-    outputs = model.construct(input_ids=input_ids, attention_mask=attention_mask)
-    
-    # Prepare inputs for generation
-    input_ids = [4, 5, 6]
-    past_key_values = [tensor1, tensor2]
-    attention_mask = [1, 1, 1]
-    inputs_embeds = [embedding1, embedding2]
-    model_inputs = model.prepare_inputs_for_generation(input_ids, past_key_values, attention_mask, inputs_embeds)
-    
-    # Reorder cache
-    past_key_values = [tensor1, tensor2]
-    beam_idx = [0, 1, 2]
-    reordered_past = Qwen2ForCausalLM._reorder_cache(past_key_values, beam_idx)
-    
-    """
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-        """
-        Initializes a new instance of the Qwen2ForCausalLM class.
-        
-        Args:
-            self: The object itself.
-            config: An instance of the Qwen2Config class containing the configuration settings for the model.
-                This parameter is required and must not be None.
-        
-        Returns:
-            None
-        
-        Raises:
-            None
-        """
         super().__init__(config)
         self.model = Qwen2Model(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
     def get_input_embeddings(self):
-        """
-        Returns the input embeddings from the model.
-        
-        Args:
-            self (Qwen2ForCausalLM): The object instance of the Qwen2ForCausalLM class.
-                This parameter represents the instance of the Qwen2ForCausalLM class, which contains the model for which input embeddings are to be retrieved.
-        
-        Returns:
-            None: This method returns None, as it directly accesses and returns the input embeddings from the model.
-        
-        Raises:
-            N/A
-        """
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-        """
-        Sets the input embeddings for the Qwen2ForCausalLM model.
-        
-        Args:
-            self (Qwen2ForCausalLM): The instance of Qwen2ForCausalLM.
-            value (object): The input embeddings to be set for the model. It can be an instance of a custom embedding class or any other object with the required attributes and methods.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            None: This method does not raise any exceptions.
-        """
         self.model.embed_tokens = value
 
     def get_output_embeddings(self):
-        """
-        Method: get_output_embeddings
-        
-        Description:
-            This method returns the output embeddings from the Qwen2ForCausalLM model.
-        
-        Args:
-            self: Qwen2ForCausalLM object.
-                Represents the instance of the Qwen2ForCausalLM class.
-        
-        Returns:
-            None
-                This method returns None.
-        
-        Raises:
-            None
-        """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-        """Sets the output embeddings for the Qwen2ForCausalLM model.
-        
-        Args:
-            self (Qwen2ForCausalLM): The instance of the Qwen2ForCausalLM class.
-            new_embeddings: The new embeddings to be set for the output layer. This can be a tensor or any other object that
-                            can be assigned to the 'lm_head' attribute of the Qwen2ForCausalLM instance.
-        
-        Returns:
-            None. This method does not return any value.
-        
-        Raises:
-            None. This method does not raise any exceptions.
-        """
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-        """
-        Sets the decoder for the Qwen2ForCausalLM object.
-        
-        Args:
-            self (Qwen2ForCausalLM): An instance of the Qwen2ForCausalLM class.
-            decoder: The decoder object to be set as the model for Qwen2ForCausalLM. The decoder should implement the necessary methods and functionality required by Qwen2ForCausalLM.
-        
-        Returns:
-            None. This method does not return any value.
-        
-        Raises:
-            None.
-        
-        Note:
-            The decoder object should be compatible with the Qwen2ForCausalLM class and fulfill the requirements necessary for generating predictions or processing inputs.
-        
-        Example Usage:
-            qwen2 = Qwen2ForCausalLM()
-            decoder = Decoder()
-            qwen2.set_decoder(decoder)
-        """
         self.model = decoder
 
     def get_decoder(self):
-        """
-        Method to retrieve the decoder model from the Qwen2ForCausalLM class.
-        
-        Args:
-            self (object): An instance of the Qwen2ForCausalLM class.
-                This parameter is required for accessing the decoder model.
-            
-        Returns:
-            None.
-            The method returns the decoder model associated with the Qwen2ForCausalLM class.
-            
-        Raises:
-            No specific exceptions are raised by this method.
-        """
         return self.model
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1098,6 +700,7 @@ attention_mask, inputs_embeds, and additional keyword arguments as input and ret
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        cache_position: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
         Args:
@@ -1124,6 +727,7 @@ attention_mask, inputs_embeds, and additional keyword arguments as input and ret
         >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
         ```"""
+
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1141,6 +745,7 @@ attention_mask, inputs_embeds, and additional keyword arguments as input and ret
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            cache_position=cache_position,
         )
 
         hidden_states = outputs[0]
@@ -1153,9 +758,11 @@ attention_mask, inputs_embeds, and additional keyword arguments as input and ret
             shift_logits = logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
+            loss_fct = CrossEntropyLoss()
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
-            loss = ops.cross_entropy(shift_logits, shift_labels)
+            # Enable model parallelism
+            loss = loss_fct(shift_logits, shift_labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -1169,204 +776,89 @@ attention_mask, inputs_embeds, and additional keyword arguments as input and ret
             attentions=outputs.attentions,
         )
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.prepare_inputs_for_generation
     def prepare_inputs_for_generation(
-        self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
+        self,
+        input_ids,
+        past_key_values=None,
+        attention_mask=None,
+        inputs_embeds=None,
+        cache_position=None,
+        position_ids=None,
+        use_cache=True,
+        **kwargs,
     ):
-        """
-        Prepare inputs for generation.
-        
-        Args:
-            self (Qwen2ForCausalLM): An instance of the Qwen2ForCausalLM class.
-            input_ids (torch.Tensor): The input token IDs of shape (batch_size, sequence_length).
-            past_key_values (Union[Cache, tuple, None]): The cached key-value states from previous generations.
-                If past_key_values is an instance of Cache, it contains information about the sequence length,
-                past length, and maximum cache length. If past_key_values is a tuple, it contains the past length.
-                If past_key_values is None, no cached key-value states are provided.
-            attention_mask (torch.Tensor, optional): The attention mask tensor of shape (batch_size, sequence_length).
-                It helps to mask out tokens that should not be attended to, such as padding tokens.
-            inputs_embeds (torch.Tensor, optional): The input embeddings tensor of shape (batch_size, sequence_length, hidden_size).
-                It represents the embedded representation of the input tokens.
-            **kwargs: Additional keyword arguments.
-        
-        Returns:
-            dict: A dictionary containing the model inputs for generation.
-                - If inputs_embeds is not None and past_key_values is None, the dictionary contains {'inputs_embeds': inputs_embeds}.
-                - Otherwise, the dictionary contains {'input_ids': input_ids}.
-                - The dictionary also includes 'position_ids', 'past_key_values', 'use_cache', and 'attention_mask'.
-        
-        Raises:
-            None: This method does not raise any exceptions.
-        """
-        # Omit tokens covered by past_key_values
+        # If we have cache: let's slice `input_ids` through `cache_position`, to keep only the unprocessed tokens
+        # Exception 1: when passing input_embeds, input_ids may be missing entries
+        # Exception 2: some generation methods do special slicing of input_ids, so we don't need to do it here
         if past_key_values is not None:
-            if isinstance(past_key_values, Cache):
-                cache_length = past_key_values.get_seq_length()
-                past_length = past_key_values.seen_tokens
-                max_cache_length = past_key_values.get_max_length()
-            else:
-                cache_length = past_length = past_key_values[0][0].shape[2]
-                max_cache_length = None
+            if inputs_embeds is not None:  # Exception 1
+                if 0 not in input_ids.shape:
+                    input_ids = input_ids[:, -cache_position.shape[0] :]
+            elif input_ids.shape[1] != cache_position.shape[0]:  # Default case (the "else", a no op, is Exception 2)
+                input_ids = ops.index_select(input_ids, -1, cache_position)
 
-            # Keep only the unprocessed tokens:
-            # 1 - If the length of the attention_mask exceeds the length of input_ids, then we are in a setting where
-            # some of the inputs are exclusively passed as part of the cache (e.g. when passing input_embeds as
-            # input)
-            if attention_mask is not None and attention_mask.shape[1] > input_ids.shape[1]:
-                input_ids = input_ids[:, -(attention_mask.shape[1] - past_length) :]
-            # 2 - If the past_length is smaller than input_ids', then input_ids holds all input tokens. We can discard
-            # input_ids based on the past_length.
-            elif past_length < input_ids.shape[1]:
-                input_ids = input_ids[:, past_length:]
-            # 3 - Otherwise (past_length >= input_ids.shape[1]), let's assume input_ids only has unprocessed tokens.
-
-            # If we are about to go beyond the maximum cache length, we need to crop the input attention mask.
-            if (
-                max_cache_length is not None
-                and attention_mask is not None
-                and cache_length + input_ids.shape[1] > max_cache_length
-            ):
-                attention_mask = attention_mask[:, -max_cache_length:]
-
-        position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
 
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
-        if inputs_embeds is not None and past_key_values is None:
+        if inputs_embeds is not None and cache_position[0] == 0:
             model_inputs = {"inputs_embeds": inputs_embeds}
         else:
             model_inputs = {"input_ids": input_ids}
 
+        if isinstance(past_key_values, StaticCache) and attention_mask.ndim == 2:
+            if inputs_embeds is not None:
+                batch_size, sequence_length = inputs_embeds.shape
+            else:
+                batch_size, sequence_length = input_ids.shape
+
+            dtype = self.lm_head.weight.dtype
+            min_dtype = float(ops.finfo(dtype).min)
+
+            attention_mask = _prepare_4d_causal_attention_mask_with_cache_position(
+                attention_mask,
+                sequence_length=sequence_length,
+                target_length=past_key_values.get_max_length(),
+                dtype=dtype,
+                min_dtype=min_dtype,
+                cache_position=cache_position,
+                batch_size=batch_size,
+            )
+
         model_inputs.update(
             {
                 "position_ids": position_ids,
+                "cache_position": cache_position,
                 "past_key_values": past_key_values,
-                "use_cache": kwargs.get("use_cache"),
+                "use_cache": use_cache,
                 "attention_mask": attention_mask,
             }
         )
         return model_inputs
 
-    @staticmethod
-    def _reorder_cache(past_key_values, beam_idx):
-        """
-        Method to reorder the cache based on the beam index.
-        
-        Args:
-            past_key_values (tuple): A tuple containing the past key values for each layer. Each element in the tuple should be a tensor representing the past state for a layer.
-            beam_idx (torch.Tensor): A tensor containing the beam indices used for reordering the past states.
-        
-        Returns:
-            None. This method modifies the input past_key_values in place and does not return any explicit value.
-        
-        Raises:
-            - ValueError: If the past_key_values or beam_idx are not in the expected format or shape.
-            - IndexError: If the beam indices provided in beam_idx are out of bounds or not applicable to the past_key_values.
-        """
-        reordered_past = ()
-        for layer_past in past_key_values:
-            reordered_past += (
-                tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),
-            )
-        return reordered_past
-
 
 class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
-
-    """
-    Qwen2ForSequenceClassification is a class representing a sequence classification model that inherits from Qwen2PreTrainedModel. It includes methods for initializing the model with a configuration, getting
-and setting input embeddings, and constructing the model for sequence classification.
-    
-    Attributes:
-        num_labels (int): The number of labels for sequence classification.
-    
-    Methods:
-        __init__(self, config): Initializes the sequence classification model with the given configuration.
-        get_input_embeddings(self): Retrieves the input embeddings from the model.
-        set_input_embeddings(self, value): Sets the input embeddings for the model.
-        construct(self, input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict): Constructs the sequence classification
-model with the specified inputs and returns the sequence classifier output with past values.
-    
-    Args:
-        input_ids (Tensor, optional): The input tensor of shape `(batch_size, sequence_length)` representing the input sequence.
-        attention_mask (Tensor, optional): The attention mask tensor of shape `(batch_size, sequence_length)` indicating which tokens should be attended to.
-        position_ids (Tensor, optional): The position IDs tensor of shape `(batch_size, sequence_length)` representing the position of each token in the input sequence.
-        past_key_values (List[Tensor], optional): The list of past key values tensors for handling incremental decoding.
-        inputs_embeds (Tensor, optional): The input embeddings tensor of shape `(batch_size, sequence_length, hidden_size)` representing the embedded input sequence.
-        labels (Tensor, optional): The tensor of shape `(batch_size,)` representing the labels for computing the sequence classification/regression loss.
-        use_cache (bool, optional): Indicates whether to use the cache for handling incremental decoding.
-        output_attentions (bool, optional): Indicates whether to output attentions.
-        output_hidden_states (bool, optional): Indicates whether to output hidden states.
-        return_dict (bool, optional): Indicates whether to return a dictionary of outputs.
-    
-    Returns:
-        Union[Tuple, SequenceClassifierOutputWithPast]: The sequence classifier output with past values.
-    
-    Raises:
-        ValueError: If batch sizes > 1 and no padding token is defined.
-    
-    Note:
-        This docstring is generated based on the provided code and is intended to provide a comprehensive understanding of the Qwen2ForSequenceClassification class and its methods. Additional details and
-specific usage instructions may be available in the official documentation or source code.
-    """
     def __init__(self, config):
-        """
-        Initializes a new instance of the Qwen2ForSequenceClassification class.
-        
-        Args:
-            self: The instance of the class.
-            config: An object of the Qwen2Config class containing the configuration settings for the model.
-        
-        Returns:
-            None
-        
-        Raises:
-            None
-        """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = Qwen2Model(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
     def get_input_embeddings(self):
-        """
-        This method retrieves the input embeddings from the Qwen2ForSequenceClassification model.
-        
-        Args:
-            self: An instance of the Qwen2ForSequenceClassification class.
-        
-        Returns:
-            None. The method returns the input embeddings from the model.
-        
-        Raises:
-            This method does not raise any exceptions.
-        """
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-        """
-        Set the input embeddings for the Qwen2ForSequenceClassification model.
-        
-        Args:
-            self (Qwen2ForSequenceClassification): The instance of the Qwen2ForSequenceClassification class.
-            value (object): The input embeddings to be set for the model. Should be of type torch.Tensor or any compatible object.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            N/A
-        """
         self.model.embed_tokens = value
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1431,14 +923,17 @@ specific usage instructions may be available in the official documentation or so
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = loss_fct(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1451,9 +946,87 @@ specific usage instructions may be available in the official documentation or so
             attentions=transformer_outputs.attentions,
         )
 
+
+# Copied from transformers.models.llama.modeling_llama.LlamaForTokenClassification with Llama->Qwen2, LLAMA->QWEN2
+class Qwen2ForTokenClassification(Qwen2PreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.model = Qwen2Model(config)
+        if getattr(config, "classifier_dropout", None) is not None:
+            classifier_dropout = config.classifier_dropout
+        elif getattr(config, "hidden_dropout", None) is not None:
+            classifier_dropout = config.hidden_dropout
+        else:
+            classifier_dropout = 0.1
+        self.dropout = nn.Dropout(classifier_dropout)
+        self.score = nn.Linear(config.hidden_size, config.num_labels)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def get_input_embeddings(self):
+        return self.model.embed_tokens
+
+    def set_input_embeddings(self, value):
+        self.model.embed_tokens = value
+
+    def forward(
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        past_key_values: Optional[List[mindspore.Tensor]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple, TokenClassifierOutput]:
+        r"""
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.model(
+            input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        sequence_output = outputs[0]
+        sequence_output = self.dropout(sequence_output)
+        logits = self.score(sequence_output)
+
+        loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+        if not return_dict:
+            output = (logits,) + outputs[2:]
+            return ((loss,) + output) if loss is not None else output
+
+        return TokenClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
+
 __all__ = [
     "Qwen2ForCausalLM",
     "Qwen2Model",
     "Qwen2PreTrainedModel",
     "Qwen2ForSequenceClassification",
+    "Qwen2ForTokenClassification"
 ]

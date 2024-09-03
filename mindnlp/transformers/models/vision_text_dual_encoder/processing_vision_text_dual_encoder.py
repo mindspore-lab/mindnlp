@@ -74,7 +74,8 @@ class VisionTextDualEncoderProcessor(ProcessorMixin):
                 The sequence or batch of sequences to be encoded. Each sequence can be a string or a list of strings
                 (pretokenized string). If the sequences are provided as list of strings (pretokenized), you must set
                 `is_split_into_words=True` (to lift the ambiguity with a batch of sequences).
-            images (`PIL.Image.Image`, `np.ndarray`, `torch.Tensor`, `List[PIL.Image.Image]`, `List[np.ndarray]`, `List[torch.Tensor]`):
+            images (`PIL.Image.Image`, `np.ndarray`, `torch.Tensor`, `List[PIL.Image.Image]`, `List[np.ndarray]`,
+                `List[torch.Tensor]`):
                 The image or batch of images to be prepared. Each image can be a PIL image, NumPy array or PyTorch
                 tensor. Both channels-first and channels-last formats are supported.
 
@@ -87,13 +88,14 @@ class VisionTextDualEncoderProcessor(ProcessorMixin):
                 - `'jax'`: Return JAX `jnp.ndarray` objects.
 
         Returns:
-            [`BatchEncoding`]: A [`BatchEncoding`] with the following fields:
+            [`BatchEncoding`]:
+                A [`BatchEncoding`] with the following fields:
 
-            - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
-            - **attention_mask** -- List of indices specifying which tokens should be attended to by the model (when
-              `return_attention_mask=True` or if *"attention_mask"* is in `self.model_input_names` and if `text` is not
-              `None`).
-            - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
+                - **input_ids** -- List of token ids to be fed to a model. Returned when `text` is not `None`.
+                - **attention_mask** -- List of indices specifying which tokens should be attended to by the model (when
+                  `return_attention_mask=True` or if *"attention_mask"* is in `self.model_input_names` and if `text` is not
+                  `None`).
+                - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
         """
 
         if text is None and images is None:
@@ -136,7 +138,7 @@ class VisionTextDualEncoderProcessor(ProcessorMixin):
     @property
     def feature_extractor_class(self):
         warnings.warn(
-            "`feature_extractor_class` is deprecated and will be removed in v5. Use `image_processor_class` instead.",
+            "`feature_extractor_class` is deprecated. Use `image_processor_class` instead.",
             FutureWarning,
         )
         return self.image_processor_class
@@ -144,7 +146,7 @@ class VisionTextDualEncoderProcessor(ProcessorMixin):
     @property
     def feature_extractor(self):
         warnings.warn(
-            "`feature_extractor` is deprecated and will be removed in v5. Use `image_processor` instead.",
+            "`feature_extractor` is deprecated. Use `image_processor` instead.",
             FutureWarning,
         )
         return self.image_processor

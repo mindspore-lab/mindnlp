@@ -1,31 +1,26 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2021 The OpenAI Team Authors and HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================
 """MindSpore OpenAI ImageGPT model."""
 
 import math
-import os
 import warnings
 from typing import Any, Optional, Tuple, Union
 
-import numpy as np
-
-import mindspore as ms
-from mindspore import nn, ops
-from mindspore import numpy as mnp
-from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from mindspore.common.initializer import Normal
+import mindspore
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -44,143 +39,34 @@ logger = logging.get_logger(__name__)
 _CHECKPOINT_FOR_DOC = "openai/imagegpt-small"
 _CONFIG_FOR_DOC = "ImageGPTConfig"
 
-
-def load_tf_weights_in_imagegpt(model, config, imagegpt_checkpoint_path):
-    """
-    Load tf checkpoints in a pytorch model
-    """
-    try:
-        import re
-
-        import tensorflow as tf
-    except ImportError:
-        logger.error(
-            "Loading a TensorFlow model in PyTorch, requires TensorFlow to be installed. Please see "
-            "https://www.tensorflow.org/install/ for installation instructions."
-        )
-        raise
-    tf_path = os.path.abspath(imagegpt_checkpoint_path)
-    logger.info("Converting TensorFlow checkpoint from {}".format(tf_path))
-    # Load weights from TF model
-    init_vars = tf.train.list_variables(tf_path)
-    names = []
-    arrays = []
-
-    for name, shape in init_vars:
-        logger.info("Loading TF weight {} with shape {}".format(name, shape))
-        array = tf.train.load_variable(tf_path, name)
-        names.append(name)
-        arrays.append(array.squeeze())
-
-    for name, array in zip(names, arrays):
-        name = name[6:]  # skip "model/"
-        name = name.split("/")
-
-        # adam_v and adam_m are variables used in AdamWeightDecayOptimizer to calculated m and v
-        # which are not required for using pretrained model
-        if any(
-            n in ["adam_v", "adam_m", "AdamWeightDecayOptimizer",
-                  "AdamWeightDecayOptimizer_1", "global_step"]
-            for n in name
-        ) or name[-1] in ["_step"]:
-            logger.info("Skipping {}".format("/".join(name)))
-            continue
-
-        pointer = model
-        if name[-1] not in ["wtet"]:
-            pointer = getattr(pointer, "transformer")
-
-        for m_name in name:
-            if re.fullmatch(r"[A-Za-z]+\d+", m_name):
-                scope_names = re.split(r"(\d+)", m_name)
-            else:
-                scope_names = [m_name]
-
-            if scope_names[0] == "w" or scope_names[0] == "g":
-                pointer = getattr(pointer, "weight")
-            elif scope_names[0] == "b":
-                pointer = getattr(pointer, "bias")
-            elif scope_names[0] == "wpe" or scope_names[0] == "wte":
-                pointer = getattr(pointer, scope_names[0])
-                pointer = getattr(pointer, "weight")
-            elif scope_names[0] in ["q_proj", "k_proj", "v_proj"]:
-                pointer = getattr(pointer, "c_attn")
-                pointer = getattr(pointer, "weight")
-            elif len(name) == 3 and name[1] == "attn" and scope_names[0] == "c_proj":
-                pointer = getattr(pointer, scope_names[0])
-                pointer = getattr(pointer, "weight")
-            elif scope_names[0] == "wtet":
-                pointer = getattr(pointer, "lm_head")
-                pointer = getattr(pointer, "weight")
-            elif scope_names[0] == "sos":
-                pointer = getattr(pointer, "wte")
-                pointer = getattr(pointer, "weight")
-            else:
-                pointer = getattr(pointer, scope_names[0])
-            if len(scope_names) >= 2:
-                num = int(scope_names[1])
-                pointer = pointer[num]
-
-        if len(name) > 1 and name[1] == "attn" or name[-1] == "wtet" or name[-1] == "sos" or name[-1] == "wte":
-            pass  # array is used to initialize only part of the pointer so sizes won't match
-        else:
-            try:
-                assert pointer.shape == array.shape
-            except AssertionError as e:
-                e.args += (pointer.shape, array.shape)
-                raise
-
-        logger.info("Initialize PyTorch weight {}".format(name))
-
-        if name[-1] == "q_proj":
-            pointer.data[:, : config.n_embd] = ms.Tensor(
-                array.reshape(config.n_embd, config.n_embd)).T
-        elif name[-1] == "k_proj":
-            pointer.data[:, config.n_embd: 2 * config.n_embd] = ms.Tensor(
-                array.reshape(config.n_embd, config.n_embd)
-            ).T
-        elif name[-1] == "v_proj":
-            pointer.data[:, 2 * config.n_embd:] = ms.Tensor(
-                array.reshape(config.n_embd, config.n_embd)).T
-        elif len(name) == 3 and name[1] == "attn" and name[2] == "c_proj":
-            pointer.data = ms.Tensor(
-                array.reshape(config.n_embd, config.n_embd))
-        elif name[-1] == "wtet":
-            pointer.data = ms.Tensor(array)
-        elif name[-1] == "wte":
-            pointer.data[: config.vocab_size - 1, :] = ms.Tensor(array)
-        elif name[-1] == "sos":
-            pointer.data[-1] = ms.Tensor(array)
-        else:
-            pointer.data = ms.Tensor(array)
-
-    return model
-
-
-class ImageGPTLayerNorm(nn.Cell):
+class ImageGPTLayerNorm(nn.Module):
     def __init__(self, hidden_size: Tuple[int], eps: float = 1e-5):
         super().__init__()
         self.eps = eps
-        self.weight = ms.Parameter(ms.Tensor(np.ones((hidden_size, ))))
+        self.weight = nn.Parameter(ops.rand(hidden_size))
 
-    def construct(self, tensor: ms.Tensor) -> tuple:
+    def forward(self, tensor: mindspore.Tensor) -> tuple:
         # input is not mean centered
         return (
             tensor
-            / ops.sqrt(ops.mean(ops.square(tensor), axis=-1, keep_dims=True) + self.eps)
-            * self.weight.data[..., :]
+            / ops.sqrt(ops.mean(ops.square(tensor), dim=-1, keepdim=True) + self.eps)
+            * self.weight
         )
 
 
-class ImageGPTAttention(nn.Cell):
+class ImageGPTAttention(nn.Module):
     def __init__(self, config, is_cross_attention: Optional[bool] = False, layer_idx: Optional[int] = None):
         super().__init__()
 
         max_positions = config.max_position_embeddings
-        self.bias = ops.tril(ops.ones((max_positions, max_positions), dtype=ms.bool_)).view(
-            1, 1, max_positions, max_positions
+        self.register_buffer(
+            "bias",
+            ops.tril(ops.ones((max_positions, max_positions))).view(
+                1, 1, max_positions, max_positions
+            ).astype(mindspore.bool_),
+            persistent=False,
         )
-        self.masked_bias = ms.Tensor(-1e4)
+        self.register_buffer("masked_bias", mindspore.tensor(-1e4), persistent=False)
 
         self.embed_dim = config.hidden_size
         self.num_heads = config.num_attention_heads
@@ -215,26 +101,23 @@ class ImageGPTAttention(nn.Cell):
     def prune_heads(self, heads):
         if len(heads) == 0:
             return
-        heads, index = find_pruneable_heads_and_indices(
-            heads, self.num_heads, self.head_dim, self.pruned_heads)
-        index_attn = ops.cat(
-            [index, index + self.split_size, index + (2 * self.split_size)])
+        heads, index = find_pruneable_heads_and_indices(heads, self.num_heads, self.head_dim, self.pruned_heads)
+        index_attn = ops.cat([index, index + self.split_size, index + (2 * self.split_size)])
 
         # Prune conv1d layers
-        self.c_attn = prune_conv1d_layer(self.c_attn, index_attn, axis=1)
-        self.c_proj = prune_conv1d_layer(self.c_proj, index, axis=0)
+        self.c_attn = prune_conv1d_layer(self.c_attn, index_attn, dim=1)
+        self.c_proj = prune_conv1d_layer(self.c_proj, index, dim=0)
 
         # Update hyper params
-        self.split_size = (self.split_size // self.num_heads) * \
-            (self.num_heads - len(heads))
+        self.split_size = (self.split_size // self.num_heads) * (self.num_heads - len(heads))
         self.num_heads = self.num_heads - len(heads)
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
-        attn_weights = ops.matmul(query, key.swapaxes(-1, -2))
+        attn_weights = ops.matmul(query, ops.transpose(key, -1, -2))
 
         if self.scale_attn_weights:
-            attn_weights = attn_weights / (float(value.shape[-1]) ** 0.5)
+            attn_weights = attn_weights / mindspore.tensor(value.shape[-1] ** 0.5)
 
         # Layer-wise attention scaling
         if self.scale_attn_by_inverse_layer_idx:
@@ -243,21 +126,20 @@ class ImageGPTAttention(nn.Cell):
         if not self.is_cross_attention:
             # if only "normal" attention layer implements causal mask
             query_length, key_length = query.shape[-2], key.shape[-2]
-            causal_mask = self.bias[:, :, key_length -
-                                    query_length: key_length, :key_length]
-            mask_value = np.finfo(ms.dtype_to_nptype(attn_weights.dtype)).min
+            causal_mask = self.bias[:, :, key_length - query_length : key_length, :key_length]
+            mask_value = float(ops.finfo(attn_weights.dtype).min)
             # Need to be a tensor, otherwise we get error: `RuntimeError: expected scalar type float but found double`.
-            mask_value = ms.Tensor(mask_value, dtype=attn_weights.dtype)
+            mask_value = mindspore.tensor(mask_value, dtype=attn_weights.dtype)
             attn_weights = ops.where(causal_mask, attn_weights, mask_value)
 
         if attention_mask is not None:
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = nn.Softmax(axis=-1)(attn_weights)
+        attn_weights = nn.Softmax(dim=-1)(attn_weights)
 
         # Downcast (if necessary) back to V's dtype (if in mixed-precision) -- No-Op otherwise
-        attn_weights = attn_weights.type(value.dtype)
+        attn_weights = attn_weights.to(value.dtype)
         attn_weights = self.attn_dropout(attn_weights)
 
         # Mask heads if we want to
@@ -269,13 +151,12 @@ class ImageGPTAttention(nn.Cell):
         return attn_output, attn_weights
 
     def _upcast_and_reordered_attn(self, query, key, value, attention_mask=None, head_mask=None):
-        # Use `torch.baddbmm` (a bit more efficient w/ alpha param for scaling -- from Megatron-LM)
+        # Use `ops.baddbmm` (a bit more efficient w/ alpha param for scaling -- from Megatron-LM)
         bsz, num_heads, q_seq_len, dk = query.shape
         _, _, k_seq_len, _ = key.shape
 
         # Preallocate attn_weights for `baddbmm`
-        attn_weights = mnp.empty((
-            bsz * num_heads, q_seq_len, k_seq_len), dtype=ms.float32)
+        attn_weights = ops.empty(bsz * num_heads, q_seq_len, k_seq_len, dtype=mindspore.float32)
 
         # Compute Scale Factor
         scale_factor = 1.0
@@ -286,33 +167,28 @@ class ImageGPTAttention(nn.Cell):
             scale_factor /= float(self.layer_idx + 1)
 
         # Upcast (turn off autocast) and reorder (Scale K by 1 / root(dk))
-        q, k = query.reshape(-1, q_seq_len,
-                             dk), key.swapaxes(-1, -2).reshape(-1, dk, k_seq_len)
-        attn_weights = ops.baddbmm(attn_weights, q.astype(
-            ms.float32), k.astype(ms.float32), beta=0, alpha=scale_factor)
-        attn_weights = attn_weights.reshape(
-            bsz, num_heads, q_seq_len, k_seq_len)
+        q, k = query.reshape(-1, q_seq_len, dk), ops.transpose(key, -1, -2).reshape(-1, dk, k_seq_len)
+        attn_weights = ops.baddbmm(attn_weights, q.float(), k.float(), beta=0, alpha=scale_factor)
+        attn_weights = attn_weights.reshape(bsz, num_heads, q_seq_len, k_seq_len)
 
         if not self.is_cross_attention:
             # if only "normal" attention layer implements causal mask
             query_length, key_length = query.shape[-2], key.shape[-2]
-            causal_mask = self.bias[:, :, key_length -
-                                    query_length: key_length, :key_length]
-            mask_value = np.finfo(ms.dtype_to_nptype(attn_weights.dtype)).min
+            causal_mask = self.bias[:, :, key_length - query_length : key_length, :key_length]
+            mask_value = float(ops.finfo(attn_weights.dtype).min)
             # Need to be a tensor, otherwise we get error: `RuntimeError: expected scalar type float but found double`.
-            mask_value = ms.Tensor(mask_value, dtype=attn_weights.dtype)
+            mask_value = mindspore.tensor(mask_value, dtype=attn_weights.dtype)
             attn_weights = ops.where(causal_mask, attn_weights, mask_value)
 
         if attention_mask is not None:
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = nn.Softmax(axis=-1)(attn_weights)
+        attn_weights = nn.Softmax(dim=-1)(attn_weights)
 
         # Downcast (if necessary) back to V's dtype (if in mixed-precision) -- No-Op if otherwise
-        if attn_weights.dtype != ms.float32:
-            raise RuntimeError(
-                "Error with upcasting, attn_weights does not have dtype ms.float32")
+        if attn_weights.dtype != mindspore.float32:
+            raise RuntimeError("Error with upcasting, attn_weights does not have dtype mindspore.float32")
         attn_weights = attn_weights.type(value.dtype)
         attn_weights = self.attn_dropout(attn_weights)
 
@@ -330,8 +206,7 @@ class ImageGPTAttention(nn.Cell):
         """
         new_shape = tensor.shape[:-1] + (num_heads, attn_head_size)
         tensor = tensor.view(*new_shape)
-        # (batch, head, seq_length, head_features)
-        return tensor.permute(0, 2, 1, 3)
+        return tensor.permute(0, 2, 1, 3)  # (batch, head, seq_length, head_features)
 
     def _merge_heads(self, tensor, num_heads, attn_head_size):
         """
@@ -341,14 +216,14 @@ class ImageGPTAttention(nn.Cell):
         new_shape = tensor.shape[:-2] + (num_heads * attn_head_size,)
         return tensor.view(new_shape)
 
-    def construct(
+    def forward(
         self,
-        hidden_states: ms.Tensor,
+        hidden_states: mindspore.Tensor,
         layer_past: Optional[bool] = None,
-        attention_mask: Optional[ms.Tensor] = None,
-        head_mask: Optional[ms.Tensor] = None,
-        encoder_hidden_states: Optional[ms.Tensor] = None,
-        encoder_attention_mask: Optional[ms.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = False,
         output_attentions: Optional[bool] = False,
     ) -> tuple:
@@ -360,12 +235,10 @@ class ImageGPTAttention(nn.Cell):
                 )
 
             query = self.q_attn(hidden_states)
-            key, value = self.c_attn(encoder_hidden_states).split(
-                self.split_size, dim=2)
+            key, value = ops.split(self.c_attn(encoder_hidden_states), self.split_size, dim=2)
             attention_mask = encoder_attention_mask
         else:
-            query, key, value = self.c_attn(hidden_states.astype(
-                self.c_attn.weight.data.dtype)).split(self.split_size, axis=2)
+            query, key, value = ops.split(self.c_attn(hidden_states), self.split_size, dim=2)
 
         query = self._split_heads(query, self.num_heads, self.head_dim)
         key = self._split_heads(key, self.num_heads, self.head_dim)
@@ -373,8 +246,8 @@ class ImageGPTAttention(nn.Cell):
 
         if layer_past is not None:
             past_key, past_value = layer_past
-            key = ops.cat((past_key, key), axis=-2)
-            value = ops.cat((past_value, value), axis=-2)
+            key = ops.cat((past_key, key), dim=-2)
+            value = ops.cat((past_value, value), dim=-2)
 
         if use_cache is True:
             present = (key, value)
@@ -382,14 +255,11 @@ class ImageGPTAttention(nn.Cell):
             present = None
 
         if self.reorder_and_upcast_attn:
-            attn_output, attn_weights = self._upcast_and_reordered_attn(
-                query, key, value, attention_mask, head_mask)
+            attn_output, attn_weights = self._upcast_and_reordered_attn(query, key, value, attention_mask, head_mask)
         else:
-            attn_output, attn_weights = self._attn(
-                query, key, value, attention_mask, head_mask)
+            attn_output, attn_weights = self._attn(query, key, value, attention_mask, head_mask)
 
-        attn_output = self._merge_heads(
-            attn_output, self.num_heads, self.head_dim)
+        attn_output = self._merge_heads(attn_output, self.num_heads, self.head_dim)
         attn_output = self.c_proj(attn_output)
         attn_output = self.resid_dropout(attn_output)
 
@@ -400,7 +270,7 @@ class ImageGPTAttention(nn.Cell):
         return outputs  # a, present, (attentions)
 
 
-class ImageGPTMLP(nn.Cell):
+class ImageGPTMLP(nn.Module):
     def __init__(self, intermediate_size, config):
         super().__init__()
         embed_dim = config.hidden_size
@@ -409,8 +279,7 @@ class ImageGPTMLP(nn.Cell):
         self.act = ACT2FN[config.activation_function]
         self.dropout = nn.Dropout(config.resid_pdrop)
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
-        hidden_states = hidden_states.astype(self.c_fc.weight.data.dtype)
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.c_fc(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.c_proj(hidden_states)
@@ -418,34 +287,30 @@ class ImageGPTMLP(nn.Cell):
         return hidden_states
 
 
-class ImageGPTBlock(nn.Cell):
+class ImageGPTBlock(nn.Module):
     def __init__(self, config, layer_idx=None):
         super().__init__()
         hidden_size = config.hidden_size
         inner_dim = config.n_inner if config.n_inner is not None else 4 * hidden_size
 
-        self.ln_1 = ImageGPTLayerNorm(
-            hidden_size, eps=config.layer_norm_epsilon)
+        self.ln_1 = ImageGPTLayerNorm(hidden_size, eps=config.layer_norm_epsilon)
         self.attn = ImageGPTAttention(config, layer_idx=layer_idx)
-        self.ln_2 = ImageGPTLayerNorm(
-            hidden_size, eps=config.layer_norm_epsilon)
+        self.ln_2 = ImageGPTLayerNorm(hidden_size, eps=config.layer_norm_epsilon)
 
         if config.add_cross_attention:
-            self.crossattention = ImageGPTAttention(
-                config, is_cross_attention=True, layer_idx=layer_idx)
-            self.ln_cross_attn = ImageGPTLayerNorm(
-                hidden_size, eps=config.layer_norm_epsilon)
+            self.crossattention = ImageGPTAttention(config, is_cross_attention=True, layer_idx=layer_idx)
+            self.ln_cross_attn = ImageGPTLayerNorm(hidden_size, eps=config.layer_norm_epsilon)
 
         self.mlp = ImageGPTMLP(inner_dim, config)
 
-    def construct(
+    def forward(
         self,
-        hidden_states: ms.Tensor,
+        hidden_states: mindspore.Tensor,
         layer_past: Optional[bool] = None,
-        attention_mask: Optional[ms.Tensor] = None,
-        head_mask: Optional[ms.Tensor] = None,
-        encoder_hidden_states: Optional[ms.Tensor] = None,
-        encoder_attention_mask: Optional[ms.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = False,
         output_attentions: Optional[bool] = False,
     ) -> tuple:
@@ -484,8 +349,7 @@ class ImageGPTBlock(nn.Cell):
             attn_output = cross_attn_outputs[0]
             # residual connection
             hidden_states = residual + attn_output
-            # add cross attentions if we output attention weights
-            outputs = outputs + cross_attn_outputs[2:]
+            outputs = outputs + cross_attn_outputs[2:]  # add cross attentions if we output attention weights
 
         residual = hidden_states
         hidden_states = self.ln_2(hidden_states)
@@ -495,8 +359,7 @@ class ImageGPTBlock(nn.Cell):
 
         outputs = (hidden_states,) + (outputs if use_cache else outputs[1:])
 
-        # hidden_states, present, (attentions, cross_attentions)
-        return outputs
+        return outputs  # hidden_states, present, (attentions, cross_attentions)
 
 
 class ImageGPTPreTrainedModel(PreTrainedModel):
@@ -506,31 +369,25 @@ class ImageGPTPreTrainedModel(PreTrainedModel):
     """
 
     config_class = ImageGPTConfig
-    load_tf_weights = load_tf_weights_in_imagegpt
     base_model_prefix = "transformer"
     main_input_name = "input_ids"
     supports_gradient_checkpointing = True
-    _no_split_cells = ["ImageGPTBlock"]
+    _no_split_modules = ["ImageGPTBlock"]
 
-    def __init__(self, *inputs, **kwargs):
-        super().__init__(*inputs)
-
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights."""
-        if isinstance(cell, (nn.Dense, Conv1D)):
+        if isinstance(module, (nn.Linear, Conv1D)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.data.initialize(Normal(self.config.initializer_range))
-            if cell.bias is not None:
-                cell.bias.initialize('zeros')
-
-        elif isinstance(cell, nn.Embedding):
-            cell.weight.data.initialize(Normal(self.config.initializer_range))
-            if cell.padding_idx is not None:
-                cell.weight.data[cell.padding_idx].initialize('zeros')
-
-        elif isinstance(cell, ImageGPTLayerNorm):
-            cell.weight.data.fill(1.0)
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight[module.padding_idx] = 0
+        elif isinstance(module, ImageGPTLayerNorm):
+            nn.init.ones_(module.weight)
 
         # Reinitialize selected weights subject to the OpenAI GPT-2 Paper Scheme:
         #   > A modified initialization which accounts for the accumulation on the residual path with model depth. Scale
@@ -538,11 +395,10 @@ class ImageGPTPreTrainedModel(PreTrainedModel):
         #   >   -- GPT-2 :: https://openai.com/blog/better-language-models/
         #
         # Reference (Megatron-LM): https://github.com/NVIDIA/Megatron-LM/blob/main/megatron/model/gpt_model.py
-        for name, p in cell.parameters_and_names():
+        for name, p in module.named_parameters():
             if "c_proj" in name and "weight" in name:
                 # Special Scaled Initialization --> There are 2 Layer Norms per Transformer Block
-                p.data.initialize(
-                    Normal((self.config.initializer_range / math.sqrt(2 * self.config.n_layer))))
+                nn.init.normal_(p, mean=0.0, std=(self.config.initializer_range / math.sqrt(2 * self.config.n_layer)))
 
 
 class ImageGPTModel(ImageGPTPreTrainedModel):
@@ -555,12 +411,12 @@ class ImageGPTModel(ImageGPTPreTrainedModel):
         self.wpe = nn.Embedding(config.max_position_embeddings, self.embed_dim)
 
         self.drop = nn.Dropout(config.embd_pdrop)
-        self.h = nn.CellList([ImageGPTBlock(config, layer_idx=i)
-                             for i in range(config.num_hidden_layers)])
-        self.ln_f = ImageGPTLayerNorm(
-            self.embed_dim, eps=config.layer_norm_epsilon)
+        self.h = nn.ModuleList([ImageGPTBlock(config, layer_idx=i) for i in range(config.num_hidden_layers)])
+        self.ln_f = ImageGPTLayerNorm(self.embed_dim, eps=config.layer_norm_epsilon)
 
         # Model parallel
+        self.model_parallel = False
+        self.device_map = None
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
@@ -578,17 +434,17 @@ class ImageGPTModel(ImageGPTPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.h[layer].attn.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        past_key_values: Optional[Tuple[Tuple[ms.Tensor]]] = None,
-        attention_mask: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        head_mask: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        encoder_hidden_states: Optional[ms.Tensor] = None,
-        encoder_attention_mask: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
@@ -596,7 +452,7 @@ class ImageGPTModel(ImageGPTPreTrainedModel):
         **kwargs: Any,
     ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
             `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
             are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
@@ -643,11 +499,9 @@ class ImageGPTModel(ImageGPTPreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError(
-                "You cannot specify both input_ids and inputs_embeds at the same time")
+            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
         elif input_ids is not None:
-            self.warn_if_padding_and_no_attention_mask(
-                input_ids, attention_mask)
+            self.warn_if_padding_and_no_attention_mask(input_ids, attention_mask)
             input_shape = input_ids.shape
             input_ids = input_ids.view(-1, input_shape[-1])
             batch_size = input_ids.shape[0]
@@ -655,8 +509,8 @@ class ImageGPTModel(ImageGPTPreTrainedModel):
             input_shape = inputs_embeds.shape[:-1]
             batch_size = inputs_embeds.shape[0]
         else:
-            raise ValueError(
-                "You have to specify either input_ids or inputs_embeds")
+            raise ValueError("You have to specify either input_ids or inputs_embeds")
+
 
         if token_type_ids is not None:
             token_type_ids = token_type_ids.view(-1, input_shape[-1])
@@ -667,8 +521,7 @@ class ImageGPTModel(ImageGPTPreTrainedModel):
         else:
             past_length = past_key_values[0][0].shape[-2]
         if position_ids is None:
-            position_ids = ops.arange(
-                past_length, input_shape[-1] + past_length, dtype=ms.int64)
+            position_ids = ops.arange(past_length, input_shape[-1] + past_length, dtype=mindspore.int64)
             position_ids = position_ids.unsqueeze(0)
 
         # ImageGPTAttention mask.
@@ -688,19 +541,17 @@ class ImageGPTModel(ImageGPTPreTrainedModel):
             # positions we want to attend and the dtype's smallest value for masked positions.
             # Since we are adding it to the raw scores before the softmax, this is
             # effectively the same as removing these entirely.
-            attention_mask = (1.0 - attention_mask) * \
-                np.finfo(ms.dtype_to_nptype(self.dtype)).min
+            attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
+            attention_mask = (1.0 - attention_mask) * float(ops.finfo(self.dtype).min)
 
         # If a 2D or 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
         if self.config.add_cross_attention and encoder_hidden_states is not None:
             encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.shape
-            encoder_hidden_shape = (
-                encoder_batch_size, encoder_sequence_length)
+            encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
                 encoder_attention_mask = ops.ones(encoder_hidden_shape)
-            encoder_attention_mask = self.invert_attention_mask(
-                encoder_attention_mask)
+            encoder_attention_mask = self.invert_attention_mask(encoder_attention_mask)
         else:
             encoder_attention_mask = None
 
@@ -735,7 +586,6 @@ class ImageGPTModel(ImageGPTPreTrainedModel):
         all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
         all_hidden_states = () if output_hidden_states else None
         for i, (block, layer_past) in enumerate(zip(self.h, past_key_values)):
-            # Model parallel
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
@@ -768,11 +618,9 @@ class ImageGPTModel(ImageGPTPreTrainedModel):
                 presents = presents + (outputs[1],)
 
             if output_attentions:
-                all_self_attentions = all_self_attentions + \
-                    (outputs[2 if use_cache else 1],)
+                all_self_attentions = all_self_attentions + (outputs[2 if use_cache else 1],)
                 if self.config.add_cross_attention:
-                    all_cross_attentions = all_cross_attentions + \
-                        (outputs[3 if use_cache else 2],)
+                    all_cross_attentions = all_cross_attentions + (outputs[3 if use_cache else 2],)
 
         hidden_states = self.ln_f(hidden_states)
 
@@ -803,10 +651,11 @@ class ImageGPTForCausalImageModeling(ImageGPTPreTrainedModel):
     def __init__(self, config: ImageGPTConfig):
         super().__init__(config)
         self.transformer = ImageGPTModel(config)
-        self.lm_head = nn.Dense(
-            config.n_embd, config.vocab_size - 1, has_bias=False)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size - 1, bias=False)
 
         # Model parallel
+        self.model_parallel = False
+        self.device_map = None
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -816,7 +665,7 @@ class ImageGPTForCausalImageModeling(ImageGPTPreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.lm_head = new_embeddings
 
-    def prepare_inputs_for_generation(self, input_ids: ms.Tensor, past_key_values: Optional[bool] = None, **kwargs):
+    def prepare_inputs_for_generation(self, input_ids: mindspore.Tensor, past_key_values: Optional[bool] = None, **kwargs):
         token_type_ids = kwargs.get("token_type_ids", None)
         # Omit tokens covered by past_key_values
         if past_key_values:
@@ -831,17 +680,17 @@ class ImageGPTForCausalImageModeling(ImageGPTPreTrainedModel):
 
             input_ids = input_ids[:, remove_prefix_length:]
             if token_type_ids is not None:
-                token_type_ids = token_type_ids[:, -input_ids.shape[1]:]
+                token_type_ids = token_type_ids[:, -input_ids.shape[1] :]
 
         attention_mask = kwargs.get("attention_mask", None)
         position_ids = kwargs.get("position_ids", None)
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
-                position_ids = position_ids[:, -input_ids.shape[1]:]
+                position_ids = position_ids[:, -input_ids.shape[1] :]
         else:
             position_ids = None
         return {
@@ -853,18 +702,18 @@ class ImageGPTForCausalImageModeling(ImageGPTPreTrainedModel):
             "token_type_ids": token_type_ids,
         }
 
-    def construct(
+    def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        past_key_values: Optional[Tuple[Tuple[ms.Tensor]]] = None,
-        attention_mask: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        head_mask: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        encoder_hidden_states: Optional[ms.Tensor] = None,
-        encoder_attention_mask: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
@@ -872,7 +721,7 @@ class ImageGPTForCausalImageModeling(ImageGPTPreTrainedModel):
         **kwargs: Any,
     ) -> Union[Tuple, CausalLMOutputWithCrossAttentions]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
             `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
             are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
@@ -889,13 +738,10 @@ class ImageGPTForCausalImageModeling(ImageGPTPreTrainedModel):
 
         >>> image_processor = AutoImageProcessor.from_pretrained("openai/imagegpt-small")
         >>> model = ImageGPTForCausalImageModeling.from_pretrained("openai/imagegpt-small")
-        >>> device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        >>> model.to(device)  # doctest: +IGNORE_RESULT
 
         >>> # unconditional generation of 8 images
         >>> batch_size = 4
-        >>> context = torch.full((batch_size, 1), model.config.vocab_size - 1)  # initialize with SOS token
-        >>> context = context.to(device)
+        >>> context = ops.full((batch_size, 1), model.config.vocab_size - 1)  # initialize with SOS token
         >>> output = model.generate(
         ...     input_ids=context, max_length=model.config.n_positions + 1, temperature=1.0, do_sample=True, top_k=40
         ... )
@@ -946,20 +792,18 @@ class ImageGPTForCausalImageModeling(ImageGPTPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        hidden_states = transformer_outputs[0].astype(ms.float32)
+        hidden_states = transformer_outputs[0]
 
         lm_logits = self.lm_head(hidden_states)
 
         loss = None
         if labels is not None:
-            labels = labels.astype(ms.int32)
             # Shift so that tokens < n predict n
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
             loss_fct = CrossEntropyLoss()
-            loss = loss_fct(
-                shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            loss = loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + transformer_outputs[1:]
@@ -976,16 +820,15 @@ class ImageGPTForCausalImageModeling(ImageGPTPreTrainedModel):
 
     @staticmethod
     def _reorder_cache(
-        past_key_values: Tuple[Tuple[ms.Tensor]], beam_idx: ms.Tensor
-    ) -> Tuple[Tuple[ms.Tensor]]:
+        past_key_values: Tuple[Tuple[mindspore.Tensor]], beam_idx: mindspore.Tensor
+    ) -> Tuple[Tuple[mindspore.Tensor]]:
         """
         This function is used to re-order the `past_key_values` cache if [`~PreTrainedModel.beam_search`] or
         [`~PreTrainedModel.beam_sample`] is called. This is required to match `past_key_values` with the correct
         beam_idx at every generation step.
         """
         return tuple(
-            tuple(past_state.index_select(0, beam_idx)
-                  for past_state in layer_past)
+            tuple(past_state.index_select(0, beam_idx) for past_state in layer_past)
             for layer_past in past_key_values
         )
 
@@ -995,21 +838,21 @@ class ImageGPTForImageClassification(ImageGPTPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = ImageGPTModel(config)
-        self.score = nn.Dense(config.n_embd, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.n_embd, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
-        input_ids: Optional[ms.Tensor] = None,
-        past_key_values: Optional[Tuple[Tuple[ms.Tensor]]] = None,
-        attention_mask: Optional[ms.Tensor] = None,
-        token_type_ids: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor] = None,
-        head_mask: Optional[ms.Tensor] = None,
-        inputs_embeds: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
@@ -1017,7 +860,7 @@ class ImageGPTForImageClassification(ImageGPTPreTrainedModel):
         **kwargs: Any,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
@@ -1071,19 +914,18 @@ class ImageGPTForImageClassification(ImageGPTPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        hidden_states = transformer_outputs[0].astype(ms.float32)
+        hidden_states = transformer_outputs[0]
         # average-pool the hidden states along the sequence dimension
-        pooled_hidden_states = hidden_states.mean(axis=1)
+        pooled_hidden_states = ops.mean(hidden_states, dim=1)
         # project from (batch_size, hidden_size) to (batch_size, num_labels)
         logits = self.score(pooled_hidden_states)
 
         loss = None
         if labels is not None:
-            labels = labels.astype(ms.int32)
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype in (ms.int64, ms.int32)):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1096,11 +938,7 @@ class ImageGPTForImageClassification(ImageGPTPreTrainedModel):
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-
-                l_result = logits.view(-1, self.num_labels)
-                lab = labels.view(-1)
-
-                loss = loss_fct(l_result, lab)
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -1115,7 +953,6 @@ class ImageGPTForImageClassification(ImageGPTPreTrainedModel):
             hidden_states=transformer_outputs.hidden_states,
             attentions=transformer_outputs.attentions,
         )
-
 
 __all__ = [
     "ImageGPTModel",

@@ -16,14 +16,10 @@
 
 from typing import Optional, Tuple, Union
 
-# import torch
-# from torch import nn
-# from torch.nn import CrossEntropyLoss
 import mindspore
-from mindspore import ops
-from mindspore import nn
+from mindnlp.core import nn
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-
 from ...configuration_utils import PretrainedConfig
 from ...modeling_outputs import BaseModelOutput, Seq2SeqLMOutput
 from ...modeling_utils import PreTrainedModel
@@ -60,7 +56,7 @@ SPEECH_ENCODER_DECODER_START_DOCSTRING = r"""
     library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
     etc.)
 
-    This model is also a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) subclass.
+    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
     Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
     and behavior.
 
@@ -80,10 +76,10 @@ SPEECH_ENCODER_DECODER_INPUTS_DOCSTRING = r"""
             `mindspore.Tensor`.
         attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
+            
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
-
+            
             [What are attention masks?](../glossary#attention-mask)
         decoder_input_ids (`mindspore.Tensor` of shape `(batch_size, target_sequence_length)`, *optional*):
             Indices of decoder input sequence tokens in the vocabulary.
@@ -106,7 +102,8 @@ SPEECH_ENCODER_DECODER_INPUTS_DOCSTRING = r"""
             `last_hidden_state` (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`) is a tensor
             of hidden-states at the output of the last layer of the encoder. Used in the cross-attention of the
             decoder.
-        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors 
+            of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
             Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
 
             If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
@@ -147,7 +144,6 @@ SPEECH_ENCODER_DECODER_INPUTS_DOCSTRING = r"""
         return_dict (`bool`, *optional*):
             If set to `True`, the model will return a [`~utils.Seq2SeqLMOutput`] instead of a plain tuple.
         kwargs (*optional*): Remaining dictionary of keyword arguments. Keyword arguments come in two flavors:
-
             - Without a prefix which will be input as `**encoder_kwargs` for the encoder forward function.
             - With a *decoder_* prefix which will be input as `**decoder_kwargs` for the decoder forward function.
 """
@@ -246,7 +242,7 @@ class SpeechEncoderDecoderModel(PreTrainedModel):
             and self.decoder.config.cross_attention_hidden_size is None
         ):
             # encoder outputs might need to be projected to different dimension for decoder
-            self.enc_to_dec_proj = nn.Dense(self.encoder.config.hidden_size, self.decoder.config.hidden_size)
+            self.enc_to_dec_proj = nn.Linear(self.encoder.config.hidden_size, self.decoder.config.hidden_size)
 
         if self.encoder.get_output_embeddings() is not None:
             raise ValueError(
@@ -295,7 +291,6 @@ class SpeechEncoderDecoderModel(PreTrainedModel):
         Instantiate an encoder and a decoder from one or two base classes of the library from pretrained model
         checkpoints.
 
-
         The model is set in evaluation mode by default using `model.eval()` (Dropout modules are deactivated). To train
         the model, you need to first set it back in training mode with `model.train()`.
 
@@ -303,24 +298,24 @@ class SpeechEncoderDecoderModel(PreTrainedModel):
             encoder_pretrained_model_name_or_path (`str`, *optional*):
                 Information necessary to initiate the encoder. Can be either:
 
-                    - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
-                    - A path to a *directory* containing model weights saved using
-                      [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
-                    - A path or url to a *tensorflow index checkpoint file* (e.g, `./tf_model/model.ckpt.index`). In
-                      this case, `from_tf` should be set to `True` and a configuration object should be provided as
-                      `config` argument. This loading path is slower than converting the TensorFlow checkpoint in a
-                      PyTorch model using the provided conversion scripts and loading the PyTorch model afterwards.
+                - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
+                - A path to a *directory* containing model weights saved using
+                [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
+                - A path or url to a *tensorflow index checkpoint file* (e.g, `./tf_model/model.ckpt.index`). In
+                this case, `from_tf` should be set to `True` and a configuration object should be provided as
+                `config` argument. This loading path is slower than converting the TensorFlow checkpoint in a
+                PyTorch model using the provided conversion scripts and loading the PyTorch model afterwards.
 
             decoder_pretrained_model_name_or_path (`str`, *optional*, defaults to `None`):
                 Information necessary to initiate the decoder. Can be either:
 
-                    - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
-                    - A path to a *directory* containing model weights saved using
-                      [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
-                    - A path or url to a *tensorflow index checkpoint file* (e.g, `./tf_model/model.ckpt.index`). In
-                      this case, `from_tf` should be set to `True` and a configuration object should be provided as
-                      `config` argument. This loading path is slower than converting the TensorFlow checkpoint in a
-                      PyTorch model using the provided conversion scripts and loading the PyTorch model afterwards.
+                - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
+                - A path to a *directory* containing model weights saved using
+                [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
+                - A path or url to a *tensorflow index checkpoint file* (e.g, `./tf_model/model.ckpt.index`). In
+                this case, `from_tf` should be set to `True` and a configuration object should be provided as
+                `config` argument. This loading path is slower than converting the TensorFlow checkpoint in a
+                PyTorch model using the provided conversion scripts and loading the PyTorch model afterwards.
 
             model_args (remaining positional arguments, *optional*):
                 All remaning positional arguments will be passed to the underlying model's `__init__` method.
@@ -336,19 +331,19 @@ class SpeechEncoderDecoderModel(PreTrainedModel):
                 Behaves differently depending on whether a `config` is provided or automatically loaded.
 
         Example:
-
-        ```python
-        >>> from transformers import SpeechEncoderDecoderModel
-
-        >>> # initialize a wav2vec2bert from a pretrained Wav2Vec2 and a pretrained BERT model. Note that the cross-attention layers will be randomly initialized
-        >>> model = SpeechEncoderDecoderModel.from_encoder_decoder_pretrained(
-        ...     "facebook/wav2vec2-base-960h", "google-bert/bert-base-uncased"
-        ... )
-        >>> # saving model after fine-tuning
-        >>> model.save_pretrained("./wav2vec2bert")
-        >>> # load fine-tuned model
-        >>> model = SpeechEncoderDecoderModel.from_pretrained("./wav2vec2bert")
-        ```"""
+            ```python
+            >>> from transformers import SpeechEncoderDecoderModel
+            ...
+            >>> # initialize a wav2vec2bert from a pretrained Wav2Vec2 and a pretrained BERT model. Note that the cross-attention layers will be randomly initialized
+            >>> model = SpeechEncoderDecoderModel.from_encoder_decoder_pretrained(
+            ...     "facebook/wav2vec2-base-960h", "google-bert/bert-base-uncased"
+            ... )
+            >>> # saving model after fine-tuning
+            >>> model.save_pretrained("./wav2vec2bert")
+            >>> # load fine-tuned model
+            >>> model = SpeechEncoderDecoderModel.from_pretrained("./wav2vec2bert")
+            ```
+        """
 
         kwargs_encoder = {
             argument[len("encoder_") :]: value for argument, value in kwargs.items() if argument.startswith("encoder_")
@@ -436,7 +431,7 @@ class SpeechEncoderDecoderModel(PreTrainedModel):
 
     # @add_start_docstrings_to_model_forward(SPEECH_ENCODER_DECODER_INPUTS_DOCSTRING)
     # @replace_return_docstrings(output_type=Seq2SeqLMOutput, config_class=_CONFIG_FOR_DOC)
-    def construct(
+    def forward(
         self,
         inputs: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -456,32 +451,32 @@ class SpeechEncoderDecoderModel(PreTrainedModel):
     ) -> Union[Tuple[mindspore.Tensor], Seq2SeqLMOutput]:
         r"""
         Returns:
+            `Union[Tuple[mindspore.Tensor], Seq2SeqLMOutput]`
 
-        Examples:
-
-        ```python
-        >>> from transformers import SpeechEncoderDecoderModel, AutoProcessor
-        >>> from datasets import load_dataset
-        >>> import torch
-
-        >>> processor = AutoProcessor.from_pretrained("facebook/wav2vec2-xls-r-300m-en-to-15")
-        >>> model = SpeechEncoderDecoderModel.from_pretrained("facebook/wav2vec2-xls-r-300m-en-to-15")
-
-        >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-
-        >>> input_values = processor(ds[0]["audio"]["array"], return_tensors="pt").input_values
-        >>> # Inference: Translate English speech to German
-        >>> generated = model.generate(input_values)
-        >>> decoded = processor.batch_decode(generated, skip_special_tokens=True)[0]
-        >>> decoded
-        'Mr. Quilter ist der Apostel der Mittelschicht und wir freuen uns, sein Evangelium willkommen heißen zu können.'
-
-        >>> # Training: Train model on English transcription
-        >>> labels = processor(text=ds[0]["text"], return_tensors="pt").input_ids
-
-        >>> loss = model(input_values, labels=labels).loss
-        >>> loss.backward()
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import SpeechEncoderDecoderModel, AutoProcessor
+            >>> from datasets import load_dataset
+            >>> import torch
+            ...
+            >>> processor = AutoProcessor.from_pretrained("facebook/wav2vec2-xls-r-300m-en-to-15")
+            >>> model = SpeechEncoderDecoderModel.from_pretrained("facebook/wav2vec2-xls-r-300m-en-to-15")
+            ...
+            >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+            ...
+            >>> input_values = processor(ds[0]["audio"]["array"], return_tensors="pt").input_values
+            >>> # Inference: Translate English speech to German
+            >>> generated = model.generate(input_values)
+            >>> decoded = processor.batch_decode(generated, skip_special_tokens=True)[0]
+            >>> decoded
+            'Mr. Quilter ist der Apostel der Mittelschicht und wir freuen uns, sein Evangelium willkommen heißen zu können.'
+            >>> # Training: Train model on English transcription
+            >>> labels = processor(text=ds[0]["text"], return_tensors="pt").input_ids
+            ...
+            >>> loss = model(input_values, labels=labels).loss
+            >>> loss.backward()
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         kwargs_encoder = {argument: value for argument, value in kwargs.items() if not argument.startswith("decoder_")}
@@ -553,7 +548,7 @@ class SpeechEncoderDecoderModel(PreTrainedModel):
         loss = None
         if labels is not None:
             logits = decoder_outputs.logits if return_dict else decoder_outputs[0]
-            loss = ops.cross_entropy(logits.reshape(-1, self.decoder.config.vocab_size), labels.reshape(-1))
+            loss = F.cross_entropy(logits.reshape(-1, self.decoder.config.vocab_size), labels.reshape(-1))
 
         if not return_dict:
             if loss is not None:

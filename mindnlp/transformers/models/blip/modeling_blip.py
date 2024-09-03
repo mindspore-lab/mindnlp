@@ -19,9 +19,11 @@ from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, TruncatedNormal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling
 from ...modeling_utils import PreTrainedModel
@@ -37,38 +39,20 @@ logger = logging.get_logger(__name__)
 
 _CHECKPOINT_FOR_DOC = "Salesforce/blip-vqa-base"
 
-def normalize(input, p=2.0, dim=1):
-    """
-    Normalize the input along a specified dimension using the specified p-norm.
-    
-    Args:
-        input (Tensor): The input tensor to be normalized.
-        p (float, optional): The p-norm to be used for normalization. Default is 2.0.
-        dim (int, optional): The dimension along which the input tensor will be normalized. Default is 1.
-    
-    Returns:
-        None
-    
-    Raises:
-        TypeError: If input is not a tensor.
-        ValueError: If p is not a positive float.
-        ValueError: If dim is not a valid dimension for the input tensor.
-    """
-    return input / ops.norm(input, ord=p, dim=dim, keepdim=True)
-
-
 # Copied from transformers.models.clip.modeling_clip.contrastive_loss
 def contrastive_loss(logits: mindspore.Tensor) -> mindspore.Tensor:
     """
     Args:
         logits (mindspore.Tensor): The input logits for the contrastive loss function.
             It is a tensor containing the predicted values from the model.
+
     Returns:
         mindspore.Tensor: A tensor representing the contrastive loss value calculated based on the input logits.
+
     Raises:
         This function does not raise any exceptions.
     """
-    return ops.cross_entropy(logits, ops.arange(len(logits)))
+    return F.cross_entropy(logits, ops.arange(len(logits)))
 
 
 # Copied from transformers.models.clip.modeling_clip.clip_loss with clip->blip
@@ -134,17 +118,19 @@ class BlipForConditionalGenerationModelOutput(ModelOutput):
             self: An instance of the 'BlipForConditionalGenerationModelOutput' class.
         
         Returns:
-            None. The method does not return any value.
+            None.
         
         Raises:
-            FutureWarning: This method raises a 'FutureWarning' if the 'decoder_logits' attribute is used. This attribute is deprecated and will be removed in version 5 of Transformers. The 'logits' attribute
-should be used instead to retrieve the final output.
-        
+            FutureWarning: This method raises a 'FutureWarning' if the 'decoder_logits' attribute is used.
+                This attribute is deprecated. The 'logits' attribute
+                should be used instead to retrieve the final output.
+
         Note:
-            The 'decoder_logits' attribute is deprecated and will be removed in version 5 of Transformers. Please use the 'logits' attribute to retrieve the final output instead.
+            The 'decoder_logits' attribute is deprecated.
+            Please use the 'logits' attribute to retrieve the final output instead.
         """
         warnings.warn(
-            "`decoder_logits` attribute is deprecated and will be removed in version 5 of Transformers."
+            "`decoder_logits` attribute is deprecated."
             " Please use the `logits` attribute to retrieve the final output instead.",
             FutureWarning,
         )
@@ -165,6 +151,7 @@ class BlipTextVisionModelOutput(ModelOutput):
         last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the model.
         hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+
             Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
             one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
 
@@ -200,6 +187,7 @@ class BlipImageTextMatchingModelOutput(ModelOutput):
         last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the model.
         hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+
             Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
             one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
 
@@ -207,6 +195,7 @@ class BlipImageTextMatchingModelOutput(ModelOutput):
         vision_pooler_output (`mindspore.Tensor` of shape `(batch_size, hidden_size)`, *optional*):
             Last layer hidden-state of the vision of the vision-only branch of the model.
         attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -257,15 +246,18 @@ class BlipOutput(ModelOutput):
     def to_tuple(self) -> Tuple[Any]:
         """
         Converts the BlipOutput object to a tuple representation.
-        
+
         Args:
-            self (BlipOutput): The BlipOutput object to be converted to a tuple. 
-        
+            self (BlipOutput): The BlipOutput object to be converted to a tuple.
+
         Returns:
-            Tuple[Any]: A tuple containing the values of the BlipOutput object. The 'text_model_output' and 'vision_model_output' keys are replaced with their respective tuple representations.
-        
+            Tuple[Any]: A tuple containing the values of the BlipOutput object.
+            The 'text_model_output' and 'vision_model_output' keys are replaced with their respective tuple representations.
+
         Raises:
-            AttributeError: If the 'text_model_output' or 'vision_model_output' attributes are not present or do not have a 'to_tuple' method.
+            AttributeError:
+                If the 'text_model_output' or 'vision_model_output' attributes are not present
+                or do not have a 'to_tuple' method.
         """
         return tuple(
             self[k] if k not in ["text_model_output", "vision_model_output"] else getattr(self, k).to_tuple()
@@ -273,11 +265,12 @@ class BlipOutput(ModelOutput):
         )
 
 
-class BlipVisionEmbeddings(nn.Cell):
+class BlipVisionEmbeddings(nn.Module):
 
     """
-    The BlipVisionEmbeddings class represents the embeddings for vision data in the Blip framework. This class inherits from nn.Cell and provides methods for initializing and constructing vision embeddings.
-    
+    The BlipVisionEmbeddings class represents the embeddings for vision data in the Blip framework.
+    This class inherits from nn.Module and provides methods for initializing and forwarding vision embeddings.
+
     Attributes:
         config (BlipVisionConfig): The configuration object for the BlipVisionEmbeddings.
         embed_dim (int): The dimension of the embeddings.
@@ -288,28 +281,31 @@ class BlipVisionEmbeddings(nn.Cell):
         num_patches (int): The number of patches in the image.
         num_positions (int): The total number of positions, including patches and class embedding.
         position_embedding (Parameter): Embedding for positional encoding.
-    
+
     Methods:
-        __init__(self, config: BlipVisionConfig): Initializes the BlipVisionEmbeddings with the given configuration.
-        construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor: Constructs the embeddings for the input pixel values.
-    
+        __init__: Initializes the BlipVisionEmbeddings with the given configuration.
+        forward: Constructs the embeddings for the input pixel values.
+
     """
     def __init__(self, config: BlipVisionConfig):
         """
         Initializes an instance of the BlipVisionEmbeddings class.
-        
+
         Args:
             self: The instance of the BlipVisionEmbeddings class.
-            config (BlipVisionConfig): An object of type BlipVisionConfig containing configuration parameters.
+            config (BlipVisionConfig):
+                An object of type BlipVisionConfig containing configuration parameters.
                 This object specifies the hidden size, image size, and patch size for the embeddings.
+
                 Parameters:
-                    - hidden_size (int): The dimension of the embedding space.
-                    - image_size (int): The size of the input image.
-                    - patch_size (int): The size of each patch in the image.
-                    
+
+                - hidden_size (int): The dimension of the embedding space.
+                - image_size (int): The size of the input image.
+                - patch_size (int): The size of each patch in the image.
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -322,7 +318,7 @@ class BlipVisionEmbeddings(nn.Cell):
         self.class_embedding = Parameter(ops.randn(1, 1, self.embed_dim))
 
         self.patch_embedding = nn.Conv2d(
-            in_channels=3, out_channels=self.embed_dim, kernel_size=self.patch_size, stride=self.patch_size, has_bias=True
+            in_channels=3, out_channels=self.embed_dim, kernel_size=self.patch_size, stride=self.patch_size, bias=True
         )
 
         self.num_patches = (self.image_size // self.patch_size) ** 2
@@ -330,18 +326,20 @@ class BlipVisionEmbeddings(nn.Cell):
 
         self.position_embedding = Parameter(ops.randn(1, self.num_positions, self.embed_dim))
 
-    def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         '''
         Constructs the embeddings for the BlipVisionEmbeddings class.
-        
+
         Args:
             self (BlipVisionEmbeddings): The instance of the BlipVisionEmbeddings class.
             pixel_values (mindspore.Tensor): The input tensor containing pixel values. It should have a shape of (batch_size, channels, height, width).
-        
+
         Returns:
-            mindspore.Tensor: The constructed embeddings tensor. It has a shape of (batch_size, num_patches + 1, embedding_dim), where num_patches is the number of patches obtained from the input tensor and
-embedding_dim is the dimension of the embeddings.
-        
+            mindspore.Tensor: The forwarded embeddings tensor.
+                It has a shape of (batch_size, num_patches + 1, embedding_dim), where num_patches is the number of
+                patches obtained from the input tensor and
+                embedding_dim is the dimension of the embeddings.
+
         Raises:
             TypeError: If the pixel_values parameter is not of type mindspore.Tensor.
             ValueError: If the pixel_values tensor does not have the correct shape.
@@ -358,34 +356,36 @@ embedding_dim is the dimension of the embeddings.
         patch_embeds = self.patch_embedding(pixel_values.to(dtype=target_dtype))  # shape = [*, width, grid, grid]
         patch_embeds = patch_embeds.flatten(start_dim=2).swapaxes(1, 2)
 
-        class_embeds = self.class_embedding.expand(batch_size, 1, -1).to(target_dtype)
-        embeddings = ops.cat([class_embeds, patch_embeds], axis=1)
+        class_embeds = ops.broadcast_to(self.class_embedding, (batch_size, 1, -1)).to(target_dtype)
+        embeddings = ops.cat([class_embeds, patch_embeds], dim=1)
         embeddings = embeddings + self.position_embedding[:, : embeddings.shape[1], :].to(target_dtype)
         return embeddings
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPTextEmbeddings with CLIP->Blip
-class BlipTextEmbeddings(nn.Cell):
+class BlipTextEmbeddings(nn.Module):
 
     """
-    This class represents a text embeddings module for BlipText, providing functionality to construct embeddings for input tokens with position information.
-    The BlipTextEmbeddings class inherits from nn.Cell and implements methods to initialize embeddings based on configuration settings and construct embeddings for input tokens with optional position
-information.
+    This class represents a text embeddings module for BlipText, providing functionality to forward embeddings for input tokens with position information.
+    The BlipTextEmbeddings class inherits from nn.Module and implements methods to initialize embeddings based on configuration settings and forward embeddings for input tokens with optional position
+    information.
     """
     def __init__(self, config: BlipTextConfig):
         """
         Initializes an instance of the BlipTextEmbeddings class.
-        
+
         Args:
             self: The current instance of the class.
-            config (BlipTextConfig): An object of the BlipTextConfig class containing configuration parameters.
+            config (BlipTextConfig):
+                An object of the BlipTextConfig class containing configuration parameters.
+
                 - The 'config' object should have a 'hidden_size' attribute specifying the size of the embedding dimension.
                 - The 'config' object should have a 'vocab_size' attribute specifying the size of the vocabulary.
                 - The 'config' object should have a 'max_position_embeddings' attribute specifying the maximum number of position embeddings.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -396,26 +396,26 @@ information.
         self.position_embedding = nn.Embedding(config.max_position_embeddings, embed_dim)
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
+        self.position_ids = ops.broadcast_to(ops.arange(config.max_position_embeddings), (1, -1))
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
         inputs_embeds: Optional[mindspore.Tensor] = None,
     ) -> mindspore.Tensor:
-        ''' 
+        '''
         Constructs BlipTextEmbeddings with given input_ids, position_ids, and inputs_embeds.
-        
+
         Args:
             self (BlipTextEmbeddings): The object instance itself.
             input_ids (Optional[mindspore.Tensor]): The input tensor containing token indices. Default is None.
             position_ids (Optional[mindspore.Tensor]): The input tensor containing position indices. Default is None.
             inputs_embeds (Optional[mindspore.Tensor]): The input tensor containing pre-computed token embeddings. Default is None.
-            
+
         Returns:
-            mindspore.Tensor: The constructed embeddings tensor.
-        
+            mindspore.Tensor: The forwarded embeddings tensor.
+
         Raises:
             ValueError: If input_ids and inputs_embeds are both None.
             ValueError: If input_ids and inputs_embeds have different sequence lengths.
@@ -434,22 +434,24 @@ information.
         return embeddings
 
 
-class BlipAttention(nn.Cell):
+class BlipAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
     def __init__(self, config):
         """
         Initializes the BlipAttention class with the provided configuration.
-        
+
         Args:
             self (BlipAttention): The instance of the BlipAttention class.
-            config (object): The configuration object containing the parameters for the BlipAttention module.
+            config (object):
+                The configuration object containing the parameters for the BlipAttention module.
+
                 - config.hidden_size (int): The size of the hidden layers.
                 - config.num_attention_heads (int): The number of attention heads.
                 - config.attention_dropout (float): The dropout rate for attention weights.
-        
+
         Returns:
-            None. This method initializes the BlipAttention instance with the provided configuration parameters.
-        
+            None.
+
         Raises:
             ValueError: If embed_dim is not divisible by num_heads.
         """
@@ -466,29 +468,29 @@ class BlipAttention(nn.Cell):
         self.scale = self.head_dim**-0.5
         self.dropout = nn.Dropout(p=config.attention_dropout)
 
-        self.qkv = nn.Dense(self.embed_dim, 3 * self.embed_dim)
+        self.qkv = nn.Linear(self.embed_dim, 3 * self.embed_dim)
 
-        self.projection = nn.Dense(self.embed_dim, self.embed_dim)
+        self.projection = nn.Linear(self.embed_dim, self.embed_dim)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         """
         This method '_shape' is a part of the 'BlipAttention' class and is used to reshape the input tensor for attention calculation.
-        
+
         Args:
             self (BlipAttention): The instance of the BlipAttention class.
             tensor (mindspore.Tensor): The input tensor to be reshaped.
             seq_len (int): The length of the input sequence.
             bsz (int): The batch size of the input data.
-        
+
         Returns:
             None: This method returns None as the reshaped tensor is returned directly without assignment.
-        
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -510,7 +512,7 @@ class BlipAttention(nn.Cell):
         attention_scores = attention_scores * self.scale
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -533,67 +535,74 @@ class BlipAttention(nn.Cell):
 
 
 # Copied from transformers.models.clip.modeling_clip.CLIPMLP with CLIP->Blip
-class BlipMLP(nn.Cell):
+class BlipMLP(nn.Module):
 
     """
-    The BlipMLP class represents a multi-layer perceptron (MLP) model for neural network computations. 
-    This class inherits from the nn.Cell module and provides functionality for constructing and applying a multi-layer perceptron with configurable activation functions and layer sizes. 
-    
+    The BlipMLP class represents a multi-layer perceptron (MLP) model for neural network computations.
+    This class inherits from the nn.Module module and provides functionality for forwarding and applying a
+    multi-layer perceptron with configurable activation functions and layer sizes.
+
     Attributes:
         config (object): The configuration object containing parameters for the MLP model.
         activation_fn (function): The activation function for hidden layers, derived from the ACT2FN dictionary in the configuration.
-        fc1 (nn.Dense): The first fully connected layer with a size defined by the configuration.
-        fc2 (nn.Dense): The second fully connected layer with a size defined by the configuration.
-    
+        fc1 (nn.Linear): The first fully connected layer with a size defined by the configuration.
+        fc2 (nn.Linear): The second fully connected layer with a size defined by the configuration.
+
     Methods:
-        construct(hidden_states: mindspore.Tensor) -> mindspore.Tensor: 
+        forward:
             Constructs the multi-layer perceptron by applying the fully connected layers and activation functions to the input tensor.
-    
+
     """
     def __init__(self, config):
         """
         Initializes an instance of the BlipMLP class.
-        
+
         Args:
             self: The instance of the BlipMLP class.
-            config: An object containing configuration parameters for the BlipMLP model. It should have the following attributes:
+            config: An object containing configuration parameters for the BlipMLP model.
+                It should have the following attributes:
+
                 - hidden_act (str): The activation function to be used in the hidden layers.
                 - hidden_size (int): The size of the hidden layer.
                 - intermediate_size (int): The size of the intermediate layer.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
         super().__init__()
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
-        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size)
-        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.fc1 = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.fc2 = nn.Linear(config.intermediate_size, config.hidden_size)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs a multi-layer perceptron (MLP) using the given hidden states.
-        
+
         Args:
             self (BlipMLP): An instance of the BlipMLP class.
             hidden_states (mindspore.Tensor): The input hidden states to the MLP.
-        
+
         Returns:
             mindspore.Tensor: The output tensor after passing through the MLP.
-        
+
         Raises:
             None.
-        
-        This method takes in the hidden states and applies a series of linear transformations and non-linear activations to them. It first passes the hidden states through a fully connected layer (self.fc1),
-then applies an activation function (self.activation_fn) to the resulting tensor. It then passes the tensor through another fully connected layer (self.fc2) before returning the final output tensor.
-        
-        The purpose of this method is to construct the MLP and process the given hidden states to obtain a transformed tensor. The returned tensor can be used for further computations or as an output of the
-MLP.
-        
-        Note: The dimensions of the hidden_states tensor should be compatible with the dimensions of the MLP's layers in order for the method to execute successfully.
+
+        This method takes in the hidden states and applies a series of linear transformations and non-linear
+        activations to them. It first passes the hidden states through a fully connected layer (self.fc1),
+        then applies an activation function (self.activation_fn) to the resulting tensor. It then passes the tensor
+        through another fully connected layer (self.fc2) before returning the final output tensor.
+
+        The purpose of this method is to forward the MLP and process the given hidden states to obtain a transformed
+        tensor. The returned tensor can be used for further computations or as an output of the MLP.
+
+        Note:
+            The dimensions of the hidden_states tensor should be compatible with the dimensions of the MLP's layers
+            in order for the method to execute successfully.
         """
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
@@ -601,58 +610,65 @@ MLP.
         return hidden_states
 
 
-class BlipEncoderLayer(nn.Cell):
+class BlipEncoderLayer(nn.Module):
 
     """
-    This class represents a single layer of the Blip encoder. It consists of self-attention mechanism followed by a feedforward neural network layer with layer normalization and residual connections.
-    
+    This class represents a single layer of the Blip encoder. It consists of self-attention mechanism followed by
+    a feedforward neural network layer with layer normalization and residual connections.
+
     This class initializes with a BlipConfig object to set up the layer configuration parameters.
-    The `construct` method processes the input hidden_states through self-attention, layer normalization, and a feedforward neural network in sequence, with the option to return attention weights if specified.
-    
+    The `forward` method processes the input hidden_states through self-attention, layer normalization, and
+    a feedforward neural network in sequence, with the option to return attention weights if specified.
+
     Args:
         config (BlipConfig): Configuration object containing parameters for the layer.
-        
+
     Methods:
-        - __init__(self, config: BlipConfig): Constructor method to initialize the encoder layer with the given configuration.
-        - construct(self, hidden_states: mindspore.Tensor, attention_mask: mindspore.Tensor, output_attentions: Optional[bool] = False) -> Tuple[mindspore.Tensor]: 
-            Process the input hidden_states through self-attention, layer normalization, and feedforward neural network, and return the output tensor(s).
-    
+        __init__: Constructor method to initialize the encoder layer with the given configuration.
+        forward:
+            Process the input hidden_states through self-attention, layer normalization, and feedforward neural network,
+            and return the output tensor(s).
+
     Attributes:
-        - embed_dim (int): Dimension of the hidden states in the layer.
-        - self_attn (BlipAttention): Self-attention mechanism.
-        - layer_norm1 (nn.LayerNorm): Layer normalization module for the first layer normalization.
-        - mlp (BlipMLP): Feedforward neural network module.
-        - layer_norm2 (nn.LayerNorm): Layer normalization module for the second layer normalization.
-    
+        embed_dim (int): Dimension of the hidden states in the layer.
+        self_attn (BlipAttention): Self-attention mechanism.
+        layer_norm1 (nn.LayerNorm): Layer normalization module for the first layer normalization.
+        mlp (BlipMLP): Feedforward neural network module.
+        layer_norm2 (nn.LayerNorm): Layer normalization module for the second layer normalization.
+
     Returns:
-        Tuple[mindspore.Tensor]: Tuple containing the final hidden states of the layer. If output_attentions is True, the tuple also includes the attention weights.
-    
+        Tuple[mindspore.Tensor]: Tuple containing the final hidden states of the layer.
+            If output_attentions is True, the tuple also includes the attention weights.
+
     Note:
-        - The attention_mask should have the shape `(batch, 1, tgt_len, src_len)` with padding elements indicated by very large negative values.
+        - The attention_mask should have the shape `(batch, 1, tgt_len, src_len)` with padding elements indicated
+        by very large negative values.
         - When output_attentions is True, the method returns the attention weights along with the hidden states.
     """
     def __init__(self, config: BlipConfig):
         """
         Args:
             self (BlipEncoderLayer): The instance of the BlipEncoderLayer class.
-            config (BlipConfig): An instance of BlipConfig class containing configuration parameters for the BlipEncoderLayer.
+            config (BlipConfig):
+                An instance of BlipConfig class containing configuration parameters for the BlipEncoderLayer.
+
                 - hidden_size (int): The dimensionality of the input and output features.
                 - layer_norm_eps (float): The epsilon value for layer normalization.
-        
+
         Returns:
-            None. This method initializes the BlipEncoderLayer instance with the provided configuration.
-        
+            None.
+
         Raises:
             TypeError: If the config parameter is not of type BlipConfig.
         """
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = BlipAttention(config)
-        self.layer_norm1 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
         self.mlp = BlipMLP(config)
-        self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -703,7 +719,7 @@ class BlipPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """Initialize the weights"""
         factor = self.config.initializer_range
-        if isinstance(cell, (nn.Conv2d, nn.Dense, nn.Embedding)):
+        if isinstance(cell, (nn.Conv2d, nn.Linear, nn.Embedding)):
             cell.weight.set_data(initializer(Normal(factor), cell.weight.shape, cell.weight.dtype))
             if hasattr(cell, "bias") and cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
@@ -719,11 +735,11 @@ class BlipPreTrainedModel(PreTrainedModel):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
-        elif isinstance(cell, nn.Dense) and cell.bias is not None:
+        elif isinstance(cell, nn.Linear) and cell.bias is not None:
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
-class BlipEncoder(nn.Cell):
+class BlipEncoder(nn.Module):
     """
     Transformer encoder consisting of `config.num_hidden_layers` self attention layers. Each layer is a
     [`BlipEncoderLayer`].
@@ -735,24 +751,24 @@ class BlipEncoder(nn.Cell):
     def __init__(self, config: BlipConfig):
         """
         Initializes a BlipEncoder object with the provided configuration.
-        
+
         Args:
             self (BlipEncoder): The instance of the BlipEncoder class.
             config (BlipConfig): An object containing configuration settings for the BlipEncoder.
                 The config parameter must be an instance of the BlipConfig class.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__()
         self.config = config
-        self.layers = nn.CellList([BlipEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([BlipEncoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         inputs_embeds,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -826,20 +842,19 @@ class BlipVisionModel(BlipPreTrainedModel):
 
     """
     A class representing the BlipVisionModel for vision tasks.
-    
-    This class inherits from the BlipPreTrainedModel and provides methods to construct the model, get input embeddings, and return the outputs.
-    
+
+    This class inherits from the BlipPreTrainedModel and provides methods to forward the model, get input embeddings, and return the outputs.
+
     Attributes:
         config (BlipVisionConfig): The configuration for the BlipVisionModel.
         embeddings (BlipVisionEmbeddings): The embeddings layer for the BlipVisionModel.
         encoder (BlipEncoder): The encoder layer for the BlipVisionModel.
         post_layernorm (nn.LayerNorm): The post layer normalization layer for the BlipVisionModel.
-    
+
     Methods:
-        __init__(self, config: BlipVisionConfig): Initializes the BlipVisionModel with the given configuration.
-        construct(self, pixel_values: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) ->
-Union[Tuple, BaseModelOutputWithPooling]: Constructs the BlipVisionModel and returns the model outputs.
-        get_input_embeddings(self): Returns the input embeddings for the BlipVisionModel.
+        __init__: Initializes the BlipVisionModel with the given configuration.
+        forward: Constructs the BlipVisionModel and returns the model outputs.
+        get_input_embeddings: Returns the input embeddings for the BlipVisionModel.
     """
     main_input_name = "pixel_values"
     config_class = BlipVisionConfig
@@ -847,14 +862,14 @@ Union[Tuple, BaseModelOutputWithPooling]: Constructs the BlipVisionModel and ret
     def __init__(self, config: BlipVisionConfig):
         """
         Initializes a new instance of the BlipVisionModel class.
-        
+
         Args:
             self: The object itself.
             config (BlipVisionConfig): The configuration object that holds all the necessary parameters for the model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -864,11 +879,11 @@ Union[Tuple, BaseModelOutputWithPooling]: Constructs the BlipVisionModel and ret
 
         self.embeddings = BlipVisionEmbeddings(config)
         self.encoder = BlipEncoder(config)
-        self.post_layernorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
+        self.post_layernorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
 
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
@@ -877,7 +892,7 @@ Union[Tuple, BaseModelOutputWithPooling]: Constructs the BlipVisionModel and ret
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
-
+            Union[Tuple, BaseModelOutputWithPooling]
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -916,15 +931,15 @@ Union[Tuple, BaseModelOutputWithPooling]: Constructs the BlipVisionModel and ret
     def get_input_embeddings(self):
         """
         Returns the input embeddings from the BlipVisionModel.
-        
+
         Args:
             self (BlipVisionModel): An instance of the BlipVisionModel class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.embeddings
 
@@ -933,64 +948,60 @@ class BlipModel(BlipPreTrainedModel):
 
     """
     BlipModel
-    
-    BlipModel is a class that represents a multimodal model for processing both text and images. It inherits from BlipPreTrainedModel and includes methods for obtaining text and image features, as well as for
-constructing the model output.
-    
-    Examples:
+
+    BlipModel is a class that represents a multimodal model for processing both text and images.
+    It inherits from BlipPreTrainedModel and includes methods for obtaining text and image features, as well as for
+    forwarding the model output.
+
+    Example:
+        ```python
         >>> from transformers import AutoProcessor, BlipModel
         >>> model = BlipModel.from_pretrained("Salesforce/blip-image-captioning-base")
         >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
         >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
         >>> text_features = model.get_text_features(**inputs)
-    
+        ...
         >>> from PIL import Image
         >>> import requests
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
         >>> inputs = processor(images=image, return_tensors="pt")
         >>> image_features = model.get_image_features(**inputs)
-    
+        ...
         >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True)
         >>> outputs = model(**inputs)
         >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
         >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
-    
-    Methods:
-        - __init__(self, config: BlipConfig)
-        - get_text_features(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, position_ids: Optional[mindspore.Tensor] = None, return_dict: Optional[bool] =
-None) -> mindspore.Tensor
-        - get_image_features(self, pixel_values: Optional[mindspore.Tensor] = None, return_dict: Optional[bool] = None) -> mindspore.Tensor
-        - construct(self, input_ids: Optional[mindspore.Tensor] = None, pixel_values: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, position_ids:
-Optional[mindspore.Tensor] = None, return_loss: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple,
-BlipOutput]
+        ```
     """
     config_class = BlipConfig
 
     def __init__(self, config: BlipConfig):
         """
         Initializes an instance of the BlipModel class.
-        
+
         Args:
             self: The current instance of the BlipModel class.
-            config (BlipConfig): The configuration object for the BlipModel. It should contain the following attributes:
-                - text_config (BlipTextConfig): The configuration object for the text model component of BlipModel. 
-                    It should be of type BlipTextConfig and contain the necessary parameters for the text model.
-                - vision_config (BlipVisionConfig): The configuration object for the vision model component of BlipModel. 
-                    It should be of type BlipVisionConfig and contain the necessary parameters for the vision model.
+            config (BlipConfig): The configuration object for the BlipModel.
+                It should contain the following attributes:
+
+                - text_config (BlipTextConfig): The configuration object for the text model component of BlipModel.
+                It should be of type BlipTextConfig and contain the necessary parameters for the text model.
+                - vision_config (BlipVisionConfig): The configuration object for the vision model component of BlipModel.
+                It should be of type BlipVisionConfig and contain the necessary parameters for the vision model.
                 - projection_dim (int): The dimension of the projection space.
                 - logit_scale_init_value (float): The initial value for the logit scale parameter.
-        
+
         Returns:
             None
-        
+
         Raises:
             ValueError: If config.text_config is not of type BlipTextConfig.
             ValueError: If config.vision_config is not of type BlipVisionConfig.
-        
+
         Note:
             This method initializes the BlipModel instance by setting the projection dimension, text embedding dimension,
-            vision embedding dimension, text model, vision model, visual projection, text projection, and logit scale 
+            vision embedding dimension, text model, vision model, visual projection, text projection, and logit scale
             attributes based on the provided configuration. It also calls the post_init method.
         """
         super().__init__(config)
@@ -1017,8 +1028,8 @@ BlipOutput]
         self.text_model = BlipTextModel(text_config)
         self.vision_model = BlipVisionModel(vision_config)
 
-        self.visual_projection = nn.Dense(self.vision_embed_dim, self.projection_dim, has_bias=False)
-        self.text_projection = nn.Dense(self.text_embed_dim, self.projection_dim, has_bias=False)
+        self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, bias=False)
+        self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, bias=False)
         self.logit_scale = Parameter(mindspore.tensor(self.config.logit_scale_init_value))
 
         # Initialize weights and apply final processing
@@ -1036,17 +1047,17 @@ BlipOutput]
             text_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The text embeddings obtained by
             applying the projection layer to the pooled output of [`BlipTextModel`].
 
-        Examples:
-
-        ```python
-        >>> from transformers import AutoProcessor, BlipModel
-
-        >>> model = BlipModel.from_pretrained("Salesforce/blip-image-captioning-base")
-        >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-
-        >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
-        >>> text_features = model.get_text_features(**inputs)
-        ```"""
+        Example:
+            ```python
+            >>> from transformers import AutoProcessor, BlipModel
+            ...
+            >>> model = BlipModel.from_pretrained("Salesforce/blip-image-captioning-base")
+            >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+            ...
+            >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+            >>> text_features = model.get_text_features(**inputs)
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         text_outputs = self.text_model(
@@ -1069,25 +1080,25 @@ BlipOutput]
         r"""
         Returns:
             image_features (`mindspore.Tensor` of shape `(batch_size, output_dim`): The image embeddings obtained by
-            applying the projection layer to the pooled output of [`BlipVisionModel`].
+                applying the projection layer to the pooled output of [`BlipVisionModel`].
 
-        Examples:
-
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, BlipModel
-
-        >>> model = BlipModel.from_pretrained("Salesforce/blip-image-captioning-base")
-        >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = processor(images=image, return_tensors="pt")
-
-        >>> image_features = model.get_image_features(**inputs)
-        ```"""
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, BlipModel
+            ...
+            >>> model = BlipModel.from_pretrained("Salesforce/blip-image-captioning-base")
+            >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> inputs = processor(images=image, return_tensors="pt")
+            ...
+            >>> image_features = model.get_image_features(**inputs)
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         vision_outputs = self.vision_model(pixel_values=pixel_values, return_dict=return_dict)
@@ -1097,7 +1108,7 @@ BlipOutput]
 
         return image_features
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         pixel_values: Optional[mindspore.Tensor] = None,
@@ -1110,28 +1121,29 @@ BlipOutput]
     ) -> Union[Tuple, BlipOutput]:
         r"""
         Returns:
+            `Union[Tuple, BlipOutput]`
 
-        Examples:
-
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, BlipModel
-
-        >>> model = BlipModel.from_pretrained("Salesforce/blip-image-captioning-base")
-        >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = processor(
-        ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
-        ... )
-
-        >>> outputs = model(**inputs)
-        >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
-        >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
-        ```"""
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, BlipModel
+            ...
+            >>> model = BlipModel.from_pretrained("Salesforce/blip-image-captioning-base")
+            >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> inputs = processor(
+            ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
+            ... )
+            ...
+            >>> outputs = model(**inputs)
+            >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
+            >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
+            ```
+        """
         # Use BLIP model's config for some fields (if specified) instead of those of vision & text components.
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1193,46 +1205,43 @@ class BlipForConditionalGeneration(BlipPreTrainedModel):
 
     """
     A class representing the BlipForConditionalGeneration model for image captioning.
-    
-    This class extends the BlipPreTrainedModel class and provides methods for initializing the model, generating image captions, and constructing the model's architecture.
-    
+
+    This class extends the BlipPreTrainedModel class and provides methods for initializing the model,
+    generating image captions, and forwarding the model's architecture.
+
     Attributes:
         vision_model (BlipVisionModel): The vision model used for extracting image features.
         text_decoder (BlipTextLMHeadModel): The text decoder model used for generating captions.
         decoder_input_ids (int): The token ID to start the decoder input sequence.
         decoder_pad_token_id (int): The token ID used for padding the decoder input sequence.
-    
+
     Methods:
-        __init__(self, config: BlipConfig): Initializes the BlipForConditionalGeneration model.
-        get_input_embeddings(self) -> nn.Cell: Returns the input embeddings of the vision model.
-        construct(self, pixel_values: mindspore.Tensor, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None,
-output_hidden_states: Optional[bool] = None, labels: Optional[mindspore.Tensor] = None, return_dict: Optional[bool] = None) -> Union[Tuple, BlipForConditionalGenerationModelOutput]: Constructs the model
-architecture and generates image captions.
-        generate(self, pixel_values: mindspore.Tensor, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, **generate_kwargs) -> mindspore.Tensor: Generates image
-captions based on the input image.
-    
-    Examples:
-        
+        __init__: Initializes the BlipForConditionalGeneration model.
+        get_input_embeddings: Returns the input embeddings of the vision model.
+        forward: Constructs the model architecture and generates image captions.
+        generate: Generates image captions based on the input image.
+
+    Example:
+        ```python
         >>> from PIL import Image
         >>> import requests
         >>> from transformers import AutoProcessor, BlipForConditionalGeneration
-    
+        ...
         >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
         >>> model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
-    
+        ...
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
         >>> text = "A picture of"
-    
+        ...
         >>> inputs = processor(images=image, text=text, return_tensors="pt")
-    
+        ...
         >>> outputs = model(**inputs)
-        
-    
+        ```
+
     Overrides:
-        generate(self, pixel_values: mindspore.Tensor, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, **generate_kwargs) -> mindspore.Tensor: Overrides the
-generate function to enable the model to be used as a conditional generator.
-    
+        generate: Overrides the generate function to enable the model to be used as a conditional generator.
+
     """
     config_class = BlipConfig
     _tied_weights_keys = ["text_decoder.cls.predictions.decoder.bias"]
@@ -1241,19 +1250,19 @@ generate function to enable the model to be used as a conditional generator.
     def __init__(self, config: BlipConfig):
         """
         Initializes an instance of the BlipForConditionalGeneration class.
-        
+
         Args:
             self (BlipForConditionalGeneration): The instance of the BlipForConditionalGeneration class.
             config (BlipConfig): An object representing the configuration settings for the Blip model.
                 It contains the necessary configurations for the vision model and text decoder.
                 It is expected that the config parameter is of type BlipConfig.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the config parameter is not of type BlipConfig.
-            - ValueError: If the config parameter is missing required configuration settings.
+            TypeError: If the config parameter is not of type BlipConfig.
+            ValueError: If the config parameter is missing required configuration settings.
         """
         super().__init__(config)
 
@@ -1267,23 +1276,23 @@ generate function to enable the model to be used as a conditional generator.
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         """
         This method returns the input embeddings for the BlipForConditionalGeneration class.
-        
+
         Args:
             self (BlipForConditionalGeneration): The instance of the BlipForConditionalGeneration class.
-        
+
         Returns:
-            nn.Cell: The input embeddings for the BlipForConditionalGeneration class. This is an instance of the nn.Cell class.
-        
+            nn.Module: The input embeddings for the BlipForConditionalGeneration class. This is an instance of the nn.Module class.
+
         Raises:
             None.
-        
+
         """
         return self.vision_model.embeddings.patch_embedding
 
-    def construct(
+    def forward(
         self,
         pixel_values: mindspore.Tensor,
         input_ids: Optional[mindspore.Tensor] = None,
@@ -1295,25 +1304,26 @@ generate function to enable the model to be used as a conditional generator.
     ) -> Union[Tuple, BlipForConditionalGenerationModelOutput]:
         r"""
         Returns:
+            Union[Tuple, BlipForConditionalGenerationModelOutput]
 
-        Examples:
-
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, BlipForConditionalGeneration
-
-        >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-        >>> model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> text = "A picture of"
-
-        >>> inputs = processor(images=image, text=text, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        ```"""
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, BlipForConditionalGeneration
+            ...
+            >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+            >>> model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> text = "A picture of"
+            ...
+            >>> inputs = processor(images=image, text=text, return_tensors="pt")
+            ...
+            >>> outputs = model(**inputs)
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1369,39 +1379,37 @@ generate function to enable the model to be used as a conditional generator.
             attention_mask (*mindspore.Tensor* of shape *(batch_size, sequence_length)*, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
-
-        Examples:
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, BlipForConditionalGeneration
-
-        >>> model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
-        >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> inputs = processor(images=image, return_tensors="pt")
-
-        >>> outputs = model.generate(**inputs)
-        >>> print(processor.decode(outputs[0], skip_special_tokens=True))
-        two cats sleeping on a couch
-        ```
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, BlipForConditionalGeneration
+            ...
+            >>> model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+            >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> inputs = processor(images=image, return_tensors="pt")
+            ...
+            >>> outputs = model.generate(**inputs)
+            >>> print(processor.decode(outputs[0], skip_special_tokens=True))
+            two cats sleeping on a couch
+            ```
         """
         batch_size = pixel_values.shape[0]
         vision_outputs = self.vision_model(pixel_values=pixel_values)
 
         image_embeds = vision_outputs[0]
 
-        image_attention_mask = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
+        image_attention_mask = ops.ones(*image_embeds.shape[:-1], dtype=mindspore.int64)
 
         if isinstance(input_ids, list):
             input_ids = mindspore.Tensor(input_ids)
         elif input_ids is None:
             input_ids = (
-                mindspore.Tensor([[self.decoder_input_ids, self.config.text_config.eos_token_id]])
-                .repeat(batch_size, 1)
+                ops.tile((mindspore.Tensor([[self.decoder_input_ids, self.config.text_config.eos_token_id]])), (batch_size, 1))
             )
 
         input_ids[:, 0] = self.config.text_config.bos_token_id
@@ -1424,33 +1432,32 @@ class BlipForQuestionAnswering(BlipPreTrainedModel):
 
     """
     BlipForQuestionAnswering is a class that represents a model for question answering using both text and vision inputs. It is designed to be used with the BlipPreTrainedModel base class.
-    
+
     This class has the following attributes:
+
     - vision_model: An instance of the BlipVisionModel class that handles the vision inputs.
     - text_encoder: An instance of the BlipTextModel class that encodes the text inputs.
     - text_decoder: An instance of the BlipTextLMHeadModel class that decodes the text inputs.
     - decoder_pad_token_id: The ID of the padding token used in the decoder.
     - decoder_start_token_id: The ID of the start token used in the decoder.
-    
+
     The BlipForQuestionAnswering class provides the following methods:
-    
-    1. __init__(self, config: BlipConfig)
-        Initializes the BlipForQuestionAnswering instance with the given configuration.
-    
-    2. get_input_embeddings(self) -> nn.Cell
-        Returns the input embeddings of the vision model.
-    
-    3. construct(self, input_ids: mindspore.Tensor, pixel_values: mindspore.Tensor, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask: Optional[mindspore.Tensor] = None,
-attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, labels: Optional[mindspore.Tensor] = None, return_dict: Optional[bool]
-= None) -> Union[Tuple, BlipTextVisionModelOutput]
-        Constructs the model and performs the forward pass. Returns the model outputs.
-    
-    4. generate(self, input_ids: mindspore.Tensor, pixel_values: mindspore.Tensor, attention_mask: Optional[mindspore.Tensor] = None, **generate_kwargs) -> mindspore.Tensor
-        Generates text outputs based on the given input IDs and pixel values.
-    
-    Please refer to the code examples in the docstring for more information on how to use the BlipForQuestionAnswering class for training and inference.
-    
-    Note: This documentation is auto-generated and may not capture all the intricacies of the class implementation. For more details, please refer to the source code.
+
+    1. __init__:
+    Initializes the BlipForQuestionAnswering instance with the given configuration.
+    2. get_input_embeddings:
+    Returns the input embeddings of the vision model.
+    3. forward:
+    Constructs the model and performs the forward pass. Returns the model outputs.
+    4. generate:
+    Generates text outputs based on the given input IDs and pixel values.
+
+    Please refer to the code examples in the docstring for more information on how to use the BlipForQuestionAnswering
+    class for training and inference.
+
+    Note:
+        This documentation is auto-generated and may not capture all the intricacies of the class implementation.
+        For more details, please refer to the source code.
     """
     config_class = BlipConfig
     _tied_weights_keys = ["text_decoder.cls.predictions.decoder.bias"]
@@ -1458,16 +1465,16 @@ attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[b
     def __init__(self, config: BlipConfig):
         """
         Initializes an instance of BlipForQuestionAnswering.
-        
+
         Args:
             self: The instance of the class.
             config (BlipConfig): An instance of BlipConfig containing the configuration for the model.
-            
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         super().__init__(config)
 
@@ -1483,22 +1490,22 @@ attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[b
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         """
         This method returns the input embeddings from the vision model for question answering.
-        
+
         Args:
             self (BlipForQuestionAnswering): The instance of the BlipForQuestionAnswering class.
-            
+
         Returns:
-            nn.Cell: The input embeddings from the vision model, which is of type nn.Cell.
-            
+            nn.Module: The input embeddings from the vision model, which is of type nn.Module.
+
         Raises:
             None
         """
         return self.vision_model.embeddings.patch_embedding
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor,
         pixel_values: mindspore.Tensor,
@@ -1512,38 +1519,39 @@ attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[b
     ) -> Union[Tuple, BlipTextVisionModelOutput]:
         r"""
         Returns:
+            `Union[Tuple, BlipTextVisionModelOutput]`
 
-        Examples:
-
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, BlipForQuestionAnswering
-
-        >>> model = BlipForQuestionAnswering.from_pretrained("Salesforce/blip-vqa-base")
-        >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-vqa-base")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> # training
-        >>> text = "How many cats are in the picture?"
-        >>> label = "2"
-        >>> inputs = processor(images=image, text=text, return_tensors="pt")
-        >>> labels = processor(text=label, return_tensors="pt").input_ids
-
-        >>> inputs["labels"] = labels
-        >>> outputs = model(**inputs)
-        >>> loss = outputs.loss
-        >>> loss.backward()
-
-        >>> # inference
-        >>> text = "How many cats are in the picture?"
-        >>> inputs = processor(images=image, text=text, return_tensors="pt")
-        >>> outputs = model.generate(**inputs)
-        >>> print(processor.decode(outputs[0], skip_special_tokens=True))
-        2
-        ```"""
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, BlipForQuestionAnswering
+            ...
+            >>> model = BlipForQuestionAnswering.from_pretrained("Salesforce/blip-vqa-base")
+            >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-vqa-base")
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            ...
+            >>> # training
+            >>> text = "How many cats are in the picture?"
+            >>> label = "2"
+            >>> inputs = processor(images=image, text=text, return_tensors="pt")
+            >>> labels = processor(text=label, return_tensors="pt").input_ids
+            ...
+            >>> inputs["labels"] = labels
+            >>> outputs = model(**inputs)
+            >>> loss = outputs.loss
+            >>> loss.backward()
+            ...
+            >>> # inference
+            >>> text = "How many cats are in the picture?"
+            >>> inputs = processor(images=image, text=text, return_tensors="pt")
+            >>> outputs = model.generate(**inputs)
+            >>> print(processor.decode(outputs[0], skip_special_tokens=True))
+            2
+            ```
+        """
         if labels is None and decoder_input_ids is None:
             raise ValueError(
                 "Either `decoder_input_ids` or `labels` should be passed when calling `forward` with"
@@ -1565,7 +1573,7 @@ attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[b
         )
 
         image_embeds = vision_outputs[0]
-        image_attention_mask = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
+        image_attention_mask = ops.ones(*image_embeds.shape[:-1], dtype=mindspore.int64)
 
         question_embeds = self.text_encoder(
             input_ids=input_ids,
@@ -1629,32 +1637,31 @@ attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[b
             **generate_kwargs:
                 Additional arguments passed to the *generate* function of the decoder
 
-
-        Examples:
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, BlipForQuestionAnswering
-
-        >>> model = BlipForQuestionAnswering.from_pretrained("Salesforce/blip-vqa-base")
-        >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-vqa-base")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> text = "How many cats are in the picture?"
-
-        >>> inputs = processor(images=image, text=text, return_tensors="pt")
-
-        >>> outputs = model.generate(**inputs)
-        >>> print(processor.decode(outputs[0], skip_special_tokens=True))
-        2
-        ```
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, BlipForQuestionAnswering
+            ...
+            >>> model = BlipForQuestionAnswering.from_pretrained("Salesforce/blip-vqa-base")
+            >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-vqa-base")
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> text = "How many cats are in the picture?"
+            ...
+            >>> inputs = processor(images=image, text=text, return_tensors="pt")
+            ...
+            >>> outputs = model.generate(**inputs)
+            >>> print(processor.decode(outputs[0], skip_special_tokens=True))
+            2
+            ```
         """
         vision_outputs = self.vision_model(pixel_values=pixel_values)
 
         image_embeds = vision_outputs[0]
 
-        image_attention_mask = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
+        image_attention_mask = ops.ones(*image_embeds.shape[:-1], dtype=mindspore.int64)
 
         if isinstance(input_ids, list):
             input_ids = mindspore.Tensor(input_ids)
@@ -1669,7 +1676,7 @@ attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[b
 
         question_embeds = question_outputs[0]
 
-        question_attention_mask = ops.ones(question_embeds.shape[:-1], dtype=mindspore.int64)
+        question_attention_mask = ops.ones(*question_embeds.shape[:-1], dtype=mindspore.int64)
 
         bos_ids = ops.full(
             (question_embeds.shape[0], 1), fill_value=self.decoder_start_token_id
@@ -1690,33 +1697,40 @@ attention_mask: Optional[mindspore.Tensor] = None, output_attentions: Optional[b
 class BlipForImageTextRetrieval(BlipPreTrainedModel):
 
     """
-    BlipForImageTextRetrieval is a class that implements a model for image-text retrieval tasks. It is designed to retrieve relevant text based on input images and vice versa. This class inherits from
-BlipPreTrainedModel.
-    
-    The class's constructor initializes the model with the provided configuration. It sets up the vision model, text encoder, projection layers, and other necessary components for image-text retrieval.
-    
+    BlipForImageTextRetrieval is a class that implements a model for image-text retrieval tasks.
+    It is designed to retrieve relevant text based on input images and vice versa. This class inherits from
+    BlipPreTrainedModel.
+
+    The class's forwardor initializes the model with the provided configuration.
+    It sets up the vision model, text encoder, projection layers, and other necessary components for image-text retrieval.
+
     The 'get_input_embeddings' method returns the patch embeddings from the vision model.
-    
-    The 'construct' method takes input image and text tensors and constructs the output based on the specified parameters. It utilizes the vision model to extract image features and the text encoder to process
-input text. Depending on the 'use_itm_head' parameter, the method either computes the similarity score between image and text features or uses the image and text projections for matching.
-    
-    The method also handles optional parameters for controlling the output format and behavior. It provides examples on how to use the BlipForImageTextRetrieval class for image-text retrieval tasks.
-    
-    Note: This docstring is a high-level overview and does not include method signatures or detailed implementation details.
+
+    The 'forward' method takes input image and text tensors and forwards the output based on the specified parameters.
+    It utilizes the vision model to extract image features and the text encoder to process input text.
+    Depending on the 'use_itm_head' parameter, the method either computes the similarity score between image and text
+    features or uses the image and text projections for matching.
+
+    The method also handles optional parameters for controlling the output format and behavior. It provides examples on
+    how to use the BlipForImageTextRetrieval class for image-text retrieval tasks.
+
+    Note:
+        This docstring is a high-level overview and does not include method signatures or detailed implementation details.
     """
     config_class = BlipConfig
 
     def __init__(self, config: BlipConfig):
         """
         Initializes an instance of the BlipForImageTextRetrieval class.
-        
+
         Args:
             self: The instance of the class itself.
-            config (BlipConfig): The configuration object containing various settings for the BlipForImageTextRetrieval model.
-        
+            config (BlipConfig):
+                The configuration object containing various settings for the BlipForImageTextRetrieval model.
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1727,13 +1741,13 @@ input text. Depending on the 'use_itm_head' parameter, the method either compute
         self.text_encoder = BlipTextModel(config.text_config, add_pooling_layer=False)
 
         # vision projection layer
-        self.vision_proj = nn.Dense(config.vision_config.hidden_size, config.image_text_hidden_size)
+        self.vision_proj = nn.Linear(config.vision_config.hidden_size, config.image_text_hidden_size)
 
         # text projection layer
-        self.text_proj = nn.Dense(config.text_config.hidden_size, config.image_text_hidden_size)
+        self.text_proj = nn.Linear(config.text_config.hidden_size, config.image_text_hidden_size)
 
         # image text matching head
-        self.itm_head = nn.Dense(config.text_config.hidden_size, 2)
+        self.itm_head = nn.Linear(config.text_config.hidden_size, 2)
 
         self.decoder_pad_token_id = (
             config.text_config.pad_token_id
@@ -1749,24 +1763,24 @@ input text. Depending on the 'use_itm_head' parameter, the method either compute
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self) -> nn.Cell:
+    def get_input_embeddings(self) -> nn.Module:
         """
         Method to get the input embeddings from the vision model for image-text retrieval.
-        
+
         Args:
             self (BlipForImageTextRetrieval): The instance of the BlipForImageTextRetrieval class.
                 This parameter is required to access the vision model and its embeddings.
-            
+
         Returns:
-            nn.Cell: A neural network cell representing the input embeddings obtained from the vision model.
+            nn.Module: A neural network cell representing the input embeddings obtained from the vision model.
                 These embeddings are used for matching image features with text features in the retrieval process.
-        
+
         Raises:
             None
         """
         return self.vision_model.embeddings.patch_embedding
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor,
         pixel_values: mindspore.Tensor,
@@ -1778,24 +1792,24 @@ input text. Depending on the 'use_itm_head' parameter, the method either compute
     ) -> Union[Tuple, BlipTextVisionModelOutput]:
         r"""
         Returns:
+            `Union[Tuple, BlipTextVisionModelOutput]`
 
-        Examples:
-
-        ```python
-        >>> from PIL import Image
-        >>> import requests
-        >>> from transformers import AutoProcessor, BlipForImageTextRetrieval
-
-        >>> model = BlipForImageTextRetrieval.from_pretrained("Salesforce/blip-itm-base-coco")
-        >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-itm-base-coco")
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> text = "an image of a cat"
-
-        >>> inputs = processor(images=image, text=text, return_tensors="pt")
-        >>> outputs = model(**inputs)
-        ```
+        Example:
+            ```python
+            >>> from PIL import Image
+            >>> import requests
+            >>> from transformers import AutoProcessor, BlipForImageTextRetrieval
+            ...
+            >>> model = BlipForImageTextRetrieval.from_pretrained("Salesforce/blip-itm-base-coco")
+            >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-itm-base-coco")
+            ...
+            >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+            >>> image = Image.open(requests.get(url, stream=True).raw)
+            >>> text = "an image of a cat"
+            ...
+            >>> inputs = processor(images=image, text=text, return_tensors="pt")
+            >>> outputs = model(**inputs)
+            ```
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -1811,7 +1825,7 @@ input text. Depending on the 'use_itm_head' parameter, the method either compute
         )
 
         image_embeds = vision_outputs[0]
-        image_atts = ops.ones(image_embeds.shape[:-1], dtype=mindspore.int64)
+        image_atts = ops.ones(*image_embeds.shape[:-1], dtype=mindspore.int64)
 
         if use_itm_head:
             question_embeds = self.text_encoder(
@@ -1832,8 +1846,8 @@ input text. Depending on the 'use_itm_head' parameter, the method either compute
             )
             question_embeds = question_embeds[0] if not return_dict else question_embeds.last_hidden_state
 
-            image_feat = normalize(self.vision_proj(image_embeds[:, 0, :]), dim=-1)
-            text_feat = normalize(self.text_proj(question_embeds[:, 0, :]), dim=-1)
+            image_feat = F.normalize(self.vision_proj(image_embeds[:, 0, :]), dim=-1)
+            text_feat = F.normalize(self.text_proj(question_embeds[:, 0, :]), dim=-1)
 
             output = image_feat @ text_feat.t()
 

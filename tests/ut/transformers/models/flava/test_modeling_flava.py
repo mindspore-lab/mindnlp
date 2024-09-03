@@ -46,7 +46,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn
+    from mindnlp.core import nn
 
     from mindnlp.transformers import (
         FlavaForPreTraining,
@@ -60,7 +60,6 @@ else:
     FlavaModel = None
     FlavaForPreTraining = None
     mindspore = {}
-
 
 if is_vision_available():
     from PIL import Image
@@ -178,12 +177,12 @@ class FlavaImageModelTest(ModelTesterMixin, unittest.TestCase):
         # FLAVA does not use inputs_embeds
         pass
 
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
             self.assertTrue(x is None or isinstance(x, nn.Linear))
 
@@ -192,7 +191,7 @@ class FlavaImageModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -630,14 +629,14 @@ class FlavaMultimodalModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
             expected_arg_names = ["hidden_states"]
             self.assertListEqual(arg_names[:1], expected_arg_names)
 
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         # No embedding in multimodal model
         pass
 
@@ -747,7 +746,7 @@ class FlavaImageCodebookTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -758,7 +757,7 @@ class FlavaImageCodebookTest(ModelTesterMixin, unittest.TestCase):
     def test_attention_outputs(self):
         pass
 
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         # No embedding in multimodal model
         pass
 
@@ -960,7 +959,7 @@ class FlavaModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     # FlavaModel does not have input/output embeddings
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     # override as the `logit_scale` parameter initilization is different for FLAVA
@@ -1038,7 +1037,7 @@ class FlavaForPreTrainingTester(FlavaModelTester):
             0, self.image_model_tester.vocab_size, bool_masked_pos.shape
         )
         mim_labels[bool_masked_pos.ne(True)] = config.ce_ignore_index
-        itm_labels = ops.ones(mlm_labels.shape[0]) # .int64
+        itm_labels = ops.ones(mlm_labels.shape[0], dtype=mindspore.int64) # .int64
 
         return config, {
             "input_ids": input_ids,

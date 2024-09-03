@@ -23,7 +23,7 @@ amp_black_list = (
     nn.BatchNorm2d
 )
 
-class _OutputTo32(nn.Cell):
+class _OutputTo32(nn.Module):
     "Wrap cell for amp. Cast network output back to float32"
 
     def __init__(self, op):
@@ -33,7 +33,7 @@ class _OutputTo32(nn.Cell):
     def construct(self, *x):
         return ops.cast(self._op(*x), mstype.float32)
 
-class _OutputTo16(nn.Cell):
+class _OutputTo16(nn.Module):
     "Wrap cell for amp. Cast network output back to float32"
 
     def __init__(self, op):
@@ -73,7 +73,7 @@ def auto_white_list(network, white_list=None):
         else:
             auto_white_list(subcell, white_list)
 
-    if isinstance(network, nn.SequentialCell) and change:
+    if isinstance(network, nn.Sequential) and change:
         network.cell_list = list(network.cells())
 
 def auto_black_list(network, black_list=None):
@@ -93,7 +93,7 @@ def auto_black_list(network, black_list=None):
         else:
             auto_black_list(subcell, black_list)
 
-    if isinstance(network, nn.SequentialCell) and change:
+    if isinstance(network, nn.Sequential) and change:
         network.cell_list = list(network.cells())
 
 # For Loss Scaler

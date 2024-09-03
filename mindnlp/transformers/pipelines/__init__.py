@@ -54,6 +54,7 @@ from .automatic_speech_recognition import AutomaticSpeechRecognitionPipeline
 from .zero_shot_classification import ZeroShotClassificationArgumentHandler, ZeroShotClassificationPipeline
 from .document_question_answering import DocumentQuestionAnsweringPipeline
 from .fill_mask import FillMaskPipeline
+from .table_question_answering import TableQuestionAnsweringPipeline
 
 from ..models.auto.modeling_auto import (
     # AutoModel,
@@ -68,6 +69,7 @@ from ..models.auto.modeling_auto import (
     AutoModelForSeq2SeqLM,
     AutoModelForSequenceClassification,
     AutoModelForSpeechSeq2Seq,
+    AutoModelForTableQuestionAnswering,
     # AutoModelForTableQuestionAnswering,
     # AutoModelForTextToSpectrogram,
     # AutoModelForTextToWaveform,
@@ -138,6 +140,16 @@ SUPPORTED_TASKS = {
         "default": {
             "model": {
                 "ms": ("distilbert/distilbert-base-cased-distilled-squad", "626af31"),
+            },
+        },
+        "type": "text",
+    },
+    "table-question-answering": {
+        "impl": TableQuestionAnsweringPipeline,
+        "ms": (AutoModelForTableQuestionAnswering,),
+        "default": {
+            "model": {
+                "ms": ("google/tapas-base-finetuned-wtq", "69ceee2"),
             },
         },
         "type": "text",
@@ -371,9 +383,9 @@ def pipeline(
 
     Pipelines are made of:
 
-        - A [tokenizer](tokenizer) in charge of mapping raw textual input to token.
-        - A [model](model) to make predictions from the inputs.
-        - Some (optional) post processing for enhancing model's output.
+    - A [tokenizer](tokenizer) in charge of mapping raw textual input to token.
+    - A [model](model) to make predictions from the inputs.
+    - Some (optional) post processing for enhancing model's output.
 
     Args:
         task (`str`):
@@ -460,24 +472,24 @@ def pipeline(
     Returns:
         [`Pipeline`]: A suitable pipeline for the task.
 
-    Examples:
+    Example:
+        ```python
+        >>> from transformers import pipeline, AutoModelForTokenClassification, AutoTokenizer
 
-    ```python
-    >>> from transformers import pipeline, AutoModelForTokenClassification, AutoTokenizer
+        >>> # Sentiment analysis pipeline
+        >>> analyzer = pipeline("sentiment-analysis")
 
-    >>> # Sentiment analysis pipeline
-    >>> analyzer = pipeline("sentiment-analysis")
+        >>> # Question answering pipeline, specifying the checkpoint identifier
+        >>> oracle = pipeline(
+        ...     "question-answering", model="distilbert-base-cased-distilled-squad", tokenizer="bert-base-cased"
+        ... )
 
-    >>> # Question answering pipeline, specifying the checkpoint identifier
-    >>> oracle = pipeline(
-    ...     "question-answering", model="distilbert-base-cased-distilled-squad", tokenizer="bert-base-cased"
-    ... )
-
-    >>> # Named entity recognition pipeline, passing in a specific model and tokenizer
-    >>> model = AutoModelForTokenClassification.from_pretrained("dbmdz/bert-large-cased-finetuned-conll03-english")
-    >>> tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-    >>> recognizer = pipeline("ner", model=model, tokenizer=tokenizer)
-    ```"""
+        >>> # Named entity recognition pipeline, passing in a specific model and tokenizer
+        >>> model = AutoModelForTokenClassification.from_pretrained("dbmdz/bert-large-cased-finetuned-conll03-english")
+        >>> tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+        >>> recognizer = pipeline("ner", model=model, tokenizer=tokenizer)
+        ```
+    """
     if model_kwargs is None:
         model_kwargs = {}
     # Make sure we only pass use_auth_token once as a kwarg (it used to be possible to pass it in model_kwargs,
@@ -672,5 +684,6 @@ __all__ = [
     'QuestionAnsweringPipeline',
     'ZeroShotClassificationPipeline',
     'DocumentQuestionAnsweringPipeline',
+    'TableQuestionAnsweringPipeline',
     'pipeline',
 ]

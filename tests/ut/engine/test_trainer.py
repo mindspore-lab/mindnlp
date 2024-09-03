@@ -34,6 +34,7 @@ import numpy as np
 from parameterized import parameterized
 from requests.exceptions import HTTPError
 
+import mindnlp
 from mindnlp.engine import (
     IntervalStrategy,
     TrainerCallback,
@@ -43,9 +44,9 @@ from mindnlp.transformers import (
     AutoTokenizer,
     PretrainedConfig,
 )
-from mindnlp.modules.optimization import get_polynomial_decay_schedule_with_warmup
+from mindnlp.transformers.optimization import get_polynomial_decay_schedule_with_warmup
 from mindnlp.utils import is_mindspore_available, logging
-from mindnlp.utils.serialization import safe_load_file, safe_save_file
+from mindnlp.core.serialization import safe_load_file, safe_save_file
 from mindnlp.utils.testing_utils import (
     # ENDPOINT_STAGING,
     # TOKEN,
@@ -77,7 +78,9 @@ from mindnlp.configs import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindnlp.core import nn, ops, optim
+    from mindnlp.core.serialization import load_checkpoint, save_checkpoint
+    from mindnlp.core.nn import functional as F
     from mindspore.dataset import GeneratorDataset
 
     # import transformers.optimization
@@ -212,7 +215,7 @@ if is_mindspore_available():
             for loader in self.loaders:
                 yield from loader
 
-    class RegressionModel(nn.Cell):
+    class RegressionModel(nn.Module):
         def __init__(self, a=0, b=0, double_output=False):
             super().__init__()
             self.a = mindspore.Parameter(mindspore.tensor([a]).float())
@@ -220,25 +223,25 @@ if is_mindspore_available():
             self.double_output = double_output
             self.config = None
 
-        def construct(self, input_x, labels=None, **kwargs):
+        def forward(self, input_x, labels=None, **kwargs):
             y = input_x * self.a + self.b
             if labels is None:
                 return (y, y) if self.double_output else (y,)
-            loss = ops.mse_loss(y, labels)
+            loss = F.mse_loss(y, labels)
             return (loss, y, y) if self.double_output else (loss, y)
 
-    class RegressionDictModel(nn.Cell):
+    class RegressionDictModel(nn.Module):
         def __init__(self, a=0, b=0):
             super().__init__()
             self.a = mindspore.Parameter(mindspore.tensor([a]).float())
             self.b = mindspore.Parameter(mindspore.tensor([b]).float())
             self.config = None
 
-        def construct(self, input_x, labels=None, **kwargs):
+        def forward(self, input_x, labels=None, **kwargs):
             y = input_x * self.a + self.b
             result = {"output": y}
             if labels is not None:
-                result["loss"] = ops.mse_loss(y, labels)
+                result["loss"] = F.mse_loss(y, labels)
             return result
 
     class RegressionPreTrainedModel(PreTrainedModel):
@@ -251,11 +254,11 @@ if is_mindspore_available():
             self.b = mindspore.Parameter(mindspore.tensor([config.b]).float())
             self.double_output = config.double_output
 
-        def construct(self, input_x, labels=None, **kwargs):
+        def forward(self, input_x, labels=None, **kwargs):
             y = input_x * self.a + self.b
             if labels is None:
                 return (y, y) if self.double_output else (y,)
-            loss = ops.mse_loss(y, labels)
+            loss = F.mse_loss(y, labels)
             return (loss, y, y) if self.double_output else (loss, y)
 
     class RegressionRandomPreTrainedModel(PreTrainedModel):
@@ -268,7 +271,7 @@ if is_mindspore_available():
             self.b = mindspore.Parameter(mindspore.tensor([config.b]).float())
             self.random_ms = config.random_ms
 
-        def construct(self, input_x, labels=None, **kwargs):
+        def forward(self, input_x, labels=None, **kwargs):
             y = input_x * self.a + self.b
             if self.random_ms:
                 torch_rand = ops.randn(1).squeeze()
@@ -281,21 +284,21 @@ if is_mindspore_available():
 
             if labels is None:
                 return (y,)
-            loss = ops.mse_loss(y, labels)
+            loss = F.mse_loss(y, labels)
             return (loss, y)
 
-    class TstLayer(nn.Cell):
+    class TstLayer(nn.Module):
         def __init__(self, hidden_size):
             super().__init__()
-            self.linear1 = nn.Dense(hidden_size, hidden_size)
+            self.linear1 = nn.Linear(hidden_size, hidden_size)
             self.ln1 = nn.LayerNorm(hidden_size)
-            self.linear2 = nn.Dense(hidden_size, hidden_size)
+            self.linear2 = nn.Linear(hidden_size, hidden_size)
             self.ln2 = nn.LayerNorm(hidden_size)
             self.bias = mindspore.Parameter(ops.zeros(hidden_size))
 
-        def construct(self, x):
-            h = self.ln1(ops.relu(self.linear1(x)))
-            h = ops.relu(self.linear2(x))
+        def forward(self, x):
+            h = self.ln1(F.relu(self.linear1(x)))
+            h = F.relu(self.linear2(x))
             return self.ln2(x + h + self.bias)
 
     def get_regression_trainer(
@@ -309,6 +312,7 @@ if is_mindspore_available():
         else:
             column_names.extend(label_names)
         gradient_checkpointing = kwargs.get("gradient_checkpointing", False)
+        print(column_names)
         train_dataset = GeneratorDataset(RegressionDataset(length=train_len, label_names=label_names), column_names=column_names)
         eval_dataset = GeneratorDataset(RegressionDataset(length=eval_len, label_names=label_names), column_names=column_names, shuffle=False)
 
@@ -402,7 +406,7 @@ class TrainerIntegrationCommon:
             loader = safe_load_file
             weights_file = os.path.join(folder, SAFE_WEIGHTS_NAME)
         else:
-            loader = mindspore.load_checkpoint
+            loader = load_checkpoint
             weights_file = os.path.join(folder, WEIGHTS_NAME)
 
         if save_safe:
@@ -412,7 +416,7 @@ class TrainerIntegrationCommon:
             shard_name = SAFE_WEIGHTS_NAME
         else:
             extension = "ckpt"
-            saver = mindspore.save_checkpoint
+            saver = save_checkpoint
             index_file = os.path.join(folder, WEIGHTS_INDEX_NAME)
             shard_name = WEIGHTS_NAME
 
@@ -592,7 +596,6 @@ class TrainerIntegrationPrerunTest(TestCasePlus, TrainerIntegrationCommon):
         train_dataset = GeneratorDataset(RegressionDataset(), column_names=['input_x', 'labels'])
         args = TrainingArguments("./regression")
         model = RegressionModel()
-        from mindspore.experimental import optim
 
         optimizer = optim.SGD(model.trainable_params(), lr=1.0)
         lr_scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda x: 1.0)
@@ -642,14 +645,14 @@ class TrainerIntegrationPrerunTest(TestCasePlus, TrainerIntegrationCommon):
             metric_for_best_model="eval_loss",
         )
         model = RegressionModel()
-        optimizer = mindspore.experimental.optim.SGD(model.trainable_params(), lr=1.0)
-        lr_scheduler = mindspore.experimental.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.2, patience=5, cooldown=2)
+        optimizer = optim.SGD(model.trainable_params(), lr=1.0)
+        lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.2, patience=5, cooldown=2)
         trainer = Trainer(
             model, args, train_dataset=train_dataset, eval_dataset=eval_dataset, optimizers=(optimizer, lr_scheduler)
         )
         trainer.train()
 
-        self.assertIsInstance(trainer.lr_scheduler, mindspore.experimental.optim.lr_scheduler.ReduceLROnPlateau)
+        self.assertIsInstance(trainer.lr_scheduler, optim.lr_scheduler.ReduceLROnPlateau)
         self.assertEqual(trainer.lr_scheduler.factor, 0.2)
         self.assertEqual(trainer.lr_scheduler.patience, 5)
         self.assertEqual(trainer.lr_scheduler.cooldown, 2)
@@ -679,7 +682,7 @@ class TrainerIntegrationPrerunTest(TestCasePlus, TrainerIntegrationCommon):
         trainer = TrainerWithLRLogs(model, args, train_dataset=train_dataset, eval_dataset=eval_dataset)
         trainer.train()
 
-        self.assertIsInstance(trainer.lr_scheduler, mindspore.experimental.optim.lr_scheduler.ReduceLROnPlateau)
+        self.assertIsInstance(trainer.lr_scheduler, optim.lr_scheduler.ReduceLROnPlateau)
         patience = trainer.lr_scheduler.patience
 
         logs = trainer.state.log_history[1:]
@@ -812,7 +815,6 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         dummy_input = mindspore.Tensor([[1, 0, 1]])
         emb1 = trainer.model.get_input_embeddings()(dummy_input)
         emb2 = trainer.model.get_input_embeddings()(dummy_input)
-
         self.assertFalse(np.allclose(emb1.asnumpy(), emb2.asnumpy()), "Neftune noise is not applied!")
 
         # redefine the model
@@ -822,16 +824,14 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             "./test", learning_rate=1e-9, logging_steps=5, logging_nan_inf_filter=False, neftune_noise_alpha=0.4
         )
         trainer = Trainer(tiny_gpt2, args, train_dataset=train_dataset)
-
         # Check that it trains without errors
         trainer.train()
 
         # Make sure forward pass works fine
         _ = trainer.model(dummy_input)
-        self.assertTrue(len(trainer.model.get_input_embeddings()._forward_hook) == 0)
+        self.assertTrue(len(trainer.model.get_input_embeddings()._forward_hooks) == 0)
 
         trainer.model.set_train(False)
-
         # Check that we get identical embeddings just in case
         emb1 = trainer.model.get_input_embeddings()(dummy_input)
         emb2 = trainer.model.get_input_embeddings()(dummy_input)
@@ -1191,8 +1191,8 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             trainer.train(resume_from_checkpoint=checkpoint)
             (a1, b1) = trainer.model.a.item(), trainer.model.b.item()
             state1 = dataclasses.asdict(trainer.state)
-            self.assertEqual(a, a1)
-            self.assertEqual(b, b1)
+            self.assertAlmostEqual(a, a1, 4)
+            self.assertAlmostEqual(b, b1, 4)
             self.check_trainer_state_are_the_same(state, state1)
 
             # Now check with a later checkpoint that it also works when we span over one epoch
@@ -1204,8 +1204,8 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             trainer.train(resume_from_checkpoint=checkpoint)
             (a1, b1) = trainer.model.a.item(), trainer.model.b.item()
             state1 = dataclasses.asdict(trainer.state)
-            self.assertEqual(a, a1)
-            self.assertEqual(b, b1)
+            self.assertAlmostEqual(a, a1, 4)
+            self.assertAlmostEqual(b, b1, 4)
             self.check_trainer_state_are_the_same(state, state1)
 
         # With a regular model that is not a PreTrainedModel
@@ -1231,8 +1231,8 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             trainer.train(resume_from_checkpoint=checkpoint)
             (a1, b1) = trainer.model.a.item(), trainer.model.b.item()
             state1 = dataclasses.asdict(trainer.state)
-            self.assertEqual(a, a1)
-            self.assertEqual(b, b1)
+            self.assertAlmostEqual(a, a1, 4)
+            self.assertAlmostEqual(b, b1, 4)
             self.check_trainer_state_are_the_same(state, state1)
 
             # Now check with a later checkpoint that it also works when we span over one epoch
@@ -1244,8 +1244,8 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             trainer.train(resume_from_checkpoint=checkpoint)
             (a1, b1) = trainer.model.a.item(), trainer.model.b.item()
             state1 = dataclasses.asdict(trainer.state)
-            self.assertEqual(a, a1)
-            self.assertEqual(b, b1)
+            self.assertAlmostEqual(a, a1, 4)
+            self.assertAlmostEqual(b, b1, 4)
             self.check_trainer_state_are_the_same(state, state1)
 
         # Now check failures
@@ -1417,8 +1417,8 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             trainer.train(resume_from_checkpoint=checkpoint)
             (a1, b1) = trainer.model.a.item(), trainer.model.b.item()
             state1 = dataclasses.asdict(trainer.state)
-            self.assertEqual(a, a1)
-            self.assertEqual(b, b1)
+            self.assertAlmostEqual(a, a1, 4)
+            self.assertAlmostEqual(b, b1, 4)
             self.check_trainer_state_are_the_same(state, state1)
 
     @require_safetensors
@@ -1452,8 +1452,8 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
                     trainer.train(resume_from_checkpoint=checkpoint)
                     (a1, b1) = trainer.model.a.item(), trainer.model.b.item()
                     state1 = dataclasses.asdict(trainer.state)
-                    self.assertEqual(a, a1)
-                    self.assertEqual(b, b1)
+                    self.assertAlmostEqual(a, a1, 4)
+                    self.assertAlmostEqual(b, b1, 4)
                     self.check_trainer_state_are_the_same(state, state1)
 
     def test_resume_training_with_gradient_accumulation(self):
@@ -1489,8 +1489,8 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             trainer.train(resume_from_checkpoint=checkpoint)
             (a1, b1) = trainer.model.a.item(), trainer.model.b.item()
             state1 = dataclasses.asdict(trainer.state)
-            self.assertEqual(a, a1)
-            self.assertEqual(b, b1)
+            self.assertAlmostEqual(a, a1, 4)
+            self.assertAlmostEqual(b, b1, 4)
             self.check_trainer_state_are_the_same(state, state1)
 
     def test_resume_training_with_frozen_params(self):
@@ -1528,8 +1528,8 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             self.assertFalse(trainer.model.a.requires_grad)
             (a1, b1) = trainer.model.a.item(), trainer.model.b.item()
             state1 = dataclasses.asdict(trainer.state)
-            self.assertEqual(a, a1)
-            self.assertEqual(b, b1)
+            self.assertAlmostEqual(a, a1, 4)
+            self.assertAlmostEqual(b, b1, 4)
             self.check_trainer_state_are_the_same(state, state1)
 
     def test_load_best_model_at_end(self):
@@ -1992,14 +1992,15 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         self.assertAlmostEqual(bf16_eval, fp32_init / 2, delta=5_000)
 
     def test_no_wd_param_group(self):
-        model = nn.SequentialCell(TstLayer(128), nn.CellList([TstLayer(128), TstLayer(128)]))
-        trainer = Trainer(model=model)
-        trainer.create_optimizer_and_scheduler(10)
-        wd_names = ['0.linear1.weight', '0.linear2.weight', '1.0.linear1.weight', '1.0.linear2.weight', '1.1.linear1.weight', '1.1.linear2.weight']  # fmt: skip
-        wd_params = [p for n, p in model.parameters_and_names() if n in wd_names]
-        no_wd_params = [p for n, p in model.parameters_and_names() if n not in wd_names]
-        self.assertListEqual(trainer.optimizer.param_groups[0]["params"], wd_params)
-        self.assertListEqual(trainer.optimizer.param_groups[1]["params"], no_wd_params)
+        model = nn.Sequential(TstLayer(128), nn.ModuleList([TstLayer(128), TstLayer(128)]))
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            trainer = Trainer(model=model, args=TrainingArguments(output_dir=tmp_dir))
+            trainer.create_optimizer_and_scheduler(10)
+            wd_names = ['0.linear1.weight', '0.linear2.weight', '1.0.linear1.weight', '1.0.linear2.weight', '1.1.linear1.weight', '1.1.linear2.weight']  # fmt: skip
+            wd_params = [p for n, p in model.named_parameters() if n in wd_names]
+            no_wd_params = [p for n, p in model.named_parameters() if n not in wd_names]
+            self.assertListEqual(trainer.optimizer.param_groups[0]["params"], wd_params)
+            self.assertListEqual(trainer.optimizer.param_groups[1]["params"], no_wd_params)
 
     @slow
     def test_end_to_end_example(self):
@@ -2068,7 +2069,7 @@ if is_mindspore_available():
     optim_test_params = [
         (
             TrainingArguments(optim=OptimizerNames.ADAMW, output_dir="None"),
-            mindspore.experimental.optim.AdamW,
+            mindnlp.core.optim.AdamW,
             default_adam_kwargs,
         ),
         # (

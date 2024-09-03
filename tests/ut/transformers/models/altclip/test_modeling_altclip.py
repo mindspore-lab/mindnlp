@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the PyTorch AltCLIP model. """
+""" Testing suite for the MindSpore AltCLIP model. """
 
 
 import inspect
@@ -38,7 +38,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops, nn
+    from mindnlp.core import nn, ops
 
     from mindnlp.transformers import AltCLIPModel, AltCLIPTextModel, AltCLIPVisionModel
     from mindnlp.transformers.models.altclip.modeling_altclip import ALTCLIP_PRETRAINED_MODEL_ARCHIVE_LIST
@@ -152,21 +152,21 @@ class AltCLIPVisionModelTest(ModelTesterMixin, unittest.TestCase):
     def test_inputs_embeds(self):
         pass
 
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     def test_forward_signature(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -181,6 +181,10 @@ class AltCLIPVisionModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     def test_training_gradient_checkpointing(self):
+        pass
+
+    @unittest.skip(reason="CLIPModel does not have input/output embeddings")
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(
@@ -263,11 +267,11 @@ class AltCLIPTextModelTester:
                 # input_mask[batch_idx, :start_index] = 1
                 # input_mask[batch_idx, start_index:] = 0
                 ops.scatter_nd_update(input_mask,
-                                      ops.stack([ops.full((int(start_index),), batch_idx), ops.arange(mindspore.tensor(start_index))], axis=1),
-                                      ops.full((int(start_index),), 1))
+                                      ops.stack([ops.full((int(start_index),), batch_idx, dtype=mindspore.int64), ops.arange(int(start_index))], dim=1),
+                                      ops.full((int(start_index),), 1, dtype=mindspore.int64))
                 ops.scatter_nd_update(input_mask,
-                                      ops.stack([ops.full((input_mask.shape[1] - int(start_index),), batch_idx), ops.arange(mindspore.tensor(input_mask.shape[1] - start_index))], axis=1),
-                                      ops.full((input_mask.shape[1] - int(start_index),), 0))
+                                      ops.stack([ops.full((input_mask.shape[1] - int(start_index),), batch_idx, dtype=mindspore.int64), ops.arange(int(input_mask.shape[1] - start_index))], dim=1),
+                                      ops.full((input_mask.shape[1] - int(start_index),), 0, dtype=mindspore.int64))
 
 
         config = self.get_config()
@@ -450,6 +454,10 @@ class AltCLIPModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model(*config_and_inputs)
 
+    @unittest.skip(reason="CLIPModel does not have input/output embeddings")
+    def test_model_get_set_embeddings(self):
+        pass
+
     @unittest.skip(reason="Hidden_states is tested in individual model tests")
     def test_hidden_states_output(self):
         pass
@@ -463,7 +471,7 @@ class AltCLIPModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="CLIPModel does not have input/output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     # override as the `logit_scale` parameter initilization is different for AltCLIP
@@ -521,7 +529,7 @@ class AltCLIPModelIntegrationTest(unittest.TestCase):
             (inputs.input_ids.shape[0], inputs.pixel_values.shape[0]),
         )
 
-        probs = ops.softmax(outputs.logits_per_image, axis=1)
+        probs = ops.softmax(outputs.logits_per_image, dim=1)
         expected_probs = mindspore.tensor([[9.9942e-01, 5.7805e-04]])
 
         self.assertTrue(np.allclose(probs.asnumpy(), expected_probs.asnumpy(), atol=5e-3))

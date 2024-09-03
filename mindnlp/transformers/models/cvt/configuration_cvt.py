@@ -78,19 +78,19 @@ class CvtConfig(PretrainedConfig):
             The epsilon used by the layer normalization layers.
 
     Example:
-
-    ```python
-    >>> from transformers import CvtConfig, CvtModel
-
-    >>> # Initializing a Cvt msft/cvt style configuration
-    >>> configuration = CvtConfig()
-
-    >>> # Initializing a model (with random weights) from the msft/cvt style configuration
-    >>> model = CvtModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import CvtConfig, CvtModel
+        ...
+        >>> # Initializing a Cvt msft/cvt style configuration
+        >>> configuration = CvtConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the msft/cvt style configuration
+        >>> model = CvtModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "cvt"
 
     def __init__(
@@ -147,10 +147,10 @@ class CvtConfig(PretrainedConfig):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         '''
         super().__init__(**kwargs)
         self.num_channels = num_channels

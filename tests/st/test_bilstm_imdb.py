@@ -28,7 +28,7 @@ if less_min_pynative_first:
 else:
     from mindspore import value_and_grad
 
-class BiLSTM(nn.Cell):
+class BiLSTM(nn.Module):
     """bilstm network"""
     def __init__(self, vocab_size, embed_dim, hidden_dim, output_dim, n_layers,
                  bidirectional, pad_idx):

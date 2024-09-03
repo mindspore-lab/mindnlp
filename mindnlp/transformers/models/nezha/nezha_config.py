@@ -66,7 +66,8 @@ class NezhaConfig(PretrainedConfig):
             intermediate_size (int, optional): The size of the intermediate layers. Defaults to 3072.
             hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
             hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Defaults to 0.1.
-            attention_probs_dropout_prob (float, optional): The dropout probability for the attention probabilities. Defaults to 0.1.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention probabilities.
+                Defaults to 0.1.
             max_position_embeddings (int, optional): The maximum number of positional embeddings. Defaults to 512.
             max_relative_position (int, optional): The maximum relative position. Defaults to 64.
             type_vocab_size (int, optional): The size of the type vocabulary. Defaults to 2.

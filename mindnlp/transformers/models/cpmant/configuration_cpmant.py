@@ -72,19 +72,19 @@ class CpmAntConfig(PretrainedConfig):
             Whether to use cache.
 
     Example:
-
-    ```python
-    >>> from transformers import CpmAntModel, CpmAntConfig
-
-    >>> # Initializing a CPMAnt cpm-ant-10b style configuration
-    >>> configuration = CpmAntConfig()
-
-    >>> # Initializing a model from the cpm-ant-10b style configuration
-    >>> model = CpmAntModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import CpmAntModel, CpmAntConfig
+        ...
+        >>> # Initializing a CPMAnt cpm-ant-10b style configuration
+        >>> configuration = CpmAntConfig()
+        ...
+        >>> # Initializing a model from the cpm-ant-10b style configuration
+        >>> model = CpmAntModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "cpmant"
 
     def __init__(
@@ -128,7 +128,7 @@ class CpmAntConfig(PretrainedConfig):
             use_cache (bool): Whether to use cache. Defaults to True.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.

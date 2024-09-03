@@ -114,7 +114,7 @@ class PegasusTokenizerFast(PreTrainedTokenizerFast):
             offset (int): Offset value for special tokens. Defaults to 103.
         
         Returns:
-            None. This method initializes the PegasusTokenizerFast instance.
+            None.
         
         Raises:
             TypeError: If additional_special_tokens is not a list.
@@ -198,10 +198,12 @@ class PegasusTokenizerFast(PreTrainedTokenizerFast):
             seq (List[int]): The input sequence for which the special token mask is to be created.
         
         Returns:
-            List[int]: A list of integers representing the special token mask for the input sequence. The value 1 indicates that the token is a special token, while 0 indicates a regular token.
+            List[int]: A list of integers representing the special token mask for the input sequence.
+                The value 1 indicates that the token is a special token, while 0 indicates a regular token.
         
         Raises:
-            ValueError: If the number or types of special tokens do not match the expected configuration, a ValueError is raised.
+            ValueError: If the number or types of special tokens do not match the expected configuration,
+                a ValueError is raised.
         """
         all_special_ids = set(self.all_special_ids)  # call it once instead of inside list comp
         all_special_ids.remove(self.unk_token_id)  # <unk> is only sometimes special
@@ -226,7 +228,7 @@ class PegasusTokenizerFast(PreTrainedTokenizerFast):
             return self._special_token_mask(token_ids_0 + token_ids_1) + [1]
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None) -> List[int]:
-        """
+        r"""
         Build model inputs from a sequence by adding eos to the end. no bos token is added to the front.
 
         - single sequence: `X </s>`
@@ -259,7 +261,8 @@ class PegasusTokenizerFast(PreTrainedTokenizerFast):
             Tuple[str]: A tuple containing the path to the saved vocabulary file.
         
         Raises:
-            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
+            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for
+                a slow tokenizer.
             OSError: If the save_directory provided is not a valid directory path.
         """
         if not self.can_save_slow_tokenizer:

@@ -44,7 +44,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindnlp.core import nn, ops
 
     from mindnlp.transformers import (
         BlipForConditionalGeneration,
@@ -164,12 +164,12 @@ class BlipVisionModelTest(ModelTesterMixin, unittest.TestCase):
     def test_inputs_embeds(self):
         pass
 
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
             self.assertTrue(x is None or isinstance(x, nn.Dense))
 
@@ -178,7 +178,7 @@ class BlipVisionModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -275,11 +275,11 @@ class BlipTextModelTester:
             rnd_start_indices = np.random.randint(1, seq_length - 1, size=(batch_size,))
             for batch_idx, start_index in enumerate(rnd_start_indices):
                 ops.scatter_nd_update(input_mask,
-                                      ops.stack([ops.full((int(start_index),), batch_idx), ops.arange(mindspore.tensor(start_index))], axis=1),
-                                      ops.full((int(start_index),), 1))
+                                      ops.stack([ops.full((int(start_index),), batch_idx, dtype=mindspore.int64), ops.arange(int(start_index))], dim=1),
+                                      ops.full((int(start_index),), 1, dtype=mindspore.int64))
                 ops.scatter_nd_update(input_mask,
-                                      ops.stack([ops.full((input_mask.shape[1] - int(start_index),), batch_idx), ops.arange(mindspore.tensor(input_mask.shape[1] - start_index))], axis=1),
-                                      ops.full((input_mask.shape[1] - int(start_index),), 0))
+                                      ops.stack([ops.full((input_mask.shape[1] - int(start_index),), batch_idx, dtype=mindspore.int64), ops.arange(int(input_mask.shape[1] - start_index))], dim=1),
+                                      ops.full((input_mask.shape[1] - int(start_index),), 0, dtype=mindspore.int64))
 
         config = self.get_config()
 
@@ -456,7 +456,7 @@ class BlipModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="BlipModel does not have input/output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     # override as the `logit_scale` parameter initilization is different for Blip
@@ -696,7 +696,7 @@ class BlipVQAModelTest(ModelTesterMixin, unittest.TestCase):
         """
         for model_class in self.all_model_classes:
             model = model_class(self.model_tester.get_config())
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so args are the first n entries
             args = list(signature.parameters.keys())
             expected_args = [
@@ -721,7 +721,7 @@ class BlipVQAModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="BlipModel does not have input/output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
 
@@ -755,7 +755,7 @@ class BlipTextRetrievalModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="BlipModel does not have input/output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_forward_signature(self):
@@ -763,7 +763,7 @@ class BlipTextRetrievalModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
@@ -889,7 +889,7 @@ class BlipTextImageModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="BlipModel does not have input/output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_forward_signature(self):
@@ -897,7 +897,7 @@ class BlipTextImageModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            signature = inspect.signature(model.construct)
+            signature = inspect.signature(model.forward)
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 

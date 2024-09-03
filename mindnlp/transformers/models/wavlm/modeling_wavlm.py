@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch WavLM model."""
+"""MindSpore WavLM model."""
 
 import math
 import warnings
@@ -20,17 +20,11 @@ from typing import Optional, Tuple, Union, List
 
 import numpy as np
 import mindspore
-from mindspore import ops
-from mindspore import nn
 from mindspore.common.initializer import initializer, Normal, TruncatedNormal, Uniform, HeNormal
-# from mindnlp._legacy.functional import multi_head_attention_forward
-from mindnlp._legacy.functional import _mha_shape_check, is_floating_point, _in_projection, _scaled_dot_product_attention
-# from mindspore.ops.function.nn_func import multi_head_attention_forward
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-import mindnlp
-# from mindnlp.modules.weight_norm import weight_norm
-
-
 
 from .configuration_wavlm import WavLMConfig
 from ...activations import ACT2FN
@@ -43,8 +37,6 @@ from ...modeling_outputs import (
     XVectorOutput,
 )
 from ...modeling_utils import PreTrainedModel
-
-
 
 logger = logging.get_logger(__name__)
 
@@ -81,7 +73,7 @@ def _canonical_mask(
 ) -> Optional[mindspore.Tensor]:
     if mask is not None:
         _mask_dtype = mask.dtype
-        _mask_is_float = is_floating_point(mask)
+        _mask_is_float = ops.is_floating_point(mask)
         if _mask_dtype != mindspore.bool_ and not _mask_is_float:
             raise AssertionError(
                 f"only bool and floating types of {mask_name} are supported")
@@ -138,14 +130,14 @@ def _in_projection_packed(
 
     Shape:
         Inputs:
-        - q: :math:`(..., E)` where E is the embedding dimension
-        - k: :math:`(..., E)` where E is the embedding dimension
-        - v: :math:`(..., E)` where E is the embedding dimension
-        - w: :math:`(E * 3, E)` where E is the embedding dimension
-        - b: :math:`E * 3` where E is the embedding dimension
+            - q: :math:`(..., E)` where E is the embedding dimension
+            - k: :math:`(..., E)` where E is the embedding dimension
+            - v: :math:`(..., E)` where E is the embedding dimension
+            - w: :math:`(E * 3, E)` where E is the embedding dimension
+            - b: :math:`E * 3` where E is the embedding dimension
 
         Output:
-        - in output list :math:`[q', k', v']`, each output tensor will have the
+            - in output list :math:`[q', k', v']`, each output tensor will have the
             same shape as the corresponding input tensor.
     """
     E = q.size(-1)
@@ -192,15 +184,15 @@ def _compute_mask_indices(
 
     Args:
         shape: The shape for which to compute masks. This should be of a tuple of size 2 where
-               the first element is the batch size and the second element is the length of the axis to span.
+            the first element is the batch size and the second element is the length of the axis to span.
         mask_prob:  The percentage of the whole axis (between 0 and 1) which will be masked. The number of
-                    independently generated mask spans of length `mask_length` is computed by
-                    `mask_prob*shape[1]/mask_length`. Note that due to overlaps, `mask_prob` is an upper bound and the
-                    actual percentage will be smaller.
+            independently generated mask spans of length `mask_length` is computed by
+            `mask_prob*shape[1]/mask_length`. Note that due to overlaps, `mask_prob` is an upper bound and the
+            actual percentage will be smaller.
         mask_length: size of the mask
         min_masks: minimum number of masked spans
         attention_mask: A (right-padded) attention mask which independently shortens the feature axis of
-                        each batch dimension.
+            each batch dimension.
     """
     batch_size, sequence_length = shape
 
@@ -298,7 +290,7 @@ def _compute_mask_indices(
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2NoLayerNormConvLayer with Wav2Vec2->WavLM
-class WavLMNoLayerNormConvLayer(nn.Cell):
+class WavLMNoLayerNormConvLayer(nn.Module):
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else 1
@@ -309,19 +301,18 @@ class WavLMNoLayerNormConvLayer(nn.Cell):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
-            pad_mode='valid'
+            bias=config.conv_bias,
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
         hidden_states = self.activation(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2LayerNormConvLayer with Wav2Vec2->WavLM
-class WavLMLayerNormConvLayer(nn.Cell):
+class WavLMLayerNormConvLayer(nn.Module):
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else 1
@@ -332,13 +323,12 @@ class WavLMLayerNormConvLayer(nn.Cell):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
-            pad_mode='valid'
+            bias=config.conv_bias,
         )
         self.layer_norm = nn.LayerNorm(self.out_conv_dim)
         self.activation = ACT2FN[config.feat_extract_activation]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
 
         hidden_states = hidden_states.swapaxes(-2, -1)
@@ -350,7 +340,7 @@ class WavLMLayerNormConvLayer(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2GroupNormConvLayer with Wav2Vec2->WavLM
-class WavLMGroupNormConvLayer(nn.Cell):
+class WavLMGroupNormConvLayer(nn.Module):
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else 1
@@ -361,14 +351,13 @@ class WavLMGroupNormConvLayer(nn.Cell):
             self.out_conv_dim,
             kernel_size=config.conv_kernel[layer_id],
             stride=config.conv_stride[layer_id],
-            has_bias=config.conv_bias,
-            pad_mode='valid'
+            bias=config.conv_bias,
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
         self.layer_norm = nn.GroupNorm(num_groups=self.out_conv_dim, num_channels=self.out_conv_dim, affine=True)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
         hidden_states = self.layer_norm(hidden_states)
         hidden_states = self.activation(hidden_states)
@@ -376,7 +365,7 @@ class WavLMGroupNormConvLayer(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2PositionalConvEmbedding with Wav2Vec2->WavLM
-class WavLMPositionalConvEmbedding(nn.Cell):
+class WavLMPositionalConvEmbedding(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.conv = nn.Conv1d(
@@ -384,22 +373,16 @@ class WavLMPositionalConvEmbedding(nn.Cell):
             config.hidden_size,
             kernel_size=config.num_conv_pos_embeddings,
             padding=config.num_conv_pos_embeddings // 2,
-            group=config.num_conv_pos_embedding_groups,
-            pad_mode='pad',
-            has_bias=True
+            groups=config.num_conv_pos_embedding_groups,
+            bias=True
         )
 
-        weight_norm = mindnlp.modules.weight_norm.weight_norm
-        # if hasattr(nn.utils.parametrizations, "weight_norm"):
-        #     weight_norm = nn.utils.parametrizations.weight_norm
-
-
-        self.conv = weight_norm(self.conv, name="weight", dim=2)
+        self.conv = nn.utils.weight_norm(self.conv, name="weight", dim=2)
 
         self.padding = WavLMSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = hidden_states.swapaxes(1, 2)
 
         hidden_states = self.conv(hidden_states)
@@ -411,19 +394,19 @@ class WavLMPositionalConvEmbedding(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2SamePadLayer with Wav2Vec2->WavLM
-class WavLMSamePadLayer(nn.Cell):
+class WavLMSamePadLayer(nn.Module):
     def __init__(self, num_conv_pos_embeddings):
         super().__init__()
         self.num_pad_remove = 1 if num_conv_pos_embeddings % 2 == 0 else 0
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         if self.num_pad_remove > 0:
             hidden_states = hidden_states[:, :, : -self.num_pad_remove]
         return hidden_states
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2FeatureEncoder with Wav2Vec2->WavLM
-class WavLMFeatureEncoder(nn.Cell):
+class WavLMFeatureEncoder(nn.Module):
     """Construct the features from raw audio waveform"""
 
     def __init__(self, config):
@@ -439,7 +422,7 @@ class WavLMFeatureEncoder(nn.Cell):
             raise ValueError(
                 f"`config.feat_extract_norm` is {config.feat_extract_norm}, but has to be one of ['group', 'layer']"
             )
-        self.conv_layers = nn.CellList(conv_layers)
+        self.conv_layers = nn.ModuleList(conv_layers)
         self.gradient_checkpointing = False
         self._requires_grad = True
 
@@ -448,7 +431,7 @@ class WavLMFeatureEncoder(nn.Cell):
             param.requires_grad = False
         self._requires_grad = False
 
-    def construct(self, input_values):
+    def forward(self, input_values):
         hidden_states = input_values[:, None]
 
         # make sure hidden_states require grad for gradient_checkpointing
@@ -479,14 +462,14 @@ class WavLMFeatureExtractor(WavLMFeatureEncoder):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2FeatureProjection with Wav2Vec2->WavLM
-class WavLMFeatureProjection(nn.Cell):
+class WavLMFeatureProjection(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.layer_norm = nn.LayerNorm(config.conv_dim[-1], epsilon=config.layer_norm_eps)
-        self.projection = nn.Dense(config.conv_dim[-1], config.hidden_size)
+        self.layer_norm = nn.LayerNorm(config.conv_dim[-1], eps=config.layer_norm_eps)
+        self.projection = nn.Linear(config.conv_dim[-1], config.hidden_size)
         self.dropout = nn.Dropout(p=config.feat_proj_dropout)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # non-projected hidden states are needed for quantization
         norm_hidden_states = self.layer_norm(hidden_states)
         hidden_states = self.projection(norm_hidden_states)
@@ -494,7 +477,7 @@ class WavLMFeatureProjection(nn.Cell):
         return hidden_states, norm_hidden_states
 
 
-class WavLMAttention(nn.Cell):
+class WavLMAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(
@@ -519,21 +502,21 @@ class WavLMAttention(nn.Cell):
             )
         self.scaling = self.head_dim**-0.5
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim)
-        self.v_proj = nn.Dense(embed_dim, embed_dim)
-        self.q_proj = nn.Dense(embed_dim, embed_dim)
-        self.out_proj = nn.Dense(embed_dim, embed_dim)
+        self.k_proj = nn.Linear(embed_dim, embed_dim)
+        self.v_proj = nn.Linear(embed_dim, embed_dim)
+        self.q_proj = nn.Linear(embed_dim, embed_dim)
+        self.out_proj = nn.Linear(embed_dim, embed_dim)
 
         self.num_buckets = num_buckets
         self.max_distance = max_distance
 
         self.gru_rel_pos_const = mindspore.Parameter(ops.ones(1, self.num_heads, 1, 1))
-        self.gru_rel_pos_linear = nn.Dense(self.head_dim, 8)
+        self.gru_rel_pos_linear = nn.Linear(self.head_dim, 8)
 
         if has_relative_position_bias:
             self.rel_attn_embed = nn.Embedding(self.num_buckets, self.num_heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -592,293 +575,9 @@ class WavLMAttention(nn.Cell):
         add_zero_attn = False
 
 
-        def multi_head_attention_forward(
-                query: mindspore.Tensor,
-                key: mindspore.Tensor,
-                value: mindspore.Tensor,
-                embed_dim_to_check: int,
-                num_heads: int,
-                in_proj_weight: Optional[mindspore.Tensor],
-                in_proj_bias: Optional[mindspore.Tensor],
-                bias_k: Optional[mindspore.Tensor],
-                bias_v: Optional[mindspore.Tensor],
-                add_zero_attn: bool,
-                dropout_p: float,
-                out_proj_weight: mindspore.Tensor,
-                out_proj_bias: Optional[mindspore.Tensor],
-                training: bool = True,
-                key_padding_mask: Optional[mindspore.Tensor] = None,
-                need_weights: bool = True,
-                attn_mask: Optional[mindspore.Tensor] = None,
-                use_separate_proj_weight: bool = False,
-                q_proj_weight: Optional[mindspore.Tensor] = None,
-                k_proj_weight: Optional[mindspore.Tensor] = None,
-                v_proj_weight: Optional[mindspore.Tensor] = None,
-                static_k: Optional[mindspore.Tensor] = None,
-                static_v: Optional[mindspore.Tensor] = None,
-                average_attn_weights: bool = True,
-                is_causal: bool = False,
-        ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]:
-            # tens_ops = (query, key, value, in_proj_weight, in_proj_bias, bias_k, bias_v, out_proj_weight, out_proj_bias)
-            # if has_torch_function(tens_ops):
-            #     return handle_torch_function(
-            #         multi_head_attention_forward,
-            #         tens_ops,
-            #         query,
-            #         key,
-            #         value,
-            #         embed_dim_to_check,
-            #         num_heads,
-            #         in_proj_weight,
-            #         in_proj_bias,
-            #         bias_k,
-            #         bias_v,
-            #         add_zero_attn,
-            #         dropout_p,
-            #         out_proj_weight,
-            #         out_proj_bias,
-            #         training=training,
-            #         key_padding_mask=key_padding_mask,
-            #         need_weights=need_weights,
-            #         attn_mask=attn_mask,
-            #         is_causal=is_causal,
-            #         use_separate_proj_weight=use_separate_proj_weight,
-            #         q_proj_weight=q_proj_weight,
-            #         k_proj_weight=k_proj_weight,
-            #         v_proj_weight=v_proj_weight,
-            #         static_k=static_k,
-            #         static_v=static_v,
-            #         average_attn_weights=average_attn_weights,
-            #     )
-
-            is_batched = _mha_shape_check(query, key, value, key_padding_mask, attn_mask, num_heads)
-
-            # For unbatched input, we unsqueeze at the expected batch-dim to pretend that the input
-            # is batched, run the computation and before returning squeeze the
-            # batch dimension so that the output doesn't carry this temporary batch dimension.
-            if not is_batched:
-                # unsqueeze if the input is unbatched
-                query = query.unsqueeze(1)
-                key = key.unsqueeze(1)
-                value = value.unsqueeze(1)
-                if key_padding_mask is not None:
-                    key_padding_mask = key_padding_mask.unsqueeze(0)
-
-            # set up shape vars
-            tgt_len, bsz, embed_dim = query.shape
-            src_len, _, _ = key.shape
-
-            key_padding_mask = _canonical_mask(
-                mask=key_padding_mask,
-                mask_name="key_padding_mask",
-                other_type=_none_or_dtype(attn_mask),
-                other_name="attn_mask",
-                target_type=query.dtype
-            )
-
-            if is_causal and attn_mask is None:
-                raise RuntimeError(
-                    "Need attn_mask if specifying the is_causal hint. "
-                    "You may use the Transformer module method "
-                    "`generate_square_subsequent_mask` to create this mask."
-                )
-
-            if is_causal and key_padding_mask is None and not need_weights:
-                # when we have a kpm or need weights, we need attn_mask
-                # Otherwise, we use the is_causal hint go as is_causal
-                # indicator to SDPA.
-                attn_mask = None
-            else:
-                attn_mask = _canonical_mask(
-                    mask=attn_mask,
-                    mask_name="attn_mask",
-                    other_type=None,
-                    other_name="",
-                    target_type=query.dtype,
-                    check_other=False,
-                )
-
-                if key_padding_mask is not None:
-                    # We have the attn_mask, and use that to merge kpm into it.
-                    # Turn off use of is_causal hint, as the merged mask is no
-                    # longer causal.
-                    is_causal = False
-
-            assert embed_dim == embed_dim_to_check, \
-                f"was expecting embedding dimension of {embed_dim_to_check}, but got {embed_dim}"
-            if isinstance(embed_dim, mindspore.Tensor):
-                # embed_dim can be a tensor when JIT tracing
-                head_dim = embed_dim.div(num_heads, rounding_mode='trunc')
-            else:
-                head_dim = embed_dim // num_heads
-            assert head_dim * num_heads == embed_dim, f"embed_dim {embed_dim} not divisible by num_heads {num_heads}"
-            if use_separate_proj_weight:
-                # allow MHA to have different embedding dimensions when separate projection weights are used
-                assert key.shape[:2] == value.shape[:2], \
-                    f"key's sequence and batch dims {key.shape[:2]} do not match value's {value.shape[:2]}"
-            else:
-                assert key.shape == value.shape, f"key shape {key.shape} does not match value shape {value.shape}"
-
-            #
-            # compute in-projection
-            #
-            if not use_separate_proj_weight:
-                assert in_proj_weight is not None, "use_separate_proj_weight is False but in_proj_weight is None"
-                q, k, v = _in_projection_packed(query, key, value, in_proj_weight, in_proj_bias)
-            else:
-                assert q_proj_weight is not None, "use_separate_proj_weight is True but q_proj_weight is None"
-                assert k_proj_weight is not None, "use_separate_proj_weight is True but k_proj_weight is None"
-                assert v_proj_weight is not None, "use_separate_proj_weight is True but v_proj_weight is None"
-                if in_proj_bias is None:
-                    b_q = b_k = b_v = None
-                else:
-                    b_q, b_k, b_v = in_proj_bias.chunk(3)
-                q, k, v = _in_projection(query, key, value, q_proj_weight, k_proj_weight, v_proj_weight, b_q, b_k, b_v)
-
-            # prep attention mask
-
-            if attn_mask is not None:
-                # ensure attn_mask's dim is 3
-                if attn_mask.ndim == 2:
-                    correct_2d_size = (tgt_len, src_len)
-                    if attn_mask.shape != correct_2d_size:
-                        raise RuntimeError(
-                            f"The shape of the 2D attn_mask is {attn_mask.shape}, but should be {correct_2d_size}.")
-                    attn_mask = attn_mask.unsqueeze(0)
-                elif attn_mask.ndim == 3:
-                    correct_3d_size = (bsz * num_heads, tgt_len, src_len)
-                    if attn_mask.shape != correct_3d_size:
-                        raise RuntimeError(
-                            f"The shape of the 3D attn_mask is {attn_mask.shape}, but should be {correct_3d_size}.")
-                else:
-                    raise RuntimeError(f"attn_mask's dimension {attn_mask.ndim} is not supported")
-
-            # add bias along batch dimension (currently second)
-            if bias_k is not None and bias_v is not None:
-                assert static_k is None, "bias cannot be added to static key."
-                assert static_v is None, "bias cannot be added to static value."
-                k = ops.cat([k, bias_k.repeat(1, bsz, 1)])
-                v = ops.cat([v, bias_v.repeat(1, bsz, 1)])
-                if attn_mask is not None:
-                    attn_mask = ops.pad(attn_mask, (0, 1))
-                if key_padding_mask is not None:
-                    key_padding_mask = ops.pad(key_padding_mask, (0, 1))
-            else:
-                assert bias_k is None
-                assert bias_v is None
-
-            #
-            # reshape q, k, v for multihead attention and make em batch first
-            #
-            q = q.view(tgt_len, bsz * num_heads, head_dim).swapaxes(0, 1)
-            if static_k is None:
-                k = k.view(k.shape[0], bsz * num_heads, head_dim).swapaxes(0, 1)
-            else:
-                # TODO finish disentangling control flow so we don't do in-projections when statics are passed
-                assert static_k.shape[0] == bsz * num_heads, \
-                    f"expecting static_k.size(0) of {bsz * num_heads}, but got {static_k.shape[0]}"
-                assert static_k.shape[2] == head_dim, \
-                    f"expecting static_k.size(2) of {head_dim}, but got {static_k.shape[2]}"
-                k = static_k
-            if static_v is None:
-                v = v.view(v.shape[0], bsz * num_heads, head_dim).swapaxes(0, 1)
-            else:
-                # TODO finish disentangling control flow so we don't do in-projections when statics are passed
-                assert static_v.shape[0] == bsz * num_heads, \
-                    f"expecting static_v.size(0) of {bsz * num_heads}, but got {static_v.shape[0]}"
-                assert static_v.shape[2] == head_dim, \
-                    f"expecting static_v.size(2) of {head_dim}, but got {static_v.shape[2]}"
-                v = static_v
-
-            # add zero attention along batch dimension (now first)
-            if add_zero_attn:
-                zero_attn_shape = (bsz * num_heads, 1, head_dim)
-                k = ops.cat([k, ops.zeros(zero_attn_shape, dtype=k.dtype)], axis=1)
-                v = ops.cat([v, ops.zeros(zero_attn_shape, dtype=v.dtype)], axis=1)
-                if attn_mask is not None:
-                    attn_mask = ops.pad(attn_mask, (0, 1))
-                if key_padding_mask is not None:
-                    key_padding_mask = ops.pad(key_padding_mask, (0, 1))
-
-            # update source sequence length after adjustments
-            src_len = k.shape[1]
-
-            # merge key padding and attention masks
-            if key_padding_mask is not None:
-                assert key_padding_mask.shape == (bsz, src_len), \
-                    f"expecting key_padding_mask shape of {(bsz, src_len)}, but got {key_padding_mask.shape}"
-                key_padding_mask = key_padding_mask.view(bsz, 1, 1, src_len). \
-                    expand(-1, num_heads, -1, -1).reshape(bsz * num_heads, 1, src_len)
-                if attn_mask is None:
-                    attn_mask = key_padding_mask
-                else:
-                    attn_mask = attn_mask + key_padding_mask
-
-            # adjust dropout probability
-            if not training:
-                dropout_p = 0.0
-
-            #
-            # (deep breath) calculate attention and out projection
-            #
-
-            if need_weights:
-                B, Nt, E = q.shape
-                q_scaled = q * math.sqrt(1.0 / float(E))
-
-                assert not (is_causal and attn_mask is None), "FIXME: is_causal not implemented for need_weights"
-
-                if attn_mask is not None:
-                    attn_output_weights = ops.baddbmm(attn_mask, q_scaled, k.swapaxes(-2, -1))
-                else:
-                    attn_output_weights = ops.bmm(q_scaled, k.swapaxes(-2, -1))
-                attn_output_weights = ops.softmax(attn_output_weights, axis=-1)
-                if dropout_p > 0.0:
-                    attn_output_weights = ops.dropout(attn_output_weights, p=dropout_p)
-
-                attn_output = ops.bmm(attn_output_weights, v)
-
-                attn_output = attn_output.swapaxes(0, 1).view(tgt_len * bsz, embed_dim)
-                attn_output = linear(attn_output, out_proj_weight, out_proj_bias)
-                attn_output = attn_output.view(tgt_len, bsz, attn_output.shape[1])
-
-                # optionally average attention weights over heads
-                attn_output_weights = attn_output_weights.view(bsz, num_heads, tgt_len, src_len)
-                if average_attn_weights:
-                    attn_output_weights = attn_output_weights.mean(axis=1)
-
-                if not is_batched:
-                    # squeeze the output if input was unbatched
-                    attn_output = attn_output.squeeze(1)
-                    attn_output_weights = attn_output_weights.squeeze(0)
-                return attn_output, attn_output_weights
-            else:
-                # attn_mask can be either (L,S) or (N*num_heads, L, S)
-                # if attn_mask's shape is (1, L, S) we need to unsqueeze to (1, 1, L, S)
-                # in order to match the input for SDPA of (N, num_heads, L, S)
-                if attn_mask is not None:
-                    if attn_mask.shape[0] == 1 and attn_mask.ndim == 3:
-                        attn_mask = attn_mask.unsqueeze(0)
-                    else:
-                        attn_mask = attn_mask.view(bsz, num_heads, -1, src_len)
-
-                q = q.view(bsz, num_heads, tgt_len, head_dim)
-                k = k.view(bsz, num_heads, src_len, head_dim)
-                v = v.view(bsz, num_heads, src_len, head_dim)
-
-                attn_output = _scaled_dot_product_attention(q, k, v, attn_mask, dropout_p, is_causal, training)
-                attn_output = attn_output.permute(2, 0, 1, 3).view(bsz * tgt_len, embed_dim)
-
-                attn_output = linear(attn_output, out_proj_weight, out_proj_bias)
-                attn_output = attn_output.view(tgt_len, bsz, attn_output.shape[1])
-                if not is_batched:
-                    # squeeze the output if input was unbatched
-                    attn_output = attn_output.squeeze(1)
-                return attn_output, None
-
         # PyTorch 1.3.0 has F.multi_head_attention_forward defined
         # so no problem with backwards compatibility
-        attn_output, attn_weights = multi_head_attention_forward(
+        attn_output, attn_weights = F.multi_head_attention_forward(
             query,
             key,
             value,
@@ -952,21 +651,21 @@ class WavLMAttention(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2FeedForward with Wav2Vec2->WavLM
-class WavLMFeedForward(nn.Cell):
+class WavLMFeedForward(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.intermediate_dropout = nn.Dropout(p=config.activation_dropout)
 
-        self.intermediate_dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.intermediate_dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-        self.output_dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.output_dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.output_dropout = nn.Dropout(p=config.hidden_dropout)
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.intermediate_dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         hidden_states = self.intermediate_dropout(hidden_states)
@@ -976,7 +675,7 @@ class WavLMFeedForward(nn.Cell):
         return hidden_states
 
 
-class WavLMEncoderLayer(nn.Cell):
+class WavLMEncoderLayer(nn.Module):
     def __init__(self, config: WavLMConfig, has_relative_position_bias: bool = True):
         super().__init__()
         self.attention = WavLMAttention(
@@ -988,11 +687,11 @@ class WavLMEncoderLayer(nn.Cell):
             has_relative_position_bias=has_relative_position_bias,
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.feed_forward = WavLMFeedForward(config)
-        self.final_layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def construct(self, hidden_states, attention_mask=None, position_bias=None, output_attentions=False, index=0):
+    def forward(self, hidden_states, attention_mask=None, position_bias=None, output_attentions=False, index=0):
         attn_residual = hidden_states
         hidden_states, attn_weights, position_bias = self.attention(
             hidden_states,
@@ -1022,7 +721,7 @@ class WavLMEncoderLayer(nn.Cell):
         return outputs
 
 
-class WavLMEncoderLayerStableLayerNorm(nn.Cell):
+class WavLMEncoderLayerStableLayerNorm(nn.Module):
     def __init__(self, config: WavLMConfig, has_relative_position_bias: bool = True):
         super().__init__()
         self.attention = WavLMAttention(
@@ -1034,11 +733,11 @@ class WavLMEncoderLayerStableLayerNorm(nn.Cell):
             has_relative_position_bias=has_relative_position_bias,
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.feed_forward = WavLMFeedForward(config)
-        self.final_layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def construct(self, hidden_states, attention_mask=None, position_bias=None, output_attentions=False):
+    def forward(self, hidden_states, attention_mask=None, position_bias=None, output_attentions=False):
         attn_residual = hidden_states
         hidden_states = self.layer_norm(hidden_states)
         hidden_states, attn_weights, position_bias = self.attention(
@@ -1059,19 +758,19 @@ class WavLMEncoderLayerStableLayerNorm(nn.Cell):
         return outputs
 
 
-class WavLMEncoder(nn.Cell):
+class WavLMEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.pos_conv_embed = WavLMPositionalConvEmbedding(config)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [WavLMEncoderLayer(config, has_relative_position_bias=(i == 0)) for i in range(config.num_hidden_layers)]
         )
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1140,14 +839,14 @@ class WavLMEncoder(nn.Cell):
         )
 
 
-class WavLMEncoderStableLayerNorm(nn.Cell):
+class WavLMEncoderStableLayerNorm(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.pos_conv_embed = WavLMPositionalConvEmbedding(config)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [
                 WavLMEncoderLayerStableLayerNorm(config, has_relative_position_bias=(i == 0))
                 for i in range(config.num_hidden_layers)
@@ -1155,7 +854,7 @@ class WavLMEncoderStableLayerNorm(nn.Cell):
         )
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -1220,7 +919,7 @@ class WavLMEncoderStableLayerNorm(nn.Cell):
         )
 
 
-class WavLMGumbelVectorQuantizer(nn.Cell):
+class WavLMGumbelVectorQuantizer(nn.Module):
     """
     Vector quantization using gumbel softmax. See [CATEGORICAL REPARAMETERIZATION WITH
     GUMBEL-SOFTMAX](https://arxiv.org/pdf/1611.01144.pdf) for more information.
@@ -1242,7 +941,7 @@ class WavLMGumbelVectorQuantizer(nn.Cell):
         self.codevectors = mindspore.Parameter(
             mindspore.Tensor(1, self.num_groups * self.num_vars, config.codevector_dim // self.num_groups)
         )
-        self.weight_proj = nn.Dense(config.conv_dim[-1], self.num_groups * self.num_vars)
+        self.weight_proj = nn.Linear(config.conv_dim[-1], self.num_groups * self.num_vars)
 
         # can be decayed for training
         self.temperature = 2
@@ -1253,7 +952,7 @@ class WavLMGumbelVectorQuantizer(nn.Cell):
         perplexity = ops.exp(-ops.sum(marginal_probs * ops.log(marginal_probs + 1e-7), dim=-1)).sum()
         return perplexity
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         batch_size, sequence_length, hidden_size = hidden_states.shape
 
         # project to codevector dim
@@ -1267,7 +966,7 @@ class WavLMGumbelVectorQuantizer(nn.Cell):
 
             # compute perplexity
             codevector_soft_dist = ops.softmax(
-                hidden_states.view(batch_size * sequence_length, self.num_groups, -1).float(), axis=-1
+                hidden_states.view(batch_size * sequence_length, self.num_groups, -1).float(), dim=-1
             )
             perplexity = self._compute_perplexity(codevector_soft_dist)
         else:
@@ -1291,21 +990,21 @@ class WavLMGumbelVectorQuantizer(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2Adapter with Wav2Vec2->WavLM
-class WavLMAdapter(nn.Cell):
+class WavLMAdapter(nn.Module):
     def __init__(self, config):
         super().__init__()
 
         # feature dim might need to be down-projected
         if config.output_hidden_size != config.hidden_size:
-            self.proj = nn.Dense(config.hidden_size, config.output_hidden_size)
+            self.proj = nn.Linear(config.hidden_size, config.output_hidden_size)
             self.proj_layer_norm = nn.LayerNorm(config.output_hidden_size)
         else:
             self.proj = self.proj_layer_norm = None
 
-        self.layers = nn.CellList(WavLMAdapterLayer(config) for _ in range(config.num_adapter_layers))
+        self.layers = nn.ModuleList(WavLMAdapterLayer(config) for _ in range(config.num_adapter_layers))
         self.layerdrop = config.layerdrop
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # down project hidden_states if necessary
         if self.proj is not None and self.proj_layer_norm is not None:
             hidden_states = self.proj(hidden_states)
@@ -1323,7 +1022,7 @@ class WavLMAdapter(nn.Cell):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2AdapterLayer with Wav2Vec2->WavLM
-class WavLMAdapterLayer(nn.Cell):
+class WavLMAdapterLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.conv = nn.Conv1d(
@@ -1332,12 +1031,11 @@ class WavLMAdapterLayer(nn.Cell):
             config.adapter_kernel_size,
             stride=config.adapter_stride,
             padding=1,
-            pad_mode='pad'
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
-        hidden_states = ops.glu(hidden_states, axis=1)
+        hidden_states = F.glu(hidden_states, dim=1)
 
         return hidden_states
 
@@ -1389,14 +1087,14 @@ class WavLMPreTrainedModel(PreTrainedModel):
             cell.projection.bias.set_data(initializer(Uniform(scale=k),
                                                         cell.projection.bias.shape, cell.projection.bias.dtype))
 
-        elif isinstance(cell, nn.Dense):
+        elif isinstance(cell, nn.Linear):
             # module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
             #
             # if module.bias is not None:
             #     module.bias.data.zero_()
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
             # module.bias.data.zero_()
@@ -1411,7 +1109,7 @@ class WavLMPreTrainedModel(PreTrainedModel):
             #     nn.init.uniform_(module.bias, a=-k, b=k)
             cell.weight.set_data(
                 initializer(HeNormal(),cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 k = math.sqrt(cell.group / (cell.in_channels * cell.kernel_size[0]))
                 cell.bias.set_data(initializer(Uniform(scale=k),
                                                     cell.bias.shape, cell.bias.dtype))
@@ -1470,7 +1168,7 @@ WAVLM_START_DOCSTRING = r"""
     This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
     library implements for all its model (such as downloading or saving etc.).
 
-    This model is a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) sub-class. Use
+    This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) sub-class. Use
     it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
     behavior.
 
@@ -1489,12 +1187,11 @@ WAVLM_INPUTS_DOCSTRING = r"""
             soundfile`). To prepare the array into `input_values`, the [`AutoProcessor`] should be used for padding and
             conversion into a tensor of type `mindspore.Tensor`. See [`Wav2Vec2Processor.__call__`] for details.
         attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing convolution and attention on padding token indices. Mask values selected in `[0,
-            1]`:
-
+            Mask to avoid performing convolution and attention on padding token indices. Mask values selected in `[0, 1]`:
+            
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
-
+            
             [What are attention masks?](../glossary#attention-mask)
 
             <Tip warning={true}>
@@ -1638,7 +1335,7 @@ class WavLMModel(WavLMPreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -1698,7 +1395,7 @@ class WavLMModel(WavLMPreTrainedModel):
 
         return hidden_states
 
-    def construct(
+    def forward(
         self,
         input_values: Optional[mindspore.Tensor],
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1774,7 +1471,7 @@ class WavLMForCTC(WavLMPreTrainedModel):
         output_hidden_size = (
             config.output_hidden_size if hasattr(config, "add_adapter") and config.add_adapter else config.hidden_size
         )
-        self.lm_head = nn.Dense(output_hidden_size, config.vocab_size)
+        self.lm_head = nn.Linear(output_hidden_size, config.vocab_size)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1806,7 +1503,7 @@ class WavLMForCTC(WavLMPreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -1827,7 +1524,7 @@ class WavLMForCTC(WavLMPreTrainedModel):
         for param in self.wavlm.get_parameters():
             param.requires_grad = False
 
-    def construct(
+    def forward(
         self,
         input_values: Optional[mindspore.Tensor],
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1837,11 +1534,12 @@ class WavLMForCTC(WavLMPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, CausalLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, target_length)`, *optional*):
-            Labels for connectionist temporal classification. Note that `target_length` has to be smaller or equal to
-            the sequence length of the output logits. Indices are selected in `[-100, 0, ..., config.vocab_size - 1]`.
-            All labels set to `-100` are ignored (masked), the loss is only computed for labels in `[0, ...,
-            config.vocab_size - 1]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, target_length)`, *optional*):
+                Labels for connectionist temporal classification. Note that `target_length` has to be smaller or equal to
+                the sequence length of the output logits. Indices are selected in `[-100, 0, ..., config.vocab_size - 1]`.
+                All labels set to `-100` are ignored (masked), the loss is only computed for labels in `[0, ...,
+                config.vocab_size - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None and labels.max() >= self.config.vocab_size:
@@ -1875,10 +1573,10 @@ class WavLMForCTC(WavLMPreTrainedModel):
             flattened_targets = labels.masked_select(labels_mask)
 
             # ctc_loss doesn't support fp16
-            log_probs = ops.log_softmax(logits.astype(mindspore.float32), axis=-1).swapaxes(0, 1)
+            log_probs = F.log_softmax(logits.astype(mindspore.float32), dim=-1).swapaxes(0, 1)
 
             # with torch.backends.cudnn.flags(enabled=False):
-            loss = ops.ctc_loss(
+            loss = F.ctc_loss(
                 log_probs,
                 labels,
                 input_lengths,
@@ -1909,8 +1607,8 @@ class WavLMForSequenceClassification(WavLMPreTrainedModel):
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
             self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers)
-        self.projector = nn.Dense(config.hidden_size, config.classifier_proj_size)
-        self.classifier = nn.Dense(config.classifier_proj_size, config.num_labels)
+        self.projector = nn.Linear(config.hidden_size, config.classifier_proj_size)
+        self.classifier = nn.Linear(config.classifier_proj_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1922,7 +1620,7 @@ class WavLMForSequenceClassification(WavLMPreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -1946,7 +1644,7 @@ class WavLMForSequenceClassification(WavLMPreTrainedModel):
             param.requires_grad = False
 
     # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2ForSequenceClassification.forward with Wav2Vec2->WavLM, wav2vec2->wavlm
-    def construct(
+    def forward(
         self,
         input_values: Optional[mindspore.Tensor],
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1956,10 +1654,11 @@ class WavLMForSequenceClassification(WavLMPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -1976,8 +1675,8 @@ class WavLMForSequenceClassification(WavLMPreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = ops.stack(hidden_states, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(hidden_states, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
@@ -1994,7 +1693,7 @@ class WavLMForSequenceClassification(WavLMPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]
@@ -2020,7 +1719,7 @@ class WavLMForAudioFrameClassification(WavLMPreTrainedModel):
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
             self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
         self.num_labels = config.num_labels
 
         self.init_weights()
@@ -2031,7 +1730,7 @@ class WavLMForAudioFrameClassification(WavLMPreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -2052,7 +1751,7 @@ class WavLMForAudioFrameClassification(WavLMPreTrainedModel):
         for param in self.wavlm.get_parameters():
             param.requires_grad = False
 
-    def construct(
+    def forward(
         self,
         input_values: Optional[mindspore.Tensor],
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2062,10 +1761,11 @@ class WavLMForAudioFrameClassification(WavLMPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -2081,8 +1781,8 @@ class WavLMForAudioFrameClassification(WavLMPreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = ops.stack(hidden_states, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(hidden_states, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
@@ -2091,7 +1791,7 @@ class WavLMForAudioFrameClassification(WavLMPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), ops.argmax(labels.view(-1, self.num_labels), dim=1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), ops.argmax(labels.view(-1, self.num_labels), dim=1))
 
 
         if not return_dict:
@@ -2107,7 +1807,7 @@ class WavLMForAudioFrameClassification(WavLMPreTrainedModel):
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.AMSoftmaxLoss
-class AMSoftmaxLoss(nn.Cell):
+class AMSoftmaxLoss(nn.Module):
     def __init__(self, input_dim, num_labels, scale=30.0, margin=0.4):
         super(AMSoftmaxLoss, self).__init__()
         self.scale = scale
@@ -2116,22 +1816,22 @@ class AMSoftmaxLoss(nn.Cell):
         self.weight = mindspore.Parameter(ops.randn(input_dim, num_labels), requires_grad=True)
         # self.loss = nn.CrossEntropyLoss()
 
-    def construct(self, hidden_states, labels):
+    def forward(self, hidden_states, labels):
         labels = labels.flatten()
-        weight = mindnlp.modules.functional.normalize(self.weight, dim=0)
-        hidden_states = mindnlp.modules.functional.normalize(hidden_states, dim=1)
+        weight = F.normalize(self.weight, dim=0)
+        hidden_states = F.normalize(hidden_states, dim=1)
         cos_theta = ops.mm(hidden_states, weight)
         psi = cos_theta - self.margin
 
-        onehot = ops.one_hot(labels, self.num_labels)
+        onehot = F.one_hot(labels, self.num_labels)
         logits = self.scale * ops.where(onehot.bool(), psi, cos_theta)
-        loss = ops.cross_entropy(logits, labels)
+        loss = F.cross_entropy(logits, labels)
 
         return loss
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.TDNNLayer
-class TDNNLayer(nn.Cell):
+class TDNNLayer(nn.Module):
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.tdnn_dim[layer_id - 1] if layer_id > 0 else config.tdnn_dim[layer_id]
@@ -2139,10 +1839,10 @@ class TDNNLayer(nn.Cell):
         self.kernel_size = config.tdnn_kernel[layer_id]
         self.dilation = config.tdnn_dilation[layer_id]
 
-        self.kernel = nn.Dense(self.in_conv_dim * self.kernel_size, self.out_conv_dim)
+        self.kernel = nn.Linear(self.in_conv_dim * self.kernel_size, self.out_conv_dim)
         self.activation = nn.ReLU()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         # if is_peft_available():
         #     from peft.tuners.lora import LoraLayer
         #
@@ -2152,7 +1852,7 @@ class TDNNLayer(nn.Cell):
         #             "You should exclude TDNNLayer from LoRA's target modules.",
         #         )
 
-        # for backward compatibility, we keep nn.Dense but call F.conv1d for speed up
+        # for backward compatibility, we keep nn.Linear but call F.conv1d for speed up
         hidden_states = hidden_states.swapaxes(1, 2)
         weight = self.kernel.weight.view(self.out_conv_dim, self.kernel_size, self.in_conv_dim).swapaxes(1, 2)
         hidden_states = ops.conv1d(hidden_states, weight, self.kernel.bias, dilation=self.dilation)
@@ -2171,13 +1871,13 @@ class WavLMForXVector(WavLMPreTrainedModel):
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
             self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers)
-        self.projector = nn.Dense(config.hidden_size, config.tdnn_dim[0])
+        self.projector = nn.Linear(config.hidden_size, config.tdnn_dim[0])
 
         tdnn_layers = [TDNNLayer(config, i) for i in range(len(config.tdnn_dim))]
-        self.tdnn = nn.CellList(tdnn_layers)
+        self.tdnn = nn.ModuleList(tdnn_layers)
 
-        self.feature_extractor = nn.Dense(config.tdnn_dim[-1] * 2, config.xvector_output_dim)
-        self.classifier = nn.Dense(config.xvector_output_dim, config.xvector_output_dim)
+        self.feature_extractor = nn.Linear(config.tdnn_dim[-1] * 2, config.xvector_output_dim)
+        self.classifier = nn.Linear(config.xvector_output_dim, config.xvector_output_dim)
 
         self.objective = AMSoftmaxLoss(config.xvector_output_dim, config.num_labels)
 
@@ -2189,7 +1889,7 @@ class WavLMForXVector(WavLMPreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -2225,7 +1925,7 @@ class WavLMForXVector(WavLMPreTrainedModel):
 
         return input_lengths
 
-    def construct(
+    def forward(
         self,
         input_values: Optional[mindspore.Tensor],
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2235,10 +1935,11 @@ class WavLMForXVector(WavLMPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, XVectorOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -2254,8 +1955,8 @@ class WavLMForXVector(WavLMPreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = ops.stack(hidden_states, axis=1)
-            norm_weights = ops.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(hidden_states, dim=1)
+            norm_weights = ops.softmax(self.layer_weights, dim=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
@@ -2268,8 +1969,7 @@ class WavLMForXVector(WavLMPreTrainedModel):
         # Statistic Pooling
         if attention_mask is None:
             mean_features = hidden_states.mean(axis=1)
-            # std_features = hidden_states.std(axis=1)
-            std_features = ops.std(hidden_states, axis=1, keepdims=True)[:,0,:]
+            std_features = ops.std(hidden_states, dim=1)
         else:
             feat_extract_output_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(axis=1))
             tdnn_output_lengths = self._get_tdnn_output_lengths(feat_extract_output_lengths)
@@ -2277,11 +1977,10 @@ class WavLMForXVector(WavLMPreTrainedModel):
             std_features = []
             for i, length in enumerate(tdnn_output_lengths):
                 mean_features.append(hidden_states[i, :length].mean(axis=0))
-                # std_features.append(hidden_states[i, :length].std(axis=0))
-                std_features.append(ops.std(hidden_states[i, :length], axis=0, keepdims=True)[0,:])
+                std_features.append(ops.std(hidden_states[i, :length], dim=0))
             mean_features = ops.stack(mean_features)
             std_features = ops.stack(std_features)
-        statistic_pooling = ops.cat([mean_features, std_features], axis=-1)
+        statistic_pooling = ops.cat([mean_features, std_features], dim=-1)
 
         output_embeddings = self.feature_extractor(statistic_pooling)
         logits = self.classifier(output_embeddings)

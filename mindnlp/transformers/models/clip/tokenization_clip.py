@@ -157,11 +157,12 @@ class BasicTokenizer:
             do_lower_case (bool): A flag indicating whether the text should be converted to lowercase. Defaults to True.
             never_split (list): A list of strings that should never be split during tokenization. Defaults to an empty list.
             tokenize_chinese_chars (bool): A flag indicating whether Chinese characters should be tokenized. Defaults to True.
-            strip_accents (None or str): Determines if accents should be stripped. If None, no action is taken; if 'unicode', accents are stripped using Unicode normalization. Defaults to None.
+            strip_accents (None or str): Determines if accents should be stripped. If None, no action is taken; if 'unicode',
+                accents are stripped using Unicode normalization. Defaults to None.
             do_split_on_punc (bool): A flag indicating whether the tokenizer should split on punctuation. Defaults to True.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -351,7 +352,7 @@ class CLIPTokenizer(PreTrainedTokenizer):
             pad_token (str, optional): The padding token. Defaults to an empty string.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             ImportError: If the 'ftfy' package is not installed.
@@ -401,11 +402,13 @@ class CLIPTokenizer(PreTrainedTokenizer):
         
         Args:
             self (CLIPTokenizer): The instance of the CLIPTokenizer class.
-                This parameter refers to the current instance of the CLIPTokenizer for which the vocabulary size is to be calculated.
+                This parameter refers to the current instance of the CLIPTokenizer for which the vocabulary size is to
+                be calculated.
         
         Returns:
             int: The number of unique tokens in the vocabulary.
-                The method returns an integer value representing the size of the vocabulary as the count of unique tokens stored in the encoder.
+                The method returns an integer value representing the size of the vocabulary as the count of unique
+                tokens stored in the encoder.
         
         Raises:
             None.
@@ -511,14 +514,17 @@ class CLIPTokenizer(PreTrainedTokenizer):
         This method 'bpe' is defined in the class 'CLIPTokenizer'. It processes a given token using Byte Pair Encoding (BPE).
         
         Args:
-            self: This parameter represents the instance of the class 'CLIPTokenizer'. It is used to access the attributes and methods of the class.
-            token (str): The input token to be processed using Byte Pair Encoding (BPE). It should be a string representing a single token.
+            self: This parameter represents the instance of the class 'CLIPTokenizer'.
+                It is used to access the attributes and methods of the class.
+            token (str): The input token to be processed using Byte Pair Encoding (BPE).
+                It should be a string representing a single token.
         
         Returns:
-            str: The processed token after applying Byte Pair Encoding (BPE) algorithm. The token is modified based on the algorithm rules.
+            str: The processed token after applying Byte Pair Encoding (BPE) algorithm.
+                The token is modified based on the algorithm rules.
         
         Raises:
-            N/A
+            None.
         """
         if token in self.cache:
             return self.cache[token]

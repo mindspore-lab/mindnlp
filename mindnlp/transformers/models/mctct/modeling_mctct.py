@@ -18,9 +18,11 @@ import math
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import nn, ops, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 # from ...integrations.deepspeed import is_deepspeed_zero3_enabled
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
@@ -49,7 +51,7 @@ _CTC_EXPECTED_LOSS = 1885.65
 def is_deepspeed_zero3_enabled():
     return False
 
-class MCTCTConv1dSubsampler(nn.Cell):
+class MCTCTConv1dSubsampler(nn.Module):
     """
     Convolutional subsampler: a stack of 1D convolution (along temporal dimension) followed by non-linear activation
     via gated linear units (https://arxiv.org/abs/1911.08460)
@@ -80,21 +82,20 @@ class MCTCTConv1dSubsampler(nn.Cell):
         self.kernel_size = config.conv_kernel
         self.stride = config.conv_stride
 
-        # NOTE: MCTCT by construction only uses one convolution kernel. I've made this flexible to allow for
+        # NOTE: MCTCT by forwardion only uses one convolution kernel. I've made this flexible to allow for
         # multiple layers of convolutions, but not sure if this model definition should just restrict it
         # to one layer. This becomes especially relevant when considering the padding like line 1 of forward().
-        self.conv_layers = nn.CellList([
+        self.conv_layers = nn.ModuleList([
             nn.Conv1d(
                 self.in_channels if i == 0 else self.mid_channels[i],
                 self.mid_channels[i] if i < self.num_layers - 1 else self.out_channels,
                 kernel_size=k,
                 stride=self.stride[i],
-                pad_mode="valid",
             )
             for i, k in enumerate(self.kernel_size)
         ])
 
-    def construct(self, input_features):
+    def forward(self, input_features):
         # NOTE: in reference to the NOTE in __init__, right now it just calculates padding as if
         # there will be just one conv layer.
         padding = sum(size // 2 for size in self.kernel_size)  # (7, 7) -> (3, 3)
@@ -103,14 +104,14 @@ class MCTCTConv1dSubsampler(nn.Cell):
         hidden_states = input_features.swapaxes(1, 2)  # -> Batch x Frame x Time
         for conv in self.conv_layers:
             hidden_states = conv(hidden_states)
-            hidden_states = ops.glu(hidden_states, axis=self.glu_dim)
+            hidden_states = F.glu(hidden_states, dim=self.glu_dim)
             hidden_states = self.dropout(hidden_states)
 
         hidden_states = hidden_states.swapaxes(1, 2)  # -> Batch x Time x Frame
         return hidden_states
 
 
-class MCTCTEmbeddings(nn.Cell):
+class MCTCTEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
@@ -141,7 +142,7 @@ class MCTCTEmbeddings(nn.Cell):
 
 
 
-    def construct(
+    def forward(
         self, input_features=None, token_type_ids=None, position_ids=None, inputs_embeds=None, past_key_values_length=0
     ):
         input_shape = input_features.shape if input_features is not None else inputs_embeds.shape[:-1]
@@ -151,7 +152,7 @@ class MCTCTEmbeddings(nn.Cell):
         if position_ids is None:
             position_ids = self.position_ids[:, past_key_values_length : seq_length + past_key_values_length]
 
-        # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
+        # Setting the token_type_ids to the registered buffer in forwardor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
         if token_type_ids is None:
@@ -174,7 +175,7 @@ class MCTCTEmbeddings(nn.Cell):
         return embeddings
 
 
-class MCTCTSelfAttention(nn.Cell):
+class MCTCTSelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -187,9 +188,9 @@ class MCTCTSelfAttention(nn.Cell):
         self.attention_head_size = config.attention_head_dim
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size, has_bias=False)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size, has_bias=False)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size, has_bias=False)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size, bias=False)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=False)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=False)
 
         self.dropout = nn.Dropout(p = config.attention_probs_dropout_prob)
 
@@ -217,7 +218,7 @@ class MCTCTSelfAttention(nn.Cell):
         batch, hidden_state, seq_len, heads = scores.shape
 
         # e.g. [10, 1853, 14, 4]
-        scores = ops.cat((scores, ops.zeros((batch, seq_len, seq_len, heads))), axis=1)
+        scores = ops.cat((scores, ops.zeros((batch, seq_len, seq_len, heads))), dim=1)
 
         # e.g. [10, 25942, 1, 4]
         scores = self.reshape_fortran(scores, [batch, (hidden_state + seq_len) * seq_len, 1, heads])
@@ -233,7 +234,7 @@ class MCTCTSelfAttention(nn.Cell):
 
         return scores.permute(0, 3, 1, 2)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -263,7 +264,7 @@ class MCTCTSelfAttention(nn.Cell):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -282,32 +283,32 @@ class MCTCTSelfAttention(nn.Cell):
         return outputs
 
 
-class MCTCTLayerNorm(nn.Cell):
+class MCTCTLayerNorm(nn.Module):
     def __init__(self):
         super().__init__()
         self.singleton_weight = Parameter(ops.ones(1),'singleton_weight')
         self.singleton_bias = Parameter(ops.zeros(1),'singleton_bias')
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         return (hidden_states * self.singleton_weight) + self.singleton_bias
 
 
-class MCTCTSelfOutput(nn.Cell):
+class MCTCTSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size, has_bias=False)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class MCTCTAttention(nn.Cell):
+class MCTCTAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.self = MCTCTSelfAttention(config)
@@ -325,14 +326,14 @@ class MCTCTAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -351,36 +352,36 @@ class MCTCTAttention(nn.Cell):
         return outputs
 
 
-class MCTCTIntermediate(nn.Cell):
+class MCTCTIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size, has_bias=False)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size, bias=False)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
-class MCTCTOutput(nn.Cell):
+class MCTCTOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size, has_bias=False)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size, bias=False)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class MCTCTLayer(nn.Cell):
+class MCTCTLayer(nn.Module):
     def __init__(self, config: MCTCTConfig):
         super().__init__()
 
@@ -392,7 +393,7 @@ class MCTCTLayer(nn.Cell):
         self.is_decoder = config.is_decoder
         self.output = MCTCTOutput(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -433,7 +434,7 @@ class MCTCTPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """Initialize the weights"""
         #TODO
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             # cell.weight.data.normal_(mean=0.0, std=std)
@@ -453,7 +454,7 @@ class MCTCTPreTrainedModel(PreTrainedModel):
             cell.singleton_weight.set_data(initializer('ones', cell.singleton_weight.shape, cell.singleton_weight.dtype))
             # cell.singleton_bias.data.zero_()
             cell.singleton_bias.set_data(initializer('zeros', cell.singleton_bias.shape, cell.singleton_bias.dtype))
-        if isinstance(cell, (nn.Dense, nn.Conv1d)):
+        if isinstance(cell, (nn.Linear, nn.Conv1d)):
             # cell.weight.data.normal_(mean=0.0, std=std)
             cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
@@ -494,7 +495,7 @@ class MCTCTPreTrainedModel(PreTrainedModel):
         # these two operations makes sure that all values
         # before the output lengths indices are attended to
         attention_mask[(ops.arange(bsz), subsampled_lengths - 1)] = 1
-        attention_mask = attention_mask.flip([-1]).cumsum(-1).flip([-1])
+        attention_mask = attention_mask.flip([-1]).int().cumsum(-1).flip([-1])
         return attention_mask
 
 
@@ -548,11 +549,11 @@ class MCTCTEncoder(MCTCTPreTrainedModel):
 
         self.layer_norm = MCTCTLayerNorm()
         self.conv = MCTCTConv1dSubsampler(config)
-        self.layers = nn.CellList([MCTCTLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([MCTCTLayer(config) for _ in range(config.num_hidden_layers)])
 
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         input_features: ms.Tensor,
         attention_mask: ms.Tensor,
@@ -575,7 +576,7 @@ class MCTCTEncoder(MCTCTPreTrainedModel):
         if attention_mask is not None:
             attention_mask = self._get_feature_vector_attention_mask(inputs_embeds.shape[1], attention_mask)
 
-        hidden_states = ops.dropout(inputs_embeds, p=self.hidden_dropout_prob, training=self.training)
+        hidden_states = F.dropout(inputs_embeds, p=self.hidden_dropout_prob, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
@@ -648,7 +649,7 @@ class MCTCTModel(MCTCTPreTrainedModel):
         self.post_init()
 
 
-    def construct(
+    def forward(
         self,
         input_features: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
@@ -702,13 +703,13 @@ class MCTCTForCTC(MCTCTPreTrainedModel):
             )
         output_hidden_size = config.hidden_size
 
-        self.ctc_head = nn.Dense(output_hidden_size, config.vocab_size)
+        self.ctc_head = nn.Linear(output_hidden_size, config.vocab_size)
 
         # Initialize weights and apply final processing
         self.post_init()
 
 
-    def construct(
+    def forward(
         self,
         input_features: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
@@ -758,9 +759,9 @@ class MCTCTForCTC(MCTCTPreTrainedModel):
             # flattened_targets = labels.masked_select(labels_mask)
 
             # ctc_loss doesn't support fp16
-            log_probs = ops.log_softmax(logits, axis=-1).swapaxes(0, 1)
+            log_probs = F.log_softmax(logits, dim=-1).swapaxes(0, 1)
 
-            loss = ops.ctc_loss(
+            loss = F.ctc_loss(
                 log_probs,
                 # flattened_targets,
                 labels,

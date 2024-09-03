@@ -50,7 +50,7 @@ class SeamlessM4Tv2Config(PretrainedConfig):
             can be represented by the `char_inputs_ids` passed when calling the Text-To-Units sub-model of
             [`~SeamlessM4Tv2Model`], [`~SeamlessM4Tv2ForSpeechToSpeech`] or [`~SeamlessM4Tv2ForTextToSpeech`].
 
-        > Parameters shared across sub-models
+        Parameters shared across sub-models: param below are Parameters shared across sub-models
 
         hidden_size (`int`, *optional*, defaults to 1024):
             Dimensionality of the "intermediate" layers in the architecture.
@@ -83,7 +83,7 @@ class SeamlessM4Tv2Config(PretrainedConfig):
         scale_embedding (`bool`, *optional*, defaults to `True`):
             Scale embeddings by diving by sqrt(d_model).
 
-        > Text encoder and text decoder specific parameters
+        Text encoder and text decoder specific parameters: param below are Text encoder and text decoder specific parameters
 
         encoder_layers (`int`, *optional*, defaults to 24):
             Number of hidden layers in the Transformer text encoder.
@@ -109,7 +109,7 @@ class SeamlessM4Tv2Config(PretrainedConfig):
         eos_token_id (`int`, *optional*, defaults to 3):
             The id of the _end-of-stream_ text token. Only applied to the text-decoder model.
 
-        > Speech encoder specific parameters
+        Speech encoder specific parameters: param below are Speech encoder specific parameters
 
         speech_encoder_layers (`int`, *optional*, defaults to 24):
             Number of hidden layers in the Transformer speech encoder.
@@ -153,7 +153,7 @@ class SeamlessM4Tv2Config(PretrainedConfig):
         speech_encoder_left_chunk_num (`int`, *optional*, defaults to 128):
             Number of chunks on the left up to which lookahead is allowed.
 
-        > Text-To-Unit (t2u) model specific parameters
+        Text-To-Unit (t2u) model specific parameters:  param below are Text-To-Unit (t2u) model specific parameters
 
         t2u_bos_token_id (`int`, *optional*, defaults to 0):
             The id of the _beginning-of-stream_ unit token. Only applied to the text-to-unit seq2seq model.
@@ -185,7 +185,7 @@ class SeamlessM4Tv2Config(PretrainedConfig):
         t2u_variance_pred_dropout (`float`, *optional*, defaults to 0.5):
             The dropout probabilitiy of the text-to-unit's duration predictor.
 
-         > Hifi-Gan Vocoder specific parameters
+         Hifi-Gan Vocoder specific parameters: param below are Hifi-Gan Vocoder specific parameters
 
         sampling_rate (`int`, *optional*, defaults to 16000):
             The sampling rate at which the output audio will be generated, expressed in hertz (Hz).
@@ -229,18 +229,20 @@ class SeamlessM4Tv2Config(PretrainedConfig):
         vocoder_offset (`int`, *optional*, defaults to 4):
             Offset the unit token ids by this number to account for symbol tokens. Applies to the vocoder only.
 
-    ```python
-    >>> from transformers import SeamlessM4Tv2Model, SeamlessM4Tv2Config
-
-    >>> # Initializing a SeamlessM4Tv2 "" style configuration
-    >>> configuration = SeamlessM4Tv2Config()
-
-    >>> # Initializing a model from the "" style configuration
-    >>> model = SeamlessM4Tv2Model(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+    Example:
+        ```python
+        >>> from transformers import SeamlessM4Tv2Model, SeamlessM4Tv2Config
+        ...
+        >>> # Initializing a SeamlessM4Tv2 "" style configuration
+        >>> configuration = SeamlessM4Tv2Config()
+        ...
+        >>> # Initializing a model from the "" style configuration
+        >>> model = SeamlessM4Tv2Model(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "seamless_m4t_v2"
 
     def __init__(

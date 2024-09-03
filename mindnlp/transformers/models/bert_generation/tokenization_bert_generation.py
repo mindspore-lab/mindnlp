@@ -41,19 +41,19 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
         vocab_file (`str`):
             [SentencePiece](https://github.com/google/sentencepiece) file (generally has a *.spm* extension) that
             contains the vocabulary necessary to instantiate a tokenizer.
-        bos_token (`str`, *optional*, defaults to `"<s>"`):
-            The begin of sequence token.
-        eos_token (`str`, *optional*, defaults to `"</s>"`):
-            The end of sequence token.
-        unk_token (`str`, *optional*, defaults to `"<unk>"`):
+        bos_token (`str`, *optional*):
+            The begin of sequence token, defaults to `"<s>"`
+        eos_token (`str`, *optional*):
+            The end of sequence token, defaults to `"</s>"`
+        unk_token (`str`, *optional*):
             The unknown token. A token that is not in the vocabulary cannot be converted to an ID and is set to be this
-            token instead.
-        pad_token (`str`, *optional*, defaults to `"<pad>"`):
-            The token used for padding, for example when batching sequences of different lengths.
-        sep_token (`str`, *optional*, defaults to `"<::::>"`):
+            token instead, defaults to `"<unk>"`
+        pad_token (`str`, *optional*):
+            The token used for padding, for example when batching sequences of different lengths, defaults to `"<pad>"`
+        sep_token (`str`, *optional*):
             The separator token, which is used when building a sequence from multiple sequences, e.g. two sequences for
             sequence classification or for a text and a question for question answering. It is also used as the last
-            token of a sequence built with special tokens.
+            token of a sequence built with special tokens, defaults to `"<::::>"`
         sp_model_kwargs (`dict`, *optional*):
             Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
             SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
@@ -62,13 +62,13 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
             - `enable_sampling`: Enable subword regularization.
             - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
 
-              - `nbest_size = {0,1}`: No sampling is performed.
-              - `nbest_size > 1`: samples from the nbest_size results.
-              - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
+                - `nbest_size = {0,1}`: No sampling is performed.
+                - `nbest_size > 1`: samples from the nbest_size results.
+                - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
                 using forward-filtering-and-backward-sampling algorithm.
 
             - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-              BPE-dropout.
+            BPE-dropout.
     """
     vocab_files_names = VOCAB_FILES_NAMES
     prefix_tokens: List[int] = []
@@ -87,23 +87,23 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
     ) -> None:
         """
         Initializes a BertGenerationTokenizer object.
-        
+
         Args:
-        - vocab_file (str): The path to the vocabulary file containing the token mappings.
-        - bos_token (str, optional): The Beginning of Sentence token. Default is '<s>'.
-        - eos_token (str, optional): The End of Sentence token. Default is '</s>'.
-        - unk_token (str, optional): The token representing unknown words. Default is '<unk>'.
-        - pad_token (str, optional): The token used for padding sequences. Default is '<pad>'.
-        - sep_token (str, optional): The token used for separating different segments. Default is '<::::>'.
-        - sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional keyword arguments for SentencePieceProcessor. Default is None.
-        
+            vocab_file (str): The path to the vocabulary file containing the token mappings.
+            bos_token (str, optional): The Beginning of Sentence token. Default is '<s>'.
+            eos_token (str, optional): The End of Sentence token. Default is '</s>'.
+            unk_token (str, optional): The token representing unknown words. Default is '<unk>'.
+            pad_token (str, optional): The token used for padding sequences. Default is '<pad>'.
+            sep_token (str, optional): The token used for separating different segments. Default is '<::::>'.
+            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional keyword arguments for SentencePieceProcessor. Default is None.
+
         Returns:
-        None. This method initializes the BertGenerationTokenizer object.
-        
+            None.
+
         Raises:
-        - TypeError: If the vocab_file is not a valid string path or if sp_model_kwargs is not a valid dictionary.
-        - OSError: If the vocab_file cannot be loaded or accessed.
-        - ValueError: If any of the default tokens are not valid strings.
+            TypeError: If the vocab_file is not a valid string path or if sp_model_kwargs is not a valid dictionary.
+            OSError: If the vocab_file cannot be loaded or accessed.
+            ValueError: If any of the default tokens are not valid strings.
         """
         self.sp_model_kwargs = {} if sp_model_kwargs is None else sp_model_kwargs
 
@@ -127,42 +127,45 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
     def vocab_size(self):
         """
         Returns the size of the vocabulary used by the BertGenerationTokenizer instance.
-        
+
         Args:
             self (BertGenerationTokenizer): The current instance of the BertGenerationTokenizer class.
-        
+
         Returns:
-            None: This method does not return a value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.sp_model.get_piece_size()
 
     def get_vocab(self):
         """
         Returns the vocabulary of the BertGenerationTokenizer.
-        
+
         Args:
             self (BertGenerationTokenizer): An instance of the BertGenerationTokenizer class.
-        
+
         Returns:
-            dict: A dictionary representing the vocabulary. The keys are tokens (words, subwords, or special tokens) 
-            and the values are their corresponding token IDs.
-        
+            dict:
+                A dictionary representing the vocabulary. The keys are tokens (words, subwords, or special tokens)
+                and the values are their corresponding token IDs.
+
         Raises:
             None.
-        
+
         Note:
-            - The vocabulary includes both the original vocabulary from the pre-trained model and any additional tokens added 
-              using the 'add_tokens' method.
+            - The vocabulary includes both the original vocabulary from the pre-trained model and any additional tokens added
+            using the 'add_tokens' method.
             - The token IDs range from 0 to vocab_size - 1, where vocab_size is the total number of tokens in the vocabulary.
-        
+
         Example:
+            ```python:
             >>> tokenizer = BertGenerationTokenizer()
             >>> vocab = tokenizer.get_vocab()
             >>> print(vocab)
             {'[PAD]': 0, '[UNK]': 1, '[CLS]': 2, '[SEP]': 3, '[MASK]': 4, 'hello': 5, 'world': 6}
+            ```
         """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
@@ -178,7 +181,7 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
             self: Instance of the BertGenerationTokenizer class.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -244,7 +247,8 @@ class BertGenerationTokenizer(PreTrainedTokenizer):
         Args:
             self: The instance of the BertGenerationTokenizer class.
             save_directory (str): The directory where the vocabulary files will be saved.
-            filename_prefix (Optional[str]): An optional prefix to be added to the vocabulary file name. Defaults to None.
+            filename_prefix (Optional[str]): An optional prefix to be added to the vocabulary file name.
+                Defaults to None.
         
         Returns:
             Tuple[str]: A tuple containing the path of the saved vocabulary file.

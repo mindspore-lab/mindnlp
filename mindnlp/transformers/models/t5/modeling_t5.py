@@ -1,6 +1,5 @@
 # coding=utf-8
 # Copyright 2018 Mesh TensorFlow authors, T5 Authors and HuggingFace Inc. team.
-# Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,24 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-""" MindSpore T5 model."""
+"""MindSpore T5 model."""
 
 import copy
 import math
 import warnings
 from typing import List, Optional, Tuple, Union
 
-import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter
-from mindspore.common.initializer import initializer, Constant, Normal
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-from mindnlp.utils import (
-    DUMMY_INPUTS,
-    DUMMY_MASK,
-    logging,
-)
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -39,175 +31,105 @@ from ...modeling_outputs import (
     Seq2SeqModelOutput,
     Seq2SeqQuestionAnsweringModelOutput,
     Seq2SeqSequenceClassifierOutput,
+    TokenClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import ALL_LAYERNORM_LAYERS, find_pruneable_heads_and_indices, prune_linear_layer
+from ....utils import (
+    DUMMY_INPUTS,
+    DUMMY_MASK,
+    logging,
+)
 from .configuration_t5 import T5Config
+
 
 logger = logging.get_logger(__name__)
 
-####################################################
-# This dict contains ids and associated url
-# for the pretrained weights provided with the models
-####################################################
-T5_PRETRAINED_MODEL_ARCHIVE_LIST = [
-    "t5-small",
-    "t5-base",
-    "t5-large",
-    "t5-3b",
-    "t5-11b",
-    # See all T5 models at https://hf-mirror.com/models?filter=t5
-]
+_CONFIG_FOR_DOC = "T5Config"
+_CHECKPOINT_FOR_DOC = "google-t5/t5-small"
 
-class T5LayerNorm(nn.Cell):
-    """T5LayerNorm"""
+
+class T5LayerNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
         """
         Construct a layernorm module in the T5 style. No bias and no subtraction of mean.
         """
         super().__init__()
-        self.weight = Parameter(initializer('zeros', (hidden_size,), mindspore.float32), 'weight')
+        self.weight = nn.Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
-    def construct(self, hidden_states):
-        """
-        This method 'construct' is a part of the class 'T5LayerNorm' and is used to perform layer normalization on the input hidden states.
-        
-        Args:
-            self (T5LayerNorm): The instance of the T5LayerNorm class.
-            hidden_states (numpy.ndarray): The input hidden states to be normalized. It is expected to be an array of numerical values.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            ValueError: If the input hidden_states is not a valid numerical array.
-            TypeError: If the input hidden_states or self.weight is not of the expected data type.
-            RuntimeError: If there is an issue with the normalization process.
-        """
-        variance = hidden_states.astype(mindspore.float32).pow(2).mean(-1, keep_dims=True)
-        hidden_states = hidden_states / ops.sqrt(variance + self.variance_epsilon)
+    def forward(self, hidden_states):
+        # T5 uses a layer_norm which only scales and doesn't shift, which is also known as Root Mean
+        # Square Layer Normalization https://arxiv.org/abs/1910.07467 thus varience is calculated
+        # w/o mean and there is no bias. Additionally we want to make sure that the accumulation for
+        # half-precision inputs is done in fp32
+
+        variance = ops.mean(hidden_states.to(mindspore.float32).pow(2), -1, keepdim=True)
+        hidden_states = hidden_states * ops.rsqrt(variance + self.variance_epsilon)
+
         # convert into half-precision if necessary
         if self.weight.dtype in [mindspore.float16, mindspore.bfloat16]:
-            hidden_states = hidden_states.astype(self.weight.dtype)
+            hidden_states = hidden_states.to(self.weight.dtype)
+
         return self.weight * hidden_states
+
 
 ALL_LAYERNORM_LAYERS.append(T5LayerNorm)
 
-class T5DenseActDense(nn.Cell):
-    """T5DenseActDense"""
+
+class T5DenseActDense(nn.Module):
     def __init__(self, config: T5Config):
-        """
-        Initializes an instance of the T5DenseActDense class.
-        
-        Args:
-            self: The instance of the class.
-            config (T5Config): The configuration object containing the model's settings.
-                - The 'config' parameter is of type T5Config, which specifies the configuration for the T5 model.
-                - It is used to set up the parameters for the dense layers and the dropout rate.
-                - This parameter is required and has no default value.
-        
-        Returns:
-            None. This method does not return any value.
-        
-        Raises:
-            None.
-        """
         super().__init__()
-        self.wi = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
-        self.dropout = nn.Dropout(p=config.dropout_rate)
+        self.wi = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, bias=False)
+        self.dropout = nn.Dropout(config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
-    def construct(self, hidden_states):
-        """
-        This method constructs the hidden states by applying a series of transformations including linear mapping, activation function,
-        dropout, and additional conversion based on weight data types.
-        
-        Args:
-            self (T5DenseActDense): The instance of the T5DenseActDense class.
-            hidden_states (Tensor): The input hidden states to be processed by the method.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            TypeError: If the data type of weights in self.wo does not match the data type of hidden_states or mindspore.int8.
-        """
+    def forward(self, hidden_states):
         hidden_states = self.wi(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.dropout(hidden_states)
-        if self.wo.weight.dtype not in (hidden_states.dtype, mindspore.int8):
-            hidden_states = hidden_states.astype(self.wo.weight.dtype)
+        if (
+            isinstance(self.wo.weight, mindspore.Tensor)
+            and hidden_states.dtype != self.wo.weight.dtype
+            and self.wo.weight.dtype != mindspore.int8
+        ):
+            hidden_states = hidden_states.to(self.wo.weight.dtype)
         hidden_states = self.wo(hidden_states)
         return hidden_states
 
 
-class T5DenseGatedActDense(nn.Cell):
-    """T5DenseGatedActDense"""
+class T5DenseGatedActDense(nn.Module):
     def __init__(self, config: T5Config):
-        """
-        Initializes an instance of the T5DenseGatedActDense class.
-        
-        Args:
-            self: An instance of the T5DenseGatedActDense class.
-            config (T5Config): The configuration object for the T5 model.
-        
-        Returns:
-            None
-        
-        Raises:
-            None
-        """
         super().__init__()
-        self.wi_0 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wi_1 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
-        self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
-        self.dropout = nn.Dropout(p=config.dropout_rate)
+        self.wi_0 = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wi_1 = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.wo = nn.Linear(config.d_ff, config.d_model, bias=False)
+        self.dropout = nn.Dropout(config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
-    def construct(self, hidden_states):
-        """
-        Constructs the hidden states of the T5DenseGatedActDense model.
-        
-        Args:
-            self: The instance of the T5DenseGatedActDense class.
-            hidden_states (Tensor): The input hidden states. It should have the shape (batch_size, sequence_length, hidden_size).
-        
-        Returns:
-            None
-        
-        Raises:
-            None
-        """
+    def forward(self, hidden_states):
         hidden_gelu = self.act(self.wi_0(hidden_states))
         hidden_linear = self.wi_1(hidden_states)
         hidden_states = hidden_gelu * hidden_linear
         hidden_states = self.dropout(hidden_states)
 
-        if self.wo.weight.dtype not in (hidden_states.dtype, mindspore.int8):
-            hidden_states = hidden_states.astype(self.wo.weight.dtype)
+        # To make 8bit quantization work for google/flan-t5-xxl, self.wo is kept in float32.
+        # See https://github.com/huggingface/transformers/issues/20287
+        # we also make sure the weights are not in `int8` in case users will force `_keep_in_fp32_modules` to be `None``
+        if (
+            isinstance(self.wo.weight, mindspore.Tensor)
+            and hidden_states.dtype != self.wo.weight.dtype
+            and self.wo.weight.dtype != mindspore.int8
+        ):
+            hidden_states = hidden_states.to(self.wo.weight.dtype)
 
         hidden_states = self.wo(hidden_states)
         return hidden_states
 
 
-class T5LayerFF(nn.Cell):
-    """T5LayerFF"""
+class T5LayerFF(nn.Module):
     def __init__(self, config: T5Config):
-        """
-        Initializes an instance of the T5LayerFF class.
-        
-        Args:
-            self: The instance of the T5LayerFF class.
-            config (T5Config): The configuration object for the T5 model. It contains various parameters and settings for the model.
-            
-        Returns:
-            None
-            
-        Raises:
-            N/A
-        """
         super().__init__()
         if config.is_gated_act:
             self.DenseReluDense = T5DenseGatedActDense(config)
@@ -215,45 +137,17 @@ class T5LayerFF(nn.Cell):
             self.DenseReluDense = T5DenseActDense(config)
 
         self.layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.dropout = nn.Dropout(p=config.dropout_rate)
+        self.dropout = nn.Dropout(config.dropout_rate)
 
-    def construct(self, hidden_states):
-        """
-        Constructs the forward pass of the T5LayerFF class.
-        
-        Args:
-            self (T5LayerFF): An instance of the T5LayerFF class.
-            hidden_states (Tensor): The hidden states input tensor. Shape (batch_size, sequence_length, hidden_size).
-        
-        Returns:
-            None
-        
-        Raises:
-            None
-        """
+    def forward(self, hidden_states):
         forwarded_states = self.layer_norm(hidden_states)
         forwarded_states = self.DenseReluDense(forwarded_states)
         hidden_states = hidden_states + self.dropout(forwarded_states)
         return hidden_states
 
 
-class T5Attention(nn.Cell):
-    """T5Attention"""
+class T5Attention(nn.Module):
     def __init__(self, config: T5Config, has_relative_attention_bias=False):
-        """
-        Initializes an instance of the T5Attention class.
-        
-        Args:
-            self: The object itself.
-            config (T5Config): An instance of the T5Config class that holds the configuration parameters for the attention mechanism.
-            has_relative_attention_bias (bool): A boolean value indicating whether the attention mechanism has relative attention bias.
-        
-        Returns:
-            None
-        
-        Raises:
-            None
-        """
         super().__init__()
         self.is_decoder = config.is_decoder
         self.has_relative_attention_bias = has_relative_attention_bias
@@ -266,29 +160,17 @@ class T5Attention(nn.Cell):
         self.inner_dim = self.n_heads * self.key_value_proj_dim
 
         # Mesh TensorFlow initialization to avoid scaling before softmax
-        self.q = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.k = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.v = nn.Dense(self.d_model, self.inner_dim, has_bias=False)
-        self.o = nn.Dense(self.inner_dim, self.d_model, has_bias=False)
+        self.q = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.k = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.v = nn.Linear(self.d_model, self.inner_dim, bias=False)
+        self.o = nn.Linear(self.inner_dim, self.d_model, bias=False)
 
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
         self.pruned_heads = set()
+        self.gradient_checkpointing = False
 
     def prune_heads(self, heads):
-        """
-        Prunes the attention heads in the T5Attention class.
-        
-        Args:
-            self (T5Attention): An instance of the T5Attention class.
-            heads (list): A list of attention heads to be pruned.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            None: This method does not raise any exceptions.
-        """
         if len(heads) == 0:
             return
         heads, index = find_pruneable_heads_and_indices(
@@ -298,7 +180,7 @@ class T5Attention(nn.Cell):
         self.q = prune_linear_layer(self.q, index)
         self.k = prune_linear_layer(self.k, index)
         self.v = prune_linear_layer(self.v, index)
-        self.o = prune_linear_layer(self.o, index, axis=1)
+        self.o = prune_linear_layer(self.o, index, dim=1)
         # Update hyper params
         self.n_heads = self.n_heads - len(heads)
         self.inner_dim = self.key_value_proj_dim * self.n_heads
@@ -367,7 +249,7 @@ class T5Attention(nn.Cell):
         values = values.permute([2, 0, 1]).unsqueeze(0)  # shape (1, num_heads, query_length, key_length)
         return values
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         mask=None,
@@ -400,11 +282,11 @@ class T5Attention(nn.Cell):
 
         def shape(states):
             """projection"""
-            return states.view(batch_size, -1, self.n_heads, self.key_value_proj_dim).swapaxes(1, 2)
+            return ops.transpose(states.view(batch_size, -1, self.n_heads, self.key_value_proj_dim), 1, 2)
 
         def unshape(states):
             """reshape"""
-            return states.swapaxes(1, 2).view(batch_size, -1, self.inner_dim)
+            return ops.transpose(states, 1, 2).view(batch_size, -1, self.inner_dim)
 
         def project(hidden_states, proj_layer, key_value_states, past_key_value):
             """projects hidden states correctly to key/query states"""
@@ -421,7 +303,7 @@ class T5Attention(nn.Cell):
                 if key_value_states is None:
                     # self-attn
                     # (batch_size, n_heads, key_length, dim_per_head)
-                    hidden_states = ops.cat([past_key_value, hidden_states], axis=2)
+                    hidden_states = ops.cat([past_key_value, hidden_states], dim=2)
                 elif past_key_value.shape[2] != key_value_states.shape[1]:
                     # checking that the `sequence_length` of the `past_key_value` is the same as
                     # the provided `key_value_states` to support prefix tuning
@@ -435,6 +317,7 @@ class T5Attention(nn.Cell):
 
         # get query states
         query_states = shape(self.q(hidden_states))  # (batch_size, n_heads, seq_length, dim_per_head)
+
         # get key/value states
         key_states = project(
             hidden_states, self.k, key_value_states, past_key_value[0] if past_key_value is not None else None
@@ -445,15 +328,19 @@ class T5Attention(nn.Cell):
 
         # compute scores
         scores = ops.matmul(
-            query_states, key_states.swapaxes(3, 2)
-        )  # equivalent of torch.einsum("bnqd,bnkd->bnqk", query_states, key_states), compatible with onnx op>9
+            query_states, ops.transpose(key_states, 3, 2)
+        )  # equivalent of ops.einsum("bnqd,bnkd->bnqk", query_states, key_states), compatible with onnx op>9
+
         if position_bias is None:
             if not self.has_relative_attention_bias:
                 position_bias = ops.zeros(
                     (1, self.n_heads, real_seq_length, key_length), dtype=scores.dtype
                 )
+                if self.gradient_checkpointing and self.training:
+                    position_bias.requires_grad = True
             else:
                 position_bias = self.compute_bias(real_seq_length, key_length)
+
             # if key and values are already calculated
             # we want only the last query position bias
             if past_key_value is not None:
@@ -470,10 +357,11 @@ class T5Attention(nn.Cell):
             position_bias_masked = position_bias
 
         scores += position_bias_masked
-        attn_weights = ops.softmax(scores.float() + 1e-10, axis=-1).astype(
-            scores.dtype
+
+        attn_weights = nn.functional.softmax(scores.float(), dim=-1).type_as(
+            scores
         )  # (batch_size, n_heads, seq_length, key_length)
-        attn_weights = ops.dropout(
+        attn_weights = nn.functional.dropout(
             attn_weights, p=self.dropout, training=self.training
         )  # (batch_size, n_heads, seq_length, key_length)
 
@@ -492,29 +380,14 @@ class T5Attention(nn.Cell):
         return outputs
 
 
-class T5LayerSelfAttention(nn.Cell):
-    """T5LayerSelfAttention"""
+class T5LayerSelfAttention(nn.Module):
     def __init__(self, config, has_relative_attention_bias=False):
-        """Initialize the T5LayerSelfAttention.
-        
-        Args:
-            self (T5LayerSelfAttention): An instance of the T5LayerSelfAttention class.
-            config (Config): An object containing the configuration parameters.
-            has_relative_attention_bias (bool, optional): A flag indicating whether the attention bias is relative or not. 
-                Defaults to False.
-        
-        Returns:
-            None
-        
-        Raises:
-            None
-        """
         super().__init__()
         self.SelfAttention = T5Attention(config, has_relative_attention_bias=has_relative_attention_bias)
         self.layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.dropout = nn.Dropout(p=config.dropout_rate)
+        self.dropout = nn.Dropout(config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -524,26 +397,8 @@ class T5LayerSelfAttention(nn.Cell):
         use_cache=False,
         output_attentions=False,
     ):
-        """
-        This method 'construct' in the class 'T5LayerSelfAttention' constructs the output of a T5 self-attention layer.
-        
-        Args:
-            self: The instance of the class.
-            hidden_states (Tensor): The hidden states of the input sequence.
-            attention_mask (Optional[Tensor]): An optional tensor for masking out certain positions in the input sequence during attention calculation.
-            position_bias (Optional[Tensor]): An optional tensor providing additional bias to attention scores based on position.
-            layer_head_mask (Optional[Tensor]): An optional tensor for masking out certain heads in the attention calculation.
-            past_key_value (Optional[Tuple[Tensor]]): An optional tuple of key and value tensors from the previous time steps for faster decoding.
-            use_cache (bool): A flag indicating whether to use caching for faster decoding.
-            output_attentions (bool): A flag indicating whether to output attention weights.
-        
-        Returns:
-            Tuple[Tensor]: A tuple containing the updated hidden states after self-attention and any additional outputs from the attention mechanism.
-        
-        Raises:
-            None
-        """
         normed_hidden_states = self.layer_norm(hidden_states)
+
         attention_output = self.SelfAttention(
             normed_hidden_states,
             mask=attention_mask,
@@ -557,33 +412,15 @@ class T5LayerSelfAttention(nn.Cell):
         outputs = (hidden_states,) + attention_output[1:]  # add attentions if we output them
         return outputs
 
-class T5LayerCrossAttention(nn.Cell):
-    """T5LayerCrossAttention"""
+
+class T5LayerCrossAttention(nn.Module):
     def __init__(self, config):
-        """
-        Initializes an instance of the T5LayerCrossAttention class.
-        
-        Args:
-            self: The object instance.
-            config: An instance of the configuration class that contains the model's hyperparameters and settings.
-                It is of type 'Any' and is used to configure the behavior of the cross-attention layer.
-                The configuration object must have the following attributes:
-                    - d_model: An integer representing the dimensionality of the model's hidden states.
-                    - layer_norm_epsilon: A small float value used to stabilize the layer normalization process.
-                    - dropout_rate: A float value between 0 and 1, denoting the dropout rate for the layer.
-        
-        Returns:
-            None. This method does not return any value.
-        
-        Raises:
-            None. This method does not raise any exceptions.
-        """
         super().__init__()
         self.EncDecAttention = T5Attention(config, has_relative_attention_bias=False)
         self.layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.dropout = nn.Dropout(p=config.dropout_rate)
+        self.dropout = nn.Dropout(config.dropout_rate)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         key_value_states,
@@ -595,27 +432,6 @@ class T5LayerCrossAttention(nn.Cell):
         query_length=None,
         output_attentions=False,
     ):
-        """
-        This method constructs the T5 layer cross-attention mechanism.
-        
-        Args:
-        - self: Reference to the current instance of the class.
-        - hidden_states: Tensor representing the input hidden states.
-        - key_value_states: Tensor representing the key-value states for the attention mechanism.
-        - attention_mask: Optional tensor specifying the attention mask. Defaults to None.
-        - position_bias: Optional tensor providing positional bias information. Defaults to None.
-        - layer_head_mask: Optional tensor masking specific attention heads. Defaults to None.
-        - past_key_value: Optional tensor containing cached key-value states from previous steps. Defaults to None.
-        - use_cache: Boolean indicating whether to use cache for key-value states. Defaults to False.
-        - query_length: Optional integer specifying the length of the query. Defaults to None.
-        - output_attentions: Boolean indicating whether to output attentions. Defaults to False.
-        
-        Returns:
-        - Tuple containing the layer output and additional attention outputs.
-        
-        Raises:
-        - None
-        """
         normed_hidden_states = self.layer_norm(hidden_states)
         attention_output = self.EncDecAttention(
             normed_hidden_states,
@@ -633,33 +449,18 @@ class T5LayerCrossAttention(nn.Cell):
         return outputs
 
 
-class T5Block(nn.Cell):
-    """T5Block"""
+class T5Block(nn.Module):
     def __init__(self, config, has_relative_attention_bias=False):
-        """
-        Initializes a new instance of the T5Block class.
-        
-        Args:
-            self: The object itself.
-            config (object): The configuration object containing the settings for the T5Block.
-            has_relative_attention_bias (bool, optional): Specifies whether the attention bias is relative or not. Default is False.
-        
-        Returns:
-            None. This method does not return any value.
-        
-        Raises:
-            None.
-        """
         super().__init__()
         self.is_decoder = config.is_decoder
-        self.layer = nn.CellList()
+        self.layer = nn.ModuleList()
         self.layer.append(T5LayerSelfAttention(config, has_relative_attention_bias=has_relative_attention_bias))
         if self.is_decoder:
             self.layer.append(T5LayerCrossAttention(config))
 
         self.layer.append(T5LayerFF(config))
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -672,44 +473,17 @@ class T5Block(nn.Cell):
         past_key_value=None,
         use_cache=False,
         output_attentions=False,
-        # return_dict=True,
+        return_dict=True,
     ):
-        """
-        Constructs a T5Block.
-        
-        This method takes 12 parameters:
-            self (T5Block): The T5Block instance.
-            hidden_states (Tensor): The input hidden states.
-            attention_mask (Tensor, optional): The attention mask tensor. Defaults to None.
-            position_bias (Tensor, optional): The position bias tensor. Defaults to None.
-            encoder_hidden_states (Tensor, optional): The encoder hidden states tensor. Defaults to None.
-            encoder_attention_mask (Tensor, optional): The encoder attention mask tensor. Defaults to None.
-            encoder_decoder_position_bias (Tensor, optional): The encoder-decoder position bias tensor. Defaults to None.
-            layer_head_mask (Tensor, optional): The layer head mask tensor. Defaults to None.
-            cross_attn_layer_head_mask (Tensor, optional): The cross-attention layer head mask tensor. Defaults to None.
-            past_key_value (Tuple[Tensor], optional): The past key-value states. Defaults to None.
-            use_cache (bool, optional): Whether to use cache. Defaults to False.
-            output_attentions (bool, optional): Whether to output attentions. Defaults to False.
-        
-        Returns:
-            Tuple: A tuple containing the following elements:
-                - hidden_states (Tensor): The output hidden states.
-                - present_key_value_state (Tuple[Tensor], optional): The present key-value state. None if not available.
-                - attention_outputs (Tuple[Tensor], optional): The attention outputs. None if not available.
-        
-        Raises:
-            ValueError: If the number of past states is not as expected.
-            Warning: If `past_key_values` is passed to the encoder.
-        """
         if past_key_value is not None:
             if not self.is_decoder:
-                logging.warning("`past_key_values` is passed to the encoder. Please make sure this is intended.")
+                logger.warning("`past_key_values` is passed to the encoder. Please make sure this is intended.")
             expected_num_past_key_values = 2 if encoder_hidden_states is None else 4
 
             if len(past_key_value) != expected_num_past_key_values:
                 raise ValueError(
                     f"There should be {expected_num_past_key_values} past states. "
-                    f"{'2 (past / key) for cross attention. ' if expected_num_past_key_values == 4 else ''}"
+                    f"{'2 (key / value) for cross attention. ' if expected_num_past_key_values == 4 else ''}"
                     f"Got {len(past_key_value)} past key / value states"
                 )
 
@@ -717,6 +491,7 @@ class T5Block(nn.Cell):
             cross_attn_past_key_value = past_key_value[2:]
         else:
             self_attn_past_key_value, cross_attn_past_key_value = None, None
+
         self_attention_outputs = self.layer[0](
             hidden_states,
             attention_mask=attention_mask,
@@ -730,8 +505,12 @@ class T5Block(nn.Cell):
         attention_outputs = self_attention_outputs[2:]  # Keep self-attention outputs and relative position weights
 
         # clamp inf values to enable fp16 training
-        if hidden_states.dtype == mindspore.float16 and ops.isinf(hidden_states).any():
-            clamp_value = mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max) - 1000
+        if hidden_states.dtype == mindspore.float16:
+            clamp_value = ops.where(
+                ops.isinf(hidden_states).any(),
+                float(ops.finfo(hidden_states.dtype).max) - 1000,
+                float(ops.finfo(hidden_states.dtype).max),
+            )
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         do_cross_attention = self.is_decoder and encoder_hidden_states is not None
@@ -757,8 +536,12 @@ class T5Block(nn.Cell):
             hidden_states = cross_attention_outputs[0]
 
             # clamp inf values to enable fp16 training
-            if hidden_states.dtype == mindspore.float16 and ops.isinf(hidden_states).any():
-                clamp_value = mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max) - 1000
+            if hidden_states.dtype == mindspore.float16:
+                clamp_value = ops.where(
+                    ops.isinf(hidden_states).any(),
+                    float(ops.finfo(hidden_states.dtype).max) - 1000,
+                    float(ops.finfo(hidden_states.dtype).max),
+                )
                 hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
             # Combine self attn and cross attn key value states
@@ -772,8 +555,12 @@ class T5Block(nn.Cell):
         hidden_states = self.layer[-1](hidden_states)
 
         # clamp inf values to enable fp16 training
-        if hidden_states.dtype == mindspore.float16 and ops.isinf(hidden_states).any():
-            clamp_value = mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max) - 1000
+        if hidden_states.dtype == mindspore.float16:
+            clamp_value = ops.where(
+                ops.isinf(hidden_states).any(),
+                float(ops.finfo(hidden_states.dtype).max) - 1000,
+                float(ops.finfo(hidden_states.dtype).max),
+            )
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -783,50 +570,19 @@ class T5Block(nn.Cell):
         else:
             outputs = outputs + attention_outputs
 
-        return outputs
-        # hidden-states, present_key_value_states, (self-attention position bias),
-        # (self-attention weights), (cross-attention position bias),(cross-attention weights)
+        return outputs  # hidden-states, present_key_value_states, (self-attention position bias), (self-attention weights), (cross-attention position bias), (cross-attention weights)
 
 
-class T5ClassificationHead(nn.Cell):
+class T5ClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
-    def __init__(self, config: T5Config):
-        """
-        Initializes a T5ClassificationHead instance.
-        
-        Args:
-            self: The T5ClassificationHead instance.
-            config (T5Config): The configuration for the T5 model. It specifies the model's architecture and parameters.
-        
-        Returns:
-            None. This method initializes the T5ClassificationHead instance and does not return any value.
-        
-        Raises:
-            - TypeError: If the config parameter is not of type T5Config.
-            - ValueError: If the config parameters are not valid or if there are any issues during initialization.
-        """
-        super().__init__()
-        self.dense = nn.Dense(config.d_model, config.d_model)
-        self.dropout = nn.Dropout(p=config.classifier_dropout)
-        self.out_proj = nn.Dense(config.d_model, config.num_labels)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-        """
-        Constructs the T5 classification head.
-        
-        Args:
-            self: The T5ClassificationHead object.
-            hidden_states (mindspore.Tensor): The input hidden states tensor.
-                This tensor contains the hidden states from the T5 model.
-                Shape of the tensor should be (batch_size, sequence_length, hidden_size).
-        
-        Returns:
-            mindspore.Tensor: The output tensor after passing through the T5 classification head.
-                Shape of the tensor is (batch_size, sequence_length, num_labels).
-        
-        Raises:
-            None.
-        """
+    def __init__(self, config: T5Config):
+        super().__init__()
+        self.dense = nn.Linear(config.d_model, config.d_model)
+        self.dropout = nn.Dropout(p=config.classifier_dropout)
+        self.out_proj = nn.Linear(config.d_model, config.num_labels)
+
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.dense(hidden_states)
         hidden_states = ops.tanh(hidden_states)
@@ -840,9 +596,9 @@ class T5PreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
+
     config_class = T5Config
     base_model_prefix = "transformer"
-
     is_parallelizable = True
     supports_gradient_checkpointing = True
     _no_split_modules = ["T5Block"]
@@ -850,25 +606,6 @@ class T5PreTrainedModel(PreTrainedModel):
 
     @property
     def dummy_inputs(self):
-        """
-        Method: dummy_inputs
-        
-        Description:
-        This method generates dummy input data for the T5PreTrainedModel.
-        
-        Args:
-        - self: An instance of the T5PreTrainedModel class.
-        
-        Returns:
-        - Type: None
-        - Purpose: This method returns a dictionary containing dummy input data for the model. The dictionary includes the following keys:
-          - 'decoder_input_ids': Tensor containing dummy input IDs.
-          - 'input_ids': Tensor containing dummy input IDs.
-          - 'decoder_attention_mask': Tensor containing dummy mask data.
-        
-        Raises:
-        This method does not raise any exceptions.
-        """
         input_ids = mindspore.tensor(DUMMY_INPUTS)
         input_mask = mindspore.tensor(DUMMY_MASK)
         dummy_inputs = {
@@ -878,99 +615,68 @@ class T5PreTrainedModel(PreTrainedModel):
         }
         return dummy_inputs
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
         factor = self.config.initializer_factor  # Used for testing weights initialization
-        if isinstance(cell, T5LayerNorm):
-            cell.weight.set_data(initializer(Constant(factor * 1.0), cell.weight.shape, cell.weight.dtype))
+        if isinstance(module, T5LayerNorm):
+            nn.init.constant_(module.weight, factor * 1.0)
         elif isinstance(
-            cell,
+            module,
             (T5Model, T5ForConditionalGeneration, T5EncoderModel, T5ForQuestionAnswering),
         ):
             # Mesh TensorFlow embeddings initialization
             # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L1624
-            cell.shared.weight.set_data(initializer(Normal(factor * 1.0),
-                                                cell.shared.weight.shape, cell.shared.weight.dtype))
-            if hasattr(cell, "lm_head") and not self.config.tie_word_embeddings:
-                cell.lm_head.weight.set_data(initializer(Normal(factor * 1.0), cell.lm_head.weight.shape, cell.lm_head.weight.dtype))
-            if hasattr(cell, "qa_outputs"):
-                cell.qa_outputs.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
-                                                            cell.qa_outputs.weight.shape, cell.qa_outputs.weight.dtype))
-                cell.qa_outputs.bias.set_data(initializer('zeros', cell.qa_outputs.bias.shape, cell.qa_outputs.bias.dtype))
-        elif isinstance(cell, T5ClassificationHead):
-            cell.dense.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
-                                                cell.dense.weight.shape, cell.dense.weight.dtype))
-
-            if hasattr(cell.dense, "bias") and cell.dense.bias is not None:
-                cell.dense.bias.set_data(initializer('zeros', cell.dense.bias.shape, cell.dense.bias.dtype))
-            cell.out_proj.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
-                                                cell.out_proj.weight.shape, cell.out_proj.weight.dtype))
-
-            if hasattr(cell.out_proj, "bias") and cell.out_proj.bias is not None:
-                cell.out_proj.bias.set_data(initializer('zeros', cell.out_proj.bias.shape, cell.out_proj.bias.dtype))
-        elif isinstance(cell, T5DenseActDense):
+            nn.init.normal_(module.shared.weight, mean=0.0, std=factor * 1.0)
+            if hasattr(module, "lm_head") and not self.config.tie_word_embeddings:
+                nn.init.normal_(module.lm_head.weight, mean=0.0, std=factor * 1.0)
+            if hasattr(module, "qa_outputs"):
+                nn.init.normal_(module.qa_outputs.weight, mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+                nn.init.zeros_(module.qa_outputs.bias)
+        elif isinstance(module, T5ForTokenClassification):
+            if hasattr(module, "classifier"):
+                nn.init.normal_(module.classifier.weight, mean=0.0, std=factor * 1.0)
+                nn.init.zeros_(module.classifier.bias)
+        elif isinstance(module, T5ClassificationHead):
+            nn.init.normal_(module.dense.weight, mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+            if hasattr(module.dense, "bias") and module.dense.bias is not None:
+                nn.init.zeros_(module.dense.bias)
+            nn.init.normal_(module.out_proj.weight, mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+            if hasattr(module.out_proj, "bias") and module.out_proj.bias is not None:
+                nn.init.zeros_(module.out_proj.bias)
+        elif isinstance(module, T5DenseActDense):
             # Mesh TensorFlow FF initialization
             # See https://github.com/tensorflow/mesh/blob/master/mesh_tensorflow/transformer/transformer_layers.py#L56
             # and https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L89
-            cell.wi.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
-                                                cell.wi.weight.shape, cell.wi.weight.dtype))
-            if hasattr(cell.wi, "bias") and cell.wi.bias is not None:
-                cell.wi.bias.set_data(initializer('zeros', cell.wi.bias.shape, cell.wi.bias.dtype))
-
-            cell.wo.weight.set_data(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)),
-                                                cell.wo.weight.shape, cell.wo.weight.dtype))
-
-            if hasattr(cell.wo, "bias") and cell.wo.bias is not None:
-                cell.wo.bias.set_data(initializer('zeros', cell.wo.bias.shape, cell.wo.bias.dtype))
-        elif isinstance(cell, T5DenseGatedActDense):
-            cell.wi_0.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
-                                                cell.wi_0.weight.shape, cell.wi_0.weight.dtype))
-            if hasattr(cell.wi_0, "bias") and cell.wi_0.bias is not None:
-                cell.wi_0.bias.set_data(initializer('zeros', cell.wi_0.bias.shape, cell.wi_0.bias.dtype))
-
-            cell.wi_1.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
-                                                cell.wi_1.weight.shape, cell.wi_1.weight.dtype))
-            if hasattr(cell.wi_1, "bias") and cell.wi_1.bias is not None:
-                cell.wi_1.bias.set_data(initializer('zeros', cell.wi_1.bias.shape, cell.wi_1.bias.dtype))
-
-            cell.wo.weight.set_data(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)),
-                                                cell.wo.weight.shape, cell.wo.weight.dtype))
-
-            if hasattr(cell.wo, "bias") and cell.wo.bias is not None:
-                cell.wo.bias.set_data(initializer('zeros', cell.wo.bias.shape, cell.wo.bias.dtype))
-        elif isinstance(cell, T5Attention):
+            nn.init.normal_(module.wi.weight, mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+            if hasattr(module.wi, "bias") and module.wi.bias is not None:
+                nn.init.zeros_(module.wi.bias)
+            nn.init.normal_(module.wo.weight, mean=0.0, std=factor * ((self.config.d_ff) ** -0.5))
+            if hasattr(module.wo, "bias") and module.wo.bias is not None:
+                nn.init.zeros_(module.wo.bias)
+        elif isinstance(module, T5DenseGatedActDense):
+            nn.init.normal_(module.wi_0.weight, mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+            if hasattr(module.wi_0, "bias") and module.wi_0.bias is not None:
+                nn.init.zeros_(module.wi_0)
+            nn.init.normal_(module.wi_1.weight, mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+            if hasattr(module.wi_1, "bias") and module.wi_1.bias is not None:
+                nn.init.data.zeros_(module.wi_1.bias)
+            nn.init.normal_(module.wo.weight, mean=0.0, std=factor * ((self.config.d_ff) ** -0.5))
+            if hasattr(module.wo, "bias") and module.wo.bias is not None:
+                nn.init.zero_(module.wo.bias)
+        elif isinstance(module, T5Attention):
             # Mesh TensorFlow attention initialization to avoid scaling before softmax
             # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/transformer/attention.py#L136
             d_model = self.config.d_model
             key_value_proj_dim = self.config.d_kv
             n_heads = self.config.num_heads
-
-            cell.q.weight.set_data(initializer(Normal(factor * ((d_model * key_value_proj_dim) ** -0.5)),
-                                                cell.q.weight.shape, cell.q.weight.dtype))
-            cell.k.weight.set_data(initializer(Normal(factor * (d_model**-0.5)),
-                                                cell.k.weight.shape, cell.k.weight.dtype))
-            cell.v.weight.set_data(initializer(Normal(factor * (d_model**-0.5)),
-                                                cell.v.weight.shape, cell.v.weight.dtype))
-            cell.o.weight.set_data(initializer(Normal(factor * ((n_heads * key_value_proj_dim) ** -0.5)),
-                                                cell.o.weight.shape, cell.o.weight.dtype))
-            if cell.has_relative_attention_bias:
-                cell.relative_attention_bias.weight.set_data(initializer(Normal(factor * (d_model**-0.5)),
-                                                    cell.relative_attention_bias.weight.shape, cell.relative_attention_bias.weight.dtype))
+            nn.init.normal_(module.q.weight, mean=0.0, std=factor * ((d_model * key_value_proj_dim) ** -0.5))
+            nn.init.normal_(module.k.weight, mean=0.0, std=factor * (d_model**-0.5))
+            nn.init.normal_(module.v.weight, mean=0.0, std=factor * (d_model**-0.5))
+            nn.init.normal_(module.o.weight, mean=0.0, std=factor * ((n_heads * key_value_proj_dim) ** -0.5))
+            if module.has_relative_attention_bias:
+                nn.init.normal_(module.relative_attention_bias.weight, mean=0.0, std=factor * ((d_model) ** -0.5))
 
     def _shift_right(self, input_ids):
-        """
-        Shifts the input IDs to the right by one position, inserting the decoder start token ID at the beginning.
-        
-        Args:
-            self (T5PreTrainedModel): An instance of the T5PreTrainedModel class.
-            input_ids (torch.Tensor): A tensor of shape (batch_size, sequence_length) containing the input IDs.
-        
-        Returns:
-            torch.Tensor: A tensor of shape (batch_size, sequence_length) representing the shifted input IDs.
-        
-        Raises:
-            ValueError: If `self.model.config.decoder_start_token_id` is not defined or if `self.model.config.pad_token_id` is not defined.
-        """
         decoder_start_token_id = self.config.decoder_start_token_id
         pad_token_id = self.config.pad_token_id
 
@@ -980,10 +686,9 @@ class T5PreTrainedModel(PreTrainedModel):
                 "See T5 docs for more information."
             )
 
-        # shift inputs to the right
-        shifted_input_ids = input_ids.new_zeros(input_ids.shape)
-        shifted_input_ids[..., 1:] = input_ids[..., :-1].copy()
-        shifted_input_ids[..., 0] = decoder_start_token_id
+        # Item assignment is not supported natively for proxies.
+        shifted_input_ids = ops.full(input_ids.shape[:-1] + (1,), decoder_start_token_id, dtype=input_ids.dtype)
+        shifted_input_ids = ops.cat([shifted_input_ids, input_ids[..., :-1]], dim=-1)
 
         if pad_token_id is None:
             raise ValueError("self.model.config.pad_token_id has to be defined.")
@@ -994,71 +699,32 @@ class T5PreTrainedModel(PreTrainedModel):
 
 
 class T5Stack(T5PreTrainedModel):
-    """T5Stack"""
-    def __init__(self, config):
-        """
-        Initializes an instance of the T5Stack class.
-        
-        Args:
-            self: The instance of the T5Stack class.
-            config: An object containing the configuration parameters for the T5Stack. It should have the following attributes:
-                - vocab_size (int): The size of the vocabulary.
-                - d_model (int): The dimensionality of the model.
-                - is_decoder (bool): Indicates whether the T5Stack is used as a decoder.
-                - num_layers (int): The number of layers in the T5Stack.
-                - layer_norm_epsilon (float): The epsilon value for layer normalization.
-                - dropout_rate (float): The dropout rate.
-        
-        Returns:
-            None. The method initializes the T5Stack object with the provided configuration.
-        
-        Raises:
-            None.
-        """
+    def __init__(self, config, embed_tokens=None):
         super().__init__(config)
 
-        self.embed_tokens = nn.Embedding(config.vocab_size, config.d_model)
+        self.embed_tokens = embed_tokens
         self.is_decoder = config.is_decoder
 
-        self.block = nn.CellList(
+        self.block = nn.ModuleList(
             [T5Block(config, has_relative_attention_bias=bool(i == 0)) for i in range(config.num_layers)]
         )
         self.final_layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.dropout = nn.Dropout(p=config.dropout_rate)
+        self.dropout = nn.Dropout(config.dropout_rate)
 
+        # Initialize weights and apply final processing
         self.post_init()
+        # Model parallel
+        self.model_parallel = False
+        self.device_map = None
+        self.gradient_checkpointing = False
 
     def get_input_embeddings(self):
-        """Return the input embeddings of the T5Stack.
-        
-        Args:
-            self: An instance of the T5Stack class.
-        
-        Returns:
-            None. This method returns the input embeddings of the T5Stack. The input embeddings are the embedded tokens used as input for the T5 model.
-        
-        Raises:
-            None. This method does not raise any exceptions.
-        """
         return self.embed_tokens
 
     def set_input_embeddings(self, new_embeddings):
-        """
-        Method to set new input embeddings for the T5Stack model.
-        
-        Args:
-            self (T5Stack): The instance of the T5Stack class.
-            new_embeddings (object): The new embeddings to set for the input. It should be compatible with the model's input format.
-        
-        Returns:
-            None. This method updates the input embeddings of the T5Stack model in place.
-        
-        Raises:
-            None.
-        """
         self.embed_tokens = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids=None,
         attention_mask=None,
@@ -1073,34 +739,7 @@ class T5Stack(T5PreTrainedModel):
         output_hidden_states=None,
         return_dict=None,
     ):
-        """
-        Constructs the T5Stack model.
-        
-        Args:
-            self (T5Stack): The instance of the T5Stack class.
-            input_ids (Tensor, optional): The input token IDs. Default: None.
-            attention_mask (Tensor, optional): The attention mask tensor. Default: None.
-            encoder_hidden_states (Tensor, optional): The hidden states of the encoder. Default: None.
-            encoder_attention_mask (Tensor, optional): The attention mask for encoder hidden states. Default: None.
-            inputs_embeds (Tensor, optional): The embedded inputs. Default: None.
-            head_mask (list, optional): The mask for attention heads. Default: None.
-            cross_attn_head_mask (list, optional): The mask for cross-attention heads. Default: None.
-            past_key_values (list, optional): The past key values for caching. Default: None.
-            use_cache (bool, optional): Whether to use caching. Default: None.
-            output_attentions (bool, optional): Whether to output attentions. Default: None.
-            output_hidden_states (bool, optional): Whether to output hidden states. Default: None.
-            return_dict (bool, optional): Whether to return a dictionary. Default: None.
-        
-        Returns:
-            None
-        
-        Raises:
-            ValueError: If both input_ids and inputs_embeds are specified at the same time.
-            ValueError: If neither input_ids nor inputs_embeds are specified.
-            AssertionError: If the model is not initialized with valid token embeddings.
-            AssertionError: If use_cache is set to True and the model is not used as a decoder.
-        
-        """
+        # Model parallel
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1113,8 +752,7 @@ class T5Stack(T5PreTrainedModel):
             raise ValueError(
                 f"You cannot specify both {err_msg_prefix}input_ids and {err_msg_prefix}inputs_embeds at the same time"
             )
-
-        if input_ids is not None:
+        elif input_ids is not None:
             input_shape = input_ids.shape
             input_ids = input_ids.view(-1, input_shape[-1])
         elif inputs_embeds is not None:
@@ -1124,8 +762,9 @@ class T5Stack(T5PreTrainedModel):
             raise ValueError(f"You have to specify either {err_msg_prefix}input_ids or {err_msg_prefix}inputs_embeds")
 
         if inputs_embeds is None:
-            assert self.embed_tokens is not None, "You have to initialize the model with valid token embeddings"
-            inputs_embeds = self.embed_tokens(input_ids.astype(mindspore.int64))
+            if self.embed_tokens is None:
+                raise ValueError("You have to initialize the model with valid token embeddings")
+            inputs_embeds = self.embed_tokens(input_ids)
 
         batch_size, seq_length = input_shape
 
@@ -1133,33 +772,39 @@ class T5Stack(T5PreTrainedModel):
         mask_seq_length = past_key_values[0][0].shape[2] + seq_length if past_key_values is not None else seq_length
 
         if use_cache is True:
-            assert self.is_decoder, f"`use_cache` can only be set to `True` if {self} is used as a decoder"
-
-        if attention_mask is None:
-            attention_mask = ops.ones((batch_size, mask_seq_length), mindspore.float32)
-        if self.is_decoder and encoder_attention_mask is None and encoder_hidden_states is not None:
-            encoder_seq_length = encoder_hidden_states.shape[1]
-            encoder_attention_mask = ops.ones(
-                (batch_size, encoder_seq_length), mindspore.int64
-            )
+            if not self.is_decoder:
+                raise ValueError(f"`use_cache` can only be set to `True` if {self} is used as a decoder")
 
         # initialize past_key_values with `None` if past does not exist
         if past_key_values is None:
             past_key_values = [None] * len(self.block)
 
+        if attention_mask is None:
+            attention_mask = ops.ones(batch_size, mask_seq_length)
+
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
         extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape)
+
         # If a 2D or 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
         if self.is_decoder and encoder_hidden_states is not None:
             encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.shape
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
-                encoder_attention_mask = ops.ones(encoder_hidden_shape)
+                encoder_attention_mask = ops.ones(
+                    encoder_hidden_shape, dtype=mindspore.int64
+                )
             encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
         else:
             encoder_extended_attention_mask = None
+
+        if self.gradient_checkpointing and self.training:
+            if use_cache:
+                logger.warning_once(
+                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
+                )
+                use_cache = False
 
         # Prepare head mask if needed
         head_mask = self.get_head_mask(head_mask, self.config.num_layers)
@@ -1176,26 +821,42 @@ class T5Stack(T5PreTrainedModel):
         for i, (layer_module, past_key_value) in enumerate(zip(self.block, past_key_values)):
             layer_head_mask = head_mask[i]
             cross_attn_layer_head_mask = cross_attn_head_mask[i]
+            # Model parallel
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
-            layer_outputs = layer_module(
-                hidden_states,
-                attention_mask=extended_attention_mask,
-                position_bias=position_bias,
-                encoder_hidden_states=encoder_hidden_states,
-                encoder_attention_mask=encoder_extended_attention_mask,
-                encoder_decoder_position_bias=encoder_decoder_position_bias,
-                layer_head_mask=layer_head_mask,
-                cross_attn_layer_head_mask=cross_attn_layer_head_mask,
-                past_key_value=past_key_value,
-                use_cache=use_cache,
-                output_attentions=output_attentions,
-            )
+            if self.gradient_checkpointing and self.training:
+                layer_outputs = self._gradient_checkpointing_func(
+                    layer_module.forward,
+                    hidden_states,
+                    extended_attention_mask,
+                    position_bias,
+                    encoder_hidden_states,
+                    encoder_extended_attention_mask,
+                    encoder_decoder_position_bias,
+                    layer_head_mask,
+                    cross_attn_layer_head_mask,
+                    None,  # past_key_value is always None with gradient checkpointing
+                    use_cache,
+                    output_attentions,
+                )
+            else:
+                layer_outputs = layer_module(
+                    hidden_states,
+                    attention_mask=extended_attention_mask,
+                    position_bias=position_bias,
+                    encoder_hidden_states=encoder_hidden_states,
+                    encoder_attention_mask=encoder_extended_attention_mask,
+                    encoder_decoder_position_bias=encoder_decoder_position_bias,
+                    layer_head_mask=layer_head_mask,
+                    cross_attn_layer_head_mask=cross_attn_layer_head_mask,
+                    past_key_value=past_key_value,
+                    use_cache=use_cache,
+                    output_attentions=output_attentions,
+                )
 
             # layer_outputs is a tuple with:
-            # hidden-states, key-value-states, (self-attention position bias), \
-            # (self-attention weights), (cross-attention position bias), (cross-attention weights)
+            # hidden-states, key-value-states, (self-attention position bias), (self-attention weights), (cross-attention position bias), (cross-attention weights)
             if use_cache is False:
                 layer_outputs = layer_outputs[:1] + (None,) + layer_outputs[1:]
 
@@ -1214,6 +875,12 @@ class T5Stack(T5PreTrainedModel):
                 all_attentions = all_attentions + (layer_outputs[3],)
                 if self.is_decoder:
                     all_cross_attentions = all_cross_attentions + (layer_outputs[5],)
+
+            # Model Parallel: If it's the last layer for that device, put things on the next device
+            if self.model_parallel:
+                for k, v in self.device_map.items():
+                    if i == v[-1] and "cuda:" + str(k) != self.last_device:
+                        hidden_states = hidden_states.to("cuda:" + str(k + 1))
 
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -1234,7 +901,6 @@ class T5Stack(T5PreTrainedModel):
                 ]
                 if v is not None
             )
-
         return BaseModelOutputWithPastAndCrossAttentions(
             last_hidden_state=hidden_states,
             past_key_values=present_key_value_states,
@@ -1243,29 +909,21 @@ class T5Stack(T5PreTrainedModel):
             cross_attentions=all_cross_attentions,
         )
 
+__HEAD_MASK_WARNING_MSG = """
+The input argument `head_mask` was split into two arguments `head_mask` and `decoder_head_mask`. Currently,
+`decoder_head_mask` is set to copy `head_mask`, but this feature is deprecated.
+If you do not want to use any `decoder_head_mask` now, please set `decoder_head_mask = torch.ones(num_layers,
+num_heads)`.
+"""
+
 
 class T5Model(T5PreTrainedModel):
-    """T5Model"""
     _keys_to_ignore_on_load_unexpected = [
         "decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight",
     ]
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: T5Config):
-        """
-        __init__ method in the T5Model class initializes a new instance of the class.
-        
-        Args:
-            self: A reference to the instance of the class.
-            config (T5Config): An instance of T5Config class containing configuration parameters for the T5 model. It includes parameters such as vocab_size, d_model, is_decoder, use_cache, is_encoder_decoder,
-and num_decoder_layers. 
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            This method does not explicitly raise any exceptions.
-        """
         super().__init__(config)
         self.shared = nn.Embedding(config.vocab_size, config.d_model)
 
@@ -1273,95 +931,38 @@ and num_decoder_layers.
         encoder_config.is_decoder = False
         encoder_config.use_cache = False
         encoder_config.is_encoder_decoder = False
-        self.encoder = T5Stack(encoder_config)
+        self.encoder = T5Stack(encoder_config, self.shared)
 
         decoder_config = copy.deepcopy(config)
         decoder_config.is_decoder = True
         decoder_config.is_encoder_decoder = False
         decoder_config.num_layers = config.num_decoder_layers
-        self.decoder = T5Stack(decoder_config)
+        self.decoder = T5Stack(decoder_config, self.shared)
 
+        # Initialize weights and apply final processing
         self.post_init()
 
+        # Model parallel
+        self.model_parallel = False
+        self.device_map = None
+
     def get_input_embeddings(self):
-        """
-        Get the input embeddings for the T5Model.
-        
-        Args:
-            self: The instance of the T5Model class.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            None: This method does not raise any exceptions.
-        """
         return self.shared
 
     def set_input_embeddings(self, new_embeddings):
-        """
-        Sets the input embeddings for the T5Model.
-        
-        Args:
-            self (T5Model): The instance of the T5Model class.
-            new_embeddings: The new input embeddings to be set for the model. This should be a tensor of shape (vocab_size, hidden_size).
-        
-        Returns:
-            None. This method does not return any value.
-        
-        Raises:
-            None. This method does not raise any exceptions.
-        """
         self.shared = new_embeddings
-        # self.encoder.set_input_embeddings(new_embeddings)
-        # self.decoder.set_input_embeddings(new_embeddings)
+        self.encoder.set_input_embeddings(new_embeddings)
+        self.decoder.set_input_embeddings(new_embeddings)
 
     def _tie_weights(self):
-        """
-        Tie the weights of the T5Model if specified in the configuration.
-        
-        Args:
-            self (T5Model): The instance of the T5Model class.
-                - This parameter represents the T5Model object on which the method is called.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            None
-        """
         if self.config.tie_word_embeddings:
             self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
             self._tie_or_clone_weights(self.decoder.embed_tokens, self.shared)
 
     def get_encoder(self):
-        """
-        This method returns the encoder for the T5Model.
-        
-        Args:
-            self: The instance of the T5Model class.
-        
-        Returns:
-            Returns the encoder associated with the T5Model.
-        
-        Raises:
-            None.
-        """
         return self.encoder
 
     def get_decoder(self):
-        """
-        Method to retrieve the decoder of the T5Model.
-        
-        Args:
-            self (T5Model): The T5Model instance on which the method is called.
-            
-        Returns:
-            None. The method returns the decoder attribute of the T5Model instance.
-        
-        Raises:
-            This method does not raise any exceptions.
-        """
         return self.decoder
 
     def _prune_heads(self, heads_to_prune):
@@ -1372,58 +973,55 @@ and num_decoder_layers.
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
-        input_ids = None,
-        attention_mask = None,
-        decoder_input_ids = None,
-        decoder_attention_mask = None,
-        head_mask = None,
-        decoder_head_mask = None,
-        cross_attn_head_mask = None,
-        encoder_outputs = None,
-        past_key_values = None,
-        inputs_embeds = None,
-        decoder_inputs_embeds = None,
-        use_cache = None,
-        output_attentions = None,
-        output_hidden_states = None,
-        return_dict = None,
-    ):
-        """
-        Constructs the T5 model for sequence-to-sequence tasks.
-        
-        Args:
-            self (T5Model): The instance of the T5Model class.
-            input_ids (torch.Tensor, optional): The input sequence tensor IDs. Default: None.
-            attention_mask (torch.Tensor, optional): The attention mask tensor. Default: None.
-            decoder_input_ids (torch.Tensor, optional): The decoder input sequence tensor IDs. Default: None.
-            decoder_attention_mask (torch.Tensor, optional): The decoder attention mask tensor. Default: None.
-            head_mask (torch.Tensor, optional): The head mask tensor. Default: None.
-            decoder_head_mask (torch.Tensor, optional): The decoder head mask tensor. Default: None.
-            cross_attn_head_mask (torch.Tensor, optional): The cross-attention head mask tensor. Default: None.
-            encoder_outputs (tuple, optional): The encoder outputs. Default: None.
-            past_key_values (tuple, optional): The past key values. Default: None.
-            inputs_embeds (torch.Tensor, optional): The input embeddings tensor. Default: None.
-            decoder_inputs_embeds (torch.Tensor, optional): The decoder input embeddings tensor. Default: None.
-            use_cache (bool, optional): Whether to use cache. Default: None.
-            output_attentions (bool, optional): Whether to output attentions. Default: None.
-            output_hidden_states (bool, optional): Whether to output hidden states. Default: None.
-            return_dict (bool, optional): Whether to return a dictionary. Default: None.
-        
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        decoder_input_ids: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        decoder_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        encoder_outputs: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
+        past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple[mindspore.Tensor], Seq2SeqModelOutput]:
+        r"""
         Returns:
-            None
-        
-        Raises:
-            None
-        """
+
+        Example:
+
+        ```python
+        >>> from transformers import AutoTokenizer, T5Model
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("google-t5/t5-small")
+        >>> model = T5Model.from_pretrained("google-t5/t5-small")
+
+        >>> input_ids = tokenizer(
+        ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
+        ... ).input_ids  # Batch size 1
+        >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="pt").input_ids  # Batch size 1
+
+        >>> # preprocess: Prepend decoder_input_ids with start token which is pad token for T5Model.
+        >>> # This is not needed for torch's T5ForConditionalGeneration as it does this internally using labels arg.
+        >>> decoder_input_ids = model._shift_right(decoder_input_ids)
+
+        >>> # forward pass
+        >>> outputs = model(input_ids=input_ids, decoder_input_ids=decoder_input_ids)
+        >>> last_hidden_states = outputs.last_hidden_state
+        ```"""
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # FutureWarning: head_mask was separated into two input args - head_mask, decoder_head_mask
         if head_mask is not None and decoder_head_mask is None:
             if self.config.num_layers == self.config.num_decoder_layers:
-                # warnings.warn(__HEAD_MASK_WARNING_MSG, FutureWarning)
+                warnings.warn(__HEAD_MASK_WARNING_MSG, FutureWarning)
                 decoder_head_mask = head_mask
 
         # Encode if needed (training, first prediction pass)
@@ -1436,6 +1034,12 @@ and num_decoder_layers.
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
                 return_dict=return_dict,
+            )
+        elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
+            encoder_outputs = BaseModelOutput(
+                last_hidden_state=encoder_outputs[0],
+                hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
+                attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
             )
 
         hidden_states = encoder_outputs[0]
@@ -1472,27 +1076,12 @@ and num_decoder_layers.
 
 
 class T5ForConditionalGeneration(T5PreTrainedModel):
-    """T5ForConditionalGeneration"""
     _keys_to_ignore_on_load_unexpected = [
         "decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight",
     ]
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
 
     def __init__(self, config: T5Config):
-        """
-        Initializes an instance of the T5ForConditionalGeneration class.
-        
-        Args:
-            self: The object instance.
-            config (T5Config): The configuration object for the T5 model. It contains various parameters to customize the model's behavior, such as the model dimension, vocabulary size, and number of decoder
-layers.
-        
-        Returns:
-            None
-        
-        Raises:
-            None
-        """
         super().__init__(config)
         self.model_dim = config.d_model
 
@@ -1502,200 +1091,105 @@ layers.
         encoder_config.is_decoder = False
         encoder_config.use_cache = False
         encoder_config.is_encoder_decoder = False
-        self.encoder = T5Stack(encoder_config)
+        self.encoder = T5Stack(encoder_config, self.shared)
 
         decoder_config = copy.deepcopy(config)
         decoder_config.is_decoder = True
         decoder_config.is_encoder_decoder = False
         decoder_config.num_layers = config.num_decoder_layers
-        self.decoder = T5Stack(decoder_config)
+        self.decoder = T5Stack(decoder_config, self.shared)
 
-        self.lm_head = nn.Dense(config.d_model, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
+        # Initialize weights and apply final processing
         self.post_init()
 
+        # Model parallel
+        self.model_parallel = False
+        self.device_map = None
+
     def get_input_embeddings(self):
-        """
-        Returns the input embeddings for the T5 model.
-        
-        Args:
-            self (T5ForConditionalGeneration): The instance of the T5ForConditionalGeneration class.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            None: This method does not raise any exceptions.
-        """
         return self.shared
 
     def set_input_embeddings(self, new_embeddings):
-        """
-        Set input embeddings for the T5 model.
-        
-        Args:
-            self (T5ForConditionalGeneration): The instance of the T5ForConditionalGeneration class.
-            new_embeddings (tensor): The new input embeddings to be set for the model. It should be a tensor of shape (vocab_size, hidden_size).
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            TypeError: If the new_embeddings parameter is not a tensor.
-            ValueError: If the shape of the new_embeddings tensor does not match the required shape (vocab_size, hidden_size).
-        """
         self.shared = new_embeddings
-        # self.encoder.set_input_embeddings(new_embeddings)
-        # self.decoder.set_input_embeddings(new_embeddings)
+        self.encoder.set_input_embeddings(new_embeddings)
+        self.decoder.set_input_embeddings(new_embeddings)
 
     def _tie_weights(self):
-        """
-        Method _tie_weights in the class T5ForConditionalGeneration ties or clones weights for word embeddings.
-        
-        Args:
-            self (T5ForConditionalGeneration): The instance of the T5ForConditionalGeneration class.
-                It represents the current object and is used to access attributes and methods within the class.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            N/A
-        """
         if self.config.tie_word_embeddings:
             self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
             self._tie_or_clone_weights(self.decoder.embed_tokens, self.shared)
 
     def set_output_embeddings(self, new_embeddings):
-        """
-        Set the output embeddings for the T5 model.
-        
-        Args:
-            self (T5ForConditionalGeneration): The T5 model instance.
-            new_embeddings (torch.Tensor): The new embeddings to set as the output embeddings for the model.
-        
-        Returns:
-            None. This method updates the output embeddings of the T5 model in place.
-        
-        Raises:
-            TypeError: If the new_embeddings parameter is not a torch.Tensor.
-            ValueError: If the shape of the new_embeddings does not match the expected shape for model output embeddings.
-        """
         self.lm_head = new_embeddings
 
     def get_output_embeddings(self):
-        """
-        Returns the output embeddings for the T5 model.
-        
-        Args:
-            self (T5ForConditionalGeneration): An instance of the T5ForConditionalGeneration class.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            None: This method does not raise any exceptions.
-        """
         return self.lm_head
 
     def get_encoder(self):
-        """
-        This method is part of the 'T5ForConditionalGeneration' class and is used to retrieve the encoder.
-        
-        Args:
-            self (T5ForConditionalGeneration): An instance of the 'T5ForConditionalGeneration' class.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            None: This method does not raise any exceptions.
-        """
         return self.encoder
 
     def get_decoder(self):
-        """
-        Returns the decoder used by the T5 model for conditional generation.
-        
-        Args:
-            self (T5ForConditionalGeneration): The current instance of the T5ForConditionalGeneration class.
-        
-        Returns:
-            None: The method does not return any value.
-        
-        Raises:
-            None: This method does not raise any exceptions.
-        """
         return self.decoder
 
-    def construct(
+    def forward(
         self,
-        input_ids = None,
-        attention_mask = None,
-        decoder_input_ids = None,
-        decoder_attention_mask = None,
-        head_mask = None,
-        decoder_head_mask = None,
-        cross_attn_head_mask = None,
-        encoder_outputs = None,
-        past_key_values = None,
-        inputs_embeds = None,
-        decoder_inputs_embeds = None,
-        labels = None,
-        use_cache = None,
-        output_attentions = None,
-        output_hidden_states = None,
-        return_dict = None,
-    ):
-        """Constructs the T5 model for conditional generation.
-        
-        Args:
-            self (T5ForConditionalGeneration): The instance of the T5ForConditionalGeneration class.
-            input_ids (torch.Tensor, optional): The input sequence tensor of shape (batch_size, sequence_length). 
-                Defaults to None.
-            attention_mask (torch.Tensor, optional): The attention mask tensor of shape (batch_size, sequence_length). 
-                Defaults to None.
-            decoder_input_ids (torch.Tensor, optional): The decoder input sequence tensor of shape (batch_size, decoder_sequence_length). 
-                Defaults to None.
-            decoder_attention_mask (torch.Tensor, optional): The decoder attention mask tensor of shape (batch_size, decoder_sequence_length). 
-                Defaults to None.
-            head_mask (torch.Tensor, optional): The head mask tensor of shape (num_layers, num_heads). 
-                Defaults to None.
-            decoder_head_mask (torch.Tensor, optional): The decoder head mask tensor of shape (num_layers, num_heads). 
-                Defaults to None.
-            cross_attn_head_mask (torch.Tensor, optional): The cross-attention head mask tensor of shape (num_layers, num_heads). 
-                Defaults to None.
-            encoder_outputs (tuple, optional): The encoder outputs returned by the encoder model. 
-                Defaults to None.
-            past_key_values (tuple, optional): The past key values returned by the decoder model. 
-                Defaults to None.
-            inputs_embeds (torch.Tensor, optional): The input embeddings tensor of shape (batch_size, sequence_length, hidden_size). 
-                Defaults to None.
-            decoder_inputs_embeds (torch.Tensor, optional): The decoder input embeddings tensor of shape (batch_size, decoder_sequence_length, hidden_size). 
-                Defaults to None.
-            labels (torch.Tensor, optional): The labels tensor of shape (batch_size, sequence_length). 
-                Defaults to None.
-            use_cache (bool, optional): Whether to use cache for the model. 
-                Defaults to None.
-            output_attentions (bool, optional): Whether to output attentions. 
-                Defaults to None.
-            output_hidden_states (bool, optional): Whether to output hidden states. 
-                Defaults to None.
-            return_dict (bool, optional): Whether to return a dictionary as the output. 
-                Defaults to None.
-        
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        decoder_input_ids: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        decoder_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        encoder_outputs: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
+        past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple[mindspore.Tensor], Seq2SeqLMOutput]:
+        r"""
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[-100, 0, ...,
+            config.vocab_size - 1]`. All labels set to `-100` are ignored (masked), the loss is only computed for
+            labels in `[0, ..., config.vocab_size]`
+
         Returns:
-            None: The method does not return any value.
-        
-        Raises:
-            None: This method does not raise any exceptions.
-        """
+
+        Examples:
+
+        ```python
+        >>> from transformers import AutoTokenizer, T5ForConditionalGeneration
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("google-t5/t5-small")
+        >>> model = T5ForConditionalGeneration.from_pretrained("google-t5/t5-small")
+
+        >>> # training
+        >>> input_ids = tokenizer("The <extra_id_0> walks in <extra_id_1> park", return_tensors="pt").input_ids
+        >>> labels = tokenizer("<extra_id_0> cute dog <extra_id_1> the <extra_id_2>", return_tensors="pt").input_ids
+        >>> outputs = model(input_ids=input_ids, labels=labels)
+        >>> loss = outputs.loss
+        >>> logits = outputs.logits
+
+        >>> # inference
+        >>> input_ids = tokenizer(
+        ...     "summarize: studies have shown that owning a dog is good for you", return_tensors="pt"
+        ... ).input_ids  # Batch size 1
+        >>> outputs = model.generate(input_ids)
+        >>> print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+        >>> # studies have shown that owning a dog is good for you.
+        ```"""
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # FutureWarning: head_mask was separated into two input args - head_mask, decoder_head_mask
         if head_mask is not None and decoder_head_mask is None:
             if self.config.num_layers == self.config.num_decoder_layers:
+                warnings.warn(__HEAD_MASK_WARNING_MSG, FutureWarning)
                 decoder_head_mask = head_mask
 
         # Encode if needed (training, first prediction pass)
@@ -1710,11 +1204,18 @@ layers.
                 output_hidden_states=output_hidden_states,
                 return_dict=return_dict,
             )
+        elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
+            encoder_outputs = BaseModelOutput(
+                last_hidden_state=encoder_outputs[0],
+                hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
+                attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
+            )
 
         hidden_states = encoder_outputs[0]
         if labels is not None and decoder_input_ids is None and decoder_inputs_embeds is None:
             # get decoder inputs from shifting lm labels to the right
             decoder_input_ids = self._shift_right(labels)
+
         # Decode
         decoder_outputs = self.decoder(
             input_ids=decoder_input_ids,
@@ -1735,14 +1236,17 @@ layers.
 
         if self.config.tie_word_embeddings:
             # Rescale output before projecting on vocab
+            # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/transformer/transformer.py#L586
             sequence_output = sequence_output * (self.model_dim**-0.5)
 
         lm_logits = self.lm_head(sequence_output)
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1), ignore_index=-100)
-            # TODO(thom): Add z_loss
+            loss_fct = CrossEntropyLoss(ignore_index=-100)
+            # move labels to correct device to enable PP
+            loss = loss_fct(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1))
+            # TODO(thom): Add z_loss https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L666
 
         if not return_dict:
             output = (lm_logits,) + decoder_outputs[1:] + encoder_outputs
@@ -1773,36 +1277,6 @@ layers.
         encoder_outputs=None,
         **kwargs,
     ):
-        """
-        Prepare inputs for generation.
-        
-        Args:
-            self (T5ForConditionalGeneration): The instance of the T5ForConditionalGeneration class.
-            input_ids (torch.Tensor): The input tensor of shape (batch_size, sequence_length) containing input IDs.
-            past_key_values (tuple, optional): The tuple of past key values for the transformer decoder. Default is None.
-            attention_mask (torch.Tensor, optional): The attention mask tensor of shape (batch_size, sequence_length) indicating which tokens to attend to. Default is None.
-            head_mask (torch.Tensor, optional): The head mask tensor of shape (num_layers, num_heads) indicating which heads to mask. Default is None.
-            decoder_head_mask (torch.Tensor, optional): The decoder head mask tensor of shape (num_layers, num_heads) indicating which decoder heads to mask. Default is None.
-            decoder_attention_mask (torch.Tensor, optional): The decoder attention mask tensor of shape (batch_size, sequence_length) indicating which tokens to attend to in the decoder. Default is None.
-            cross_attn_head_mask (torch.Tensor, optional): The cross-attention head mask tensor of shape (num_layers, num_heads) indicating which cross-attention heads to mask. Default is None.
-            use_cache (bool, optional): Whether to use cache. Default is None.
-            encoder_outputs (torch.Tensor, optional): The encoder outputs tensor of shape (batch_size, sequence_length, hidden_size) containing the hidden states of the encoder. Default is None.
-        
-        Returns:
-            dict: A dictionary containing the prepared inputs for generation with the following keys:
-                - 'decoder_input_ids' (torch.Tensor): The decoder input tensor of shape (batch_size, sequence_length) containing input IDs.
-                - 'past_key_values' (tuple): The tuple of past key values for the transformer decoder.
-                - 'encoder_outputs' (torch.Tensor): The encoder outputs tensor of shape (batch_size, sequence_length, hidden_size) containing the hidden states of the encoder.
-                - 'attention_mask' (torch.Tensor): The attention mask tensor of shape (batch_size, sequence_length) indicating which tokens to attend to.
-                - 'head_mask' (torch.Tensor): The head mask tensor of shape (num_layers, num_heads) indicating which heads to mask.
-                - 'decoder_head_mask' (torch.Tensor): The decoder head mask tensor of shape (num_layers, num_heads) indicating which decoder heads to mask.
-                - 'decoder_attention_mask' (torch.Tensor): The decoder attention mask tensor of shape (batch_size, sequence_length) indicating which tokens to attend to in the decoder.
-                - 'cross_attn_head_mask' (torch.Tensor): The cross-attention head mask tensor of shape (num_layers, num_heads) indicating which cross-attention heads to mask.
-                - 'use_cache' (bool): Whether to use cache.
-        
-        Raises:
-            None.
-        """
         # cut decoder_input_ids if past_key_values is used
         if past_key_values is not None:
             past_length = past_key_values[0][0].shape[2]
@@ -1829,41 +1303,9 @@ layers.
         }
 
     def prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor):
-        """
-        Prepare decoder input ids from labels.
-        
-        This method is used to prepare the input ids for the decoder by shifting the given labels sequence to the right.
-        
-        Args:
-            self (T5ForConditionalGeneration): An instance of the T5ForConditionalGeneration class.
-            labels (mindspore.Tensor): The labels tensor containing the sequence of labels.
-        
-        Returns:
-            None. This method modifies the decoder input ids in-place.
-        
-        Raises:
-            None.
-        
-        """
         return self._shift_right(labels)
 
     def _reorder_cache(self, past_key_values, beam_idx):
-        """
-        This method '_reorder_cache' is defined within the class 'T5ForConditionalGeneration' and is used to reorder the cache for decoding during the T5 model's conditional generation.
-        
-        Args:
-            self (object): The instance of the class.
-            past_key_values (tuple): The past key value states generated during the model's previous decoding steps. If set to None, a warning is logged to consider setting `use_cache=True` to speed up
-decoding.
-            beam_idx (tensor): The indices of the beam to reorder the cache.
-        
-        Returns:
-            tuple: The reordered past key value states for the decoder. If 'past_key_values' is None, it returns None.
-        
-        Raises:
-            ValueError: If the shape of the reordered layer past states and the original layer past states mismatch.
-            ValueError: If the length of the reordered layer past states and the original layer past states mismatch.
-        """
         # if decoder past is not included in output
         # speedy decoding is disabled and no need to reorder
         if past_key_values is None:
@@ -1895,98 +1337,37 @@ decoding.
 
 
 class T5EncoderModel(T5PreTrainedModel):
-    """T5EncoderModel"""
     _tied_weights_keys = ["encoder.embed_tokens.weight"]
     _keys_to_ignore_on_load_unexpected = [r"decoder"]
 
     def __init__(self, config: T5Config):
-        """
-        Initializes a T5EncoderModel instance.
-        
-        Args:
-            self: The T5EncoderModel instance itself.
-            config (T5Config): An instance of T5Config containing the configuration parameters for the model.
-                It specifies the configuration settings such as vocab_size and d_model.
-                This parameter is required for configuring the T5EncoderModel.
-        
-        Returns:
-            None. This method does not return any value.
-        
-        Raises:
-            N/A
-        """
         super().__init__(config)
         self.shared = nn.Embedding(config.vocab_size, config.d_model)
 
         encoder_config = copy.deepcopy(config)
         encoder_config.use_cache = False
         encoder_config.is_encoder_decoder = False
-        self.encoder = T5Stack(encoder_config)
+        self.encoder = T5Stack(encoder_config, self.shared)
+
         # Initialize weights and apply final processing
         self.post_init()
 
+        # Model parallel
+        self.model_parallel = False
+        self.device_map = None
+
     def get_input_embeddings(self):
-        """Retrieve the input embeddings.
-        
-        This method is used to obtain the input embeddings for the T5EncoderModel class.
-        
-        Args:
-            self: An instance of the T5EncoderModel class.
-        
-        Returns:
-            None. This method does not return a value.
-        
-        Raises:
-            None. This method does not raise any exceptions.
-        """
         return self.shared
 
     def set_input_embeddings(self, new_embeddings):
-        """
-        Sets the input embeddings for the T5EncoderModel.
-        
-        Args:
-            self (T5EncoderModel): The instance of the T5EncoderModel class.
-            new_embeddings (torch.Tensor): The new input embeddings to be set.
-            
-        Returns:
-            None
-        
-        Raises:
-            None
-        """
         self.shared = new_embeddings
         self.encoder.set_input_embeddings(new_embeddings)
 
     def _tie_weights(self):
-        """
-        Ties the weights of the word embeddings in the T5EncoderModel.
-        
-        Args:
-            self (T5EncoderModel): An instance of the T5EncoderModel class.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            None: This method does not raise any exceptions.
-        """
         if self.config.tie_word_embeddings:
             self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
 
     def get_encoder(self):
-        """
-        Get the encoder of the T5EncoderModel.
-        
-        Args:
-            self (T5EncoderModel): An instance of the T5EncoderModel class.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            None: This method does not raise any exceptions.
-        """
         return self.encoder
 
     def _prune_heads(self, heads_to_prune):
@@ -1997,38 +1378,32 @@ class T5EncoderModel(T5PreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.block[layer].layer[0].SelfAttention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
-        input_ids = None,
-        attention_mask = None,
-        head_mask = None,
-        inputs_embeds = None,
-        output_attentions = None,
-        output_hidden_states = None,
-        return_dict = None,
-    ):
-        """
-        Constructs the T5EncoderModel.
-        
-        Args:
-            self: The T5EncoderModel object.
-            input_ids (optional): A tensor of shape (batch_size, sequence_length) containing the input token IDs. Defaults to None.
-            attention_mask (optional): A tensor of shape (batch_size, sequence_length) containing the attention mask. Defaults to None.
-            head_mask (optional): A tensor of shape (num_heads,) containing the head mask. Defaults to None.
-            inputs_embeds (optional): A tensor of shape (batch_size, sequence_length, embedding_size) containing the input embeddings. Defaults to None.
-            output_attentions (optional): A boolean indicating whether to return the attentions. Defaults to None.
-            output_hidden_states (optional): A boolean indicating whether to return the hidden states. Defaults to None.
-            return_dict (optional): A boolean indicating whether to return a dictionary. If not provided, it is determined by self.config.use_return_dict. Defaults to None.
-        
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple[mindspore.Tensor], BaseModelOutput]:
+        r"""
         Returns:
-            encoder_outputs: A tuple containing the encoder outputs. It typically consists of the following elements:
-                - last_hidden_state: A tensor of shape (batch_size, sequence_length, hidden_size) containing the last hidden state of the encoder.
-                - hidden_states: A tuple of tensors containing all the hidden states of the encoder. Each tensor has a shape of (batch_size, sequence_length, hidden_size).
-                - attentions: A tuple of tensors containing the attentions of the encoder. Each tensor has a shape of (batch_size, num_heads, sequence_length, sequence_length).
-        
-        Raises:
-            None.
-        """
+
+        Example:
+
+        ```python
+        >>> from transformers import AutoTokenizer, T5EncoderModel
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("google-t5/t5-small")
+        >>> model = T5EncoderModel.from_pretrained("google-t5/t5-small")
+        >>> input_ids = tokenizer(
+        ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
+        ... ).input_ids  # Batch size 1
+        >>> outputs = model(input_ids=input_ids)
+        >>> last_hidden_states = outputs.last_hidden_state
+        ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         encoder_outputs = self.encoder(
@@ -2043,68 +1418,22 @@ class T5EncoderModel(T5PreTrainedModel):
 
         return encoder_outputs
 
-class T5ForSequenceClassification(T5PreTrainedModel):
 
-    """ 
-    T5ForSequenceClassification class implements a T5 model for sequence classification tasks. 
-    It inherits from the T5PreTrainedModel class. 
-    
-    This class includes methods for initializing the model with a T5 configuration, constructing the model for sequence classification tasks, 
-    and computing the loss based on the provided labels. 
-    
-    The __init__ method initializes the T5ForSequenceClassification instance with a T5 configuration. 
-    The construct method constructs the model for sequence classification tasks and returns the computed loss and logits. 
-    
-    The construct method takes various input arguments such as input_ids, attention_mask, decoder_input_ids, labels, and other optional parameters 
-    to customize the behavior of the model during inference. 
-    
-    If labels are provided, the model computes the loss based on the problem type specified in the T5 configuration. 
-    The loss can be computed for regression, single-label classification, or multi-label classification tasks. 
-    
-    This class provides flexibility in handling different types of sequence classification tasks and supports customization through the T5 configuration settings.
-    
-    """
+class T5ForSequenceClassification(T5PreTrainedModel):
     _keys_to_ignore_on_load_unexpected = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight"]
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: T5Config):
-        """
-        Initializes an instance of the T5ForSequenceClassification class.
-        
-        Args:
-            self: An instance of the T5ForSequenceClassification class.
-            config (T5Config): The configuration object that contains the model's hyperparameters and settings.
-        
-        Returns:
-            None
-        
-        Raises:
-            None
-        
-        Description:
-        This method initializes an instance of the T5ForSequenceClassification class by setting up the necessary components for sequence classification tasks. It takes in the self parameter, which refers to
-the instance of the class itself, and the config parameter, which is an instance of the T5Config class.
-        
-        The config parameter is of type T5Config and represents the configuration object that contains various hyperparameters and settings for the T5 model. It is used to initialize the transformer and
-classification_head attributes of the T5ForSequenceClassification instance.
-        
-        The transformer attribute is of type T5Model and is responsible for the main transformer model used for sequence classification. It is initialized with the provided config object.
-        
-        The classification_head attribute is of type T5ClassificationHead and represents the classification head that is added on top of the transformer model. It is also initialized with the provided config
-object.
-        
-        After initializing the transformer and classification_head attributes, the post_init method is called to perform any additional setup or customization required.
-        
-        Note:
-        This method is automatically called when creating a new instance of the T5ForSequenceClassification class.
-        """
         super().__init__(config)
         self.transformer = T5Model(config)
         self.classification_head = T5ClassificationHead(config)
+
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+        self.model_parallel = False
+
+    def forward(
         self,
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2168,8 +1497,8 @@ object.
 
         eos_mask = input_ids.eq(self.config.eos_token_id)
 
-        if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
-            raise ValueError("All examples must have the same number of <eos> tokens.")
+        # if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
+        #     raise ValueError("All examples must have the same number of <eos> tokens.")
         batch_size, _, hidden_size = sequence_output.shape
         sentence_representation = sequence_output[eos_mask].view(batch_size, -1, hidden_size)[:, -1, :]
         logits = self.classification_head(sentence_representation)
@@ -2185,14 +1514,17 @@ object.
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.config.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.config.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -2210,42 +1542,74 @@ object.
         )
 
 
-class T5ForQuestionAnswering(T5PreTrainedModel):
+class T5ForTokenClassification(T5PreTrainedModel):
+    _tied_weights_keys = ["transformer.encoder.embed_tokens.weight"]
 
-    """
-    This class represents a T5 model for question answering tasks. It is designed specifically for question answering applications where the model takes input text and outputs answers to questions posed about
-the input. The model architecture includes an encoder and a decoder, both based on the T5Stack structure. The T5ForQuestionAnswering class provides methods for setting input embeddings, tying weights,
-accessing the encoder and decoder components, and constructing the model for inference or training.
-    
-    The constructor initializes the T5ForQuestionAnswering model with a T5Config object, setting up the model dimensions, shared embeddings, encoder, decoder, and other necessary components. The model can be
-fine-tuned for specific question answering tasks by adjusting configurations and utilizing the provided methods.
-    
-    The construct method executes the forward pass of the model, taking input tensors and generating outputs for question answering. It handles input embeddings, attention masks, decoder inputs, and various
-optional arguments to control the model's behavior during inference or training. The method returns the model's output, including predicted start and end positions for answering questions, loss values, and
-other relevant information.
-    
-    Overall, the T5ForQuestionAnswering class encapsulates a T5 model tailored for question answering tasks, providing a convenient interface for utilizing and fine-tuning the model for specific applications.
-    """
+    def __init__(self, config: T5Config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+
+        self.transformer = T5EncoderModel(config)
+        self.dropout = nn.Dropout(config.classifier_dropout)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def forward(
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
+        r"""
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Returns:
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.transformer(
+            input_ids,
+            attention_mask=attention_mask,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        hidden_states = outputs[0]
+        hidden_states = self.dropout(hidden_states)
+        logits = self.classifier(hidden_states)
+
+        loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+        if not return_dict:
+            output = (logits, outputs[2:-1])
+            return ((loss,) + output) if loss is not None else output
+
+        return TokenClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
+
+
+class T5ForQuestionAnswering(T5PreTrainedModel):
     _keys_to_ignore_on_load_unexpected = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight"]
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: T5Config):
-        """
-        Initializes an instance of the T5ForQuestionAnswering class.
-        
-        Args:
-            self: The instance of the class.
-            config (T5Config): The configuration object that defines the model's parameters.
-                - The config parameter must be an instance of the T5Config class.
-                - It is used to set up the model's architecture and hyperparameters.
-                - This parameter is required.
-        
-        Returns:
-            None.
-        
-        Raises:
-            None.
-        """
         super().__init__(config)
         self.model_dim = config.d_model
 
@@ -2255,106 +1619,42 @@ other relevant information.
         encoder_config.is_decoder = False
         encoder_config.use_cache = False
         encoder_config.is_encoder_decoder = False
-        self.encoder = T5Stack(encoder_config)
+        self.encoder = T5Stack(encoder_config, self.shared)
 
         decoder_config = copy.deepcopy(config)
         decoder_config.is_decoder = True
         decoder_config.is_encoder_decoder = False
         decoder_config.num_layers = config.num_decoder_layers
-        self.decoder = T5Stack(decoder_config)
+        self.decoder = T5Stack(decoder_config, self.shared)
 
         self.num_labels = config.num_labels
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
+        self.model_parallel = False
+
     def get_input_embeddings(self):
-        '''
-        Method: get_input_embeddings
-        
-        Description:
-        This method returns the shared input embeddings of the T5 model for question answering.
-        
-        Args:
-            self: The instance of the T5ForQuestionAnswering class.
-        
-        Returns:
-            None
-        
-        Raises:
-            None
-        '''
         return self.shared
 
     def set_input_embeddings(self, new_embeddings):
-        """
-        Method to set new input embeddings for the T5 model used for Question Answering.
-        
-        Args:
-            self (T5ForQuestionAnswering): The instance of the T5ForQuestionAnswering class.
-                This parameter is automatically passed and refers to the current instance of the class.
-            new_embeddings (object): The new input embeddings to be set for the model.
-                This parameter represents the embeddings that will replace the existing ones in the model.
-                
-        Returns:
-            None. This method does not return any value explicitly.
-        
-        Raises:
-            None.
-        """
         self.shared = new_embeddings
-        # self.encoder.set_input_embeddings(new_embeddings)
-        # self.decoder.set_input_embeddings(new_embeddings)
+        self.encoder.set_input_embeddings(new_embeddings)
+        self.decoder.set_input_embeddings(new_embeddings)
 
     def _tie_weights(self):
-        """
-        Ties the weights of the word embeddings in the T5ForQuestionAnswering model.
-        
-        Args:
-            self: An instance of the T5ForQuestionAnswering class.
-        
-        Returns:
-            None.
-        
-        Raises:
-            None.
-        """
         if self.config.tie_word_embeddings:
             self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
             self._tie_or_clone_weights(self.decoder.embed_tokens, self.shared)
 
     def get_encoder(self):
-        """
-        Returns the encoder used for T5 question answering.
-        
-        Args:
-            self: An instance of the T5ForQuestionAnswering class.
-        
-        Returns:
-            None: The method does not return any value.
-        
-        Raises:
-            None: This method does not raise any exceptions.
-        """
         return self.encoder
 
     def get_decoder(self):
-        """
-        Returns the decoder for the T5 model used for question answering.
-        
-        Args:
-            self: An instance of the T5ForQuestionAnswering class.
-        
-        Returns:
-            None: This method does not return anything.
-        
-        Raises:
-            None: This method does not raise any exceptions.
-        """
         return self.decoder
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -2407,12 +1707,7 @@ other relevant information.
         # FutureWarning: head_mask was separated into two input args - head_mask, decoder_head_mask
         if head_mask is not None and decoder_head_mask is None:
             if self.config.num_layers == self.config.num_decoder_layers:
-                warnings.warn("""
-                The input argument `head_mask` was split into two arguments `head_mask` and `decoder_head_mask`. Currently,
-                `decoder_head_mask` is set to copy `head_mask`, but this feature is deprecated and will be removed in future versions.
-                If you do not want to use any `decoder_head_mask` now, please set `decoder_head_mask = ops.ones(num_layers,
-                num_heads)`.
-                """, FutureWarning)
+                warnings.warn(__HEAD_MASK_WARNING_MSG, FutureWarning)
                 decoder_head_mask = head_mask
 
         # Encode if needed (training, first prediction pass)
@@ -2454,7 +1749,7 @@ other relevant information.
         sequence_output = decoder_outputs[0]
 
         logits = self.qa_outputs(sequence_output)
-        start_logits, end_logits = logits.split(1, axis=-1)
+        start_logits, end_logits = ops.split(logits, 1, dim=-1)
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
 
@@ -2470,8 +1765,9 @@ other relevant information.
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
@@ -2492,11 +1788,11 @@ other relevant information.
         )
 
 __all__ = [
-    "T5_PRETRAINED_MODEL_ARCHIVE_LIST",
     "T5EncoderModel",
     "T5ForConditionalGeneration",
     "T5Model",
     "T5PreTrainedModel",
     "T5ForQuestionAnswering",
     "T5ForSequenceClassification",
+    "T5ForTokenClassification",
 ]

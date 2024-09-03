@@ -78,14 +78,15 @@ class InternLMTokenizer(PreTrainedTokenizer):
             bos_token (str, optional): The beginning of sentence token. Defaults to '<s>'.
             eos_token (str, optional): The end of sentence token. Defaults to '</s>'.
             pad_token (str, optional): The padding token. Defaults to None.
-            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional keyword arguments for the SentencePieceProcessor. Defaults to None.
+            sp_model_kwargs (Optional[Dict[str, Any]], optional):
+                Additional keyword arguments for the SentencePieceProcessor. Defaults to None.
             add_bos_token (bool, optional): Whether to add the bos_token to the vocabulary. Defaults to True.
             add_eos_token (bool, optional): Whether to add the eos_token to the vocabulary. Defaults to False.
             clean_up_tokenization_spaces (bool, optional): Whether to clean up tokenization spaces. Defaults to False.
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -115,16 +116,19 @@ class InternLMTokenizer(PreTrainedTokenizer):
 
     def __getstate__(self):
         """
-        Method '__getstate__' in the class 'InternLMTokenizer' is used to retrieve the state of the object for pickling or serialization purposes.
+        Method '__getstate__' in the class 'InternLMTokenizer' is used to retrieve the state of the object
+        for pickling or serialization purposes.
         
         Args:
             self: An instance of the 'InternLMTokenizer' class.
         
         Returns:
-            None: This method does not explicitly return any value. However, it modifies the state of the object by setting the 'sp_model' attribute to None and returns the modified state as a dictionary.
+            None: This method does not explicitly return any value.
+                However, it modifies the state of the object by setting the 'sp_model' attribute to None
+                and returns the modified state as a dictionary.
         
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         state = self.__dict__.copy()
         state["sp_model"] = None
@@ -136,13 +140,14 @@ class InternLMTokenizer(PreTrainedTokenizer):
         
         Args:
             self (InternLMTokenizer): The instance of the InternLMTokenizer class.
-            d (dict): The dictionary containing the state information to be set. The dictionary should have the '__dict__' attribute which stores the internal state of the object.
+            d (dict): The dictionary containing the state information to be set.
+                The dictionary should have the '__dict__' attribute which stores the internal state of the object.
             
         Returns:
-            None: This method does not return any value.
+            None.
             
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         self.__dict__ = d
         self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)

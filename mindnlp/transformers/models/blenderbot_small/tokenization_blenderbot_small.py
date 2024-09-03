@@ -101,7 +101,7 @@ class BlenderbotSmallTokenizer(PreTrainedTokenizer):
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None. This method initializes the BlenderbotSmallTokenizer instance with the provided parameters.
+            None: This method initializes the BlenderbotSmallTokenizer instance with the provided parameters.
         
         Raises:
             FileNotFoundError: If either vocab_file or merges_file is not found.
@@ -164,6 +164,7 @@ class BlenderbotSmallTokenizer(PreTrainedTokenizer):
             None.
         
         This method applies the following steps to perform BPE:
+
         1. Checks if the token exists in the cache. If yes, returns the cached value.
         2. Applies regular expression substitution to separate certain punctuation marks from the token.
         3. Replaces single quotes with spaces around them.
@@ -171,6 +172,7 @@ class BlenderbotSmallTokenizer(PreTrainedTokenizer):
         5. If the token contains a newline character, replaces it with '__newln__'.
         6. Splits the token into a list of individual words.
         7. Processes each word in the list:
+
             - Converts the word to lowercase.
             - Converts the word into a tuple.
             - Appends '</w>' to the last character of the tuple.
@@ -180,6 +182,7 @@ class BlenderbotSmallTokenizer(PreTrainedTokenizer):
             - Joins the merged characters with '@@ ' and removes the '</w>' suffix.
             - Caches the processed word for future use.
             - Appends the processed word to the final list.
+
         8. Joins all the words in the final list with a space separator and returns the result.
         """
         if token in self.cache:

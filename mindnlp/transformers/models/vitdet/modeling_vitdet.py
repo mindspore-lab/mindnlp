@@ -19,14 +19,14 @@ import math
 from typing import Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
-from mindspore.common.initializer import initializer, HeNormal, TruncatedNormal
-from mindnlp.utils import logging
+from mindnlp.core import nn, ops
 
 from ...activations import ACT2FN
 from ...modeling_outputs import BackboneOutput, BaseModelOutput
 from ...modeling_utils import PreTrainedModel
-
+from ....utils import (
+    logging,
+)
 from ...backbone_utils import BackboneMixin
 from .configuration_vitdet import VitDetConfig
 
@@ -37,7 +37,7 @@ logger = logging.get_logger(__name__)
 _CONFIG_FOR_DOC = "VitDetConfig"
 
 
-class VitDetEmbeddings(nn.Cell):
+class VitDetEmbeddings(nn.Module):
     """
     This class turns `pixel_values` of shape `(batch_size, num_channels, height, width)` into the initial
     `hidden_states` (patch embeddings) to be consumed by a Transformer.
@@ -59,11 +59,11 @@ class VitDetEmbeddings(nn.Cell):
         if config.use_absolute_position_embeddings:
             # Initialize absolute positional embedding with pretrain image size.
             num_positions = num_patches + 1
-            self.position_embeddings = Parameter(ops.zeros(1, num_positions, config.hidden_size))
+            self.position_embeddings = nn.Parameter(ops.zeros(1, num_positions, config.hidden_size))
         else:
             self.position_embeddings = None
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, has_bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size)
 
     def get_absolute_positions(self, abs_pos_embeddings, has_cls_token, height, width):
         """
@@ -90,9 +90,9 @@ class VitDetEmbeddings(nn.Cell):
         if size * size != num_position:
             raise ValueError("Absolute position embeddings must be a square number.")
 
-        if  (size != height or size != width):
+        if (size != height or size != width):
             # nn.functional.interpolate is a noop in case size == height and size == width - we need to always capture this path with jit.trace.
-            new_abs_pos_embeddings = ops.interpolate(
+            new_abs_pos_embeddings = nn.functional.interpolate(
                 abs_pos_embeddings.reshape(1, size, size, -1).permute(0, 3, 1, 2),
                 size=(height, width),
                 mode="bicubic",
@@ -103,7 +103,7 @@ class VitDetEmbeddings(nn.Cell):
         else:
             return abs_pos_embeddings.reshape(1, height, width, -1)
 
-    def construct(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         num_channels = pixel_values.shape[1]
         if num_channels != self.num_channels:
             raise ValueError(
@@ -124,6 +124,7 @@ class VitDetEmbeddings(nn.Cell):
 
         return embeddings
 
+
 def get_rel_pos(q_size, k_size, rel_pos):
     """
     Get relative positional embeddings according to the relative positions of query and key sizes.
@@ -143,7 +144,7 @@ def get_rel_pos(q_size, k_size, rel_pos):
     # Interpolate rel pos if needed.
     if rel_pos.shape[0] != max_rel_dist:
         # Interpolate rel position embeddings.
-        rel_pos_resized = ops.interpolate(
+        rel_pos_resized = nn.functional.interpolate(
             rel_pos.reshape(1, rel_pos.shape[0], -1).permute(0, 2, 1),
             size=max_rel_dist,
             mode="linear",
@@ -176,7 +177,7 @@ def add_decomposed_relative_positions(attn, queries, rel_pos_h, rel_pos_w, q_siz
             Relative position embeddings (Lw, num_channels) for width axis.
         q_size (`Tuple[int]`):
             Spatial sequence size of query q with (queries_height, queries_width).
-        k_size (`Tuple[int]`]):
+        k_size (`Tuple[int]`):
             Spatial sequence size of key k with (keys_height, keys_width).
 
     Returns:
@@ -201,7 +202,7 @@ def add_decomposed_relative_positions(attn, queries, rel_pos_h, rel_pos_w, q_siz
     return attn
 
 
-class VitDetAttention(nn.Cell):
+class VitDetAttention(nn.Module):
     """Multi-head Attention block with relative position embeddings."""
 
     def __init__(self, config, input_size=None):
@@ -221,30 +222,30 @@ class VitDetAttention(nn.Cell):
         head_dim = dim // num_heads
         self.scale = head_dim**-0.5
 
-        self.qkv = nn.Dense(dim, dim * 3, has_bias =config.qkv_bias)
-        self.proj = nn.Dense(dim, dim)
+        self.qkv = nn.Linear(dim, dim * 3, bias=config.qkv_bias)
+        self.proj = nn.Linear(dim, dim)
 
         self.use_relative_position_embeddings = config.use_relative_position_embeddings
         if self.use_relative_position_embeddings:
             # initialize relative positional embeddings
-            self.rel_pos_h = Parameter(ops.zeros(2 * input_size[0] - 1, head_dim))
-            self.rel_pos_w = Parameter(ops.zeros(2 * input_size[1] - 1, head_dim))
+            self.rel_pos_h = nn.Parameter(ops.zeros(2 * input_size[0] - 1, head_dim))
+            self.rel_pos_w = nn.Parameter(ops.zeros(2 * input_size[1] - 1, head_dim))
 
-    def construct(self, hidden_state, output_attentions=False):
+    def forward(self, hidden_state, output_attentions=False):
         batch_size, height, width, _ = hidden_state.shape
         # qkv with shape (3, batch_size, num_heads, height * width, num_channels)
         qkv = self.qkv(hidden_state).reshape(batch_size, height * width, 3, self.num_heads, -1).permute(2, 0, 3, 1, 4)
         # queries, keys and values have shape (batch_size * num_heads, height * width, num_channels)
         queries, keys, values = qkv.reshape(3, batch_size * self.num_heads, height * width, -1).unbind(0)
 
-        attention_scores = (queries * self.scale) @ keys.swapaxes(-2, -1)
+        attention_scores = (queries * self.scale) @ ops.transpose(keys, -2, -1)
 
         if self.use_relative_position_embeddings:
             attention_scores = add_decomposed_relative_positions(
                 attention_scores, queries, self.rel_pos_h, self.rel_pos_w, (height, width), (height, width)
             )
 
-        attention_probs = ops.softmax(attention_scores,axis=-1)
+        attention_probs = ops.softmax(attention_scores, dim=-1)
 
         hidden_state = attention_probs @ values
         hidden_state = hidden_state.view(batch_size, self.num_heads, height, width, -1)
@@ -279,27 +280,27 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
     keep_prob = 1 - drop_prob
     shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
     random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
-    random_tensor.floor()  # binarize
+    random_tensor = random_tensor.floor()  # binarize
     output = input.div(keep_prob) * random_tensor
     return output
 
 
 # Copied from transformers.models.beit.modeling_beit.BeitDropPath
-class VitDetDropPath(nn.Cell):
+class VitDetDropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
 
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         super().__init__()
         self.drop_prob = drop_prob
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         return drop_path(hidden_states, self.drop_prob, self.training)
 
     def extra_repr(self) -> str:
         return "p={}".format(self.drop_prob)
 
 
-class VitDetLayerNorm(nn.Cell):
+class VitDetLayerNorm(nn.Module):
     """
     A LayerNorm variant, popularized by Transformers, that performs point-wise mean and variance normalization over the
     channel dimension for inputs that have shape (batch_size, channels, height, width).
@@ -308,20 +309,20 @@ class VitDetLayerNorm(nn.Cell):
 
     def __init__(self, normalized_shape, eps=1e-6):
         super().__init__()
-        self.weight = Parameter(ops.ones(normalized_shape))
-        self.bias = Parameter(ops.zeros(normalized_shape))
+        self.weight = nn.Parameter(ops.ones(normalized_shape))
+        self.bias = nn.Parameter(ops.zeros(normalized_shape))
         self.eps = eps
         self.normalized_shape = (normalized_shape,)
 
-    def construct(self, x):
-        u = x.mean(1, keep_dims=True)
-        s = (x - u).pow(2).mean(1, keep_dims=True)
+    def forward(self, x):
+        u = x.mean(1, keepdim=True)
+        s = (x - u).pow(2).mean(1, keepdim=True)
         x = (x - u) / ops.sqrt(s + self.eps)
         x = self.weight[:, None, None] * x + self.bias[:, None, None]
         return x
 
 
-class VitDetResBottleneckBlock(nn.Cell):
+class VitDetResBottleneckBlock(nn.Module):
     """
     The standard bottleneck residual block without the last activation layer. It contains 3 conv layers with kernels
     1x1, 3x3, 1x1.
@@ -340,35 +341,35 @@ class VitDetResBottleneckBlock(nn.Cell):
                 Number of output channels for the 3x3 "bottleneck" conv layers.
         """
         super().__init__()
-        self.conv1 = nn.Conv2d(in_channels, bottleneck_channels, 1, has_bias=False)
+        self.conv1 = nn.Conv2d(in_channels, bottleneck_channels, 1, bias=False)
         self.norm1 = VitDetLayerNorm(bottleneck_channels)
         self.act1 = ACT2FN[config.hidden_act]
 
-        self.conv2 = nn.Conv2d(bottleneck_channels, bottleneck_channels, 3, padding=1, pad_mode='pad', has_bias=False)
+        self.conv2 = nn.Conv2d(bottleneck_channels, bottleneck_channels, 3, padding=1, bias=False)
         self.norm2 = VitDetLayerNorm(bottleneck_channels)
         self.act2 = ACT2FN[config.hidden_act]
 
-        self.conv3 = nn.Conv2d(bottleneck_channels, out_channels, 1, has_bias=False)
+        self.conv3 = nn.Conv2d(bottleneck_channels, out_channels, 1, bias=False)
         self.norm3 = VitDetLayerNorm(out_channels)
 
-    def construct(self, x):
+    def forward(self, x):
         out = x
-        for layer in self.cells():
+        for layer in self.children():
             out = layer(out)
 
         out = x + out
         return out
 
 
-class VitDetMlp(nn.Cell):
+class VitDetMlp(nn.Module):
     def __init__(self, config, in_features: int, hidden_features: int) -> None:
         super().__init__()
-        self.fc1 = nn.Dense(in_features, hidden_features)
+        self.fc1 = nn.Linear(in_features, hidden_features)
         self.act = ACT2FN[config.hidden_act]
-        self.fc2 = nn.Dense(hidden_features, in_features)
+        self.fc2 = nn.Linear(hidden_features, in_features)
         self.drop = nn.Dropout(config.dropout_prob)
 
-    def construct(self, x: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, x: mindspore.Tensor) -> mindspore.Tensor:
         x = self.fc1(x)
         x = self.act(x)
         x = self.drop(x)
@@ -399,14 +400,14 @@ def window_partition(hidden_state, window_size):
     pad_width = (window_size - width % window_size) % window_size
 
     # Noop in case pad_width == 0 and pad_height == 0.
-    hidden_state = ops.pad(hidden_state, (0, 0, 0, pad_width, 0, pad_height))
+    hidden_state = nn.functional.pad(hidden_state, (0, 0, 0, pad_width, 0, pad_height))
 
     padded_height, padded_width = height + pad_height, width + pad_width
 
     hidden_state = hidden_state.view(
         batch_size, padded_height // window_size, window_size, padded_width // window_size, window_size, num_channels
     )
-    windows = hidden_state.permute(0, 1, 3, 2, 4, 5).view(-1, window_size, window_size, num_channels)
+    windows = hidden_state.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, num_channels)
     return windows, (padded_height, padded_width)
 
 
@@ -433,15 +434,15 @@ def window_unpartition(windows, window_size, pad_height_width, height_width):
     hidden_state = windows.view(
         batch_size, padded_height // window_size, padded_width // window_size, window_size, window_size, -1
     )
-    hidden_state = hidden_state.permute(0, 1, 3, 2, 4, 5)
+    hidden_state = hidden_state.permute(0, 1, 3, 2, 4, 5).contiguous()
     hidden_state = hidden_state.view(batch_size, padded_height, padded_width, -1)
 
     # We always have height <= padded_height and width <= padded_width
-    hidden_state = hidden_state[:, :height, :width, :]
+    hidden_state = hidden_state[:, :height, :width, :].contiguous()
     return hidden_state
 
 
-class VitDetLayer(nn.Cell):
+class VitDetLayer(nn.Module):
     """This corresponds to the Block class in the original implementation."""
 
     def __init__(
@@ -452,13 +453,13 @@ class VitDetLayer(nn.Cell):
         dim = config.hidden_size
         input_size = (config.image_size // config.patch_size, config.image_size // config.patch_size)
 
-        self.norm1 = nn.LayerNorm([dim], epsilon=config.layer_norm_eps)
+        self.norm1 = nn.LayerNorm(dim, eps=config.layer_norm_eps)
         self.attention = VitDetAttention(
             config, input_size=input_size if window_size == 0 else (window_size, window_size)
         )
 
         self.drop_path = VitDetDropPath(drop_path_rate) if drop_path_rate > 0.0 else nn.Identity()
-        self.norm2 = nn.LayerNorm([dim], epsilon=config.layer_norm_eps)
+        self.norm2 = nn.LayerNorm(dim, eps=config.layer_norm_eps)
         self.mlp = VitDetMlp(config=config, in_features=dim, hidden_features=int(dim * config.mlp_ratio))
 
         self.window_size = window_size
@@ -473,7 +474,7 @@ class VitDetLayer(nn.Cell):
                 bottleneck_channels=dim // 2,
             )
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -516,7 +517,7 @@ class VitDetLayer(nn.Cell):
         return outputs
 
 
-class VitDetEncoder(nn.Cell):
+class VitDetEncoder(nn.Module):
     def __init__(self, config: VitDetConfig) -> None:
         super().__init__()
         self.config = config
@@ -536,10 +537,10 @@ class VitDetEncoder(nn.Cell):
                 )
             )
 
-        self.layer = nn.CellList(layers)
+        self.layer = nn.ModuleList(layers)
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -583,19 +584,18 @@ class VitDetEncoder(nn.Cell):
         )
 
 
-def caffe2_msra_fill(cell: nn.Cell) -> None:
+def caffe2_msra_fill(module: nn.Module) -> None:
     """
     Initialize `module.weight` using the "MSRAFill" implemented in Caffe2. Also initializes `module.bias` to 0.
 
     Source: https://detectron2.readthedocs.io/en/latest/_modules/fvcore/nn/weight_init.html.
 
     Args:
-        module (nn.Cell): module to initialize.
+        module (nn.Module): module to initialize.
     """
-    cell.weight.set_data(initializer(HeNormal(mode="fan_out", nonlinearity="relu"),
-                                                    cell.weight.shape, cell.weight.dtype))
-    if cell.bias is not None:
-        cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+    nn.init.kaiming_normal_(module.weight, mode="fan_out", nonlinearity="relu")
+    if module.bias is not None:
+        nn.init.constant_(module.bias, 0)
 
 
 class VitDetPreTrainedModel(PreTrainedModel):
@@ -610,36 +610,49 @@ class VitDetPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = []
 
-    def _init_weights(self, cell: Union[nn.Dense, nn.Conv2d, nn.LayerNorm]) -> None:
+    def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
             # Upcast the input in `fp32` and cast it back to desired `dtype` to avoid
             # `trunc_normal_cpu` not implemented in `half` issues
-            cell.weight.set_data(initializer(TruncatedNormal(sigma=self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, VitDetEmbeddings):
-            cell.position_embeddings.set_data(initializer(TruncatedNormal(self.config.initializer_range),
-                                             cell.position_embeddings.shape, cell.position_embeddings.dtype))
-        elif isinstance(cell, VitDetAttention) and self.config.use_relative_position_embeddings:
-            cell.rel_pos_h.set_data(initializer(TruncatedNormal(self.config.initializer_range),
-                                             cell.rel_pos_h.shape, cell.rel_pos_h.dtype))
-            cell.rel_pos_w.set_data(initializer(TruncatedNormal(self.config.initializer_range),
-                                             cell.rel_pos_w.shape, cell.rel_pos_w.dtype))
+            module.weight = nn.init.trunc_normal_(
+                module.weight.to(mindspore.float32), mean=0.0, std=self.config.initializer_range
+            ).to(module.weight.dtype)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
-        elif isinstance(cell, VitDetResBottleneckBlock):
-            for layer in [cell.conv1, cell.conv2, cell.conv3]:
+        elif isinstance(module, VitDetEmbeddings):
+            module.position_embeddings = nn.init.trunc_normal_(
+                module.position_embeddings.to(mindspore.float32),
+                mean=0.0,
+                std=self.config.initializer_range,
+            ).to(module.position_embeddings.dtype)
+
+        elif isinstance(module, VitDetAttention) and self.config.use_relative_position_embeddings:
+            module.rel_pos_h = nn.init.trunc_normal_(
+                module.rel_pos_h.to(mindspore.float32),
+                mean=0.0,
+                std=self.config.initializer_range,
+            )
+            module.rel_pos_w = nn.init.trunc_normal_(
+                module.rel_pos_w.to(mindspore.float32),
+                mean=0.0,
+                std=self.config.initializer_range,
+            )
+
+        elif isinstance(module, VitDetResBottleneckBlock):
+            for layer in [module.conv1, module.conv2, module.conv3]:
                 caffe2_msra_fill(layer)
-            for layer in [cell.norm1, cell.norm2]:
-                layer.weight.set_data(initializer('ones', layer.weight.shape, layer.weight.dtype))
-                layer.bias.set_data(initializer('zeros', layer.bias.shape, layer.bias.dtype))
+            for layer in [module.norm1, module.norm2]:
+                nn.init.ones_(layer.weight)
+                nn.init.zeros_(layer.bias)
             # zero init last norm layer.
-            cell.norm3.weight.set_data(initializer('zeros', cell.weight.shape, cell.weight.dtype))
-            cell.norm3.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            nn.init.ones_(module.norm3.weight)
+            nn.init.zeros_(module.norm3.bias)
+
 
 class VitDetModel(VitDetPreTrainedModel):
     def __init__(self, config: VitDetConfig):
@@ -663,7 +676,7 @@ class VitDetModel(VitDetPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
@@ -683,9 +696,9 @@ class VitDetModel(VitDetPreTrainedModel):
         >>> config = VitDetConfig()
         >>> model = VitDetModel(config)
 
-        >>> pixel_values = torch.randn(1, 3, 224, 224)
+        >>> pixel_values = ops.randn(1, 3, 224, 224)
 
-        >>> with torch.no_grad():
+        >>> with no_grad():
         ...     outputs = model(pixel_values)
 
         >>> last_hidden_states = outputs.last_hidden_state
@@ -728,6 +741,7 @@ class VitDetModel(VitDetPreTrainedModel):
             attentions=encoder_outputs.attentions,
         )
 
+
 class VitDetBackbone(VitDetPreTrainedModel, BackboneMixin):
     def __init__(self, config):
         super().__init__(config)
@@ -743,7 +757,7 @@ class VitDetBackbone(VitDetPreTrainedModel, BackboneMixin):
     def get_input_embeddings(self) -> VitDetEmbeddings:
         return self.embeddings.projection
 
-    def construct(
+    def forward(
         self,
         pixel_values: mindspore.Tensor,
         output_hidden_states: Optional[bool] = None,
@@ -762,9 +776,9 @@ class VitDetBackbone(VitDetPreTrainedModel, BackboneMixin):
         >>> config = VitDetConfig()
         >>> model = VitDetBackbone(config)
 
-        >>> pixel_values = torch.randn(1, 3, 224, 224)
+        >>> pixel_values = ops.randn(1, 3, 224, 224)
 
-        >>> with torch.no_grad():
+        >>> with no_grad():
         ...     outputs = model(pixel_values)
 
         >>> feature_maps = outputs.feature_maps

@@ -24,14 +24,14 @@ from mindnlp.utils.generic import cached_property
 from mindnlp.transformers import VideoMAEConfig
 from mindnlp.transformers.models.auto import get_values
 from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow,is_mindspore_available,is_vision_available
-from mindnlp.utils.serialization import load
+from mindnlp.core.serialization import load
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindnlp.core import nn, ops
 
     from mindnlp.transformers import (
         MODEL_FOR_VIDEO_CLASSIFICATION_MAPPING,
@@ -215,14 +215,14 @@ class VideoMAEModelTest(ModelTesterMixin, unittest.TestCase):
     def test_inputs_embeds(self):
         pass
 
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            self.assertIsInstance(model.get_input_embeddings(), (nn.Cell))
+            self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     def test_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()

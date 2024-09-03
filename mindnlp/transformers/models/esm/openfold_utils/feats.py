@@ -83,7 +83,7 @@ def pseudo_beta_fn(aatype, all_atom_positions, all_atom_masks):
     ca_idx = rc.atom_order["CA"]
     cb_idx = rc.atom_order["CB"]
     pseudo_beta = ops.where(
-        is_gly[..., None].expand(*((-1,) * len(is_gly.shape)), 3),
+        is_gly[..., None].broadcast_to((*((-1,) * len(is_gly.shape)), 3)),
         all_atom_positions[..., ca_idx, :],
         all_atom_positions[..., cb_idx, :],
     )
@@ -134,7 +134,7 @@ def build_template_angle_feat(template_feats: Dict[str, mindspore.Tensor]) -> mi
             - 'template_torsion_angles_mask': A tensor representing the mask for template torsion angles.
     
     Returns:
-        mindspore.Tensor: The template angle feature tensor constructed by concatenating one-hot encoded template amino acid types, template torsion angles sin and cosine, alternative template torsion angles
+        mindspore.Tensor: The template angle feature tensor forwarded by concatenating one-hot encoded template amino acid types, template torsion angles sin and cosine, alternative template torsion angles
 sin and cosine, and template torsion angles mask.
     
     Raises:
@@ -202,8 +202,8 @@ def build_template_pair_feat(
     )
 
     n_res = batch["template_aatype"].shape[-1]
-    to_concat.append(aatype_one_hot[..., None, :, :].expand(*aatype_one_hot.shape[:-2], n_res, -1, -1))
-    to_concat.append(aatype_one_hot[..., None, :].expand(*aatype_one_hot.shape[:-2], -1, n_res, -1))
+    to_concat.append(aatype_one_hot[..., None, :, :].broadcast_to((*aatype_one_hot.shape[:-2], n_res, -1, -1)))
+    to_concat.append(aatype_one_hot[..., None, :].broadcast_to((*aatype_one_hot.shape[:-2], -1, n_res, -1)))
 
     n, ca, c = [rc.atom_order[a] for a in ["N", "CA", "C"]]
     rigids = Rigid.make_transform_from_reference(
@@ -247,7 +247,7 @@ def build_extra_msa_feat(batch: Dict[str, mindspore.Tensor]) -> mindspore.Tensor
             - 'extra_deletion_value': Tensor containing values of deletions in MSA sequences.
     
     Returns:
-        mindspore.Tensor: A concatenated tensor containing additional MSA features constructed from the input batch data.
+        mindspore.Tensor: A concatenated tensor containing additional MSA features forwarded from the input batch data.
     
     Raises:
         None
@@ -294,7 +294,7 @@ def torsion_angles_to_frames(
     bb_rot[..., 1] = 1
 
     # [*, N, 8, 2]
-    alpha = ops.cat([bb_rot.expand(*alpha.shape[:-2], -1, -1), alpha], axis=-2)
+    alpha = ops.cat([bb_rot.broadcast_to((*alpha.shape[:-2], -1, -1)), alpha], axis=-2)
 
     # [*, N, 8, 3, 3]
     # Produces rotation matrices of the form:

@@ -17,7 +17,8 @@
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...configuration_utils import PretrainedConfig
@@ -33,7 +34,7 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     """
     Shift input ids one token to the right.
     """
-    shifted_input_ids = input_ids.new_zeros(input_ids.shape)
+    shifted_input_ids = ops.zeros(input_ids.shape, dtype=input_ids.dtype)
     shifted_input_ids[:, 1:] = input_ids[:, :-1].copy()
     if decoder_start_token_id is None:
         raise ValueError("Make sure to set the decoder_start_token_id attribute of the model's configuration.")
@@ -42,7 +43,7 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     if pad_token_id is None:
         raise ValueError("Make sure to set the pad_token_id attribute of the model's configuration.")
     # replace possible -100 values in labels by `pad_token_id`
-    shifted_input_ids.masked_fill_(shifted_input_ids == -100, pad_token_id)
+    shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
 
     return shifted_input_ids
 
@@ -121,7 +122,7 @@ class VisionEncoderDecoderModel(PreTrainedModel):
             self.encoder.config.hidden_size != self.decoder.config.hidden_size
             and self.decoder.config.cross_attention_hidden_size is None
         ):
-            self.enc_to_dec_proj = nn.Dense(self.encoder.config.hidden_size, self.decoder.config.hidden_size)
+            self.enc_to_dec_proj = nn.Linear(self.encoder.config.hidden_size, self.decoder.config.hidden_size)
 
         if self.encoder.get_output_embeddings() is not None:
             raise ValueError(
@@ -181,9 +182,9 @@ class VisionEncoderDecoderModel(PreTrainedModel):
     @classmethod
     def from_encoder_decoder_pretrained(
         cls,
-        *model_args,
         encoder_pretrained_model_name_or_path: str = None,
         decoder_pretrained_model_name_or_path: str = None,
+        *model_args, # pylint: disable=keyword-arg-before-vararg
         **kwargs,
     ) -> PreTrainedModel:
         r"""
@@ -330,7 +331,7 @@ class VisionEncoderDecoderModel(PreTrainedModel):
         config.tie_word_embeddings = False
         return cls(encoder=encoder, decoder=decoder, config=config)
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[mindspore.Tensor] = None,
         decoder_input_ids: Optional[mindspore.Tensor] = None,
@@ -436,7 +437,7 @@ class VisionEncoderDecoderModel(PreTrainedModel):
         loss = None
         if labels is not None:
             logits = decoder_outputs.logits if return_dict else decoder_outputs[0]
-            loss = ops.cross_entropy(logits.reshape(-1, self.decoder.config.vocab_size), labels.reshape(-1))
+            loss = F.cross_entropy(logits.reshape(-1, self.decoder.config.vocab_size), labels.reshape(-1))
 
         if not return_dict:
             if loss is not None:

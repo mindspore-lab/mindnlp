@@ -15,16 +15,16 @@
 
 """MindNLP bert model"""
 import mindspore.common.dtype as mstype
-from mindspore import nn, ops
 from mindspore import Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.modules.functional import make_causal_mask, finfo
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from .configuration_bert import BertConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 
 
-class MSBertEmbeddings(nn.Cell):
+class MSBertEmbeddings(nn.Module):
     """
     Embeddings for BERT, include word, position and token_type
     """
@@ -37,7 +37,7 @@ class MSBertEmbeddings(nn.Cell):
             config: An object of the config class containing the configuration parameters for the embeddings.
             
         Returns:
-            None. This method does not return any value.
+            None.
             
         Raises:
             None.
@@ -46,22 +46,18 @@ class MSBertEmbeddings(nn.Cell):
         token type embeddings, layer normalization, and dropout. The configuration parameters are used to determine
         the size of the embeddings and other properties.
         
-        The 'word_embeddings' attribute is an instance of the nn.Embedding class, which represents a lookup table
+        - The 'word_embeddings' attribute is an instance of the nn.Embedding class, which represents a lookup table
         for word embeddings. It takes the vocabulary size (config.vocab_size) and hidden size (config.hidden_size) as 
         arguments.
-        
-        The 'position_embeddings' attribute is an instance of the nn.Embedding class, which represents a lookup table 
+        - The 'position_embeddings' attribute is an instance of the nn.Embedding class, which represents a lookup table
         for position embeddings. It takes the maximum position embeddings (config.max_position_embeddings) and hidden size 
         (config.hidden_size) as arguments.
-        
-        The 'token_type_embeddings' attribute is an instance of the nn.Embedding class, which represents a lookup table 
+        - The 'token_type_embeddings' attribute is an instance of the nn.Embedding class, which represents a lookup table
         for token type embeddings. It takes the token type vocabulary size (config.type_vocab_size) and hidden size 
         (config.hidden_size) as arguments.
-        
-        The 'LayerNorm' attribute is an instance of the nn.LayerNorm class, which applies layer normalization to the 
+        - The 'LayerNorm' attribute is an instance of the nn.LayerNorm class, which applies layer normalization to the
         input embeddings. It takes the hidden size (config.hidden_size) and epsilon (config.layer_norm_eps) as arguments.
-        
-        The 'dropout' attribute is an instance of the nn.Dropout class, which applies dropout regularization to the 
+        - The 'dropout' attribute is an instance of the nn.Dropout class, which applies dropout regularization to the
         input embeddings. It takes the dropout probability (config.hidden_dropout_prob) as an argument.
         """
         super().__init__()
@@ -78,13 +74,13 @@ class MSBertEmbeddings(nn.Cell):
             config.hidden_size,
         )
         self.LayerNorm = nn.LayerNorm(
-            (config.hidden_size,), epsilon=config.layer_norm_eps
+            (config.hidden_size,), eps=config.layer_norm_eps
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, input_ids, token_type_ids, position_ids):
+    def forward(self, input_ids, token_type_ids, position_ids):
         """
-        This method constructs the embeddings for MSBert model.
+        This method forwards the embeddings for MSBert model.
         
         Args:
             self (object): The object instance of MSBertEmbeddings class.
@@ -93,7 +89,7 @@ class MSBertEmbeddings(nn.Cell):
             position_ids (tensor): The position ids to indicate the position of each token in the input sequence.
         
         Returns:
-            tensor: The constructed embeddings for the input sequence represented as a tensor.
+            tensor: The forwarded embeddings for the input sequence represented as a tensor.
         
         Raises:
             None
@@ -107,7 +103,7 @@ class MSBertEmbeddings(nn.Cell):
         return embeddings
 
 
-class MSBertSelfAttention(nn.Cell):
+class MSBertSelfAttention(nn.Module):
     """
     Self attention layer for BERT.
     """
@@ -116,27 +112,33 @@ class MSBertSelfAttention(nn.Cell):
         
         Args:
             self: The instance of the class.
-            config: A configuration object containing various parameters.
+            config:
+                A configuration object containing various parameters.
+
                 - Type: Object
                 - Purpose: Specifies the configuration parameters for the attention mechanism.
                 - Restrictions: None
-        
-            causal: A boolean value indicating whether the attention mechanism is causal or not.
+
+            causal:
+                A boolean value indicating whether the attention mechanism is causal or not.
+
                 - Type: bool
                 - Purpose: Determines if the attention mechanism is restricted to attend to previous positions only.
                 - Restrictions: None
-        
-            init_cache: A boolean value indicating whether to initialize the cache or not.
+
+            init_cache:
+                A boolean value indicating whether to initialize the cache or not.
+
                 - Type: bool
                 - Purpose: Determines if the cache for attention weights and values should be initialized.
                 - Restrictions: None
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             ValueError: If the hidden size is not a multiple of the number of attention heads.
-        
+
         Notes:
             - This method is called when creating an instance of the MSBertSelfAttention class.
             - The attention mechanism is responsible for computing self-attention weights and values based on the input.
@@ -159,15 +161,15 @@ class MSBertSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(
+        self.query = nn.Linear(
             config.hidden_size,
             self.all_head_size,
         )
-        self.key = nn.Dense(
+        self.key = nn.Linear(
             config.hidden_size,
             self.all_head_size,
         )
-        self.value = nn.Dense(
+        self.value = nn.Linear(
             config.hidden_size,
             self.all_head_size,
         )
@@ -178,7 +180,7 @@ class MSBertSelfAttention(nn.Cell):
         self.causal = causal
         self.init_cache = init_cache
 
-        self.causal_mask = make_causal_mask(
+        self.causal_mask = F.make_causal_mask(
             ops.ones((1, config.max_position_embeddings), dtype=mstype.bool_),
             dtype=mstype.bool_,
         )
@@ -215,17 +217,19 @@ class MSBertSelfAttention(nn.Cell):
     def _concatenate_to_cache(self, key, value, query, attention_mask):
         """
         Concatenates the given key, value, query, and attention mask to the cache in the MSBertSelfAttention class.
-        
+
         Args:
             self (MSBertSelfAttention): An instance of the MSBertSelfAttention class.
-            key (Tensor): The key tensor to be concatenated to the cache. Shape: (batch_size, num_updated_cache_vectors, hidden_size).
-            value (Tensor): The value tensor to be concatenated to the cache. Shape: (batch_size, num_updated_cache_vectors, hidden_size).
+            key (Tensor): The key tensor to be concatenated to the cache.
+                Shape: (batch_size, num_updated_cache_vectors, hidden_size).
+            value (Tensor): The value tensor to be concatenated to the cache.
+                Shape: (batch_size, num_updated_cache_vectors, hidden_size).
             query (Tensor): The query tensor. Shape: (batch_size, sequence_length, hidden_size).
             attention_mask (Tensor): The attention mask tensor. Shape: (batch_size, sequence_length).
-        
+
         Returns:
             tuple: A tuple containing the updated key, value, and attention mask tensors.
-        
+
         Raises:
             None.
         """
@@ -260,21 +264,27 @@ class MSBertSelfAttention(nn.Cell):
         input_x = input_x.view(*new_x_shape)
         return input_x.transpose(0, 2, 1, 3)
 
-    def construct(self, hidden_states, attention_mask=None, head_mask=None):
+    def forward(self, hidden_states, attention_mask=None, head_mask=None):
         """
         Constructs the self-attention layer for the MSBert model.
-        
+
         Args:
             self (MSBertSelfAttention): The instance of the MSBertSelfAttention class.
-            hidden_states (Tensor): The input tensor of shape (batch_size, seq_length, hidden_size) representing the hidden states.
-            attention_mask (Tensor, optional): The attention mask tensor of shape (batch_size, seq_length) or (batch_size, seq_length, seq_length) to mask out certain positions from the attention computation.
-Defaults to None.
-            head_mask (Tensor, optional): The tensor of shape (num_attention_heads,) representing the mask for the attention heads. Defaults to None.
-        
+            hidden_states (Tensor):
+                The input tensor of shape (batch_size, seq_length, hidden_size) representing the hidden states.
+            attention_mask (Tensor, optional):
+                The attention mask tensor of shape (batch_size, seq_length) or (batch_size, seq_length, seq_length)
+                to mask out certain positions from the attention computation.
+                Defaults to None.
+            head_mask (Tensor, optional):
+                The tensor of shape (num_attention_heads,) representing the mask for the attention heads.
+                Defaults to None.
+
         Returns:
-            outputs (tuple): A tuple containing the context layer tensor of shape (batch_size, seq_length, hidden_size) and the attention probabilities tensor of shape (batch_size, num_attention_heads,
-seq_length, seq_length) if self.output_attentions is True, else only the context layer tensor is returned.
-        
+            outputs (tuple): A tuple containing the context layer tensor of shape (batch_size, seq_length, hidden_size)
+                and the attention probabilities tensor of shape (batch_size, num_attention_heads, eq_length, seq_length)
+                if self.output_attentions is True, else only the context layer tensor is returned.
+
         Raises:
             None.
         """
@@ -323,17 +333,11 @@ seq_length, seq_length) if self.output_attentions is True, else only the context
         # Convert the boolean attention mask to an attention bias.
         if attention_mask is not None:
             # attention mask in the form of attention bias
-            # attention_bias = ops.select(
-            #     attention_mask > 0,
-            #     ops.full(attention_mask.shape, 0.0).astype(hidden_states.dtype),
-            #     ops.full(attention_mask.shape, finfo(hidden_states.dtype, "min")).astype(
-            #         hidden_states.dtype
-            #     ),
-            # )
+
             attention_bias = ops.select(
                 attention_mask > 0,
                 ops.zeros_like(attention_mask).astype(hidden_states.dtype),
-                (ops.ones_like(attention_mask) * finfo(hidden_states.dtype, "min")).astype(
+                (ops.ones_like(attention_mask) * float(ops.finfo(hidden_states.dtype).min)).astype(
                     hidden_states.dtype
                 ),
             )
@@ -371,48 +375,49 @@ seq_length, seq_length) if self.output_attentions is True, else only the context
         return outputs
 
 
-class MSBertSelfOutput(nn.Cell):
+class MSBertSelfOutput(nn.Module):
     r"""
     Bert Self Output
     """
     def __init__(self, config):
         """
         Initializes an instance of the MSBertSelfOutput class.
-        
+
         Args:
             self: The instance of the MSBertSelfOutput class.
             config: An object containing configuration parameters for the MSBertSelfOutput class.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the config parameter is not of the expected type.
-            - ValueError: If the config parameter does not contain the required configuration parameters.
-            - RuntimeError: If there is an issue with initializing the dense, LayerNorm, or dropout attributes.
+            TypeError: If the config parameter is not of the expected type.
+            ValueError: If the config parameter does not contain the required configuration parameters.
+            RuntimeError: If there is an issue with initializing the dense, LayerNorm, or dropout attributes.
         """
         super().__init__()
-        self.dense = nn.Dense(
+        self.dense = nn.Linear(
             config.hidden_size,
             config.hidden_size,
         )
-        self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=1e-12)
+        self.LayerNorm = nn.LayerNorm((config.hidden_size,), eps=1e-12)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         """
-        This method 'construct' is a part of the 'MSBertSelfOutput' class and is responsible for processing the hidden states and input tensor.
-        
+        This method 'forward' is a part of the 'MSBertSelfOutput' class and is responsible for
+        processing the hidden states and input tensor.
+
         Args:
             self: The instance of the class.
-            
+
             hidden_states (tensor): The hidden states to be processed. It is expected to be a tensor.
-            
+
             input_tensor (tensor): The input tensor to be incorporated into the hidden states. It is expected to be a tensor.
-        
+
         Returns:
-            tensor: The processed hidden states with the input tensor incorporated. 
-        
+            tensor: The processed hidden states with the input tensor incorporated.
+
         Raises:
             This method does not raise any exceptions.
         """
@@ -422,34 +427,34 @@ class MSBertSelfOutput(nn.Cell):
         return hidden_states
 
 
-class MSBertAttention(nn.Cell):
+class MSBertAttention(nn.Module):
     r"""
     Bert Attention
     """
     def __init__(self, config, causal, init_cache=False):
         """
         Initializes an instance of MSBertAttention.
-        
+
         Args:
             self: The instance of the class itself.
             config (object): The configuration object containing various settings.
             causal (bool): Flag indicating whether the attention mechanism is causal.
             init_cache (bool, optional): Flag indicating whether to initialize cache. Default is False.
-        
+
         Returns:
-            None. This method initializes the MSBertAttention object.
-        
+            None.
+
         Raises:
-            No specific exceptions are raised by this method.
+            None.
         """
         super().__init__()
         self.self = MSBertSelfAttention(config, causal, init_cache)
         self.output = MSBertSelfOutput(config)
 
-    def construct(self, hidden_states, attention_mask=None, head_mask=None):
+    def forward(self, hidden_states, attention_mask=None, head_mask=None):
         """
         Constructs the attention mechanism for a multi-head self-attention layer in MSBertAttention.
-        
+
         Args:
             self (MSBertAttention): The instance of the MSBertAttention class.
             hidden_states (torch.Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size).
@@ -460,14 +465,16 @@ class MSBertAttention(nn.Cell):
             head_mask (torch.Tensor, optional): An optional tensor of shape (num_heads,) or (num_layers, num_heads) indicating
                 which heads or layers to mask. 1 indicates to include the head/layer, while 0 indicates to mask it.
                 If not provided, all heads/layers are included.
-        
+
         Returns:
-            Tuple[torch.Tensor]: A tuple containing:
+            Tuple[torch.Tensor]:
+                A tuple containing:
+
                 - attention_output (torch.Tensor): The output tensor of shape (batch_size, sequence_length, hidden_size),
                   which represents the attended hidden states for each token in the input sequence.
                 - self_outputs[1:] (tuple): A tuple of length `num_layers` containing tensors representing intermediate
                   outputs of the self-attention mechanism.
-        
+
         Raises:
             None.
         """
@@ -477,98 +484,103 @@ class MSBertAttention(nn.Cell):
         return outputs
 
 
-class MSBertIntermediate(nn.Cell):
+class MSBertIntermediate(nn.Module):
     r"""
     Bert Intermediate
     """
     def __init__(self, config):
         """
         Initializes an instance of the MSBertIntermediate class.
-        
+
         Args:
             self: The instance of the MSBertIntermediate class.
-            config: An object representing the configuration for the MSBertIntermediate model. It contains the following attributes:
+            config: An object representing the configuration for the MSBertIntermediate model.
+                It contains the following attributes:
+
                 - hidden_size (int): The size of the hidden layer.
                 - intermediate_size (int): The size of the intermediate layer.
                 - hidden_act (str): The activation function for the hidden layer.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the config parameter is not provided or is not of the correct type.
-            - ValueError: If the config object does not contain the required attributes.
+            TypeError: If the config parameter is not provided or is not of the correct type.
+            ValueError: If the config object does not contain the required attributes.
         """
         super().__init__()
-        self.dense = nn.Dense(
+        self.dense = nn.Linear(
             config.hidden_size,
             config.intermediate_size,
         )
         self.intermediate_act_fn = ACT2FN[config.hidden_act]
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
         Constructs the intermediate layer of the MSBert model.
-        
+
         Args:
             self: An instance of the MSBertIntermediate class.
-            hidden_states (Tensor): The input hidden states. Should be a tensor of shape (batch_size, sequence_length, hidden_size).
-        
+            hidden_states (Tensor): The input hidden states.
+                Should be a tensor of shape (batch_size, sequence_length, hidden_size).
+
         Returns:
-            Tensor: The output hidden states after passing through the intermediate layer. Has the same shape as the input hidden states.
-        
+            Tensor: The output hidden states after passing through the intermediate layer.
+                Has the same shape as the input hidden states.
+
         Raises:
             None.
-        
-        This method takes in the input hidden states and applies the intermediate layer transformations. It first passes the hidden states through a dense layer, then applies an activation function. The
-resulting hidden states are returned as the output.
+
+        This method takes in the input hidden states and applies the intermediate layer transformations.
+        It first passes the hidden states through a dense layer, then applies an activation function.
+        The resulting hidden states are returned as the output.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
-class MSBertOutput(nn.Cell):
+class MSBertOutput(nn.Module):
     r"""
     Bert Output
     """
     def __init__(self, config):
         """
         Initializes an instance of the MSBertOutput class.
-        
+
         Args:
             self: The instance of the class.
             config: An object of type 'config' that contains the configuration parameters for the MSBertOutput.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
         super().__init__()
-        self.dense = nn.Dense(
+        self.dense = nn.Linear(
             config.intermediate_size,
             config.hidden_size,
         )
-        self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=1e-12)
+        self.LayerNorm = nn.LayerNorm((config.hidden_size,), eps=1e-12)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         """
-        This method constructs the output of the MSBert model.
-        
+        This method forwards the output of the MSBert model.
+
         Args:
             self: The instance of the MSBertOutput class.
             hidden_states (tensor): The hidden states from the MSBert model.
                 This tensor contains the encoded information from the input.
             input_tensor (tensor): The input tensor to be added to the hidden states.
                 This tensor represents the original input to the MSBert model.
-        
+
         Returns:
-            tensor: The constructed output tensor representing the final hidden states.
+            tensor: The forwarded output tensor representing the final hidden states.
             This tensor is the result of processing the hidden states and input tensor.
-        
+
         Raises:
             None.
         """
@@ -578,22 +590,22 @@ class MSBertOutput(nn.Cell):
         return hidden_states
 
 
-class MSBertLayer(nn.Cell):
+class MSBertLayer(nn.Module):
     r"""
     Bert Layer
     """
     def __init__(self, config, init_cache=False):
         """
         Initializes an instance of the MSBertLayer class.
-        
+
         Args:
             self: The instance of the class.
             config (object): The configuration object containing various settings and parameters.
             init_cache (bool, optional): Whether to initialize the cache. Defaults to False.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -604,23 +616,31 @@ class MSBertLayer(nn.Cell):
         if config.add_cross_attention:
             self.crossattention = MSBertAttention(config, causal=False, init_cache=init_cache)
 
-    def construct(self, hidden_states, attention_mask=None, head_mask=None,
+    def forward(self, hidden_states, attention_mask=None, head_mask=None,
                 encoder_hidden_states = None,
                 encoder_attention_mask = None):
         """
         Constructs the MSBertLayer.
-        
+
         Args:
             self: The instance of the MSBertLayer class.
             hidden_states: The input hidden states (tensor) of shape (batch_size, sequence_length, hidden_size).
-            attention_mask: Optional attention mask (tensor) of shape (batch_size, sequence_length) or (batch_size, 1, 1, sequence_length). Defaults to None.
+            attention_mask:
+                Optional attention mask (tensor) of shape (batch_size, sequence_length) or (batch_size, 1, 1, sequence_length).
+                Defaults to None.
             head_mask: Optional head mask (tensor) of shape (num_heads,) or (num_layers, num_heads). Defaults to None.
-            encoder_hidden_states: Optional encoder hidden states (tensor) of shape (batch_size, sequence_length, hidden_size). Defaults to None.
-            encoder_attention_mask: Optional encoder attention mask (tensor) of shape (batch_size, sequence_length) or (batch_size, 1, 1, sequence_length). Defaults to None.
-        
+            encoder_hidden_states:
+                Optional encoder hidden states (tensor) of shape (batch_size, sequence_length, hidden_size).
+                Defaults to None.
+            encoder_attention_mask:
+                Optional encoder attention mask (tensor) of shape (batch_size, sequence_length) or (batch_size, 1, 1, sequence_length).
+                Defaults to None.
+
         Returns:
-            tuple: A tuple containing the layer output (tensor) of shape (batch_size, sequence_length, hidden_size) and any additional attention outputs.
-        
+            tuple:
+                A tuple containing the layer output (tensor) of shape (batch_size, sequence_length, hidden_size)
+                and any additional attention outputs.
+
         Raises:
             None.
         """
@@ -642,90 +662,102 @@ class MSBertLayer(nn.Cell):
         return outputs
 
 
-class MSBertEncoder(nn.Cell):
+class MSBertEncoder(nn.Module):
     r"""
     Bert Encoder
     """
     def __init__(self, config):
         """
         Initializes an instance of the MSBertEncoder class.
-        
+
         Args:
             self (MSBertEncoder): The instance of the class itself.
-            config: An object containing the configuration parameters for the MSBertEncoder.
+            config:
+                An object containing the configuration parameters for the MSBertEncoder.
+
                 - output_attentions (bool): Whether to output attentions weights.
                 - output_hidden_states (bool): Whether to output all hidden states.
-                - layer (nn.CellList): List of MSBertLayer instances.
-        
+                - layer (nn.ModuleList): List of MSBertLayer instances.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         self.output_attentions = config.output_attentions
         self.output_hidden_states = config.output_hidden_states
-        self.layer = nn.CellList(
+        self.layer = nn.ModuleList(
             [MSBertLayer(config) for _ in range(config.num_hidden_layers)]
         )
 
     def _set_recompute(self):
         """
         Sets the recompute flag for each layer in the MSBertEncoder.
-        
+
         Args:
             self: An instance of the MSBertEncoder class.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         Description:
-        This method iterates over each layer within the MSBertEncoder instance and sets the recompute flag for each layer by calling the 'recompute()' method of the layer. The recompute flag is used to
-indicate whether the layer needs to be recomputed during the forward pass of the encoder. By setting the recompute flag, it allows for dynamic computation of the layer based on the input.
-        
-        Example usage:
-            encoder = MSBertEncoder()
-            encoder._set_recompute()
-        
+            This method iterates over each layer within the MSBertEncoder instance and sets the recompute flag
+            for each layer by calling the 'recompute()' method of the layer.
+            The recompute flag is used to indicate whether the layer needs to be recomputed during the
+            forward pass of the encoder.
+            By setting the recompute flag, it allows for dynamic computation of the layer based on the input.
+
+        Example:
+            ```python
+            >>> encoder = MSBertEncoder()
+            >>> encoder._set_recompute()
+            ```
+
         Note:
-            This method is typically called internally within the MSBertEncoder class and does not need to be called externally.
+            This method is typically called internally within the MSBertEncoder class
+            and does not need to be called externally.
         """
         for layer in self.layer:
             layer.recompute()
 
-    def construct(self, hidden_states, attention_mask=None, head_mask=None,
+    def forward(self, hidden_states, attention_mask=None, head_mask=None,
                 encoder_hidden_states = None,
                 encoder_attention_mask = None):
         """
         Constructs the MSBertEncoder.
-        
+
         Args:
             self: An instance of the MSBertEncoder class.
-            hidden_states (Tensor): The input hidden states of the encoder. 
+            hidden_states (Tensor): The input hidden states of the encoder.
                 Shape: (batch_size, sequence_length, hidden_size)
-            attention_mask (Tensor, optional): The attention mask for the input hidden states. 
-                If provided, the attention mask should have the same shape as the hidden states. 
-                Each element of the mask should be 0 or 1, where 0 indicates the position is padded/invalid and 1 indicates the position is not padded/valid.
+            attention_mask (Tensor, optional): The attention mask for the input hidden states.
+                If provided, the attention mask should have the same shape as the hidden states.
+                Each element of the mask should be 0 or 1, where 0 indicates the position is padded/invalid and 1
+                indicates the position is not padded/valid.
                 Defaults to None.
-            head_mask (Tensor, optional): The head mask for the attention mechanism. 
+            head_mask (Tensor, optional): The head mask for the attention mechanism.
                 If provided, the head mask should have the same shape as the number of layers in the encoder.
                 Each element of the mask should be 0 or 1, where 0 indicates the head is masked and 1 indicates the head is not masked.
                 Defaults to None.
-            encoder_hidden_states (Tensor, optional): The hidden states of the encoder. 
+            encoder_hidden_states (Tensor, optional): The hidden states of the encoder.
                 Shape: (batch_size, sequence_length, hidden_size)
                 Defaults to None.
-            encoder_attention_mask (Tensor, optional): The attention mask for the encoder hidden states. 
+            encoder_attention_mask (Tensor, optional): The attention mask for the encoder hidden states.
                 If provided, the attention mask should have the same shape as the encoder hidden states.
-                Each element of the mask should be 0 or 1, where 0 indicates the position is padded/invalid and 1 indicates the position is not padded/valid.
+                Each element of the mask should be 0 or 1, where 0 indicates the position is padded/invalid
+                and 1 indicates the position is not padded/valid.
                 Defaults to None.
-        
+
         Returns:
-            outputs (Tuple): A tuple containing the following elements:
-                - hidden_states (Tensor): The output hidden states of the encoder. 
+            outputs (Tuple):
+                A tuple containing the following elements:
+
+                - hidden_states (Tensor): The output hidden states of the encoder.
                     Shape: (batch_size, sequence_length, hidden_size)
                 - all_hidden_states (Tuple[Tensor]): A tuple of hidden states of all layers.
                     Each element of the tuple has the shape (batch_size, sequence_length, hidden_size).
@@ -733,7 +765,7 @@ indicate whether the layer needs to be recomputed during the forward pass of the
                 - all_attentions (Tuple[Tensor]): A tuple of attention scores of all layers.
                     Each element of the tuple has the shape (batch_size, num_heads, sequence_length, sequence_length).
                     This will be included if the 'output_attentions' flag is set to True.
-        
+
         Raises:
             None.
         """
@@ -766,48 +798,53 @@ indicate whether the layer needs to be recomputed during the forward pass of the
         return outputs
 
 
-class MSBertPooler(nn.Cell):
+class MSBertPooler(nn.Module):
     r"""
     Bert Pooler
     """
     def __init__(self, config):
         """
         Initializes an instance of the MSBertPooler class.
-        
+
         Args:
             self (MSBertPooler): The instance of the MSBertPooler class.
-            config: An object containing configuration parameters.
+            config:
+                An object containing configuration parameters.
+
                 - Type: Any
                 - Purpose: Holds the configuration settings for the MSBertPooler.
                 - Restrictions: Must be compatible with the expected configuration format.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         """
         super().__init__()
-        self.dense = nn.Dense(
+        self.dense = nn.Linear(
             config.hidden_size,
             config.hidden_size,
         )
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method constructs a pooled output from the given hidden states.
-        
+        This method forwards a pooled output from the given hidden states.
+
         Args:
             self (MSBertPooler): The instance of the MSBertPooler class.
-            hidden_states (torch.Tensor): A tensor containing the hidden states. It is expected to have a shape of (batch_size, sequence_length, hidden_size).
-        
+            hidden_states (torch.Tensor): A tensor containing the hidden states.
+                It is expected to have a shape of (batch_size, sequence_length, hidden_size).
+
         Returns:
-            torch.Tensor: The pooled output tensor obtained by applying dense and activation functions to the first token tensor from the hidden_states.
-        
+            torch.Tensor: The pooled output tensor obtained by applying dense
+                and activation functions to the first token tensor from the hidden_states.
+
         Raises:
             TypeError: If the input hidden_states is not a torch.Tensor.
-            ValueError: If the hidden_states tensor does not have the expected shape of (batch_size, sequence_length, hidden_size).
+            ValueError: If the hidden_states tensor does not have the expected shape of
+                (batch_size, sequence_length, hidden_size).
         """
         # We "pool" the model by simply taking the hidden state corresponding.
         # to the first token
@@ -817,61 +854,68 @@ class MSBertPooler(nn.Cell):
         return pooled_output
 
 
-class MSBertPredictionHeadTransform(nn.Cell):
+class MSBertPredictionHeadTransform(nn.Module):
     r"""
     Bert Prediction Head Transform
     """
     def __init__(self, config):
         """
         Initializes an instance of the MSBertPredictionHeadTransform class.
-        
+
         Args:
             self: An instance of the MSBertPredictionHeadTransform class.
-            config: An object containing configuration settings for the transformation. It is expected to have the following attributes:
+            config: An object containing configuration settings for the transformation.
+                It is expected to have the following attributes:
+
                 - hidden_size (int): The size of the hidden layer.
                 - hidden_act (str): The activation function to be used for the hidden layer.
                 - layer_norm_eps (float): The epsilon value for LayerNorm.
-        
+
         Returns:
-            None. This method initializes the dense layer, activation function, and LayerNorm parameters for the transformation.
-        
+            None: This method initializes the dense layer, activation function, and LayerNorm parameters for the transformation.
+
         Raises:
-            - TypeError: If the config parameter is not provided.
-            - ValueError: If the config parameter is missing any required attributes.
-            - KeyError: If the hidden activation function specified in the config is not found in the ACT2FN dictionary.
+            TypeError: If the config parameter is not provided.
+            ValueError: If the config parameter is missing any required attributes.
+            KeyError: If the hidden activation function specified in the config is not found in the ACT2FN dictionary.
         """
         super().__init__()
-        self.dense = nn.Dense(
+        self.dense = nn.Linear(
             config.hidden_size,
             config.hidden_size,
         )
         self.transform_act_fn = ACT2FN[config.hidden_act]
         self.LayerNorm = nn.LayerNorm(
-            (config.hidden_size,), epsilon=config.layer_norm_eps
+            (config.hidden_size,), eps=config.layer_norm_eps
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         """
-        This method 'construct' is part of the 'MSBertPredictionHeadTransform' class and is used to perform transformations on hidden states.
-        
+        This method 'forward' is part of the 'MSBertPredictionHeadTransform' class and is used to perform transformations on hidden states.
+
         Args:
-            self: The instance of the 'MSBertPredictionHeadTransform' class.
-                Type: MSBertPredictionHeadTransform
-                Purpose: Represents the current instance of the class.
-                Restrictions: None
-        
-            hidden_states: The input hidden states that need to undergo transformations.
-                Type: Any
-                Purpose: Represents the hidden states to be processed.
-                Restrictions: Should be compatible with the operations performed within the method.
-        
+            self:
+                The instance of the 'MSBertPredictionHeadTransform' class.
+
+                - Type: MSBertPredictionHeadTransform
+                - Purpose: Represents the current instance of the class.
+                - Restrictions: None
+
+            hidden_states:
+                The input hidden states that need to undergo transformations.
+
+                - Type: Any
+                - Purpose: Represents the hidden states to be processed.
+                - Restrictions: Should be compatible with the operations performed within the method.
+
         Returns:
-            The transformed hidden states after passing through the dense layer, activation function, and LayerNorm.
-                Type: None
-                Purpose: To return the processed hidden states for further usage.
-        
+            hidden_states:
+
+                - Type: None
+                - Purpose: To return the processed hidden states for further usage.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
@@ -879,24 +923,26 @@ class MSBertPredictionHeadTransform(nn.Cell):
         return hidden_states
 
 
-class MSBertLMPredictionHead(nn.Cell):
+class MSBertLMPredictionHead(nn.Module):
     r"""
     Bert LM Prediction Head
     """
     def __init__(self, config):
         """
         Initializes an instance of the MSBertLMPredictionHead class.
-        
+
         Args:
             self: The object instance.
-            config: An instance of the configuration class that contains the model's configuration settings.
+            config:
+                An instance of the configuration class that contains the model's configuration settings.
+
                 - Type: Any
                 - Purpose: This parameter is used to configure the MSBertLMPredictionHead instance.
                 - Restrictions: None
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -905,29 +951,33 @@ class MSBertLMPredictionHead(nn.Cell):
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(
+        self.decoder = nn.Linear(
             config.hidden_size,
             config.vocab_size,
-            has_bias=False,
+            bias=False,
         )
 
         self.bias = Parameter(initializer("zeros", config.vocab_size), "bias")
 
-    def construct(self, hidden_states, masked_lm_positions):
+    def forward(self, hidden_states, masked_lm_positions):
         """
         Constructs the MSBertLMPredictionHead.
-        
-        This method takes in the hidden states and masked language model positions, and applies a series of operations to compute the final hidden states for the MSBertLMPredictionHead. The resulting hidden
-states are then transformed and decoded to produce the final output.
-        
+
+        This method takes in the hidden states and masked language model positions,
+        and applies a series of operations to compute the final hidden states for the MSBertLMPredictionHead.
+        The resulting hidden states are then transformed and decoded to produce the final output.
+
         Args:
             self (MSBertLMPredictionHead): An instance of the MSBertLMPredictionHead class.
             hidden_states (Tensor): A tensor of shape (batch_size, seq_len, hidden_size) containing the hidden states.
-            masked_lm_positions (Tensor): A tensor of shape (batch_size, num_masked_lm_positions) containing the positions of the masked language model tokens. If None, no masking is applied.
-        
+            masked_lm_positions (Tensor): A tensor of shape (batch_size, num_masked_lm_positions)
+                containing the positions of the masked language model tokens. If None, no masking is applied.
+
         Returns:
-            Tensor: A tensor of shape (batch_size, seq_len, hidden_size) containing the final hidden states for the MSBertLMPredictionHead.
-        
+            Tensor:
+                A tensor of shape (batch_size, seq_len, hidden_size) containing
+                the final hidden states for the MSBertLMPredictionHead.
+
         Raises:
             None.
         """
@@ -944,44 +994,47 @@ states are then transformed and decoded to produce the final output.
         return hidden_states
 
 
-class MSBertPreTrainingHeads(nn.Cell):
+class MSBertPreTrainingHeads(nn.Module):
     r"""
     Bert PreTraining Heads
     """
     def __init__(self, config):
         """
         Initialize the MSBertPreTrainingHeads class.
-        
+
         Args:
             self (object): The instance of the class.
-            config (object): An object containing configuration settings.
+            config (object):
+                An object containing configuration settings.
+
                 - Type: Custom class
                 - Purpose: Provides configuration parameters for the pre-training heads.
-                - Restrictions: Must be compatible with the MSBertLMPredictionHead and nn.Dense classes.
-        
+                - Restrictions: Must be compatible with the MSBertLMPredictionHead and nn.Linear classes.
+
         Returns:
-            None. This method initializes the MSBertPreTrainingHeads class with the specified configuration.
-        
+            None.
+
         Raises:
-            No exceptions are explicitly raised within this method.
+            None.
         """
         super().__init__()
         self.predictions = MSBertLMPredictionHead(config)
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+        self.seq_relationship = nn.Linear(config.hidden_size, 2)
 
-    def construct(self, sequence_output, pooled_output, masked_lm_positions):
+    def forward(self, sequence_output, pooled_output, masked_lm_positions):
         """
         Construct method in the MSBertPreTrainingHeads class.
-        
+
         Args:
             self (object): The instance of the class.
             sequence_output (tensor): The output tensor from the pre-trained model for the input sequence.
             pooled_output (tensor): The output tensor obtained by applying pooling to the sequence_output.
             masked_lm_positions (tensor): The positions of the masked language model tokens in the input sequence.
-        
+
         Returns:
-            Tuple: A tuple containing the prediction_scores (tensor) and seq_relationship_score (tensor) calculated based on the inputs.
-        
+            Tuple: A tuple containing the prediction_scores (tensor) and seq_relationship_score (tensor)
+                calculated based on the inputs.
+
         Raises:
             None: This method does not raise any exceptions.
         """
@@ -998,7 +1051,7 @@ class MSBertPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(
@@ -1008,7 +1061,7 @@ class MSBertPreTrainedModel(PreTrainedModel):
                     cell.weight.dtype,
                 )
             )
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
@@ -1033,17 +1086,17 @@ class MSBertModel(MSBertPreTrainedModel):
     def __init__(self, config, add_pooling_layer=True):
         """
         Initializes the MSBertModel class with the provided configuration and optional pooling layer.
-        
+
         Args:
             self (MSBertModel): The current instance of the MSBertModel class.
             config (object): The configuration object containing settings for the model.
             add_pooling_layer (bool): Flag indicating whether to add a pooling layer to the model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         super().__init__(config)
         self.embeddings = MSBertEmbeddings(config)
@@ -1054,35 +1107,36 @@ class MSBertModel(MSBertPreTrainedModel):
     def get_input_embeddings(self):
         """
         This method returns the input embeddings of the MSBertModel.
-        
+
         Args:
             self: The instance of the MSBertModel class.
-        
+
         Returns:
-            None: This method returns the input embeddings of the MSBertModel.
-        
+            word_embeddings:
+                This method returns the input embeddings of the MSBertModel.
+
         Raises:
-            None
+            None.
         """
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, new_embeddings):
         """
         Set the input embeddings for the MSBertModel.
-        
+
         Args:
             self (MSBertModel): The MSBertModel instance.
             new_embeddings (object): The new input embeddings to be set. This could be of any type, such as a tensor or an array.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         self.embeddings.word_embeddings = new_embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids,
         attention_mask=None,
@@ -1094,23 +1148,26 @@ class MSBertModel(MSBertPreTrainedModel):
     ):
         """
         Construct method in the MSBertModel class.
-        
+
         Args:
             self: MSBertModel object.
             input_ids (Tensor): The input tensor containing the token ids for the input sequence.
-            attention_mask (Tensor, optional): A mask tensor indicating which tokens should be attended to and which should be ignored.
+            attention_mask (Tensor, optional):
+                A mask tensor indicating which tokens should be attended to and which should be ignored.
             token_type_ids (Tensor, optional): A tensor indicating the token types for each token in the input sequence.
             position_ids (Tensor, optional): A tensor specifying the position ids for each token in the input sequence.
             head_mask (Tensor, optional): A mask tensor applied to the attention scores in the self-attention mechanism.
             encoder_hidden_states (Tensor, optional): Hidden states from the encoder.
             encoder_attention_mask (Tensor, optional): A mask tensor indicating which encoder tokens should be attended to in the self-attention mechanism.
-        
+
         Returns:
-            Tuple: A tuple containing the following:
+            Tuple:
+                A tuple containing the following:
+
                 - sequence_output (Tensor): The output tensor from the encoder for each token in the input sequence.
                 - pooled_output (Tensor): The pooled output tensor from the pooler layer, if available.
                 - Additional encoder outputs.
-        
+
         Raises:
             ValueError: If the dimensions of the head_mask tensor are incompatible.
         """
@@ -1167,19 +1224,20 @@ class MSBertForPretraining(MSBertPreTrainedModel):
     def __init__(self, config, *args, **kwargs):
         """
         __init__
-        
+
         Initialize the MSBertForPretraining class.
-        
+
         Args:
             self: The instance of the MSBertForPretraining class.
-            config: The configuration for the MSBertForPretraining, containing various parameters and settings for model initialization. It should be an instance of the configuration class specific to the
-MSBertForPretraining model.
-        
+            config: The configuration for the MSBertForPretraining,
+                containing various parameters and settings for model initialization.
+                It should be an instance of the configuration class specific to the MSBertForPretraining model.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None
         """
         super().__init__(config, *args, **kwargs)
         self.bert = MSBertModel(config)
@@ -1190,7 +1248,7 @@ MSBertForPretraining model.
             self.bert.embeddings.word_embeddings.weight
         )
 
-    def construct(
+    def forward(
         self,
         input_ids,
         attention_mask=None,
@@ -1200,8 +1258,8 @@ MSBertForPretraining model.
         masked_lm_positions=None,
     ):
         """
-        This method constructs the pretraining model for MSBertForPretraining.
-        
+        This method forwards the pretraining model for MSBertForPretraining.
+
         Args:
             self (MSBertForPretraining): The instance of the MSBertForPretraining class.
             input_ids (Tensor): The input tensor containing the token ids.
@@ -1210,10 +1268,10 @@ MSBertForPretraining model.
             position_ids (Tensor, optional): A tensor representing the position ids. Default is None.
             head_mask (Tensor, optional): A tensor representing the head mask. Default is None.
             masked_lm_positions (List[int]): A list of integer positions of masked language model tokens.
-        
+
         Returns:
             Tuple[Tensor, Tensor]: A tuple containing the prediction scores and sequence relationship score.
-        
+
         Raises:
             None
         """
@@ -1245,15 +1303,18 @@ class MSBertForSequenceClassification(MSBertPreTrainedModel):
     def __init__(self, config):
         """
         Initializes an instance of the MSBertForSequenceClassification class.
-        
+
         Args:
             self: The instance of the class.
-            config (object): A configuration object containing the settings for the model. It should include the following attributes:
+            config (object): A configuration object containing the settings for the model.
+                It should include the following attributes:
+
                 - num_labels (int): The number of labels for sequence classification.
-                - classifier_dropout (float, optional): The dropout probability for the classifier layer. If not provided, the value will default to config.hidden_dropout_prob.
+                - classifier_dropout (float, optional): The dropout probability for the classifier layer.
+                If not provided, the value will default to config.hidden_dropout_prob.
         
         Returns:
-            None. This method initializes the instance with the provided configuration.
+            None: This method initializes the instance with the provided configuration.
         
         Raises:
             TypeError: If the config parameter is not provided or is not of the expected type.
@@ -1271,10 +1332,10 @@ class MSBertForSequenceClassification(MSBertPreTrainedModel):
             if config.classifier_dropout is not None
             else config.hidden_dropout_prob
         )
-        self.classifier = nn.Dense(config.hidden_size, self.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, self.num_labels)
         self.dropout = nn.Dropout(p=classifier_dropout)
 
-    def construct(
+    def forward(
         self,
         input_ids,
         attention_mask=None,

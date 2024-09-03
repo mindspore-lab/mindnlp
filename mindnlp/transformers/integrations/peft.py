@@ -33,6 +33,7 @@ class PeftAdapterMixin:
 
     Currently supported PEFT methods are all non-prefix tuning methods. Below is the list of supported PEFT methods
     that anyone can load, train and run with this mixin class:
+
     - Low Rank Adapters (LoRA): https://huggingface.co/docs/peft/conceptual_guides/lora
     - IA3: https://huggingface.co/docs/peft/conceptual_guides/ia3
     - AdaLora: https://arxiv.org/abs/2303.10512
@@ -367,10 +368,10 @@ class PeftAdapterMixin:
             A string representing the active adapter.
         
         Raises:
-            FutureWarning: If the `active_adapter` method is deprecated and will be removed in a future version.
+            FutureWarning: If the `active_adapter` method is deprecated.
         """
         warnings.warn(
-            "The `active_adapter` method is deprecated and will be removed in a future version.", FutureWarning
+            "The `active_adapter` method is deprecated.", FutureWarning
         )
 
         return self.active_adapters()[0]

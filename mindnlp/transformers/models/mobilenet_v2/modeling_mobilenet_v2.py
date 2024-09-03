@@ -17,9 +17,10 @@
 from typing import Optional, Union
 
 import mindspore as ms
-from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutputWithPoolingAndNoAttention,
@@ -88,7 +89,7 @@ def apply_tf_padding(features: ms.Tensor, conv_layer: nn.Conv2d) -> ms.Tensor:
     return ops.pad(features, padding, "constant", 0.0)
 
 
-class MobileNetV2ConvLayer(nn.Cell):
+class MobileNetV2ConvLayer(nn.Module):
     def __init__(
         self,
         config: MobileNetV2Config,
@@ -120,17 +121,17 @@ class MobileNetV2ConvLayer(nn.Cell):
             stride=stride,
             padding=padding,
             dilation=dilation,
-            group=groups,
-            has_bias=bias,
-            pad_mode="pad",
+            groups=groups,
+            bias=bias,
         )
 
         if use_normalization:
             self.normalization = nn.BatchNorm2d(
                 num_features=out_channels,
                 eps=config.layer_norm_eps if layer_norm_eps is None else layer_norm_eps,
-                momentum=1 - 0.997,
-                affine=True
+                momentum=0.997,
+                affine=True,
+                track_running_stats=True,
             )
         else:
             self.normalization = None
@@ -145,7 +146,7 @@ class MobileNetV2ConvLayer(nn.Cell):
         else:
             self.activation = None
 
-    def construct(self, features: ms.Tensor) -> ms.Tensor:
+    def forward(self, features: ms.Tensor) -> ms.Tensor:
         if self.config.tf_padding:
             features = apply_tf_padding(features, self.convolution)
         features = self.convolution(features)
@@ -156,7 +157,7 @@ class MobileNetV2ConvLayer(nn.Cell):
         return features
 
 
-class MobileNetV2InvertedResidual(nn.Cell):
+class MobileNetV2InvertedResidual(nn.Module):
     def __init__(
         self, config: MobileNetV2Config, in_channels: int, out_channels: int, stride: int, dilation: int = 1
     ) -> None:
@@ -193,7 +194,7 @@ class MobileNetV2InvertedResidual(nn.Cell):
             use_activation=False,
         )
 
-    def construct(self, features: ms.Tensor) -> ms.Tensor:
+    def forward(self, features: ms.Tensor) -> ms.Tensor:
         residual = features
 
         features = self.expand_1x1(features)
@@ -203,7 +204,7 @@ class MobileNetV2InvertedResidual(nn.Cell):
         return residual + features if self.use_residual else features
 
 
-class MobileNetV2Stem(nn.Cell):
+class MobileNetV2Stem(nn.Module):
     def __init__(self, config: MobileNetV2Config, in_channels: int, expanded_channels: int, out_channels: int) -> None:
         super().__init__()
 
@@ -241,7 +242,7 @@ class MobileNetV2Stem(nn.Cell):
             use_activation=False,
         )
 
-    def construct(self, features: ms.Tensor) -> ms.Tensor:
+    def forward(self, features: ms.Tensor) -> ms.Tensor:
         features = self.first_conv(features)
         if self.expand_1x1 is not None:
             features = self.expand_1x1(features)
@@ -263,9 +264,9 @@ class MobileNetV2PreTrainedModel(PreTrainedModel):
     _no_split_modules = []
     _keys_to_ignore_on_load_unexpected = [r'num_batches_tracked']
 
-    def _init_weights(self, cell: Union[nn.Dense, nn.Conv2d]) -> None:
+    def _init_weights(self, cell: Union[nn.Linear, nn.Conv2d]) -> None:
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             cell.weight.set_data(initializer(Normal(mean=0.0,sigma = self.config.initializer_range),
                                                 cell.weight.shape,cell.weight.dtype))
             if cell.bias is not None:
@@ -297,7 +298,7 @@ class MobileNetV2Model(MobileNetV2PreTrainedModel):
         current_stride = 2  # first conv layer has stride 2
         dilation = 1
 
-        self.layer = nn.CellList()
+        self.layer = nn.ModuleList()
         for i in range(16):
             # Keep making the feature maps smaller or use dilated convolution?
             if current_stride == config.output_stride:
@@ -339,7 +340,7 @@ class MobileNetV2Model(MobileNetV2PreTrainedModel):
     def _prune_heads(self, heads_to_prune):
         raise NotImplementedError
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[ms.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
@@ -392,13 +393,13 @@ class MobileNetV2ForImageClassification(MobileNetV2PreTrainedModel):
 
         # Classifier head
         self.dropout = nn.Dropout(p = config.classifier_dropout_prob)
-        self.classifier = nn.Dense(last_hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
+        self.classifier = nn.Linear(last_hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
 
         # Initialize weights and apply final processing
         self.post_init()
 
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[ms.Tensor] = None,
         output_hidden_states: Optional[bool] = None,
@@ -426,13 +427,13 @@ class MobileNetV2ForImageClassification(MobileNetV2PreTrainedModel):
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = F.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -445,7 +446,7 @@ class MobileNetV2ForImageClassification(MobileNetV2PreTrainedModel):
         )
 
 
-class MobileNetV2DeepLabV3Plus(nn.Cell):
+class MobileNetV2DeepLabV3Plus(nn.Module):
     """
     The neural network from the paper "Encoder-Decoder with Atrous Separable Convolution for Semantic Image
     Segmentation" https://arxiv.org/abs/1802.02611
@@ -501,18 +502,18 @@ class MobileNetV2DeepLabV3Plus(nn.Cell):
             bias=True,
         )
 
-    def construct(self, features: ms.Tensor) -> ms.Tensor:
+    def forward(self, features: ms.Tensor) -> ms.Tensor:
         spatial_size = features.shape[-2:]
 
         features_pool = self.avg_pool(features)
         features_pool = self.conv_pool(features_pool)
-        features_pool = ops.interpolate(
+        features_pool = F.interpolate(
             features_pool, size=spatial_size, mode="bilinear", align_corners=True
         )
 
         features_aspp = self.conv_aspp(features)
 
-        features = ops.cat([features_pool, features_aspp], axis=1)
+        features = ops.cat([features_pool, features_aspp], dim=1)
 
         features = self.conv_projection(features)
         features = self.dropout(features)
@@ -533,7 +534,7 @@ class MobileNetV2ForSemanticSegmentation(MobileNetV2PreTrainedModel):
         self.post_init()
 
 
-    def construct(
+    def forward(
         self,
         pixel_values: Optional[ms.Tensor] = None,
         labels: Optional[ms.Tensor] = None,
@@ -589,10 +590,10 @@ class MobileNetV2ForSemanticSegmentation(MobileNetV2PreTrainedModel):
         loss = None
         if labels is not None:
             # upsample logits to the images' original size
-            upsampled_logits = ops.interpolate(
+            upsampled_logits = F.interpolate(
                 logits, size=labels.shape[-2:], mode="bilinear", align_corners=False
             )
-            loss = ops.cross_entropy(upsampled_logits, labels, ignore_index=self.config.semantic_loss_ignore_index)
+            loss = F.cross_entropy(upsampled_logits, labels, ignore_index=self.config.semantic_loss_ignore_index)
 
         if not return_dict:
             if output_hidden_states:

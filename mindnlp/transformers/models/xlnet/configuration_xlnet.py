@@ -112,7 +112,7 @@ class XLNetConfig(PretrainedConfig):
 
         if "use_cache" in kwargs:
             warnings.warn(
-                "The `use_cache` argument is deprecated and will be removed in a future version, use `use_mems_eval`"
+                "The `use_cache` argument is deprecated, use `use_mems_eval`"
                 " instead.",
                 FutureWarning,
             )
@@ -149,11 +149,12 @@ class XLNetConfig(PretrainedConfig):
             value: The desired value for the maximum position embeddings. It should be an integer.
             
         Returns:
-            None. This method does not return any value.
+            None.
             
         Raises:
-            NotImplementedError: This exception is raised when trying to set the maximum position embeddings for the XLNetConfig class. Since the model type is one of the few models that has no sequence length
-limit, setting the maximum position embeddings is not allowed.
+            NotImplementedError: This exception is raised when trying to set the maximum position embeddings for
+                the XLNetConfig class. Since the model type is one of the few models that has no sequence length
+                limit, setting the maximum position embeddings is not allowed.
         
         Note:
             The model type should be specified before using this method.

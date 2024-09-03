@@ -122,7 +122,7 @@ class CLIPImageProcessor(BaseImageProcessor):
             do_convert_rgb (bool): A flag indicating whether to convert the image to RGB format. Defaults to True.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
             None specified.
@@ -165,6 +165,7 @@ class CLIPImageProcessor(BaseImageProcessor):
         # for backwards compatibility of KOSMOS-2
         if "use_square_size" in kwargs:
             self.size = {"height": size["shortest_edge"], "width": size["shortest_edge"]}
+            delattr(self, "use_square_size")
 
     def resize(
         self,
@@ -268,6 +269,7 @@ class CLIPImageProcessor(BaseImageProcessor):
                 Whether to convert the image to RGB.
             return_tensors (`str` or `TensorType`, *optional*):
                 The type of tensors to return. Can be one of:
+
                 - Unset: Return a list of `np.ndarray`.
                 - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
                 - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
@@ -275,6 +277,7 @@ class CLIPImageProcessor(BaseImageProcessor):
                 - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
             data_format (`ChannelDimension` or `str`, *optional*, defaults to `ChannelDimension.FIRST`):
                 The channel dimension format for the output image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - Unset: Use the channel dimension format of the input image.
@@ -298,11 +301,8 @@ class CLIPImageProcessor(BaseImageProcessor):
         image_mean = image_mean if image_mean is not None else self.image_mean
         image_std = image_std if image_std is not None else self.image_std
         do_convert_rgb = do_convert_rgb if do_convert_rgb is not None else self.do_convert_rgb
-
         validate_kwargs(captured_kwargs=kwargs.keys(), valid_processor_keys=self._valid_processor_keys)
-
         images = make_list_of_images(images)
-
         if not valid_images(images):
             raise ValueError(
                 "Invalid image type. Must be of type PIL.Image.Image, numpy.ndarray, "

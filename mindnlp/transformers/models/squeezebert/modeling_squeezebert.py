@@ -19,9 +19,10 @@ from typing import Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindspore import nn, ops
 from mindspore.common.initializer import Normal, initializer
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -43,7 +44,7 @@ _CHECKPOINT_FOR_DOC = "squeezebert/squeezebert-uncased"
 _CONFIG_FOR_DOC = "SqueezeBertConfig"
 
 
-class SqueezeBertEmbeddings(nn.Cell):
+class SqueezeBertEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
@@ -61,7 +62,7 @@ class SqueezeBertEmbeddings(nn.Cell):
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
@@ -70,7 +71,7 @@ class SqueezeBertEmbeddings(nn.Cell):
             (1, -1)
         )
 
-    def construct(
+    def forward(
         self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None
     ):
         if input_ids is not None:
@@ -97,22 +98,23 @@ class SqueezeBertEmbeddings(nn.Cell):
         return embeddings
 
 
-class MatMulWrapper(nn.Cell):
+class MatMulWrapper(nn.Module):
     """
     Wrapper for ops.matmul(). This makes flop-counting easier to implement. Note that if you directly call
     ops.matmul() in your code, the flop counter will typically ignore the flops of the matmul.
     """
 
-    def __init__(self):
-        super().__init__()
-
-    def construct(self, mat1, mat2):
+    def forward(self, mat1, mat2):
         """
-
-        :param inputs: two torch tensors :return: matmul of these tensors
-
         Here are the typical dimensions found in BERT (the B is optional) mat1.shape: [B, <optional extra dims>, M, K]
         mat2.shape: [B, <optional extra dims>, K, N] output shape: [B, <optional extra dims>, M, N]
+
+        Args:
+            mat1: a tensor
+            mat2: a tensor
+
+        Returns:
+            matmul of these tensors
         """
         return ops.matmul(mat1, mat2)
 
@@ -124,33 +126,31 @@ class SqueezeBertLayerNorm(nn.LayerNorm):
     N = batch C = channels W = sequence length
     """
 
-    def __init__(self, hidden_size, epsilon=1e-12):
-        nn.LayerNorm.__init__(
-            self,
-            normalized_shape=hidden_size,
-            epsilon=epsilon,
-        )  # instantiates self.{weight, bias, eps}
-    def construct(self, x):
+    def __init__(self, hidden_size, eps=1e-12):
+        nn.LayerNorm.__init__(self, normalized_shape=hidden_size, eps=eps)  # instantiates self.{weight, bias, eps}
+
+    def forward(self, x):
         x = x.permute(0, 2, 1)
-        x = nn.LayerNorm.construct(self, x)
+        x = nn.LayerNorm.forward(self, x)
         return x.permute(0, 2, 1)
 
 
-class ConvDropoutLayerNorm(nn.Cell):
+
+class ConvDropoutLayerNorm(nn.Module):
     """
     ConvDropoutLayerNorm: Conv, Dropout, LayerNorm
     """
 
-    def __init__(self, cin, cout, group, dropout_prob):
+    def __init__(self, cin, cout, groups, dropout_prob):
         super().__init__()
 
         self.conv1d = nn.Conv1d(
-            in_channels=cin, out_channels=cout, kernel_size=1, group=group
+            in_channels=cin, out_channels=cout, kernel_size=1, groups=groups
         )
         self.layernorm = SqueezeBertLayerNorm(cout)
         self.dropout = nn.Dropout(p=dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def forward(self, hidden_states, input_tensor):
         x = self.conv1d(hidden_states)
         x = self.dropout(x)
         x = x + input_tensor
@@ -158,7 +158,7 @@ class ConvDropoutLayerNorm(nn.Cell):
         return x
 
 
-class ConvActivation(nn.Cell):
+class ConvActivation(nn.Module):
     """
     ConvActivation: Conv, Activation
     """
@@ -166,16 +166,16 @@ class ConvActivation(nn.Cell):
     def __init__(self, cin, cout, group, act):
         super().__init__()
         self.conv1d = nn.Conv1d(
-            in_channels=cin, out_channels=cout, kernel_size=1, group=group
+            in_channels=cin, out_channels=cout, kernel_size=1, groups=group
         )
         self.act = ACT2FN[act]
 
-    def construct(self, x):
+    def forward(self, x):
         output = self.conv1d(x)
         return self.act(output)
 
 
-class SqueezeBertSelfAttention(nn.Cell):
+class SqueezeBertSelfAttention(nn.Module):
 
     def __init__(self, config, cin, q_groups=1, k_groups=1, v_groups=1):
         """
@@ -192,25 +192,26 @@ class SqueezeBertSelfAttention(nn.Cell):
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
         self.query = nn.Conv1d(
-            in_channels=cin, out_channels=cin, kernel_size=1, group=q_groups
+            in_channels=cin, out_channels=cin, kernel_size=1, groups=q_groups
         )
         self.key = nn.Conv1d(
-            in_channels=cin, out_channels=cin, kernel_size=1, group=k_groups
+            in_channels=cin, out_channels=cin, kernel_size=1, groups=k_groups
         )
         self.value = nn.Conv1d(
-            in_channels=cin, out_channels=cin, kernel_size=1, group=v_groups
+            in_channels=cin, out_channels=cin, kernel_size=1, groups=v_groups
         )
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
-        self.softmax = nn.Softmax(axis=-1)
+        self.softmax = nn.Softmax(dim=-1)
 
         self.matmul_qk = MatMulWrapper()
         self.matmul_qkv = MatMulWrapper()
 
     def transpose_for_scores(self, x):
         """
-        - input: [N, C, W]
-        - output: [N, C1, W, C2] where C1 is the head index, and C2 is one head's contents
+        Input/Output:
+            - input: [N, C, W]
+            - output: [N, C1, W, C2] where C1 is the head index, and C2 is one head's contents
         """
         new_x_shape = (
             x.shape[0],
@@ -223,8 +224,9 @@ class SqueezeBertSelfAttention(nn.Cell):
 
     def transpose_key_for_scores(self, x):
         """
-        - input: [N, C, W]
-        - output: [N, C1, C2, W] where C1 is the head index, and C2 is one head's contents
+        Input/Output:
+            - input: [N, C, W]
+            - output: [N, C1, C2, W] where C1 is the head index, and C2 is one head's contents
         """
         new_x_shape = (
             x.shape[0],
@@ -238,15 +240,16 @@ class SqueezeBertSelfAttention(nn.Cell):
 
     def transpose_output(self, x):
         """
-        - input: [N, C1, W, C2]
-        - output: [N, C, W]
+        Input/Output:
+            - input: [N, C1, W, C2]
+            - output: [N, C, W]
         """
         x = x.permute(0, 1, 3, 2)  # [N, C1, C2, W]
         new_x_shape = (x.shape[0], self.all_head_size, x.shape[3])  # [N, C, W]
         x = x.view(*new_x_shape)
         return x
 
-    def construct(self, hidden_states, attention_mask, output_attentions):
+    def forward(self, hidden_states, attention_mask, output_attentions):
         """
         expects hidden_states in [N, C, W] data layout.
 
@@ -263,7 +266,7 @@ class SqueezeBertSelfAttention(nn.Cell):
         # Take the dot product between "query" and "key" to get the raw attention scores.
         attention_score = self.matmul_qk(query_layer, key_layer)
         attention_score = attention_score / math.sqrt(self.attention_head_size)
-        # Apply the attention mask is (precomputed for all layers in BertModel construct() function)
+        # Apply the attention mask is (precomputed for all layers in BertModel forward() function)
         attention_score = attention_score + attention_mask
 
         # Normalize the attention scores to probabilities.
@@ -282,14 +285,18 @@ class SqueezeBertSelfAttention(nn.Cell):
         return result
 
 
-class SqueezeBertModule(nn.Cell):
+class SqueezeBertModule(nn.Module):
     def __init__(self, config):
         """
-        - hidden_size = input chans = output chans for Q, K, V (they are all the same ... for now) = output chans for
-          the Cell
-        - intermediate_size = output chans for intermediate layer
-        - group = number of group for all layers in the BertModule. (eventually we could change the interface to
-          allow different group for different layers)
+        Args:
+            config:
+                containing:
+
+                - hidden_size = input chans = output chans for Q, K, V (they are all the same ... for now) = output
+                chans for the Cell.
+                - intermediate_size = output chans for intermediate layer
+                - group = number of group for all layers in the BertModule. (eventually we could change the interface to
+                  allow different group for different layers)
         """
         super().__init__()
 
@@ -308,7 +315,7 @@ class SqueezeBertModule(nn.Cell):
         self.post_attention = ConvDropoutLayerNorm(
             cin=c0,
             cout=c1,
-            group=config.post_attention_groups,
+            groups=config.post_attention_groups,
             dropout_prob=config.hidden_dropout_prob,
         )
         self.intermediate = ConvActivation(
@@ -317,11 +324,11 @@ class SqueezeBertModule(nn.Cell):
         self.output = ConvDropoutLayerNorm(
             cin=c2,
             cout=c3,
-            group=config.output_groups,
+            groups=config.output_groups,
             dropout_prob=config.hidden_dropout_prob,
         )
 
-    def construct(self, hidden_states, attention_mask, output_attentions):
+    def forward(self, hidden_states, attention_mask, output_attentions):
         att = self.attention(hidden_states, attention_mask, output_attentions)
         attention_output = att["context_layer"]
 
@@ -336,7 +343,7 @@ class SqueezeBertModule(nn.Cell):
         return output_dict
 
 
-class SqueezeBertEncoder(nn.Cell):
+class SqueezeBertEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
 
@@ -346,11 +353,11 @@ class SqueezeBertEncoder(nn.Cell):
             "before the first SqueezeBertModule."
         )
 
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [SqueezeBertModule(config) for _ in range(config.num_hidden_layers)]
         )
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -381,7 +388,7 @@ class SqueezeBertEncoder(nn.Cell):
                 all_hidden_states += (hidden_states,)
                 hidden_states = hidden_states.permute(0, 2, 1)
 
-            layer_output = layer.construct(
+            layer_output = layer.forward(
                 hidden_states, attention_mask, output_attentions
             )
 
@@ -409,13 +416,13 @@ class SqueezeBertEncoder(nn.Cell):
         )
 
 
-class SqueezeBertPooler(nn.Cell):
+class SqueezeBertPooler(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -424,33 +431,33 @@ class SqueezeBertPooler(nn.Cell):
         return pooled_output
 
 
-class SqueezeBertPredictionHeadTransform(nn.Cell):
+class SqueezeBertPredictionHeadTransform(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
         self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], epsilon=config.layer_norm_eps
+            [config.hidden_size], eps=config.layer_norm_eps
         )
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
         return hidden_states
 
 
-class SqueezeBertLMPredictionHead(nn.Cell):
+class SqueezeBertLMPredictionHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.transform = SqueezeBertPredictionHeadTransform(config)
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
 
@@ -460,23 +467,23 @@ class SqueezeBertLMPredictionHead(nn.Cell):
     def _tie_weights(self) -> None:
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
 
 
-class SqueezeBertOnlyMLMHead(nn.Cell):
+class SqueezeBertOnlyMLMHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.predictions = SqueezeBertLMPredictionHead(config)
 
-    def construct(self, sequence_output):
+    def forward(self, sequence_output):
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
 
 
-class SqueezeBertPreTrainedModel(PreTrainedModel, nn.Cell):
+class SqueezeBertPreTrainedModel(PreTrainedModel, nn.Module):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
@@ -487,7 +494,7 @@ class SqueezeBertPreTrainedModel(PreTrainedModel, nn.Cell):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv1d)):
+        if isinstance(cell, (nn.Linear, nn.Conv1d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(
@@ -541,7 +548,7 @@ class SqueezeBertModel(SqueezeBertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -644,7 +651,7 @@ class SqueezeBertForMaskedLM(SqueezeBertPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
         self.cls.predictions.bias = new_embeddings.bias
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -658,10 +665,11 @@ class SqueezeBertForMaskedLM(SqueezeBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MaskedLMOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -684,7 +692,7 @@ class SqueezeBertForMaskedLM(SqueezeBertPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy  # -100 index = padding token
+            loss_fct = F.cross_entropy  # -100 index = padding token
             masked_lm_loss = loss_fct(
                 prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
             )
@@ -711,12 +719,12 @@ class SqueezeBertForSequenceClassification(SqueezeBertPreTrainedModel):
 
         self.transformer = SqueezeBertModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, self.config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, self.config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -730,10 +738,11 @@ class SqueezeBertForSequenceClassification(SqueezeBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -770,16 +779,16 @@ class SqueezeBertForSequenceClassification(SqueezeBertPreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
-                loss_fct = ops.mse_loss
+                loss_fct = F.mse_loss
                 if self.num_labels == 1:
                     loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss_fct = ops.cross_entropy
+                loss_fct = F.cross_entropy
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss_fct = ops.binary_cross_entropy_with_logits
+                loss_fct = F.binary_cross_entropy_with_logits
                 loss = loss_fct(logits, labels)
 
         if not return_dict:
@@ -800,12 +809,12 @@ class SqueezeBertForMultipleChoice(SqueezeBertPreTrainedModel):
 
         self.transformer = SqueezeBertModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -819,10 +828,11 @@ class SqueezeBertForMultipleChoice(SqueezeBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MultipleChoiceModelOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where *num_choices* is the size of the second dimension of the input tensors. (see
-            *input_ids* above)
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+                num_choices-1]` where *num_choices* is the size of the second dimension of the input tensors. (see
+                *input_ids* above)
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -875,7 +885,7 @@ class SqueezeBertForMultipleChoice(SqueezeBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy
+            loss_fct = F.cross_entropy
             loss = loss_fct(reshaped_logits, labels)
 
         if not return_dict:
@@ -897,12 +907,12 @@ class SqueezeBertForTokenClassification(SqueezeBertPreTrainedModel):
 
         self.transformer = SqueezeBertModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -916,8 +926,9 @@ class SqueezeBertForTokenClassification(SqueezeBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -942,7 +953,7 @@ class SqueezeBertForTokenClassification(SqueezeBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy
+            loss_fct = F.cross_entropy
             loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
@@ -963,12 +974,12 @@ class SqueezeBertForQuestionAnswering(SqueezeBertPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.transformer = SqueezeBertModel(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -983,14 +994,15 @@ class SqueezeBertForQuestionAnswering(SqueezeBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = (
             return_dict if return_dict is not None else self.config.use_return_dict
@@ -1027,7 +1039,7 @@ class SqueezeBertForQuestionAnswering(SqueezeBertPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            loss_fct = ops.cross_entropy
+            loss_fct = F.cross_entropy
             start_loss = loss_fct(
                 start_logits, start_positions, ignore_index=ignored_index
             )

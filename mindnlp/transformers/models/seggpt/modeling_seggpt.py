@@ -20,9 +20,9 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import nn, ops
 from mindspore.common.initializer import Normal
 
+from mindnlp.core import nn, ops
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...modeling_outputs import ModelOutput
@@ -44,6 +44,7 @@ _EXPECTED_OUTPUT_SHAPE = [3, 896, 448]
 class SegGptEncoderOutput(ModelOutput):
     """
     Output type of [`SegGptEncoderOutput`].
+
     Args:
         last_hidden_state (`ms.Tensor` of shape `(batch_size, patch_height, patch_width, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the model.
@@ -53,10 +54,11 @@ class SegGptEncoderOutput(ModelOutput):
         attentions (`Tuple[ms.Tensor]`, `optional`, returned when `config.output_attentions=True`):
             Tuple of *ms.Tensor* (one for each layer) of shape
             `(batch_size, num_heads, seq_len, seq_len)`.
-        intermediate_hidden_states (`Tuple[ms.Tensor]`, `optional`, returned when `config.intermediate_hidden_state_indices` is set):
+        intermediate_hidden_states (`Tuple[ms.Tensor]`, `optional`, returned when
+            `config.intermediate_hidden_state_indices` is set):
             Tuple of `ms.Tensor` of shape `(batch_size, patch_height, patch_width, hidden_size)`.
-            Each element in the Tuple corresponds to the output of the layer specified in `config.intermediate_hidden_state_indices`.
-            Additionaly, each feature passes through a LayerNorm.
+            Each element in the Tuple corresponds to the output of the layer specified in
+            `config.intermediate_hidden_state_indices`. Additionaly, each feature passes through a LayerNorm.
     """
 
     last_hidden_state: ms.Tensor
@@ -90,7 +92,7 @@ class SegGptImageSegmentationOutput(ModelOutput):
 
 
 # Copied from transformers.models.sam.modeling_sam.SamPatchEmbeddings with Sam->SegGpt
-class SegGptPatchEmbeddings(nn.Cell):
+class SegGptPatchEmbeddings(nn.Module):
     """
     This class turns `pixel_values` of shape `(batch_size, num_channels, height, width)` into the initial
     `hidden_states` (patch embeddings) of shape `(batch_size, seq_length, hidden_size)` to be consumed by a
@@ -113,9 +115,9 @@ class SegGptPatchEmbeddings(nn.Cell):
         self.num_patches = num_patches
 
         self.projection = nn.Conv2d(
-            num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, has_bias=True, pad_mode='pad', padding=0)
+            num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True, padding=0)
 
-    def construct(self, pixel_values):
+    def forward(self, pixel_values):
         batch_size, num_channels, height, width = pixel_values.shape
         if num_channels != self.num_channels:
             raise ValueError(
@@ -129,7 +131,7 @@ class SegGptPatchEmbeddings(nn.Cell):
         return embeddings
 
 
-class SegGptEmbeddings(nn.Cell):
+class SegGptEmbeddings(nn.Module):
     """
     Construct the embeddings from patch, position embeddings for input and prompt.
     """
@@ -174,7 +176,7 @@ class SegGptEmbeddings(nn.Cell):
         else:
             return patch_pos_embed.reshape(1, height, width, -1)
 
-    def construct(
+    def forward(
         self,
         pixel_values: ms.Tensor,
         prompt_pixel_values: ms.Tensor,
@@ -218,12 +220,12 @@ class SegGptEmbeddings(nn.Cell):
         input_embeddings = input_embeddings + type_embedding
         prompt_embeddings = prompt_embeddings + type_embedding
 
-        embeddings = ops.cat((input_embeddings, prompt_embeddings), axis=0)
+        embeddings = ops.cat((input_embeddings, prompt_embeddings), dim=0)
 
         return embeddings
 
 
-class SegGptAttention(nn.Cell):
+class SegGptAttention(nn.Module):
     """Multi-head Attention block with relative position embeddings."""
 
     def __init__(self, config):
@@ -241,9 +243,9 @@ class SegGptAttention(nn.Cell):
         self.num_attention_heads = config.num_attention_heads
         self.scale = head_dim**-0.5
 
-        self.qkv = nn.Dense(config.hidden_size,
-                            config.hidden_size * 3, has_bias=config.qkv_bias)
-        self.proj = nn.Dense(config.hidden_size, config.hidden_size)
+        self.qkv = nn.Linear(config.hidden_size,
+                            config.hidden_size * 3, bias=config.qkv_bias)
+        self.proj = nn.Linear(config.hidden_size, config.hidden_size)
 
         self.use_relative_position_embeddings = config.use_relative_position_embeddings
         if self.use_relative_position_embeddings:
@@ -343,7 +345,7 @@ class SegGptAttention(nn.Cell):
                             query_width, key_height * key_width)
         return attn
 
-    def construct(self, hidden_states: ms.Tensor, output_attentions=False) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor, output_attentions=False) -> ms.Tensor:
         batch_size, height, width, _ = hidden_states.shape
         # qkv with shape (3, batch_size, nHead, height * width, channel)
         qkv = (
@@ -364,7 +366,7 @@ class SegGptAttention(nn.Cell):
             )
 
         attn_weights = ops.softmax(
-            attn_weights, dtype=ms.float32, axis=-1).astype(query.dtype)
+            attn_weights, dtype=ms.float32, dim=-1).astype(query.dtype)
 
         if output_attentions:
             # this operation is a bit awkward, but it's required to
@@ -389,14 +391,14 @@ class SegGptAttention(nn.Cell):
 
 
 # Copied from transformers.models.sam.modeling_sam.SamMLPBlock with SamMLPBlock->SegGptMlp
-class SegGptMlp(nn.Cell):
+class SegGptMlp(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.lin1 = nn.Dense(config.hidden_size, config.mlp_dim)
-        self.lin2 = nn.Dense(config.mlp_dim, config.hidden_size)
+        self.lin1 = nn.Linear(config.hidden_size, config.mlp_dim)
+        self.lin2 = nn.Linear(config.mlp_dim, config.hidden_size)
         self.act = ACT2FN[config.hidden_act]
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         hidden_states = self.lin1(hidden_states)
         hidden_states = self.act(hidden_states)
         hidden_states = self.lin2(hidden_states)
@@ -426,21 +428,21 @@ def drop_path(input: ms.Tensor, drop_prob: float = 0.0, training: bool = False) 
 
 
 # Copied from transformers.models.beit.modeling_beit.BeitDropPath with Beit->SegGpt
-class SegGptDropPath(nn.Cell):
+class SegGptDropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
 
     def __init__(self, drop_prob: Optional[float] = None) -> None:
         super().__init__()
         self.drop_prob = drop_prob
 
-    def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
         return drop_path(hidden_states, self.drop_prob, self.training)
 
     def extra_repr(self) -> str:
         return "p={}".format(self.drop_prob)
 
 
-class SegGptLayer(nn.Cell):
+class SegGptLayer(nn.Module):
     def __init__(self, config: SegGptConfig, drop_path_rate: float) -> None:
         super().__init__()
         self.attention = SegGptAttention(config)
@@ -448,11 +450,11 @@ class SegGptLayer(nn.Cell):
         self.drop_path = SegGptDropPath(
             drop_path_rate) if drop_path_rate > 0.0 else nn.Identity()
         self.layernorm_before = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps)
+            config.hidden_size, eps=config.layer_norm_eps)
         self.layernorm_after = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps)
+            config.hidden_size, eps=config.layer_norm_eps)
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         ensemble_cond: int,
@@ -478,7 +480,7 @@ class SegGptLayer(nn.Cell):
                 inputs = inputs.reshape(*prompt.shape)
             else:
                 inputs = inputs.mean(axis=0, keep_dims=True).expand_as(inputs)
-            attention_output = ops.cat([prompt, inputs], axis=1)
+            attention_output = ops.cat([prompt, inputs], dim=1)
 
         # first residual connection
         hidden_states = self.drop_path(attention_output) + hidden_states
@@ -493,19 +495,19 @@ class SegGptLayer(nn.Cell):
         return outputs
 
 
-class SegGptEncoder(nn.Cell):
+class SegGptEncoder(nn.Module):
     def __init__(self, config: SegGptConfig) -> None:
         super().__init__()
         self.config = config
         dpr = [x.item() for x in ops.linspace(
             0, config.drop_path_rate, config.num_hidden_layers)]
-        self.layers = nn.CellList([SegGptLayer(config, dpr[i])
+        self.layers = nn.ModuleList([SegGptLayer(config, dpr[i])
                                   for i in range(config.num_hidden_layers)])
         self.layernorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps)
+            config.hidden_size, eps=config.layer_norm_eps)
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states: ms.Tensor,
         feature_ensemble: bool = False,
@@ -569,8 +571,9 @@ class SegGptEncoder(nn.Cell):
 
 
 # Copied from transformers.models.convnext.modeling_convnext.ConvNextLayerNorm with ConvNext->SegGpt
-class SegGptLayerNorm(nn.Cell):
-    r"""LayerNorm that supports two data formats: channels_last (default) or channels_first.
+class SegGptLayerNorm(nn.Module):
+    r"""
+    LayerNorm that supports two data formats: channels_last (default) or channels_first.
     The ordering of the dimensions in the inputs. channels_last corresponds to inputs with shape (batch_size, height,
     width, channels) while channels_first corresponds to inputs with shape (batch_size, channels, height, width).
     """
@@ -586,7 +589,7 @@ class SegGptLayerNorm(nn.Cell):
                 f"Unsupported data format: {self.data_format}")
         self.normalized_shape = (normalized_shape,)
 
-    def construct(self, x: ms.Tensor) -> ms.Tensor:
+    def forward(self, x: ms.Tensor) -> ms.Tensor:
         if self.data_format == "channels_last":
             x = ops.layer_norm(x, self.normalized_shape,
                                self.weight, self.bias, self.eps)
@@ -601,25 +604,24 @@ class SegGptLayerNorm(nn.Cell):
         return x
 
 
-class SegGptDecoderHead(nn.Cell):
+class SegGptDecoderHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.conv = nn.Conv2d(
             config.decoder_hidden_size,
             config.decoder_hidden_size,
             kernel_size=3,
-            pad_mode='pad',
             padding=1,
-            has_bias=True
+            bias=True
         )
         self.layernorm = SegGptLayerNorm(
             normalized_shape=config.decoder_hidden_size, eps=config.layer_norm_eps, data_format="channels_first"
         )
         self.act_fct = ACT2FN[config.hidden_act]
         self.head = nn.Conv2d(config.decoder_hidden_size, 3,
-                              kernel_size=1, has_bias=True, pad_mode='pad', padding=0)  # decoder to patch
+                              kernel_size=1, bias=True, padding=0)  # decoder to patch
 
-    def construct(self, hidden_states: ms.Tensor):
+    def forward(self, hidden_states: ms.Tensor):
         hidden_states = self.conv(hidden_states)
         hidden_states = self.layernorm(hidden_states)
         hidden_states = self.act_fct(hidden_states)
@@ -628,13 +630,13 @@ class SegGptDecoderHead(nn.Cell):
         return hidden_states
 
 
-class SegGptDecoder(nn.Cell):
+class SegGptDecoder(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.decoder_embed = nn.Dense(
+        self.decoder_embed = nn.Linear(
             config.hidden_size * len(config.intermediate_hidden_state_indices),
             config.patch_size**2 * config.decoder_hidden_size,
-            has_bias=True,
+            bias=True,
         )
         self.decoder_pred = SegGptDecoderHead(config)
         self.patch_size = config.patch_size
@@ -653,7 +655,7 @@ class SegGptDecoder(nn.Cell):
 
         return hidden_states
 
-    def construct(self, hidden_states: ms.Tensor):
+    def forward(self, hidden_states: ms.Tensor):
         hidden_states = self.decoder_embed(hidden_states)
         hidden_states = self._reshape_hidden_states(hidden_states)
         hidden_states = self.decoder_pred(hidden_states)
@@ -673,10 +675,10 @@ class SegGptPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["SegGptEmbeddings", "SegGptLayer"]
 
-    def _init_weights(self, cell: Union[nn.Dense, nn.Conv2d, nn.LayerNorm]) -> None:
+    def _init_weights(self, cell: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
         std = self.config.initializer_range
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Linear, nn.Conv2d)):
             cell.weight.data.initialize(Normal(std))
             if cell.bias is not None:
                 cell.bias.initialize('zeros')
@@ -721,7 +723,7 @@ class SegGptModel(SegGptPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         pixel_values: ms.Tensor,
         prompt_pixel_values: ms.Tensor,
@@ -735,36 +737,37 @@ class SegGptModel(SegGptPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SegGptEncoderOutput]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`, `optional`):
-            Ground truth mask for input images.
+        Args:
+            labels (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`, `optional`):
+                Ground truth mask for input images.
 
         Returns:
+            `Union[Tuple, SegGptEncoderOutput]`
 
-        Examples:
-
-        ```python
-        >>> from transformers import SegGptImageProcessor, SegGptModel
-        >>> from PIL import Image
-        >>> import requests
-
-        >>> image_input_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_2.jpg"
-        >>> image_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1.jpg"
-        >>> mask_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1_target.png"
-
-        >>> image_input = Image.open(requests.get(image_input_url, stream=True).raw)
-        >>> image_prompt = Image.open(requests.get(image_prompt_url, stream=True).raw)
-        >>> mask_prompt = Image.open(requests.get(mask_prompt_url, stream=True).raw).convert("L")
-
-        >>> checkpoint = "BAAI/seggpt-vit-large"
-        >>> model = SegGptModel.from_pretrained(checkpoint)
-        >>> image_processor = SegGptImageProcessor.from_pretrained(checkpoint)
-
-        >>> inputs = image_processor(images=image_input, prompt_images=image_prompt, prompt_masks=mask_prompt, return_tensors="pt")
-
-        >>> outputs = model(**inputs)
-        >>> list(outputs.last_hidden_state.shape)
-        [1, 56, 28, 1024]
-        ```
+        Example:
+            ```python
+            >>> from transformers import SegGptImageProcessor, SegGptModel
+            >>> from PIL import Image
+            >>> import requests
+            ...
+            >>> image_input_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_2.jpg"
+            >>> image_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1.jpg"
+            >>> mask_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1_target.png"
+            ...
+            >>> image_input = Image.open(requests.get(image_input_url, stream=True).raw)
+            >>> image_prompt = Image.open(requests.get(image_prompt_url, stream=True).raw)
+            >>> mask_prompt = Image.open(requests.get(mask_prompt_url, stream=True).raw).convert("L")
+            ...
+            >>> checkpoint = "BAAI/seggpt-vit-large"
+            >>> model = SegGptModel.from_pretrained(checkpoint)
+            >>> image_processor = SegGptImageProcessor.from_pretrained(checkpoint)
+            ...
+            >>> inputs = image_processor(images=image_input, prompt_images=image_prompt, prompt_masks=mask_prompt, return_tensors="pt")
+            ...
+            >>> outputs = model(**inputs)
+            >>> list(outputs.last_hidden_state.shape)
+            [1, 56, 28, 1024]
+            ```
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -778,11 +781,11 @@ class SegGptModel(SegGptPreTrainedModel):
         prompt_pixel_values = prompt_pixel_values.astype(expected_dtype)
 
         # Prepare inputs
-        pixel_values = ops.cat((prompt_pixel_values, pixel_values), axis=2)
+        pixel_values = ops.cat((prompt_pixel_values, pixel_values), dim=2)
         prompt_pixel_values = (
-            ops.cat((prompt_masks, prompt_masks), axis=2)
+            ops.cat((prompt_masks, prompt_masks), dim=2)
             if labels is None
-            else ops.cat((prompt_masks, labels), axis=2)
+            else ops.cat((prompt_masks, labels), dim=2)
         )
         prompt_pixel_values = prompt_pixel_values.astype(expected_dtype)
 
@@ -794,7 +797,7 @@ class SegGptModel(SegGptPreTrainedModel):
         # We concat on height axis so SegGPT can handle as a single image, hence we need to mask the portion
         # of the mask prompt pixels that will be destinated to the prediction as they don't add any information.
         # This is only the case for inference. In training, the model concat of prompt mask and label is masked
-        # and reconstructed together (In-Context Painting).
+        # and reforwarded together (In-Context Painting).
         if bool_masked_pos is None:
             num_patches = self.embeddings.patch_embeddings.num_patches
             bool_masked_pos = ops.zeros(num_patches, dtype=ms.bool_)
@@ -847,13 +850,13 @@ def unpatchify(tensor: ms.Tensor, patch_height: int, patch_width: int) -> ms.Ten
     return tensor
 
 
-class SegGptLoss(nn.Cell):
+class SegGptLoss(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.beta = config.beta
         self.patch_size = config.patch_size
 
-    def construct(
+    def forward(
         self,
         prompt_masks: ms.Tensor,
         pred_masks: ms.Tensor,
@@ -878,7 +881,7 @@ class SegGptLoss(nn.Cell):
         Returns:
             `ms.Tensor`: The mean L1 loss between the predicted masks and the ground truth masks.
         """
-        ground_truth = ops.cat((prompt_masks, labels), axis=2)
+        ground_truth = ops.cat((prompt_masks, labels), dim=2)
 
         mask = bool_masked_pos[:, :, None].repeat(1, 1, self.patch_size**2 * 3)
         mask = unpatchify(
@@ -902,7 +905,7 @@ class SegGptForImageSegmentation(SegGptPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         pixel_values: ms.Tensor,
         prompt_pixel_values: ms.Tensor,
@@ -916,36 +919,37 @@ class SegGptForImageSegmentation(SegGptPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SegGptImageSegmentationOutput]:
         r"""
-        labels (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`, `optional`):
-            Ground truth mask for input images.
+        Args:
+            labels (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`, `optional`):
+                Ground truth mask for input images.
 
         Returns:
+            `Union[Tuple, SegGptImageSegmentationOutput]`
 
-        Examples:
-
-        ```python
-        >>> from transformers import SegGptImageProcessor, SegGptForImageSegmentation
-        >>> from PIL import Image
-        >>> import requests
-
-        >>> image_input_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_2.jpg"
-        >>> image_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1.jpg"
-        >>> mask_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1_target.png"
-
-        >>> image_input = Image.open(requests.get(image_input_url, stream=True).raw)
-        >>> image_prompt = Image.open(requests.get(image_prompt_url, stream=True).raw)
-        >>> mask_prompt = Image.open(requests.get(mask_prompt_url, stream=True).raw).convert("L")
-
-        >>> checkpoint = "BAAI/seggpt-vit-large"
-        >>> model = SegGptForImageSegmentation.from_pretrained(checkpoint)
-        >>> image_processor = SegGptImageProcessor.from_pretrained(checkpoint)
-
-        >>> inputs = image_processor(images=image_input, prompt_images=image_prompt, prompt_masks=mask_prompt, return_tensors="pt")
-        >>> outputs = model(**inputs)
-        >>> result = image_processor.post_process_semantic_segmentation(outputs, target_sizes=[image_input.size[::-1]])[0]
-        >>> print(list(result.shape))
-        [170, 297]
-        ```
+        Example:
+            ```python
+            >>> from transformers import SegGptImageProcessor, SegGptForImageSegmentation
+            >>> from PIL import Image
+            >>> import requests
+            ...
+            >>> image_input_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_2.jpg"
+            >>> image_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1.jpg"
+            >>> mask_prompt_url = "https://raw.githubusercontent.com/baaivision/Painter/main/SegGPT/SegGPT_inference/examples/hmbb_1_target.png"
+            ...
+            >>> image_input = Image.open(requests.get(image_input_url, stream=True).raw)
+            >>> image_prompt = Image.open(requests.get(image_prompt_url, stream=True).raw)
+            >>> mask_prompt = Image.open(requests.get(mask_prompt_url, stream=True).raw).convert("L")
+            ...
+            >>> checkpoint = "BAAI/seggpt-vit-large"
+            >>> model = SegGptForImageSegmentation.from_pretrained(checkpoint)
+            >>> image_processor = SegGptImageProcessor.from_pretrained(checkpoint)
+            ...
+            >>> inputs = image_processor(images=image_input, prompt_images=image_prompt, prompt_masks=mask_prompt, return_tensors="pt")
+            >>> outputs = model(**inputs)
+            >>> result = image_processor.post_process_semantic_segmentation(outputs, target_sizes=[image_input.size[::-1]])[0]
+            >>> print(list(result.shape))
+            [170, 297]
+            ```
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -974,7 +978,7 @@ class SegGptForImageSegmentation(SegGptPreTrainedModel):
 
         intermediate_hidden_states = outputs.intermediate_hidden_states if return_dict else outputs[-1]
         intermediate_hidden_states = ops.cat(
-            intermediate_hidden_states, axis=-1)
+            intermediate_hidden_states, dim=-1)
         pred_masks = self.decoder(intermediate_hidden_states)
 
         loss = None

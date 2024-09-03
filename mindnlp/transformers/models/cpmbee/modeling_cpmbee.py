@@ -20,11 +20,12 @@ from collections import UserDict
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from mindnlp.modules.functional import embedding
 from ...generation.beam_search import BeamHypotheses, BeamSearchScorer
 from ...generation.streamers import BaseStreamer
 from ...generation.utils import (
@@ -54,10 +55,10 @@ CPMBEE_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-class CpmBeeLinear(nn.Dense):
+class CpmBeeLinear(nn.Linear):
 
     """
-    This class represents a linear layer with a scale operation for CPMBee. It is a subclass of the nn.Dense class.
+    This class represents a linear layer with a scale operation for CPMBee. It is a subclass of the nn.Linear class.
     
     Attributes:
         dim_in (int): The input dimension of the linear layer.
@@ -68,7 +69,7 @@ class CpmBeeLinear(nn.Dense):
         __init__(self, dim_in, dim_out, dtype):
             Construct a linear layer for CPMBee with a scale operation.
     
-        construct(self, x):
+        forward(self, x):
             Apply the linear transformation to the input tensor.
     
     """
@@ -76,25 +77,27 @@ class CpmBeeLinear(nn.Dense):
         """
         Construct a linear for CPMBee. It contains a scale operation.
         """
-        super().__init__(dim_in, dim_out, has_bias=False)
+        super().__init__(dim_in, dim_out, bias=False)
         self.dim_in = self.in_features = dim_in
         self.dim_out = self.out_features = dim_out
 
         self.weight = Parameter(ops.zeros((dim_out, dim_in), dtype=dtype))
 
-    def construct(self, x: mindspore.Tensor):
+    def forward(self, x: mindspore.Tensor):
         """
+
         Args:
             x (`mindspore.Tensor` of shape `(batch, seq_len, dim_in)`): The input of linear layer
+
         Returns:
             `mindspore.Tensor` of shape `(batch, seq_len, dim_out)`: The output of the linear transform y.
         """
-        x = ops.dense(x, self.weight)
+        x = F.linear(x, self.weight)
         x = x / math.sqrt(self.dim_in)
         return x
 
 
-class CpmBeeLayerNorm(nn.Cell):
+class CpmBeeLayerNorm(nn.Module):
     """
     We use Root Mean Square (RMS) Layer Normalization, please see https://arxiv.org/abs/1910.07467 for details."
     """
@@ -104,14 +107,16 @@ class CpmBeeLayerNorm(nn.Cell):
         
         Args:
             self: The instance of the CpmBeeLayerNorm class.
-            config (CpmBeeConfig): An instance of the CpmBeeConfig class containing the configuration parameters.
+            config (CpmBeeConfig):
+                An instance of the CpmBeeConfig class containing the configuration parameters.
+
                 - config.eps (float): The value for epsilon used in normalization.
                 - config.hidden_size (int): The dimension of the hidden size.
                 - config.ms_dtype (str): The data type for the weight parameter.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -121,7 +126,7 @@ class CpmBeeLayerNorm(nn.Cell):
         self.dim_norm = config.hidden_size
         self.weight = Parameter(ops.zeros(config.hidden_size, dtype=config.ms_dtype))
 
-    def construct(self, hidden_states: mindspore.Tensor):
+    def forward(self, hidden_states: mindspore.Tensor):
         """
         Args:
             hidden_states (`mindspore.Tensor` of shape `(batch, seq_len, dim_in)`)
@@ -134,11 +139,11 @@ class CpmBeeLayerNorm(nn.Cell):
         return hidden_states
 
 
-class CpmBeeAttention(nn.Cell):
+class CpmBeeAttention(nn.Module):
 
     """
-    This class represents the attention mechanism used in the CpmBee model. It inherits from the nn.Cell class.
-    
+    This class represents the attention mechanism used in the CpmBee model. It inherits from the nn.Module class.
+
     Attributes:
         dim_model (int): The hidden size of the model.
         num_heads (int): The number of attention heads.
@@ -149,32 +154,33 @@ class CpmBeeAttention(nn.Cell):
         attention_out (CpmBeeLinear): Linear layer for the output of the attention mechanism.
         softmax (nn.Softmax): Softmax function for computing attention weights.
         dropout (nn.Dropout or None): Dropout layer for regularization (optional).
-    
+
     Methods:
-        __init__(self, config: CpmBeeConfig):
+        __init__:
             Initializes the CpmBeeAttention class.
-        
-        construct(self, hidden_q: mindspore.Tensor, hidden_kv: mindspore.Tensor, attention_mask: mindspore.Tensor, position_bias: mindspore.Tensor, 
-                  output_attentions: Optional[bool] = False, past_key_values: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None, 
-                  use_cache: Optional[bool] = None):
+
+        forward:
             Constructs the attention mechanism.
     """
     def __init__(self, config: CpmBeeConfig):
         """
         Initializes an instance of the CpmBeeAttention class.
-        
+
         Args:
             self: The instance of the class.
-            config (CpmBeeConfig): The configuration object containing the following attributes:
+            config (CpmBeeConfig):
+                The configuration object containing the following attributes:
+
                 - hidden_size (int): The dimension of the model.
                 - num_attention_heads (int): The number of attention heads.
                 - dim_head (int): The dimension of each attention head.
                 - ms_dtype: The data type used for the linear layers.
-                - dropout_p (float, optional): The probability of an element to be zeroed during dropout. If not provided, no dropout is applied.
-        
+                - dropout_p (float, optional): The probability of an element to be zeroed during dropout.
+                If not provided, no dropout is applied.
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -189,14 +195,14 @@ class CpmBeeAttention(nn.Cell):
 
         self.attention_out = CpmBeeLinear(self.num_heads * self.dim_head, self.dim_model, dtype=config.ms_dtype)
 
-        self.softmax = nn.Softmax(axis=-1)
+        self.softmax = nn.Softmax(dim=-1)
 
         if config.dropout_p is not None:
             self.dropout = nn.Dropout(p=config.dropout_p)
         else:
             self.dropout = None
 
-    def construct(
+    def forward(
         self,
         hidden_q: mindspore.Tensor,
         hidden_kv: mindspore.Tensor,
@@ -237,8 +243,8 @@ class CpmBeeAttention(nn.Cell):
         value = value.view(batch_size, len_k, self.num_heads, self.dim_head).permute(0, 2, 1, 3)
 
         if past_key_values is not None:
-            key = ops.cat([past_key_values[0], key], axis=-2)
-            value = ops.cat([past_key_values[1], value], axis=-2)
+            key = ops.cat([past_key_values[0], key], dim=-2)
+            value = ops.cat([past_key_values[1], value], dim=-2)
             len_k = key.shape[-2]
 
         # (batch_size, num_heads, len_q, dim_head) @ (batch_size, num_heads, dim_head, len_k) -> (batch_size, num_heads, len_q, len_k)
@@ -248,14 +254,14 @@ class CpmBeeAttention(nn.Cell):
         score = ops.masked_fill(
             score,
             attention_mask.view(batch_size, 1, len_q, len_k) == mindspore.tensor(False),
-            ops.scalar_to_tensor(float("-inf"), dtype=score.dtype),
+            float("-inf"),
         )
         score = self.softmax(score)
 
         score = ops.masked_fill(
             score,
             attention_mask.view(batch_size, 1, len_q, len_k) == mindspore.tensor(False),
-            ops.scalar_to_tensor(0, dtype=score.dtype),
+            0.,
         )
         if output_attentions:
             attn_weights = score
@@ -280,54 +286,42 @@ class CpmBeeAttention(nn.Cell):
         return score, attn_weights, past_key_values
 
 
-class CpmBeeSelfAttentionBlock(nn.Cell):
+class CpmBeeSelfAttentionBlock(nn.Module):
 
     '''
-    Represents a self-attention block in the CpmBee model for transformer-based neural network architectures. This class inherits from `nn.Cell`.
-    
+    Represents a self-attention block in the CpmBee model for transformer-based neural network architectures.
+    This class inherits from `nn.Module`.
+
     Args:
         config (CpmBeeConfig): The configuration for the self-attention block.
-    
+
     Raises:
         ValueError: If the configuration is invalid.
-    
+
     Attributes:
         layernorm_before_attention (CpmBeeLayerNorm): The layer normalization module before the self-attention block.
         self_attention (CpmBeeAttention): The self-attention module.
         dropout (nn.Dropout or None): The dropout layer, if configured.
-    
-    Methods:
-        construct(hidden_states, attention_mask, position_bias, output_attentions, past_key_values, use_cache): 
-            Applies the self-attention mechanism to the input hidden states.
-    
-            Args:
-                hidden_states (mindspore.Tensor): Input tensor of shape `(batch, len_seq, dim_model)`.
-                attention_mask (mindspore.Tensor): Tensor of shape `(batch, len_seq, len_seq)` used to avoid invalid areas in self-attention.
-                position_bias (mindspore.Tensor or None): Tensor of shape `(batch, len_seq, len_seq)` providing positional information to the self-attention block.
-                output_attentions (bool, optional): Whether to return the attention tensors of all attention layers.
-                past_key_values (Tuple(mindspore.Tensor), optional): Cached past key and value projection states.
-                use_cache (bool, optional): If `True`, past key-value states are returned and can be used to speed up decoding.
-    
-            Returns:
-                Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]: The updated hidden states, attention weights, and current key-value states.
-    
+
     Raises:
         ValueError: If the input tensors are of invalid shape or type.
-    
+
     Returns:
-        Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]: The updated hidden states, attention weights, and current key-value states.
+        Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
+            The updated hidden states, attention weights, and current key-value states.
     '''
     def __init__(self, config: CpmBeeConfig):
         """
         Initializes a CpmBeeSelfAttentionBlock instance.
-        
+
         Args:
             self: The CpmBeeSelfAttentionBlock instance itself.
-            config (CpmBeeConfig): An instance of CpmBeeConfig containing configuration parameters for the self-attention block.
-        
+            config (CpmBeeConfig): An instance of CpmBeeConfig containing configuration parameters for the
+                self-attention block.
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -339,7 +333,7 @@ class CpmBeeSelfAttentionBlock(nn.Cell):
         else:
             self.dropout = None
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -378,34 +372,36 @@ class CpmBeeSelfAttentionBlock(nn.Cell):
         return hidden_states, attn_weights, current_key_value
 
 
-class CpmBeeDenseGatedACT(nn.Cell):
+class CpmBeeDenseGatedACT(nn.Module):
 
     """
-    This class represents a dense gated activation module in the CpmBee framework. It performs a nonlinear transformation on an input tensor from one feature space to another using a gated activation function.
-    
-    The class inherits from the `nn.Cell` class.
-    
+    This class represents a dense gated activation module in the CpmBee framework.
+    It performs a nonlinear transformation on an input tensor from one feature space to another using
+    a gated activation function.
+
+    The class inherits from the `nn.Module` class.
+
     Attributes:
         w_0 (CpmBeeLinear): An instance of the CpmBeeLinear class representing the first linear transformation.
         w_1 (CpmBeeLinear): An instance of the CpmBeeLinear class representing the second linear transformation.
         act (nn.GELU): An instance of the GELU activation function.
-    
+
     Methods:
-        __init__(self, config: CpmBeeConfig): Initializes the CpmBeeDenseGatedACT class.
-        construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor: Transforms an input tensor from one feature space to another via a nonlinear operation.
-    
+        __init__: Initializes the CpmBeeDenseGatedACT class.
+        forward: Transforms an input tensor from one feature space to another via a nonlinear operation.
+
     """
     def __init__(self, config: CpmBeeConfig):
         """
         Initializes a new instance of the CpmBeeDenseGatedACT class.
-        
+
         Args:
             self: The current CpmBeeDenseGatedACT object.
             config (CpmBeeConfig): An instance of the CpmBeeConfig class containing configuration parameters.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -414,7 +410,7 @@ class CpmBeeDenseGatedACT(nn.Cell):
         self.w_1 = CpmBeeLinear(config.hidden_size, config.dim_ff, dtype=config.ms_dtype)
         self.act = nn.GELU()
 
-    def construct(self, hidden_states: mindspore.Tensor):
+    def forward(self, hidden_states: mindspore.Tensor):
         """Transform an input tensor from one feature space to another via a nonlinear operation
 
         Args:
@@ -427,39 +423,40 @@ class CpmBeeDenseGatedACT(nn.Cell):
         return hidden_states
 
 
-class CpmBeeFeedForward(nn.Cell):
+class CpmBeeFeedForward(nn.Module):
 
     """
-    This class represents a feedforward neural network layer for the CpmBee model. 
-    It consists of a dense gated activation layer (`CpmBeeDenseGatedACT`), optional dropout layer, and a linear transformation layer (`CpmBeeLinear`). 
-    
+    This class represents a feedforward neural network layer for the CpmBee model.
+    It consists of a dense gated activation layer (`CpmBeeDenseGatedACT`), optional dropout layer,
+    and a linear transformation layer (`CpmBeeLinear`).
+
     Attributes:
-        - w_in: Instance of `CpmBeeDenseGatedACT` for processing input hidden states.
-        - dropout: Optional dropout layer for regularization.
-        - w_out: Instance of `CpmBeeLinear` for transforming hidden states to output.
-    
+        w_in: Instance of `CpmBeeDenseGatedACT` for processing input hidden states.
+        dropout: Optional dropout layer for regularization.
+        w_out: Instance of `CpmBeeLinear` for transforming hidden states to output.
+
     Methods:
-        - __init__(self, config: CpmBeeConfig): Constructor method initializing the feedforward layer.
-        - construct(self, hidden_states: mindspore.Tensor): Method for processing input hidden states through the feedforward layer.
-    
+        __init__: Constructor method initializing the feedforward layer.
+        forward: Method for processing input hidden states through the feedforward layer.
+
     Args:
-        - config: Configuration object of type `CpmBeeConfig` containing layer specifications.
-        - hidden_states: Input tensor of shape `(batch, seq_len, dim_in)` representing hidden states.
-    
+        config: Configuration object of type `CpmBeeConfig` containing layer specifications.
+        hidden_states: Input tensor of shape `(batch, seq_len, dim_in)` representing hidden states.
+
     Returns:
-        - mindspore.Tensor: Transformed hidden states after passing through the feedforward layer.
+        mindspore.Tensor: Transformed hidden states after passing through the feedforward layer.
     """
     def __init__(self, config: CpmBeeConfig):
         """
         Initializes an instance of the CpmBeeFeedForward class.
-        
+
         Args:
             self: The instance of the class.
             config (CpmBeeConfig): An object of the CpmBeeConfig class containing configuration parameters.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -472,7 +469,7 @@ class CpmBeeFeedForward(nn.Cell):
 
         self.w_out = CpmBeeLinear(config.dim_ff, config.hidden_size, dtype=config.ms_dtype)
 
-    def construct(self, hidden_states: mindspore.Tensor):
+    def forward(self, hidden_states: mindspore.Tensor):
         """
         Args:
             hidden_states (`mindspore.Tensor` of shape `(batch, seq_len, dim_in)`)
@@ -487,35 +484,35 @@ class CpmBeeFeedForward(nn.Cell):
         return hidden_states
 
 
-class CpmBeeFFNBlock(nn.Cell):
+class CpmBeeFFNBlock(nn.Module):
 
     """
     This class represents a feed-forward block in the CpmBee model. It is used to process hidden states before the feed-forward layer.
-    
-    The CpmBeeFFNBlock class inherits from nn.Cell.
-    
+
+    The CpmBeeFFNBlock class inherits from nn.Module.
+
     Attributes:
         layernorm_before_ffn (CpmBeeLayerNorm): An instance of the CpmBeeLayerNorm class that performs layer normalization before the feed-forward layer.
         ffn (CpmBeeFeedForward): An instance of the CpmBeeFeedForward class that represents the feed-forward layer.
         dropout (nn.Dropout or None): An optional dropout layer. If None, no dropout is applied.
-    
+
     Methods:
-        __init__(self, config: CpmBeeConfig): Initializes the CpmBeeFFNBlock object.
-        construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor: Processes the hidden states before the feed-forward layer.
-    
+        __init__: Initializes the CpmBeeFFNBlock object.
+        forward: Processes the hidden states before the feed-forward layer.
+
     """
     def __init__(self, config: CpmBeeConfig):
         """
         Initializes a CpmBeeFFNBlock instance.
-        
+
         Args:
             self: The current object instance.
             config (CpmBeeConfig): The configuration object containing the parameters for the CpmBeeFFNBlock.
                 This object must be an instance of CpmBeeConfig class.
-            
+
         Returns:
             None.
-        
+
         Raises:
             None.
         """
@@ -527,7 +524,7 @@ class CpmBeeFFNBlock(nn.Cell):
         else:
             self.dropout = None
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
     ):
@@ -544,60 +541,35 @@ class CpmBeeFFNBlock(nn.Cell):
         return hidden_states
 
 
-class CpmBeeTransformerBlock(nn.Cell):
+class CpmBeeTransformerBlock(nn.Module):
 
     """
-    This class represents a transformer block of the CPM-BEE model, which is a neural network architecture used for natural language processing tasks. The CpmBeeTransformerBlock class inherits from nn.Cell and
-contains two sub-blocks: a self-attention block and a feed-forward neural network (FFN) block.
-    
+    This class represents a transformer block of the CPM-BEE model, which is a neural network architecture used for
+    natural language processing tasks. The CpmBeeTransformerBlock class inherits from nn.Module and contains
+    two sub-blocks: a self-attention block and a feed-forward neural network (FFN) block.
+
     Attributes:
         config (CpmBeeConfig): The configuration object for the CPM-BEE model.
         mask_att (bool): A boolean flag indicating whether to apply masking to the self-attention block.
         mask_ffn (bool): A boolean flag indicating whether to apply masking to the feed-forward neural network block.
-    
-    Methods:
-        __init__(self, config: CpmBeeConfig, mask_att: bool = False, mask_ffn: bool = False):
-            Initializes a new instance of the CpmBeeTransformerBlock class.
-            
-        construct(self, hidden_states: mindspore.Tensor, attention_mask: mindspore.Tensor, position_bias: Optional[mindspore.Tensor] = None, output_attentions: Optional[bool] = False, past_key_values:
-Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None, use_cache: Optional[bool] = None):
-            Applies the transformer block to the input tensor.
-            
-            Args:
-                hidden_states (mindspore.Tensor):
-                    The input tensor of shape `(batch, seq_len, dim_model)`.
-                attention_mask (mindspore.Tensor):
-                    A tensor of shape `(batch, seq_len, seq_len)` indicating the areas that should be avoided during the attention calculation.
-                position_bias (Optional[mindspore.Tensor]):
-                    A tensor of shape `(num_heads, seq_len, seq_len)` providing positional information to the attention mechanism. Defaults to `None`.
-                output_attentions (Optional[bool]):
-                    A boolean flag indicating whether to return the attention tensors of all attention layers. Defaults to `False`.
-                past_key_values (Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]):
-                    A tuple of tensors representing the cached past key and value projection states. Defaults to `None`.
-                use_cache (Optional[bool]):
-                    A boolean flag indicating whether to return and use the cached past key and value states to speed up decoding. Defaults to `None`.
-                    
-            Returns:
-                A tuple containing the output tensor of shape `(batch, seq_len, dim_model)`, the attention weights tensor of shape `(batch, num_heads, seq_len, seq_len)`, and the current key value tensor of
-shape `(2, batch, num_heads, seq_len, dim_head)`.
     """
     def __init__(self, config: CpmBeeConfig, mask_att: bool = False, mask_ffn: bool = False):
         """
         __init__
-        
+
         Initializes a CpmBeeTransformerBlock instance.
-        
+
         Args:
             self: The instance of the CpmBeeTransformerBlock class.
             config (CpmBeeConfig): An instance of the CpmBeeConfig class containing configuration parameters.
             mask_att (bool, optional): A boolean indicating whether to mask attention. Defaults to False.
             mask_ffn (bool, optional): A boolean indicating whether to mask feed-forward network. Defaults to False.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are documented for this method.
+            None.
         """
         super().__init__()
         self.mask_att = mask_att
@@ -608,7 +580,7 @@ shape `(2, batch, num_heads, seq_len, dim_head)`.
         if not self.mask_ffn:
             self.ffn = CpmBeeFFNBlock(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -653,54 +625,56 @@ shape `(2, batch, num_heads, seq_len, dim_head)`.
         return hidden_states, attn_weights, current_key_value
 
 
-class CpmBeeEncoder(nn.Cell):
+class CpmBeeEncoder(nn.Module):
 
     """
-    CpmBeeEncoder is a class that represents an encoder module for the CpmBeeTransformer model. 
-    This class inherits from nn.Cell and is responsible for processing input data through multiple transformer blocks. 
-    
+    CpmBeeEncoder is a class that represents an encoder module for the CpmBeeTransformer model.
+    This class inherits from nn.Module and is responsible for processing input data through multiple transformer blocks.
+
     Attributes:
         num_layers (int): The number of transformer blocks in the encoder.
-        layers (nn.CellList): List of CpmBeeTransformerBlock instances representing each transformer block in the encoder.
+        layers (nn.ModuleList): List of CpmBeeTransformerBlock instances representing each transformer block in the encoder.
         output_layernorm (CpmBeeLayerNorm): Layer normalization module for the encoder output.
-    
+
     Methods:
-        __init__(self, config: CpmBeeConfig):
+        __init__:
             Initializes the CpmBeeEncoder instance with the provided configuration.
-        
-        construct(self, hidden_states: mindspore.Tensor, attention_mask: mindspore.Tensor, position_bias: mindspore.Tensor, 
-                  output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, 
-                  past_key_values: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None, use_cache: Optional[bool] = None):
+
+        forward:
             Processes the input hidden_states through the encoder layers.
-            
-            Args:
-                hidden_states (mindspore.Tensor): Input tensor of shape (batch, seq_len, dim_model).
-                attention_mask (mindspore.Tensor): Tensor to mask invalid areas during calculation of shape (batch, seq_len, seq_len).
-                position_bias (mindspore.Tensor): Tensor providing position information to the attention mechanism of shape (num_heads, seq_len, seq_len).
-                output_attentions (bool, optional): Indicates whether to return attention tensors of all layers.
-                output_hidden_states (bool, optional): Indicates whether to return hidden states of all layers.
-                past_key_values (Tuple[mindspore.Tensor, mindspore.Tensor], optional): Cached past key and value projection states.
-                use_cache (bool, optional): If True, past key and value states are returned for speeding up decoding.
-            
+
+             Args:
+
+            - hidden_states (mindspore.Tensor): Input tensor of shape (batch, seq_len, dim_model).
+            - attention_mask (mindspore.Tensor):
+            Tensor to mask invalid areas during calculation of shape (batch, seq_len, seq_len).
+            - position_bias (mindspore.Tensor):
+            Tensor providing position information to the attention mechanism of shape (num_heads, seq_len, seq_len).
+            - output_attentions (bool, optional): Indicates whether to return attention tensors of all layers.
+            - output_hidden_states (bool, optional): Indicates whether to return hidden states of all layers.
+            - past_key_values (Tuple[mindspore.Tensor, mindspore.Tensor], optional): Cached past key and value projection states.
+            - use_cache (bool, optional): If True, past key and value states are returned for speeding up decoding.
+
             Returns:
-                mindspore.Tensor: Processed hidden states after passing through all encoder layers.
-                Tuple[mindspore.Tensor, ...]: Cached key values if 'use_cache' is enabled.
-                Tuple[mindspore.Tensor, ...]: Hidden states of all layers if 'output_hidden_states' is enabled.
-                Tuple[mindspore.Tensor, ...]: Attention weights of all layers if 'output_attentions' is enabled.
+
+            - mindspore.Tensor: Processed hidden states after passing through all encoder layers.
+            - Tuple[mindspore.Tensor, ...]: Cached key values if 'use_cache' is enabled.
+            - Tuple[mindspore.Tensor, ...]: Hidden states of all layers if 'output_hidden_states' is enabled.
+            - Tuple[mindspore.Tensor, ...]: Attention weights of all layers if 'output_attentions' is enabled.
     """
     def __init__(self, config: CpmBeeConfig):
         """
         Initializes a new instance of the CpmBeeEncoder class.
-        
+
         Args:
             self: The instance of the CpmBeeEncoder class.
             config (CpmBeeConfig): An instance of the CpmBeeConfig class containing configuration parameters for the encoder.
                 This parameter is used to configure the encoder's behavior and settings.
                 The config parameter must be of type CpmBeeConfig.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             AssertionError: If the length of config.mask_modules does not equal the number of hidden layers specified in config.
             AssertionError: If the length of mask_module within config.mask_modules is not 2 for each mask_module in the list.
@@ -714,7 +688,7 @@ class CpmBeeEncoder(nn.Cell):
         else:
             config.mask_modules = [(False, False)] * self.num_layers
 
-        self.layers = nn.CellList(
+        self.layers = nn.ModuleList(
             [
                 CpmBeeTransformerBlock(
                     config, mask_att=config.mask_modules[ith][0], mask_ffn=config.mask_modules[ith][1]
@@ -725,7 +699,7 @@ class CpmBeeEncoder(nn.Cell):
 
         self.output_layernorm = CpmBeeLayerNorm(config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: mindspore.Tensor,
@@ -782,46 +756,49 @@ class CpmBeeEncoder(nn.Cell):
         return hidden_states, current_key_values, all_hidden_states, all_self_attns
 
 
-class CpmBeeBucketPositionBias(nn.Cell):
+class CpmBeeBucketPositionBias(nn.Module):
 
     """
-    This class represents a position bias computation module in the CpmBee model. It is used to calculate the relative position buckets for attention mechanism.
-    
+    This class represents a position bias computation module in the CpmBee model.
+    It is used to calculate the relative position buckets for attention mechanism.
+
     Attributes:
         num_heads (int): The number of attention heads.
         num_buckets (int): The number of position bias buckets.
         num_segment_bucket (int): The number of segment buckets used for position bias.
         max_distance (int): The maximum distance for position bias calculation.
         relative_attention_bias (mindspore.Parameter): The learnable parameter used for relative attention bias calculation.
-    
+
     Methods:
-        __init__(self, config: CpmBeeConfig) -> None:
+        __init__:
             Initializes the CpmBeeBucketPositionBias instance.
-        
-        construct(self, query_pos: mindspore.Tensor, key_pos: mindspore.Tensor, rel_buckets: mindspore.Tensor) -> mindspore.Tensor:
+
+        forward:
             Constructs the position bias based on the given query and key positions and relative buckets.
-        
-        _position_bucket(self, relative_position, num_buckets=32, max_distance=128) -> mindspore.Tensor:
+
+        _position_bucket:
             Computes the position bucket for the given relative position.
-    
+
     """
     def __init__(self, config: CpmBeeConfig) -> None:
         """Initializes an instance of the CpmBeeBucketPositionBias class.
-        
+
         Args:
             self: The instance of the class.
-            config (CpmBeeConfig): The configuration object containing various parameters.
+            config (CpmBeeConfig):
+                The configuration object containing various parameters.
+
                 - num_attention_heads (int): The number of attention heads.
                 - position_bias_num_buckets (int): The number of buckets for position bias.
                 - position_bias_num_segment_buckets (int): The number of buckets for segment bias.
                 - position_bias_max_distance (int): The maximum distance for position bias.
                 - ms_dtype: The dtype for the position bias parameter.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
 
@@ -838,21 +815,23 @@ class CpmBeeBucketPositionBias(nn.Cell):
             ),
         )
 
-    def construct(self, query_pos: mindspore.Tensor, key_pos: mindspore.Tensor, rel_buckets: mindspore.Tensor):
+    def forward(self, query_pos: mindspore.Tensor, key_pos: mindspore.Tensor, rel_buckets: mindspore.Tensor):
         """
-        This method constructs relative position bias embeddings based on the input query positions, key positions, and relative buckets.
-        
+        This method forwards relative position bias embeddings based on the input query positions, key positions,
+        and relative buckets.
+
         Args:
             self (CpmBeeBucketPositionBias): An instance of the CpmBeeBucketPositionBias class.
             query_pos (mindspore.Tensor): A tensor representing the positions of queries in the input sequence.
             key_pos (mindspore.Tensor): A tensor representing the positions of keys in the input sequence.
             rel_buckets (mindspore.Tensor): A tensor containing relative position buckets.
-        
+
         Returns:
-            None: This method does not return any value explicitly. The constructed embeddings are stored in the 'embeds' variable within the method.
-        
+            None: This method does not return any value explicitly.
+                The forwarded embeddings are stored in the 'embeds' variable within the method.
+
         Raises:
-            AssertionError: 
+            AssertionError:
                 - If the number of batches in key_pos and query_pos tensors are not equal.
                 - If the number of batches in rel_buckets and key_pos tensors are not equal.
                 - If the number of query positions in the rel_buckets tensor does not match the query positions tensor.
@@ -892,23 +871,25 @@ class CpmBeeBucketPositionBias(nn.Cell):
             relative_position_bucket,
         )
 
-        embeds = embedding(relative_position_bucket, self.relative_attention_bias)
+        embeds = F.embedding(relative_position_bucket, self.relative_attention_bias)
         embeds = embeds.permute(0, 3, 1, 2)
         return embeds
 
     def _position_bucket(self, relative_position, num_buckets=32, max_distance=128):
         """
         This method calculates the position bucket for a given relative position within a specified range.
-        
+
         Args:
             self: The instance of the CpmBeeBucketPositionBias class.
             relative_position (int): The relative position for which the bucket needs to be calculated.
             num_buckets (int, optional): The number of buckets to categorize the relative position into. Defaults to 32.
             max_distance (int, optional): The maximum distance for categorizing the relative position. Defaults to 128.
-        
+
         Returns:
-            None: This method does not return a value as it directly updates the 'relative_buckets' attribute of the CpmBeeBucketPositionBias instance.
-        
+            None:
+                This method does not return a value as it directly updates the 'relative_buckets' attribute of
+                the CpmBeeBucketPositionBias instance.
+
         Raises:
             ValueError: If the 'relative_position' or 'num_buckets' is not a positive integer.
             ValueError: If the 'max_distance' is not a positive integer greater than 0.
@@ -931,70 +912,72 @@ class CpmBeeBucketPositionBias(nn.Cell):
             relative_postion_if_large,
             ops.full_like(relative_postion_if_large, num_buckets - 1),
         )
-        relative_buckets += ops.where(is_small, relative_position.to(mindspore.int32), relative_postion_if_large)
+        relative_buckets += ops.where(is_small, relative_position, relative_postion_if_large)
         return relative_buckets
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->CPMBee
-class CpmBeeOutput(nn.Cell):
+class CpmBeeOutput(nn.Module):
 
     """
     CpmBeeOutput represents a neural network cell for processing hidden states, including dense transformation, dropout, and layer normalization.
-    
-    This class inherits from nn.Cell and provides methods for initializing the cell and constructing the output based on the given input tensors.
-    
+
+    This class inherits from nn.Module and provides methods for initializing the cell and forwarding the output based on the given input tensors.
+
     Attributes:
-        dense (nn.Dense): A dense layer for transforming the input hidden states.
+        dense (nn.Linear): A dense layer for transforming the input hidden states.
         LayerNorm (nn.LayerNorm): A layer normalization module for normalizing the hidden states.
         dropout (nn.Dropout): A dropout module for applying dropout to the hidden states.
-    
+
     Methods:
-        __init__(config): Initializes the CpmBeeOutput cell with the given configuration.
-        construct(hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor: Constructs the output based on the input hidden states and input tensor.
-    
+        __init__: Initializes the CpmBeeOutput cell with the given configuration.
+        forward: Constructs the output based on the input hidden states and input tensor.
+
     """
     def __init__(self, config):
         """
         Initializes a CpmBeeOutput instance.
-        
+
         Args:
             self (CpmBeeOutput): The instance of the CpmBeeOutput class.
-            config (object): The configuration object containing parameters for the model.
+            config (object):
+                The configuration object containing parameters for the model.
+
                 - intermediate_size (int): The size of the intermediate layer.
                 - hidden_size (int): The size of the hidden layer.
                 - layer_norm_eps (float): The epsilon value for LayerNorm.
                 - hidden_dropout_prob (float): The dropout probability for the hidden layer.
-                
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            - TypeError: If the provided config object is not of the expected type.
-            - ValueError: If the config object is missing any required parameters.
-            - AttributeError: If there is an issue with accessing the attributes of the config object.
+            TypeError: If the provided config object is not of the expected type.
+            ValueError: If the config object is missing any required parameters.
+            AttributeError: If there is an issue with accessing the attributes of the config object.
         """
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         """
         Constructs the CpmBeeOutput.
-        
+
         This method takes three parameters: self, hidden_states, and input_tensor. It returns a mindspore.Tensor object.
-        
+
         Args:
             self (CpmBeeOutput): An instance of the CpmBeeOutput class.
             hidden_states (mindspore.Tensor): The hidden states tensor.
                 This tensor contains the hidden states from the previous layer.
             input_tensor (mindspore.Tensor): The input tensor.
                 This tensor represents the input to the current layer.
-        
+
         Returns:
-            mindspore.Tensor: The constructed tensor.
+            mindspore.Tensor: The forwarded tensor.
                 This tensor is the result of applying the CpmBeeOutput layer operations.
-        
+
         Raises:
             None.
         """
@@ -1004,7 +987,7 @@ class CpmBeeOutput(nn.Cell):
         return hidden_states
 
 
-class CpmBeeRotaryEmbedding(nn.Cell):
+class CpmBeeRotaryEmbedding(nn.Module):
     """
     RotaryEmbedding embeds the unk token and special token. It will embeds the "...<mask>...<mask>...<unk>...<unk>..."
     to "...<mask_0>...<mask_1>...<unk_0>...<unk_1>..."" to help model to specify different special tokens and unk
@@ -1013,16 +996,18 @@ class CpmBeeRotaryEmbedding(nn.Cell):
     def __init__(self, config: CpmBeeConfig):
         '''
         Initializes a new instance of the CpmBeeRotaryEmbedding class.
-        
+
         Args:
             self: The instance of the CpmBeeRotaryEmbedding class.
-            config (CpmBeeConfig): An instance of the CpmBeeConfig class containing configuration parameters.
+            config (CpmBeeConfig):
+                An instance of the CpmBeeConfig class containing configuration parameters.
+
                 - Purpose: Represents the configuration for the rotary embedding.
                 - Restrictions: Must be a valid instance of the CpmBeeConfig class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None
         '''
@@ -1032,18 +1017,18 @@ class CpmBeeRotaryEmbedding(nn.Cell):
         self.dtype = config.ms_dtype
         self.inv_freq = inv_freq.to(config.ms_dtype)
 
-    def construct(self, x: mindspore.Tensor, x_pos: mindspore.Tensor):
+    def forward(self, x: mindspore.Tensor, x_pos: mindspore.Tensor):
         """
         Constructs a rotary embedding for a given input tensor.
-        
+
         Args:
             self (CpmBeeRotaryEmbedding): An instance of the CpmBeeRotaryEmbedding class.
-            x (mindspore.Tensor): The input tensor for which the rotary embedding is constructed.
+            x (mindspore.Tensor): The input tensor for which the rotary embedding is forwarded.
             x_pos (mindspore.Tensor): The positional encoding tensor.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1052,11 +1037,11 @@ class CpmBeeRotaryEmbedding(nn.Cell):
         x_pos = x_pos * self.distance_scale
         freqs = x_pos[..., None] * inv_freq[None, :]  # (..., dim/2)
 
-        emb = ops.cat((freqs, freqs), axis=-1)  # (..., dim)
+        emb = ops.cat((freqs, freqs), dim=-1)  # (..., dim)
         emb_cos = emb.cos()  # (..., dim)
         emb_sin = emb.sin()  # (..., dim)
 
-        rotate_x = ops.cat([-x[..., x.shape[-1] // 2 :], x[..., : x.shape[-1] // 2]], axis=-1)  # (..., dim)
+        rotate_x = ops.cat([-x[..., x.shape[-1] // 2 :], x[..., : x.shape[-1] // 2]], dim=-1)  # (..., dim)
 
         return x * emb_cos + rotate_x * emb_sin
 
@@ -1068,17 +1053,19 @@ class CpmBeeEmbeddingExt(nn.Embedding):
     def __init__(self, config: CpmBeeConfig):
         """
         Initialize the CpmBeeEmbeddingExt object.
-        
+
         Args:
             self: The instance of the CpmBeeEmbeddingExt class.
-            config (CpmBeeConfig): An instance of CpmBeeConfig containing configuration parameters for the embedding.
+            config (CpmBeeConfig):
+                An instance of CpmBeeConfig containing configuration parameters for the embedding.
+
                 - vocab_size (int): The size of the vocabulary.
                 - hidden_size (int): The size of the hidden layer.
                 - ms_dtype: The data type for model parameters.
-        
+
         Returns:
-            None. This method initializes the CpmBeeEmbeddingExt object with the provided configuration.
-        
+            None.
+
         Raises:
             None.
         """
@@ -1086,51 +1073,55 @@ class CpmBeeEmbeddingExt(nn.Embedding):
         self.dim_model = config.hidden_size
         self.rotary_emb = CpmBeeRotaryEmbedding(config)
 
-    def construct(self, ids: mindspore.Tensor, ids_sub: mindspore.Tensor):
+    def forward(self, ids: mindspore.Tensor, ids_sub: mindspore.Tensor):
         """
         Construct and return the embeddings of the given input IDs and sub-IDs for the CpmBeeEmbeddingExt class.
-        
+
         Args:
             self (CpmBeeEmbeddingExt): An instance of the CpmBeeEmbeddingExt class.
-            ids (mindspore.Tensor): The input IDs tensor.
-                                    Shape: (batch_size, sequence_length).
-                                    Type: int32 or int64.
-                                    Purpose: Represent the input IDs for which embeddings need to be constructed.
-            ids_sub (mindspore.Tensor): The sub-IDs tensor.
-                                        Shape: (batch_size, sequence_length).
-                                        Type: int32 or int64.
-                                        Purpose: Represent the sub-IDs for modifying the embeddings.
-        
+            ids (mindspore.Tensor):
+                The input IDs tensor:
+
+                - Shape: (batch_size, sequence_length).
+                - Type: int32 or int64.
+                - Purpose: Represent the input IDs for which embeddings need to be forwarded.
+            ids_sub (mindspore.Tensor):
+                The sub-IDs tensor.
+
+                - Shape: (batch_size, sequence_length).
+                - Type: int32 or int64.
+                - Purpose: Represent the sub-IDs for modifying the embeddings.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
-        embeds = super().construct(ids) / math.sqrt(self.dim_model)
+        embeds = super().forward(ids) / math.sqrt(self.dim_model)
         return self.rotary_emb(embeds, ids_sub)
 
     def projection(self, x: mindspore.Tensor, ext_table: Optional[mindspore.Tensor] = None):
         """
         This method projects the input tensor 'x' using a dense layer and optionally concatenates it with another tensor 'ext_table'.
-        
+
         Args:
             self: Instance of the class CpmBeeEmbeddingExt.
             x (mindspore.Tensor): Input tensor to be projected. It should have a shape compatible with the weight tensor.
-            ext_table (Optional[mindspore.Tensor], optional): Additional tensor to be concatenated with the projected tensor 'x'. 
+            ext_table (Optional[mindspore.Tensor], optional): Additional tensor to be concatenated with the projected tensor 'x'.
                 It should have a compatible shape with 'x'. Defaults to None.
-        
+
         Returns:
-            mindspore.Tensor or None: The projected tensor 'x' after applying the dense layer operation. 
-            If 'ext_table' is provided and has a non-zero shape, the concatenated tensor is returned.
-        
+            mindspore.Tensor or None: The projected tensor 'x' after applying the dense layer operation.
+                If 'ext_table' is provided and has a non-zero shape, the concatenated tensor is returned.
+
         Raises:
             None
         """
-        logits = ops.dense(x / math.sqrt(self.dim_model), self.weight)
+        logits = F.linear(x / math.sqrt(self.dim_model), self.weight)
         if ext_table is not None and 0 not in ext_table.shape:
-            logits_ext = ops.dense(x, ext_table)
-            logits = ops.cat([logits, logits_ext], axis=-1)
+            logits_ext = F.linear(x, ext_table)
+            logits = ops.cat([logits, logits_ext], dim=-1)
         return logits
 
 
@@ -1146,7 +1137,7 @@ class CpmBeePreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """Initialize the weights"""
         std = self.config.init_std
-        if isinstance(cell, nn.Dense):
+        if isinstance(cell, nn.Linear):
             cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
@@ -1167,42 +1158,39 @@ class CpmBeeModel(CpmBeePreTrainedModel):
 
     """
     CpmBeeModel
-    
-    This class represents a CpmBee model for natural language processing tasks. It is a subclass of CpmBeePreTrainedModel and inherits all the functionality from it.
-    
+
+    This class represents a CpmBee model for natural language processing tasks.
+    It is a subclass of CpmBeePreTrainedModel and inherits all the functionality from it.
+
     Attributes:
-        - encoder: An instance of CpmBeeEncoder, responsible for encoding the input sequences.
-        - input_embedding: An instance of CpmBeeEmbeddingExt, used for embedding the input sequences.
-        - position_bias: An instance of CpmBeeBucketPositionBias, used for calculating the position bias.
-        - vocab_size: An integer representing the size of the vocabulary.
-    
+        encoder: An instance of CpmBeeEncoder, responsible for encoding the input sequences.
+        input_embedding: An instance of CpmBeeEmbeddingExt, used for embedding the input sequences.
+        position_bias: An instance of CpmBeeBucketPositionBias, used for calculating the position bias.
+        vocab_size: An integer representing the size of the vocabulary.
+
     Methods:
-        - __init__(self, config: CpmBeeConfig): Initializes the CpmBeeModel instance with the given configuration.
-        - get_input_embeddings(self): Returns the input embedding instance.
-        - set_input_embeddings(self, embeddings, **kwargs): Sets the input embeddings to the given value.
-        - construct(self, input_ids: mindspore.Tensor, input_id_sub: Optional[mindspore.Tensor] = None, length: Optional[mindspore.Tensor] = None, context: Optional[mindspore.Tensor] = None, sample_ids:
-Optional[mindspore.Tensor] = None, num_segments: Optional[mindspore.Tensor] = None, segment: Optional[mindspore.Tensor] = None, segment_rel_offset: Optional[mindspore.Tensor] = None, segment_rel:
-Optional[mindspore.Tensor] = None, span: Optional[Dict] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, past_key_values: Optional[List] = None, use_cache:
-Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Constructs the CpmBee model with the provided input and configuration.
-        - inference(self, input_ids: mindspore.Tensor, input_id_sub: Optional[mindspore.Tensor] = None, position: Optional[mindspore.Tensor] = None, context: Optional[mindspore.Tensor] = None, sample_ids:
-Optional[mindspore.Tensor] = None, num_segments: Optional[mindspore.Tensor] = None, segment: Optional[mindspore.Tensor] = None, segment_rel_offset: Optional[mindspore.Tensor] = None, segment_rel:
-Optional[mindspore.Tensor] = None, past_states: Optional[Dict] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, past_key_values: Optional[List] = None, use_cache:
-Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs inference using the CpmBee model with the provided input and configuration.
+        __init__: Initializes the CpmBeeModel instance with the given configuration.
+        get_input_embeddings: Returns the input embedding instance.
+        set_input_embeddings: Sets the input embeddings to the given value.
+        forward: Constructs the CpmBee model with the provided input and configuration.
+        inference: Performs inference using the CpmBee model with the provided input and configuration.
     """
     def __init__(self, config: CpmBeeConfig):
         """
         Initializes an instance of the CpmBeeModel class.
-        
+
         Args:
             self: The object instance.
-            config (CpmBeeConfig): The configuration object that contains the model settings.
+            config (CpmBeeConfig):
+                The configuration object that contains the model settings.
+
                 - type: CpmBeeConfig
                 - purpose: Specifies the model configuration.
                 - restrictions: Must be an instance of CpmBeeConfig.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1220,35 +1208,36 @@ Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs i
     def get_input_embeddings(self):
         """
         This method retrieves the input embeddings for the CpmBeeModel.
-        
+
         Args:
             self (CpmBeeModel): The instance of the CpmBeeModel class.
                 It is used to access the input embeddings for the model.
-        
+
         Returns:
-            None. The method returns the input embedding associated with the CpmBeeModel instance.
-        
+            input_embedding: The method returns the input embedding associated with the CpmBeeModel instance.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.input_embedding
 
     def set_input_embeddings(self, embeddings, **kwargs):
         """
         This method sets the input embeddings for the CpmBeeModel.
-        
+
         Args:
-            embeddings (object): The input embeddings to be set for the model. It can be of any type and should contain the necessary information for input embeddings.
-        
+            embeddings (object): The input embeddings to be set for the model.
+                It can be of any type and should contain the necessary information for input embeddings.
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
-            No specific exceptions are documented for this method.
+            None.
         """
         self.input_embedding = embeddings
 
-    def construct(
+    def forward(
         self,
         input_ids: mindspore.Tensor,
         input_id_sub: Optional[mindspore.Tensor] = None,
@@ -1267,32 +1256,51 @@ Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs i
         return_dict: Optional[bool] = None,
         **kwargs,
     ):
-        """Constructs the CpmBeeModel.
-        
-            Args:
-                self: The object itself.
-                input_ids (mindspore.Tensor): The input tensor of shape (batch, seq_length) containing the input IDs.
-                input_id_sub (Optional[mindspore.Tensor], optional): The optional input tensor of shape (batch, seq_length) containing the sub input IDs. Defaults to None.
-                length (Optional[mindspore.Tensor], optional): The optional input tensor of shape (batch,) containing the length of the input sequences. Defaults to None.
-                context (Optional[mindspore.Tensor], optional): The optional input tensor of shape (batch, seq_length) containing the context. Defaults to None.
-                sample_ids (Optional[mindspore.Tensor], optional): The optional input tensor of shape (batch, seq_length) containing the sample IDs. Defaults to None.
-                num_segments (Optional[mindspore.Tensor], optional): The optional input tensor of shape (batch, seq_length) containing the number of segments. Defaults to None.
-                segment (Optional[mindspore.Tensor], optional): The optional input tensor of shape (batch, seq_length) containing the segments. Defaults to None.
-                segment_rel_offset (Optional[mindspore.Tensor], optional): The optional input tensor of shape (batch, seq_length) containing the segment relative offset. Defaults to None.
-                segment_rel (Optional[mindspore.Tensor], optional): The optional input tensor of shape (batch, seq_length) containing the segment relative. Defaults to None.
-                span (Optional[Dict], optional): The optional input dictionary containing span information. Defaults to None.
-                output_attentions (Optional[bool], optional): The optional boolean flag indicating whether to output attentions. Defaults to None.
-                output_hidden_states (Optional[bool], optional): The optional boolean flag indicating whether to output hidden states. Defaults to None.
-                past_key_values (Optional[List], optional): The optional list containing past key values. Defaults to None.
-                use_cache (Optional[bool], optional): The optional boolean flag indicating whether to use cache. Defaults to None.
-                return_dict (Optional[bool], optional): The optional boolean flag indicating whether to return a dictionary. Defaults to None.
-        
-            Returns:
-                None
-        
-            Raises:
-                None
-            """
+        """
+        Constructs the CpmBeeModel.
+
+        Args:
+            self: The object itself.
+            input_ids (mindspore.Tensor): The input tensor of shape (batch, seq_length) containing the input IDs.
+            input_id_sub (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch, seq_length) containing the sub input IDs. Defaults to None.
+            length (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch,) containing the length of the input sequences.
+                Defaults to None.
+            context (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch, seq_length) containing the context. Defaults to None.
+            sample_ids (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch, seq_length) containing the sample IDs. Defaults to None.
+            num_segments (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch, seq_length) containing the number of segments.
+                Defaults to None.
+            segment (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch, seq_length) containing the segments. Defaults to None.
+            segment_rel_offset (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch, seq_length) containing the segment relative offset.
+                Defaults to None.
+            segment_rel (Optional[mindspore.Tensor], optional):
+                The optional input tensor of shape (batch, seq_length) containing the segment relative.
+                Defaults to None.
+            span (Optional[Dict], optional):
+                The optional input dictionary containing span information. Defaults to None.
+            output_attentions (Optional[bool], optional):
+                The optional boolean flag indicating whether to output attentions. Defaults to None.
+            output_hidden_states (Optional[bool], optional):
+                The optional boolean flag indicating whether to output hidden states. Defaults to None.
+            past_key_values (Optional[List], optional):
+                The optional list containing past key values. Defaults to None.
+            use_cache (Optional[bool], optional):
+                The optional boolean flag indicating whether to use cache. Defaults to None.
+            return_dict (Optional[bool], optional):
+                The optional boolean flag indicating whether to return a dictionary. Defaults to None.
+
+        Returns:
+            None
+
+        Raises:
+            None
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1306,7 +1314,7 @@ Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs i
             batch, seq_length = input_ids.shape
             segment = ops.where(input_ids != 0, mindspore.tensor(2), 0).to(dtype=dtype)
             context = ops.full((batch, seq_length), 1, dtype=dtype)
-            position = ops.arange(seq_length, dtype=dtype).repeat(batch, 1)
+            position = ops.tile(ops.arange(seq_length, dtype=dtype), (batch, 1))
             input_id_sub = ops.full((batch, seq_length), 0, dtype=dtype)
             segment_rel_offset = ops.full((batch, seq_length), 0, dtype=dtype)
             segment_rel = ops.full((batch, seq_length), 0, dtype=dtype)
@@ -1322,13 +1330,13 @@ Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs i
             + segment[:, None, :]
             + segment_rel_offset[:, :, None],
             ~(
-                (sample_ids[:, :, None] == sample_ids[:, None, :])
-                & (span[:, None, :] == span[:, :, None])
+                (sample_ids[:, :, None] == sample_ids[:, None, :]).to(mindspore.int32)
+                & (span[:, None, :] == span[:, :, None]).to(mindspore.int32)
             ),  # not in the same span or sample
             0,  # avoid torch.gather overflow
         ).view(batch, seqlen * seqlen)
 
-        segment_bucket = ops.gather_elements(
+        segment_bucket = ops.gather(
             input=segment_rel,
             dim=1,
             index=segment_rel_2d.long(),
@@ -1336,8 +1344,8 @@ Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs i
 
         segment_bucket = segment_bucket.masked_fill(
             ~(
-                (sample_ids[:, :, None] == sample_ids[:, None, :])
-                & (span[:, None, :] == span[:, :, None])
+                (sample_ids[:, :, None] == sample_ids[:, None, :]).to(mindspore.int32)
+                & (span[:, None, :] == span[:, :, None]).to(mindspore.int32)
             ),  # not in the same span or sample
             1,  # bucket is used for in-context samples
         )
@@ -1347,12 +1355,12 @@ Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs i
             seqlen
         ).view(-1, 1)
         # sample mask
-        sample_mask_2d = (sample_ids[:, :, None] == 0) | (
+        sample_mask_2d = (sample_ids[:, :, None] == 0).to(mindspore.int32) | (
             sample_ids[:, :, None] == sample_ids[:, None, :]
-        )
+        ).to(mindspore.int32)
         # context mask
         attention_mask = context[:, None, :] | (
-            context[:, :, None].logical_not() & directional_mask_2d.view(1, seqlen, seqlen)
+            context[:, :, None].logical_not().to(mindspore.int32) & directional_mask_2d.view(1, seqlen, seqlen).to(mindspore.int32)
         )
         # span mask
         attention_mask = (
@@ -1360,12 +1368,12 @@ Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs i
         )
         # length mask
         mask_1d = (
-            ops.arange(seqlen)[None, :].repeat(batch, 1) < length[:, None]
-        )
+            ops.tile(ops.arange(seqlen)[None, :], (batch, 1)) < length[:, None]
+        ).to(mindspore.int32)
         attention_mask = (
             mask_1d.view(batch, seqlen, 1) & mask_1d.view(batch, 1, seqlen) & attention_mask
-        )
-        position = ops.arange(seqlen).expand(batch, seqlen)
+        ).to(mindspore.bool_)
+        position = ops.broadcast_to(ops.arange(seqlen), (batch, seqlen))
 
         hidden_states = self.input_embedding(input_ids, input_id_sub)
         position_bias = self.position_bias(position, position, segment_bucket)
@@ -1412,28 +1420,52 @@ Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs i
     ):
         '''
         Perform inference using the CpmBeeModel.
-        
+
         Args:
             self (CpmBeeModel): An instance of the CpmBeeModel class.
-            input_ids (mindspore.Tensor): The input tensor of shape (batch, seq_length) containing the input IDs.
-            input_id_sub (Optional[mindspore.Tensor]): The optional input tensor of shape (batch, seq_length) containing the sub input IDs. Default is None.
-            position (Optional[mindspore.Tensor]): The optional input tensor of shape (batch, seq_length) containing the position information. Default is None.
-            context (Optional[mindspore.Tensor]): The optional input tensor of shape (batch, seq_length) containing the context information. Default is None.
-            sample_ids (Optional[mindspore.Tensor]): The optional input tensor of shape (batch, seq_length) containing the sample IDs. Default is None.
-            num_segments (Optional[mindspore.Tensor]): The optional input tensor of shape (batch, seq_length) containing the number of segments. Default is None.
-            segment (Optional[mindspore.Tensor]): The optional input tensor of shape (batch, seq_length) containing the segment information. Default is None.
-            segment_rel_offset (Optional[mindspore.Tensor]): The optional input tensor of shape (batch, seq_length) containing the segment relative offset. Default is None.
-            segment_rel (Optional[mindspore.Tensor]): The optional input tensor of shape (batch, seq_length) containing the segment relative information. Default is None.
-            past_states (Optional[Dict]): The optional dictionary containing the past states. Default is None.
-            output_attentions (Optional[bool]): Whether to output attentions. If None, it uses the output_attentions from the model configuration. Default is None.
-            output_hidden_states (Optional[bool]): Whether to output hidden states. If None, it uses the output_hidden_states from the model configuration. Default is None.
+            input_ids (mindspore.Tensor):
+                The input tensor of shape (batch, seq_length) containing the input IDs.
+            input_id_sub (Optional[mindspore.Tensor]):
+                The optional input tensor of shape (batch, seq_length) containing the sub input IDs. Default is None.
+            position (Optional[mindspore.Tensor]):
+                The optional input tensor of shape (batch, seq_length) containing the position information.
+                Default is None.
+            context (Optional[mindspore.Tensor]):
+                The optional input tensor of shape (batch, seq_length) containing the context information.
+                Default is None.
+            sample_ids (Optional[mindspore.Tensor]):
+                The optional input tensor of shape (batch, seq_length) containing the sample IDs. Default is None.
+            num_segments (Optional[mindspore.Tensor]):
+                The optional input tensor of shape (batch, seq_length) containing the number of segments.
+                Default is None.
+            segment (Optional[mindspore.Tensor]):
+                The optional input tensor of shape (batch, seq_length) containing the segment information.
+                Default is None.
+            segment_rel_offset (Optional[mindspore.Tensor]):
+                The optional input tensor of shape (batch, seq_length) containing the segment relative offset.
+                Default is None.
+            segment_rel (Optional[mindspore.Tensor]):
+                The optional input tensor of shape (batch, seq_length) containing the segment relative information.
+                Default is None.
+            past_states (Optional[Dict]):
+                The optional dictionary containing the past states. Default is None.
+            output_attentions (Optional[bool]):
+                Whether to output attentions. If None, it uses the output_attentions from the model configuration.
+                Default is None.
+            output_hidden_states (Optional[bool]):
+                Whether to output hidden states. If None, it uses the output_hidden_states from the model configuration.
+                Default is None.
             past_key_values (Optional[List]): The optional list containing the past key values. Default is None.
-            use_cache (Optional[bool]): Whether to use cache. If None, it uses the use_cache from the model configuration. Default is None.
-            return_dict (Optional[bool]): Whether to return a dictionary. If None, it uses the use_return_dict from the model configuration. Default is None.
-        
+            use_cache (Optional[bool]):
+                Whether to use cache. If None, it uses the use_cache from the model configuration. Default is None.
+            return_dict (Optional[bool]):
+                Whether to return a dictionary. If None, it uses the use_return_dict from the model configuration.
+                Default is None.
+
         Returns:
-            BaseModelOutputWithPast: An instance of BaseModelOutputWithPast containing the last hidden state, past key values, hidden states, and attentions.
-        
+            BaseModelOutputWithPast: An instance of BaseModelOutputWithPast containing the last hidden state,
+                past key values, hidden states, and attentions.
+
         Raises:
             None
         '''
@@ -1465,11 +1497,11 @@ Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs i
             present_segments = segment
             present_buffer = None
         else:
-            present_position = ops.cat([past_states["buffer_position"], position], axis=-1)
-            present_context = ops.cat([past_states["buffer_context"], context.astype(mindspore.int64)], axis=-1)
-            present_sample_ids = ops.cat([past_states["buffer_sample_ids"], sample_ids], axis=-1)
-            present_num_segments = ops.cat([past_states["buffer_num_segments"], num_segments], axis=-1)
-            present_segments = ops.cat([past_states["buffer_segments"], segment], axis=-1)
+            present_position = ops.cat([past_states["buffer_position"], position], dim=-1)
+            present_context = ops.cat([past_states["buffer_context"], context.astype(mindspore.int64)], dim=-1)
+            present_sample_ids = ops.cat([past_states["buffer_sample_ids"], sample_ids], dim=-1)
+            present_num_segments = ops.cat([past_states["buffer_num_segments"], num_segments], dim=-1)
+            present_segments = ops.cat([past_states["buffer_segments"], segment], dim=-1)
             present_buffer = past_states["buffer"]
 
         batch = input_ids.shape[0]
@@ -1484,7 +1516,7 @@ Optional[bool] = None, return_dict: Optional[bool] = None, **kwargs): Performs i
             0,  # avoid torch.gather overflow
         ).view(batch, len_q * len_buffer)
 
-        segment_bucket = ops.gather_elements(
+        segment_bucket = ops.gather(
             input=segment_rel,
             dim=1,
             index=segment_rel_2d.long(),
@@ -1538,28 +1570,31 @@ class CpmBeeBeamHypotheses(BeamHypotheses):
 
     """
     This class represents a set of beam hypotheses for the CpmBee model. It is derived from the BeamHypotheses class.
-    
-    The CpmBeeBeamHypotheses class is used to store and manage a list of beam hypotheses along with their scores and beam indices. Each hypothesis consists of a sequence of predicted tokens and a corresponding
-sum of log probabilities. The class provides methods to add new hypotheses, update the list of hypotheses, and retrieve the best hypotheses based on their scores.
-    
+
+    The CpmBeeBeamHypotheses class is used to store and manage a list of beam hypotheses along with their scores
+    and beam indices. Each hypothesis consists of a sequence of predicted tokens and a corresponding sum of log
+    probabilities. The class provides methods to add new hypotheses, update the list of hypotheses, and retrieve
+    the best hypotheses based on their scores.
+
     Attributes:
-        beams (List[Tuple[float, List, Optional[mindspore.Tensor]]]): A list of tuples representing the beam hypotheses. Each tuple contains the hypothesis score, the predicted token sequence, and the beam
-indices.
+        beams (List[Tuple[float, List, Optional[mindspore.Tensor]]]): A list of tuples representing the beam hypotheses.
+            Each tuple contains the hypothesis score, the predicted token sequence, and the beam indices.
         worst_score (float): The score of the worst hypothesis in the list.
         num_beams (int): The maximum number of beam hypotheses to be stored.
         length_penalty (float): The length penalty factor applied to the hypothesis scores.
-    
+
     Methods:
-        add(self, hyp: List, sum_logprobs: float, beam_indices: Optional[mindspore.Tensor] = None)
-            Add a new hypothesis to the list of beam hypotheses. The hypothesis is represented by a sequence of predicted tokens and its sum of log probabilities. Optionally, the beam indices can also be
-provided.
-        
-        update(self)
-            Update the list of beam hypotheses by removing the worst hypothesis if the maximum number of hypotheses is exceeded.
-        
-        get_best(self, num_best: int) -> List[Tuple[float, List, Optional[mindspore.Tensor]]]
-            Retrieve the best `num_best` beam hypotheses based on their scores. The hypotheses are returned as a list of tuples, where each tuple contains the hypothesis score, the predicted token sequence,
-and the beam indices.
+        add:
+            Add a new hypothesis to the list of beam hypotheses. The hypothesis is represented by a sequence of
+            predicted tokens and its sum of log probabilities. Optionally, the beam indices can also be provided.
+
+        update:
+            Update the list of beam hypotheses by removing the worst hypothesis if the maximum number of hypotheses
+            is exceeded.
+
+        get_best:
+            Retrieve the best `num_best` beam hypotheses based on their scores. The hypotheses are returned as a list
+            of tuples, where each tuple contains the hypothesis score, the predicted token sequence, and the beam indices.
     """
     def add(self, hyp: List, sum_logprobs: float, beam_indices: Optional[mindspore.Tensor] = None):
         """
@@ -1579,6 +1614,7 @@ and the beam indices.
 class CpmBeeBeamSearchScorer(BeamSearchScorer):
     """
     Override BeamSearchScorer for CPMBee to support:
+
     1. Replace beam_tokens by beam_states, containing `idx`, `ans`, `nx_token_id`...
     2. The `process` will update the beam_states
     3. The `finalize` will just return the best hypotheses as a list.
@@ -1596,20 +1632,21 @@ class CpmBeeBeamSearchScorer(BeamSearchScorer):
     ):
         """
         Initializes the CpmBeeBeamSearchScorer object.
-        
+
         Args:
             batch_size (int): The batch size for beam search.
             num_beams (int): The number of beams for beam search.
             length_penalty (float, optional): The length penalty for beam search. Defaults to 1.0.
-            do_early_stopping (bool or str, optional): Flag to indicate if early stopping should be performed. Defaults to False.
+            do_early_stopping (bool or str, optional): Flag to indicate if early stopping should be performed.
+                Defaults to False.
             num_beam_hyps_to_keep (int, optional): The number of beam hypotheses to keep. Defaults to 1.
             num_beam_groups (int, optional): The number of beam groups for beam search. Defaults to 1.
             max_length (int, optional): The maximum length for beam search. Defaults to None.
             **model_kwargs: Additional model-specific keyword arguments.
-        
+
         Returns:
-            None. This method initializes the CpmBeeBeamSearchScorer object.
-        
+            None.
+
         Raises:
             ValueError: If the provided batch size, num_beams, num_beam_groups, or max_length is not a positive integer.
             TypeError: If the provided length_penalty is not a float or if do_early_stopping is not a bool or str.
@@ -1670,7 +1707,7 @@ class CpmBeeBeamSearchScorer(BeamSearchScorer):
     ) -> Tuple[mindspore.Tensor]:
         """
         Process the beam search for the CpmBeeBeamSearchScorer.
-        
+
         Args:
             self: The instance of the CpmBeeBeamSearchScorer class.
             batch_size (int): The batch size for processing.
@@ -1686,13 +1723,14 @@ class CpmBeeBeamSearchScorer(BeamSearchScorer):
             ext_table_sub_cpu (Optional[mindspore.Tensor]): The CPU tensor for extended table sub.
             ext_table_ids_cpu (Optional[mindspore.Tensor]): The CPU tensor for extended table IDs.
             **model_kwargs: Additional keyword arguments for the model.
-        
+
         Returns:
             Tuple[mindspore.Tensor]: A tuple containing the next beam scores, next beam states, and next beam indices.
-        
+
         Raises:
-            AssertionError: If the length of next_instance_beam_states is not equal to zero when cur_len is equal to max_length, or not equal to self.num_beams otherwise.
-        
+            AssertionError: If the length of next_instance_beam_states is not equal to zero when cur_len is equal to
+                max_length, or not equal to self.num_beams otherwise.
+
         """
         next_beam_state = []
         for sent_id in range(batch_size):
@@ -1825,27 +1863,30 @@ class CpmBeeBeamSearchScorer(BeamSearchScorer):
     def finalize(self) -> Tuple[mindspore.Tensor]:
         """
         Finalizes the beam search scoring process and returns the best hypotheses.
-        
+
         Args:
             self: The instance of the CpmBeeBeamSearchScorer class.
-        
+
         Returns:
             A tuple containing mindspore.Tensor objects representing the best hypotheses.
-        
+
         Raises:
             None.
-        
-        This method iterates over the beam hypotheses generated during the beam search process and selects the best hypothesis from each beam. The best hypothesis is determined based on the maximum score
-assigned to it. The selected best hypotheses are then returned as a tuple of mindspore.Tensor objects.
-        
+
+        This method iterates over the beam hypotheses generated during the beam search process and selects the
+        best hypothesis from each beam. The best hypothesis is determined based on the maximum score assigned to it.
+        The selected best hypotheses are then returned as a tuple of mindspore.Tensor objects.
+
         Note:
             - The beam hypotheses are internally stored in the _beam_hyps attribute of the CpmBeeBeamSearchScorer instance.
             - The best hypothesis is determined by selecting the hypothesis with the maximum score from each beam.
-        
+
         Example:
-            scorer = CpmBeeBeamSearchScorer()
-            results = scorer.finalize()
-            # results contains the best hypotheses as mindspore.Tensor objects.
+            ```python
+            >>> scorer = CpmBeeBeamSearchScorer()
+            >>> results = scorer.finalize()
+            >>> # results contains the best hypotheses as mindspore.Tensor objects.
+            ```
         """
         results = []
         for _, hypotheses in enumerate(self._beam_hyps):
@@ -1866,9 +1907,10 @@ assigned to it. The selected best hypotheses are then returned as a tuple of min
     ):
         """
         Applies repetition penalty to the logits for beam search in the CpmBeeBeamSearchScorer class.
-        
+
         Args:
-            logits (Tensor): The logits representing the scores for each token in the vocabulary. Shape: (batch_size * num_beams, vocab_size).
+            logits (Tensor): The logits representing the scores for each token in the vocabulary.
+                Shape: (batch_size * num_beams, vocab_size).
             batch_size (int): The size of the batch.
             num_beams (int): The number of beams used in the beam search.
             prev_output_tokens (Tensor): The previously generated tokens. Shape: (batch_size * num_beams, sequence_length).
@@ -1876,13 +1918,13 @@ assigned to it. The selected best hypotheses are then returned as a tuple of min
             start_idx (int, optional): The start index of the window for calculating repetition penalty. Defaults to None.
             end_idx (int, optional): The end index of the window for calculating repetition penalty. Defaults to None.
             window_size (int, optional): The size of the window for calculating repetition penalty. Defaults to None.
-        
+
         Returns:
             None
-        
+
         Raises:
             AssertionError: If repetition_penalty is less than 1.
-        
+
         """
         # only conduct repetition penalty for the output
         assert repetition_penalty >= 1, "repetition penalty coefficient should >= 1"
@@ -1912,31 +1954,35 @@ assigned to it. The selected best hypotheses are then returned as a tuple of min
 class CpmBeeForCausalLM(CpmBeePreTrainedModel):
 
     """
-    This class represents a CPMBee model for Causal Language Modeling tasks. It inherits from CpmBeePreTrainedModel and implements methods for model initialization, inference, beam search generation, input
-embeddings handling, and more.
-    
-    The class includes methods for initializing the model, constructing the model for inference, performing inference, getting and setting input embeddings, getting and setting output embeddings, preparing
-inputs for generation, updating model kwargs for generation, reordering cache during generation, expanding inputs for generation, adjusting logits during generation, performing beam search for generation, and
-generating outputs based on input data using beam search.
-    
-    The `generate` method processes input data using the model to generate responses, filling placeholders in the input data with generated text. It accepts a dictionary or a list of dictionaries as input and
-returns a dictionary or a list of dictionaries with the '<ans>' field filled with generated text.
-    
-    For more details on the methods and their parameters, please refer to the method docstrings within the class implementation.
+    This class represents a CPMBee model for Causal Language Modeling tasks. It inherits from CpmBeePreTrainedModel and
+    implements methods for model initialization, inference, beam search generation, input embeddings handling, and more.
+
+    The class includes methods for initializing the model, forwarding the model for inference, performing inference,
+    getting and setting input embeddings, getting and setting output embeddings, preparing inputs for generation,
+    updating model kwargs for generation, reordering cache during generation, expanding inputs for generation,
+    adjusting logits during generation, performing beam search for generation, and generating outputs based on
+    input data using beam search.
+
+    The `generate` method processes input data using the model to generate responses, filling placeholders in the
+    input data with generated text. It accepts a dictionary or a list of dictionaries as input and
+    returns a dictionary or a list of dictionaries with the '<ans>' field filled with generated text.
+
+    For more details on the methods and their parameters, please refer to the method docstrings within the class
+    implementation.
     """
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config: CpmBeeConfig):
         """
         Initializes a new instance of the CpmBeeForCausalLM class.
-        
+
         Args:
             self: The object instance.
             config (CpmBeeConfig): The configuration object for the CpmBee model.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1944,10 +1990,10 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
         self.cpmbee = CpmBeeModel(config)
 
         # lm_head.weight is tied to cpmbee.input_embedding.weight
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         input_id_sub: Optional[mindspore.Tensor] = None,
@@ -2053,7 +2099,7 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, logits.shape[-1]), labels.long().view(-1))
+            loss = F.cross_entropy(logits.view(-1, logits.shape[-1]), labels.long().view(-1))
 
         if not return_dict:
             output = (logits,) + model_output[1:]
@@ -2147,18 +2193,17 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
                 ext_table subscriptions for embedding projection.
 
         Example:
-
-        Text Generation with CpmBeeForCausalLM.
-        ```python
-        >>> from transformers import CpmBeeTokenizer, CpmBeeForCausalLM
-
-        >>> texts = {"input": "今天天气不错，", "<ans>": ""}
-        >>> model = CpmBeeForCausalLM.from_pretrained("openbmb/cpm-bee-10b")
-        >>> tokenizer = CPMBeeTokenizer.from_pretrained("openbmb/cpm-bee-10b")
-        >>> output_texts = model.generate({"input": "今天天气不错，", "<ans>": ""}, tokenizer)
-        >>> print(output_texts)
-        {'input': '今天天气不错，', '<ans>': '适合睡觉。'}
-        ```
+            Text Generation with CpmBeeForCausalLM.
+            ```python
+            >>> from transformers import CpmBeeTokenizer, CpmBeeForCausalLM
+            ...
+            >>> texts = {"input": "今天天气不错，", "<ans>": ""}
+            >>> model = CpmBeeForCausalLM.from_pretrained("openbmb/cpm-bee-10b")
+            >>> tokenizer = CPMBeeTokenizer.from_pretrained("openbmb/cpm-bee-10b")
+            >>> output_texts = model.generate({"input": "今天天气不错，", "<ans>": ""}, tokenizer)
+            >>> print(output_texts)
+            {'input': '今天天气不错，', '<ans>': '适合睡觉。'}
+            ```
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -2189,7 +2234,7 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, logits.shape[-1]), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, logits.shape[-1]), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + model_output[1:]
@@ -2206,29 +2251,29 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
     def get_input_embeddings(self):
         """
         This method retrieves the input embeddings from the CpmBeeForCausalLM object.
-        
+
         Args:
             self (CpmBeeForCausalLM): The instance of the CpmBeeForCausalLM class.
-        
+
         Returns:
-            None: This method returns the input embeddings, which are of type None.
-        
+            input_embedding: This method returns the input embeddings, which are of type None.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.cpmbee.input_embedding
 
     def set_input_embeddings(self, embeddings):
         """
         Sets the input embeddings for the CpmBeeForCausalLM class.
-        
+
         Args:
             self (CpmBeeForCausalLM): The instance of the CpmBeeForCausalLM class.
             embeddings: The input embeddings to be set for the CpmBeeForCausalLM instance.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
         """
@@ -2237,33 +2282,35 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
     def get_output_embeddings(self):
         """
         Returns the output embeddings for the CpmBeeForCausalLM model.
-        
+
         Args:
             self: An instance of the CpmBeeForCausalLM class.
-        
+
         Returns:
-            None. The method returns the output embeddings of type 'None'.
-        
+            None.
+
         Raises:
-            This method does not raise any exceptions.
+            None.
         """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
         """
         Sets the output embeddings for the CpmBeeForCausalLM model.
-        
+
         Args:
             self (CpmBeeForCausalLM): The instance of the CpmBeeForCausalLM class.
-            new_embeddings: The new embeddings to be set as the output embeddings. This should be a tensor or an object that can be converted to a tensor.
-        
+            new_embeddings: The new embeddings to be set as the output embeddings.
+                This should be a tensor or an object that can be converted to a tensor.
+
         Returns:
             None
-        
+
         Raises:
             None
-        
-        This method sets the output embeddings of the CpmBeeForCausalLM model to the provided new embeddings. The new embeddings are assigned to the 'lm_head' attribute of the model object.
+
+        This method sets the output embeddings of the CpmBeeForCausalLM model to the provided new embeddings.
+        The new embeddings are assigned to the 'lm_head' attribute of the model object.
         """
         self.lm_head = new_embeddings
 
@@ -2322,7 +2369,7 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
                         batch_size * beam_scorer.num_beams, 1
                     ),
                 ],
-                axis=-1,
+                dim=-1,
             )
             _input_ids = input_ids[:, -1:]
 
@@ -2354,13 +2401,13 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
         """
         old_past_states = model_kwargs["past_states"]
         model_kwargs["past_states"] = {
-            "buffer_position": ops.cat([old_past_states["buffer_position"], model_inputs["position"]], axis=-1),
-            "buffer_context": ops.cat([old_past_states["buffer_context"], model_inputs["context"].astype(mindspore.int64)], axis=-1),
-            "buffer_sample_ids": ops.cat([old_past_states["buffer_sample_ids"], model_inputs["sample_ids"]], axis=-1),
+            "buffer_position": ops.cat([old_past_states["buffer_position"], model_inputs["position"]], dim=-1),
+            "buffer_context": ops.cat([old_past_states["buffer_context"], model_inputs["context"].astype(mindspore.int64)], dim=-1),
+            "buffer_sample_ids": ops.cat([old_past_states["buffer_sample_ids"], model_inputs["sample_ids"]], dim=-1),
             "buffer_num_segments": ops.cat(
-                [old_past_states["buffer_num_segments"], model_inputs["num_segments"]], axis=-1
+                [old_past_states["buffer_num_segments"], model_inputs["num_segments"]], dim=-1
             ),
-            "buffer_segments": ops.cat([old_past_states["buffer_segments"], model_inputs["segment"]], axis=-1),
+            "buffer_segments": ops.cat([old_past_states["buffer_segments"], model_inputs["segment"]], dim=-1),
             "buffer": outputs.past_key_values,
         }
 
@@ -2369,42 +2416,44 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
     def _reorder_cache(self, past_key_values: Dict, beam_idx: mindspore.Tensor):
         """
         Reorders the cache of past key values for beam search decoding in a CpmBeeForCausalLM object.
-        
+
         Args:
             self (CpmBeeForCausalLM): The instance of the CpmBeeForCausalLM class.
             past_key_values (Dict): The dictionary containing the cache of past key values.
                 The cache is used during beam search decoding to store previous key-value pairs.
             beam_idx (mindspore.Tensor): The tensor containing the indices of the beams to be reordered.
                 The indices represent the order in which the beams are to be arranged.
-        
+
         Returns:
-            None. The method modifies the past_key_values dictionary in-place.
-        
+            None: The method modifies the past_key_values dictionary in-place.
+
         Raises:
             None.
-        
+
         Note:
             The method reorders the cache by rearranging the key-value pairs based on the given beam indices.
             If the cache contains a 'buffer' key, the key-value pairs within the buffer are rearranged.
             If a key-value pair is (None, None), it remains unchanged.
             Otherwise, the key-value pair is split into separate key and value tensors, and only the tensors
             corresponding to the specified beam indices are kept in the cache.
-        
+
         Example:
-            # Create an instance of the CpmBeeForCausalLM class
-            cpm_bee = CpmBeeForCausalLM()
-        
-            # Define the past key values
-            past_key_values = {
-                'buffer': [((key1, value1), (key2, value2)), ((key3, value3), (key4, value4))],
-                'other_key': tensor([[1, 2, 3], [4, 5, 6]])
-            }
-        
-            # Define the beam indices
-            beam_idx = tensor([1, 0])
-        
-            # Reorder the cache of past key values
-            cpm_bee._reorder_cache(past_key_values, beam_idx)
+            ```python
+            >>> # Create an instance of the CpmBeeForCausalLM class
+            >>> cpm_bee = CpmBeeForCausalLM()
+            ...
+            >>> # Define the past key values
+            >>> past_key_values = {
+            >>>     'buffer': [((key1, value1), (key2, value2)), ((key3, value3), (key4, value4))],
+            >>>     'other_key': tensor([[1, 2, 3], [4, 5, 6]])
+            >>> }
+            ...
+            >>> # Define the beam indices
+            >>> beam_idx = tensor([1, 0])
+            ...
+            >>> # Reorder the cache of past key values
+            >>> cpm_bee._reorder_cache(past_key_values, beam_idx)
+            ```
         """
         beam_idx = beam_idx.tolist()
         for kw in past_key_values.keys():
@@ -2439,11 +2488,11 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
                     and isinstance(dict_to_expand[key], mindspore.Tensor)
                     and "ext_table" not in key
                 ):
-                    dict_to_expand[key] = dict_to_expand[key].repeat_interleave(expand_size, dim=0)
+                    dict_to_expand[key] = ops.repeat_interleave(dict_to_expand[key], expand_size, dim=0)
             return dict_to_expand
 
         if input_ids is not None:
-            input_ids = input_ids.repeat_interleave(expand_size, dim=0)
+            input_ids = ops.repeat_interleave(input_ids, expand_size, dim=0)
 
         model_kwargs = _expand_dict_for_generation(model_kwargs)
 
@@ -2611,8 +2660,8 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
                 None,
             )
 
-            _next_token_scores = ops.log_softmax(
-                next_token_logits, axis=-1
+            _next_token_scores = F.log_softmax(
+                next_token_logits, dim=-1
             )  # (batch_size * num_beams, vocab_size)
 
             next_token_scores_processed = logits_processor(input_ids, _next_token_scores)
@@ -2697,6 +2746,7 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
     ) -> List:
         r"""
         The generation of CPMBee.
+
         1. It will use beam search as generation strategy.
         2. It will use CpmBeeBeamSearchScorer as the beamsearch scorer.
         """
@@ -2712,7 +2762,7 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
                 if new_generation_config != self.generation_config:
                     warnings.warn(
                         "You have modified the pretrained model configuration to control generation. This is a"
-                        " deprecated strategy to control generation and will be removed soon, in a future version."
+                        " deprecated strategy to control generation."
                         " Please use a generation configuration file (see"
                         " https://hf-mirror.com/docs/transformers/main_classes/text_generation)"
                     )
@@ -2755,7 +2805,7 @@ returns a dictionary or a list of dictionaries with the '<ans>' field filled wit
         model_kwargs["output_hidden_states"] = generation_config.output_hidden_states
         model_kwargs["use_cache"] = generation_config.use_cache
 
-        accepts_attention_mask = "attention_mask" in set(inspect.signature(self.construct).parameters.keys())
+        accepts_attention_mask = "attention_mask" in set(inspect.signature(self.forward).parameters.keys())
         requires_attention_mask = "encoder_outputs" not in model_kwargs
 
         if model_kwargs.get("attention_mask", None) is None and requires_attention_mask and accepts_attention_mask:

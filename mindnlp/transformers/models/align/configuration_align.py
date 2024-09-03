@@ -81,19 +81,19 @@ class AlignTextConfig(PretrainedConfig):
             relevant if `config.is_decoder=True`.
 
     Example:
-
-    ```python
-    >>> from transformers import AlignTextConfig, AlignTextModel
-
-    >>> # Initializing a AlignTextConfig with kakaobrain/align-base style configuration
-    >>> configuration = AlignTextConfig()
-
-    >>> # Initializing a AlignTextModel (with random weights) from the kakaobrain/align-base style configuration
-    >>> model = AlignTextModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import AlignTextConfig, AlignTextModel
+        ...
+        >>> # Initializing a AlignTextConfig with kakaobrain/align-base style configuration
+        >>> configuration = AlignTextConfig()
+        ...
+        >>> # Initializing a AlignTextModel (with random weights) from the kakaobrain/align-base style configuration
+        >>> model = AlignTextModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "align_text_model"
 
     def __init__(
@@ -117,7 +117,7 @@ class AlignTextConfig(PretrainedConfig):
     ):
         """
         Initializes a new instance of the AlignTextConfig class.
-        
+
         Args:
             self: The instance of the class.
             vocab_size (int, optional): The size of the vocabulary. Defaults to 30522.
@@ -135,10 +135,10 @@ class AlignTextConfig(PretrainedConfig):
             pad_token_id (int, optional): The token id for padding. Defaults to 0.
             position_embedding_type (str, optional): The type of position embedding to use (e.g., 'absolute'). Defaults to 'absolute'.
             use_cache (bool, optional): Whether to use cache for the transformer encoder. Defaults to True.
-        
+
         Returns:
-            None. The method initializes the instance attributes with the provided values.
-        
+            None.
+
         Raises:
             ValueError: If any of the provided parameters are not of the expected type or value range.
         """
@@ -164,20 +164,20 @@ class AlignTextConfig(PretrainedConfig):
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
         """
         Loads a pretrained model configuration from a given model name or file path.
-        
+
         Args:
             cls (class): The class object itself.
             pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model.
                 It can be either a string representing the model name or an os.PathLike object representing the file path.
                 Note that the model should be of type 'align' according to the configuration.
                 Using a model of different type may cause errors in some configurations.
-        
+
         Returns:
             PretrainedConfig: The loaded pretrained model configuration.
-        
+
         Raises:
             None.
-        
+
         """
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 
@@ -250,19 +250,19 @@ class AlignVisionConfig(PretrainedConfig):
             The drop rate for skip connections.
 
     Example:
-
-    ```python
-    >>> from transformers import AlignVisionConfig, AlignVisionModel
-
-    >>> # Initializing a AlignVisionConfig with kakaobrain/align-base style configuration
-    >>> configuration = AlignVisionConfig()
-
-    >>> # Initializing a AlignVisionModel (with random weights) from the kakaobrain/align-base style configuration
-    >>> model = AlignVisionModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import AlignVisionConfig, AlignVisionModel
+        ...
+        >>> # Initializing a AlignVisionConfig with kakaobrain/align-base style configuration
+        >>> configuration = AlignVisionConfig()
+        ...
+        >>> # Initializing a AlignVisionModel (with random weights) from the kakaobrain/align-base style configuration
+        >>> model = AlignVisionModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
     model_type = "align_vision_model"
 
     def __init__(
@@ -291,7 +291,7 @@ class AlignVisionConfig(PretrainedConfig):
     ):
         """
         Initializes an instance of the `AlignVisionConfig` class.
-        
+
         Args:
             self: The instance of the class itself.
             num_channels (int): The number of channels in the input image. Default is 3.
@@ -315,13 +315,13 @@ class AlignVisionConfig(PretrainedConfig):
             batch_norm_momentum (float): The momentum value for batch normalization. Default is 0.99.
             drop_connect_rate (float): The rate at which to drop connections. Default is 0.2.
             **kwargs: Additional keyword arguments.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
+
         """
         super().__init__(**kwargs)
 
@@ -351,18 +351,18 @@ class AlignVisionConfig(PretrainedConfig):
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
         """
         This method creates an instance of AlignVisionConfig from a pretrained model configuration.
-        
+
         Args:
             cls (class): The class object itself.
             pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model configuration.
                 It can be either a string or a path-like object.
-            
+
         Returns:
             PretrainedConfig: An instance of PretrainedConfig class representing the configuration of the pretrained model.
-        
+
         Raises:
-            - Warning: If the model type specified in the configuration is different from the model type of the class, a warning is issued
-                        because using a different model type may lead to errors in some configurations of models.
+            Warning: If the model type specified in the configuration is different from the model type of the class, a warning is issued
+                because using a different model type may lead to errors in some configurations of models.
         """
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 
@@ -404,28 +404,28 @@ class AlignConfig(PretrainedConfig):
             Dictionary of keyword arguments.
 
     Example:
-
-    ```python
-    >>> from transformers import AlignConfig, AlignModel
-
-    >>> # Initializing a AlignConfig with kakaobrain/align-base style configuration
-    >>> configuration = AlignConfig()
-
-    >>> # Initializing a AlignModel (with random weights) from the kakaobrain/align-base style configuration
-    >>> model = AlignModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-
-    >>> # We can also initialize a AlignConfig from a AlignTextConfig and a AlignVisionConfig
-    >>> from transformers import AlignTextConfig, AlignVisionConfig
-
-    >>> # Initializing ALIGN Text and Vision configurations
-    >>> config_text = AlignTextConfig()
-    >>> config_vision = AlignVisionConfig()
-
-    >>> config = AlignConfig.from_text_vision_configs(config_text, config_vision)
-    ```"""
+        ```python
+        >>> from transformers import AlignConfig, AlignModel
+        ...
+        >>> # Initializing a AlignConfig with kakaobrain/align-base style configuration
+        >>> configuration = AlignConfig()
+        ...
+        >>> # Initializing a AlignModel (with random weights) from the kakaobrain/align-base style configuration
+        >>> model = AlignModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ...
+        >>> # We can also initialize a AlignConfig from a AlignTextConfig and a AlignVisionConfig
+        >>> from transformers import AlignTextConfig, AlignVisionConfig
+        ...
+        >>> # Initializing ALIGN Text and Vision configurations
+        >>> config_text = AlignTextConfig()
+        >>> config_vision = AlignVisionConfig()
+        ...
+        >>> config = AlignConfig.from_text_vision_configs(config_text, config_vision)
+        ```
+    """
     model_type = "align"
 
     def __init__(
@@ -437,7 +437,8 @@ class AlignConfig(PretrainedConfig):
         initializer_range=0.02,
         **kwargs,
     ):
-        """Initializes an instance of the AlignConfig class.
+        """
+        Initializes an instance of the AlignConfig class.
         
         Args:
             self: The instance of the AlignConfig class.
@@ -448,10 +449,10 @@ class AlignConfig(PretrainedConfig):
             initializer_range (float, optional): The range for initializing variables. Defaults to 0.02.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__(**kwargs)
 

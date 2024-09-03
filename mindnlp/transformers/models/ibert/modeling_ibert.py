@@ -15,17 +15,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""I-BERT model."""
+"""MindSpore I-BERT model."""
 
 import math
 from typing import Optional, Tuple, Union
-import numpy as np
 
 import mindspore
-from mindspore import nn, ops
-from mindspore.common.initializer import initializer, Normal
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-from mindnlp.utils import logging
 from ...activations import gelu
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
@@ -38,14 +36,18 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
+from ....utils import logging
 from .configuration_ibert import IBertConfig
 from .quant_modules import IntGELU, IntLayerNorm, IntSoftmax, QuantAct, QuantEmbedding, QuantLinear
 
 
 logger = logging.get_logger(__name__)
 
+_CHECKPOINT_FOR_DOC = "kssteven/ibert-roberta-base"
+_CONFIG_FOR_DOC = "IBertConfig"
 
-class IBertEmbeddings(nn.Cell):
+
+class IBertEmbeddings(nn.Module):
     """
     Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
@@ -71,8 +73,9 @@ class IBertEmbeddings(nn.Cell):
         )
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
-
+        self.register_buffer(
+            "position_ids", ops.arange(config.max_position_embeddings).broadcast_to((1, -1)), persistent=False
+        )
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
 
         # End copy
@@ -99,9 +102,9 @@ class IBertEmbeddings(nn.Cell):
             force_dequant=config.force_dequant,
         )
         self.output_activation = QuantAct(self.act_bit, quant_mode=self.quant_mode)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(
+    def forward(
         self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None, past_key_values_length=0
     ):
         if position_ids is None:
@@ -153,9 +156,9 @@ class IBertEmbeddings(nn.Cell):
         We are provided embeddings directly. We cannot infer which are padded so just generate sequential position ids.
 
         Args:
-            inputs_embeds: torch.Tensor
+            inputs_embeds: mindspore.Tensor
 
-        Returns: torch.Tensor
+        Returns: mindspore.Tensor
         """
         input_shape = inputs_embeds.shape[:-1]
         sequence_length = input_shape[1]
@@ -166,7 +169,7 @@ class IBertEmbeddings(nn.Cell):
         return position_ids.unsqueeze(0).broadcast_to(input_shape)
 
 
-class IBertSelfAttention(nn.Cell):
+class IBertSelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -218,7 +221,7 @@ class IBertSelfAttention(nn.Cell):
         self.value_activation = QuantAct(self.act_bit, quant_mode=self.quant_mode)
         self.output_activation = QuantAct(self.act_bit, quant_mode=self.quant_mode)
 
-        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
         if self.position_embedding_type != "absolute":
             raise ValueError("I-BERT only supports 'absolute' for `config.position_embedding_type`")
@@ -230,7 +233,7 @@ class IBertSelfAttention(nn.Cell):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         hidden_states_scaling_factor,
@@ -308,7 +311,7 @@ class IBertSelfAttention(nn.Cell):
         return outputs, output_scaling_factor
 
 
-class IBertSelfOutput(nn.Cell):
+class IBertSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.quant_mode = config.quant_mode
@@ -336,9 +339,9 @@ class IBertSelfOutput(nn.Cell):
             force_dequant=config.force_dequant,
         )
         self.output_activation = QuantAct(self.act_bit, quant_mode=self.quant_mode)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, hidden_states_scaling_factor, input_tensor, input_tensor_scaling_factor):
+    def forward(self, hidden_states, hidden_states_scaling_factor, input_tensor, input_tensor_scaling_factor):
         hidden_states, hidden_states_scaling_factor = self.dense(hidden_states, hidden_states_scaling_factor)
         hidden_states = self.dropout(hidden_states)
         hidden_states, hidden_states_scaling_factor = self.ln_input_act(
@@ -355,7 +358,7 @@ class IBertSelfOutput(nn.Cell):
         return hidden_states, hidden_states_scaling_factor
 
 
-class IBertAttention(nn.Cell):
+class IBertAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.quant_mode = config.quant_mode
@@ -374,14 +377,14 @@ class IBertAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         hidden_states_scaling_factor,
@@ -404,7 +407,7 @@ class IBertAttention(nn.Cell):
         return outputs, outputs_scaling_factor
 
 
-class IBertIntermediate(nn.Cell):
+class IBertIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.quant_mode = config.quant_mode
@@ -425,7 +428,7 @@ class IBertIntermediate(nn.Cell):
         self.intermediate_act_fn = IntGELU(quant_mode=self.quant_mode, force_dequant=config.force_dequant)
         self.output_activation = QuantAct(self.act_bit, quant_mode=self.quant_mode)
 
-    def construct(self, hidden_states, hidden_states_scaling_factor):
+    def forward(self, hidden_states, hidden_states_scaling_factor):
         hidden_states, hidden_states_scaling_factor = self.dense(hidden_states, hidden_states_scaling_factor)
         hidden_states, hidden_states_scaling_factor = self.intermediate_act_fn(
             hidden_states, hidden_states_scaling_factor
@@ -438,7 +441,7 @@ class IBertIntermediate(nn.Cell):
         return hidden_states, hidden_states_scaling_factor
 
 
-class IBertOutput(nn.Cell):
+class IBertOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.quant_mode = config.quant_mode
@@ -466,9 +469,9 @@ class IBertOutput(nn.Cell):
             force_dequant=config.force_dequant,
         )
         self.output_activation = QuantAct(self.act_bit, quant_mode=self.quant_mode)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, hidden_states_scaling_factor, input_tensor, input_tensor_scaling_factor):
+    def forward(self, hidden_states, hidden_states_scaling_factor, input_tensor, input_tensor_scaling_factor):
         hidden_states, hidden_states_scaling_factor = self.dense(hidden_states, hidden_states_scaling_factor)
         hidden_states = self.dropout(hidden_states)
         hidden_states, hidden_states_scaling_factor = self.ln_input_act(
@@ -485,7 +488,7 @@ class IBertOutput(nn.Cell):
         return hidden_states, hidden_states_scaling_factor
 
 
-class IBertLayer(nn.Cell):
+class IBertLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.quant_mode = config.quant_mode
@@ -499,7 +502,7 @@ class IBertLayer(nn.Cell):
         self.pre_intermediate_act = QuantAct(self.act_bit, quant_mode=self.quant_mode)
         self.pre_output_act = QuantAct(self.act_bit, quant_mode=self.quant_mode)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         hidden_states_scaling_factor,
@@ -543,14 +546,14 @@ class IBertLayer(nn.Cell):
         return layer_output, layer_output_scaling_factor
 
 
-class IBertEncoder(nn.Cell):
+class IBertEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.quant_mode = config.quant_mode
-        self.layer = nn.CellList([IBertLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([IBertLayer(config) for _ in range(config.num_hidden_layers)])
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         hidden_states_scaling_factor,
@@ -607,14 +610,14 @@ class IBertEncoder(nn.Cell):
         )
 
 
-class IBertPooler(nn.Cell):
+class IBertPooler(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.quant_mode = config.quant_mode
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -632,24 +635,21 @@ class IBertPreTrainedModel(PreTrainedModel):
     config_class = IBertConfig
     base_model_prefix = "ibert"
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, (QuantLinear, nn.Dense)):
+        if isinstance(module, (QuantLinear, nn.Linear)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-
-        elif isinstance(cell, (QuantEmbedding, nn.Embedding)):
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-            cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
-        elif isinstance(cell, (IntLayerNorm, nn.LayerNorm)):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, (QuantEmbedding, nn.Embedding)):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
+        elif isinstance(module, (IntLayerNorm, nn.LayerNorm)):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
     def resize_token_embeddings(self, new_num_tokens=None):
         raise NotImplementedError("`resize_token_embeddings` is not supported for I-BERT.")
@@ -692,7 +692,7 @@ class IBertModel(IBertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -755,7 +755,6 @@ class IBertModel(IBertPreTrainedModel):
         )
         sequence_output = encoder_outputs[0]
         pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
-
         if not return_dict:
             return (sequence_output, pooled_output) + encoder_outputs[1:]
 
@@ -788,7 +787,7 @@ class IBertForMaskedLM(IBertPreTrainedModel):
         self.lm_head.decoder = new_embeddings
         self.lm_head.bias = new_embeddings.bias
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -802,7 +801,7 @@ class IBertForMaskedLM(IBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[MaskedLMOutput, Tuple[mindspore.Tensor]]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
             config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
@@ -827,7 +826,8 @@ class IBertForMaskedLM(IBertPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            loss_fct = CrossEntropyLoss()
+            masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
@@ -841,19 +841,19 @@ class IBertForMaskedLM(IBertPreTrainedModel):
         )
 
 
-class IBertLMHead(nn.Cell):
+class IBertLMHead(nn.Module):
     """I-BERT Head for masked language modeling."""
 
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size)
-        self.bias = mindspore.Parameter(ops.zeros(config.vocab_size), 'bias')
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
+        self.bias = nn.Parameter(ops.zeros(config.vocab_size))
         self.decoder.bias = self.bias
 
-    def construct(self, features, **kwargs):
+    def forward(self, features, **kwargs):
         x = self.dense(features)
         x = gelu(x)
         x = self.layer_norm(x)
@@ -864,6 +864,7 @@ class IBertLMHead(nn.Cell):
         return x
 
     def _tie_weights(self) -> None:
+        # For accelerate compatibility and to not break backward compatibility
         self.bias = self.decoder.bias
 
 
@@ -878,7 +879,7 @@ class IBertForSequenceClassification(IBertPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -918,20 +919,23 @@ class IBertForSequenceClassification(IBertPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype in (mindspore.int64, mindspore.int32)):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -949,13 +953,13 @@ class IBertForMultipleChoice(IBertPreTrainedModel):
         super().__init__(config)
 
         self.ibert = IBertModel(config)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
@@ -999,14 +1003,14 @@ class IBertForMultipleChoice(IBertPreTrainedModel):
             return_dict=return_dict,
         )
         pooled_output = outputs[1]
-
         pooled_output = self.dropout(pooled_output)
         logits = self.classifier(pooled_output)
         reshaped_logits = logits.view(-1, num_choices)
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1026,14 +1030,13 @@ class IBertForTokenClassification(IBertPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.ibert = IBertModel(config, add_pooling_layer=False)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1071,7 +1074,8 @@ class IBertForTokenClassification(IBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1085,16 +1089,16 @@ class IBertForTokenClassification(IBertPreTrainedModel):
         )
 
 
-class IBertClassificationHead(nn.Cell):
+class IBertClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
 
-    def construct(self, features, **kwargs):
+    def forward(self, features, **kwargs):
         hidden_states = features[:, 0, :]  # take <s> token (equiv. to [CLS])
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.dense(hidden_states)
@@ -1110,12 +1114,12 @@ class IBertForQuestionAnswering(IBertPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.ibert = IBertModel(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1130,11 +1134,11 @@ class IBertForQuestionAnswering(IBertPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[QuestionAnsweringModelOutput, Tuple[mindspore.Tensor]]:
         r"""
-        start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for position (index) of the start of the labelled span for computing the token classification loss.
             Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
             are not taken into account for computing the loss.
-        end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for position (index) of the end of the labelled span for computing the token classification loss.
             Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
             are not taken into account for computing the loss.
@@ -1172,8 +1176,9 @@ class IBertForQuestionAnswering(IBertPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
@@ -1195,16 +1200,15 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     are ignored. This is modified from fairseq's *utils.make_positions*.
 
     Args:
-    input_ids (`torch.LongTensor`):
+    input_ids (`mindspore.Tensor`):
            Indices of input sequence tokens in the vocabulary.
 
-    Returns: torch.Tensor
+    Returns: mindspore.Tensor
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).type_as(mask) + past_key_values_length) * mask
+    incremental_indices = (ops.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
     return incremental_indices.long() + padding_idx
-
 __all__ = [
     "IBertForMaskedLM",
     "IBertForMultipleChoice",

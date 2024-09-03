@@ -21,8 +21,10 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindspore import ops, nn
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 
 from mindnlp.utils import (
     ModelOutput,
@@ -54,68 +56,72 @@ GPT2_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-class GPT2Attention(nn.Cell):
+class GPT2Attention(nn.Module):
 
     """
-    The `GPT2Attention` class represents the attention mechanism used in the GPT-2 model. It is a subclass of the `nn.Cell` class.
+    The `GPT2Attention` class represents the attention mechanism used in the GPT-2 model.
+    It is a subclass of the `nn.Module` class.
     
     Summary:
-        This class implements the attention mechanism in GPT-2, which is used for self-attention within the model or cross-attention between the model and an encoder.
+        This class implements the attention mechanism in GPT-2, which is used for self-attention within the model
+        or cross-attention between the model and an encoder.
     
     Attributes:
-        - `config`: The configuration object containing various hyperparameters for the attention mechanism.
-        - `is_cross_attention`: A boolean flag indicating whether the attention is for cross-attention or self-attention.
-        - `layer_idx`: An optional integer representing the index of the layer.
-        - `bias`: A tensor representing the bias used in attention calculations.
-        - `masked_bias`: A tensor representing the bias used in attention calculations for masking.
-        - `embed_dim`: An integer representing the embedding dimension of the attention mechanism.
-        - `num_heads`: An integer representing the number of attention heads.
-        - `head_dim`: An integer representing the dimension of each attention head.
-        - `split_size`: An integer representing the size of split tensors.
-        - `scale_attn_weights`: A boolean flag indicating whether to scale the attention weights.
-        - `scale_attn_by_inverse_layer_idx`: A boolean flag indicating whether to scale the attention weights by the inverse of the layer index.
-        - `reorder_and_upcast_attn`: A boolean flag indicating whether to reorder and upcast the attention weights.
-        - `c_attn`: The convolutional layer for attention calculations.
-        - `q_attn`: The convolutional layer for calculating queries (only used for cross-attention).
-        - `c_proj`: The convolutional layer for projecting the attention output.
-        - `attn_dropout`: The dropout layer applied to the attention weights.
-        - `resid_dropout`: The dropout layer applied to the attention output.
-        - `pruned_heads`: A set containing the indices of pruned attention heads.
-    
+        `config`: The configuration object containing various hyperparameters for the attention mechanism.
+        `is_cross_attention`: A boolean flag indicating whether the attention is for cross-attention or self-attention.
+        `layer_idx`: An optional integer representing the index of the layer.
+        `bias`: A tensor representing the bias used in attention calculations.
+        `masked_bias`: A tensor representing the bias used in attention calculations for masking.
+        `embed_dim`: An integer representing the embedding dimension of the attention mechanism.
+        `num_heads`: An integer representing the number of attention heads.
+        `head_dim`: An integer representing the dimension of each attention head.
+        `split_size`: An integer representing the size of split tensors.
+        `scale_attn_weights`: A boolean flag indicating whether to scale the attention weights.
+        `scale_attn_by_inverse_layer_idx`: A boolean flag indicating whether to scale the attention weights
+            by the inverse of the layer index.
+        `reorder_and_upcast_attn`: A boolean flag indicating whether to reorder and upcast the attention weights.
+        `c_attn`: The convolutional layer for attention calculations.
+        `q_attn`: The convolutional layer for calculating queries (only used for cross-attention).
+        `c_proj`: The convolutional layer for projecting the attention output.
+        `attn_dropout`: The dropout layer applied to the attention weights.
+        `resid_dropout`: The dropout layer applied to the attention output.
+        `pruned_heads`: A set containing the indices of pruned attention heads.
+
     Methods:
-        - `prune_heads(heads)`: Prunes the specified attention heads.
-        - `_attn(query, key, value, attention_mask=None, head_mask=None)`: Performs attention calculations for self-attention.
-        - `_upcast_and_reordered_attn(query, key, value, attention_mask=None, head_mask=None)`: Performs attention calculations for cross-attention.
-        - `_split_heads(tensor, num_heads, attn_head_size)`: Splits the `hidden_size` dimension into `attn_head_size` and `num_heads`.
-        - `_merge_heads(tensor, num_heads, attn_head_size)`: Merges the `attn_head_size` and `num_heads` dimensions into `hidden_size`.
-        - `construct(hidden_states, layer_past=None, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, use_cache=False, output_attentions=False)`: Constructs the
-attention mechanism.
-    
-    Please note that this class does not include method signatures or any other code. The provided information is a summary of the class and its attributes and methods.
+        `prune_heads`: Prunes the specified attention heads.
+        `_attn`: Performs attention calculations for self-attention.
+        `_upcast_and_reordered_attn`: Performs attention calculations for cross-attention.
+        `_split_heads`: Splits the `hidden_size` dimension into `attn_head_size` and `num_heads`.
+        `_merge_heads`: Merges the `attn_head_size` and `num_heads` dimensions into `hidden_size`.
+        `forward`: Constructs the attention mechanism.
+
+    Please note that this class does not include method signatures or any other code.
+    The provided information is a summary of the class and its attributes and methods.
     """
     def __init__(self, config, is_cross_attention=False, layer_idx=None):
         """
         Initializes an instance of the GPT2Attention class.
-        
+
         Args:
             self: The object itself.
             config (object): An object containing the configuration parameters.
-            is_cross_attention (bool, optional): Indicates whether the attention is cross-attention or not. Defaults to False.
+            is_cross_attention (bool, optional): Indicates whether the attention is cross-attention or not.
+                Defaults to False.
             layer_idx (int, optional): The index of the layer. Defaults to None.
-        
+
         Returns:
             None
-        
+
         Raises:
             ValueError: If `embed_dim` is not divisible by `num_heads`.
-        
+
         """
         super().__init__()
 
         max_positions = config.max_position_embeddings
-        self.bias = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.bool_)).view(
+        self.bias = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.int32)).view(
                 1, 1, max_positions, max_positions
-            )
+            ).to(mindspore.bool_)
         self.masked_bias = mindspore.Tensor(-1e4)
 
         self.embed_dim = config.hidden_size
@@ -151,20 +157,21 @@ attention mechanism.
     def prune_heads(self, heads):
         """
         This method is part of the GPT2Attention class and is named prune_heads.
-        
+
         Args:
             self: GPT2Attention object. Represents an instance of the GPT2Attention class.
-            
+
             heads: List of integers. The list of head indices to be pruned from the attention mechanism.
-                   It identifies the specific heads to be pruned from the attention mechanism.
-        
+                It identifies the specific heads to be pruned from the attention mechanism.
+
         Returns:
-            None. This method does not return any value explicitly. It modifies the internal state of the GPT2Attention object.
-        
+            None: This method does not return any value explicitly.
+                It modifies the internal state of the GPT2Attention object.
+
         Raises:
-            No specific exceptions are raised within this method. However, depending on the implementation of the helper functions 
-            find_pruneable_heads_and_indices, ops.cat, and prune_conv1d_layer, potential exceptions related to these functions 
-            may be raised during the execution of prune_heads method.
+            None: However, depending on the implementation of the helper functions find_pruneable_heads_and_indices,
+                ops.cat, and prune_conv1d_layer, potential exceptions related to these functions may be raised during
+                the execution of prune_heads method.
         """
         if len(heads) == 0:
             return
@@ -172,8 +179,8 @@ attention mechanism.
         index_attn = ops.cat([index, index + self.split_size, index + (2 * self.split_size)])
 
         # Prune conv1d layers
-        self.c_attn = prune_conv1d_layer(self.c_attn, index_attn, axis=1)
-        self.c_proj = prune_conv1d_layer(self.c_proj, index, axis=0)
+        self.c_attn = prune_conv1d_layer(self.c_attn, index_attn, dim=1)
+        self.c_proj = prune_conv1d_layer(self.c_proj, index, dim=0)
 
         # Update hyper params
         self.split_size = (self.split_size // self.num_heads) * (self.num_heads - len(heads))
@@ -183,7 +190,7 @@ attention mechanism.
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
         """
         Performs attention computation for the GPT2 model.
-        
+
         Args:
             self (GPT2Attention): The GPT2Attention instance to which this method belongs.
             query (Tensor): The query tensor for attention computation.
@@ -191,10 +198,10 @@ attention mechanism.
             value (Tensor): The value tensor for attention computation.
             attention_mask (Tensor, optional): An optional tensor for masking the attention weights.
             head_mask (Tensor, optional): An optional tensor for masking specific attention heads.
-        
+
         Returns:
             Tuple[Tensor, Tensor]: A tuple containing the attention output tensor and the attention weights tensor.
-        
+
         Raises:
             ValueError: If the dimensions of the input tensors are incompatible for matrix multiplication.
             TypeError: If the input tensors are not of type Tensor.
@@ -224,7 +231,7 @@ attention mechanism.
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         # Downcast (if necessary) back to V's dtype (if in mixed-precision) -- No-Op otherwise
         attn_weights = attn_weights.astype(value.dtype)
@@ -240,21 +247,24 @@ attention mechanism.
 
     def _upcast_and_reordered_attn(self, query, key, value, attention_mask=None, head_mask=None):
         """
-        This method _upcast_and_reordered_attn in the class GPT2Attention performs upcasting and reordering operations for the attention mechanism in a GPT-2 model.
-        
+        This method _upcast_and_reordered_attn in the class GPT2Attention performs upcasting and reordering operations
+        for the attention mechanism in a GPT-2 model.
+
         Args:
             self (GPT2Attention): The instance of the GPT2Attention class.
             query (Tensor): The input query tensor with shape (batch_size, num_heads, query_sequence_length, depth).
             key (Tensor): The input key tensor with shape (batch_size, num_heads, key_sequence_length, depth).
             value (Tensor): The input value tensor with shape (batch_size, num_heads, key_sequence_length, depth).
-            attention_mask (Tensor, optional): An optional tensor defining additional attention masks with shape (batch_size, num_heads, query_sequence_length, key_sequence_length).
+            attention_mask (Tensor, optional): An optional tensor defining additional attention masks with shape
+                (batch_size, num_heads, query_sequence_length, key_sequence_length).
             head_mask (Tensor, optional): An optional tensor that masks specific heads of the attention mechanism.
-        
+
         Returns:
-            None. The method returns the computed attention output and attention weights.
-        
+            The computed attention output and attention weights.
+
         Raises:
-            RuntimeError: Raised if there is an error during upcasting and the resulting attention weights do not have the expected data type 'mindspore.float32'.
+            RuntimeError: Raised if there is an error during upcasting and the resulting attention weights
+                do not have the expected data type 'mindspore.float32'.
         """
         bsz, num_heads, q_seq_len, dk = query.shape
         _, _, k_seq_len, _ = key.shape
@@ -288,7 +298,7 @@ attention mechanism.
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, dim=-1)
 
         # Downcast (if necessary) back to V's dtype (if in mixed-precision) -- No-Op if otherwise
         if attn_weights.dtype != mindspore.float32:
@@ -320,7 +330,7 @@ attention mechanism.
         new_shape = tensor.shape[:-2] + (num_heads * attn_head_size,)
         return tensor.view(new_shape)
 
-    def construct(
+    def forward(
         self,
         hidden_states: Optional[Tuple[mindspore.Tensor]],
         layer_past: Optional[Tuple[mindspore.Tensor]] = None,
@@ -332,24 +342,26 @@ attention mechanism.
         output_attentions: Optional[bool] = False,
     ) -> Tuple[Union[mindspore.Tensor, Tuple[mindspore.Tensor]], ...]:
         """
-        This method 'construct' in the class 'GPT2Attention' is responsible for constructing the attention mechanism for GPT-2 model.
-        
+        This method 'forward' in the class 'GPT2Attention' is responsible for forwarding the attention mechanism
+        for GPT-2 model.
+
         Args:
-        - self: The instance of the class.
-        - hidden_states (Optional[Tuple[mindspore.Tensor]]): The input hidden states for the attention mechanism.
-        - layer_past (Optional[Tuple[mindspore.Tensor]]): The past layer key and value tensors for optimization.
-        - attention_mask (Optional[mindspore.Tensor]): Masking tensor to prevent attention to certain positions.
-        - head_mask (Optional[mindspore.Tensor]): Masking tensor to prevent attention in specific heads.
-        - encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states from the encoder for cross-attention.
-        - encoder_attention_mask (Optional[mindspore.Tensor]): Masking tensor for encoder attention.
-        - use_cache (Optional[bool]): Flag to use caching for optimization.
-        - output_attentions (Optional[bool]): Flag to output attention weights.
-        
+            self: The instance of the class.
+            hidden_states (Optional[Tuple[mindspore.Tensor]]): The input hidden states for the attention mechanism.
+            layer_past (Optional[Tuple[mindspore.Tensor]]): The past layer key and value tensors for optimization.
+            attention_mask (Optional[mindspore.Tensor]): Masking tensor to prevent attention to certain positions.
+            head_mask (Optional[mindspore.Tensor]): Masking tensor to prevent attention in specific heads.
+            encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states from the encoder for cross-attention.
+            encoder_attention_mask (Optional[mindspore.Tensor]): Masking tensor for encoder attention.
+            use_cache (Optional[bool]): Flag to use caching for optimization.
+            output_attentions (Optional[bool]): Flag to output attention weights.
+
         Returns:
-        - Tuple[Union[mindspore.Tensor, Tuple[mindspore.Tensor]], ...]: A tuple containing the output tensor from attention mechanism and present states for caching.
-        
+            Tuple[Union[mindspore.Tensor, Tuple[mindspore.Tensor]], ...]:
+                A tuple containing the output tensor from attention mechanism and present states for caching.
+
         Raises:
-        - ValueError: If 'encoder_hidden_states' is provided without 'q_attn' weights defined for cross-attention.
+            ValueError: If 'encoder_hidden_states' is provided without 'q_attn' weights defined for cross-attention.
         """
         if encoder_hidden_states is not None:
             if not hasattr(self, "q_attn"):
@@ -370,8 +382,8 @@ attention mechanism.
 
         if layer_past is not None:
             past_key, past_value = layer_past
-            key = ops.cat((past_key, key), axis=-2)
-            value = ops.cat((past_value, value), axis=-2)
+            key = ops.cat((past_key, key), dim=-2)
+            value = ops.cat((past_value, value), dim=-2)
 
         if use_cache is True:
             present = (key, value)
@@ -394,41 +406,44 @@ attention mechanism.
         return outputs  # a, present, (attentions)
 
 
-class GPT2MLP(nn.Cell):
+class GPT2MLP(nn.Module):
 
     """
-    This class represents a multi-layer perceptron (MLP) component of the GPT-2 model. It is used to process the hidden states in the model architecture.
-    
-    The GPT2MLP class inherits from the nn.Cell class and contains methods for initializing the MLP and constructing the hidden states.
-    
+    This class represents a multi-layer perceptron (MLP) component of the GPT-2 model.
+    It is used to process the hidden states in the model architecture.
+
+    The GPT2MLP class inherits from the nn.Module class and contains methods for initializing the MLP and
+    forwarding the hidden states.
+
     Attributes:
         c_fc (Conv1D): A 1D convolutional layer used for intermediate processing of the hidden states.
         c_proj (Conv1D): A 1D convolutional layer used for final projection of the hidden states.
         act (activation function): The activation function used in the MLP.
         dropout (Dropout): A dropout layer used for regularization.
-        
+
     Methods:
-        __init__(self, intermediate_size, config): Initializes the GPT2MLP with the given intermediate size and configuration.
-        construct(self, hidden_states): Constructs the hidden states by applying the specified operations on the input hidden states.
-    
+        __init__: Initializes the GPT2MLP with the given intermediate size and configuration.
+        forward: Constructs the hidden states by applying the specified operations on the input hidden states.
+
     """
     def __init__(self, intermediate_size, config):
         """Initializes an instance of the GPT2MLP class.
-        
+
         Args:
             self (GPT2MLP): The GPT2MLP object being initialized.
             intermediate_size (int): The size of the intermediate layer.
             config (object): The configuration object containing various settings.
                 This object is expected to have the following attributes:
-                    - hidden_size (int): The size of the embedding dimension.
-                    - activation_function (str): The name of the activation function to use.
-                    - resid_pdrop (float): The dropout rate for residual connections.
-        
+
+                - hidden_size (int): The size of the embedding dimension.
+                - activation_function (str): The name of the activation function to use.
+                - resid_pdrop (float): The dropout rate for residual connections.
+
         Returns:
-            None. This method does not return anything.
-        
+            None.
+
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__()
         embed_dim = config.hidden_size
@@ -437,29 +452,33 @@ class GPT2MLP(nn.Cell):
         self.act = ACT2FN[config.activation_function]
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
-    def construct(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
+    def forward(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
         """
         Constructs a GPT2MLP model by applying a series of operations on the input hidden states.
-        
+
         Args:
             self: An instance of the GPT2MLP class.
-            hidden_states (Optional[Tuple[mindspore.Tensor]]): The input hidden states. It is an optional parameter and defaults to None.
-        
+            hidden_states (Optional[Tuple[mindspore.Tensor]]): The input hidden states.
+                It is an optional parameter and defaults to None.
+
         Returns:
             mindspore.Tensor: The output hidden states after applying the operations.
-        
+
         Raises:
             None.
-        
+
         Note:
-            The `hidden_states` parameter should be a tuple of mindspore.Tensor objects representing the hidden states of the model.
+            The `hidden_states` parameter should be a tuple of mindspore.Tensor objects representing the hidden states
+            of the model.
             The `hidden_states` parameter can be None, in which case it will be ignored and not used in the operations.
             The output hidden states will be of type mindspore.Tensor.
-        
+
         Example:
+            ```python
             >>> model = GPT2MLP()
             >>> hidden_states = (tensor1, tensor2)
-            >>> output = model.construct(hidden_states)
+            >>> output = model.forward(hidden_states)
+            ```
         """
         hidden_states = self.c_fc(hidden_states)
         hidden_states = self.act(hidden_states)
@@ -468,63 +487,74 @@ class GPT2MLP(nn.Cell):
         return hidden_states
 
 
-class GPT2Block(nn.Cell):
+class GPT2Block(nn.Module):
 
     """
-    This class represents a single block of the GPT2 (Generative Pretrained Transformer 2) model. 
-    
-    GPT2Block is a subclass of nn.Cell and contains the following attributes:
+    This class represents a single block of the GPT2 (Generative Pretrained Transformer 2) model.
+
+    GPT2Block is a subclass of nn.Module and contains the following attributes:
+
     - ln_1: A LayerNorm module for layer normalization.
     - attn: An instance of the GPT2Attention class for self-attention mechanism.
     - ln_2: A LayerNorm module for layer normalization.
-    - crossattention: An instance of the GPT2Attention class for cross-attention mechanism (optional, if `encoder_hidden_states` are passed).
-    - ln_cross_attn: A LayerNorm module for layer normalization in cross-attention mechanism (optional, if `encoder_hidden_states` are passed).
+    - crossattention: An instance of the GPT2Attention class for cross-attention mechanism
+    (optional, if `encoder_hidden_states` are passed).
+    - ln_cross_attn: A LayerNorm module for layer normalization in cross-attention mechanism
+    (optional, if `encoder_hidden_states` are passed).
     - mlp: An instance of the GPT2MLP class for the feed-forward neural network.
-    
+
     Methods:
-    - __init__(self, config, layer_idx=None): Initializes the GPT2Block instance with the given configuration and optional layer index.
-    - construct(self, hidden_states, layer_past=None, attention_mask=None, head_mask=None, encoder_hidden_states=None, encoder_attention_mask=None, use_cache=False, output_attentions=False): Performs the
-forward pass of the GPT2Block.
-      - Parameters:
-        - hidden_states: An optional tuple of tensors representing the input hidden states.
-        - layer_past: An optional tuple of tensors representing the past hidden states (default: None).
-        - attention_mask: An optional tensor representing the attention mask (default: None).
-        - head_mask: An optional tensor representing the head mask (default: None).
-        - encoder_hidden_states: An optional tensor representing the hidden states of the encoder (default: None).
-        - encoder_attention_mask: An optional tensor representing the attention mask for the encoder (default: None).
-        - use_cache: A boolean indicating whether to use cache for faster decoding (default: False).
-        - output_attentions: A boolean indicating whether to output attentions weights (default: False).
-      - Returns:
-        - A tuple of tensors representing the outputs of the GPT2Block.
-    
-    Note: If `encoder_hidden_states` are passed, the GPT2Block instance should be instantiated with cross-attention layers by setting `config.add_cross_attention=True`.
-    
+        __init__: Initializes the GPT2Block instance with the given configuration and optional layer index.
+        forward:
+            Performs the forward pass of the GPT2Block.
+
+            Parameters:
+
+            - hidden_states: An optional tuple of tensors representing the input hidden states.
+            - layer_past: An optional tuple of tensors representing the past hidden states (default: None).
+            - attention_mask: An optional tensor representing the attention mask (default: None).
+            - head_mask: An optional tensor representing the head mask (default: None).
+            - encoder_hidden_states: An optional tensor representing the hidden states of the encoder (default: None).
+            - encoder_attention_mask: An optional tensor representing the attention mask for the encoder (default: None).
+            - use_cache: A boolean indicating whether to use cache for faster decoding (default: False).
+            - output_attentions: A boolean indicating whether to output attentions weights (default: False).
+
+            Returns:
+
+            - A tuple of tensors representing the outputs of the GPT2Block.
+
+    Note:
+        If `encoder_hidden_states` are passed, the GPT2Block instance should be instantiated with cross-attention layers
+        by setting `config.add_cross_attention=True`.
+
     Raises:
-    - ValueError: If `encoder_hidden_states` are passed, but the GPT2Block instance does not have cross-attention layers.
-    
+        ValueError: If `encoder_hidden_states` are passed, but the GPT2Block instance does not have cross-attention
+            layers.
+
     """
     def __init__(self, config, layer_idx=None):
         """
         Initializes an instance of the GPT2Block class.
-        
+
         Args:
             self: The object instance.
-            config: An object containing the configuration parameters for the GPT2Block.
-                    It should have the following attributes:
-                    - hidden_size: An integer specifying the size of the hidden layer.
-                    - n_inner: An optional integer representing the number of inner layers.
-                      If not provided, the default value is 4 times the hidden size.
-                    - layer_norm_epsilon: A small float value used for layer normalization.
-                      It ensures numerical stability in the presence of small variances.
-                    - add_cross_attention: A boolean indicating whether to include cross-attention.
-                    - is_cross_attention: A boolean indicating whether this is a cross-attention layer.
-                    - layer_idx: An optional integer representing the index of the layer.
-        
+            config:
+                An object containing the configuration parameters for the GPT2Block.
+                It should have the following attributes:
+
+                - hidden_size: An integer specifying the size of the hidden layer.
+                - n_inner: An optional integer representing the number of inner layers.
+                If not provided, the default value is 4 times the hidden size.
+                - layer_norm_epsilon: A small float value used for layer normalization.
+                It ensures numerical stability in the presence of small variances.
+                - add_cross_attention: A boolean indicating whether to include cross-attention.
+                - is_cross_attention: A boolean indicating whether this is a cross-attention layer.
+                - layer_idx: An optional integer representing the index of the layer.
             layer_idx: An optional integer representing the index of the layer.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -532,17 +562,17 @@ forward pass of the GPT2Block.
         hidden_size = config.hidden_size
         inner_dim = config.n_inner if config.n_inner is not None else 4 * hidden_size
 
-        self.ln_1 = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+        self.ln_1 = nn.LayerNorm([hidden_size], eps=config.layer_norm_epsilon)
         self.attn = GPT2Attention(config, layer_idx=layer_idx)
-        self.ln_2 = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+        self.ln_2 = nn.LayerNorm([hidden_size], eps=config.layer_norm_epsilon)
 
         if config.add_cross_attention:
             self.crossattention = GPT2Attention(config, is_cross_attention=True, layer_idx=layer_idx)
-            self.ln_cross_attn = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+            self.ln_cross_attn = nn.LayerNorm([hidden_size], eps=config.layer_norm_epsilon)
 
         self.mlp = GPT2MLP(inner_dim, config)
 
-    def construct(
+    def forward(
         self,
         hidden_states: Optional[Tuple[mindspore.Tensor]],
         layer_past: Optional[Tuple[mindspore.Tensor]] = None,
@@ -555,25 +585,31 @@ forward pass of the GPT2Block.
     ) -> Union[Tuple[mindspore.Tensor], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor, ...]]]]:
         """
         Constructs a GPT2 block with optional cross-attention functionality.
-        
+
         Args:
             self: The GPT2Block instance.
             hidden_states (Optional[Tuple[mindspore.Tensor]]): The input hidden states. Default is None.
-            layer_past (Optional[Tuple[mindspore.Tensor]]): Past hidden states for autoregressive decoding. Default is None.
-            attention_mask (Optional[mindspore.Tensor]): Mask to prevent attention to some positions. Default is None.
-            head_mask (Optional[mindspore.Tensor]): Mask to nullify selected heads of the attention mechanism. Default is None.
-            encoder_hidden_states (Optional[mindspore.Tensor]): Hidden states of the encoder for cross-attention. Default is None.
+            layer_past (Optional[Tuple[mindspore.Tensor]]):
+                Past hidden states for autoregressive decoding. Default is None.
+            attention_mask (Optional[mindspore.Tensor]):
+                Mask to prevent attention to some positions. Default is None.
+            head_mask (Optional[mindspore.Tensor]):
+                Mask to nullify selected heads of the attention mechanism. Default is None.
+            encoder_hidden_states (Optional[mindspore.Tensor]):
+                Hidden states of the encoder for cross-attention. Default is None.
             encoder_attention_mask (Optional[mindspore.Tensor]): Mask for encoder attention. Default is None.
             use_cache (Optional[bool]): Whether to use cache for faster decoding. Default is False.
             output_attentions (Optional[bool]): Whether to output attentions weights. Default is False.
-        
+
         Returns:
             Union[Tuple[mindspore.Tensor], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor, ...]]]]:
-            - Tuple containing the final hidden states if `use_cache` is False.
-            - Tuple containing the final hidden states and additional outputs if `use_cache` is True.
-        
+
+                - Tuple containing the final hidden states if `use_cache` is False.
+                - Tuple containing the final hidden states and additional outputs if `use_cache` is True.
+
         Raises:
-            ValueError: If `encoder_hidden_states` are provided but the model is not instantiated with cross-attention layers.
+            ValueError: If `encoder_hidden_states` are provided but the model is not instantiated with cross-attention
+                layers.
         """
         residual = hidden_states
         hidden_states = self.ln_1(hidden_states)
@@ -639,7 +675,7 @@ class GPT2PreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, Conv1D)):
+        if isinstance(cell, (nn.Linear, Conv1D)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -683,18 +719,21 @@ class GPT2DoubleHeadsModelOutput(ModelOutput):
             Prediction scores of the language modeling head (scores for each vocabulary token before SoftMax).
         mc_logits (`mindspore.Tensor` of shape `(batch_size, num_choices)`):
             Prediction scores of the multiple choice classification head (scores for each choice before SoftMax).
-        past_key_values (`Tuple[Tuple[mindspore.Tensor]]`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        past_key_values (`Tuple[Tuple[mindspore.Tensor]]`, *optional*, returned when `use_cache=True` is passed
+            or when `config.use_cache=True`):
             Tuple of length `config.n_layers`, containing tuples of tensors of shape `(batch_size, num_heads,
             sequence_length, embed_size_per_head)`).
 
             Contains pre-computed hidden-states (key and values in the attention blocks) that can be used (see
             `past_key_values` input) to speed up sequential decoding.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or
+            when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or
+            when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -713,37 +752,39 @@ class GPT2DoubleHeadsModelOutput(ModelOutput):
 class GPT2Model(GPT2PreTrainedModel):
 
     """
-    This class represents a GPT-2 model for natural language processing tasks. It includes methods for initializing the model, setting input embeddings, pruning model heads, and constructing the model for
-inference or training. The model consists of multiple GPT2Blocks organized in layers to process input sequences and generate output representations. The GPT2Model class inherits from the GPT2PreTrainedModel
-class, which provides additional functionality and pretrained weights for fine-tuning or transfer learning tasks.
-    
+    This class represents a GPT-2 model for natural language processing tasks. It includes methods for initializing
+    the model, setting input embeddings, pruning model heads, and forwarding the model for inference or training.
+    The model consists of multiple GPT2Blocks organized in layers to process input sequences and generate output
+    representations. The GPT2Model class inherits from the GPT2PreTrainedModel class, which provides additional
+    functionality and pretrained weights for fine-tuning or transfer learning tasks.
+
     Methods:
-    - __init__(self, config): Initializes the GPT-2 model with configuration parameters.
-    - get_input_embeddings(self): Returns the input embeddings used by the model.
-    - set_input_embeddings(self, new_embeddings): Sets new input embeddings for the model.
-    - _prune_heads(self, heads_to_prune): Prunes specific attention heads in the model based on the provided dictionary.
-    - construct(self, input_ids, past_key_values, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, encoder_hidden_states, encoder_attention_mask, use_cache, output_attentions,
-output_hidden_states, return_dict): Constructs the GPT-2 model for inference or training with various input options and returns the model output.
-    
+        __init__: Initializes the GPT-2 model with configuration parameters.
+        get_input_embeddings: Returns the input embeddings used by the model.
+        set_input_embeddings: Sets new input embeddings for the model.
+        _prune_heads: Prunes specific attention heads in the model based on the provided dictionary.
+        forward: Constructs the GPT-2 model for inference or training with various input options and returns
+            the model output.
+
     Attributes:
-    - embed_dim: The dimensionality of the embedding layer in the model.
-    - wte: Embedding layer for token embeddings.
-    - wpe: Embedding layer for position embeddings.
-    - drop: Dropout layer for regularization.
-    - h: List of GPT2Block layers for processing input sequences.
-    - ln_f: Layer normalization applied to the final hidden states.
+        embed_dim: The dimensionality of the embedding layer in the model.
+        wte: Embedding layer for token embeddings.
+        wpe: Embedding layer for position embeddings.
+        drop: Dropout layer for regularization.
+        h: List of GPT2Block layers for processing input sequences.
+        ln_f: Layer normalization applied to the final hidden states.
     """
     def __init__(self, config):
         """
         Initializes an instance of the GPT2Model class.
-        
+
         Args:
             self: The instance of the GPT2Model class.
             config: An object of type 'config' containing the configuration parameters for the GPT2Model.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -755,8 +796,8 @@ output_hidden_states, return_dict): Constructs the GPT-2 model for inference or 
         self.wpe = nn.Embedding(config.max_position_embeddings, self.embed_dim)
 
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([GPT2Block(config, layer_idx=i) for i in range(config.num_hidden_layers)])
-        self.ln_f = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
+        self.h = nn.ModuleList([GPT2Block(config, layer_idx=i) for i in range(config.num_hidden_layers)])
+        self.ln_f = nn.LayerNorm([self.embed_dim], eps=config.layer_norm_epsilon)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -764,23 +805,26 @@ output_hidden_states, return_dict): Constructs the GPT-2 model for inference or 
     def get_input_embeddings(self):
         """
         Retrieves the input embeddings for the GPT2Model.
-        
+
         Args:
             self (GPT2Model): The instance of the GPT2Model class.
-        
+
         Returns:
-            None: This method does not return any value.
-        
+            None.
+
         Raises:
             None.
-        
-        This method is responsible for retrieving the input embeddings of the GPT2Model. It takes a single parameter, 'self', which refers to the instance of the GPT2Model class.
-        
-        The GPT2Model class is designed to handle GPT-2 models, which are based on the Transformer architecture. Input embeddings are representations of the input tokens in the model. They are used as the
-initial input to the model and are typically generated by applying a word embedding layer to the input tokens.
-        
-        Since this method does not return any value, the return type is 'None'. The purpose of this method is to retrieve the input embeddings needed for further processing within the GPT2Model.
-        
+
+        This method is responsible for retrieving the input embeddings of the GPT2Model.
+        It takes a single parameter, 'self', which refers to the instance of the GPT2Model class.
+
+        The GPT2Model class is designed to handle GPT-2 models, which are based on the Transformer architecture.
+        Input embeddings are representations of the input tokens in the model. They are used as the initial input to
+        the model and are typically generated by applying a word embedding layer to the input tokens.
+
+        Since this method does not return any value, the return type is 'None'. The purpose of this method is to
+        retrieve the input embeddings needed for further processing within the GPT2Model.
+
         No exceptions are raised by this method.
         """
         return self.wte
@@ -788,17 +832,18 @@ initial input to the model and are typically generated by applying a word embedd
     def set_input_embeddings(self, new_embeddings):
         """
         Sets the input embeddings of the GPT2Model.
-        
+
         Args:
             self (GPT2Model): The instance of the GPT2Model class.
-            new_embeddings: The new input embeddings to be set. It should be a tensor of shape (vocab_size, hidden_size) representing the word embeddings.
-        
+            new_embeddings: The new input embeddings to be set.
+                It should be a tensor of shape (vocab_size, hidden_size) representing the word embeddings.
+
         Returns:
-            None. This method modifies the input embeddings of the GPT2Model in-place.
-        
+            None: This method modifies the input embeddings of the GPT2Model in-place.
+
         Raises:
             None.
-        
+
         """
         self.wte = new_embeddings
 
@@ -809,7 +854,7 @@ initial input to the model and are typically generated by applying a word embedd
         for layer, heads in heads_to_prune.items():
             self.h[layer].attn.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -827,40 +872,68 @@ initial input to the model and are typically generated by applying a word embedd
     ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
         """
         Constructs the GPT-2 model.
-        
+
         Args:
             self (:obj:`GPT2Model`): An instance of the `GPT2Model` class.
-            input_ids (:obj:`Optional[mindspore.Tensor]`, `optional`): Input tensor of shape :obj:`(batch_size, sequence_length)`.
-            past_key_values (:obj:`Optional[Tuple[Tuple[mindspore.Tensor]]]`, `optional`): Tuple of :obj:`(layer_num, batch_size, num_heads, past_sequence_length, hidden_size)` tensors containing the previous
-hidden states (key and values of the attention blocks) if they were cached, used for faster decoding. Defaults to :obj:`None`.
-            attention_mask (:obj:`Optional[mindspore.Tensor]`, `optional`): Mask to avoid performing attention on padding token indices. Mask values selected in ``[0, 1]`` where 1 indicates the token is not
-masked and 0 indicates the token is masked. Defaults to :obj:`None`.
-            token_type_ids (:obj:`Optional[mindspore.Tensor]`, `optional`): Input tensor of shape :obj:`(batch_size, sequence_length)` indicating the token types to differentiate between different sentences in
-the input. Defaults to :obj:`None`.
-            position_ids (:obj:`Optional[mindspore.Tensor]`, `optional`): Tensor of shape :obj:`(batch_size, sequence_length)` containing the position indices. Defaults to :obj:`None`.
-            head_mask (:obj:`Optional[mindspore.Tensor]`, `optional`): Mask to nullify selected heads of the self-attention modules. Mask values selected in ``[0, 1]``, where 1 indicates the head is kept and 0
-indicates the head is nullified. Defaults to :obj:`None`.
-            inputs_embeds (:obj:`Optional[mindspore.Tensor]`, `optional`): Input tensor of shape :obj:`(batch_size, sequence_length, hidden_size)` containing the embedded inputs. Defaults to :obj:`None`.
-            encoder_hidden_states (:obj:`Optional[mindspore.Tensor]`, `optional`): The encoded input sequence of shape :obj:`(batch_size, sequence_length, hidden_size)` to be used in the cross-attention layer.
-Defaults to :obj:`None`.
-            encoder_attention_mask (:obj:`Optional[mindspore.Tensor]`, `optional`): Cross attention mask to avoid performing attention on padding token indices. Defaults to :obj:`None`.
-            use_cache (:obj:`Optional[bool]`, `optional`): Whether or not the model should return the past key values when used for inference. Defaults to :obj:`None`.
-            output_attentions (:obj:`Optional[bool]`, `optional`): Whether to also return all attention weights, including the self-attention weights of each attention layer. Defaults to :obj:`None`.
-            output_hidden_states (:obj:`Optional[bool]`, `optional`): Whether to also return all hidden states of each layer in addition to the output tensor. Defaults to :obj:`None`.
-            return_dict (:obj:`Optional[bool]`, `optional`): Whether to return a dictionary instead of a tuple. Defaults to :obj:`None`.
-        
+            input_ids (:obj:`Optional[mindspore.Tensor]`, `optional`): 
+                Input tensor of shape :obj:`(batch_size, sequence_length)`.
+            past_key_values (:obj:`Optional[Tuple[Tuple[mindspore.Tensor]]]`, `optional`): 
+                Tuple of :obj:`(layer_num, batch_size, num_heads, past_sequence_length, hidden_size)` tensors 
+                containing the previous hidden states (key and values of the attention blocks) if they were cached, 
+                used for faster decoding. Defaults to :obj:`None`.
+            attention_mask (:obj:`Optional[mindspore.Tensor]`, `optional`): 
+                Mask to avoid performing attention on padding token indices. Mask values selected in ``[0, 1]`` 
+                where 1 indicates the token is not masked and 0 indicates the token is masked. Defaults to :obj:`None`.
+            token_type_ids (:obj:`Optional[mindspore.Tensor]`, `optional`): 
+                Input tensor of shape :obj:`(batch_size, sequence_length)` indicating the token types to differentiate 
+                between different sentences in the input. Defaults to :obj:`None`.
+            position_ids (:obj:`Optional[mindspore.Tensor]`, `optional`): Tensor of shape :obj:
+                `(batch_size, sequence_length)` containing the position indices. Defaults to :obj:`None`.
+            head_mask (:obj:`Optional[mindspore.Tensor]`, `optional`): Mask to nullify selected heads of the 
+                self-attention modules. Mask values selected in ``[0, 1]``, where 1 indicates the head is kept and 0
+                indicates the head is nullified. Defaults to :obj:`None`.
+            inputs_embeds (:obj:`Optional[mindspore.Tensor]`, `optional`): 
+                Input tensor of shape :obj:`(batch_size, sequence_length, hidden_size)` containing the embedded inputs. 
+                Defaults to :obj:`None`.
+            encoder_hidden_states (:obj:`Optional[mindspore.Tensor]`, `optional`): 
+                The encoded input sequence of shape :obj:`(batch_size, sequence_length, hidden_size)` to be used in the 
+                cross-attention layer. Defaults to :obj:`None`.
+            encoder_attention_mask (:obj:`Optional[mindspore.Tensor]`, `optional`): 
+                Cross attention mask to avoid performing attention on padding token indices. Defaults to :obj:`None`.
+            use_cache (:obj:`Optional[bool]`, `optional`): 
+                Whether or not the model should return the past key values when used for inference. 
+                Defaults to :obj:`None`.
+            output_attentions (:obj:`Optional[bool]`, `optional`):
+                Whether to also return all attention weights, including the self-attention weights of 
+                each attention layer. Defaults to :obj:`None`.
+            output_hidden_states (:obj:`Optional[bool]`, `optional`): 
+                Whether to also return all hidden states of each layer in addition to the output tensor. 
+                Defaults to :obj:`None`.
+            return_dict (:obj:`Optional[bool]`, `optional`): 
+                Whether to return a dictionary instead of a tuple. Defaults to :obj:`None`.
+
         Returns:
-            :obj:`Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]`: A tuple or a dictionary of outputs containing the following tensors depending on the value of `return_dict`:
-                - last_hidden_state (:obj:`mindspore.Tensor` of shape :obj:`(batch_size, sequence_length, hidden_size)`): Sequence of hidden-states at the output of the last layer of the model.
-                - past_key_values (:obj:`Tuple[Tuple[mindspore.Tensor]]`): Tuple of :obj:`(layer_num, batch_size, num_heads, past_sequence_length, hidden_size)` tensors containing the previous hidden states
-(key and values of the attention blocks) if they were cached, used for faster decoding.
-                - hidden_states (:obj:`Tuple[mindspore.Tensor]`): Tuple of :obj:`(batch_size, sequence_length, hidden_size)` tensors containing the hidden states of all layers of the model if
-`output_hidden_states=True`.
-                - attentions (:obj:`Tuple[mindspore.Tensor]`): Tuple of :obj:`(batch_size, num_heads, sequence_length, sequence_length)` tensors containing the attention weights of all self-attention layers of
-the model if `output_attentions=True`.
-                - cross_attentions (:obj:`Tuple[mindspore.Tensor]`): Tuple of :obj:`(batch_size, num_heads, sequence_length, sequence_length)` tensors containing the attention weights of all cross-attention
-layers of the model if `output_attentions=True` and `config.add_cross_attention=True`.
-        
+            :obj:`Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]`: 
+                A tuple or a dictionary of outputs containing the following tensors depending 
+                on the value of `return_dict`:
+                
+                - last_hidden_state (:obj:`mindspore.Tensor` of shape :obj:`(batch_size, sequence_length, hidden_size)`): 
+                Sequence of hidden-states at the output of the last layer of the model.
+                - past_key_values (:obj:`Tuple[Tuple[mindspore.Tensor]]`): 
+                Tuple of :obj:`(layer_num, batch_size, num_heads, past_sequence_length, hidden_size)` tensors containing 
+                the previous hidden states (key and values of the attention blocks) if they were cached, used for 
+                faster decoding.
+                - hidden_states (:obj:`Tuple[mindspore.Tensor]`): 
+                Tuple of :obj:`(batch_size, sequence_length, hidden_size)` tensors containing the hidden states of all 
+                layers of the model if `output_hidden_states=True`.
+                - attentions (:obj:`Tuple[mindspore.Tensor]`): 
+                Tuple of :obj:`(batch_size, num_heads, sequence_length, sequence_length)` tensors containing the 
+                attention weights of all self-attention layers of the model if `output_attentions=True`.
+                - cross_attentions (:obj:`Tuple[mindspore.Tensor]`): 
+                Tuple of :obj:`(batch_size, num_heads, sequence_length, sequence_length)` tensors containing the 
+                attention weights of all cross-attention layers of the model if `output_attentions=True` and 
+                `config.add_cross_attention=True`.
+
         Raises:
             ValueError: If both `input_ids` and `inputs_embeds` are specified simultaneously.
             ValueError: If neither `input_ids` nor `inputs_embeds` are specified.
@@ -1002,50 +1075,51 @@ layers of the model if `output_attentions=True` and `config.add_cross_attention=
 class GPT2LMHeadModel(GPT2PreTrainedModel):
 
     """
-    The `GPT2LMHeadModel` class is a subclass of `GPT2PreTrainedModel` that represents a language model based on the GPT-2 architecture.
-    
-    This class provides methods for initializing the model, getting and setting the output embeddings, preparing inputs for generation, and constructing the model. It also includes a static method for
-reordering the cache when using beam search or beam sampling.
-    
+    The `GPT2LMHeadModel` class is a subclass of `GPT2PreTrainedModel` that represents a language model based on the 
+    GPT-2 architecture.
+
+    This class provides methods for initializing the model, getting and setting the output embeddings, preparing inputs 
+    for generation, and forwarding the model. It also includes a static method for reordering the cache when using 
+    beam search or beam sampling.
+
     Attributes:
-        - transformer: A GPT2Model instance representing the GPT-2 transformer model.
-        - lm_head: A nn.Dense layer representing the output layer of the language model.
-    
+        transformer: A GPT2Model instance representing the GPT-2 transformer model.
+        lm_head: A nn.Linear layer representing the output layer of the language model.
+
     Methods:
-        - __init__(self, config): Initializes the GPT2LMHeadModel.
-        - get_output_embeddings(self): Returns the lm_head output embeddings.
-        - set_output_embeddings(self, new_embeddings): Sets the lm_head output embeddings.
-        - prepare_inputs_for_generation(self, input_ids, past_key_values=None, inputs_embeds=None, **kwargs): Prepares inputs for generation by adjusting the input_ids, token_type_ids, attention_mask, and
-position_ids.
-        - construct(self, input_ids, past_key_values=None, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None, inputs_embeds=None, encoder_hidden_states=None,
-encoder_attention_mask=None, labels=None, use_cache=None, output_attentions=None, output_hidden_states=None, return_dict=None): Constructs the GPT2LMHeadModel and returns the model outputs.
-        - _reorder_cache(past_key_values, beam_idx): Reorders the past_key_values cache based on the beam_idx for beam search or beam sampling.
-    
+        __init__: Initializes the GPT2LMHeadModel.
+        get_output_embeddings: Returns the lm_head output embeddings.
+        set_output_embeddings: Sets the lm_head output embeddings.
+        prepare_inputs_for_generation: 
+            Prepares inputs for generation by adjusting the input_ids, token_type_ids, attention_mask, and position_ids.
+        forward: Constructs the GPT2LMHeadModel and returns the model outputs.
+        _reorder_cache: Reorders the past_key_values cache based on the beam_idx for beam search or beam sampling.
+
     Note:
         - The labels for language modeling are shifted inside the model.
         - The loss is computed only for labels in [0, ..., config.vocab_size].
         - The GPT2LMHeadModel class inherits from GPT2PreTrainedModel.
-    
+
     """
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
         """
         Initializes a new instance of the GPT2LMHeadModel class.
-        
+
         Args:
             self: The current object instance.
             config: An instance of the GPT2Config class representing the model configuration.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
         super().__init__(config)
         self.transformer = GPT2Model(config)
-        self.lm_head = nn.Dense(config.n_embd, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1053,58 +1127,62 @@ encoder_attention_mask=None, labels=None, use_cache=None, output_attentions=None
     def get_output_embeddings(self):
         """
         Returns the output embeddings of the GPT2LMHeadModel.
-        
+
         Args:
             self: An instance of the GPT2LMHeadModel class.
-        
+
         Returns:
-            None: The method returns None.
-        
+            None.
+
         Raises:
-            N/A
-        
-        This method retrieves the output embeddings of the GPT2LMHeadModel. The output embeddings are the weights of the linear layer (lm_head) which is responsible for producing the logits for each token in
-the language model. These logits are then used to calculate the probabilities of the next token in the sequence.
-        
-        Note that the returned value is of type None, as the method doesn't explicitly return any value, but rather directly accesses the output embeddings of the GPT2LMHeadModel.
-        
-        Example usage:
-            model = GPT2LMHeadModel()
-            output_embeddings = model.get_output_embeddings()
+            None.
+
+        This method retrieves the output embeddings of the GPT2LMHeadModel. The output embeddings are the weights of
+        the linear layer (lm_head) which is responsible for producing the logits for each token in the language model.
+        These logits are then used to calculate the probabilities of the next token in the sequence.
+
+        Note that the returned value is of type None, as the method doesn't explicitly return any value, but rather
+        directly accesses the output embeddings of the GPT2LMHeadModel.
+
+        Example:
+            ```python
+            >>> odel = GPT2LMHeadModel()
+            >>> output_embeddings = model.get_output_embeddings()
+            ```
         """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
         """
         Method to set new output embeddings for the GPT2LMHeadModel.
-        
+
         Args:
             self (GPT2LMHeadModel): The instance of the GPT2LMHeadModel class.
                 It represents the GPT-2 language model head model.
             new_embeddings (any): The new embeddings to be set as the output embeddings.
                 These embeddings will replace the current output embeddings in the model.
-        
+
         Returns:
-            None. This method does not return any value.
-        
+            None.
+
         Raises:
-            N/A
+            None.
         """
         self.lm_head = new_embeddings
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, inputs_embeds=None, **kwargs):
         '''
         Prepare inputs for generation.
-        
+
         Args:
             self (GPT2LMHeadModel): The GPT2LMHeadModel instance.
             input_ids (torch.Tensor): The input token ids of shape [batch_size, sequence_length].
             past_key_values (Tuple[torch.Tensor]): The past key values of the model.
             inputs_embeds (torch.Tensor): The input embeddings of shape [batch_size, sequence_length, hidden_size].
-            
+
         Returns:
             None
-            
+
         Raises:
             None
         '''
@@ -1129,7 +1207,7 @@ the language model. These logits are then used to calculate the probabilities of
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
@@ -1154,7 +1232,7 @@ the language model. These logits are then used to calculate the probabilities of
 
         return model_inputs
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -1172,10 +1250,11 @@ the language model. These logits are then used to calculate the probabilities of
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithCrossAttentions]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1197,14 +1276,13 @@ the language model. These logits are then used to calculate the probabilities of
         hidden_states = transformer_outputs[0]
 
         lm_logits = self.lm_head(hidden_states)
-
         loss = None
         if labels is not None:
             # Shift so that tokens < n predict n
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + transformer_outputs[1:]
@@ -1237,30 +1315,35 @@ the language model. These logits are then used to calculate the probabilities of
 class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
 
     """
-    This class represents a GPT-2 model with two classification heads for multiple choice tasks. It is designed to be used for natural language processing tasks that require generating text and making multiple
-choice predictions. The model architecture is based on the GPT-2 model with additional heads for language modeling and multiple choice classification.
-    
-    The class includes methods for initializing the model, setting and getting output embeddings, preparing inputs for text generation, and constructing the model for inference or training. It also provides a
-method for reordering cache during beam search or beam sampling.
-    
-    Note that this class inherits from GPT2PreTrainedModel, which is a base class for all GPT-2 models in the transformers library. The GPT2DoubleHeadsModel extends the base functionality of the GPT-2 model to
-support multiple choice tasks.
-    
-    For detailed usage examples and descriptions of input parameters and return values, please refer to the method docstrings within the class code.
+    This class represents a GPT-2 model with two classification heads for multiple choice tasks.
+    It is designed to be used for natural language processing tasks that require generating text and making multiple
+    choice predictions. The model architecture is based on the GPT-2 model with additional heads for language modeling
+    and multiple choice classification.
+
+    The class includes methods for initializing the model, setting and getting output embeddings, preparing inputs for
+    text generation, and forwarding the model for inference or training. It also provides a method for reordering
+    cache during beam search or beam sampling.
+
+    Note that this class inherits from GPT2PreTrainedModel, which is a base class for all GPT-2 models in the
+    transformers library. The GPT2DoubleHeadsModel extends the base functionality of the GPT-2 model to support multiple
+    choice tasks.
+
+    For detailed usage examples and descriptions of input parameters and return values, please refer to the method
+    docstrings within the class code.
     """
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
         """
         Initializes a new instance of the GPT2DoubleHeadsModel class.
-        
+
         Args:
             self: The object instance.
             config: An instance of the GPT2Config class that defines the model configuration.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
@@ -1268,7 +1351,7 @@ support multiple choice tasks.
         config = copy.deepcopy(config)
         config.num_labels = 1
         self.transformer = GPT2Model(config)
-        self.lm_head = nn.Dense(config.n_embd, config.vocab_size, has_bias=False)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
         self.multiple_choice_head = SequenceSummary(config)
 
         # Initialize weights and apply final processing
@@ -1277,29 +1360,29 @@ support multiple choice tasks.
     def get_output_embeddings(self):
         """
         Returns the output embeddings of the GPT2DoubleHeadsModel.
-        
+
         Args:
             self (GPT2DoubleHeadsModel): The current instance of the GPT2DoubleHeadsModel.
-        
+
         Returns:
-            None: This method does not return a value.
-        
+            None.
+
         Raises:
-            None: This method does not raise any exceptions.
+            None.
         """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
         """
         Sets the output embeddings for the GPT2DoubleHeadsModel.
-        
+
         Args:
             self (GPT2DoubleHeadsModel): The instance of the GPT2DoubleHeadsModel class.
             new_embeddings (torch.nn.Embedding): The new embeddings to set as the output embeddings.
-            
+
         Returns:
-            None. This method does not return any value.
-            
+            None.
+
         Raises:
             None.
         """
@@ -1308,21 +1391,24 @@ support multiple choice tasks.
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, **kwargs):
         """
         Prepares the inputs for generation in the GPT2DoubleHeadsModel class.
-        
+
         Args:
             self (GPT2DoubleHeadsModel): The instance of the GPT2DoubleHeadsModel class.
             input_ids (torch.Tensor): The input tensor of shape (batch_size, sequence_length) containing the input IDs.
             past_key_values (tuple, optional): A tuple of past key values. Defaults to None.
-        
+
         Returns:
-            dict: A dictionary containing the prepared inputs for generation, including the following keys:
-                - 'input_ids' (torch.Tensor): The input tensor after removing the prefix. Shape: (batch_size, sequence_length)
+            dict:
+                A dictionary containing the prepared inputs for generation, including the following keys:
+
+                - 'input_ids' (torch.Tensor): The input tensor after removing the prefix.
+                Shape: (batch_size, sequence_length)
                 - 'past_key_values' (tuple): The updated past key values.
                 - 'use_cache' (bool): The value of the 'use_cache' keyword argument.
                 - 'position_ids' (torch.Tensor): The position IDs tensor. Shape: (batch_size, sequence_length)
                 - 'attention_mask' (torch.Tensor): The attention mask tensor. Shape: (batch_size, sequence_length)
                 - 'token_type_ids' (torch.Tensor): The token type IDs tensor. Shape: (batch_size, sequence_length)
-        
+
         Raises:
             None.
         """
@@ -1347,7 +1433,7 @@ support multiple choice tasks.
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
@@ -1363,7 +1449,7 @@ support multiple choice tasks.
             "token_type_ids": token_type_ids,
         }
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -1382,44 +1468,46 @@ support multiple choice tasks.
         **kwargs,
     ) -> Union[Tuple, GPT2DoubleHeadsModelOutput]:
         r"""
-        mc_token_ids (`mindspore.Tensor` of shape `(batch_size, num_choices)`, *optional*, default to index of the last token of the input):
-            Index of the classification token in each input sequence. Selected in the range `[0, input_ids.shape[-1] -
-            1]`.
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids`. Indices are selected in `[-100, 0, ..., config.vocab_size - 1]`. All labels set to
-            `-100` are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size - 1]`
-        mc_labels (`mindspore.Tensor` of shape `(batch_size)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ..., num_choices]`
-            where *num_choices* is the size of the second dimension of the input tensors. (see *input_ids* above)
+        Args:
+            mc_token_ids (`mindspore.Tensor` of shape `(batch_size, num_choices)`, *optional*,
+                default to index of the last token of the input):
+                Index of the classification token in each input sequence. Selected in the range `[0, input_ids.shape[-1] -
+                1]`.
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+                `labels = input_ids`. Indices are selected in `[-100, 0, ..., config.vocab_size - 1]`. All labels set to
+                `-100` are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size - 1]`
+            mc_labels (`mindspore.Tensor` of shape `(batch_size)`, *optional*):
+                Labels for computing the multiple choice classification loss. Indices should be in `[0, ..., num_choices]`
+                where *num_choices* is the size of the second dimension of the input tensors. (see *input_ids* above)
 
-        Return:
+        Returns:
+            Union[Tuple, GPT2DoubleHeadsModelOutput]
 
         Example:
-
-        ```python
-
-        >>> from transformers import AutoTokenizer, GPT2DoubleHeadsModel
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
-        >>> model = GPT2DoubleHeadsModel.from_pretrained("gpt2")
-
-        >>> # Add a [CLS] to the vocabulary (we should train it also!)
-        >>> num_added_tokens = tokenizer.add_special_tokens({"cls_token": "[CLS]"})
-        >>> # Update the model embeddings with the new vocabulary size
-        >>> embedding_layer = model.resize_token_embeddings(len(tokenizer))
-
-        >>> choices = ["Hello, my dog is cute [CLS]", "Hello, my cat is cute [CLS]"]
-        >>> encoded_choices = [tokenizer.encode(s) for s in choices]
-        >>> cls_token_location = [tokens.index(tokenizer.cls_token_id) for tokens in encoded_choices]
-
-        >>> input_ids = mindspore.Tensor(encoded_choices).unsqueeze(0)  # Batch size: 1, number of choices: 2
-        >>> mc_token_ids = mindspore.Tensor([cls_token_location])  # Batch size: 1
-
-        >>> outputs = model(input_ids, mc_token_ids=mc_token_ids)
-        >>> lm_logits = outputs.logits
-        >>> mc_logits = outputs.mc_logits
-        ```"""
+            ```python
+            >>> from transformers import AutoTokenizer, GPT2DoubleHeadsModel
+            ...
+            >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
+            >>> model = GPT2DoubleHeadsModel.from_pretrained("gpt2")
+            ...
+            >>> # Add a [CLS] to the vocabulary (we should train it also!)
+            >>> num_added_tokens = tokenizer.add_special_tokens({"cls_token": "[CLS]"})
+            >>> # Update the model embeddings with the new vocabulary size
+            >>> embedding_layer = model.resize_token_embeddings(len(tokenizer))
+            ...
+            >>> choices = ["Hello, my dog is cute [CLS]", "Hello, my cat is cute [CLS]"]
+            >>> encoded_choices = [tokenizer.encode(s) for s in choices]
+            >>> cls_token_location = [tokens.index(tokenizer.cls_token_id) for tokens in encoded_choices]
+            ...
+            >>> input_ids = mindspore.Tensor(encoded_choices).unsqueeze(0)  # Batch size: 1, number of choices: 2
+            >>> mc_token_ids = mindspore.Tensor([cls_token_location])  # Batch size: 1
+            ...
+            >>> outputs = model(input_ids, mc_token_ids=mc_token_ids)
+            >>> lm_logits = outputs.logits
+            >>> mc_logits = outputs.mc_logits
+            ```
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.transformer(
@@ -1443,12 +1531,12 @@ support multiple choice tasks.
 
         mc_loss = None
         if mc_labels is not None:
-            mc_loss = ops.cross_entropy(mc_logits.view(-1, mc_logits.shape[-1]), mc_labels.view(-1))
+            mc_loss = F.cross_entropy(mc_logits.view(-1, mc_logits.shape[-1]), mc_labels.view(-1))
         lm_loss = None
         if labels is not None:
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
-            lm_loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            lm_loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         if not return_dict:
             output = (lm_logits, mc_logits) + transformer_outputs[1:]
@@ -1484,45 +1572,55 @@ support multiple choice tasks.
 class GPT2ForSequenceClassification(GPT2PreTrainedModel):
 
     """
-    GPT2ForSequenceClassification represents a GPT-2 model fine-tuned for sequence classification tasks. This class inherits from GPT2PreTrainedModel.
-    
-    The GPT2ForSequenceClassification class provides a method 'construct' for constructing the sequence classification model. The 'construct' method accepts input tensors such as input_ids, past_key_values,
-attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, and return_dict.
-    
-    The 'construct' method returns a tuple containing the sequence classification loss, logits, past_key_values, hidden_states, and attentions. If the return_dict parameter is set to False, the output is a
-tuple of pooled_logits and transformer_outputs. The sequence classification loss is computed based on the given labels and the model configuration.
-    
-    The GPT2ForSequenceClassification class also includes an __init__ method for initializing the model with the given configuration, number of labels, GPT2Model transformer, and score.
-    
-    Labels for computing the sequence classification/regression loss can be provided as a mindspore.Tensor of shape (batch_size,) in the 'construct' method. Indices for the labels should be in the range [0,
-config.num_labels - 1]. If config.num_labels == 1, a regression loss is computed (Mean-Square loss). If config.num_labels > 1, a classification loss is computed (Cross-Entropy).
-    
-    The class ensures proper handling of padding tokens and provides warnings for unexpected scenarios. Additionally, it dynamically determines the problem type based on the configuration and label data types.
-    
-    Note: This docstring is generated based on the provided code and does not include signatures or any other code.
+    GPT2ForSequenceClassification represents a GPT-2 model fine-tuned for sequence classification tasks.
+    This class inherits from GPT2PreTrainedModel.
+
+    The GPT2ForSequenceClassification class provides a method 'forward' for forwarding the sequence classification
+    model. The 'forward' method accepts input tensors such as input_ids, past_key_values, attention_mask,
+    token_type_ids, position_ids, head_mask, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states,
+    and return_dict.
+
+    The 'forward' method returns a tuple containing the sequence classification loss, logits, past_key_values,
+    hidden_states, and attentions. If the return_dict parameter is set to False, the output is a tuple of pooled_logits
+    and transformer_outputs. The sequence classification loss is computed based on the given labels and the model
+    configuration.
+
+    The GPT2ForSequenceClassification class also includes an __init__ method for initializing the model with the given
+    configuration, number of labels, GPT2Model transformer, and score.
+
+    Labels for computing the sequence classification/regression loss can be provided as a mindspore.Tensor of shape
+    (batch_size,) in the 'forward' method. Indices for the labels should be in the range [0,
+    config.num_labels - 1]. If config.num_labels == 1, a regression loss is computed (Mean-Square loss).
+    If config.num_labels > 1, a classification loss is computed (Cross-Entropy).
+
+    The class ensures proper handling of padding tokens and provides warnings for unexpected scenarios.
+    Additionally, it dynamically determines the problem type based on the configuration and label data types.
+
+    Note:
+        This docstring is generated based on the provided code and does not include signatures or any other code.
     """
     def __init__(self, config):
         """Initializes a new instance of the GPT2ForSequenceClassification class.
-        
+
         Args:
             self: The object itself.
             config: An instance of the GPT2Config class containing the configuration parameters for the GPT2 model.
-        
+
         Returns:
             None
-        
+
         Raises:
             None
         """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = GPT2Model(config)
-        self.score = nn.Dense(config.n_embd, self.num_labels, has_bias=False)
+        self.score = nn.Linear(config.n_embd, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -1538,10 +1636,11 @@ config.num_labels - 1]. If config.num_labels == 1, a regression loss is computed
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1597,13 +1696,13 @@ config.num_labels - 1]. If config.num_labels == 1, a regression loss is computed
 
             if self.config.problem_type == "regression":
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(pooled_logits, labels)
+                    loss = F.mse_loss(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1620,28 +1719,32 @@ config.num_labels - 1]. If config.num_labels == 1, a regression loss is computed
 class GPT2ForTokenClassification(GPT2PreTrainedModel):
 
     """
-    This class represents a GPT-2 model for token classification, inheriting from GPT2PreTrainedModel. It includes methods for initialization and construction of the model for token classification tasks. The
-model utilizes a transformer architecture with configurable dropout and classifier layers for classification or regression loss computation based on the number of labels specified in the configuration. The
-construct method processes input data through the transformer, applies dropout, generates logits using the classifier layer, and computes the loss if labels are provided. The method returns the loss and output
-based on the specified return format. 
+    This class represents a GPT-2 model for token classification, inheriting from GPT2PreTrainedModel.
+    It includes methods for initialization and forwardion of the model for token classification tasks.
+    The model utilizes a transformer architecture with configurable dropout and classifier layers for classification
+    or regression loss computation based on the number of labels specified in the configuration.
+    The forward method processes input data through the transformer, applies dropout, generates logits using the
+    classifier layer, and computes the loss if labels are provided. The method returns the loss and output
+    based on the specified return format.
     """
     def __init__(self, config):
         """
         Initializes a GPT2ForTokenClassification instance.
-        
+
         Args:
             self (GPT2ForTokenClassification): The GPT2ForTokenClassification instance.
             config (GPT2Config): The configuration object containing model hyperparameters.
                 This parameter is required to properly configure the GPT2 model for token classification.
                 It should include the following attributes:
-                    - num_labels (int): The number of distinct labels for token classification.
-                    - classifier_dropout (float, optional): The dropout probability for the classifier layer.
-                    - hidden_dropout (float, optional): The dropout probability for hidden layers.
+
+                - num_labels (int): The number of distinct labels for token classification.
+                - classifier_dropout (float, optional): The dropout probability for the classifier layer.
+                - hidden_dropout (float, optional): The dropout probability for hidden layers.
                 If both 'classifier_dropout' and 'hidden_dropout' are provided, 'classifier_dropout' takes precedence.
-        
+
         Returns:
-            None. This method initializes the GPT2ForTokenClassification instance.
-        
+            None.
+
         Raises:
             ValueError: If 'config' is missing the 'num_labels' attribute.
             TypeError: If 'config' is not an instance of GPT2Config.
@@ -1659,12 +1762,12 @@ based on the specified return format.
         else:
             classifier_dropout = 0.1
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
@@ -1680,7 +1783,8 @@ based on the specified return format.
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+        Args:
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
@@ -1707,7 +1811,7 @@ based on the specified return format.
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + transformer_outputs[2:]
@@ -1724,35 +1828,40 @@ class GPT2ForQuestionAnswering(GPT2PreTrainedModel):
 
     """
     This class represents a GPT2 model for question answering tasks. It is a subclass of GPT2PreTrainedModel.
-    
+
     GPT2ForQuestionAnswering inherits the following attributes and methods from GPT2PreTrainedModel:
-    
+
     Attributes:
-        - config: The configuration object for the GPT2 model.
-        - transformer: The GPT2Model instance for the transformer part of the model.
-        - qa_outputs: A neural network layer for question answering outputs.
-    
+        config: The configuration object for the GPT2 model.
+        transformer: The GPT2Model instance for the transformer part of the model.
+        qa_outputs: A neural network layer for question answering outputs.
+
     Methods:
-        - __init__(self, config): Initializes the GPT2ForQuestionAnswering instance.
-        - construct(self, input_ids, attention_mask, token_type_ids, position_ids, head_mask, inputs_embeds, start_positions, end_positions, output_attentions, output_hidden_states, return_dict): 
-          Constructs the GPT2ForQuestionAnswering model and performs question answering.
-    
+        __init__: Initializes the GPT2ForQuestionAnswering instance.
+        forward: Constructs the GPT2ForQuestionAnswering model and performs question answering.
+
     The GPT2ForQuestionAnswering class provides the following functionality:
-    
+
     - Initialization:
+
         - The GPT2ForQuestionAnswering instance is initialized with a 'config' parameter.
         - The 'config' parameter is used to set the 'num_labels' attribute.
         - The 'transformer' attribute is set to an instance of the GPT2Model class with the 'config' parameter.
         - The 'qa_outputs' attribute is set to a neural network layer with 'config.hidden_size' input size and 2 output units.
-    
+
     - Construction:
-        - The 'construct' method constructs the GPT2ForQuestionAnswering model.
+
+        - The 'forward' method forwards the GPT2ForQuestionAnswering model.
         - The method takes several input tensors as parameters, such as 'input_ids', 'attention_mask', 'token_type_ids', etc.
-        - It also takes optional parameters like 'start_positions', 'end_positions', 'output_attentions', 'output_hidden_states', and 'return_dict'.
-        - The method returns a tuple of outputs, including 'start_logits' and 'end_logits', which represent the predicted start and end positions for the answer span.
-        - If 'start_positions' and 'end_positions' are provided, the method calculates the loss for the question answering task and returns the total loss along with the outputs.
-    
-    Note: The method parameters and return types are defined using MindSpore framework's type hints.
+        - It also takes optional parameters like 'start_positions', 'end_positions', 'output_attentions',
+        'output_hidden_states', and 'return_dict'.
+        - The method returns a tuple of outputs, including 'start_logits' and 'end_logits', which represent the
+        predicted start and end positions for the answer span.
+        - If 'start_positions' and 'end_positions' are provided, the method calculates the loss for the question
+        answering task and returns the total loss along with the outputs.
+
+    Note:
+        The method parameters and return types are defined using MindSpore framework's type hints.
     """
     def __init__(self, config):
         """
@@ -1760,26 +1869,28 @@ class GPT2ForQuestionAnswering(GPT2PreTrainedModel):
         
         Args:
             self (GPT2ForQuestionAnswering): The instance of the GPT2ForQuestionAnswering class.
-            config: Configuration object containing necessary settings for the model initialization.
-                Type: object
-                Purpose: Configures the model based on the provided settings.
-                Restrictions: Must be a valid configuration object.
+            config:
+                Configuration object containing necessary settings for the model initialization.
+
+                - Type: object
+                - Purpose: Configures the model based on the provided settings.
+                - Restrictions: Must be a valid configuration object.
         
         Returns:
-            None: This method does not return any value.
+            None.
         
         Raises:
-            N/A
+            None.
         """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = GPT2Model(config)
-        self.qa_outputs = nn.Dense(config.hidden_size, 2)
+        self.qa_outputs = nn.Linear(config.hidden_size, 2)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1794,14 +1905,15 @@ class GPT2ForQuestionAnswering(GPT2PreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         r"""
-        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
+        Args:
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the start of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for position (index) of the end of the labelled span for computing the token classification loss.
+                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+                are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1836,8 +1948,8 @@ class GPT2ForQuestionAnswering(GPT2PreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

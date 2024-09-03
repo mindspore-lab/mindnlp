@@ -31,7 +31,6 @@ class CanineConfig(PretrainedConfig):
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
 
-
     Args:
         hidden_size (`int`, *optional*, defaults to 768):
             Dimension of the encoder layers and the pooler layer.
@@ -77,19 +76,19 @@ class CanineConfig(PretrainedConfig):
             TPU/XLA memory alignment.
 
     Example:
-
-    ```python
-    >>> from transformers import CanineConfig, CanineModel
-
-    >>> # Initializing a CANINE google/canine-s style configuration
-    >>> configuration = CanineConfig()
-
-    >>> # Initializing a model (with random weights) from the google/canine-s style configuration
-    >>> model = CanineModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        ```python
+        >>> from transformers import CanineConfig, CanineModel
+        ...
+        >>> # Initializing a CANINE google/canine-s style configuration
+        >>> configuration = CanineConfig()
+        ...
+        >>> # Initializing a model (with random weights) from the google/canine-s style configuration
+        >>> model = CanineModel(configuration)
+        ...
+        >>> # Accessing the model configuration
+        >>> configuration = model.config
+        ```
+    """
 
     model_type = "canine"
 

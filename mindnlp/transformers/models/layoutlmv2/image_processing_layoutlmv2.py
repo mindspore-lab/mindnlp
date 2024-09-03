@@ -47,13 +47,12 @@ logger = logging.get_logger(__name__)
 
 def normalize_box(box, width, height):
     """
-
     Args:
         box:
         width:
         height:
 
-    Returns:
+    Returns: list
     """
     return [
         int(1000 * (box[0] / width)),
@@ -143,15 +142,18 @@ class LayoutLMv2ImageProcessor(BaseImageProcessor):
         Args:
             self: The LayoutLMv2ImageProcessor instance.
             do_resize (bool): Indicates whether to perform image resizing. Defaults to True.
-            size (Dict[str, int]): A dictionary specifying the height and width for resizing the image. Defaults to {'height': 224, 'width': 224}.
-            resample (PILImageResampling): The resampling filter to use when resizing the image. Defaults to PILImageResampling.BILINEAR.
+            size (Dict[str, int]): A dictionary specifying the height and width for resizing the image.
+                Defaults to {'height': 224, 'width': 224}.
+            resample (PILImageResampling): The resampling filter to use when resizing the image.
+                Defaults to PILImageResampling.BILINEAR.
             apply_ocr (bool): Indicates whether optical character recognition (OCR) should be applied. Defaults to True.
             ocr_lang (Optional[str]): The language for OCR. If None, the default language is used. Defaults to None.
-            tesseract_config (Optional[str]): Configuration options for the Tesseract OCR engine. Defaults to an empty string.
+            tesseract_config (Optional[str]): Configuration options for the Tesseract OCR engine.
+                Defaults to an empty string.
             **kwargs: Additional keyword arguments.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -202,12 +204,14 @@ class LayoutLMv2ImageProcessor(BaseImageProcessor):
             data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the output image. If unset, the channel dimension format of the input
                 image is used. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
             input_data_format (`ChannelDimension` or `str`, *optional*):
                 The channel dimension format for the input image. If unset, the channel dimension format is inferred
                 from the input image. Can be one of:
+
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
@@ -265,15 +269,17 @@ class LayoutLMv2ImageProcessor(BaseImageProcessor):
                 Tesseract.
             return_tensors (`str` or `TensorType`, *optional*):
                 The type of tensors to return. Can be one of:
-                    - Unset: Return a list of `np.ndarray`.
-                    - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
-                    - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
-                    - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
-                    - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
+
+                - Unset: Return a list of `np.ndarray`.
+                - `TensorType.TENSORFLOW` or `'tf'`: Return a batch of type `tf.Tensor`.
+                - `TensorType.PYTORCH` or `'pt'`: Return a batch of type `torch.Tensor`.
+                - `TensorType.NUMPY` or `'np'`: Return a batch of type `np.ndarray`.
+                - `TensorType.JAX` or `'jax'`: Return a batch of type `jax.numpy.ndarray`.
             data_format (`ChannelDimension` or `str`, *optional*, defaults to `ChannelDimension.FIRST`):
                 The channel dimension format for the output image. Can be one of:
-                    - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
-                    - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
+
+                - `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
+                - `ChannelDimension.LAST`: image in (height, width, num_channels) format.
         """
         do_resize = do_resize if do_resize is not None else self.do_resize
         size = size if size is not None else self.size

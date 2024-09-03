@@ -12,9 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" mT5 model configuration"""
-from mindnlp.utils import logging
+"""mT5 model configuration"""
 from ...configuration_utils import PretrainedConfig
+from ....utils import logging
 
 
 logger = logging.get_logger(__name__)
@@ -25,7 +25,7 @@ class MT5Config(PretrainedConfig):
     This is the configuration class to store the configuration of a [`MT5Model`] or a [`TFMT5Model`]. It is used to
     instantiate a mT5 model according to the specified arguments, defining the model architecture. Instantiating a
     configuration with the defaults will yield a similar configuration to that of the mT5
-    [google/mt5-small](https://hf-mirror.com/google/mt5-small) architecture.
+    [google/mt5-small](https://huggingface.co/google/mt5-small) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -65,8 +65,10 @@ class MT5Config(PretrainedConfig):
         use_cache (`bool`, *optional*, defaults to `True`):
             Whether or not the model should return the last key/values attentions (not used by all models).
     """
+
     model_type = "mt5"
     keys_to_ignore_at_inference = ["past_key_values"]
+    attribute_map = {"hidden_size": "d_model", "num_attention_heads": "num_heads", "num_hidden_layers": "num_layers"}
 
     def __init__(
         self,
@@ -93,47 +95,6 @@ class MT5Config(PretrainedConfig):
         classifier_dropout=0.0,
         **kwargs,
     ):
-        """
-        Initialize a new MT5Config object.
-        
-        Args:
-        - vocab_size (int): The size of the vocabulary.
-        - d_model (int): The dimension of the model.
-        - d_kv (int): The dimension of the key and value vectors in the attention mechanism.
-        - d_ff (int): The dimension of the feed-forward network.
-        - num_layers (int): The total number of layers in the model.
-        - num_decoder_layers (int): The number of decoder layers. If None, it defaults to the total number of layers.
-        - num_heads (int): The number of attention heads in the multi-head attention mechanism.
-        - relative_attention_num_buckets (int): The number of buckets for relative position embeddings.
-        - relative_attention_max_distance (int): The maximum distance for relative position embeddings.
-        - dropout_rate (float): The dropout rate for regularization.
-        - layer_norm_epsilon (float): The epsilon value for layer normalization.
-        - initializer_factor (float): The factor for initializing parameters.
-        - feed_forward_proj (str): The type of feed-forward projection function.
-        - is_encoder_decoder (bool): Indicates whether the model is an encoder-decoder architecture.
-        - use_cache (bool): Indicates whether caching is enabled.
-        - tokenizer_class (str): The class name of the tokenizer.
-        - tie_word_embeddings (bool): Indicates whether word embeddings are tied in the model.
-        - pad_token_id (int): The token ID for padding.
-        - eos_token_id (int): The token ID for end-of-sequence.
-        - decoder_start_token_id (int): The token ID for the decoder start token.
-        - classifier_dropout (float): The dropout rate for the classifier.
-        
-        Returns:
-        None
-        
-        Raises:
-        - ValueError: If the feed_forward_proj format is invalid or not supported.
-        """
-        super().__init__(
-            is_encoder_decoder=is_encoder_decoder,
-            tokenizer_class=tokenizer_class,
-            tie_word_embeddings=tie_word_embeddings,
-            pad_token_id=pad_token_id,
-            eos_token_id=eos_token_id,
-            decoder_start_token_id=decoder_start_token_id,
-            **kwargs,
-        )
         self.vocab_size = vocab_size
         self.d_model = d_model
         self.d_kv = d_kv
@@ -167,52 +128,14 @@ class MT5Config(PretrainedConfig):
         if feed_forward_proj == "gated-gelu":
             self.dense_act_fn = "gelu_new"
 
-    @property
-    def hidden_size(self):
-        """
-        Returns the hidden size of the MT5Config.
-        
-        Args:
-            self: An instance of the MT5Config class.
-        
-        Returns:
-            int: The hidden size (d_model) of the MT5Config.
-        
-        Raises:
-            None.
-        """
-        return self.d_model
-
-    @property
-    def num_attention_heads(self):
-        """
-        This method, num_attention_heads, is a property method within the MT5Config class, and it takes one parameter, self.
-        
-        Args:
-            self (object): A reference to the instance of the class.
-            
-        Returns:
-            None: This method returns the value of 'num_heads' attribute.
-        
-        Raises:
-            This method does not raise any exceptions.
-        """
-        return self.num_heads
-
-    @property
-    def num_hidden_layers(self):
-        '''
-        Returns the number of hidden layers in the MT5Config.
-        
-        Args:
-            self: The instance of the MT5Config class.
-        
-        Returns:
-            None
-        
-        Raises:
-            This method does not raise any exceptions.
-        '''
-        return self.num_layers
+        super().__init__(
+            is_encoder_decoder=is_encoder_decoder,
+            tokenizer_class=tokenizer_class,
+            tie_word_embeddings=tie_word_embeddings,
+            pad_token_id=pad_token_id,
+            eos_token_id=eos_token_id,
+            decoder_start_token_id=decoder_start_token_id,
+            **kwargs,
+        )
 
 __all__ = ['MT5Config']

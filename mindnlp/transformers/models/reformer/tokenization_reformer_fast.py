@@ -107,14 +107,16 @@ class ReformerTokenizerFast(PreTrainedTokenizerFast):
         
         Args:
             self: The instance of the class.
-            vocab_file (str): The path to the vocabulary file. If not provided, the tokenizer will use a default vocabulary.
-            tokenizer_file (str): The path to the tokenizer file. If not provided, the tokenizer will use a default tokenizer.
+            vocab_file (str): The path to the vocabulary file. If not provided, the tokenizer will use a
+                default vocabulary.
+            tokenizer_file (str): The path to the tokenizer file. If not provided, the tokenizer will use a
+                default tokenizer.
             eos_token (str): The end-of-sequence token. Defaults to '</s>'.
             unk_token (str): The unknown token. Defaults to '<unk>'.
             additional_special_tokens (list): A list of additional special tokens to be added to the vocabulary.
         
         Returns:
-            None. This method does not return any value.
+            None.
         
         Raises:
             None.
@@ -160,7 +162,8 @@ class ReformerTokenizerFast(PreTrainedTokenizerFast):
             Tuple[str]: A tuple containing the path to the saved vocabulary file.
         
         Raises:
-            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
+            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary
+                for a slow tokenizer.
             OSError: If the specified save_directory is not a valid directory.
         """
         if not self.can_save_slow_tokenizer:

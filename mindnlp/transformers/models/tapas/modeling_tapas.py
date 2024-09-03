@@ -12,17 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch TAPAS model."""
+"""MindSpore TAPAS model."""
 
 import enum
 import math
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
-import numpy as np
 
 import mindspore
-from mindspore import nn, ops
-from mindspore.common.initializer import initializer, Normal
+from mindnlp.core import nn, ops, distributions
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling, MaskedLMOutput, SequenceClassifierOutput
@@ -41,22 +40,13 @@ from .configuration_tapas import TapasConfig
 
 logger = logging.get_logger(__name__)
 
-
 _CONFIG_FOR_DOC = "TapasConfig"
 _CHECKPOINT_FOR_DOC = "google/tapas-base"
 
 
 EPSILON_ZERO_DIVISION = 1e-10
-EPSILON_PROB_ZERO_DIVISION = 1e-6 #避免出现概率出现0报错
 CLOSE_ENOUGH_TO_LOG_ZERO = -10000.0
 MAX_ENOUGH_VAlUE = 1e10
-
-def softmax_with_epsilon(logits):
-    #由于mindspore分布不允许存在0概率项，所有修改保证输出概率值不存在0
-    probs  = ops.softmax(logits)
-    probs = probs + EPSILON_PROB_ZERO_DIVISION #probs不能存在0
-    probs = probs/probs.sum(axis=-1, keepdims=True)
-    return probs
 
 
 @dataclass
@@ -89,8 +79,7 @@ class TableQuestionAnsweringOutput(ModelOutput):
     attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
-
-class TapasEmbeddings(nn.Cell):
+class TapasEmbeddings(nn.Module):
     """
     Construct the embeddings from word, position and token_type embeddings. Same as BertEmbeddings but with a number of
     additional token type embeddings to encode tabular structure.
@@ -112,18 +101,19 @@ class TapasEmbeddings(nn.Cell):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.config = config
 
-    def construct(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
+    def forward(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
         if input_ids is not None:
             input_shape = input_ids.shape
         else:
             input_shape = inputs_embeds.shape[:-1]
 
         seq_length = input_shape[1]
+
         if position_ids is None:
             # create absolute position embeddings
             position_ids = ops.arange(seq_length, dtype=mindspore.int64)
@@ -142,7 +132,8 @@ class TapasEmbeddings(nn.Cell):
                 first_position = gather(first_position_per_segment, full_index)
                 # shape (1, seq_len)
                 position = ops.arange(seq_length, dtype=mindspore.int64).unsqueeze(0)
-                position_ids = ops.minimum(self.config.max_position_embeddings - 1, position - first_position
+                position_ids = ops.minimum(
+                    ops.as_tensor(self.config.max_position_embeddings - 1), position - first_position
                 )
 
         if token_type_ids is None:
@@ -166,7 +157,7 @@ class TapasEmbeddings(nn.Cell):
         return embeddings
 
 
-class TapasSelfAttention(nn.Cell):
+class TapasSelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -179,11 +170,11 @@ class TapasSelfAttention(nn.Cell):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.query = nn.Dense(config.hidden_size, self.all_head_size)
-        self.key = nn.Dense(config.hidden_size, self.all_head_size)
-        self.value = nn.Dense(config.hidden_size, self.all_head_size)
+        self.query = nn.Linear(config.hidden_size, self.all_head_size)
+        self.key = nn.Linear(config.hidden_size, self.all_head_size)
+        self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
-        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
         self.is_decoder = config.is_decoder
 
     def transpose_for_scores(self, x):
@@ -191,7 +182,7 @@ class TapasSelfAttention(nn.Cell):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -220,8 +211,8 @@ class TapasSelfAttention(nn.Cell):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], axis=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], axis=2)
+            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -232,14 +223,14 @@ class TapasSelfAttention(nn.Cell):
             past_key_value = (key_layer, value_layer)
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_layer, ops.transpose(key_layer, -1, -2))
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
         if attention_mask is not None:
-            # Apply the attention mask is (precomputed for all layers in TapasModel construct() function)
+            # Apply the attention mask is (precomputed for all layers in TapasModel forward() function)
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, axis=-1)
+        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -262,21 +253,21 @@ class TapasSelfAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfOutput
-class TapasSelfOutput(nn.Cell):
+class TapasSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class TapasAttention(nn.Cell):
+class TapasAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.self = TapasSelfAttention(config)
@@ -295,15 +286,15 @@ class TapasAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    # Copied from transformers.models.bert.modeling_bert.BertAttention.construct
-    def construct(
+    # Copied from transformers.models.bert.modeling_bert.BertAttention.forward
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -328,37 +319,37 @@ class TapasAttention(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate
-class TapasIntermediate(nn.Cell):
+class TapasIntermediate(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput
-class TapasOutput(nn.Cell):
+class TapasOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class TapasLayer(nn.Cell):
+class TapasLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -373,8 +364,8 @@ class TapasLayer(nn.Cell):
         self.intermediate = TapasIntermediate(config)
         self.output = TapasOutput(config)
 
-    # Copied from transformers.models.bert.modeling_bert.BertLayer.construct
-    def construct(
+    # Copied from transformers.models.bert.modeling_bert.BertLayer.forward
+    def forward(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -446,14 +437,14 @@ class TapasLayer(nn.Cell):
         return layer_output
 
 
-class TapasEncoder(nn.Cell):
+class TapasEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([TapasLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList([TapasLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
-    def construct(
+    def forward(
         self,
         hidden_states,
         attention_mask=None,
@@ -510,13 +501,13 @@ class TapasEncoder(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPooler
-class TapasPooler(nn.Cell):
+class TapasPooler(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -526,17 +517,17 @@ class TapasPooler(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPredictionHeadTransform with Bert->Tapas
-class TapasPredictionHeadTransform(nn.Cell):
+class TapasPredictionHeadTransform(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         if isinstance(config.hidden_act, str):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.transform_act_fn(hidden_states)
         hidden_states = self.LayerNorm(hidden_states)
@@ -544,16 +535,16 @@ class TapasPredictionHeadTransform(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertLMPredictionHead with Bert->Tapas
-class TapasLMPredictionHead(nn.Cell):
+class TapasLMPredictionHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.transform = TapasPredictionHeadTransform(config)
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
-        self.bias = mindspore.Parameter(ops.zeros(config.vocab_size), name='bias')
+        self.bias = nn.Parameter(ops.zeros(config.vocab_size))
 
         # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
         self.decoder.bias = self.bias
@@ -561,19 +552,19 @@ class TapasLMPredictionHead(nn.Cell):
     def _tie_weights(self):
         self.decoder.bias = self.bias
 
-    def construct(self, hidden_states):
+    def forward(self, hidden_states):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOnlyMLMHead with Bert->Tapas
-class TapasOnlyMLMHead(nn.Cell):
+class TapasOnlyMLMHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.predictions = TapasLMPredictionHead(config)
 
-    def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
         prediction_scores = self.predictions(sequence_output)
         return prediction_scores
 
@@ -587,80 +578,24 @@ class TapasPreTrainedModel(PreTrainedModel):
     config_class = TapasConfig
     base_model_prefix = "tapas"
     supports_gradient_checkpointing = True
+    _supports_param_buffer_assignment = False
 
     # Copied from transformers.models.bert.modeling_bert.BertPreTrainedModel._init_weights
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Dense, nn.Conv2d)):
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            cell.weight.initialize(Normal(self.config.initializer_range))
-            if cell.padding_idx is not None:
-                cell.weight[cell.padding_idx] = 0
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-
-
-TAPAS_START_DOCSTRING = r"""
-    This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
-    library implements for all its models (such as downloading or saving, resizing the input embeddings, pruning heads
-    etc.)
-
-    This model is also a PyTorch [ops.nn.Cell](https://pyops.org/docs/stable/nn.html#ops.nn.Cell) subclass.
-    Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
-    and behavior.
-
-    Parameters:
-        config ([`TapasConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-TAPAS_INPUTS_DOCSTRING = r"""
-    Args:
-        input_ids (`mindspore.Tensor` of shape `({0})`):
-            Indices of input sequence tokens in the vocabulary. Indices can be obtained using [`AutoTokenizer`]. See
-            [`PreTrainedTokenizer.encode`] and [`PreTrainedTokenizer.__call__`] for details.
-
-            [What are input IDs?](../glossary#input-ids)
-        attention_mask (`mindspore.Tensor` of shape `({0})`, *optional*):
-            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-
-            [What are attention masks?](../glossary#attention-mask)
-        token_type_ids (`mindspore.Tensor` of shape `({0}, 7)`, *optional*):
-            Token indices that encode tabular structure. Indices can be obtained using [`AutoTokenizer`]. See this
-            class for more info.
-
-            [What are token type IDs?](../glossary#token-type-ids)
-        position_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
-            Indices of positions of each input sequence tokens in the position embeddings. If
-            `reset_position_index_per_cell` of [`TapasConfig`] is set to `True`, relative position embeddings will be
-            used. Selected in the range `[0, config.max_position_embeddings - 1]`.
-
-            [What are position IDs?](../glossary#position-ids)
-        head_mask (`mindspore.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-            Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`: - 1
-            indicates the head is **not masked**, - 0 indicates the head is **masked**.
-        inputs_embeds (`mindspore.Tensor` of shape `({0}, hidden_size)`, *optional*):
-            Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation. This
-            is useful if you want more control over how to convert `input_ids` indices into associated vectors than the
-            model's internal embedding lookup matrix.
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
+        if isinstance(module, nn.Linear):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight[module.padding_idx] = 0
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
 
 class TapasModel(TapasPreTrainedModel):
@@ -700,7 +635,7 @@ class TapasModel(TapasPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -754,7 +689,6 @@ class TapasModel(TapasPreTrainedModel):
             input_shape = inputs_embeds.shape[:-1]
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
-
 
         if attention_mask is None:
             attention_mask = ops.ones(input_shape)
@@ -833,7 +767,7 @@ class TapasForMaskedLM(TapasPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
         self.cls.predictions.bias = new_embeddings.bias
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -904,8 +838,8 @@ class TapasForMaskedLM(TapasPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            loss_fct = ops.cross_entropy  # -100 index = padding token
-            masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.reshape(-1))
+            loss_fct = CrossEntropyLoss()  # -100 index = padding token
+            masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
@@ -918,6 +852,7 @@ class TapasForMaskedLM(TapasPreTrainedModel):
             attentions=outputs.attentions,
         )
 
+
 class TapasForQuestionAnswering(TapasPreTrainedModel):
     def __init__(self, config: TapasConfig):
         super().__init__(config)
@@ -926,33 +861,34 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
         self.tapas = TapasModel(config)
 
         # dropout (only used when training)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         # cell selection heads
         if config.init_cell_selection_weights_to_zero:
             # init_cell_selection_weights_to_zero: Whether the initial weights should be
             # set to 0. This ensures that all tokens have the same prior probability.
-            self.output_weights = mindspore.Parameter(ops.zeros(config.hidden_size), name='output_weights')
-            self.column_output_weights = mindspore.Parameter(ops.zeros(config.hidden_size), name ='column_output_weights')
+            self.output_weights = nn.Parameter(ops.zeros(config.hidden_size))
+            self.column_output_weights = nn.Parameter(ops.zeros(config.hidden_size))
         else:
-            self.output_weights = mindspore.Parameter(initializer(Normal(config.initializer_range),
-                                        (config.hidden_size,), mindspore.float32),name='output_weights')
-
-            self.column_output_weights = mindspore.Parameter(initializer(Normal(config.initializer_range),
-                                        (config.hidden_size,), mindspore.float32),name='column_output_weights')
-            # here, a truncated normal is used in the original implementation
-
-        self.output_bias = mindspore.Parameter(ops.zeros([1]), name='output_bias')
-        self.column_output_bias = mindspore.Parameter(ops.zeros([1]),name='column_output_bias')
+            self.output_weights = nn.Parameter(ops.empty(config.hidden_size))
+            nn.init.normal_(
+                self.output_weights, std=config.initializer_range
+            )  # here, a truncated normal is used in the original implementation
+            self.column_output_weights = nn.Parameter(ops.empty(config.hidden_size))
+            nn.init.normal_(
+                self.column_output_weights, std=config.initializer_range
+            )  # here, a truncated normal is used in the original implementation
+        self.output_bias = nn.Parameter(ops.zeros([]))
+        self.column_output_bias = nn.Parameter(ops.zeros([]))
 
         # aggregation head
         if config.num_aggregation_labels > 0:
-            self.aggregation_classifier = nn.Dense(config.hidden_size, config.num_aggregation_labels)
+            self.aggregation_classifier = nn.Linear(config.hidden_size, config.num_aggregation_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1034,6 +970,7 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
+
         sequence_output = outputs[0]
         pooled_output = outputs[1]
 
@@ -1043,7 +980,6 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
             input_shape = input_ids.shape
         else:
             input_shape = inputs_embeds.shape[:-1]
-
 
         # Construct indices for the table.
         if token_type_ids is None:
@@ -1065,12 +1001,12 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
         column_ids = token_type_ids[:, :, token_types.index("column_ids")]
 
         row_index = IndexMap(
-            indices=ops.minimum(row_ids, self.config.max_num_rows - 1),
+            indices=ops.minimum(row_ids, ops.as_tensor(self.config.max_num_rows - 1)),
             num_segments=self.config.max_num_rows,
             batch_dims=1,
         )
         col_index = IndexMap(
-            indices=ops.minimum(column_ids, self.config.max_num_columns - 1),
+            indices=ops.minimum(column_ids, ops.as_tensor(self.config.max_num_columns - 1)),
             num_segments=self.config.max_num_columns,
             batch_dims=1,
         )
@@ -1091,6 +1027,7 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
 
         # Compute logits per token. These are used to select individual cells.
         logits = compute_token_logits(sequence_output, self.config.temperature, self.output_weights, self.output_bias)
+
         # Compute logits per column. These are used to select a column.
         column_logits = None
         if self.config.select_one_column:
@@ -1144,9 +1081,7 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
             if self.config.average_logits_per_cell:
                 logits_per_cell, _ = reduce_mean(logits, cell_index)
                 logits = gather(logits_per_cell, cell_index)
-
-            probs = softmax_with_epsilon(logits)
-            dist_per_token = nn.probability.distribution.Bernoulli(probs=probs)
+            dist_per_token = distributions.Bernoulli(logits=logits)
 
             # Compute cell selection loss per example.
             selection_loss_per_example = None
@@ -1164,8 +1099,7 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
                 selection_loss_per_example, logits = _single_column_cell_selection_loss(
                     logits, column_logits, labels, cell_index, col_index, cell_mask
                 )
-                probs = softmax_with_epsilon(logits)
-                dist_per_token = nn.probability.distribution.Bernoulli(probs=probs)
+                dist_per_token = distributions.Bernoulli(logits=logits)
 
             # Supervised cell selection
             if self.config.disable_per_token_loss:
@@ -1232,6 +1166,7 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
                         )
 
                 total_loss += ops.mean(per_example_additional_loss)
+
         else:
             # if no label ids are provided, set them to zeros in order to properly compute logits
             labels = ops.zeros_like(logits)
@@ -1250,19 +1185,20 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
             attentions=outputs.attentions,
         )
 
+
 class TapasForSequenceClassification(TapasPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
 
         self.tapas = TapasModel(config)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def construct(
+    def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
@@ -1288,7 +1224,7 @@ class TapasForSequenceClassification(TapasPreTrainedModel):
 
         ```python
         >>> from transformers import AutoTokenizer, TapasForSequenceClassification
-        >>> import ops
+        >>> import torch
         >>> import pandas as pd
 
         >>> tokenizer = AutoTokenizer.from_pretrained("google/tapas-base-finetuned-tabfact")
@@ -1306,7 +1242,7 @@ class TapasForSequenceClassification(TapasPreTrainedModel):
         ... ]
 
         >>> inputs = tokenizer(table=table, queries=queries, padding="max_length", return_tensors="pt")
-        >>> labels = mindspore.Tensor([1, 0])  # 1 means entailed, 0 means refuted
+        >>> labels = mindspore.tensor([1, 0])  # 1 means entailed, 0 means refuted
 
         >>> outputs = model(**inputs, labels=labels)
         >>> loss = outputs.loss
@@ -1342,16 +1278,16 @@ class TapasForSequenceClassification(TapasPreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
-                loss_fct = ops.mse_loss
+                loss_fct = MSELoss()
                 if self.num_labels == 1:
                     loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss_fct = ops.cross_entropy
+                loss_fct = CrossEntropyLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss_fct = ops.binary_cross_entropy_with_logits
+                loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1395,12 +1331,12 @@ class IndexMap:
                 batch dimensions. Segments in different batch elements are always distinct even if they have the same
                 index.
         """
-        self.indices = indices.copy()
-        self.num_segments = mindspore.Tensor(int(num_segments))
+        self.indices = ops.as_tensor(indices)
+        self.num_segments = ops.as_tensor(num_segments)
         self.batch_dims = batch_dims
 
     def batch_shape(self):
-        return self.indices.shape[: self.batch_dims]  # returns a ops.Size object
+        return self.indices.shape[: self.batch_dims]  # returns a tuple object
 
 
 class ProductIndexMap(IndexMap):
@@ -1428,7 +1364,6 @@ class ProductIndexMap(IndexMap):
             num_segments=inner_index.num_segments * outer_index.num_segments,
             batch_dims=inner_index.batch_dims,
         )
-
         self.outer_index = outer_index
         self.inner_index = inner_index
 
@@ -1440,10 +1375,9 @@ class ProductIndexMap(IndexMap):
     def project_inner(self, index):
         """Projects an index with the same index set onto the inner components."""
         return IndexMap(
-            indices=ops.fmod(index.indices.type(mindspore.int32), self.inner_index.num_segments.type(mindspore.int32))
-            .type(mindspore.float32)
+            indices=ops.fmod(index.indices.to(mindspore.float32), self.inner_index.num_segments.to(mindspore.float32))
             .floor()
-            .type(mindspore.int64),
+            .to(mindspore.int64),
             num_segments=self.inner_index.num_segments,
             batch_dims=index.batch_dims,
         )
@@ -1468,7 +1402,7 @@ def gather(values, index, name="segmented_gather"):
     indices = index.indices
     # first, check whether the indices of the index represent scalar values (i.e. not vectorized)
     if len(values.shape[index.batch_dims :]) < 2:
-        return ops.gather_elements(
+        return ops.gather(
             values,
             index.batch_dims,
             indices.view(
@@ -1476,8 +1410,10 @@ def gather(values, index, name="segmented_gather"):
             ),  # ops.gather expects index to have the same number of dimensions as values
         ).view(indices.shape)
     else:
+        # this means we have a vectorized version
+        # we have to adjust the index
         indices = indices.unsqueeze(-1).broadcast_to(values.shape)
-        return ops.gather_elements(values, index.batch_dims, indices)
+        return ops.gather(values, index.batch_dims, indices)
 
 
 def flatten(index, name="segmented_flatten"):
@@ -1497,12 +1433,11 @@ def flatten(index, name="segmented_flatten"):
         (`IndexMap`): The flattened IndexMap.
     """
     # first, get batch_size as scalar tensor
-    batch_size = ops.prod(mindspore.Tensor(list(index.batch_shape()),dtype = mindspore.float32)).to(mindspore.int64)
+    batch_size = math.prod(list(index.batch_shape()))
     # next, create offset as 1-D tensor of length batch_size,
     # and multiply element-wise by num segments (to offset different elements in the batch) e.g. if batch size is 2: [0, 64]
-    batch_size = ops.maximum(batch_size, 1)
-    offset = ops.arange(start=0, end=int(batch_size)) * index.num_segments
-    offset = offset.reshape(index.batch_shape())
+    offset = ops.arange(start=0, end=batch_size) * index.num_segments
+    offset = offset.view(index.batch_shape())
     for _ in range(index.batch_dims, len(index.indices.shape)):  # typically range(1,2)
         offset = offset.unsqueeze(-1)
 
@@ -1515,7 +1450,7 @@ def range_index_map(batch_shape, num_segments, name="range_index_map"):
     Constructs an index map equal to range(num_segments).
 
     Args:
-        batch_shape (`ops.Size`):
+        batch_shape (`tuple`):
             Batch shape
         num_segments (`int`):
             Number of segments
@@ -1525,30 +1460,40 @@ def range_index_map(batch_shape, num_segments, name="range_index_map"):
     Returns:
         (`IndexMap`): IndexMap of shape batch_shape with elements equal to range(num_segments).
     """
-    batch_shape = mindspore.Tensor(
-        batch_shape, dtype=mindspore.int64
-    )  # create a rank 1 tensor vector containing batch_shape (e.g. [2])
-    assert len(batch_shape.shape) == 1
-    num_segments = mindspore.Tensor(num_segments)  # create a rank 0 tensor (scalar) containing num_segments (e.g. 64)
+    if batch_shape:
+        batch_shape = ops.as_tensor(
+            batch_shape, dtype=mindspore.int64
+        )  # create a rank 1 tensor vector containing batch_shape (e.g. [2])
+        assert len(batch_shape.shape) == 1
+    num_segments = ops.as_tensor(num_segments)  # create a rank 0 tensor (scalar) containing num_segments (e.g. 64)
     assert len(num_segments.shape) == 0
 
     indices = ops.arange(
-        start=0, end=num_segments
+        start=0, end=num_segments.item()
     )  # create a rank 1 vector with num_segments elements
-    new_tensor = ops.cat(
-        [ops.ones_like(batch_shape, dtype=mindspore.int64), num_segments.unsqueeze(dim=0)],
-        axis=0,
-    )
+    if isinstance(batch_shape, mindspore.Tensor):
+        new_tensor = ops.cat(
+            [ops.ones_like(batch_shape, dtype=mindspore.int64), num_segments.unsqueeze(dim=0)],
+            dim=0,
+        )
+    else:
+        new_tensor = num_segments.unsqueeze(dim=0)
     # new_tensor is just a vector of [1 64] for example (assuming only 1 batch dimension)
     new_shape = [int(x) for x in new_tensor.tolist()]
-    indices = indices.reshape(new_shape)
+    indices = indices.view(*new_shape)
 
-    multiples = ops.cat([batch_shape, mindspore.Tensor([1])], axis=0)
-    #indices = indices.repeat(multiples.tolist())
+    if isinstance(batch_shape, mindspore.Tensor):
+        multiples = ops.cat([batch_shape, ops.as_tensor([1])], dim=0)
+    else:
+        multiples = ops.as_tensor([1])
+    indices = indices.tile(tuple(multiples.tolist()))
     # equivalent (in Numpy:)
-    indices = mindspore.Tensor(np.tile(indices.numpy(), multiples.tolist()))
-
-    return IndexMap(indices=indices, num_segments=num_segments, batch_dims=list(batch_shape.shape)[0])
+    # indices = ops.as_tensor(np.tile(indices.numpy(), multiples.tolist()))
+    if isinstance(batch_shape, mindspore.Tensor):
+        batch_dims = list(batch_shape.shape)[0]
+    else:
+        batch_dims = 0
+    return IndexMap(indices=indices, num_segments=num_segments, batch_dims=batch_dims)
 
 
 def _segment_reduce(values, index, segment_reduce_fn, name):
@@ -1572,54 +1517,63 @@ def _segment_reduce(values, index, segment_reduce_fn, name):
     # However if `values` has extra dimensions to the right keep them
     # unflattened. Segmented ops support vector-valued operations.
     flat_index = flatten(index)
-    vector_shape = values.shape[len(index.indices.shape) :]  # ops.Size object
-    flattened_shape = ops.cat(
-        [mindspore.Tensor([-1], dtype=mindspore.int64), mindspore.Tensor(vector_shape, dtype=mindspore.int64)], axis=0
-    )
+    vector_shape = values.shape[len(index.indices.shape) :]  # tuple object
+    if vector_shape:
+        flattened_shape = ops.cat(
+            [ops.as_tensor([-1], dtype=mindspore.int64), ops.as_tensor(vector_shape, dtype=mindspore.int64)], dim=0
+        )
+    else:
+        flattened_shape = ops.as_tensor([-1], dtype=mindspore.int64)
     # changed "view" by "reshape" in the following line
-    flat_values = values.view(-1)[:flat_index.indices.shape[0]] #mindspore ops.tensor_scatter_xxx要求index,value shape相同
+    flat_values = values.reshape(flattened_shape.tolist())
 
     out = ops.zeros(int(flat_index.num_segments), dtype=mindspore.float32)
-
-    scatter_fun = ops.tensor_scatter_add
     if segment_reduce_fn == 'amax':
-        scatter_fun = ops.tensor_scatter_max
-        out = ops.ones(int(flat_index.num_segments), dtype=mindspore.float32)*(-MAX_ENOUGH_VAlUE)
+        out = out.view(1, -1)
+        indices_tmp = ops.stack([ops.zeros_like(flat_index.indices.long()), flat_index.indices.long()], dim= -1)
+        segment_means = ops.tensor_scatter_max(out, indices_tmp, flat_values.float())
+        segment_means = segment_means.view(-1)
+        segment_means = ops.where(segment_means < float(ops.finfo(mindspore.float32).min), 0., segment_means)
     elif segment_reduce_fn == 'amin':
-	#ops.tensor_scattle_min没有include_self参数，默认包括，所以这里先将默认值改为MAX_ENOUGH_VAlUE
-        scatter_fun = ops.tensor_scatter_min
-        out = ops.ones(int(flat_index.num_segments), dtype=mindspore.float32)*MAX_ENOUGH_VAlUE
-    elif segment_reduce_fn == 'sum':
-        scatter_fun = ops.tensor_scatter_add
-
-    #ops.tensor_scatter_xxx需要二维以上，所以下面变换成二维tensor再处理
-    out = out.view(1, -1)
-    indices_tmp = ops.stack([ops.zeros_like(flat_index.indices.long()), flat_index.indices.long()], axis = -1)
-    segment_means = scatter_fun(out, indices_tmp, flat_values.float())
-    segment_means = segment_means.view(-1)
+        out = out.view(1, -1)
+        indices_tmp = ops.stack([ops.zeros_like(flat_index.indices.long()), flat_index.indices.long()], dim= -1)
+        segment_means = ops.tensor_scatter_min(out, indices_tmp, flat_values.float())
+        segment_means = segment_means.view(-1)
+        segment_means = ops.where(segment_means > float(ops.finfo(mindspore.float32).max), 0., segment_means)
+    else:
+        segment_means = ops.scatter_add(
+            out, dim=0, index=flat_index.indices.long(), src=flat_values.float()[:flat_index.indices.shape[0]]
+        )
 
     if segment_reduce_fn == 'mean':
-        segment_count = scatter_fun(out, indices_tmp, ops.ones_like(flat_values.float()))
+        segment_count = ops.scatter_add(
+            out, dim=0, index=flat_index.indices.long(), src=ops.ones(flat_index.indices.shape)
+        )
         segment_count = segment_count.view(-1)
         segment_means = segment_means/(segment_count + EPSILON_ZERO_DIVISION)
 
-    if segment_reduce_fn == 'amin':
-        segment_means = ops.where(segment_means > MAX_ENOUGH_VAlUE-1, 0, segment_means)
-
-    if segment_reduce_fn == 'amax':
-        segment_means = ops.where(segment_means < -MAX_ENOUGH_VAlUE+1, 0, segment_means)
 
     # Unflatten the values.
-    new_shape = ops.cat(
-        [
-            mindspore.Tensor(index.batch_shape(), dtype=mindspore.int64),
-            mindspore.Tensor([int(index.num_segments)], dtype=mindspore.int64),
-            mindspore.Tensor(vector_shape, dtype=mindspore.int64),
-        ],
-        axis=0,
-    )
-    output_values = segment_means.reshape(new_shape.tolist()).to(values.dtype)
-    output_index = range_index_map(index.batch_shape(), int(index.num_segments))
+    new_shape = index.num_segments.unsqueeze(0)
+    if vector_shape:
+        new_shape = ops.cat(
+            [
+                new_shape,
+                ops.as_tensor(vector_shape, dtype=mindspore.int64),
+            ],
+            dim=0,
+        )
+    if index.batch_shape():
+        new_shape = ops.cat(
+            [
+                ops.as_tensor(index.batch_shape(), dtype=mindspore.int64),
+                new_shape
+            ],
+            dim=0,
+        )
+
+    output_values = segment_means.copy().view(*new_shape.tolist()).to(values.dtype)
+    output_index = range_index_map(index.batch_shape(), index.num_segments)
     return output_values, output_index
 
 
@@ -1776,10 +1730,14 @@ def compute_column_logits(
 
     # Mask columns that do not appear in the example.
     is_padding = ops.logical_and(cell_count < 0.5, ~ops.eq(out_index.indices, 0))
-    column_logits += CLOSE_ENOUGH_TO_LOG_ZERO * is_padding.to(mindspore.float32)
+    column_logits += CLOSE_ENOUGH_TO_LOG_ZERO * ops.as_tensor(
+        is_padding, dtype=mindspore.float32
+    )
 
     if not allow_empty_column_selection:
-        column_logits += CLOSE_ENOUGH_TO_LOG_ZERO * (ops.eq(out_index.indices, 0).type(mindspore.float32))
+        column_logits += CLOSE_ENOUGH_TO_LOG_ZERO * ops.as_tensor(
+            ops.eq(out_index.indices, 0), dtype=mindspore.float32
+        )
 
     return column_logits
 
@@ -1813,21 +1771,20 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
     # Part 1: column loss
 
     # First find the column we should select. We use the column with maximum number of selected cells.
-    labels_per_column, _ = reduce_sum(labels, col_index)
+    labels_per_column, _ = reduce_sum(ops.as_tensor(labels, dtype=mindspore.float32), col_index)
     # shape of labels_per_column is (batch_size, max_num_cols). It contains the number of label ids for every column, for every example
     column_label = ops.argmax(labels_per_column, dim=-1)  # shape (batch_size,)
     # Check if there are no selected cells in the column. In that case the model
     # should predict the special column id 0, which means "select nothing".
     no_cell_selected = ops.eq(
-        ops.max(labels_per_column, axis=-1)[0], 0
+        ops.max(labels_per_column, dim=-1)[0], 0
     )  # no_cell_selected is of shape (batch_size,) and equals True
     # if an example of the batch has no cells selected (i.e. if there are no labels set to 1 for that example)
     column_label = ops.where(
-        no_cell_selected.reshape(column_label.shape), ops.zeros_like(column_label), column_label
+        no_cell_selected.view(column_label.shape), ops.zeros_like(column_label), column_label
     )
 
-    probs = softmax_with_epsilon(column_logits)
-    column_dist = nn.probability.distribution.Categorical(probs=probs)  # shape (batch_size, max_num_cols)
+    column_dist = distributions.Categorical(logits=column_logits)  # shape (batch_size, max_num_cols)
     column_loss_per_example = -column_dist.log_prob(column_label)
 
     # Part 2: cell loss
@@ -1837,36 +1794,46 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
     logits_per_cell, _ = reduce_mean(token_logits, cell_index)
     # labels_per_cell: shape (batch_size, 64*32), indicating whether each cell should be selected (1) or not (0)
     labels_per_cell, labels_index = reduce_max(
-        labels, cell_index
+        ops.as_tensor(labels, dtype=mindspore.int64), cell_index
     )
+
     # Mask for the selected column.
     # column_id_for_cells: shape (batch_size, 64*32), indicating to which column each cell belongs
     column_id_for_cells = cell_index.project_inner(labels_index).indices
     # column_mask: shape (batch_size, 64*32), equal to 1 if cell belongs to column to be selected
-    column_mask = ops.eq(column_id_for_cells, ops.unsqueeze(column_label, dim=-1)).type(mindspore.float32)
+    column_mask = ops.as_tensor(
+        ops.eq(column_id_for_cells, ops.unsqueeze(column_label, dim=-1)),
+        dtype=mindspore.float32,
+    )
 
     # Compute the log-likelihood for cells, but only for the selected column.
-    probs = softmax_with_epsilon(logits_per_cell)
-    cell_dist = nn.probability.distribution.Bernoulli(probs=probs)  # shape (batch_size, 64*32)
+    cell_dist = distributions.Bernoulli(logits=logits_per_cell)  # shape (batch_size, 64*32)
     cell_log_prob = cell_dist.log_prob(labels_per_cell.type(mindspore.float32))  # shape(batch_size, 64*32)
+
     cell_loss = -ops.sum(cell_log_prob * column_mask * cell_mask, dim=1)
 
     # We need to normalize the loss by the number of cells in the column.
     cell_loss /= ops.sum(column_mask * cell_mask, dim=1) + EPSILON_ZERO_DIVISION
+
     selection_loss_per_example = column_loss_per_example
     selection_loss_per_example += ops.where(
         no_cell_selected.view(selection_loss_per_example.shape),
         ops.zeros_like(selection_loss_per_example),
         cell_loss,
     )
+
     # Set the probs outside the selected column (selected by the *model*)
     # to 0. This ensures backwards compatibility with models that select
     # cells from multiple columns.
-    selected_column_id = ops.argmax(column_logits, dim=-1).type(mindspore.int64)
-     # shape (batch_size,)
+    selected_column_id = ops.as_tensor(
+        ops.argmax(column_logits, dim=-1), dtype=mindspore.int64
+    )  # shape (batch_size,)
 
     # selected_column_mask: shape (batch_size, 64*32), equal to 1 if cell belongs to column selected by the model
-    selected_column_mask = ops.eq(column_id_for_cells, ops.unsqueeze(selected_column_id, dim=-1)).type(mindspore.float32)
+    selected_column_mask = ops.as_tensor(
+        ops.eq(column_id_for_cells, ops.unsqueeze(selected_column_id, dim=-1)),
+        dtype=mindspore.float32,
+    )
 
     # Never select cells with the special column id 0.
     selected_column_mask = ops.where(
@@ -1876,6 +1843,7 @@ def _single_column_cell_selection_loss(token_logits, column_logits, labels, cell
     )
     new_logits_per_cell = logits_per_cell + CLOSE_ENOUGH_TO_LOG_ZERO * (1.0 - cell_mask * selected_column_mask)
     logits = gather(new_logits_per_cell, cell_index)
+
     return selection_loss_per_example, logits
 
 
@@ -1920,17 +1888,16 @@ def _calculate_aggregate_mask(answer, pooled_output, cell_selection_preference, 
         cell_selection_preference (`float`):
             Preference for cell selection in ambiguous cases.
         labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
-            Labels per token. aggregation_classifier (`ops.nn.Dense`): Aggregation head
+            Labels per token. aggregation_classifier (`nn.Linear`): Aggregation head
 
     Returns:
         aggregate_mask (`mindspore.Tensor` of shape `(batch_size,)`): A mask set to 1 for examples that should use
         aggregation functions.
     """
     # mindspore.Tensor(batch_size,)
-    aggregate_mask_init = ops.logical_not(ops.isnan(answer))#.type(mindspore.Tensor)
+    aggregate_mask_init = ops.logical_not(ops.isnan(answer)).to(mindspore.float32)
     logits_aggregation = aggregation_classifier(pooled_output)
-    probs = softmax_with_epsilon(logits_aggregation)
-    dist_aggregation = nn.probability.distribution.Categorical(probs=probs)
+    dist_aggregation = distributions.categorical.Categorical(logits=logits_aggregation)
     # Index 0 corresponds to "no aggregation".
     aggregation_ops_total_mass = ops.sum(dist_aggregation.probs[:, 1:], dim=1)
 
@@ -1941,14 +1908,12 @@ def _calculate_aggregate_mask(answer, pooled_output, cell_selection_preference, 
     is_cell_supervision_available = ops.sum(labels, dim=1) > 0
 
     # ops.where is not equivalent to tf.where (in tensorflow 1)
-    # hence the added .reshape on the condition to match the shape of the first tensor
+    # hence the added .view on the condition to match the shape of the first tensor
     aggregate_mask = ops.where(
         ops.logical_and(is_pred_cell_selection, is_cell_supervision_available).view(aggregate_mask_init.shape),
         ops.zeros_like(aggregate_mask_init, dtype=mindspore.float32),
-        aggregate_mask_init.to(mindspore.float32),
+        aggregate_mask_init,
     )
-
-    #aggregate_mask = aggregate_mask
 
     return aggregate_mask
 
@@ -1986,8 +1951,8 @@ def _calculate_aggregation_loss_known(
         # Use aggregation supervision as the target.
         target_aggregation = aggregation_labels
 
-    one_hot_labels = ops.one_hot(target_aggregation, depth=num_aggregation_labels, on_value=1.0, off_value=0.0).type(mindspore.float32)
-    log_probs = ops.log_softmax(logits_aggregation, axis=-1)
+    one_hot_labels = nn.functional.one_hot(target_aggregation, num_classes=num_aggregation_labels).type(mindspore.float32)
+    log_probs = nn.functional.log_softmax(logits_aggregation, dim=-1)
 
     # mindspore.Tensor[batch_size]
     per_example_aggregation_intermediate = -ops.sum(one_hot_labels * log_probs, dim=-1)
@@ -2013,8 +1978,7 @@ def _calculate_aggregation_loss_unknown(logits_aggregation, aggregate_mask):
         aggregation_loss_unknown (`mindspore.Tensor` of shape `(batch_size,)`): Aggregation loss (in case of answer
         supervision) per example.
     """
-    probs = softmax_with_epsilon(logits_aggregation)
-    dist_aggregation = nn.probability.distribution.Categorical(probs=probs)
+    dist_aggregation = distributions.categorical.Categorical(logits=logits_aggregation)
     # Index 0 corresponds to "no aggregation".
     aggregation_ops_total_mass = ops.sum(dist_aggregation.probs[:, 1:], dim=1)
     # Predict some aggregation in case of an answer that needs aggregation.
@@ -2069,7 +2033,7 @@ def _calculate_expected_result(
     Calculates the expected result given cell and aggregation probabilities.
 
     Args:
-        dist_per_cell (`ops.distributions.Bernoulli`):
+        dist_per_cell (`distributions.Bernoulli`):
             Cell selection distribution for each cell.
         numeric_values (`mindspore.Tensor` of shape `(batch_size, seq_length)`):
             Numeric values of every token. Nan for tokens which are not numeric values.
@@ -2086,8 +2050,7 @@ def _calculate_expected_result(
         expected_result (`mindspore.Tensor` of shape `(batch_size,)`): The expected result per example.
     """
     if config.use_gumbel_for_cells:
-        #mindspore存在RelaxedBernoulli实现
-        gumbel_dist = nn.probability.distribution.RelaxedBernoulli(
+        gumbel_dist = distributions.RelaxedBernoulli(
             # The token logits where already divided by the temperature and used for
             # computing cell selection errors so we need to multiply it again here
             temperature=config.temperature,
@@ -2126,16 +2089,15 @@ def _calculate_expected_result(
         raise ValueError(f"Invalid average_approximation_function: {config.average_approximation_function}")
 
     if config.use_gumbel_for_aggregation:
-        #mindspore存在RelaxedOneHotCategorical实现
-        gumbel_dist = nn.probability.distribution.RelaxedOneHotCategorical(
+        gumbel_dist = distributions.RelaxedOneHotCategorical(
             config.aggregation_temperature, logits=logits_aggregation[:, 1:]
         )
         # <float32>[batch_size, num_aggregation_labels - 1]
         aggregation_op_only_probs = gumbel_dist.sample()
     else:
         # <float32>[batch_size, num_aggregation_labels - 1]
-        aggregation_op_only_probs = ops.softmax(
-            logits_aggregation[:, 1:] / config.aggregation_temperature, axis=-1
+        aggregation_op_only_probs = nn.functional.softmax(
+            logits_aggregation[:, 1:] / config.aggregation_temperature, dim=-1
         )
 
     all_results = ops.cat(
@@ -2144,7 +2106,7 @@ def _calculate_expected_result(
             ops.unsqueeze(average_result, dim=1),
             ops.unsqueeze(count_result, dim=1),
         ],
-        axis=1,
+        dim=1,
     )
 
     expected_result = ops.sum(all_results * aggregation_op_only_probs, dim=1)
@@ -2175,7 +2137,7 @@ def _calculate_regression_loss(
             Answer for every example in the batch. Nan if there is no scalar answer.
         aggregate_mask (`mindspore.Tensor` of shape `(batch_size,)`):
             A mask set to 1 for examples that should use aggregation functions.
-        dist_per_cell (`ops.distributions.Bernoulli`):
+        dist_per_cell (`distributions.Bernoulli`):
             Cell selection distribution for each cell.
         numeric_values (`mindspore.Tensor` of shape `(batch_size, seq_length)`):
             Numeric values of every token. Nan for tokens which are not numeric values.
@@ -2202,7 +2164,7 @@ def _calculate_regression_loss(
     answer_masked = ops.where(ops.isnan(answer), ops.zeros_like(answer), answer)
 
     if config.use_normalized_answer_loss:
-        normalizer = (ops.max(ops.abs(expected_result), ops.abs(answer_masked)) + EPSILON_ZERO_DIVISION).detach()
+        normalizer = (ops.max(ops.abs(expected_result), ops.abs(answer_masked)) + EPSILON_ZERO_DIVISION)
 
         normalized_answer_masked = answer_masked / normalizer
         normalized_expected_result = expected_result / normalizer
@@ -2226,7 +2188,6 @@ def _calculate_regression_loss(
     per_example_answer_loss_scaled = config.answer_loss_importance * (per_example_answer_loss * aggregate_mask)
 
     return per_example_answer_loss_scaled, large_answer_loss_mask
-
 
 __all__ = [
     "TapasForMaskedLM",

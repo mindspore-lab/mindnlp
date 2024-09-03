@@ -41,7 +41,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         BridgeTowerForContrastiveLearning,
@@ -458,7 +458,7 @@ class BridgeTowerModelTest(ModelTesterMixin, unittest.TestCase):
                         )
 
     @unittest.skip(reason="""Bridge Tower does not have input/output embeddings. So this test is not applicable.""")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(reason="""Bridge Tower does not have input/output embeddings. Thus this test is not applicable.""")

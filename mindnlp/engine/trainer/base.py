@@ -35,18 +35,15 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindspore import nn, ops
 from mindspore.dataset import Dataset, BatchDataset, PaddedBatchDataset
-import mindspore.experimental
-import mindspore.experimental.optim
-from mindspore.nn.learning_rate_schedule import LearningRateSchedule
 
+from mindnlp.core import nn, ops, optim
+from ...core.serialization import safe_load_file, safe_save_file, save, save_checkpoint, load
 from ...peft import PeftModel
 from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_SAFE_WEIGHTS_NAME, \
     WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from ...dataset import BaseMapFunction
 from ...utils import logging, find_labels, can_return_loss
-from ...utils.serialization import safe_load_file, safe_save_file
 from ...utils.import_utils import is_safetensors_available
 from ...transformers.modeling_utils import PreTrainedModel
 from ...transformers.configuration_utils import PretrainedConfig
@@ -72,7 +69,6 @@ from ..utils import (
     get_parameter_names,
     get_model_param_count,
     speed_metrics,
-    convert_tensor_to_scalar,
     nested_concat,
     nested_numpify,
     neftune_post_forward_hook,
@@ -130,7 +126,7 @@ class Trainer:
     from ..utils import _get_learning_rate
     def __init__(
         self,
-        model: Union[PreTrainedModel, nn.Cell] = None,
+        model: Union[PreTrainedModel, nn.Module] = None,
         args: TrainingArguments = None,
         map_fn: Optional[Union[Callable, BaseMapFunction]] = None,
         train_dataset: Optional[Dataset] = None,
@@ -139,7 +135,7 @@ class Trainer:
         model_init: Optional[Callable[[], PreTrainedModel]] = None,
         compute_metrics: Optional[Callable[[EvalPrediction], Dict]] = None,
         callbacks: Optional[List[TrainerCallback]] = None,
-        optimizers: Tuple[nn.Optimizer, LearningRateSchedule] = (None, None),
+        optimizers: Tuple[optim.Optimizer, optim.lr_scheduler.LambdaLR] = (None, None),
         preprocess_logits_for_metrics: Optional[Callable[[mindspore.Tensor, mindspore.Tensor], mindspore.Tensor]] = None,
     ):
         """
@@ -147,7 +143,7 @@ class Trainer:
         
         Args:
             self (Trainer): The Trainer object itself.
-            model (Union[PreTrainedModel, nn.Cell]): The pre-trained model or neural network cell to be trained.
+            model (Union[PreTrainedModel, nn.Module]): The pre-trained model or neural network cell to be trained.
             args (TrainingArguments): The training arguments including hyperparameters and output directory.
             map_fn (Optional[Union[Callable, BaseMapFunction]]): Optional map function for data preprocessing.
             train_dataset (Optional[Dataset]): The training dataset.
@@ -375,7 +371,7 @@ class Trainer:
             None: This method does not return any value.
         
         Raises:
-            NotImplementedError: If the model does not have a 'construct' method.
+            NotImplementedError: If the model does not have a 'forward' method.
         """
         if self._signature_columns is None:
             # Inspect model forward signature to keep only the arguments it accepts.
@@ -386,7 +382,7 @@ class Trainer:
                 else:
                     # PeftMixedModel do not provide a `get_base_model` method
                     model_to_inspect = self.model.base_model.model
-            signature = inspect.signature(model_to_inspect.construct)
+            signature = inspect.signature(model_to_inspect.forward)
             self._signature_columns = list(signature.parameters.keys())
 
             # Labels may be named label or label_ids, the default data collator handles that.
@@ -463,13 +459,13 @@ class Trainer:
             optimizer_grouped_parameters = [
                 {
                     "params": [
-                        p for p in opt_model.trainable_params() if (p.name in decay_parameters and p.requires_grad)
+                        p for n, p in opt_model.named_parameters() if (n in decay_parameters and p.requires_grad)
                     ],
                     "weight_decay": self.args.weight_decay,
                 },
                 {
                     "params": [
-                        p for p in opt_model.trainable_params() if (p.name not in decay_parameters and p.requires_grad)
+                        p for n, p in opt_model.named_parameters() if (n not in decay_parameters and p.requires_grad)
                     ],
                     "weight_decay": 0.0,
                 },
@@ -527,12 +523,10 @@ class Trainer:
         #     optimizer_cls = AdamW
         #     optimizer_kwargs.update(adam_kwargs)
         if args.optim == OptimizerNames.ADAMW:
-            from mindspore.experimental.optim import AdamW
-
-            optimizer_cls = AdamW
+            optimizer_cls = optim.AdamW
             optimizer_kwargs.update(adam_kwargs)
         elif args.optim == OptimizerNames.SGD:
-            optimizer_cls = mindspore.experimental.optim.SGD
+            optimizer_cls = optim.SGD
         # TODO: support Adagrad and Rmsporp
         # elif args.optim == OptimizerNames.ADAGRAD:
         #     optimizer_cls = mindspore.nn.Adagrad
@@ -551,7 +545,7 @@ class Trainer:
             num_training_steps (int): The number of training steps to do.
         """
         if self.lr_scheduler is None:
-            from ...modules.optimization import get_scheduler
+            from ...transformers.optimization import get_scheduler
             self.lr_scheduler = get_scheduler(
                 self.args.lr_scheduler_type,
                 optimizer=self.optimizer if optimizer is None else optimizer,
@@ -759,7 +753,6 @@ class Trainer:
         inner_training_loop = find_executable_batch_size(
             self._inner_training_loop, self._train_batch_size, args.auto_find_batch_size
         )
-
         return inner_training_loop(
             args=args,
             resume_from_checkpoint=resume_from_checkpoint,
@@ -1137,10 +1130,19 @@ MindSpore's `load_checkpoint` function.
                     # Gradient clipping
                     if args.max_grad_norm is not None and args.max_grad_norm > 0:
                         # deepspeed does its own clipping
-                        grads = ops.clip_by_global_norm(grads, args.max_grad_norm)
-
+                        _grad_norm = nn.utils.clip_grad_norm_(
+                            grads,
+                            args.max_grad_norm,
+                        )
                     # Optimizer step
-                    self.optimizer(grads)
+                    self.optimizer.step(grads)
+
+
+                    optimizer_was_run = True
+                    if optimizer_was_run:
+                        # Delay optimizer scheduling until metrics are generated
+                        if not isinstance(self.lr_scheduler, optim.lr_scheduler.ReduceLROnPlateau):
+                            self.lr_scheduler.step()
 
                     self.state.global_step += 1
                     self.state.epoch = epoch + (step + 1 + steps_skipped) / steps_in_epoch
@@ -1329,10 +1331,9 @@ indicating whether to prefer safe tensors.
         )
         if checkpoint_file_exists and os.path.isfile(os.path.join(checkpoint, SCHEDULER_NAME)):
             # Load in optimizer and scheduler states
-            mindspore.load_param_into_net(self.optimizer, mindspore.load_checkpoint(os.path.join(checkpoint, OPTIMIZER_NAME)))
+            self.optimizer.load_state_dict(load(os.path.join(checkpoint, OPTIMIZER_NAME)))
             # with warnings.catch_warnings(record=True) as caught_warnings:
-            with open(os.path.join(checkpoint, SCHEDULER_NAME), 'r') as fp:
-                self.lr_scheduler.load_state_dict(json.load(fp))
+            self.lr_scheduler.load_state_dict(load(os.path.join(checkpoint, SCHEDULER_NAME)))
 
             # reissue_pt_warnings(caught_warnings)
 
@@ -1351,14 +1352,14 @@ indicating whether to prefer safe tensors.
 
         return inputs
 
-    def training_step(self, model: nn.Cell, inputs: Dict[str, Union[mindspore.Tensor, Any]]) -> Tuple[List[mindspore.Tensor], mindspore.Tensor]:
+    def training_step(self, model: nn.Module, inputs: Dict[str, Union[mindspore.Tensor, Any]]) -> Tuple[List[mindspore.Tensor], mindspore.Tensor]:
         """
         Perform a training step on a batch of inputs.
 
         Subclass and override to inject custom behavior.
 
         Args:
-            model (`nn.Cell`):
+            model (`nn.Module`):
                 The model to train.
             inputs (`Dict[str, Union[mindspore.Tensor, Any]]`):
                 The inputs and targets of the model.
@@ -1376,7 +1377,10 @@ indicating whether to prefer safe tensors.
             return self.compute_loss(model, inputs)
 
         if getattr(self, 'grad_fn', None) is None or self.model_reload:
-            self.grad_fn = mindspore.value_and_grad(forward, None, self.optimizer.parameters)
+            weights = ()
+            for group in self.optimizer.param_groups:
+                weights += tuple(group['params'])
+            self.grad_fn = mindspore.value_and_grad(forward, None, weights)
 
         loss, grads = self.grad_fn(inputs)
 
@@ -1527,7 +1531,7 @@ indicating whether to prefer safe tensors.
             # self._report_to_hp_search(trial, self.state.global_step, metrics)
 
             # Run delayed LR scheduler now that metrics are populated
-            if isinstance(self.lr_scheduler, mindspore.experimental.optim.lr_scheduler.ReduceLROnPlateau):
+            if isinstance(self.lr_scheduler, optim.lr_scheduler.ReduceLROnPlateau):
                 metric_to_check = self.args.metric_for_best_model
                 if not metric_to_check.startswith("eval_"):
                     metric_to_check = f"eval_{metric_to_check}"
@@ -1588,7 +1592,7 @@ indicating whether to prefer safe tensors.
                         state_dict, os.path.join(output_dir, SAFE_WEIGHTS_NAME), metadata={"format": "np"}
                     )
                 else:
-                    mindspore.save_checkpoint(self.model, os.path.join(output_dir, WEIGHTS_NAME))
+                    save_checkpoint(self.model, os.path.join(output_dir, WEIGHTS_NAME))
         else:
             self.model.save_pretrained(
                 output_dir, state_dict=state_dict, safe_serialization=self.args.save_safetensors
@@ -1616,15 +1620,12 @@ indicating whether to prefer safe tensors.
         """
         if self.args.should_save:
             # deepspeed.save_checkpoint above saves model/optim/sched
-            mindspore.save_checkpoint(self.optimizer, os.path.join(output_dir, OPTIMIZER_NAME))
+            save(self.optimizer.state_dict(), os.path.join(output_dir, OPTIMIZER_NAME))
 
         # Save SCHEDULER & SCALER
         if self.args.should_save:
             # with warnings.catch_warnings(record=True) as caught_warnings:
-            lr_scheduler_state_dict = copy.deepcopy(self.lr_scheduler.state_dict())
-            with open(os.path.join(output_dir, SCHEDULER_NAME), 'w') as fp:
-                json.dump(convert_tensor_to_scalar(lr_scheduler_state_dict), fp)
-            # reissue_pt_warnings(caught_warnings)
+            save(self.lr_scheduler.state_dict(), os.path.join(output_dir, SCHEDULER_NAME))
 
     def _save_checkpoint(self, model, metrics=None):
         r"""
@@ -2090,7 +2091,7 @@ indicating whether to prefer safe tensors.
 
     def prediction_step(
         self,
-        model: nn.Cell,
+        model: nn.Module,
         inputs: Dict[str, Union[mindspore.Tensor, Any]],
         prediction_loss_only: bool,
         ignore_keys: Optional[List[str]] = None,

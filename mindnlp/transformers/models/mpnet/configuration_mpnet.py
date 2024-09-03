@@ -74,10 +74,10 @@ class MPNetConfig(PretrainedConfig):
             eos_token_id (int, optional): The token ID for the end of sequence. Defaults to 2.
         
         Returns:
-            None. This method does not return a value.
+            None.
         
         Raises:
-            None. This method does not raise any exceptions.
+            None.
         """
         super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
 
