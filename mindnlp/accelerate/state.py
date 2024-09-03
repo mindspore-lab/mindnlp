@@ -1,0 +1,6 @@
+
+class PartialState:
+    ...
+    
+class AccelerateState:
+    ...

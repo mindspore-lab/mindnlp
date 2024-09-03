@@ -15,7 +15,7 @@ class DistributedType(str, enum.Enum):
 
 
 @dataclass
-class MindFormersLMPlugin:
+class MindFormersPlugin:
     """
     Plugin for MindFormersLM to enable tensor, pipeline, sequence and data parallelism.
     """
