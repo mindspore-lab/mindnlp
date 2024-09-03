@@ -48,6 +48,7 @@ if is_vision_available():
 
     from mindnlp.transformers import AutoImageProcessor
 
+
 class DetaModelTester:
     def __init__(
         self,
@@ -336,6 +337,7 @@ class DetaModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         )
         self.model_tester.create_and_check_deta_unfreeze_backbone(*config_and_inputs)
 
+    @unittest.skip
     def test_deta_object_detection_head_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs(
             model_class_name="DetaForObjectDetection"

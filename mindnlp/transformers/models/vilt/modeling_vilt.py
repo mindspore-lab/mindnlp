@@ -150,6 +150,7 @@ class ViltEmbeddings(nn.Module):
         valid_idx = ops.nonzero(x_mask, as_tuple=False)
         non_valid_idx = ops.nonzero((1 - x_mask), as_tuple=False)
         unique_rows = ops.unique(valid_idx[:, 0])
+        print(type(unique_rows))
         valid_row_idx = [valid_idx[valid_idx[:, 0] == u] for u in unique_rows]
         non_valid_row_idx = [non_valid_idx[non_valid_idx[:, 0] == u] for u in unique_rows]
 
