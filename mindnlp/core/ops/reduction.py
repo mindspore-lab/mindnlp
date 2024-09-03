@@ -138,9 +138,13 @@ def unique(input, sorted=True, return_inverse=False, return_counts=False, dim=No
     if USE_PYBOOST:
         return mindspore.mint.unique(input, sorted, return_inverse, return_counts, dim)
     out, inverse = ops.unique(input)
+    outs = (out,)
     if return_inverse:
-        return out, inverse
-    return out
+        outs += (inverse,)
+    if return_counts:
+        counts = (out == input).sum(0, keepdims=True)
+        outs += (counts,)
+    return outs if len(outs) > 1 else outs[0]
 
 # unique_consecutive
 def unique_consecutive(input, return_inverse=False, return_counts=False, dim=None):

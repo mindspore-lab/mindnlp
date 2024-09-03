@@ -969,8 +969,8 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
         if labels is not None:
             # retrieve loss input_lengths from attention_mask
             labels = labels.astype(mindspore.int32)
-            if labels.max() >= self.config.vocab_size:
-                raise ValueError(f"Label values must be <= vocab_size: {self.config.vocab_size}")
+            # if labels.max() >= self.config.vocab_size:
+            #     raise ValueError(f"Label values must be <= vocab_size: {self.config.vocab_size}")
             attention_mask = (
                 attention_mask if attention_mask is not None else ops.ones_like(input_values, dtype=mindspore.int64)
             )

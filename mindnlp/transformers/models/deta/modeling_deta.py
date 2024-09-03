@@ -1495,8 +1495,8 @@ class DetaModel(DetaPreTrainedModel):
         source_flatten = ops.cat(source_flatten, 1)
         mask_flatten = ops.cat(mask_flatten, 1)
         lvl_pos_embed_flatten = ops.cat(lvl_pos_embed_flatten, 1)
-        spatial_shapes = mindspore.tensor(spatial_shapes, dtype=mindspore.int64)
-        level_start_index = ops.cat((spatial_shapes.new_zeros((1,)), spatial_shapes.prod(1).cumsum(0)[:-1]))
+        spatial_shapes = mindspore.tensor(spatial_shapes, dtype=mindspore.int32)
+        level_start_index = ops.cat((ops.zeros((1,), dtype=mindspore.int32), spatial_shapes.prod(1).int().cumsum(0)[:-1]))
         valid_ratios = ops.stack([self.get_valid_ratio(m) for m in masks], 1)
         valid_ratios = valid_ratios.float()
 

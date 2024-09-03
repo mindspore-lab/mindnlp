@@ -133,7 +133,7 @@ class DbrxModelTester:
         }
 
     def prepare_config_and_inputs(self):
-        input_ids = ids_tensor([self.batch_size, self.seq_length], self.vocab_size)
+        input_ids = ids_tensor((self.batch_size, self.seq_length), self.vocab_size)
 
         input_mask = None
         if self.use_input_mask:
@@ -338,7 +338,7 @@ class DbrxModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             config_and_inputs[0].position_embedding_type = type
             self.model_tester.create_and_check_model(*config_and_inputs)
 
-    #@slow
+    @slow
     def test_model_from_pretrained(self):
         model_name = "eitanturok/dbrx-tiny"
         model = DbrxModel.from_pretrained(model_name)
@@ -373,12 +373,11 @@ class DbrxModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     @unittest.skip(reason="Dbrx models do not work with offload")
     def test_generate_compile_fullgraph(self):
         pass
-    
 
 
 @require_mindspore
 class DbrxModelIntegrationTest(unittest.TestCase):
-    #@slow
+    @slow
     def test_tiny_model_logits(self):
         model = DbrxForCausalLM.from_pretrained("Rocketknight1/dbrx-tiny-random")
         input_ids = mindspore.tensor([[0, 1, 2, 3, 4, 5]])

@@ -54,7 +54,6 @@ if is_vision_available():
     import PIL
     from PIL import Image
 
-
 class ViltModelTester:
     def __init__(
         self,
