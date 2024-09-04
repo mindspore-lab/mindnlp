@@ -20,7 +20,7 @@ import numpy as np
 import mindspore
 from mindspore.common.initializer import Uniform, HeNormal, initializer,Normal
 
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
@@ -969,8 +969,9 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
         if labels is not None:
             # retrieve loss input_lengths from attention_mask
             labels = labels.astype(mindspore.int32)
-            # if labels.max() >= self.config.vocab_size:
-            #     raise ValueError(f"Label values must be <= vocab_size: {self.config.vocab_size}")
+            with no_grad():
+                if ops.max(labels) >= self.config.vocab_size:
+                    raise ValueError(f"Label values must be <= vocab_size: {self.config.vocab_size}")
             attention_mask = (
                 attention_mask if attention_mask is not None else ops.ones_like(input_values, dtype=mindspore.int64)
             )

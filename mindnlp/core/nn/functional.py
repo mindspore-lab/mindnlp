@@ -177,6 +177,25 @@ def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean
         return mindspore.mint.nn.functional.binary_cross_entropy_with_logits(input, target, weight, reduction, pos_weight)
     return ops.binary_cross_entropy_with_logits(input, target, weight, pos_weight, reduction)
 
+def gumbel_softmax(logits: Tensor, tau: float = 1, hard: bool = False, eps: float = 1e-10, dim: int = -1) -> Tensor:
+    if eps != 1e-10:
+        warnings.warn("`eps` parameter is deprecated and has no effect.")
+
+    uniform_samples = _get_cache_prim(ops.UniformReal)()(logits.shape)
+    gumbels = -ops.log(-ops.log(uniform_samples + eps) + eps) # ~Gumbel(0, 1)
+    gumbels = (logits + gumbels) / tau  # ~Gumbel(logits,tau)
+    y_soft = softmax(gumbels, dim)
+
+    if hard:
+        # Straight through.
+        index = y_soft.argmax(dim)
+        y_hard = one_hot(index, logits.shape[dim])
+        ret = ops.stop_gradient(y_hard - y_soft) + y_soft
+    else:
+        # Reparametrization trick.
+        ret = y_soft
+    return ret
+
 def log_softmax(input, dim=-1, dtype=None):
     out = ops.log_softmax(input, dim)
     if dtype is not None:
@@ -791,7 +810,7 @@ def multi_head_attention_forward(
         assert key_padding_mask.shape == (bsz, src_len), \
             f"expecting key_padding_mask shape of {(bsz, src_len)}, but got {key_padding_mask.shape}"
         key_padding_mask = key_padding_mask.view(bsz, 1, 1, src_len).   \
-            expand(-1, num_heads, -1, -1).reshape(bsz * num_heads, 1, src_len)
+            broadcast_to((-1, num_heads, -1, -1)).reshape(bsz * num_heads, 1, src_len)
         if attn_mask is None:
             attn_mask = key_padding_mask
         else:
