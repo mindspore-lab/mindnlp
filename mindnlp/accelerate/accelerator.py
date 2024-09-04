@@ -1,7 +1,7 @@
 import os
 import mindspore
 from mindspore.experimental.optim.lr_scheduler import LRScheduler
-from .state import AccelerateState
+from .state import AcceleratorState
 from .utils import (
     DistributedType,
     MindFormersPlugin,
@@ -42,7 +42,7 @@ class Accelerator:
             )
         else:
             os.environ["ACCELERATE_USE_MINDFORMERS"] = "true"
-        self.state = AccelerateState()
+        self.state = AcceleratorState()
 
         if mindformers_plugin:
             if not is_mindformers_available():
@@ -177,7 +177,7 @@ class Accelerator:
         if scheduler is not None:
             self._schedulers.append(scheduler)
 
-    def backward(self):   
+    def backward(self, loss, **kwargs):   
         pass
 
     def wait_for_everyone(self):
@@ -203,4 +203,19 @@ class Accelerator:
         ```
         """
         wait_for_everyone()
+
+    def print(self, *args, **kwargs):
+        """
+        Drop in replacement of `print()` to only print once per server.
+
+        Example:
+
+        ```python
+        >>> from accelerate import Accelerator
+
+        >>> accelerator = Accelerator()
+        >>> accelerator.print("Hello world!")
+        ```
+        """
+        self.state.print(*args, **kwargs)
 

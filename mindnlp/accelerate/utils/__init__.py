@@ -3,6 +3,9 @@ from .dataclasses import (
     DistributedType,
     MindFormersPlugin
 )
+from .environment import (
+    str_to_bool
+)
 from .imports import (
     is_mindformers_available
 )
@@ -37,7 +40,7 @@ if is_mindformers_available():
         MindFormersEngine,
         MindFormersOptimizerWrapper,
         MindFormersSchedulerWrapper,
-        initialize as mindformer_initialize,
+        initialize as mindformers_initialize,
         prepare_data_loader as mindformers_prepare_data_loader,
         prepare_model_optimizer_scheduler as mindformers_prepare_model_optimizer_scheduler
     )
