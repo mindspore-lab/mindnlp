@@ -201,8 +201,8 @@ class DepthAnythingModelTest(ModelTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        # model_name = "LiheYoung/depth-anything-small-hf"
-        model_name="D:/Mindspore/depth-anything-small-hf"
+        model_name = "LiheYoung/depth-anything-small-hf"
+        # model_name="D:/Mindspore/depth-anything-small-hf"
         model = DepthAnythingForDepthEstimation.from_pretrained(model_name)
         self.assertIsNotNone(model)
 
@@ -247,10 +247,10 @@ def prepare_img():
 @slow
 class DepthAnythingModelIntegrationTest(unittest.TestCase):
     def test_inference(self):
-        # image_processor = DPTImageProcessor.from_pretrained("LiheYoung/depth-anything-small-hf")
-        # model = DepthAnythingForDepthEstimation.from_pretrained("LiheYoung/depth-anything-small-hf")
-        image_processor = DPTImageProcessor.from_pretrained("D:/Mindspore/depth-anything-small-hf")
-        model = DepthAnythingForDepthEstimation.from_pretrained("D:/Mindspore/depth-anything-small-hf")
+        image_processor = DPTImageProcessor.from_pretrained("LiheYoung/depth-anything-small-hf")
+        model = DepthAnythingForDepthEstimation.from_pretrained("LiheYoung/depth-anything-small-hf")
+        # image_processor = DPTImageProcessor.from_pretrained("D:/Mindspore/depth-anything-small-hf")
+        # model = DepthAnythingForDepthEstimation.from_pretrained("D:/Mindspore/depth-anything-small-hf")
 
         image = prepare_img()
         inputs = image_processor(images=image, return_tensors="ms")
