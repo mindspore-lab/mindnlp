@@ -370,6 +370,10 @@ class DetaModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     def test_feed_forward_chunking(self):
         pass
 
+    @unittest.skip(reason="grid_sampler_2d_grad_cpu_kernel.h:162] store] memcpy_s failed. errorno is: 34")
+    def test_training(self):
+        pass
+
     def test_attention_outputs(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
         config.return_dict = True

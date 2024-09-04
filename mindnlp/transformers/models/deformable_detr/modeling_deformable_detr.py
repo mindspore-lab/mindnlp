@@ -1687,9 +1687,9 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
             proposals.append(proposal)
             _cur += height * width
         output_proposals = ops.cat(proposals, 1)
-        output_proposals_valid = (
-            (output_proposals > 0.01).int() & (output_proposals < 0.99).int()
-        ).all(-1, keep_dims=True)
+        output_proposals_valid = ops.all(
+            ((output_proposals > 0.01).int() & (output_proposals < 0.99).int()).bool(), -1, keepdim=True
+        )
         output_proposals = ops.log(
             output_proposals / (1 - output_proposals)
         )  # inverse sigmoid
@@ -2291,8 +2291,9 @@ class DeformableDetrLoss(nn.Module):
             source_logits.shape[2] + 1,
             dtype=source_logits.dtype,
         )
+        target_classes = target_classes.unsqueeze(-1)
         target_classes_onehot = ops.scatter(
-            target_classes_onehot, 2, target_classes.unsqueeze(-1), ops.ones_like(target_classes_onehot)
+            target_classes_onehot, 2, target_classes, ops.ones_like(target_classes, dtype=target_classes_onehot.dtype)
         )
         target_classes_onehot = target_classes_onehot[:, :, :-1]
         loss_ce = (
