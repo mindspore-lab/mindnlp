@@ -33,3 +33,4 @@ tiktoken
 faiss_cpu
 phonemizer
 git+https://github.com/lvyufeng/einops
+rich
