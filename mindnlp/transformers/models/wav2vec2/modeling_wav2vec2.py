@@ -1683,7 +1683,7 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
             neg_is_pos = (quantized_features == negative_quantized_features).all(-1)
 
             if neg_is_pos.any():
-                logits[1:][neg_is_pos] = float("-inf")
+                logits[1:][neg_is_pos] = float(ops.finfo(logits.dtype).min)
 
             # 6. compute contrastive loss \mathbf{L}_m = cross_entropy(logs) =
             # -log(exp(sim(c_t, q_t)/\kappa) / \sum_{\sim{q}} exp(sim(c_t, \sim{q})/\kappa))
@@ -1694,7 +1694,6 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
             # 7. compute diversity loss: \mathbf{L}_d
             num_codevectors = self.config.num_codevectors_per_group * self.config.num_codevector_groups
             diversity_loss = ((num_codevectors - codevector_perplexity) / num_codevectors) * mask_time_indices.sum()
-
             # 8. \mathbf{L} = \mathbf{L}_m + \alpha * \mathbf{L}_d
             loss = contrastive_loss + self.config.diversity_loss_weight * diversity_loss
 

@@ -579,17 +579,17 @@ class Wav2Vec2ModelTest(ModelTesterMixin, unittest.TestCase):
     # overwrite from test_modeling_common
     def _mock_init_weights(self, module):
         if hasattr(module, "weight") and module.weight is not None:
-            module.weight.fill_(3)
+            nn.init.constant_(module.weight, 3)
         if hasattr(module, "weight_g") and module.weight_g is not None:
-            module.weight_g.fill_(3)
+            nn.init.constant_(module.weight_g, 3)
         if hasattr(module, "weight_v") and module.weight_v is not None:
-            module.weight_v.fill_(3)
+            nn.init.constant_(module.weight_v, 3)
         if hasattr(module, "bias") and module.bias is not None:
-            module.bias.fill_(3)
+            nn.init.constant_(module.bias, 3)
         if hasattr(module, "codevectors") and module.codevectors is not None:
-            module.codevectors.fill_(3)
+            nn.init.constant_(module.codevectors, 3)
         if hasattr(module, "masked_spec_embed") and module.masked_spec_embed is not None:
-            module.masked_spec_embed.fill_(3)
+            nn.init.constant_(module.masked_spec_embed, 3)
 
     def test_mask_feature_prob_ctc(self):
         model = Wav2Vec2ForCTC.from_pretrained(
@@ -771,17 +771,17 @@ class Wav2Vec2RobustModelTest(ModelTesterMixin, unittest.TestCase):
     # overwrite from test_modeling_common
     def _mock_init_weights(self, module):
         if hasattr(module, "weight") and module.weight is not None:
-            module.weight.fill_(3)
+            nn.init.constant_(module.weight, 3)
         if hasattr(module, "weight_g") and module.weight_g is not None:
-            module.weight_g.fill_(3)
+            nn.init.constant_(module.weight_g, 3)
         if hasattr(module, "weight_v") and module.weight_v is not None:
-            module.weight_v.fill_(3)
+            nn.init.constant_(module.weight_v, 3)
         if hasattr(module, "bias") and module.bias is not None:
-            module.bias.fill_(3)
+            nn.init.constant_(module.bias, 3)
         if hasattr(module, "codevectors") and module.codevectors is not None:
-            module.codevectors.fill_(3)
+            nn.init.constant_(module.codevectors, 3)
         if hasattr(module, "masked_spec_embed") and module.masked_spec_embed is not None:
-            module.masked_spec_embed.fill_(3)
+            nn.init.constant_(module.masked_spec_embed, 3)
 
     def test_model_for_pretraining(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -822,6 +822,7 @@ class Wav2Vec2RobustModelTest(ModelTesterMixin, unittest.TestCase):
             sampled_negative_indices=sampled_negative_indices,
         ).loss
 
+        print(loss, loss_more_masked)
         # loss_more_masked has to be bigger or equal loss since more masked inputs have to be predicted
         self.assertTrue(loss.item() <= loss_more_masked.item())
 
@@ -1166,7 +1167,7 @@ class Wav2Vec2UtilsTest(unittest.TestCase):
             self.assertTrue(((negative - features) == 0).sum() == 0.0)
 
         # make sure that full vectors are sampled and not values of vectors => this means that `unique()` yields a single value for `hidden_size` dim
-        self.assertEqual(ops.unique(negatives, dim=-1).shape, (num_negatives, batch_size, sequence_length, 1))
+        self.assertEqual(ops.unique_consecutive(negatives, dim=-1).shape, (num_negatives, batch_size, sequence_length, 1))
 
     def test_sample_negatives_with_mask(self):
         batch_size = 2
@@ -1204,7 +1205,7 @@ class Wav2Vec2UtilsTest(unittest.TestCase):
             self.assertTrue(((negative - features) == 0).sum() == 0.0)
 
         # make sure that full vectors are sampled and not values of vectors => this means that `unique()` yields a single value for `hidden_size` dim
-        self.assertEqual(ops.unique(negatives, dim=-1).shape, (num_negatives, batch_size, sequence_length, 1))
+        self.assertEqual(ops.unique_consecutive(negatives, dim=-1).shape, (num_negatives, batch_size, sequence_length, 1))
 
 
 @require_mindspore

@@ -137,6 +137,7 @@ def sum(input, dim=None, keepdim=False, *, dtype=None):
 def unique(input, sorted=True, return_inverse=False, return_counts=False, dim=None):
     if USE_PYBOOST:
         return mindspore.mint.unique(input, sorted, return_inverse, return_counts, dim)
+
     out, inverse = ops.unique(input)
     outs = (out,)
     if return_inverse:
