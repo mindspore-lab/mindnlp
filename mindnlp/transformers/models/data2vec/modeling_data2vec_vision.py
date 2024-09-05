@@ -36,7 +36,7 @@ from ...modeling_outputs import (
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
 
-# pylint: disable=E1102
+# pylint: disable=not-callable
 
 
 
@@ -64,19 +64,19 @@ class Data2VecVisionModelOutputWithPooling(BaseModelOutputWithPooling):
     Class for outputs of [`Data2VecVisionModel`].
 
     Args:
-        last_hidden_state (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`):
+        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the model.
-        pooler_output (`torch.FloatTensor` of shape `(batch_size, hidden_size)`):
+        pooler_output (`mindspore.Tensor` of shape `(batch_size, hidden_size)`):
             Average of the last layer hidden states of the patch tokens (excluding the *[CLS]* token) if
             *config.use_mean_pooling* is set to True. If set to False, then the final hidden state of the *[CLS]* token
             will be returned.
-        hidden_states (`tuple(torch.FloatTensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `torch.FloatTensor` (one for the output of the embeddings + one for the output of each layer) of
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        attentions (`tuple(torch.FloatTensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `torch.FloatTensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
@@ -192,7 +192,7 @@ class Data2VecVisionEmbeddings(nn.Module):
         batch_size, seq_len, _ = embeddings.shape
 
         if bool_masked_pos is not None:
-            mask_tokens = self.mask_token.expand((batch_size, seq_len, -1))
+            mask_tokens = self.mask_token.broadcast_to((batch_size, seq_len, -1))
             # replace the masked visual tokens by mask_tokens
             w = bool_masked_pos.unsqueeze(-1).type_as(mask_tokens)
             embeddings = embeddings * (1 - w) + mask_tokens * w
@@ -261,10 +261,10 @@ class Data2VecVisionPatchEmbeddings(nn.Module):
             )
             embeddings = embeddings + position_embedding
 
-        #ops.transpose((embeddings.flatten(start_dim=2)), 1,2)
+
         embeddings = embeddings.flatten(start_dim=2).swapaxes(1, 2)
 
-        #embeddings = embeddings.flatten(start_dim=2).transpose(1, 2)
+
 
         return embeddings, (patch_height, patch_width)
 
@@ -345,7 +345,7 @@ class Data2VecVisionSelfAttention(nn.Module):
 
         context_layer = ops.matmul(attention_probs, value_layer)
 
-        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
+        context_layer = context_layer.permute(0, 2, 1, 3)
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
 
@@ -543,7 +543,7 @@ class Data2VecVisionRelativePositionBias(nn.Module):
         coords = ops.stack(grid)  # 2, Wh, Ww
         coords_flatten = ops.flatten(coords, 1)  # 2, Wh*Ww
         relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :]  # 2, Wh*Ww, Wh*Ww
-        relative_coords = relative_coords.permute(1, 2, 0).contiguous()  # Wh*Ww, Wh*Ww, 2
+        relative_coords = relative_coords.permute(1, 2, 0) # Wh*Ww, Wh*Ww, 2
         relative_coords[:, :, 0] += window_size[0] - 1  # shift to start from 0
         relative_coords[:, :, 1] += window_size[1] - 1
         relative_coords[:, :, 0] *= 2 * window_size[1] - 1
@@ -591,7 +591,7 @@ class Data2VecVisionRelativePositionBias(nn.Module):
             window_size[0] * window_size[1] + 1, window_size[0] * window_size[1] + 1, -1
         )
         # num_attention_heads, patch_size*num_patches_width, patch_size*num_patches_height
-        relative_position_bias = relative_position_bias.permute(2, 0, 1).contiguous()
+        relative_position_bias = relative_position_bias.permute(2, 0, 1)
 
         if interpolate_pos_encoding:
             relative_position_bias = nn.functional.interpolate(
@@ -707,24 +707,20 @@ class Data2VecVisionPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         """Initialize the weights"""
         if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
-            # Slightly different from the TF version which uses truncated_normal for initialization
-            # cf https://github.com/pytorch/pytorch/pull/5617
             nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
-            #module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+
             if module.bias is not None:
                 nn.init.zeros_(module.bias)
-                #module.bias.data.zero_()
+
         elif isinstance(module, nn.Embedding):
             nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
-            #module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+
             if module.padding_idx is not None:
                 module.weight.data[module.padding_idx]=0
-                #module.weight.data[module.padding_idx].zero_()
+
         elif isinstance(module, nn.LayerNorm):
             nn.init.zeros_(module.bias)
             nn.init.ones_(module.weight)
-            #module.bias.data.zero_()
-            #module.weight.data.fill_(1.0)
 
 
 
