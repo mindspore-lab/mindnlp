@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
+# pylint: disable=C,R
 # pylint: disable=line-too-long
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=missing-class-docstring
@@ -35,13 +36,14 @@ import mindspore as ms
 # from accelerate.utils import gather_object
 from mindspore.dataset import Dataset
 # from transformers import DataCollator, PreTrainedModel, PreTrainedTokenizerBase, Trainer, TrainingArguments
-from data.data_collator import DataCollator
+from ...trl.data.data_collator import DataCollator
 from mindnlp.transformers import (
     PreTrainedModel,
     PreTrainedTokenizerBase,
 )
 from mindnlp.engine import Trainer, TrainingArguments
-from mindnlp.core import ops, nn
+from mindnlp.core import ops, nn, optim
+import mindnlp.core.nn.functional as F
 
 # from transformers.trainer_callback import TrainerCallback
 # from mindnlp.transformers.trainer_callback import TrainerCallback
@@ -52,15 +54,13 @@ from mindnlp.core import ops, nn
 # from transformers.trainer_utils import EvalPrediction
 # from mindnlp.transformers.trainer_utils import EvalPrediction
 
-from mindnlp.core.nn.learning_rate_schedule import LearningRateSchedule
-
-from ..import_utils import is_peft_available
-from .reward_config import RewardConfig
+from ...trl.import_utils import is_peft_available
+from ..train_args import RewardConfig
 from .utils import RewardDataCollatorWithPadding, compute_accuracy, print_rich_table
 
 
-if is_peft_available():
-    from peft import PeftModel, get_peft_model
+# if is_peft_available():
+#     from peft import PeftModel, get_peft_model
     #prepare_model_for_kbit_training
 
 
@@ -97,7 +97,7 @@ class RewardTrainer(Trainer):
         model_init: Optional[Callable[[], PreTrainedModel]] = None,
         compute_metrics: Optional[Callable[[], Dict]] = None, #Callable[[EvalPrediction], Dict]
         callbacks: Optional[List] = None, #callbacks: Optional[List[TrainerCallback]] = None,
-        optimizers: Tuple[nn.Optimizer, LearningRateSchedule] = (None, None),
+        optimizers: Tuple[optim.Optimizer, optim.lr_scheduler.LambdaLR] = (None, None),
         preprocess_logits_for_metrics: Optional[Callable[[ms.Tensor, ms.Tensor], ms.Tensor]] = None,
         max_length: Optional[int] = None,
         peft_config: Optional[Dict] = None,
@@ -267,9 +267,9 @@ class RewardTrainer(Trainer):
         )["logits"]
         # calculate loss, optionally modulate with margin
         if "margin" in inputs:
-            loss = -ops.logsigmoid(rewards_chosen - rewards_rejected - inputs["margin"]).mean()
+            loss = -F.logsigmoid(rewards_chosen - rewards_rejected - inputs["margin"]).mean()
         else:
-            loss = -ops.logsigmoid(rewards_chosen - rewards_rejected).mean()
+            loss = -F.logsigmoid(rewards_chosen - rewards_rejected).mean()
 
         if return_outputs:
             return loss, {

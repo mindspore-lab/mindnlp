@@ -13,12 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
-# pylint: disable=too-many-instance-attributes
-# pylint: disable=too-many-locals
-# pylint: disable=too-many-arguments
-# pylint: disable=too-many-branches
-# pylint: disable=too-many-statements
-# pylint: disable=no-else-raise
+
+# pylint: disable=C,R
 
 import json
 import logging
@@ -171,7 +167,7 @@ class PreTrainedModelWrapper(nn.Module):
             reward_adapter = kwargs.pop("reward_adapter", None)
             reward_adapter_name = kwargs.pop("reward_adapter_name", "reward_adapter")
             is_trainable = kwargs.pop("is_trainable", False)
-            trl_model_args, pretrained_kwargs, peft_quantization_kwargs = cls._split_kwargs(kwargs)
+            trl_model_args, pretrained_kwargs = cls._split_kwargs(kwargs)
             token = pretrained_kwargs.get("token", None)
         else:
             reward_adapter = None
@@ -180,7 +176,7 @@ class PreTrainedModelWrapper(nn.Module):
             is_trainable = False
             trl_model_args = {}
             pretrained_kwargs = {}
-            peft_quantization_kwargs = {}
+            # peft_quantization_kwargs = {}
             token = None
 
         if reward_adapter is not None and not isinstance(reward_adapter, str):
@@ -410,7 +406,7 @@ class PreTrainedModelWrapper(nn.Module):
         else:
             state_dict = pretrained_model_name_or_path.state_dict()
 
-        model.is_peft_model = is_peft_model
+        # model.is_peft_model = is_peft_model
         # model.current_device = current_device
 
         if is_resuming_training:
@@ -463,7 +459,7 @@ class PreTrainedModelWrapper(nn.Module):
                     )
             # load json
             if is_resuming_training:
-                with open(index_file_name) as f:
+                with open(index_file_name, encoding='utf-8') as f:
                     index = json.load(f)
                 # check filename with `v_head` or any known extra module:
                 files_to_download = set()
@@ -603,7 +599,7 @@ class PreTrainedModelWrapper(nn.Module):
         num_labels, hidden_dim = score_dict["weight"].shape
         has_bias = any("bias" in name for name in adapter_state_dict.keys())
 
-        score = nn.Dense(hidden_dim, num_labels, has_bias=has_bias)
+        score = nn.Linear(hidden_dim, num_labels, bias=has_bias)
         score.load_state_dict(score_dict)
         for param in score.parameters():
             param.requires_grad = False

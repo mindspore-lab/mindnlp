@@ -15,6 +15,8 @@ limitations under the License.
 flake8: noqa
 '''
 
+# pylint: disable=C,R
+
 from typing import TYPE_CHECKING
 from ..import_utils import _LazyModule, is_diffusers_available, OptionalDependencyNotAvailable
 

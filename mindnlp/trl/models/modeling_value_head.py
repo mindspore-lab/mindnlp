@@ -12,13 +12,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable=line-too-long
-# pylint: disable=unused-argument
-# pylint: disable=unused-variable
+# pylint: disable=C,R
 
 
 import mindspore as ms
-from mindspore import Tensor
 from mindnlp.core import nn
 from mindnlp.transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM
 
@@ -42,6 +39,7 @@ class ValueHead(nn.Module):
         self.dropout = nn.Dropout(summary_dropout_prob) if summary_dropout_prob else nn.Identity()
 
         # some models such as OPT have a projection layer before the word embeddings - e.g. OPT-350m
+        hidden_size = None
         if hasattr(config, "hidden_size"):
             hidden_size = config.hidden_size
         if hasattr(config, "word_embed_proj_dim"):
@@ -51,7 +49,7 @@ class ValueHead(nn.Module):
                 if hasattr(config.decoder, "hidden_size"):
                     hidden_size = config.decoder.hidden_size
 
-        self.summary = nn.Dense(hidden_size, 1)
+        self.summary = nn.Linear(hidden_size, 1)
 
         self.flatten = nn.Flatten()
 
@@ -183,8 +181,8 @@ class AutoModelForCausalLMWithValueHead(PreTrainedModelWrapper):
         value = self.v_head(last_hidden_state).squeeze(-1)
 
         # force upcast in fp32 if logits are in half-precision
-        if lm_logits.dtype != ms.float32:
-            lm_logits = lm_logits.astype(ms.float32)
+        if lm_logits.dtype != ms.Tensor:
+            lm_logits = lm_logits.astype(ms.Tensor)
 
         return (lm_logits, loss, value)
 
@@ -244,7 +242,7 @@ class AutoModelForCausalLMWithValueHead(PreTrainedModelWrapper):
                     "The model is offloaded on CPU or disk - CPU & disk offloading is not supported for ValueHead models."
                 )
 
-            first_device = list(set(self.pretrained_model.hf_device_map.values()))[0]
+            # first_device = list(set(self.pretrained_model.hf_device_map.values()))[0]
             # if isinstance(first_device, int):
                 # if is_npu_available():
                 #     first_device = f"npu:{first_device}"
@@ -254,16 +252,16 @@ class AutoModelForCausalLMWithValueHead(PreTrainedModelWrapper):
                 #     first_device = f"cuda:{first_device}"
             self.v_head = self.v_head
 
-            def set_device_hook(module, input, outputs):
-                new_output = ()
-                for output in outputs:
-                    if isinstance(output, Tensor):
-                        new_output += (output,)
-                    else:
-                        new_output += (output,)
-                return new_output
+            # def set_device_hook(module, input, outputs):
+            #     new_output = ()
+            #     for output in outputs:
+            #         if isinstance(output, ms.Tensor):
+            #             new_output += (output,)
+            #         else:
+            #             new_output += (output,)
+            #     return new_output
 
-            self.register_forward_hook(set_device_hook)
+            # self.register_forward_hook(set_device_hook)
 
             self.is_sequential_parallel = True
 
@@ -323,45 +321,45 @@ class AutoModelForSeq2SeqLMWithValueHead(PreTrainedModelWrapper):
         self.v_head.load_state_dict(state_dict, strict=False)
         del state_dict
 
-        if hasattr(self.pretrained_model, "hf_device_map"):
-            if (
-                "cpu" in self.pretrained_model.hf_device_map.values()
-                or "disk" in self.pretrained_model.hf_device_map.values()
-            ):
-                raise ValueError(
-                    "The model is offloaded on CPU or disk - CPU & disk offloading is not supported for ValueHead models."
-                )
+        # if hasattr(self.pretrained_model, "hf_device_map"):
+        #     if (
+        #         "cpu" in self.pretrained_model.hf_device_map.values()
+        #         or "disk" in self.pretrained_model.hf_device_map.values()
+        #     ):
+        #         raise ValueError(
+        #             "The model is offloaded on CPU or disk - CPU & disk offloading is not supported for ValueHead models."
+        #         )
 
-            # get the lm_head device
-            for name, module in self.pretrained_model.named_modules():
-                if any(attribute in name for attribute in self.lm_head_namings):
-                    lm_head_device = module.weight.device
-                    break
+        #     # get the lm_head device
+        #     for name, module in self.pretrained_model.named_modules():
+        #         if any(attribute in name for attribute in self.lm_head_namings):
+        #             lm_head_device = module.weight.device
+        #             break
 
 
-            def set_device_hook(module, input, outputs):
-                r"""
-                A hook that sets the device of the output of the model to the device of the first
-                parameter of the model.
+        #     def set_device_hook(module, input, outputs):
+        #         r"""
+        #         A hook that sets the device of the output of the model to the device of the first
+        #         parameter of the model.
 
-                Args:
-                    module (`nn.Module`):
-                        The module to which the hook is attached.
-                    input (`tuple`):
-                        The input to the module.
-                    outputs (`tuple`):
-                        The output of the module.
-                """
-                new_output = ()
-                for output in outputs:
-                    if isinstance(output, Tensor):
-                        new_output += (output,)
-                    else:
-                        new_output += (output,)
-                return new_output
+        #         Args:
+        #             module (`nn.Module`):
+        #                 The module to which the hook is attached.
+        #             input (`tuple`):
+        #                 The input to the module.
+        #             outputs (`tuple`):
+        #                 The output of the module.
+        #         """
+        #         new_output = ()
+        #         for output in outputs:
+        #             if isinstance(output, ms.Tensor):
+        #                 new_output += (output,)
+        #             else:
+        #                 new_output += (output,)
+        #         return new_output
 
-            self.register_forward_hook(set_device_hook)
-            self.is_sequential_parallel = True
+        #     self.register_forward_hook(set_device_hook)
+        #     self.is_sequential_parallel = True
 
     def state_dict(self, *args, **kwargs):
         r"""
@@ -426,8 +424,8 @@ class AutoModelForSeq2SeqLMWithValueHead(PreTrainedModelWrapper):
         value = self.v_head(last_hidden_state).squeeze(-1)
 
         # force upcast in fp32 if logits are in half-precision
-        if lm_logits.dtype != ms.float32:
-            lm_logits = lm_logits.astype(ms.float32)
+        if lm_logits.dtype != ms.Tensor:
+            lm_logits = lm_logits.astype(ms.Tensor)
 
         return (lm_logits, loss, value)
 

@@ -1,13 +1,16 @@
 '''
 there are dataset_formatting functions in this file.
 '''
+
+# pylint: disable=C,R
+
 import logging
 from typing import Callable, Literal, Optional, Union
 
 from datasets import Dataset, Value
 from mindnlp.transformers import AutoTokenizer
 
-from ..trainer.utils import ConstantLengthDataset
+from ...engine.trainer.utils import ConstantLengthDataset
 
 # pylint: disable=line-too-long
 # pylint: disable=no-else-return
@@ -17,10 +20,13 @@ FORMAT_MAPPING = {
     "instruction": {"completion": Value(dtype="string", id=None), "prompt": Value(dtype="string", id=None)},
 }
 
-
-def conversations_formatting_function(tokenizer: AutoTokenizer, messages_field: Literal["messages", "conversations"]):
+def conversations_formatting_function(
+    tokenizer: AutoTokenizer,
+    messages_field: Literal["messages", "conversations"]
+    ):
     r"""
-    return a callable function that takes in a "messages" dataset and returns a formatted dataset, based on the tokenizer
+    return a callable function that takes in a "messages" dataset and returns a formatted dataset,
+    based on the tokenizer
     apply chat template to the dataset
     """
 
@@ -38,7 +44,8 @@ def conversations_formatting_function(tokenizer: AutoTokenizer, messages_field: 
 
 def instructions_formatting_function(tokenizer: AutoTokenizer):
     r"""
-    return a callable function that takes in an "instructions" dataset and returns a formatted dataset, based on the tokenizer
+    return a callable function that takes in an "instructions" dataset and returns a formatted dataset, 
+    based on the tokenizer
     apply chat template to the dataset
     """
 

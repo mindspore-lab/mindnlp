@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=C,R
 # pylint: disable=expression-not-assigned
 # pylint: disable=assignment-from-no-return
 # pylint: disable=used-before-assignment
@@ -50,6 +51,7 @@ from ...transformers.configuration_utils import PretrainedConfig
 from ...transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from ...transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, MODEL_MAPPING_NAMES
 from ...transformers.ms_utils import ALL_LAYERNORM_LAYERS
+from huggingface_hub import PyTorchModelHubMixin
 
 from ..utils import (
     PREFIX_CHECKPOINT_DIR,
@@ -2314,3 +2316,35 @@ def load_sharded_checkpoint(model, folder, strict=True, prefer_safe=True):
 
     # Return the same thing as PyTorch load_state_dict function.
     return missing_keys, unexpected_keys
+
+#####for trl/trainer
+
+class BaseTrainer(PyTorchModelHubMixin):
+    r"""
+    Base class for all trainers - this base class implements the basic functions that we
+    need for a trainer.
+
+    The trainer needs to have the following functions:
+        - step: takes in a batch of data and performs a step of training
+        - loss: takes in a batch of data and returns the loss
+        - compute_rewards: takes in a batch of data and returns the rewards
+        - _build_models_and_tokenizer: builds the models and tokenizer
+        - _build_dataset: builds the dataset
+    Each user is expected to implement their own trainer class that inherits from this base
+    if they want to use a new training algorithm.
+    """
+
+    def __init__(self, config):
+        self.config = config
+
+    def step(self, *args):
+        raise NotImplementedError("Not implemented")
+
+    def loss(self, *args):
+        raise NotImplementedError("Not implemented")
+
+    def compute_rewards(self, *args):
+        raise NotImplementedError("Not implemented")
+
+    def _save_pretrained(self, save_directory):
+        raise NotImplementedError("Not implemented")

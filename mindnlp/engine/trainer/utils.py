@@ -12,29 +12,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable=line-too-long
-# pylint: disable=too-many-instance-attributes
-# pylint: disable=missing-class-docstring
-# pylint: disable=unused-argument
-# pylint: disable=too-many-arguments
-# pylint: disable=no-else-return
-# pylint: disable=too-many-locals
-# pylint: disable=too-many-branches
-# pylint: disable=too-many-statements
-# pylint: disable=unused-import
-# pylint: disable=undefined-variable
-# pylint: disable=missing-function-docstring
+# pylint: disable=C,R
 
 import random
 import warnings
 # from collections import deque
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 import mindspore.numpy as np
 import pandas as pd
 import mindspore as ms
-import mindnlp.core.ops as ops
+from mindnlp.core import ops,nn
 # from accelerate import Accelerator
 # from accelerate.state import AcceleratorState, PartialState
 # from accelerate.utils import is_deepspeed_available
@@ -54,17 +43,25 @@ from rich.table import Table
 from mindnlp.transformers import (
     PreTrainedTokenizerBase,
 )
-from data.data_collator import DataCollatorForLanguageModeling
+from ...trl.data.data_collator import DataCollatorForLanguageModeling
 from mindnlp.engine import TrainerCallback
-# from transformers.trainer_utils import has_length
+from mindnlp.engine import has_length
 
-from ..import_utils import is_peft_available
-from ..import_utils import is_unsloth_available
-from ..trainer.model_config import ModelConfig
+from ...trl.core import pad_sequence
+from ...trl.import_utils import is_peft_available
+from ...trl.import_utils import is_unsloth_available
+from ..train_args import ModelConfig
+from typing import (
+    Generic,
+    Iterable,
+    # Sequence,
+    TypeVar,
+)
+import bisect
+T_co = TypeVar("T_co", covariant=True)
 
-
-if is_peft_available():
-    from peft import LoraConfig, PeftConfig
+# if is_peft_available():
+    # from peft import LoraConfig, PeftConfig
 
 
 # if is_deepspeed_available():
@@ -72,18 +69,6 @@ if is_peft_available():
 
 #######################IterableDataset###############
 
-from typing import (
-    cast,
-    Generic,
-    Iterable,
-    Sequence,
-    TypeVar,
-)
-
-
-import bisect
-
-T_co = TypeVar("T_co", covariant=True)
 
 class Dataset(Generic[T_co]):
     r"""An abstract class representing a :class:`Dataset`.
@@ -509,83 +494,83 @@ class RewardDataCollatorWithPadding:
             "return_loss": True,
         }
         if has_margin:
-            margin = ms.Tensor(margin, dtype=ms.float)
+            margin = ms.Tensor(margin)
             batch["margin"] = margin
         return batch
 
 
-# @dataclass
-# class DPODataCollatorWithPadding:
-#     r"""
-#     DPO DataCollator class that pads the tokenized inputs to the maximum length of the batch.
-#     Args:
-#         pad_token_id (`int` defaults to 0):
-#             The tokenizer's pad_token_id.
-#         label_pad_token_id (`int`, defaults to -100):
-#             The label used for masking.
-#         is_encoder_decoder (`Optional[bool]`, `optional`, defaults to `None`):
-#             Whether or not you model has an encoder_decoder architecture.
-#     """
+@dataclass
+class DPODataCollatorWithPadding:
+    r"""
+    DPO DataCollator class that pads the tokenized inputs to the maximum length of the batch.
+    Args:
+        pad_token_id (`int` defaults to 0):
+            The tokenizer's pad_token_id.
+        label_pad_token_id (`int`, defaults to -100):
+            The label used for masking.
+        is_encoder_decoder (`Optional[bool]`, `optional`, defaults to `None`):
+            Whether or not you model has an encoder_decoder architecture.
+    """
 
-#     pad_token_id: int = 0
-#     label_pad_token_id: int = -100
-#     is_encoder_decoder: Optional[bool] = False
+    pad_token_id: int = 0
+    label_pad_token_id: int = -100
+    is_encoder_decoder: Optional[bool] = False
 
-#     def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
-#         # first, pad everything to the same length
-#         padded_batch = {}
-#         for k in features[0].keys():
-#             if k.endswith("_input_ids") or k.endswith("_attention_mask") or k.endswith("_labels"):
-#                 if self.is_encoder_decoder:
-#                     to_pad = [torch.LongTensor(ex[k]) for ex in features]
+    def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+        # first, pad everything to the same length
+        padded_batch = {}
+        for k in features[0].keys():
+            if k.endswith("_input_ids") or k.endswith("_attention_mask") or k.endswith("_labels"):
+                if self.is_encoder_decoder:
+                    to_pad = [ms.Tensor(ex[k]) for ex in features]
 
-#                     if (k.startswith("prompt")) and (k.endswith("input_ids")):
-#                         if self.pad_token_id is None:
-#                             raise ValueError(
-#                                 "Padding is enabled, but the tokenizer is not configured with a padding token."
-#                                 " Explicitly set `tokenizer.pad_token` (e.g. `tokenizer.pad_token = tokenizer.eos_token`)"
-#                                 " before calling the trainer."
-#                             )
-#                         padding_value = self.pad_token_id
-#                     elif k.endswith("_attention_mask"):
-#                         padding_value = 0
-#                     elif k.startswith(("chosen", "rejected", "completion")) or ("decoder" in k):
-#                         padding_value = self.label_pad_token_id
-#                     else:
-#                         raise ValueError(f"Unexpected key in batch '{k}'")
-#                     padded_batch[k] = pad_sequence(to_pad, batch_first=True, padding_value=padding_value)
-#                 else:
-#                     # adapted from https://stackoverflow.com/questions/73256206
-#                     if "prompt" in k:
-#                         to_pad = [torch.LongTensor(ex[k][::-1]) for ex in features]
-#                     else:
-#                         to_pad = [torch.LongTensor(ex[k]) for ex in features]
-#                     if k.endswith("_input_ids"):
-#                         if self.pad_token_id is None:
-#                             raise ValueError(
-#                                 "Padding is enabled, but the tokenizer is not configured with a padding token."
-#                                 " Explicitly set `tokenizer.pad_token` (e.g. `tokenizer.pad_token = tokenizer.eos_token`)"
-#                                 " before calling the trainer."
-#                             )
-#                         padding_value = self.pad_token_id
-#                     elif k.endswith("_labels"):
-#                         padding_value = self.label_pad_token_id
-#                     elif k.endswith("_attention_mask"):
-#                         padding_value = 0
-#                     else:
-#                         raise ValueError(f"Unexpected key in batch '{k}'")
+                    if (k.startswith("prompt")) and (k.endswith("input_ids")):
+                        if self.pad_token_id is None:
+                            raise ValueError(
+                                "Padding is enabled, but the tokenizer is not configured with a padding token."
+                                " Explicitly set `tokenizer.pad_token` (e.g. `tokenizer.pad_token = tokenizer.eos_token`)"
+                                " before calling the trainer."
+                            )
+                        padding_value = self.pad_token_id
+                    elif k.endswith("_attention_mask"):
+                        padding_value = 0
+                    elif k.startswith(("chosen", "rejected", "completion")) or ("decoder" in k):
+                        padding_value = self.label_pad_token_id
+                    else:
+                        raise ValueError(f"Unexpected key in batch '{k}'")
+                    padded_batch[k] = pad_sequence(to_pad, padding_value=padding_value)
+                else:
+                    # adapted from https://stackoverflow.com/questions/73256206
+                    if "prompt" in k:
+                        to_pad = [ms.Tensor(ex[k][::-1]) for ex in features]
+                    else:
+                        to_pad = [ms.Tensor(ex[k]) for ex in features]
+                    if k.endswith("_input_ids"):
+                        if self.pad_token_id is None:
+                            raise ValueError(
+                                "Padding is enabled, but the tokenizer is not configured with a padding token."
+                                " Explicitly set `tokenizer.pad_token` (e.g. `tokenizer.pad_token = tokenizer.eos_token`)"
+                                " before calling the trainer."
+                            )
+                        padding_value = self.pad_token_id
+                    elif k.endswith("_labels"):
+                        padding_value = self.label_pad_token_id
+                    elif k.endswith("_attention_mask"):
+                        padding_value = 0
+                    else:
+                        raise ValueError(f"Unexpected key in batch '{k}'")
 
-#                     padded_batch[k] = pad_sequence(to_pad, batch_first=True, padding_value=padding_value)
-#                     # for the prompt, flip back so padding is on left side
-#                     if "prompt" in k:
-#                         padded_batch[k] = padded_batch[k].flip(dims=[1])
-#             elif k.endswith("_logps"):
-#                 # the cached reference model logprobs
-#                 padded_batch[k] = torch.tensor([ex[k] for ex in features])
-#             else:
-#                 padded_batch[k] = [ex[k] for ex in features]
+                    padded_batch[k] = pad_sequence(to_pad, padding_value=padding_value)
+                    # for the prompt, flip back so padding is on left side
+                    if "prompt" in k:
+                        padded_batch[k] = padded_batch[k].flip(dims=[1])
+            elif k.endswith("_logps"):
+                # the cached reference model logprobs
+                padded_batch[k] = ms.tensor([ex[k] for ex in features])
+            else:
+                padded_batch[k] = [ex[k] for ex in features]
 
-#         return padded_batch
+        return padded_batch
 
 
 class ConstantLengthDataset(IterableDataset):
@@ -783,25 +768,25 @@ def compute_accuracy(eval_pred) -> Dict[str, float]:
     return {"accuracy": accuracy}
 
 
-# def pad_to_length(tensor: torch.Tensor, length: int, pad_value: Union[int, float], dim: int = -1) -> torch.Tensor:
-#     if tensor.size(dim) >= length:
-#         return tensor
-#     else:
-#         pad_size = list(tensor.shape)
-#         pad_size[dim] = length - tensor.size(dim)
-#         return torch.cat(
-#             [
-#                 tensor,
-#                 pad_value * torch.ones(*pad_size, dtype=tensor.dtype, device=tensor.device),
-#             ],
-#             dim=dim,
-#         )
+def pad_to_length(tensor: ms.Tensor, length: int, pad_value: Union[int, float], dim: int = -1) -> ms.Tensor:
+    if tensor.shape[dim] >= length:
+        return tensor
+    else:
+        pad_size = list(tensor.shape)
+        pad_size[dim] = length - tensor.shape[dim]
+        return ops.cat(
+            [
+                tensor,
+                pad_value * ops.ones(*pad_size),
+            ],
+            dim=dim,
+        )
 
 
-# def disable_dropout_in_model(model: torch.nn.Module) -> None:
-#     for module in model.modules():
-#         if isinstance(module, torch.nn.Dropout):
-#             module.p = 0
+def disable_dropout_in_model(model: nn.Module) -> None:
+    for module in model.modules():
+        if isinstance(module, nn.Dropout):
+            module.p = 0
 
 
 # def exact_div(a, b, custom_error_message=""):
@@ -853,7 +838,7 @@ def compute_accuracy(eval_pred) -> Dict[str, float]:
 #         return {k: {"mean": np.mean(v), "std": np.std(v), "count": len(v)} for k, v in self.stats.items()}
 
 
-def neftune_post_forward_hook(module, input, output):
+def neftune_post_forward_hook(module, output):
     """
     Implements the NEFTune forward pass for the model using forward hooks. Note this works only for
     torch.nn.Embedding layers. This method is slightly adapted from the original source code
@@ -879,7 +864,7 @@ def neftune_post_forward_hook(module, input, output):
         dims = ms.Tensor(output.shape(1) * output.shape(2))
         mag_norm = module.neftune_noise_alpha / ops.sqrt(dims)
         uniform = ms.common.initializer.Uniform(mag_norm)
-        output = output + uniform(ops.ZerosLike(output))
+        output = output + uniform(ops.zeros_like(output))
     return output
 
 
@@ -949,17 +934,17 @@ def get_peft_config(model_config: ModelConfig) -> "Optional[PeftConfig]":
             "Make sure to run `pip install -U peft`."
         )
 
-    peft_config = LoraConfig(
-        r=model_config.lora_r,
-        lora_alpha=model_config.lora_alpha,
-        lora_dropout=model_config.lora_dropout,
-        bias="none",
-        task_type=model_config.lora_task_type,
-        target_modules=model_config.lora_target_modules,
-        modules_to_save=model_config.lora_modules_to_save,
-    )
+    # peft_config = LoraConfig(
+    #     r=model_config.lora_r,
+    #     lora_alpha=model_config.lora_alpha,
+    #     lora_dropout=model_config.lora_dropout,
+    #     bias="none",
+    #     task_type=model_config.lora_task_type,
+    #     target_modules=model_config.lora_target_modules,
+    #     modules_to_save=model_config.lora_modules_to_save,
+    # )
 
-    return peft_config
+    # return peft_config
 
 
 class RichProgressCallback(TrainerCallback):

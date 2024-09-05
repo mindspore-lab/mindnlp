@@ -15,6 +15,7 @@
 """
 utils for trainer.
 """
+# pylint: disable=C,R
 from mindspore import ops, value_and_grad
 from mindspore.amp import all_finite
 

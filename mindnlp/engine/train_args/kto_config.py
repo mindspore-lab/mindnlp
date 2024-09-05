@@ -11,12 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# pylint: disable=C,R
 from dataclasses import dataclass
 from typing import Dict, Literal, Optional
 
 from mindnlp.engine import TrainingArguments
 
-from ..import_utils import is_sklearn_available
+from ...trl.import_utils import is_sklearn_available
 
 
 @dataclass

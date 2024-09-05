@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
+# pylint: disable=C,R
 # pylint: disable=line-too-long
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=missing-class-docstring
@@ -34,9 +35,8 @@ from typing import Callable, Dict, List, Optional, Tuple, Union, NewType, Any
 # import datasets
 
 import mindspore as ms
-from mindnlp.core import nn
+from mindnlp.core import nn, optim
 from mindspore.dataset import Dataset, transforms
-from mindnlp.core.nn.learning_rate_schedule import LearningRateSchedule
 #暂只考虑单卡训练
 # from accelerate.state import PartialState
 # from mindspore.dataset.engine import Dataset
@@ -57,14 +57,14 @@ from mindnlp.transformers import (
 from mindnlp.engine import Trainer
 from mindnlp.peft import PeftConfig, PeftModel, get_peft_model
 
-from data.data_collator import DataCollator, DataCollatorForLanguageModeling
+from ...trl.data.data_collator import DataCollator, DataCollatorForLanguageModeling
 # from mindnlp.transformers.modeling_utils import unwrap_model
 # from mindnlp.transformers.trainer_callback import TrainerCallback
 # from mindnlp.transformers.trainer_utils import EvalPrediction
 
-from ..extras.dataset_formatting import get_formatting_func_from_dataset
-from ..import_utils import is_peft_available
-from .sft_config import SFTConfig
+from ...trl.extras.dataset_formatting import get_formatting_func_from_dataset
+from ...trl.import_utils import is_peft_available
+from ..train_args import SFTConfig
 from .utils import (
     ConstantLengthDataset,
     # DataCollatorForCompletionOnlyLM,
@@ -179,7 +179,7 @@ class SFTTrainer(Trainer):
         model_init: Optional[Callable[[], PreTrainedModel]] = None,
         compute_metrics: Optional[Callable[[], Dict]] = None, #Callable[[EvalPrediction], Dict]
         callbacks: Optional[List] = None, #callbacks: Optional[List[TrainerCallback]] = None,
-        optimizers: Tuple[nn.Optimizer, LearningRateSchedule] = (None, None),
+        optimizers: Tuple[optim.Optimizer, optim.lr_scheduler.LambdaLR] = (None, None),
         preprocess_logits_for_metrics: Optional[Callable[[ms.Tensor, ms.Tensor], ms.Tensor]] = None,
         peft_config: Optional["PeftConfig"] = None,
         dataset_text_field: Optional[str] = None,
@@ -566,19 +566,19 @@ class SFTTrainer(Trainer):
                 add_special_tokens,
                 remove_unused_columns,
             )
-
-        else:
-            return self._prepare_packed_dataloader(
-                tokenizer,
-                dataset,
-                dataset_text_field,
-                max_seq_length,
-                num_of_sequences,
-                chars_per_token,
-                formatting_func,
-                append_concat_token,
-                add_special_tokens,
-            )
+        #先不考虑packed
+        # else:
+        #     return self._prepare_packed_dataloader(
+        #         tokenizer,
+        #         dataset,
+        #         dataset_text_field,
+        #         max_seq_length,
+        #         num_of_sequences,
+        #         chars_per_token,
+        #         formatting_func,
+        #         append_concat_token,
+        #         add_special_tokens,
+        #     )
 
     def _prepare_non_packed_dataloader(
         self,
@@ -654,56 +654,57 @@ class SFTTrainer(Trainer):
                                                                         'attention_mask': (None, 0),})
         return tokenized_dataset
 
-    def _prepare_packed_dataloader(
-        self,
-        tokenizer,
-        dataset,
-        dataset_text_field,
-        max_seq_length,
-        num_of_sequences,
-        chars_per_token,
-        formatting_func=None,
-        append_concat_token=True,
-        add_special_tokens=True,
-    ):
-        if dataset_text_field is not None or formatting_func is not None:
-            if tokenizer is None:
-                raise ValueError("You need to pass a tokenizer when using `dataset_text_field` with `SFTTrainer`.")
+###先不考虑packed
+    # def _prepare_packed_dataloader(
+    #     self,
+    #     tokenizer,
+    #     dataset,
+    #     dataset_text_field,
+    #     max_seq_length,
+    #     num_of_sequences,
+    #     chars_per_token,
+    #     formatting_func=None,
+    #     append_concat_token=True,
+    #     add_special_tokens=True,
+    # ):
+    #     if dataset_text_field is not None or formatting_func is not None:
+    #         if tokenizer is None:
+    #             raise ValueError("You need to pass a tokenizer when using `dataset_text_field` with `SFTTrainer`.")
 
-            constant_length_iterator = ConstantLengthDataset(
-                tokenizer,
-                dataset,
-                dataset_text_field=dataset_text_field,
-                formatting_func=formatting_func,
-                seq_length=max_seq_length,
-                infinite=False,
-                num_of_sequences=num_of_sequences,
-                chars_per_token=chars_per_token,
-                eos_token_id=tokenizer.eos_token_id,
-                append_concat_token=append_concat_token,
-                add_special_tokens=add_special_tokens,
-            )
+    #         constant_length_iterator = ConstantLengthDataset(
+    #             tokenizer,
+    #             dataset,
+    #             dataset_text_field=dataset_text_field,
+    #             formatting_func=formatting_func,
+    #             seq_length=max_seq_length,
+    #             infinite=False,
+    #             num_of_sequences=num_of_sequences,
+    #             chars_per_token=chars_per_token,
+    #             eos_token_id=tokenizer.eos_token_id,
+    #             append_concat_token=append_concat_token,
+    #             add_special_tokens=add_special_tokens,
+    #         )
 
-            # if isinstance(dataset, datasets.IterableDataset):
-            #     return constant_length_iterator
+    #         # if isinstance(dataset, datasets.IterableDataset):
+    #         #     return constant_length_iterator
 
-            def data_generator(constant_length_iterator):
-                yield from constant_length_iterator
+    #         def data_generator(constant_length_iterator):
+    #             yield from constant_length_iterator
 
-            try:
-                packed_dataset = Dataset.from_generator(
-                    data_generator, gen_kwargs={"constant_length_iterator": constant_length_iterator}
-                )
-            except (DatasetGenerationError, SchemaInferenceError) as exc:
-                raise ValueError(
-                    "Error occurred while packing the dataset. "
-                    "Make sure that your dataset has enough samples to at least yield one packed sequence."
-                ) from exc
-            return packed_dataset
-        else:
-            raise ValueError(
-                "You need to pass a `dataset_text_field` or `formatting_func` argument to the SFTTrainer if you want to use the `ConstantLengthDataset`."
-            )
+    #         try:
+    #             packed_dataset = Dataset.from_generator(
+    #                 data_generator, gen_kwargs={"constant_length_iterator": constant_length_iterator}
+    #             )
+    #         except (DatasetGenerationError, SchemaInferenceError) as exc:
+    #             raise ValueError(
+    #                 "Error occurred while packing the dataset. "
+    #                 "Make sure that your dataset has enough samples to at least yield one packed sequence."
+    #             ) from exc
+    #         return packed_dataset
+    #     else:
+    #         raise ValueError(
+    #             "You need to pass a `dataset_text_field` or `formatting_func` argument to the SFTTrainer if you want to use the `ConstantLengthDataset`."
+    #         )
 
     def _trl_activate_neftune(self, model):
         r"""

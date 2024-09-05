@@ -34,29 +34,29 @@ _import_structure = {
         "setup_chat_format",
         "SUPPORTED_ARCHITECTURES",
     ],
-    "trainer": [
-        "DataCollatorForCompletionOnlyLM",
-        "DPOConfig",
-        "DPOTrainer",
-        "CPOConfig",
-        "CPOTrainer",
-        "AlignPropConfig",
-        "AlignPropTrainer",
-        "IterativeSFTTrainer",
-        "KTOConfig",
-        "KTOTrainer",
-        "ModelConfig",
-        "ORPOConfig",
-        "ORPOTrainer",
-        "PPOConfig",
-        "PPOTrainer",
-        "RewardConfig",
-        "RewardTrainer",
-        "SFTConfig",
-        "SFTTrainer",
-        "FDivergenceConstants",
-        "FDivergenceType",
-    ],
+    # "trainer": [
+    #     "DataCollatorForCompletionOnlyLM",
+    #     "DPOConfig",
+    #     "DPOTrainer",
+    #     "CPOConfig",
+    #     "CPOTrainer",
+    #     "AlignPropConfig",
+    #     "AlignPropTrainer",
+    #     "IterativeSFTTrainer",
+    #     "KTOConfig",
+    #     "KTOTrainer",
+    #     "ModelConfig",
+    #     "ORPOConfig",
+    #     "ORPOTrainer",
+    #     "PPOConfig",
+    #     "PPOTrainer",
+    #     "RewardConfig",
+    #     "RewardTrainer",
+    #     "SFTConfig",
+    #     "SFTTrainer",
+    #     "FDivergenceConstants",
+    #     "FDivergenceType",
+    # ],
     "commands": [],
     "commands.cli_utils": ["init_zero_verbose",\
         "SFTScriptArguments", "DPOScriptArguments", "TrlParser"],
@@ -128,7 +128,7 @@ if TYPE_CHECKING:
         FDivergenceConstants,
         FDivergenceType,
     )
-    from .trainer.utils import get_kbit_device_map,\
+    from ..trainer.utils import get_kbit_device_map,\
         get_peft_config, get_quantization_config, RichProgressCallback
 
     from .commands.cli_utils import init_zero_verbose, SFTScriptArguments,\
@@ -139,14 +139,14 @@ if TYPE_CHECKING:
             raise OptionalDependencyNotAvailable()
     except OptionalDependencyNotAvailable:
         pass
-    else:
-        from .models import (
-            DDPOPipelineOutput,
-            DDPOSchedulerOutput,
-            DDPOStableDiffusionPipeline,
-            DefaultDDPOStableDiffusionPipeline,
-        )
-        from .trainer import DDPOConfig, DDPOTrainer
+    # else:
+    #     from .models import (
+    #         DDPOPipelineOutput,
+    #         DDPOSchedulerOutput,
+    #         DDPOStableDiffusionPipeline,
+    #         DefaultDDPOStableDiffusionPipeline,
+    #     )
+    #     from .trainer import DDPOConfig, DDPOTrainer
 
 else:
     import sys
