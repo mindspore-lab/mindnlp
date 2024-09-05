@@ -19,7 +19,7 @@ from mindnlp.core import nn
 from mindnlp.peft.utils.integrations import dequantize_module_weight
 from ...utils.other import transpose
 import mindspore
-from mindspore import ops
+from mindnlp.core import ops
 import numpy as np
 
 
