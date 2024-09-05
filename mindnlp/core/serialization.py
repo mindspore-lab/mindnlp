@@ -35,7 +35,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import mindspore
-from mindspore import Tensor
+from mindspore import Tensor, Parameter
 from mindspore.train.serialization import _exec_save, _parse_ckpt_proto, tensor_to_np_type, tensor_to_ms_type
 
 import safetensors
@@ -755,6 +755,13 @@ def _open_zipfile_writer(name_or_buffer):
     else:
         container = _open_zipfile_writer_buffer
     return container(name_or_buffer)
+
+def _rebuild_parameter(data, requires_grad, backward_hooks):
+    param = Parameter(data, requires_grad=requires_grad)
+    # NB: This line exists only for backwards compatibility; the
+    # general expectation is that backward_hooks is an empty
+    # OrderedDict.  See Note [Don't serialize hooks]
+    return param
 
 def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, backward_hooks, metadata=None):
     '''Rebuilds a tensor based on the provided parameters.

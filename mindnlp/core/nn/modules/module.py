@@ -8,6 +8,7 @@ from collections import OrderedDict, namedtuple
 import mindspore
 from mindspore import Tensor, Parameter
 from mindspore.common._stub_tensor import StubTensor
+from mindspore.common.dtype import Float
 
 from ...utils import hooks
 from ...utils.hooks import RemovableHandle
@@ -1202,7 +1203,7 @@ class Module:
     def to(self, dtype=None):
         def convert(t):
             try:
-                return t.to(dtype)
+                return t.to(dtype) if isinstance(t.dtype, Float) else t
             except NotImplementedError as e:
                 if str(e) == "Cannot copy out of meta tensor; no data!":
                     raise NotImplementedError(

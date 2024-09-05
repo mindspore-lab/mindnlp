@@ -2406,7 +2406,6 @@ class ModelTesterMixin:
                                 is_special_classes
                                 and any(len(re.findall(target, name)) > 0 for target in special_param_names)
                             ):
-                                print(name)
                                 self.assertIn(
                                     param_mean,
                                     [0.0, 1.0],
@@ -3085,7 +3084,6 @@ class ModelTesterMixin:
 
         # Creating a position_ids tensor. note the repeating figures in the end.
         position_ids_shared_prefix = mindspore.tensor([[0, 1, 2, 3, 3, 3]], dtype=mindspore.int64)
-
         return input_ids, position_ids, input_ids_shared_prefix, mask_shared_prefix, position_ids_shared_prefix
 
     def test_custom_4d_attention_mask(self):
@@ -3125,7 +3123,6 @@ class ModelTesterMixin:
 
             out_last_tokens = logits[:, -1, :]  # last tokens in each batch line
             out_shared_prefix_last_tokens = logits_shared_prefix[0, -3:, :]  # last three tokens
-
             # comparing softmax-normalized logits:
             normalized_0 = F.softmax(out_last_tokens)
             normalized_1 = F.softmax(out_shared_prefix_last_tokens)
