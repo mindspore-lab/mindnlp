@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch PatchTSMixer model."""
+"""Mindspore PatchTSMixer model."""
 
 import math
 from dataclasses import dataclass
@@ -1060,7 +1060,7 @@ class PatchTSMixerStdScaler(nn.Module):
         Parameters:
             data (`mindspore.Tensor` of shape `(batch_size, sequence_length, num_input_channels)`):
                 input for Batch norm calculation
-            observed_indicator (`torch.BoolTensor` of shape `(batch_size, sequence_length, num_input_channels)`):
+            observed_indicator (`mindspore。Tensor` of shape `(batch_size, sequence_length, num_input_channels)`):
                 Calculating the scale on the observed indicator.
         Returns:
             tuple of `mindspore.Tensor` of shapes
