@@ -13,18 +13,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=not-callable
+# pylint: disable=not-callable, no-name-in-module
 """generation mixin"""
 import copy
 import inspect
 import warnings
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
+from mindspore._c_expression import _framework_profiler_step_start
+from mindspore._c_expression import _framework_profiler_step_end
+
 from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import functional as F
+from ...utils.testing_utils import parse_flag_from_env
 
 from ..cache_utils import (
     Cache,
@@ -156,6 +161,7 @@ class GenerateDecoderOnlyOutput(ModelOutput):
     attentions: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     hidden_states: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     past_key_values: Optional[Tuple[Tuple[Tuple[mindspore.Tensor]]]] = None
+    average_infer_time: Optional[float] = None
 
 
 @dataclass
@@ -208,6 +214,7 @@ class GenerateEncoderDecoderOutput(ModelOutput):
     cross_attentions: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     decoder_hidden_states: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     past_key_values: Optional[Tuple[Tuple[Tuple[mindspore.Tensor]]]] = None
+    average_infer_time: Optional[float] = None
 
 
 @dataclass
@@ -1642,6 +1649,7 @@ class GenerationMixin:
                     - [`~generation.GenerateEncoderDecoderOutput`],
                     - [`~generation.GenerateBeamEncoderDecoderOutput`]
         """
+        _run_profiler = parse_flag_from_env('MS_ENABLE_RUNTIME_PROFILER', False)
         # 1. Handle `generation_config` and kwargs that might update it, and validate the `.generate()` call
         self._validate_model_class()
         tokenizer = kwargs.pop("tokenizer", None)  # Pull this out first, we only use it for stopping criteria
@@ -1850,6 +1858,11 @@ class GenerationMixin:
         prepared_stopping_criteria = self._get_stopping_criteria(
             generation_config=generation_config, stopping_criteria=stopping_criteria, tokenizer=tokenizer, **kwargs
         )
+
+        if _run_profiler:
+            _framework_profiler_step_start()
+            logger.warning('Enabling the profiler will generate larger files. Please set `max_length` or `max_new_tokens` to a smaller value (recommended less than 10)')
+
         # 10. go into different generation modes
         if generation_mode == GenerationMode.ASSISTED_GENERATION:
             if generation_config.num_return_sequences > 1:
@@ -2106,6 +2119,9 @@ class GenerationMixin:
                 synced_gpus=synced_gpus,
                 **model_kwargs,
             )
+
+        if _run_profiler:
+            _framework_profiler_step_end()
 
         # Convert to legacy cache if needed
         if use_dynamic_cache_by_default and generation_config.return_legacy_cache:
@@ -2902,9 +2918,14 @@ class GenerationMixin:
         unfinished_sequences = ops.ones(batch_size, dtype=mindspore.int64)
         model_kwargs = self._get_initial_cache_position(input_ids, model_kwargs)
 
+        time_record = []
+        _record_time = parse_flag_from_env('INFERENCE_TIME_RECORD', False)
+
         while self._has_unfinished_sequences(
             this_peer_finished, synced_gpus, cur_len=cur_len, max_length=max_length
         ):
+            if _record_time:
+                infer_start = time.time()
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
@@ -2971,9 +2992,19 @@ class GenerationMixin:
             this_peer_finished = unfinished_sequences.max() == 0
             cur_len += 1
 
+            if _record_time:
+                infer_stop = time.time()
+                time_record.append(infer_stop - infer_start)
             # This is needed to properly delete outputs.logits which may be very large for first iteration
             # Otherwise a reference to outputs is kept which keeps the logits alive in the next iteration
             del outputs
+
+        average_infer_time = None
+        if time_record:
+            time_record.pop(0)
+            average_infer_time = sum(time_record) / len(time_record)
+            print(f'average inference time is: {average_infer_time}')
+            print(f'inference time record: {time_record}')
 
         if streamer is not None:
             streamer.end()
@@ -2990,6 +3021,7 @@ class GenerationMixin:
                     cross_attentions=cross_attentions,
                     decoder_hidden_states=decoder_hidden_states,
                     past_key_values=model_kwargs.get("past_key_values"),
+                    average_infer_time=average_infer_time
                 )
             else:
                 return GenerateDecoderOnlyOutput(
@@ -2999,6 +3031,7 @@ class GenerationMixin:
                     attentions=decoder_attentions,
                     hidden_states=decoder_hidden_states,
                     past_key_values=model_kwargs.get("past_key_values"),
+                    average_infer_time=average_infer_time
                 )
         else:
             return input_ids
@@ -3130,7 +3163,13 @@ class GenerationMixin:
 
         decoder_prompt_len = input_ids.shape[-1]  # record the prompt length of decoder
 
+
+        time_record = []
+        _record_time = parse_flag_from_env('INFERENCE_TIME_RECORD', False)
+
         while self._has_unfinished_sequences(this_peer_finished, synced_gpus):
+            if _record_time:
+                infer_start = time.time()
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
             # prepare variable output controls (note: some models won't accept all output controls)
@@ -3294,6 +3333,17 @@ class GenerationMixin:
 
             if beam_scorer.is_done or all(stopping_criteria(input_ids, scores)):
                 this_peer_finished = True
+
+            if _record_time:
+                infer_stop = time.time()
+                time_record.append(infer_stop - infer_start)
+
+        average_infer_time = None
+        if time_record:
+            time_record.pop(0)
+            average_infer_time = sum(time_record) / len(time_record)
+            print(f'average inference time is: {average_infer_time}')
+            print(f'inference time record: {time_record}')
 
         sequence_outputs = beam_scorer.finalize(
             input_ids,

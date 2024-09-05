@@ -12,18 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch CLIP model."""
+"""Testing suite for the MindSpore CLIP model."""
 
 import inspect
-import os
 import tempfile
 import unittest
-from typing import Optional, Tuple
 
 import numpy as np
 import requests
-from parameterized import parameterized
-from pytest import mark
 
 from mindnlp.transformers import CLIPConfig, CLIPTextConfig, CLIPVisionConfig
 from mindnlp.utils.testing_utils import (
@@ -647,3 +643,26 @@ class CLIPModelIntegrationTest(unittest.TestCase):
         print(outputs.logits_per_image)
 
         self.assertTrue(ops.allclose(outputs.logits_per_image, expected_logits, atol=1e-3))
+
+    @slow
+    def test_inference_time(self):
+        import time
+        model_name = "openai/clip-vit-base-patch32"
+        model = CLIPModel.from_pretrained(model_name)
+        processor = CLIPProcessor.from_pretrained(model_name)
+
+        image = prepare_img()
+        inputs = processor(
+            text=["a photo of a cat", "a photo of a dog"], images=image, padding=True, return_tensors="ms"
+        )
+
+        infer_time = []
+        # forward pass
+        with no_grad():
+            for i in range(20):
+                s = time.time()
+                outputs = model(**inputs)
+                t = time.time()
+                infer_time.append(t - s)
+
+        print(infer_time)
