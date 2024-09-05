@@ -19,7 +19,6 @@ import mindnlp
 from mindnlp import transformers
 import mindspore
 from mindnlp.core import nn
-from mindspore import Parameter
 from mindnlp.core import ops
 
 def dequantize_module_weight(module: nn.Module) -> nn.Parameter:
