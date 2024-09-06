@@ -332,6 +332,11 @@ def mse_loss(input, target, reduction='mean'):
 def l1_loss(input, target, reduction='mean'):
     return ops.l1_loss(input, target, reduction)
 
+def smooth_l1_loss(input, target, beta=1.0, reduction='none'):
+    input = input.to(mindspore.float32)
+    target = target.to(mindspore.float32)
+    return ops.smooth_l1_loss(input, target, beta, reduction)
+
 def kl_div(logits, labels, reduction='mean', log_target=False):
     if log_target:
         labels = ops.log(labels)
