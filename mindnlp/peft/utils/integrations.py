@@ -11,12 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from contextlib import contextmanager
-
-import packaging.version
-import mindnlp
-from mindnlp import transformers
+"""integrations for peft"""
 import mindspore
 from mindnlp.core import nn
 from mindnlp.core import ops
@@ -53,38 +48,3 @@ def dequantize_module_weight(module: nn.Module) -> nn.Parameter:
         # dequantize_bnb_weight for 8bit moves the device in-place, thus we need to move it back to CPU if necessary
         module.weight = module.weight.to(device)
     return weight
-
-
-def dequantize_bnb_weight(weight: nn.Parameter, state=None):
-    """Helper function to dequantize 4bit or 8bit bnb weights.
-
-    Since dequantization is not supported on CPU, the weight will be temporarily moved to CUDA if necessary.
-    """
-    import bitsandbytes as bnb
-
-    # BNB requires CUDA weights
-    device = weight.device
-    is_cpu = device.type == "cpu"
-    if is_cpu:
-        weight = weight.to("cuda")
-
-    cls_name = weight.__class__.__name__
-    if cls_name == "Params4bit":
-        dequantized = bnb.functional.dequantize_4bit(weight.data, weight.quant_state)
-        if is_cpu:
-            dequantized = dequantized.to(device)
-        return dequantized
-
-    if state.SCB is None:
-        state.SCB = weight.SCB
-
-    im = ops.eye(weight.data.shape[-1]).contiguous().half().to(weight.device)
-    im, imt, SCim, SCimt, coo_tensorim = bnb.functional.double_quant(im)
-    im, Sim = bnb.functional.transform(im, "col32")
-    if state.CxB is None:
-        state.CxB, state.SB = bnb.functional.transform(weight.data, to_order=state.formatB)
-    out32, Sout32 = bnb.functional.igemmlt(im, state.CxB, Sim, state.SB)
-    dequantized = bnb.functional.mm_dequant(out32, Sout32, SCim, state.SCB, bias=None).t()
-    if is_cpu:
-        dequantized = dequantized.to(device)
-    return dequantized

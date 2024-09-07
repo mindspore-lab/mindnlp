@@ -25,7 +25,7 @@ from mindnlp.core.nn import ParameterDict, functional as F
 from ....transformers.ms_utils import Conv1D
 from ..tuners_utils import BaseTunerLayer, check_adapters_to_merge
 from ...utils.other import transpose
-from .dora import DoraConv2dLayer, DoraEmbeddingLayer, DoraLinearLayer
+from .dora import DoraConv2dLayer, DoraLinearLayer
 from .config import LoraConfig
 
 
@@ -651,14 +651,10 @@ with 'lora.'.
                 The name of the adapter for which the delta weight should be computed.
         """
         dtype = self.lora_B[adapter].weight.dtype
-
         weight_A = self.lora_A[adapter].weight
         weight_B = self.lora_B[adapter].weight
-
         output_tensor = transpose(weight_B @ weight_A, self.fan_in_fan_out) * self.scaling[adapter]
-
         return output_tensor
-    
     def _apply_dora(self, x, lora_A, lora_B, scaling, active_adapter):
         """
         For DoRA on Linear layers, calculate the extra output from LoRA with DoRA applied. This should be added on top of the base layer
@@ -666,25 +662,19 @@ with 'lora.'.
         """
         base_layer = self.get_base_layer()  # Get the base linear layer
         weight = base_layer.weight  # Base layer's weight
-        
         # Compute LoRA weight
         lora_weight = ops.mm(lora_B.weight.flatten(start_dim=1), lora_A.weight.flatten(start_dim=1))
         lora_weight = lora_weight.reshape(weight.shape)
-        
         # Magnitude scaling and weight normalization
         magnitude = self.lora_magnitude_vector[active_adapter]
         weight_norm = self._get_weight_norm(weight, lora_weight, scaling)
         mag_norm_scale = magnitude / weight_norm
-        
         # Base layer's output
         base_output = ops.matmul(x, weight.t())  # Linear transformation (x @ weight.T)
-        
         # LoRA's output
         lora_output = lora_B(lora_A(x))
-        
         # Result with DoRA applied
         result_dora = (mag_norm_scale - 1) * base_output + mag_norm_scale * lora_output * scaling
-        
         return result_dora
 
 
@@ -704,7 +694,6 @@ with 'lora.'.
         """
         self._check_forward_args(x, *args, **kwargs)
         adapter_names = kwargs.pop("adapter_names", None)
-
         if self.disable_adapters:
             if self.merged:
                 self.unmerge()
@@ -724,7 +713,6 @@ with 'lora.'.
                 dropout = self.lora_dropout[active_adapter]
                 scaling = self.scaling[active_adapter]
                 x = x.to(lora_A.weight.dtype)
-
                 if not self.use_dora[active_adapter]:
                     result = result + lora_B(lora_A(dropout(x))) * scaling
                 else:

@@ -11,16 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""dora for peft"""
 from copy import deepcopy
-
-from mindnlp.core.nn import ParameterDict, functional as F
+import mindspore
+from mindnlp.core.nn import functional as F
 from mindnlp.core import nn
 from mindnlp.peft.utils.integrations import dequantize_module_weight
-from ...utils.other import transpose
-import mindspore
 from mindnlp.core import ops
-import numpy as np
+from ...utils.other import transpose
 
 
 class DoraLinearLayer(nn.Module):
