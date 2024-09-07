@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch Depth Anything model."""
+"""Testing suite for the mindspore Depth Anything model."""
 
 import unittest
 
@@ -206,36 +206,6 @@ class DepthAnythingModelTest(ModelTesterMixin, unittest.TestCase):
         model = DepthAnythingForDepthEstimation.from_pretrained(model_name)
         self.assertIsNotNone(model)
 
-    # def test_backbone_selection(self):
-    #     def _validate_backbone_init():
-    #         for model_class in self.all_model_classes:
-    #             model = model_class(config)
-    #             model.to()
-    #             model.eval()
-    #
-    #             # Confirm out_indices propogated to backbone
-    #             self.assertEqual(len(model.backbone.out_indices), 2)
-    #
-    #     config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
-    #
-    #     # Load a timm backbone
-    #     config.backbone = "resnet18"
-    #     config.use_pretrained_backbone = True
-    #     config.use_timm_backbone = True
-    #     config.backbone_config = None
-    #     # For transformer backbones we can't set the out_indices or just return the features
-    #     config.backbone_kwargs = {"out_indices": (-2, -1)}
-    #     _validate_backbone_init()
-    #
-    #     # Load a HF backbone
-    #     config.backbone = "facebook/dinov2-small"
-    #     config.use_pretrained_backbone = True
-    #     config.use_timm_backbone = False
-    #     config.backbone_config = None
-    #     config.backbone_kwargs = {"out_indices": [-2, -1]}
-    #     _validate_backbone_init()
-
-
 # We will verify our results on an image of cute cats
 def prepare_img():
     image = Image.open("../fixtures/tests_samples/COCO/000000039769.png")
@@ -249,21 +219,13 @@ class DepthAnythingModelIntegrationTest(unittest.TestCase):
     def test_inference(self):
         image_processor = DPTImageProcessor.from_pretrained("LiheYoung/depth-anything-small-hf")
         model = DepthAnythingForDepthEstimation.from_pretrained("LiheYoung/depth-anything-small-hf")
-        # image_processor = DPTImageProcessor.from_pretrained("D:/Mindspore/depth-anything-small-hf")
-        # model = DepthAnythingForDepthEstimation.from_pretrained("D:/Mindspore/depth-anything-small-hf")
 
         image = prepare_img()
         inputs = image_processor(images=image, return_tensors="ms")
 
-        # forward pass
-        # with no_grad():
-        #     outputs = model(**inputs)
-        #     predicted_depth = outputs.predicted_depth
-        #     print("no_grads的predicted_depth", predicted_depth)
 
         outputs = model(**inputs)
         predicted_depth = outputs.predicted_depth
-        # print("no_grads的predicted_depth", predicted_depth)
 
         # verify the predicted depth
         expected_shape = (1, 518, 686)
@@ -271,7 +233,4 @@ class DepthAnythingModelIntegrationTest(unittest.TestCase):
         expected_slice = mindspore.tensor(
             [[8.8204, 8.6468, 8.6195], [8.3313, 8.6027, 8.7526], [8.6526, 8.6866, 8.7453]],
         )
-        # print("outputs.predicted_depth[0, :3, :3].asnumpy():", outputs.predicted_depth[0, :3, :3].asnumpy())
-        # print('------------------------------------------------------------------------------')
-        # print("expected_slice.asnumpy():", expected_slice.asnumpy())
         self.assertTrue(np.allclose(outputs.predicted_depth[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-6))
