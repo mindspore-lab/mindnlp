@@ -1458,6 +1458,28 @@ class T5ModelIntegrationTests(unittest.TestCase):
         )
 
 
+    @slow
+    def test_translation_inference_time(self):
+        model = self.model  # google-t5/t5-base
+        tok = self.tokenizer
+        use_task_specific_params(model, "translation_en_to_fr")
+
+        en_text = (
+            ' This image section from an infrared recording by the Spitzer telescope shows a "family portrait" of'
+            " countless generations of stars: the oldest stars are seen as blue dots. "
+        )
+
+        input_ids = tok.encode(model.config.prefix + en_text, return_tensors="ms")
+        input_ids = input_ids
+
+        output = model.generate(
+            input_ids=input_ids,
+            max_new_tokens=50,
+            do_sample=False,
+        )
+        print(output)
+
+
 @require_mindspore
 class TestAsymmetricT5(unittest.TestCase):
     def build_model_and_check_forward_pass(self, **kwargs):

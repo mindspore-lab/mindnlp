@@ -745,7 +745,7 @@ class RealmReaderProjection(nn.Module):
             return starts, ends, span_masks
 
         def mask_to_score(mask, dtype=mindspore.float32):
-            return (1.0 - mask.type(dtype)) * np.finfo(mindspore.dtype_to_nptype(dtype)).min
+            return (1.0 - mask.type(dtype)) * float(ops.finfo(dtype).min)
 
         # [reader_beam_size, max_sequence_len, span_hidden_size * 2]
         hidden_states = self.dense_intermediate(hidden_states)
@@ -787,7 +787,7 @@ class RealmPreTrainedModel(PreTrainedModel):
         elif isinstance(module, nn.Embedding):
             nn.init.normal_(module.weight,mean=0.0,std=self.config.initializer_range)
             if module.padding_idx is not None:
-                module.weight.data[module.padding_idx] = 0
+                module.weight[module.padding_idx] = 0
         elif isinstance(module, nn.LayerNorm):
             nn.init.zeros_(module.bias)
             nn.init.ones_(module.weight)
@@ -1427,7 +1427,7 @@ class RealmReader(RealmPreTrainedModel):
                 """Loss based on the negative marginal log-likelihood."""
 
                 def mask_to_score(mask, dtype=mindspore.float32):
-                    return (1.0 - mask.type(dtype)) * np.finfo(mindspore.dtype_to_nptype(dtype)).min
+                    return (1.0 - mask.type(dtype)) * float(ops.finfo(dtype).min)
 
                 # []
                 log_numerator = ops.logsumexp(logits + mask_to_score(is_correct, dtype=logits.dtype), dim=-1)

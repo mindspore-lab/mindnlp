@@ -137,7 +137,15 @@ def sum(input, dim=None, keepdim=False, *, dtype=None):
 def unique(input, sorted=True, return_inverse=False, return_counts=False, dim=None):
     if USE_PYBOOST:
         return mindspore.mint.unique(input, sorted, return_inverse, return_counts, dim)
-    return ops.unique(input)
+
+    out, inverse = ops.unique(input)
+    outs = (out,)
+    if return_inverse:
+        outs += (inverse,)
+    if return_counts:
+        counts = (out == input).sum(0, keepdims=True)
+        outs += (counts,)
+    return outs if len(outs) > 1 else outs[0]
 
 # unique_consecutive
 def unique_consecutive(input, return_inverse=False, return_counts=False, dim=None):

@@ -95,7 +95,7 @@ class LoraModel(BaseTuner):
         ...     task_type="SEQ_2_SEQ_LM",
         ...     r=8,
         ...     lora_alpha=32,
-        ...     target_cells=["q", "v"],
+        ...     target_modules=["q", "v"],
         ...     lora_dropout=0.01,
         ... )
 
@@ -109,9 +109,9 @@ class LoraModel(BaseTuner):
         >>> from peft import LoraConfig, PeftModel, get_peft_model, prepare_model_for_kbit_training
 
         >>> rank = ...
-        >>> target_cells = ["q_proj", "k_proj", "v_proj", "out_proj", "fc_in", "fc_out", "wte"]
+        >>> target_modules = ["q_proj", "k_proj", "v_proj", "out_proj", "fc_in", "fc_out", "wte"]
         >>> config = LoraConfig(
-        ...     r=4, lora_alpha=16, target_cells=target_cells, lora_dropout=0.1, bias="none", task_type="CAUSAL_LM"
+        ...     r=4, lora_alpha=16, target_modules=target_modules, lora_dropout=0.1, bias="none", task_type="CAUSAL_LM"
         ... )
         >>> quantization_config = transformers.BitsAndBytesConfig(load_in_8bit=True)
 
@@ -169,7 +169,7 @@ class LoraModel(BaseTuner):
             lora_config (dict): A dictionary containing the LoRa configuration.
                 This dictionary should have the following structure:
                 {
-                    "target_cells": {
+                    "target_modules": {
                         "cell1": {
                             ...
                         },
@@ -180,9 +180,9 @@ class LoraModel(BaseTuner):
                     },
                     ...
                 }
-                The 'target_cells' key should contain the target cell information.
+                The 'target_modules' key should contain the target cell information.
             key (str): The key to identify the target cell.
-                The key should be a string that matches the key used in the 'target_cells' dictionary.
+                The key should be a string that matches the key used in the 'target_modules' dictionary.
         
         Returns:
             None: This method does not return any value.
@@ -566,7 +566,7 @@ class LoraModel(BaseTuner):
         
         Args:
             peft_config (PeftConfig): The configuration for the adapter.
-                - target_cells (set): The target cells for the adapter. If not specified, it will be determined based on the model type.
+                - target_modules (set): The target cells for the adapter. If not specified, it will be determined based on the model type.
             model_config (dict): The configuration for the model.
                 - model_type (str): The type of the model.
         
@@ -574,13 +574,13 @@ class LoraModel(BaseTuner):
             None. The method does not return any value.
         
         Raises:
-            ValueError: If the target_cells is not specified in peft_config and the model_type is not found in the TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING.
+            ValueError: If the target_modules is not specified in peft_config and the model_type is not found in the TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING.
         
         """
-        if peft_config.target_cells is None:
+        if peft_config.target_modules is None:
             if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING:
-                raise ValueError("Please specify `target_cells` in `peft_config`")
-            peft_config.target_cells = set(
+                raise ValueError("Please specify `target_modules` in `peft_config`")
+            peft_config.target_modules = set(
                 TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING[model_config["model_type"]]
             )
         return peft_config
@@ -683,25 +683,25 @@ class LoraModel(BaseTuner):
         else:
             raise ValueError(f"Invalid combination_type: {combination_type}")
 
-        target_cell_types = [type(self.peft_config[adapter].target_cells) for adapter in adapters]
+        target_cell_types = [type(self.peft_config[adapter].target_modules) for adapter in adapters]
         if not target_cell_types:
             raise ValueError(f"Found no adapter matching the names in {adapters}")
         if len(set(target_cell_types)) > 1:
             raise ValueError(
                 "all adapter configs should follow the same target cells type. "
-                "Combining adapters with `target_cells` type being a mix of list/set and string is not supported."
+                "Combining adapters with `target_modules` type being a mix of list/set and string is not supported."
             )
 
         if target_cell_types[0] == str:
-            new_target_cells = "|".join(f"({self.peft_config[adapter].target_cells})" for adapter in adapters)
+            new_target_modules = "|".join(f"({self.peft_config[adapter].target_modules})" for adapter in adapters)
         elif target_cell_types[0] == set:
-            new_target_cells = reduce(
-                operator.or_, (self.peft_config[adapter].target_cells for adapter in adapters)
+            new_target_modules = reduce(
+                operator.or_, (self.peft_config[adapter].target_modules for adapter in adapters)
             )
         else:
-            raise TypeError(f"Invalid type {target_cell_types[0]} found in target_cells")
+            raise TypeError(f"Invalid type {target_cell_types[0]} found in target_modules")
 
-        return combination_type, new_rank, new_target_cells
+        return combination_type, new_rank, new_target_modules
 
     def add_weighted_adapter(
         self,
@@ -756,7 +756,7 @@ class LoraModel(BaseTuner):
             if adapter not in list(self.peft_config.keys()):
                 raise ValueError(f"Adapter {adapter} does not exist")
 
-        combination_type, new_rank, new_target_cells = self._check_add_weighted_adapter(
+        combination_type, new_rank, new_target_modules = self._check_add_weighted_adapter(
             adapters=adapters,
             combination_type=combination_type,
             svd_rank=svd_rank,
@@ -766,7 +766,7 @@ class LoraModel(BaseTuner):
             self.peft_config[adapters[0]],
             r=new_rank,
             lora_alpha=new_rank,
-            target_cells=new_target_cells,
+            target_modules=new_target_modules,
         )
         self.inject_adapter(self.model, adapter_name)
 

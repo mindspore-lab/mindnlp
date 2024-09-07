@@ -200,9 +200,30 @@ def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean
     return ops.binary_cross_entropy_with_logits(input, target, weight, pos_weight, reduction)
 
 
-def log_softmax(input, dim=-1):
-    return ops.log_softmax(input, dim)
+def gumbel_softmax(logits: Tensor, tau: float = 1, hard: bool = False, eps: float = 1e-10, dim: int = -1) -> Tensor:
+    if eps != 1e-10:
+        warnings.warn("`eps` parameter is deprecated and has no effect.")
 
+    uniform_samples = _get_cache_prim(ops.UniformReal)()(logits.shape)
+    gumbels = -ops.log(-ops.log(uniform_samples + eps) + eps) # ~Gumbel(0, 1)
+    gumbels = (logits + gumbels) / tau  # ~Gumbel(logits,tau)
+    y_soft = softmax(gumbels, dim)
+
+    if hard:
+        # Straight through.
+        index = y_soft.argmax(dim)
+        y_hard = one_hot(index, logits.shape[dim])
+        ret = ops.stop_gradient(y_hard - y_soft) + y_soft
+    else:
+        # Reparametrization trick.
+        ret = y_soft
+    return ret
+
+def log_softmax(input, dim=-1, dtype=None):
+    out = ops.log_softmax(input, dim)
+    if dtype is not None:
+        out = out.to(dtype)
+    return out
 
 def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0, scale_grad_by_freq=False):
     if USE_PYBOOST:
@@ -230,13 +251,109 @@ def pad(input, pad, mode='constant', value=0.0):
 
 
 def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
-    # _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
-    # return _nll_loss(input, target, weight)
-    return ops.nll_loss(input, target, weight, ignore_index, reduction, label_smoothing)
+    if label_smoothing != 0.0 or target.ndim != 1:
+        return _inner_nll_loss(input, target, weight, ignore_index, reduction, label_smoothing)
+    if weight is None:
+        weight = ops.ones(input.shape[-1], dtype=input.dtype)
+    _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
+    return _nll_loss(input, target, weight)[0]
 
 
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
-    return ops.cross_entropy(input, target, weight, ignore_index, reduction, label_smoothing)
+    class_dim = 0 if input.ndim == 1 else 1
+    if target.dtype in [mindspore.float32, mindspore.float16]:
+        return _cross_entropy(input, target, class_dim, weight, reduction, label_smoothing)
+    return nll_loss(log_softmax(input, class_dim), target, weight, ignore_index, reduction, label_smoothing)
+
+
+def _cross_entropy(inputs, target, target_dim, weight=None, reduction='mean', label_smoothing=0.0):
+    """cross entropy inner function"""
+    class_dim = 0 if inputs.ndim == 1 else 1
+    n_classes = inputs.shape[class_dim]
+    inputs = log_softmax(inputs, class_dim)
+    if label_smoothing > 0.0:
+        target = target * (1 - label_smoothing) + label_smoothing / n_classes
+
+    if weight is None:
+        weight = ops.ones_like(inputs)
+    elif inputs.ndim != 1:
+        broadcast_shape = [1 for _ in range(inputs.ndim)]
+        broadcast_shape[1] = weight.shape[0]
+        weight = weight.reshape(broadcast_shape)
+
+    if reduction == 'mean':
+        return -(inputs * target * weight).sum() / (inputs.size / n_classes)
+    if reduction == 'sum':
+        return -(inputs * target * weight).sum()
+    return -(inputs * target * weight).sum(class_dim)
+
+
+def _inner_nll_loss(inputs, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
+    ndim = inputs.ndim
+    if ndim == 2:
+        ret = _nll_loss(inputs, target, -1, weight, ignore_index, reduction, label_smoothing)
+    elif ndim == 4:
+        ret = _nll_loss(inputs, target, 1, weight, ignore_index, reduction, label_smoothing)
+    elif ndim == 1:
+        ret = _nll_loss(inputs, target, 0, weight, ignore_index, reduction, label_smoothing)
+    else:
+        n = inputs.shape[0]
+        c = inputs.shape[1]
+        out_size = (n,) + inputs.shape[2:]
+        inputs = inputs.view((n, c, 1, -1))
+        target = target.view((n, 1, -1))
+        if reduction != 'none':
+            ret = _nll_loss(inputs, target, 1, weight, ignore_index, reduction, label_smoothing)
+        else:
+            ret = _nll_loss(inputs, target, 1, weight, ignore_index, label_smoothing=label_smoothing)
+            ret = ret.view(out_size)
+    return ret
+
+
+def _nll_loss(inputs, target, target_dim=-1, weight=None, ignore_index=None, reduction='none', label_smoothing=0.0):
+    """nll loss inner function"""
+    if target.ndim == inputs.ndim - 1:
+        target = target.expand_dims(target_dim)
+    if ignore_index is not None:
+        non_pad_mask = ops.equal(target, ignore_index)
+        target = target.masked_fill(non_pad_mask, ops.cast(0, target.dtype))
+    else:
+        non_pad_mask = target
+    if weight is not None:
+        loss_weights = ops.gather(weight, target, 0)
+        orig_shape = inputs.shape
+        if inputs.ndim != 2:
+            inputs = inputs.view(orig_shape[:2] + (-1,))
+            weight = weight.view(weight.shape + (1,))
+        weighted_inputs = inputs * weight
+        weighted_inputs = weighted_inputs.view(orig_shape)
+        loss = ops.neg(ops.gather_d(weighted_inputs, target_dim, target))
+        smooth_loss = ops.neg(weighted_inputs.sum(axis=target_dim, keepdims=True))
+    else:
+        loss = ops.neg(ops.gather_d(inputs, target_dim, target))
+        smooth_loss = ops.neg(inputs.sum(axis=target_dim, keepdims=True))
+        loss_weights = ops.ones_like(loss)
+
+    if ignore_index is not None:
+        loss = loss.masked_fill(non_pad_mask, ops.cast(0, loss.dtype))
+        loss_weights = loss_weights.masked_fill(non_pad_mask, ops.cast(0, loss_weights.dtype))
+        smooth_loss = smooth_loss.masked_fill(non_pad_mask, ops.cast(0, smooth_loss.dtype))
+
+    loss = loss.squeeze(target_dim)
+    smooth_loss = smooth_loss.squeeze(target_dim)
+
+    if reduction == 'sum':
+        loss = loss.sum()
+        smooth_loss = smooth_loss.sum()
+    if reduction == 'mean':
+        loss = loss.sum() / loss_weights.sum()
+        smooth_loss = smooth_loss.sum() / loss_weights.sum()
+
+    eps_i = label_smoothing / inputs.shape[target_dim]
+    if label_smoothing != 0:
+        loss = (1. - label_smoothing) * loss + eps_i * smooth_loss
+
+    return loss
 
 
 def mse_loss(input, target, reduction='mean'):
@@ -246,6 +363,16 @@ def mse_loss(input, target, reduction='mean'):
 def l1_loss(input, target, reduction='mean'):
     return ops.l1_loss(input, target, reduction)
 
+
+def smooth_l1_loss(input, target, beta=1.0, reduction='none'):
+    input = input.to(mindspore.float32)
+    target = target.to(mindspore.float32)
+    return ops.smooth_l1_loss(input, target, beta, reduction)
+
+def kl_div(logits, labels, reduction='mean', log_target=False):
+    if log_target:
+        labels = ops.log(labels)
+    return ops.kl_div(logits, labels, reduction)
 
 def softmax(input, dim=-1, *, dtype=None):
     if USE_PYBOOST:
@@ -295,6 +422,16 @@ def normalize(input, p=2.0, dim=1, eps=1e-6):
 
 
 def batch_norm(input, running_mean, running_var, weight=None, bias=None, training=False, momentum=0.1, eps=1e-05):
+
+    if running_mean is None:
+        running_mean = ops.ones(input.shape[1])
+    if running_var is None:
+        running_var = ops.zeros(input.shape[1])
+    if weight is None:
+        weight = ops.ones(input.shape[1])
+    if bias is None:
+        bias = ops.zeros(input.shape[1])
+
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.batch_norm(
             input,
@@ -306,16 +443,6 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None, trainin
             momentum,
             eps
         )
-
-    if running_mean is None:
-        running_mean = ops.ones(input.shape[1])
-    if running_var is None:
-        running_var = ops.zeros(input.shape[1])
-    if weight is None:
-        weight = ops.ones(input.shape[1])
-    if bias is None:
-        bias = ops.zeros(input.shape[1])
-
     return ops.batch_norm(
         input,
         running_mean,
@@ -826,8 +953,8 @@ def multi_head_attention_forward(
     if key_padding_mask is not None:
         assert key_padding_mask.shape == (bsz, src_len), \
             f"expecting key_padding_mask shape of {(bsz, src_len)}, but got {key_padding_mask.shape}"
-        key_padding_mask = key_padding_mask.view(bsz, 1, 1, src_len). \
-            expand(-1, num_heads, -1, -1).reshape(bsz * num_heads, 1, src_len)
+        key_padding_mask = key_padding_mask.view(bsz, 1, 1, src_len).   \
+            broadcast_to((-1, num_heads, -1, -1)).reshape(bsz * num_heads, 1, src_len)
         if attn_mask is None:
             attn_mask = key_padding_mask
         else:

@@ -26,7 +26,6 @@ from typing import List, Optional, Set, Tuple, Union
 
 import mindspore
 from mindspore import Parameter
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
@@ -830,17 +829,17 @@ class DPTPreTrainedModel(PreTrainedModel):
     main_input_name = "pixel_values"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
+        if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
-            cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range, mean=0.0), cell.weight.shape,
-                                             cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
 
 class DPTModel(DPTPreTrainedModel):

@@ -28,7 +28,7 @@ class LNTuningConfig(PeftConfig):
     This is the configuration class to store the configuration of a :class:`~peft.tuners.LNTuningModel`.
 
     Args:
-        target_cells (`Optional[Union[List[str], str]]`):
+        target_modules (`Optional[Union[List[str], str]]`):
             List of cell names or regex expression of the cell names to replace with LNTuning. For example,
             '.*decoder.*' or '.*encoder.*'. If this is not specified, cells will be chosen according to the model
             architecture. If the architecture is not known, an error will be raised -- in this case, you should specify
@@ -39,7 +39,7 @@ class LNTuningConfig(PeftConfig):
             and as such need to be trainable and saved.
     """
 
-    target_cells: Optional[Union[list[str], str]] = field(
+    target_modules: Optional[Union[list[str], str]] = field(
         default=None,
         metadata={
             "help": (

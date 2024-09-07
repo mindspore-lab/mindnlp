@@ -102,6 +102,7 @@ from . import (
     funnel,
     fsmt,
     gemma,
+    gemma2,
     git,
     openai,
     gpt2,
@@ -152,10 +153,13 @@ from . import (
     mpnet,
     mpt,
     mluke,
+    mt5,
     musicgen,
     musicgen_melody,
     mvp,
     nezha,
+    nllb,
+    nllb_moe,
     nougat,
     nystromformer,
     olmo,
@@ -184,6 +188,7 @@ from . import (
     rembert,
     resnet,
     roberta,
+    roberta_prelayernorm,
     roc_bert,
     rwkv,
     sam,
@@ -226,6 +231,7 @@ from . import (
     vit_mae,
     vit_msn,
     vitdet,
+    vitmatte,
     vits,
     vivit,
     wav2vec2,
@@ -331,6 +337,7 @@ from .funnel import *
 from .fsmt import *
 from .fastspeech2_conformer import *
 from .gemma import *
+from .gemma2 import *
 from .git import *
 from .openai import *
 from .gptj import *
@@ -381,10 +388,13 @@ from .mobilevit import *
 from .mpnet import *
 from .mluke import *
 from .mpt import *
+from .mt5 import *
 from .musicgen import *
 from .musicgen_melody import *
 from .mvp import *
 from .nezha import *
+from .nllb import *
+from .nllb_moe import *
 from .nougat import *
 from .nystromformer import *
 from .olmo import *
@@ -413,6 +423,7 @@ from .reformer import *
 from .rembert import *
 from .resnet import *
 from .roberta import *
+from .roberta_prelayernorm import *
 from .roc_bert import *
 from .rwkv import *
 from .sam import *
@@ -456,6 +467,7 @@ from .vit_hybrid import *
 from .vit_mae import *
 from .vit_msn import *
 from .vitdet import *
+from .vitmatte import *
 from .vivit import *
 from .whisper import *
 from .wav2vec2 import *
@@ -562,6 +574,7 @@ __all__.extend(chatglm3.__all__)
 __all__.extend(openai.__all__)
 __all__.extend(gptj.__all__)
 __all__.extend(gemma.__all__)
+__all__.extend(gemma2.__all__)
 __all__.extend(git.__all__)
 __all__.extend(gpt_neo.__all__)
 __all__.extend(gpt_neox.__all__)
@@ -610,10 +623,13 @@ __all__.extend(mobilenet_v2.__all__)
 __all__.extend(mobilevit.__all__)
 __all__.extend(mpnet.__all__)
 __all__.extend(mpt.__all__)
+__all__.extend(mt5.__all__)
 __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
 __all__.extend(mvp.__all__)
 __all__.extend(nezha.__all__)
+__all__.extend(nllb.__all__)
+__all__.extend(nllb_moe.__all__)
 __all__.extend(nougat.__all__)
 __all__.extend(nystromformer.__all__)
 __all__.extend(olmo.__all__)
@@ -642,6 +658,7 @@ __all__.extend(reformer.__all__)
 __all__.extend(rembert.__all__)
 __all__.extend(resnet.__all__)
 __all__.extend(roberta.__all__)
+__all__.extend(roberta_prelayernorm.__all__)
 __all__.extend(roc_bert.__all__)
 __all__.extend(rwkv.__all__)
 __all__.extend(sam.__all__)
@@ -686,6 +703,7 @@ __all__.extend(vit_hybrid.__all__)
 __all__.extend(vit_mae.__all__)
 __all__.extend(vit_msn.__all__)
 __all__.extend(vitdet.__all__)
+__all__.extend(vitmatte.__all__)
 __all__.extend(vivit.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)

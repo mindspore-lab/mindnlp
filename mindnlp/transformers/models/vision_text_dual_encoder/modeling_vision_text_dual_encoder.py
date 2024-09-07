@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================
-"""PyTorch VisionTextDualEncoder model."""
+"""MindSpore VisionTextDualEncoder model."""
 
 from typing import Optional, Tuple, Union
 
@@ -265,13 +265,13 @@ class VisionTextDualEncoderModel(PreTrainedModel):
         text_embeds = self.text_projection(text_embeds)
 
         # normalized features
-        image_embeds = image_embeds / ops.norm(image_embeds, dim=-1, keepdim=True)
-        text_embeds = text_embeds / ops.norm(text_embeds, dim=-1, keepdim=True)
+        image_embeds = image_embeds / ops.norm(image_embeds, p=2, dim=-1, keepdim=True)
+        text_embeds = text_embeds / ops.norm(text_embeds, p=2, dim=-1, keepdim=True)
 
         # cosine similarity as logits
         logit_scale = self.logit_scale.exp()
         logits_per_text = ops.matmul(text_embeds, image_embeds.t()) * logit_scale
-        logits_per_image = ops.t(logits_per_text)
+        logits_per_image = logits_per_text.T
 
         loss = None
         if return_loss:

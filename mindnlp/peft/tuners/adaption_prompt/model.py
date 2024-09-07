@@ -81,7 +81,7 @@ class AdaptionPromptModel(nn.Module):
         parents = []
         # 获取模型的所有子模块及其名称
         for name, subcell in self.model.name_cells().items():
-            if name.endswith(config.target_cells):
+            if name.endswith(config.target_modules):
                 # 对每个符合条件的子模块调用 _get_subcells 函数
                 parent, target, target_name = _get_subcells(self.model, name)
                 if target == subcell:
@@ -133,9 +133,9 @@ class AdaptionPromptModel(nn.Module):
             attn = AdaptedAttention(
                 model_type=self.model.config.model_type,
                 adapter_len=config.adapter_len,
-                model=getattr(par, config.target_cells),
+                model=getattr(par, config.target_modules),
             )
-            setattr(par, config.target_cells, attn)
+            setattr(par, config.target_modules, attn)
 
     def _set_adapted_attentions(self, adapter_name: str) -> None:
         """Replace LlamaAttention cells with cached AdaptedAttention cells."""
@@ -143,16 +143,16 @@ class AdaptionPromptModel(nn.Module):
         del self._cached_adapters[adapter_name]
         config = self.peft_config[adapter_name]
         for i, par in enumerate(self._parents[adapter_name]):
-            setattr(par, config.target_cells, cached[i])
+            setattr(par, config.target_modules, cached[i])
 
     def _remove_adapted_attentions(self, adapter_name: str) -> None:
         """Remove AdaptedAttention cells from the model and store them in the cache."""
         config = self.peft_config[adapter_name]
         adapted_attentions = []
         for par in self._parents[adapter_name]:
-            attn = getattr(par, config.target_cells)
+            attn = getattr(par, config.target_modules)
             adapted_attentions.append(attn)
-            setattr(par, config.target_cells, attn.model)
+            setattr(par, config.target_modules, attn.model)
         self._cached_adapters[adapter_name] = adapted_attentions
 
     def _mark_only_adaption_prompts_as_trainable(self, model: nn.Module) -> None:

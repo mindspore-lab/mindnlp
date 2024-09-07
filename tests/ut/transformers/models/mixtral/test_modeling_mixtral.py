@@ -446,3 +446,14 @@ class MixtralIntegrationTest(unittest.TestCase):
         self.assertTrue(np.allclose(logits[0, :3, :3].half().asnumpy(), EXPECTED_LOGITS_LEFT.asnumpy(), atol=1e-3, rtol=1e-3))
         self.assertTrue(np.allclose(logits[0, -3:, -3:].half().asnumpy(), EXPECTED_LOGITS_LEFT_UNPADDED.asnumpy(), atol=1e-3, rtol=1e-3))
         self.assertTrue(np.allclose(logits[1, -3:, -3:].half().asnumpy(), EXPECTED_LOGITS_RIGHT_UNPADDED.asnumpy(), atol=1e-3, rtol=1e-3))
+
+    @slow
+    @require_mindspore
+    def test_small_model_generate_time(self):
+        model_id = "hf-internal-testing/Mixtral-tiny"
+        dummy_input = mindspore.Tensor([[0, 1, 0], [0, 1, 0]])
+
+        model = MixtralForCausalLM.from_pretrained(model_id, ms_dtype=mindspore.float16)
+        # TODO: might need to tweak it in case the logits do not match on our daily runners
+        # these logits have been obtained with the original megablocks impelmentation.
+        model.generate(dummy_input, max_new_tokens=20)

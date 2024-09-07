@@ -119,7 +119,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("vit_hybrid", "ViTHybridImageProcessor"),
         # ("vit_mae", "ViTImageProcessor"),
         # ("vit_msn", "ViTImageProcessor"),
-        # ("vitmatte", "VitMatteImageProcessor"),
+        ("vitmatte", "VitMatteImageProcessor"),
         ("xclip", "CLIPImageProcessor"),
         # ("yolos", "YolosImageProcessor"),
         ("zoedepth", ("ZoeDepthImageProcessor",)),

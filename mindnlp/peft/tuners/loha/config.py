@@ -36,7 +36,7 @@ class LoHaConfig(LycorisConfig):
             The dropout probability for disabling LoHa modules during training.
         use_effective_conv2d (`bool`):
             Use parameter effective decomposition for Conv2d with ksize > 1 ("Proposition 3" from FedPara paper).
-        target_cells (`Optional[Union[List[str], str]]`):
+        target_modules (`Optional[Union[List[str], str]]`):
             The names of the modules to apply the adapter to. If this is specified, only the modules with the specified
             names will be replaced. When passing a string, a regex match will be performed. When passing a list of
             strings, either an exact match will be performed or it is checked if the name of the module ends with any
@@ -80,7 +80,7 @@ class LoHaConfig(LycorisConfig):
             "help": 'Use parameter effective decomposition for Conv2d 3x3 with ksize > 1 ("Proposition 3" from FedPara paper)'
         },
     )
-    target_cells: Optional[Union[List[str], str]] = field(
+    target_modules: Optional[Union[List[str], str]] = field(
         default=None,
         metadata={
             "help": "List of cell names or regex expression of the module names to replace with LoHa."
@@ -133,15 +133,15 @@ class LoHaConfig(LycorisConfig):
         Returns:
             None: This method does not return any value.
                 Type: None
-                Purpose: The method sets the 'peft_type' attribute to PeftType.LOHA and initializes the 'target_cells' attribute
-                as a set if the 'target_cells' attribute is of type list; otherwise, it leaves the 'target_cells' attribute unchanged.
+                Purpose: The method sets the 'peft_type' attribute to PeftType.LOHA and initializes the 'target_modules' attribute
+                as a set if the 'target_modules' attribute is of type list; otherwise, it leaves the 'target_modules' attribute unchanged.
         
         Raises:
             None
         """
         self.peft_type = PeftType.LOHA
-        self.target_cells = (
-            set(self.target_cells)
-            if isinstance(self.target_cells, list)
-            else self.target_cells
+        self.target_modules = (
+            set(self.target_modules)
+            if isinstance(self.target_modules, list)
+            else self.target_modules
         )

@@ -19,11 +19,9 @@ import math
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import mindspore
-from mindspore.common.initializer import initializer, TruncatedNormal
-
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindnlp.utils import logging
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BackboneOutput,
@@ -33,12 +31,25 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
+from ....utils import (
+    logging,
+)
 from ...backbone_utils import BackboneMixin
 from .configuration_dinov2 import Dinov2Config
 
 
 logger = logging.get_logger(__name__)
 
+# General docstring
+_CONFIG_FOR_DOC = "Dinov2Config"
+
+# Base docstring
+_CHECKPOINT_FOR_DOC = "facebook/dinov2-base"
+_EXPECTED_OUTPUT_SHAPE = [1, 257, 768]
+
+# Image classification docstring
+_IMAGE_CLASS_CHECKPOINT = "facebook/dinov2-small-imagenet1k-1-layer"
+_IMAGE_CLASS_EXPECTED_OUTPUT = "tabby, tabby cat"
 
 
 class Dinov2Embeddings(nn.Module):
@@ -49,12 +60,12 @@ class Dinov2Embeddings(nn.Module):
     def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
 
-        self.cls_token = mindspore.Parameter(ops.randn(1, 1, config.hidden_size), 'cls_token')
-        self.mask_token = mindspore.Parameter(ops.zeros(1, config.hidden_size), 'mask_token')
+        self.cls_token = nn.Parameter(ops.randn(1, 1, config.hidden_size))
+        self.mask_token = nn.Parameter(ops.zeros(1, config.hidden_size))
         self.patch_embeddings = Dinov2PatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
-        self.position_embeddings = mindspore.Parameter(ops.randn(1, num_patches + 1, config.hidden_size), 'position_embeddings')
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.position_embeddings = nn.Parameter(ops.randn(1, num_patches + 1, config.hidden_size))
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.config = config
 
     def interpolate_pos_encoding(self, embeddings: mindspore.Tensor, height: int, width: int) -> mindspore.Tensor:
@@ -81,12 +92,11 @@ class Dinov2Embeddings(nn.Module):
         patch_pos_embed = patch_pos_embed.reshape(1, int(math.sqrt(num_positions)), int(math.sqrt(num_positions)), dim)
         patch_pos_embed = patch_pos_embed.permute(0, 3, 1, 2)
         target_dtype = patch_pos_embed.dtype
-        patch_pos_embed = F.interpolate(
+        patch_pos_embed = nn.functional.interpolate(
             patch_pos_embed.to(dtype=mindspore.float32),
             scale_factor=(float(height / math.sqrt(num_positions)), float(width / math.sqrt(num_positions))),
             mode="bicubic",
             align_corners=False,
-            recompute_scale_factor=True
         ).to(dtype=target_dtype)
         if int(height) != patch_pos_embed.shape[-2] or int(width) != patch_pos_embed.shape[-1]:
             raise ValueError("Width or height does not match with the interpolated position embeddings")
@@ -135,7 +145,7 @@ class Dinov2PatchEmbeddings(nn.Module):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size)
 
     def forward(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         num_channels = pixel_values.shape[1]
@@ -144,7 +154,7 @@ class Dinov2PatchEmbeddings(nn.Module):
                 "Make sure that the channel dimension of the pixel values match with the one set in the configuration."
                 f" Expected {self.num_channels} but got {num_channels}."
             )
-        embeddings = self.projection(pixel_values).flatten(start_dim=2).swapaxes(1, 2)
+        embeddings = ops.transpose(ops.flatten(self.projection(pixel_values), 2), 1, 2)
         return embeddings
 
 
@@ -166,7 +176,7 @@ class Dinov2SelfAttention(nn.Module):
         self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
         self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
 
-        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
@@ -183,12 +193,12 @@ class Dinov2SelfAttention(nn.Module):
         query_layer = self.transpose_for_scores(mixed_query_layer)
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_layer, ops.transpose(key_layer, -1, -2))
 
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, dim=-1)
+        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -200,7 +210,7 @@ class Dinov2SelfAttention(nn.Module):
 
         context_layer = ops.matmul(attention_probs, value_layer)
 
-        context_layer = context_layer.permute(0, 2, 1, 3)
+        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(new_context_layer_shape)
 
@@ -219,7 +229,7 @@ class Dinov2SelfOutput(nn.Module):
     def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -271,7 +281,7 @@ class Dinov2Attention(nn.Module):
 class Dinov2LayerScale(nn.Module):
     def __init__(self, config) -> None:
         super().__init__()
-        self.lambda1 = mindspore.Parameter(config.layerscale_value * ops.ones(config.hidden_size), 'lambda1')
+        self.lambda1 = nn.Parameter(config.layerscale_value * ops.ones(config.hidden_size))
 
     def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         return hidden_state * self.lambda1
@@ -293,7 +303,7 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
     keep_prob = 1 - drop_prob
     shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
     random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
-    random_tensor.floor_()  # binarize
+    random_tensor = random_tensor.floor()  # binarize
     output = input.div(keep_prob) * random_tensor
     return output
 
@@ -344,8 +354,8 @@ class Dinov2SwiGLUFFN(nn.Module):
 
     def forward(self, hidden_state: mindspore.Tensor) -> mindspore.Tensor:
         hidden_state = self.weights_in(hidden_state)
-        x1, x2 = hidden_state.chunk(2, axis=-1)
-        hidden = F.silu(x1) * x2
+        x1, x2 = hidden_state.chunk(2, dim=-1)
+        hidden = nn.functional.silu(x1) * x2
         return self.weights_out(hidden)
 
 
@@ -355,12 +365,12 @@ class Dinov2Layer(nn.Module):
     def __init__(self, config: Dinov2Config) -> None:
         super().__init__()
 
-        self.norm1 = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.norm1 = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.attention = Dinov2Attention(config)
         self.layer_scale1 = Dinov2LayerScale(config)
         self.drop_path = Dinov2DropPath(config.drop_path_rate) if config.drop_path_rate > 0.0 else nn.Identity()
 
-        self.norm2 = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.norm2 = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         if config.use_swiglu_ffn:
             self.mlp = Dinov2SwiGLUFFN(config)
@@ -464,26 +474,31 @@ class Dinov2PreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["Dinov2SwiGLUFFN"]
 
-    def _init_weights(self, cell: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
+    def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv2d)):
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
             # Upcast the input in `fp32` and cast it back to desired `dtype` to avoid
             # `trunc_normal_cpu` not implemented in `half` issues
-            cell.weight.set_data(initializer(TruncatedNormal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            nn.init.trunc_normal_(
+                module.weight, mean=0.0, std=self.config.initializer_range
+            )
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
+        elif isinstance(module, Dinov2Embeddings):
+            nn.init.trunc_normal_(
+                module.position_embeddings,
+                mean=0.0,
+                std=self.config.initializer_range,
+            )
 
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-
-        elif isinstance(cell, Dinov2Embeddings):
-            cell.position_embeddings.set_data(initializer(TruncatedNormal(self.config.initializer_range),
-                                             cell.position_embeddings.shape, cell.position_embeddings.dtype))
-
-            cell.cls_token.set_data(initializer(TruncatedNormal(self.config.initializer_range),
-                                             cell.cls_token.shape, cell.cls_token.dtype))
+            nn.init.trunc_normal_(
+                module.cls_token,
+                mean=0.0,
+                std=self.config.initializer_range,
+            )
 
 
 class Dinov2Model(Dinov2PreTrainedModel):
@@ -494,7 +509,7 @@ class Dinov2Model(Dinov2PreTrainedModel):
         self.embeddings = Dinov2Embeddings(config)
         self.encoder = Dinov2Encoder(config)
 
-        self.layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -509,7 +524,6 @@ class Dinov2Model(Dinov2PreTrainedModel):
         """
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
-
 
     def forward(
         self,
@@ -561,7 +575,6 @@ class Dinov2Model(Dinov2PreTrainedModel):
         )
 
 
-
 class Dinov2ForImageClassification(Dinov2PreTrainedModel):
     def __init__(self, config: Dinov2Config) -> None:
         super().__init__(config)
@@ -607,13 +620,12 @@ class Dinov2ForImageClassification(Dinov2PreTrainedModel):
         cls_token = sequence_output[:, 0]
         patch_tokens = sequence_output[:, 1:]
 
-        linear_input = ops.cat([cls_token, patch_tokens.mean(axis=1)], dim=1)
+        linear_input = ops.cat([cls_token, ops.mean(patch_tokens, dim=1)], dim=1)
 
         logits = self.classifier(linear_input)
 
         loss = None
         if labels is not None:
-            # move labels to correct device to enable model parallelism
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
@@ -623,14 +635,17 @@ class Dinov2ForImageClassification(Dinov2PreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = F.mse_loss(logits, labels)
+                    loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = F.binary_cross_entropy_with_logits(logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -644,7 +659,6 @@ class Dinov2ForImageClassification(Dinov2PreTrainedModel):
         )
 
 
-
 class Dinov2Backbone(Dinov2PreTrainedModel, BackboneMixin):
     def __init__(self, config):
         super().__init__(config)
@@ -654,7 +668,7 @@ class Dinov2Backbone(Dinov2PreTrainedModel, BackboneMixin):
         self.embeddings = Dinov2Embeddings(config)
         self.encoder = Dinov2Encoder(config)
 
-        self.layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -688,7 +702,7 @@ class Dinov2Backbone(Dinov2PreTrainedModel, BackboneMixin):
         ...     "facebook/dinov2-base", out_features=["stage2", "stage5", "stage8", "stage11"]
         ... )
 
-        >>> inputs = processor(image, return_tensors="ms")
+        >>> inputs = processor(image, return_tensors="pt")
 
         >>> outputs = model(**inputs)
         >>> feature_maps = outputs.feature_maps
@@ -721,7 +735,7 @@ class Dinov2Backbone(Dinov2PreTrainedModel, BackboneMixin):
                     batch_size, _, height, width = pixel_values.shape
                     patch_size = self.config.patch_size
                     hidden_state = hidden_state.reshape(batch_size, height // patch_size, width // patch_size, -1)
-                    hidden_state = hidden_state.permute(0, 3, 1, 2)
+                    hidden_state = hidden_state.permute(0, 3, 1, 2).contiguous()
                 feature_maps += (hidden_state,)
 
         if not return_dict:
