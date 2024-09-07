@@ -12,15 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch Swin model."""
+"""Testing suite for the MindSpore Swin model."""
 
 import collections
 import unittest
-import numpy as np
 
 from mindnlp.transformers import SwinConfig
-from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow, is_vision_available, is_mindspore_available
-# from transformers.utils import cached_property, is_torch_available, is_vision_available
+from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow
+from mindnlp.utils import cached_property, is_mindspore_available, is_vision_available
 
 from ...test_backbone_common import BackboneTesterMixin
 from ...test_configuration_common import ConfigTester
@@ -30,7 +29,7 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn, ops
+    from mindnlp.core import nn, ops, no_grad
 
     from mindnlp.transformers import SwinBackbone, SwinForImageClassification, SwinForMaskedImageModeling, SwinModel
 
@@ -135,7 +134,7 @@ class SwinModelTester:
 
     def create_and_check_model(self, config, pixel_values, labels):
         model = SwinModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values)
 
         expected_seq_len = ((config.image_size // config.patch_size) ** 2) // (4 ** (len(config.depths) - 1))
@@ -145,7 +144,7 @@ class SwinModelTester:
 
     def create_and_check_backbone(self, config, pixel_values, labels):
         model = SwinBackbone(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values)
 
         # verify hidden states
@@ -158,7 +157,7 @@ class SwinModelTester:
         # verify backbone works with out_features=None
         config.out_features = None
         model = SwinBackbone(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values)
 
         # verify feature maps
@@ -170,7 +169,7 @@ class SwinModelTester:
 
     def create_and_check_for_masked_image_modeling(self, config, pixel_values, labels):
         model = SwinForMaskedImageModeling(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values)
         self.parent.assertEqual(
             result.logits.shape, (self.batch_size, self.num_channels, self.image_size, self.image_size)
@@ -179,7 +178,7 @@ class SwinModelTester:
         # test greyscale images
         config.num_channels = 1
         model = SwinForMaskedImageModeling(config)
-        model.set_train(False)
+        model.eval()
 
         pixel_values = floats_tensor([self.batch_size, 1, self.image_size, self.image_size])
         result = model(pixel_values)
@@ -188,14 +187,14 @@ class SwinModelTester:
     def create_and_check_for_image_classification(self, config, pixel_values, labels):
         config.num_labels = self.type_sequence_label_size
         model = SwinForImageClassification(config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values, labels=labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.type_sequence_label_size))
 
         # test greyscale images
         config.num_channels = 1
         model = SwinForImageClassification(config)
-        model.set_train(False)
+        model.eval()
 
         pixel_values = floats_tensor([self.batch_size, 1, self.image_size, self.image_size])
         result = model(pixel_values)
@@ -237,19 +236,16 @@ class SwinModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = SwinModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=SwinConfig, embed_dim=37)
+        self.config_tester = ConfigTester(
+            self,
+            config_class=SwinConfig,
+            embed_dim=37,
+            has_text_modality=False,
+            common_properties=["image_size", "patch_size", "num_channels"],
+        )
 
     def test_config(self):
-        self.create_and_test_config_common_properties()
-        self.config_tester.create_and_test_config_to_json_string()
-        self.config_tester.create_and_test_config_to_json_file()
-        self.config_tester.create_and_test_config_from_and_save_pretrained()
-        self.config_tester.create_and_test_config_with_num_labels()
-        self.config_tester.check_config_can_be_init_without_params()
-        self.config_tester.check_config_arguments_init()
-
-    def create_and_test_config_common_properties(self):
-        return
+        self.config_tester.run_common_tests()
 
     def test_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -262,6 +258,10 @@ class SwinModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_training_gradient_checkpointing(self):
         super().test_training_gradient_checkpointing()
+
+    @unittest.skipIf(mindspore.get_context('device_target') == 'CPU', 'cpu has error')
+    def test_training(self):
+        super().test_training()
 
     def test_backbone(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -290,7 +290,7 @@ class SwinModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     def test_attention_outputs(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -301,8 +301,9 @@ class SwinModelTest(ModelTesterMixin, unittest.TestCase):
             inputs_dict["output_hidden_states"] = False
             config.return_dict = True
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.attentions
             expected_num_attentions = len(self.model_tester.depths)
             self.assertEqual(len(attentions), expected_num_attentions)
@@ -312,8 +313,9 @@ class SwinModelTest(ModelTesterMixin, unittest.TestCase):
             config.output_attentions = True
             window_size_squared = config.window_size**2
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.attentions
             self.assertEqual(len(attentions), expected_num_attentions)
 
@@ -327,8 +329,9 @@ class SwinModelTest(ModelTesterMixin, unittest.TestCase):
             inputs_dict["output_attentions"] = True
             inputs_dict["output_hidden_states"] = True
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             # also another +1 for reshaped_hidden_states
             added_hidden_states = 1 if model_class.__name__ == "SwinBackbone" else 2
@@ -345,9 +348,10 @@ class SwinModelTest(ModelTesterMixin, unittest.TestCase):
 
     def check_hidden_states_output(self, inputs_dict, config, model_class, image_size):
         model = model_class(config)
-        model.set_train(False)
+        model.eval()
 
-        outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+        with no_grad():
+            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
         hidden_states = outputs.hidden_states
 
@@ -453,7 +457,7 @@ class SwinModelTest(ModelTesterMixin, unittest.TestCase):
 @require_vision
 @require_mindspore
 class SwinModelIntegrationTest(unittest.TestCase):
-    # @cached_property
+    @cached_property
     def default_image_processor(self):
         return (
             AutoImageProcessor.from_pretrained("microsoft/swin-tiny-patch4-window7-224")
@@ -467,16 +471,17 @@ class SwinModelIntegrationTest(unittest.TestCase):
         image_processor = self.default_image_processor
 
         image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
-        inputs = image_processor(images=image, return_tensors="pt")
+        inputs = image_processor(images=image, return_tensors="ms")
 
         # forward pass
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
 
         # verify the logits
         expected_shape = (1, 1000)
         self.assertEqual(outputs.logits.shape, expected_shape)
         expected_slice = mindspore.tensor([-0.0948, -0.6454, -0.0921])
-        self.assertTrue(np.allclose(outputs.logits[0, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(outputs.logits[0, :3], expected_slice, atol=1e-4))
 
     @slow
     def test_inference_interpolate_pos_encoding(self):
@@ -491,7 +496,8 @@ class SwinModelIntegrationTest(unittest.TestCase):
         pixel_values = inputs.pixel_values
 
         # forward pass
-        outputs = model(pixel_values, interpolate_pos_encoding=True)
+        with no_grad():
+            outputs = model(pixel_values, interpolate_pos_encoding=True)
 
         # verify the logits
         expected_shape = (1, 256, 768)

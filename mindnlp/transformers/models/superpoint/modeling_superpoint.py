@@ -1,34 +1,34 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# Copyright 2024 The HuggingFace Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-"""PyTorch SuperPoint model."""
+"""MindSpore SuperPoint model."""
 
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
+
 import mindspore
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindnlp.utils import (
-    ModelOutput,
-    logging,
-)
 
 from ...modeling_utils import PreTrainedModel
 from ...modeling_outputs import (
     BaseModelOutputWithNoAttention,
 )
 from .configuration_superpoint import SuperPointConfig
+
+from ....utils import (
+    ModelOutput,
+    logging,
+)
 
 
 logger = logging.get_logger(__name__)
@@ -39,22 +39,16 @@ _CHECKPOINT_FOR_DOC = "magic-leap-community/superpoint"
 
 
 def remove_keypoints_from_borders(
-    keypoints: mindspore.Tensor,
-    scores: mindspore.Tensor,
-    border: int,
-    height: int,
-    width: int,
+    keypoints: mindspore.Tensor, scores: mindspore.Tensor, border: int, height: int, width: int
 ) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
     """Removes keypoints (and their associated scores) that are too close to the border"""
-    mask_h = (keypoints[:, 0] >= border) & (keypoints[:, 0] < (height - border))
-    mask_w = (keypoints[:, 1] >= border) & (keypoints[:, 1] < (width - border))
-    mask = mask_h & mask_w
+    mask_h = (keypoints[:, 0] >= border).int() & (keypoints[:, 0] < (height - border)).int()
+    mask_w = (keypoints[:, 1] >= border).int() & (keypoints[:, 1] < (width - border)).int()
+    mask = (mask_h & mask_w).bool()
     return keypoints[mask], scores[mask]
 
 
-def top_k_keypoints(
-    keypoints: mindspore.Tensor, scores: mindspore.Tensor, k: int
-) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
+def top_k_keypoints(keypoints: mindspore.Tensor, scores: mindspore.Tensor, k: int) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
     """Keeps the k keypoints with highest score"""
     if k >= len(keypoints):
         return keypoints, scores
@@ -68,22 +62,17 @@ def simple_nms(scores: mindspore.Tensor, nms_radius: int) -> mindspore.Tensor:
         raise ValueError("Expected positive values for nms_radius")
 
     def max_pool(x):
-        return F.max_pool2d(
-            x, kernel_size=nms_radius * 2 + 1, stride=1, padding=nms_radius
-        )
+        return nn.functional.max_pool2d(x, kernel_size=nms_radius * 2 + 1, stride=1, padding=nms_radius)
 
     zeros = ops.zeros_like(scores)
-    scores = ops.unsqueeze(scores, dim=0)  # 加维度因为维度问题max_pool在3维情况下报错
+    scores = scores.unsqueeze(0)
     max_mask = scores == max_pool(scores)
-    scores = ops.squeeze(scores, dim=0)  # 减维度
-
     for _ in range(2):
         supp_mask = max_pool(max_mask.float()) > 0
         supp_scores = ops.where(supp_mask, zeros, scores)
         new_max_mask = supp_scores == max_pool(supp_scores)
-        max_mask = max_mask | (new_max_mask & (~supp_mask))
-    max_mask = ops.squeeze(max_mask, dim=0)  # 减维度
-    return ops.where(max_mask, scores, zeros)
+        max_mask = max_mask.int() | (new_max_mask.int() & (~supp_mask).int())
+    return ops.where(max_mask.squeeze(0).bool(), scores.squeeze(0), zeros)
 
 
 @dataclass
@@ -104,7 +93,7 @@ class SuperPointKeypointDescriptionOutput(ModelOutput):
             Scores of predicted keypoints.
         descriptors (`mindspore.Tensor` of shape `(batch_size, num_keypoints, descriptor_size)`):
             Descriptors of predicted keypoints.
-        mask (`torch.BoolTensor` of shape `(batch_size, num_keypoints)`):
+        mask (`mindspore.Tensor` of shape `(batch_size, num_keypoints)`):
             Mask indicating which values in keypoints, scores and descriptors are keypoint information.
         hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or
         when `config.output_hidden_states=True`):
@@ -122,13 +111,8 @@ class SuperPointKeypointDescriptionOutput(ModelOutput):
 
 
 class SuperPointConvBlock(nn.Module):
-    "SuperPointConvBlock"
     def __init__(
-        self,
-        config: SuperPointConfig,
-        in_channels: int,
-        out_channels: int,
-        add_pooling: bool = False,
+        self, config: SuperPointConfig, in_channels: int, out_channels: int, add_pooling: bool = False
     ) -> None:
         super().__init__()
         self.conv_a = nn.Conv2d(
@@ -169,25 +153,17 @@ class SuperPointEncoder(nn.Module):
 
         conv_blocks = []
         conv_blocks.append(
-            SuperPointConvBlock(
-                config, self.input_dim, config.encoder_hidden_sizes[0], add_pooling=True
-            )
+            SuperPointConvBlock(config, self.input_dim, config.encoder_hidden_sizes[0], add_pooling=True)
         )
         for i in range(1, len(config.encoder_hidden_sizes) - 1):
             conv_blocks.append(
                 SuperPointConvBlock(
-                    config,
-                    config.encoder_hidden_sizes[i - 1],
-                    config.encoder_hidden_sizes[i],
-                    add_pooling=True,
+                    config, config.encoder_hidden_sizes[i - 1], config.encoder_hidden_sizes[i], add_pooling=True
                 )
             )
         conv_blocks.append(
             SuperPointConvBlock(
-                config,
-                config.encoder_hidden_sizes[-2],
-                config.encoder_hidden_sizes[-1],
-                add_pooling=False,
+                config, config.encoder_hidden_sizes[-2], config.encoder_hidden_sizes[-1], add_pooling=False
             )
         )
         self.conv_blocks = nn.ModuleList(conv_blocks)
@@ -240,16 +216,10 @@ class SuperPointInterestPointDecoder(nn.Module):
             padding=1,
         )
         self.conv_score_b = nn.Conv2d(
-            config.decoder_hidden_size,
-            config.keypoint_decoder_dim,
-            kernel_size=1,
-            stride=1,
-            padding=0,
+            config.decoder_hidden_size, config.keypoint_decoder_dim, kernel_size=1, stride=1, padding=0
         )
 
-    def forward(
-        self, encoded: mindspore.Tensor
-    ) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
+    def forward(self, encoded: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
         scores = self._get_pixel_scores(encoded)
         keypoints, scores = self._extract_keypoints(scores)
 
@@ -259,18 +229,14 @@ class SuperPointInterestPointDecoder(nn.Module):
         """Based on the encoder output, compute the scores for each pixel of the image"""
         scores = self.relu(self.conv_score_a(encoded))
         scores = self.conv_score_b(scores)
-        scores = F.softmax(scores, 1)[:, :-1]
+        scores = nn.functional.softmax(scores, 1)[:, :-1]
         batch_size, _, height, width = scores.shape
         scores = scores.permute(0, 2, 3, 1).reshape(batch_size, height, width, 8, 8)
-        scores = scores.permute(0, 1, 3, 2, 4).reshape(
-            batch_size, height * 8, width * 8
-        )
+        scores = scores.permute(0, 1, 3, 2, 4).reshape(batch_size, height * 8, width * 8)
         scores = simple_nms(scores, self.nms_radius)
         return scores
 
-    def _extract_keypoints(
-        self, scores: mindspore.Tensor
-    ) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
+    def _extract_keypoints(self, scores: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
         """Based on their scores, extract the pixels that represent the keypoints that will be used for descriptors computation"""
         _, height, width = scores.shape
 
@@ -322,18 +288,16 @@ class SuperPointDescriptorDecoder(nn.Module):
             padding=0,
         )
 
-    def forward(
-        self, encoded: mindspore.Tensor, keypoints: mindspore.Tensor
-    ) -> mindspore.Tensor:
+    def forward(self, encoded: mindspore.Tensor, keypoints: mindspore.Tensor) -> mindspore.Tensor:
         """Based on the encoder output and the keypoints, compute the descriptors for each keypoint"""
         descriptors = self.conv_descriptor_b(self.relu(self.conv_descriptor_a(encoded)))
-        descriptors = F.normalize(descriptors, p=2, dim=1)
-        descriptors = self._sample_descriptors(
-            keypoints[None], descriptors[0][None], 8
-        )[0]
+        descriptors = nn.functional.normalize(descriptors, p=2, dim=1)
+
+        descriptors = self._sample_descriptors(keypoints[None], descriptors[0][None], 8)[0]
 
         # [descriptor_dim, num_keypoints] -> [num_keypoints, descriptor_dim]
-        descriptors = ops.swapaxes(descriptors, 0, 1)
+        descriptors = ops.transpose(descriptors, 0, 1)
+
         return descriptors
 
     @staticmethod
@@ -341,21 +305,17 @@ class SuperPointDescriptorDecoder(nn.Module):
         """Interpolate descriptors at keypoint locations"""
         batch_size, num_channels, height, width = descriptors.shape
         keypoints = keypoints - scale / 2 + 0.5
-        divisor = mindspore.Tensor(
-            [[(width * scale - scale / 2 - 0.5), (height * scale - scale / 2 - 0.5)]]
-        )
+        divisor = mindspore.tensor([[(width * scale - scale / 2 - 0.5), (height * scale - scale / 2 - 0.5)]])
         divisor = divisor.to(keypoints.dtype)
         keypoints /= divisor
         keypoints = keypoints * 2 - 1  # normalize to (-1, 1)
-        # [batch_size, num_channels, num_keypoints, 2] -> [batch_size, num_channels, num_keypoints, 2]
         kwargs = {"align_corners": True}
+        # [batch_size, num_channels, num_keypoints, 2] -> [batch_size, num_channels, num_keypoints, 2]
         keypoints = keypoints.view(batch_size, 1, -1, 2)
-
-        descriptors = F.grid_sample(descriptors, keypoints, mode="bilinear", **kwargs)
+        descriptors = nn.functional.grid_sample(descriptors, keypoints, mode="bilinear", **kwargs)
         # [batch_size, descriptor_decoder_dim, num_channels, num_keypoints] -> [batch_size, descriptor_decoder_dim, num_keypoints]
-        descriptors = ops.reshape(descriptors, (batch_size, num_channels, -1))
-        descriptors = F.normalize(descriptors, p=2, dim=1)
-
+        descriptors = descriptors.reshape(batch_size, num_channels, -1)
+        descriptors = nn.functional.normalize(descriptors, p=2, dim=1)
         return descriptors
 
 
@@ -373,16 +333,14 @@ class SuperPointPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
         if isinstance(module, (nn.Linear, nn.Conv2d)):
-            nn.init.normal_(module.weight,mean=0.0, std=self.config.initializer_range)
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
             if module.bias is not None:
                 nn.init.zeros_(module.bias)
         elif isinstance(module, nn.LayerNorm):
             nn.init.zeros_(module.bias)
             nn.init.ones_(module.weight)
 
-    def extract_one_channel_pixel_values(
-        self, pixel_values: mindspore.Tensor
-    ) -> mindspore.Tensor:
+    def extract_one_channel_pixel_values(self, pixel_values: mindspore.Tensor) -> mindspore.Tensor:
         """
         Assuming pixel_values has shape (batch_size, 3, height, width), and that all channels values are the same,
         extract the first channel value to get a tensor of shape (batch_size, 1, height, width) for SuperPoint. This is
@@ -397,30 +355,6 @@ class SuperPointPreTrainedModel(PreTrainedModel):
 
         """
         return pixel_values[:, 0, :, :][:, None, :, :]
-
-
-SUPERPOINT_START_DOCSTRING = r"""
-    This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass. Use it
-    as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
-    behavior.
-
-    Parameters:
-        config ([`SuperPointConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-    """
-
-SUPERPOINT_INPUTS_DOCSTRING = r"""
-Args:
-    pixel_values (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
-        Pixel values. Pixel values can be obtained using [`SuperPointImageProcessor`]. See
-        [`SuperPointImageProcessor.__call__`] for details.
-    output_hidden_states (`bool`, *optional*):
-        Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for more
-        detail.
-    return_dict (`bool`, *optional*):
-        Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-    """
 
 
 class SuperPointForKeypointDetection(SuperPointPreTrainedModel):
@@ -456,7 +390,6 @@ class SuperPointForKeypointDetection(SuperPointPreTrainedModel):
 
         ```python
         >>> from transformers import AutoImageProcessor, SuperPointForKeypointDetection
-        >>> import torch
         >>> from PIL import Image
         >>> import requests
 
@@ -474,13 +407,9 @@ class SuperPointForKeypointDetection(SuperPointPreTrainedModel):
             raise ValueError("SuperPoint does not support training for now.")
 
         output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         pixel_values = self.extract_one_channel_pixel_values(pixel_values)
 
@@ -495,16 +424,11 @@ class SuperPointForKeypointDetection(SuperPointPreTrainedModel):
         last_hidden_state = encoder_outputs[0]
 
         list_keypoints_scores = [
-            self.keypoint_decoder(last_hidden_state[None, ...])
-            for last_hidden_state in last_hidden_state
+            self.keypoint_decoder(last_hidden_state[None, ...]) for last_hidden_state in last_hidden_state
         ]
 
-        list_keypoints = [
-            keypoints_scores[0] for keypoints_scores in list_keypoints_scores
-        ]
-        list_scores = [
-            keypoints_scores[1] for keypoints_scores in list_keypoints_scores
-        ]
+        list_keypoints = [keypoints_scores[0] for keypoints_scores in list_keypoints_scores]
+        list_scores = [keypoints_scores[1] for keypoints_scores in list_keypoints_scores]
 
         list_descriptors = [
             self.descriptor_decoder(last_hidden_state[None, ...], keypoints[None, ...])
@@ -518,23 +442,19 @@ class SuperPointForKeypointDetection(SuperPointPreTrainedModel):
         descriptors = ops.zeros(
             (batch_size, maximum_num_keypoints, self.config.descriptor_decoder_dim),
         )
-        mask = ops.zeros((batch_size, maximum_num_keypoints), dtype=mindspore.float32)
+        mask = ops.zeros((batch_size, maximum_num_keypoints), dtype=mindspore.int32)
 
-        for i, (_keypoints, _scores, _descriptors) in enumerate(
-            zip(list_keypoints, list_scores, list_descriptors)
-        ):
+        for i, (_keypoints, _scores, _descriptors) in enumerate(zip(list_keypoints, list_scores, list_descriptors)):
             keypoints[i, : _keypoints.shape[0]] = _keypoints
             scores[i, : _scores.shape[0]] = _scores
             descriptors[i, : _descriptors.shape[0]] = _descriptors
-            mask[i, : _scores.shape[0]] = 1
+            if 0 not in _scores.shape:
+                mask[i, : _scores.shape[0]] = 1
 
         hidden_states = encoder_outputs[1] if output_hidden_states else None
         if not return_dict:
-            return tuple(
-                v
-                for v in [loss, keypoints, scores, descriptors, mask, hidden_states]
-                if v is not None
-            )
+            return tuple(v for v in [loss, keypoints, scores, descriptors, mask, hidden_states] if v is not None)
+
         return SuperPointKeypointDescriptionOutput(
             loss=loss,
             keypoints=keypoints,
@@ -543,7 +463,6 @@ class SuperPointForKeypointDetection(SuperPointPreTrainedModel):
             mask=mask,
             hidden_states=hidden_states,
         )
-
 
 __all__ = [
     "SuperPointForKeypointDetection",

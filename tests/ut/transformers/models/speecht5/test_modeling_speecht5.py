@@ -43,7 +43,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         SpeechT5ForSpeechToSpeech,
@@ -53,7 +53,6 @@ if is_mindspore_available():
         SpeechT5Model,
         SpeechT5Processor,
     )
-
 
 def prepare_inputs_dict(
     config,
@@ -341,8 +340,8 @@ class SpeechT5ForSpeechToTextTester:
         next_attn_mask = ids_tensor((self.batch_size, 3), 2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([attention_mask, next_attn_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([attention_mask, next_attn_mask], dim=-1)
 
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["last_hidden_state"]
         output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
@@ -619,7 +618,7 @@ class SpeechT5ForSpeechToTextTest(ModelTesterMixin, unittest.TestCase):
             output_embeds = model.get_output_embeddings()
             self.assertEqual(output_embeds.weight.shape[0], model_vocab_size + 10)
             # Check bias if present
-            if output_embeds.has_bias:
+            if output_embeds.bias is not None:
                 self.assertEqual(output_embeds.bias.shape[0], model_vocab_size + 10)
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             model(**self._prepare_for_class(inputs_dict, model_class))
@@ -631,7 +630,7 @@ class SpeechT5ForSpeechToTextTest(ModelTesterMixin, unittest.TestCase):
             output_embeds = model.get_output_embeddings()
             self.assertEqual(output_embeds.weight.shape[0], model_vocab_size - 15)
             # Check bias if present
-            if output_embeds.has_bias:
+            if output_embeds.bias is not None:
                 self.assertEqual(output_embeds.bias.shape[0], model_vocab_size - 15)
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             if "decoder_input_ids" in inputs_dict:
@@ -1017,6 +1016,7 @@ class SpeechT5ForTextToSpeechTest(ModelTesterMixin, unittest.TestCase):
             cell.bias.data.fill(3)
 
 
+@slow
 @require_mindspore
 @require_sentencepiece
 @require_tokenizers
@@ -1853,7 +1853,7 @@ class SpeechT5HifiGanTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             model.set_train(False)
 
-            batched_inputs = inputs["spectrogram"].unsqueeze(0).repeat(2, 1, 1)
+            batched_inputs = inputs["spectrogram"].unsqueeze(0).tile((2, 1, 1))
             batched_outputs = model(batched_inputs)
 
             self.assertEqual(
