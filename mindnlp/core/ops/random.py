@@ -10,7 +10,7 @@ from ..utils import get_default_dtype
 
 # bernoulli
 def bernoulli(input, p=0.5):
-    random_numbers = rand(*input.shape, dtype=input.dtype)
+    random_numbers = rand(*input.shape, dtype=mindspore.float32)
     samples = random_numbers < p
     samples = samples.int()
     return samples
