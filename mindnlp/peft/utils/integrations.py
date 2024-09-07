@@ -13,8 +13,8 @@
 # limitations under the License.
 """integrations for peft"""
 import mindspore
-from mindnlp.core import nn, ops
 import bitsandbytes as bnb
+from mindnlp.core import nn, ops
 
 def dequantize_module_weight(module: nn.Module) -> nn.Parameter:
     """

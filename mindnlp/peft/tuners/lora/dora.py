@@ -25,41 +25,34 @@ class DoraLinearLayer(nn.Module):
     def __init__(self, fan_in_fan_out):
         super().__init__()
         self.fan_in_fan_out = fan_in_fan_out
-
     def get_weight_norm(self, weight, lora_weight, scaling) -> mindspore.Tensor:
         # calculate L2 norm of weight matrix, column-wise
         weight = transpose(weight, self.fan_in_fan_out)
         weight = weight + scaling * lora_weight
         weight_norm = ops.norm(weight, dim=1).to(weight.dtype)
         return weight_norm
-
     def update_layer(self, *, base_layer, lora_A, lora_B, scaling, place_on_cpu=False) -> None:
         # temporarily convert fp16 to fp32, as fp16 can cause trouble on CPU with PyTorch < 2.2
         dtype_is_fp16 = lora_A.dtype == mindspore.float16 
         if dtype_is_fp16:
             lora_A = lora_A.float()
             lora_B = lora_B.float()
-
         if base_layer.__class__.__name__ == "Linear4bit":
             # We have to create a copy of the base layer, otherwise, FSDP will throw an error. 8bit does not work
             # yet because Int8Params cannot be correctly deep-copied (attributes vanish)
             base_layer = deepcopy(base_layer)
-
         weight = dequantize_module_weight(base_layer)
         if weight.data.ndim == 4:  # For handling LoRAs applied to Conv2Ds.
             lora_weight = ops.mm(lora_B.flatten(start_dim=1), lora_A.flatten(start_dim=1))
             lora_weight = lora_weight.reshape(weight.shape)
         else:
             lora_weight = lora_B @ lora_A
-
         if dtype_is_fp16:
             lora_weight = lora_weight.half()
         weight_norm = self.get_weight_norm(weight, lora_weight, scaling)
-
         if place_on_cpu:
             weight_norm = weight_norm.to("cpu")
         self.weight = nn.Parameter(weight_norm, requires_grad=True)
-
     def forward(self, x, *, lora_A, lora_B, scaling, base_layer):
         """
         For DoRA, calculate the extra output from LoRA with DoRA applied. This should be added on top of the base layer
@@ -174,3 +167,4 @@ class DoraConv2dLayer(DoraLinearLayer):
     def __repr__(self) -> str:
         rep = super().__repr__()
         return "lora.dora." + rep
+
