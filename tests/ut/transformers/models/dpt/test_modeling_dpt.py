@@ -301,7 +301,7 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
 
 # We will verify our results on an image of cute cats
 def prepare_img():
-    image = Image.open("../fixtures/tests_samples/COCO/000000039769.png")
+    image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
     return image
 
 
@@ -310,8 +310,8 @@ def prepare_img():
 @slow
 class DPTModelIntegrationTest(unittest.TestCase):
     def test_inference_depth_estimation(self):
-        image_processor = DPTImageProcessor.from_pretrained("D:/Mindspore/dpt")
-        model = DPTForDepthEstimation.from_pretrained("D:/Mindspore/dpt")
+        image_processor = DPTImageProcessor.from_pretrained("Intel/dpt-large")
+        model = DPTForDepthEstimation.from_pretrained("Intel/dpt-large")
 
         image = prepare_img()
         inputs = image_processor(images=image, return_tensors="ms")
