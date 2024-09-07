@@ -38,7 +38,6 @@ if is_vision_available():
 
     from mindnlp.transformers import AutoImageProcessor
 
-
 class SuperPointModelTester:
     def __init__(
         self,
@@ -221,7 +220,7 @@ class SuperPointModelTest(ModelTesterMixin, unittest.TestCase):
 
             check_hidden_states_output(inputs_dict, config, model_class)
 
-    
+    @slow
     def test_model_from_pretrained(self):
         model = SuperPointForKeypointDetection.from_pretrained(self.from_pretrained_id,from_pt = True)
         self.assertIsNotNone(model)
@@ -255,7 +254,7 @@ class SuperPointModelIntegrationTest(unittest.TestCase):
     def default_image_processor(self):
         return AutoImageProcessor.from_pretrained("magic-leap-community/superpoint") if is_vision_available() else None
 
-    
+    @slow
     def test_inference(self):
         model = SuperPointForKeypointDetection.from_pretrained("magic-leap-community/superpoint")
         preprocessor = self.default_image_processor

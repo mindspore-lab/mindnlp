@@ -1283,8 +1283,8 @@ class ModelTesterMixin:
             config.chunk_size_feed_forward = 1
             model = model_class(config)
             model.eval()
-
             hidden_states_with_chunk = model(**self._prepare_for_class(inputs_dict, model_class))[0]
+
             self.assertTrue(ops.allclose(hidden_states_no_chunk, hidden_states_with_chunk, atol=1e-3))
 
     def test_resize_position_vector_embeddings(self):

@@ -7,6 +7,7 @@ import mindspore
 from mindspore import ops, Tensor
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.function.random_func import _get_seed, _set_prim_op_user_data
+from mindspore.ops.operations import nn_ops
 
 from mindnlp.configs import USE_PYBOOST, DEVICE_TARGET
 from .modules._utils import _pair
@@ -173,6 +174,8 @@ def linear(input, weight, bias=None):
 
 
 def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean', pos_weight=None):
+    if input.shape != target.shape:
+        target = target.unsqueeze(1).expand_as(input).to(input.dtype)
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.binary_cross_entropy_with_logits(input, target, weight, reduction, pos_weight)
     return ops.binary_cross_entropy_with_logits(input, target, weight, pos_weight, reduction)
@@ -1055,7 +1058,20 @@ def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     return output
 
 def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0, reduction='mean', zero_infinity=False):
-    return ops.ctc_loss(log_probs, targets, input_lengths, target_lengths, blank, reduction, zero_infinity)[0]
+    ctc_loss_op = _get_cache_prim(nn_ops.CTCLossV2)(blank=blank, reduction="none", zero_infinity=zero_infinity)
+    loss, _ = ctc_loss_op(log_probs, targets, input_lengths, target_lengths)
+    if zero_infinity:
+        loss = ops.where(ops.isinf(loss), 0., loss)
+    if reduction == 'sum':
+        loss = loss.sum()
+    if reduction == 'mean':
+        input_type = loss.dtype
+        target_length_t = target_lengths.clip(1., None)
+        loss = loss.astype("float32")
+        loss = loss / target_length_t
+        loss = loss.mean()
+        loss = loss.astype(input_type)
+    return loss
 
 def one_hot(tensor, num_classes=-1):
     if USE_PYBOOST:

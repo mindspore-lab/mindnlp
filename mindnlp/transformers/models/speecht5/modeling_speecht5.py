@@ -12,20 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Mindspore SpeechT5 model."""
+"""MindSpore SpeechT5 model."""
 
 import math
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import Parameter
-from mindspore.common.initializer import initializer, Normal, Uniform
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindnlp.utils import logging
+from mindnlp.core import nn, ops, no_grad, get_default_dtype
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, L1Loss
 
-from .configuration_speecht5 import SpeechT5Config, SpeechT5HifiGanConfig
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
@@ -36,9 +32,17 @@ from ...modeling_outputs import (
     Seq2SeqSpectrogramOutput,
 )
 from ...modeling_utils import PreTrainedModel
+from ....utils import logging
+from .configuration_speecht5 import SpeechT5Config, SpeechT5HifiGanConfig
 
 
 logger = logging.get_logger(__name__)
+
+
+_HIDDEN_STATES_START_POSITION = 1
+
+# General docstring
+_CONFIG_FOR_DOC = "SpeechT5Config"
 
 
 # Copied from transformers.models.bart.modeling_bart.shift_tokens_right
@@ -46,7 +50,7 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     """
     Shift input ids one token to the right.
     """
-    shifted_input_ids = input_ids.new_zeros(input_ids.shape)
+    shifted_input_ids = ops.zeros_like(input_ids)
     shifted_input_ids[:, 1:] = input_ids[:, :-1].copy()
     shifted_input_ids[:, 0] = decoder_start_token_id
 
@@ -58,21 +62,25 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     return shifted_input_ids
 
 
-def shift_spectrograms_right(input_values: mindspore.Tensor, reduction_factor: int = 1):
+def shift_spectrograms_right(
+    input_values: mindspore.Tensor, reduction_factor: int = 1, attention_mask: Optional[mindspore.Tensor] = None
+):
     """
     Shift input spectrograms one timestep to the right. Also applies the reduction factor to the sequence length.
     """
     # thin out frames for reduction factor
     if reduction_factor > 1:
         input_values = input_values[:, reduction_factor - 1 :: reduction_factor]
+        if attention_mask is not None:
+            attention_mask = attention_mask[:, reduction_factor - 1 :: reduction_factor]
 
-    shifted_input_values = input_values.new_zeros(input_values.shape)
+    shifted_input_values = ops.zeros_like(input_values)
     shifted_input_values[:, 1:] = input_values[:, :-1].copy()
 
     # replace possible -100 values in labels by zeros
-    shifted_input_values.masked_fill(shifted_input_values == -100.0, 0.0)
+    shifted_input_values = shifted_input_values.masked_fill(shifted_input_values == -100.0, 0.0)
 
-    return shifted_input_values
+    return shifted_input_values, attention_mask
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2._compute_mask_indices
@@ -231,7 +239,7 @@ class SpeechT5LayerNormConvLayer(nn.Module):
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
         )
-        self.layer_norm = nn.LayerNorm([self.out_conv_dim])
+        self.layer_norm = nn.LayerNorm(self.out_conv_dim, elementwise_affine=True)
         self.activation = ACT2FN[config.feat_extract_activation]
 
     def forward(self, hidden_states):
@@ -265,7 +273,7 @@ class SpeechT5GroupNormConvLayer(nn.Module):
 
     def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
-        hidden_states = self.layer_norm(hidden_states.unsqueeze(-1)).squeeze(-1)
+        hidden_states = self.layer_norm(hidden_states)
         hidden_states = self.activation(hidden_states)
         return hidden_states
 
@@ -279,14 +287,16 @@ class SpeechT5SinusoidalPositionalEmbedding(nn.Module):
         self.offset = 2
         self.embedding_dim = embedding_dim
         self.padding_idx = padding_idx
-        emb_weights = self.get_embedding(num_positions + self.offset, embedding_dim, padding_idx)
-        self.weights = Parameter(emb_weights, "weights")
-        self.weights.requires_grad = False
+        self.make_weights(num_positions + self.offset, embedding_dim, padding_idx)
 
     def make_weights(self, num_embeddings: int, embedding_dim: int, padding_idx: Optional[int] = None):
         emb_weights = self.get_embedding(num_embeddings, embedding_dim, padding_idx)
-        emb_weights = emb_weights.to(dtype=self.weights.dtype)
-        self.weights = Parameter(emb_weights, "weights")
+        if hasattr(self, "weights"):
+            # in forward put the weights on the correct dtype and device of the param
+            emb_weights = emb_weights.to(dtype=self.weights.dtype) # pylint: disable=access-member-before-definition
+
+        self.weights = nn.Parameter(emb_weights)
+        self.weights.requires_grad = False
 
     @staticmethod
     def get_embedding(num_embeddings: int, embedding_dim: int, padding_idx: Optional[int] = None):
@@ -301,11 +311,12 @@ class SpeechT5SinusoidalPositionalEmbedding(nn.Module):
         emb = ops.cat([ops.sin(emb), ops.cos(emb)], dim=1).view(num_embeddings, -1)
         if embedding_dim % 2 == 1:
             # zero pad
-            emb = ops.cat([emb, ops.zeros((num_embeddings, 1))], dim=1)
+            emb = ops.cat([emb, ops.zeros(num_embeddings, 1)], dim=1)
         if padding_idx is not None:
             emb[padding_idx, :] = 0
-        return emb.float()
+        return emb.to(get_default_dtype())
 
+    @no_grad()
     def forward(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
         bsz, seq_len = input_ids.shape
         # Create the position ids from the input token ids. Any padded tokens remain padded.
@@ -345,18 +356,22 @@ class SpeechT5PositionalConvEmbedding(nn.Module):
             kernel_size=config.num_conv_pos_embeddings,
             padding=config.num_conv_pos_embeddings // 2,
             groups=config.num_conv_pos_embedding_groups,
-            bias=True,
         )
 
-        self.conv = F.weight_norm(self.conv, name='weight', dim=2)
+        weight_norm = nn.utils.weight_norm
+
+        self.conv = weight_norm(self.conv, name="weight", dim=2)
+
         self.padding = SpeechT5SamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
 
     def forward(self, hidden_states):
         hidden_states = hidden_states.swapaxes(1, 2)
+
         hidden_states = self.conv(hidden_states)
         hidden_states = self.padding(hidden_states)
         hidden_states = self.activation(hidden_states)
+
         hidden_states = hidden_states.swapaxes(1, 2)
         return hidden_states
 
@@ -367,17 +382,17 @@ class SpeechT5ScaledPositionalEncoding(nn.Module):
     """
 
     def __init__(self, dropout, dim, max_len=5000):
-        pe = ops.zeros((max_len, dim))
+        pe = ops.zeros(max_len, dim)
         position = ops.arange(0, max_len).unsqueeze(1)
         div_term = ops.exp((ops.arange(0, dim, 2, dtype=mindspore.int64).float() * -(math.log(10000.0) / dim)))
         pe[:, 0::2] = ops.sin(position.float() * div_term)
         pe[:, 1::2] = ops.cos(position.float() * div_term)
         pe = pe.unsqueeze(0)
         super().__init__()
-        self.pe = pe
+        self.register_buffer("pe", pe, persistent=False)
         self.dropout = nn.Dropout(p=dropout)
         self.dim = dim
-        self.alpha = Parameter(mindspore.tensor([1.0]), "alpha")
+        self.alpha = nn.Parameter(mindspore.tensor(1.0))
 
     def forward(self, emb):
         emb = emb + self.alpha * self.pe[:, : emb.shape[1]]
@@ -436,16 +451,30 @@ class SpeechT5FeatureEncoder(nn.Module):
                 f"`config.feat_extract_norm` is {config.feat_extract_norm}, but has to be one of ['group', 'layer']"
             )
         self.conv_layers = nn.ModuleList(conv_layers)
+        self.gradient_checkpointing = False
+        self._requires_grad = True
 
     def _freeze_parameters(self):
-        for _, param in self.parameters_and_names():
+        for param in self.parameters():
             param.requires_grad = False
         self._requires_grad = False
 
     def forward(self, input_values):
         hidden_states = input_values[:, None]
+
+        # make sure hidden_states require grad for gradient_checkpointing
+        if self._requires_grad and self.training:
+            hidden_states.requires_grad = True
+
         for conv_layer in self.conv_layers:
-            hidden_states = conv_layer(hidden_states)
+            if self._requires_grad and self.gradient_checkpointing and self.training:
+                hidden_states = self._gradient_checkpointing_func(
+                    conv_layer.__call__,
+                    hidden_states,
+                )
+            else:
+                hidden_states = conv_layer(hidden_states)
+
         return hidden_states
 
 
@@ -453,9 +482,9 @@ class SpeechT5FeatureEncoder(nn.Module):
 class SpeechT5FeatureProjection(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.layer_norm = nn.LayerNorm([config.conv_dim[-1]], eps=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.conv_dim[-1], eps=config.layer_norm_eps)
         self.projection = nn.Linear(config.conv_dim[-1], config.hidden_size)
-        self.dropout = nn.Dropout(p=config.feat_proj_dropout)
+        self.dropout = nn.Dropout(config.feat_proj_dropout)
 
     def forward(self, hidden_states):
         # non-projected hidden states are needed for quantization
@@ -474,7 +503,7 @@ class SpeechT5SpeechEncoderPrenet(nn.Module):
 
         # model only needs masking vector if mask prob is > 0.0
         if config.mask_time_prob > 0.0 or config.mask_feature_prob > 0.0:
-            self.masked_spec_embed = Parameter(initializer(Uniform(), (config.hidden_size,), dtype=mindspore.float32), "masked_spec_embed")
+            self.masked_spec_embed = nn.Parameter(ops.randn(config.hidden_size))
 
         self.pos_conv_embed = SpeechT5PositionalConvEmbedding(config)
         self.pos_sinusoidal_embed = SpeechT5SinusoidalPositionalEmbedding(
@@ -524,7 +553,7 @@ class SpeechT5SpeechEncoderPrenet(nn.Module):
     def _get_feature_vector_attention_mask(self, feature_vector_length: int, attention_mask: mindspore.Tensor):
         # Effectively attention_mask.sum(-1), but not inplace to be able to run
         # on inference mode.
-        non_padded_lengths = attention_mask.cumsum(axis=-1)[:, -1]
+        non_padded_lengths = ops.cumsum(attention_mask, dim=-1)[:, -1]
         output_lengths = self._get_feat_extract_output_lengths(non_padded_lengths).to(mindspore.int64)
         batch_size = attention_mask.shape[0]
 
@@ -533,21 +562,22 @@ class SpeechT5SpeechEncoderPrenet(nn.Module):
         )
         # these two operations makes sure that all values before the output lengths idxs are attended to
         attention_mask[(ops.arange(attention_mask.shape[0]), output_lengths - 1)] = 1
-        attention_mask = attention_mask.flip([-1]).cumsum(-1).flip([-1]).bool()
+        attention_mask = attention_mask.flip([-1]).int().cumsum(-1).flip([-1]).bool()
         return attention_mask
 
+    # Copied from transformers.models.unispeech.modeling_unispeech.UniSpeechPreTrainedModel._get_feat_extract_output_lengths
     def _get_feat_extract_output_lengths(self, input_lengths: Union[mindspore.Tensor, int]):
         """
         Computes the output length of the convolutional layers
         """
+
         def _conv_out_length(input_length, kernel_size, stride):
             # 1D convolutional layer output length formula taken
-            # from https://pytorch.org/docs/stable/generated/ops.nn.Conv1d.html
-            #return ops.div(input_length - kernel_size, stride, rounding_mode="floor") + 1
-            return (input_length - kernel_size) // stride + 1
+            return ops.div(input_length - kernel_size, stride, rounding_mode="floor") + 1
 
         for kernel_size, stride in zip(self.config.conv_kernel, self.config.conv_stride):
             input_lengths = _conv_out_length(input_lengths, kernel_size, stride)
+
         return input_lengths
 
     # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2Model._mask_hidden_states
@@ -580,7 +610,7 @@ class SpeechT5SpeechEncoderPrenet(nn.Module):
                 attention_mask=attention_mask,
                 min_masks=self.config.mask_time_min_masks,
             )
-            mask_time_indices = mindspore.Tensor(mask_time_indices, dtype=mindspore.bool_)
+            mask_time_indices = mindspore.tensor(mask_time_indices, dtype=mindspore.bool_)
             hidden_states[mask_time_indices] = self.masked_spec_embed.to(hidden_states.dtype)
 
         if self.config.mask_feature_prob > 0 and self.training:
@@ -591,13 +621,13 @@ class SpeechT5SpeechEncoderPrenet(nn.Module):
                 mask_length=self.config.mask_feature_length,
                 min_masks=self.config.mask_feature_min_masks,
             )
-            mask_feature_indices = mindspore.Tensor(mask_feature_indices, dtype=mindspore.bool_)
+            mask_feature_indices = mindspore.tensor(mask_feature_indices, dtype=mindspore.bool_)
             mask_feature_indices = mask_feature_indices[:, None].broadcast_to((-1, sequence_length, -1))
             hidden_states[mask_feature_indices] = 0
 
         return hidden_states
 
-### Problem
+
 class SpeechT5SpeechDecoderPrenet(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -621,10 +651,10 @@ class SpeechT5SpeechDecoderPrenet(nn.Module):
         )
         self.speaker_embeds_layer = nn.Linear(config.speaker_embedding_dim + config.hidden_size, config.hidden_size)
 
-    def _consistent_dropout(self, inputs_embeds, p):
-        mask = ops.bernoulli(inputs_embeds[0], p=p)
-        all_masks = mask.unsqueeze(0).tile((inputs_embeds.shape[0], 1, 1))
-        return ops.where(all_masks == 1, inputs_embeds, 0) * 1 / (1 - p)
+    # def _consistent_dropout(self, inputs_embeds, p):
+    #     mask = ops.bernoulli(inputs_embeds[0], p=p)
+    #     all_masks = mask.unsqueeze(0).tile((inputs_embeds.shape[0], 1, 1))
+    #     return ops.where(all_masks == 1, inputs_embeds, 0.) * 1 / (1 - p)
 
     def forward(
         self,
@@ -632,18 +662,21 @@ class SpeechT5SpeechDecoderPrenet(nn.Module):
         speaker_embeddings: Optional[mindspore.Tensor] = None,
     ):
         # Dropout is always applied, even when evaluating. See §2.2 in https://arxiv.org/abs/1712.05884.
+
         inputs_embeds = input_values
         for layer in self.layers:
-            inputs_embeds = ops.relu(layer(inputs_embeds))
-            inputs_embeds = self._consistent_dropout(inputs_embeds, self.config.speech_decoder_prenet_dropout)
+            inputs_embeds = nn.functional.relu(layer(inputs_embeds))
+            inputs_embeds = nn.functional.dropout(inputs_embeds, self.config.speech_decoder_prenet_dropout)
+
         inputs_embeds = self.final_layer(inputs_embeds)
         inputs_embeds = self.encode_positions(inputs_embeds)
+
         if speaker_embeddings is not None:
-            speaker_embeddings = speaker_embeddings / ops.norm(speaker_embeddings, p=2.0, dim=1, keepdim=True)
-            speaker_embeddings = ops.nan_to_num(speaker_embeddings)
+            speaker_embeddings = nn.functional.normalize(speaker_embeddings)
             speaker_embeddings = speaker_embeddings.unsqueeze(1).broadcast_to((-1, inputs_embeds.shape[1], -1))
             inputs_embeds = ops.cat([inputs_embeds, speaker_embeddings], dim=-1)
-            inputs_embeds = F.relu(self.speaker_embeds_layer(inputs_embeds))
+            inputs_embeds = nn.functional.relu(self.speaker_embeds_layer(inputs_embeds))
+
         return inputs_embeds
 
 
@@ -676,7 +709,7 @@ class SpeechT5BatchNormConvLayer(nn.Module):
         else:
             self.activation = None
 
-        self.dropout = nn.Dropout(p=config.speech_decoder_postnet_dropout)
+        self.dropout = nn.Dropout(config.speech_decoder_postnet_dropout)
 
     def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
@@ -716,7 +749,7 @@ class SpeechT5TextEncoderPrenet(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
+        self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, config.pad_token_id)
         self.encode_positions = SpeechT5ScaledPositionalEncoding(
             config.positional_dropout,
             config.hidden_size,
@@ -739,10 +772,10 @@ class SpeechT5TextDecoderPrenet(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.dropout = nn.Dropout(p=config.positional_dropout)
+        self.dropout = nn.Dropout(config.positional_dropout)
         self.embed_scale = math.sqrt(config.hidden_size) if config.scale_embedding else 1.0
 
-        self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
+        self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, config.pad_token_id)
 
         self.embed_positions = SpeechT5SinusoidalPositionalEmbedding(
             config.max_text_positions + config.pad_token_id + 1,
@@ -828,7 +861,7 @@ class SpeechT5Attention(nn.Module):
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2).contiguous()
 
     def forward(
         self,
@@ -882,8 +915,8 @@ class SpeechT5Attention(nn.Module):
 
         proj_shape = (bsz * self.num_heads, -1, self.head_dim)
         query_states = self._shape(query_states, tgt_len, bsz).view(*proj_shape)
-        key_states = key_states.reshape(*proj_shape)
-        value_states = value_states.reshape(*proj_shape)
+        key_states = key_states.view(*proj_shape)
+        value_states = value_states.view(*proj_shape)
 
         src_len = key_states.shape[1]
         attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
@@ -896,7 +929,7 @@ class SpeechT5Attention(nn.Module):
 
         # relative attention bias
         if position_bias is not None:
-            reshape_q = query_states.view(bsz * self.num_heads, -1, self.head_dim).swapaxes(0, 1)
+            reshape_q = query_states.contiguous().view(bsz * self.num_heads, -1, self.head_dim).swapaxes(0, 1)
             rel_pos_bias = ops.matmul(reshape_q, position_bias.swapaxes(-2, -1))
             rel_pos_bias = rel_pos_bias.swapaxes(0, 1).view(
                 bsz * self.num_heads, position_bias.shape[0], position_bias.shape[1]
@@ -911,7 +944,7 @@ class SpeechT5Attention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, dim=-1)
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -932,7 +965,7 @@ class SpeechT5Attention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = nn.functional.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -957,7 +990,7 @@ class SpeechT5Attention(nn.Module):
 class SpeechT5FeedForward(nn.Module):
     def __init__(self, config, intermediate_size):
         super().__init__()
-        self.intermediate_dropout = nn.Dropout(p=config.activation_dropout)
+        self.intermediate_dropout = nn.Dropout(config.activation_dropout)
 
         self.intermediate_dense = nn.Linear(config.hidden_size, intermediate_size)
         if isinstance(config.hidden_act, str):
@@ -966,7 +999,7 @@ class SpeechT5FeedForward(nn.Module):
             self.intermediate_act_fn = config.hidden_act
 
         self.output_dense = nn.Linear(intermediate_size, config.hidden_size)
-        self.output_dropout = nn.Dropout(p=config.hidden_dropout)
+        self.output_dropout = nn.Dropout(config.hidden_dropout)
 
     def forward(self, hidden_states):
         hidden_states = self.intermediate_dense(hidden_states)
@@ -987,10 +1020,10 @@ class SpeechT5EncoderLayer(nn.Module):
             dropout=config.attention_dropout,
             is_decoder=False,
         )
-        self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.feed_forward = SpeechT5FeedForward(config, config.encoder_ffn_dim)
-        self.final_layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -1048,8 +1081,8 @@ class SpeechT5DecoderLayer(nn.Module):
             dropout=config.attention_dropout,
             is_decoder=True,
         )
-        self.dropout = nn.Dropout(p=config.hidden_dropout)
-        self.self_attn_layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout)
+        self.self_attn_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         self.encoder_attn = SpeechT5Attention(
             config.hidden_size,
@@ -1057,10 +1090,10 @@ class SpeechT5DecoderLayer(nn.Module):
             dropout=config.attention_dropout,
             is_decoder=True,
         )
-        self.encoder_attn_layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.encoder_attn_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         self.feed_forward = SpeechT5FeedForward(config, config.decoder_ffn_dim)
-        self.final_layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -1108,6 +1141,7 @@ class SpeechT5DecoderLayer(nn.Module):
         hidden_states = self.dropout(hidden_states)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
+
         # Cross-Attention Block
         cross_attn_present_key_value = None
         cross_attn_weights = None
@@ -1157,37 +1191,35 @@ class SpeechT5PreTrainedModel(PreTrainedModel):
     main_input_name = "input_values"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, SpeechT5PositionalConvEmbedding):
-            cell.conv.weight.set_data(
-                initializer(Normal(2 * math.sqrt(1 / (cell.conv.kernel_size[0] * cell.conv.in_channels))),
-                            cell.conv.weight.shape, cell.conv.weight.dtype))
-            cell.conv.bias.set_data(initializer('zeros', cell.conv.bias.shape, cell.conv.bias.dtype))
-        elif isinstance(cell, SpeechT5FeatureProjection):
-            k = math.sqrt(1 / cell.projection.in_channels)
-            cell.projection.weight.set_data(
-                initializer(Uniform(k), cell.projection.weight.shape, cell.projection.weight.dtype))
-            cell.projection.bias.set_data(
-                initializer(Uniform(k), cell.projection.bias.shape, cell.projection.bias.dtype))
-        elif isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Conv1d):
-            cell.weight.set_data(initializer('he_normal', cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                k = math.sqrt(cell.group / (cell.in_channels * cell.kernel_size[0]))
-                cell.bias.set_data(initializer(Uniform(k), cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-
-            cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
+        if isinstance(module, SpeechT5PositionalConvEmbedding):
+            nn.init.normal_(
+                module.conv.weight,
+                mean=0,
+                std=2 * math.sqrt(1 / (module.conv.kernel_size[0] * module.conv.in_channels)),
+            )
+            nn.init.constant_(module.conv.bias, 0)
+        elif isinstance(module, SpeechT5FeatureProjection):
+            k = math.sqrt(1 / module.projection.in_features)
+            nn.init.uniform_(module.projection.weight, a=-k, b=k)
+            nn.init.uniform_(module.projection.bias, a=-k, b=k)
+        elif isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, (nn.LayerNorm, nn.GroupNorm)):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
+        elif isinstance(module, nn.Conv1d):
+            nn.init.kaiming_normal_(module.weight)
+            if module.bias is not None:
+                k = math.sqrt(module.groups / (module.in_channels * module.kernel_size[0]))
+                nn.init.uniform_(module.bias, a=-k, b=k)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight[module.padding_idx] = 0
 
 
 class SpeechT5Encoder(SpeechT5PreTrainedModel):
@@ -1197,8 +1229,8 @@ class SpeechT5Encoder(SpeechT5PreTrainedModel):
 
     def __init__(self, config: SpeechT5Config):
         super().__init__(config)
-        self.layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout)
         self.layerdrop = config.encoder_layerdrop
 
         self.layers = nn.ModuleList([SpeechT5EncoderLayer(config) for _ in range(config.encoder_layers)])
@@ -1206,6 +1238,9 @@ class SpeechT5Encoder(SpeechT5PreTrainedModel):
         self.embed_positions = SpeechT5RelativePositionalEncoding(
             config.hidden_size // config.encoder_attention_heads, config.encoder_max_relative_position
         )
+
+        self.gradient_checkpointing = False
+
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1282,14 +1317,26 @@ class SpeechT5Encoder(SpeechT5PreTrainedModel):
                 dropout_probability = ops.rand([])
                 skip_the_layer = dropout_probability < self.layerdrop
 
-            layer_outputs = encoder_layer(
-                    hidden_states,
-                    attention_mask=attention_mask,
-                    position_bias=position_bias,
-                    layer_head_mask=(head_mask[idx] if head_mask is not None else None),
-                    output_attentions=output_attentions,
-                )
-            hidden_states = layer_outputs[0]
+            if not skip_the_layer:
+                # under deepspeed zero3 all gpus must run in sync
+                if self.gradient_checkpointing and self.training:
+                    layer_outputs = self._gradient_checkpointing_func(
+                        encoder_layer.__call__,
+                        hidden_states,
+                        attention_mask,
+                        (head_mask[idx] if head_mask is not None else None),
+                        position_bias,
+                        output_attentions,
+                    )
+                else:
+                    layer_outputs = encoder_layer(
+                        hidden_states,
+                        attention_mask=attention_mask,
+                        position_bias=position_bias,
+                        layer_head_mask=(head_mask[idx] if head_mask is not None else None),
+                        output_attentions=output_attentions,
+                    )
+                hidden_states = layer_outputs[0]
 
             if skip_the_layer:
                 layer_outputs = (None, None)
@@ -1429,7 +1476,11 @@ class SpeechT5Decoder(SpeechT5PreTrainedModel):
     def __init__(self, config: SpeechT5Config):
         super().__init__(config)
         self.layerdrop = config.decoder_layerdrop
+
         self.layers = nn.ModuleList([SpeechT5DecoderLayer(config) for _ in range(config.decoder_layers)])
+
+        self.gradient_checkpointing = False
+
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1510,7 +1561,6 @@ class SpeechT5Decoder(SpeechT5PreTrainedModel):
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1521,12 +1571,20 @@ class SpeechT5Decoder(SpeechT5PreTrainedModel):
         attention_mask = _prepare_4d_causal_attention_mask(
             attention_mask, input_shape, hidden_states, past_key_values_length
         )
+
         # expand encoder attention mask
         if encoder_hidden_states is not None and encoder_attention_mask is not None:
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
             encoder_attention_mask = _prepare_4d_attention_mask(
                 encoder_attention_mask, hidden_states.dtype, tgt_len=input_shape[-1]
             )
+
+        if self.gradient_checkpointing and self.training:
+            if use_cache:
+                logger.warning_once(
+                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
+                )
+                use_cache = False
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
@@ -1557,19 +1615,33 @@ class SpeechT5Decoder(SpeechT5PreTrainedModel):
 
             past_key_value = past_key_values[idx] if past_key_values is not None else None
 
-            layer_outputs = decoder_layer(
-                hidden_states,
-                attention_mask=attention_mask,
-                encoder_hidden_states=encoder_hidden_states,
-                encoder_attention_mask=encoder_attention_mask,
-                layer_head_mask=(head_mask[idx] if head_mask is not None else None),
-                cross_attn_layer_head_mask=(
-                    cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None
-                ),
-                past_key_value=past_key_value,
-                output_attentions=output_attentions,
-                use_cache=use_cache,
-            )
+            if self.gradient_checkpointing and self.training:
+                layer_outputs = self._gradient_checkpointing_func(
+                    decoder_layer.__call__,
+                    hidden_states,
+                    attention_mask,
+                    encoder_hidden_states,
+                    encoder_attention_mask,
+                    head_mask[idx] if head_mask is not None else None,
+                    cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None,
+                    None,
+                    output_attentions,
+                    use_cache,
+                )
+            else:
+                layer_outputs = decoder_layer(
+                    hidden_states,
+                    attention_mask=attention_mask,
+                    encoder_hidden_states=encoder_hidden_states,
+                    encoder_attention_mask=encoder_attention_mask,
+                    layer_head_mask=(head_mask[idx] if head_mask is not None else None),
+                    cross_attn_layer_head_mask=(
+                        cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None
+                    ),
+                    past_key_value=past_key_value,
+                    output_attentions=output_attentions,
+                    use_cache=use_cache,
+                )
             hidden_states = layer_outputs[0]
 
             if use_cache:
@@ -1794,8 +1866,8 @@ class SpeechT5GuidedMultiheadAttentionLoss(nn.Module):
     @staticmethod
     def _make_guided_attention_mask(input_length, output_length, sigma):
         grid_y, grid_x = ops.meshgrid(
-            [ops.arange(input_length),
-            ops.arange(output_length),],
+            ops.arange(input_length),
+            ops.arange(output_length),
             indexing="xy",
         )
         grid_x = grid_x.float() / output_length
@@ -1813,6 +1885,9 @@ class SpeechT5SpectrogramLoss(nn.Module):
         self.use_guided_attention_loss = config.use_guided_attention_loss
         self.guided_attention_loss_num_heads = config.guided_attention_loss_num_heads
         self.reduction_factor = config.reduction_factor
+
+        self.l1_criterion = L1Loss()
+        self.bce_criterion = BCEWithLogitsLoss(pos_weight=mindspore.tensor(5.0))
 
         if self.use_guided_attention_loss:
             self.attn_criterion = SpeechT5GuidedMultiheadAttentionLoss(config)
@@ -1834,16 +1909,16 @@ class SpeechT5SpectrogramLoss(nn.Module):
         outputs_after_postnet = outputs_after_postnet.masked_select(padding_mask)
 
         # spectrogram loss
-        l1_loss = ops.l1_loss(outputs_after_postnet, labels) + ops.l1_loss(outputs_before_postnet, labels)
+        l1_loss = self.l1_criterion(outputs_after_postnet, labels) + self.l1_criterion(outputs_before_postnet, labels)
 
-        # forward stop labels from the padding mask
+        # construct stop labels from the padding mask
         masks = padding_mask[:, :, 0]
-        stop_labels = ops.cat([~masks * 1.0, ops.ones((masks.shape[0], 1))], dim=1)
+        stop_labels = ops.cat([~masks * 1.0, ops.ones(masks.shape[0], 1)], dim=1)
         stop_labels = stop_labels[:, 1:].masked_select(masks)
         logits = logits.masked_select(masks)
 
         # stop token loss
-        bce_loss = F.binary_cross_entropy_with_logits(logits, stop_labels, pos_weight=mindspore.tensor(5.0))
+        bce_loss = self.bce_criterion(logits, stop_labels)
 
         # combined loss
         loss = l1_loss + bce_loss
@@ -2098,7 +2173,7 @@ class SpeechT5ForSpeechToText(SpeechT5PreTrainedModel):
         >>> from datasets import load_dataset
 
         >>> dataset = load_dataset(
-        ...     "hf-internal-testing/librispeech_asr_demo", "clean", split="validation"
+        ...     "hf-internal-testing/librispeech_asr_demo", "clean", split="validation", trust_remote_code=True
         ... )  # doctest: +IGNORE_RESULT
         >>> dataset = dataset.sort("id")
         >>> sampling_rate = dataset.features["audio"].sampling_rate
@@ -2153,7 +2228,8 @@ class SpeechT5ForSpeechToText(SpeechT5PreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = F.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -2216,6 +2292,7 @@ class SpeechT5ForSpeechToText(SpeechT5PreTrainedModel):
             )
         return reordered_past
 
+
 def _generate_speech(
     model: SpeechT5PreTrainedModel,
     input_values: mindspore.Tensor,
@@ -2256,10 +2333,13 @@ def _generate_speech(
         encoder_attention_mask = model.speecht5.encoder.prenet._get_feature_vector_attention_mask(
             encoder_out[0].shape[1], encoder_attention_mask
         )
+
     maxlen = int(encoder_last_hidden_state.shape[1] * maxlenratio / model.config.reduction_factor)
     minlen = int(encoder_last_hidden_state.shape[1] * minlenratio / model.config.reduction_factor)
+
     # Start the output sequence with a mel spectrum that is all zeros.
-    output_sequence = encoder_last_hidden_state.new_zeros((bsz, 1, model.config.num_mel_bins))
+    output_sequence = encoder_last_hidden_state.new_zeros(bsz, 1, model.config.num_mel_bins)
+
     spectrogram = []
     cross_attentions = []
     past_key_values = None
@@ -2268,6 +2348,7 @@ def _generate_speech(
 
     while True:
         idx += 1
+
         # Run the decoder prenet on the entire output sequence.
         decoder_hidden_states = model.speecht5.decoder.prenet(output_sequence, speaker_embeddings)
         # Run the decoder layers on the last element of the prenet output.
@@ -2295,32 +2376,31 @@ def _generate_speech(
 
         # Extend the output sequence with the new mel spectrum.
         new_spectrogram = spectrum[:, -1, :].view(bsz, 1, model.config.num_mel_bins)
-
         output_sequence = ops.cat((output_sequence, new_spectrogram), dim=1)
         # Predict the probability that this is the stop token.
-        prob = model.speech_decoder_postnet.prob_out(last_decoder_output)
-        prob = ops.sigmoid(prob)
+        prob = ops.sigmoid(model.speech_decoder_postnet.prob_out(last_decoder_output))
 
-        if idx >= minlen:
-            # If the generation loop is less than maximum length time, check the ones in the batch that have met
-            # the prob threshold. Otherwise, assume all have met thresholds and fill other spectrograms for the batch.
-            if idx < maxlen:
-                meet_thresholds = ops.sum(prob, dim=-1) >= threshold
-                meet_indexes = [i[0] for i in ops.argwhere(meet_thresholds).tolist()]
-            else:
-                meet_indexes = range(len(prob))
-            meet_indexes = [i for i in meet_indexes if i not in result_spectrogram]
-            if len(meet_indexes) > 0:
-                spectrograms = ops.stack(spectrogram)
-                spectrograms = spectrograms.swapaxes(0, 1).flatten(start_dim=1, end_dim=2)
-                spectrograms = model.speech_decoder_postnet.postnet(spectrograms)
-                for meet_index in meet_indexes:
-                    result_spectrogram[meet_index] = spectrograms[meet_index]
-            if len(result_spectrogram) >= bsz:
-                break
+        if idx < minlen:
+            continue
+        # If the generation loop is less than maximum length time, check the ones in the batch that have met
+        # the prob threshold. Otherwise, assume all have met thresholds and fill other spectrograms for the batch.
+        if idx < maxlen:
+            meet_thresholds = ops.sum(prob, dim=-1) >= threshold
+            meet_indexes = ops.nonzero(meet_thresholds, as_tuple=True)[0].tolist()
+        else:
+            meet_indexes = range(len(prob))
+        meet_indexes = [i for i in meet_indexes if i not in result_spectrogram]
+        if len(meet_indexes) > 0:
+            spectrograms = ops.stack(spectrogram)
+            spectrograms = spectrograms.swapaxes(0, 1).flatten(1, 2)
+            spectrograms = model.speech_decoder_postnet.postnet(spectrograms)
+            for meet_index in meet_indexes:
+                result_spectrogram[meet_index] = spectrograms[meet_index]
+        if len(result_spectrogram) >= bsz:
+            break
     spectrograms = [result_spectrogram[i] for i in range(len(result_spectrogram))]
     if not return_output_lengths:
-        spectrogram = spectrograms[0] if bsz == 1 else pad_sequence(spectrograms, batch_first=True)
+        spectrogram = spectrograms[0] if bsz == 1 else nn.utils.rnn.pad_sequence(spectrograms, batch_first=True)
         if vocoder is not None:
             outputs = vocoder(spectrogram)
         else:
@@ -2338,11 +2418,11 @@ def _generate_speech(
         for i in range(bsz):
             spectrogram_lengths.append(spectrograms[i].shape[0])
         if vocoder is None:
-            spectrograms = pad_sequence(spectrograms, batch_first=True)
+            spectrograms = nn.utils.rnn.pad_sequence(spectrograms, batch_first=True)
             outputs = (spectrograms, spectrogram_lengths)
         else:
             waveforms = []
-            spectrograms = pad_sequence(spectrograms, batch_first=True)
+            spectrograms = nn.utils.rnn.pad_sequence(spectrograms, batch_first=True)
             waveforms = vocoder(spectrograms)
             waveform_lengths = [int(waveforms.shape[1] / max(spectrogram_lengths)) * i for i in spectrogram_lengths]
             outputs = (waveforms, waveform_lengths)
@@ -2437,21 +2517,23 @@ class SpeechT5ForTextToSpeech(SpeechT5PreTrainedModel):
         >>> vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan")
 
         >>> inputs = processor(text="Hello, my dog is cute", return_tensors="pt")
-        >>> speaker_embeddings = torch.zeros((1, 512))  # or load xvectors from a file
+        >>> speaker_embeddings = ops.zeros((1, 512))  # or load xvectors from a file
 
         >>> set_seed(555)  # make deterministic
 
         >>> # generate speech
         >>> speech = model.generate(inputs["input_ids"], speaker_embeddings=speaker_embeddings, vocoder=vocoder)
         >>> speech.shape
-        torch.Size([15872])
+        ([15872])
         ```
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if labels is not None:
             if decoder_input_values is None:
-                decoder_input_values = shift_spectrograms_right(labels, self.config.reduction_factor)
+                decoder_input_values, decoder_attention_mask = shift_spectrograms_right(
+                    labels, self.config.reduction_factor, decoder_attention_mask
+                )
             if self.config.use_guided_attention_loss:
                 output_attentions = True
 
@@ -2471,7 +2553,6 @@ class SpeechT5ForTextToSpeech(SpeechT5PreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=True,
         )
-
         outputs_before_postnet, outputs_after_postnet, logits = self.speech_decoder_postnet(outputs[0])
 
         loss = None
@@ -2502,6 +2583,7 @@ class SpeechT5ForTextToSpeech(SpeechT5PreTrainedModel):
             encoder_attentions=outputs.encoder_attentions,
         )
 
+    @no_grad()
     def generate(
         self,
         input_ids: mindspore.Tensor,
@@ -2593,6 +2675,7 @@ class SpeechT5ForTextToSpeech(SpeechT5PreTrainedModel):
             return_output_lengths,
         )
 
+    @no_grad()
     def generate_speech(
         self,
         input_ids: mindspore.Tensor,
@@ -2762,7 +2845,7 @@ class SpeechT5ForSpeechToSpeech(SpeechT5PreTrainedModel):
         >>> import torch
 
         >>> dataset = load_dataset(
-        ...     "hf-internal-testing/librispeech_asr_demo", "clean", split="validation"
+        ...     "hf-internal-testing/librispeech_asr_demo", "clean", split="validation", trust_remote_code=True
         ... )  # doctest: +IGNORE_RESULT
         >>> dataset = dataset.sort("id")
         >>> sampling_rate = dataset.features["audio"].sampling_rate
@@ -2774,21 +2857,23 @@ class SpeechT5ForSpeechToSpeech(SpeechT5PreTrainedModel):
         >>> # audio file is decoded on the fly
         >>> inputs = processor(audio=dataset[0]["audio"]["array"], sampling_rate=sampling_rate, return_tensors="pt")
 
-        >>> speaker_embeddings = torch.zeros((1, 512))  # or load xvectors from a file
+        >>> speaker_embeddings = ops.zeros((1, 512))  # or load xvectors from a file
 
         >>> set_seed(555)  # make deterministic
 
         >>> # generate speech
         >>> speech = model.generate_speech(inputs["input_values"], speaker_embeddings, vocoder=vocoder)
         >>> speech.shape
-        torch.Size([77824])
+        ([77824])
         ```
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if labels is not None:
             if decoder_input_values is None:
-                decoder_input_values = shift_spectrograms_right(labels, self.config.reduction_factor)
+                decoder_input_values, decoder_attention_mask = shift_spectrograms_right(
+                    labels, self.config.reduction_factor, decoder_attention_mask
+                )
 
         outputs = self.speecht5(
             input_values=input_values,
@@ -2827,6 +2912,7 @@ class SpeechT5ForSpeechToSpeech(SpeechT5PreTrainedModel):
             encoder_attentions=outputs.encoder_attentions,
         )
 
+    @no_grad()
     def generate_speech(
         self,
         input_values: mindspore.Tensor,
@@ -2953,22 +3039,22 @@ class HifiGanResidualBlock(nn.Module):
 
     def apply_weight_norm(self):
         for layer in self.convs1:
-            F.weight_norm(layer)
+            nn.utils.weight_norm(layer)
         for layer in self.convs2:
-            F.weight_norm(layer)
+            nn.utils.weight_norm(layer)
 
     def remove_weight_norm(self):
         for layer in self.convs1:
-            F.remove_weight_norm(layer)
+            nn.utils.remove_weight_norm(layer)
         for layer in self.convs2:
-            F.remove_weight_norm(layer)
+            nn.utils.remove_weight_norm(layer)
 
     def forward(self, hidden_states):
         for conv1, conv2 in zip(self.convs1, self.convs2):
             residual = hidden_states
-            hidden_states = ops.leaky_relu(hidden_states, self.leaky_relu_slope)
+            hidden_states = nn.functional.leaky_relu(hidden_states, self.leaky_relu_slope)
             hidden_states = conv1(hidden_states)
-            hidden_states = ops.leaky_relu(hidden_states, self.leaky_relu_slope)
+            hidden_states = nn.functional.leaky_relu(hidden_states, self.leaky_relu_slope)
             hidden_states = conv2(hidden_states)
             hidden_states = hidden_states + residual
         return hidden_states
@@ -3010,34 +3096,34 @@ class SpeechT5HifiGan(PreTrainedModel):
 
         self.conv_post = nn.Conv1d(channels, 1, kernel_size=7, stride=1, padding=3)
 
-        self.mean = ops.zeros(config.model_in_dim)
-        self.scale = ops.ones(config.model_in_dim)
+        self.register_buffer("mean", ops.zeros(config.model_in_dim))
+        self.register_buffer("scale", ops.ones(config.model_in_dim))
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights."""
-        if isinstance(cell, (nn.Linear, nn.Conv1d)):
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
+        if isinstance(module, (nn.Linear, nn.Conv1d)):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
 
     def apply_weight_norm(self):
-        F.weight_norm(self.conv_pre)
+        nn.utils.weight_norm(self.conv_pre)
         for layer in self.upsampler:
-            F.weight_norm(layer)
+            nn.utils.weight_norm(layer)
         for layer in self.resblocks:
             layer.apply_weight_norm()
-        F.weight_norm(self.conv_post)
+        nn.utils.weight_norm(self.conv_post)
 
     def remove_weight_norm(self):
-        F.remove_weight_norm(self.conv_pre)
+        nn.utils.remove_weight_norm(self.conv_pre)
         for layer in self.upsampler:
-            F.remove_weight_norm(layer)
+            nn.utils.remove_weight_norm(layer)
         for layer in self.resblocks:
             layer.remove_weight_norm()
-        F.remove_weight_norm(self.conv_post)
+        nn.utils.remove_weight_norm(self.conv_post)
 
     def forward(self, spectrogram: mindspore.Tensor) -> mindspore.Tensor:
         r"""
@@ -3065,7 +3151,7 @@ class SpeechT5HifiGan(PreTrainedModel):
 
         hidden_states = self.conv_pre(hidden_states)
         for i in range(self.num_upsamples):
-            hidden_states = ops.leaky_relu(hidden_states, self.config.leaky_relu_slope)
+            hidden_states = nn.functional.leaky_relu(hidden_states, self.config.leaky_relu_slope)
             hidden_states = self.upsampler[i](hidden_states)
 
             res_state = self.resblocks[i * self.num_kernels](hidden_states)
@@ -3073,7 +3159,7 @@ class SpeechT5HifiGan(PreTrainedModel):
                 res_state += self.resblocks[i * self.num_kernels + j](hidden_states)
             hidden_states = res_state / self.num_kernels
 
-        hidden_states = ops.leaky_relu(hidden_states)
+        hidden_states = nn.functional.leaky_relu(hidden_states)
         hidden_states = self.conv_post(hidden_states)
         hidden_states = ops.tanh(hidden_states)
 
@@ -3085,35 +3171,6 @@ class SpeechT5HifiGan(PreTrainedModel):
             waveform = hidden_states.squeeze(1)
 
         return waveform
-
-
-def pad_sequence(sequences, batch_first=False, padding_value=0.0):
-    """
-    Pad a list of sequences to the same length.
-    
-    Args:
-        sequences (List[List[float]]): The list of sequences to be padded.
-        batch_first (bool, optional): If True, the output tensor will have shape (batch_size, max_len, features).
-            If False, the shape will be (max_len, batch_size, features). Default is False.
-        padding_value (float, optional): The value used for padding. Default is 0.0.
-    
-    Returns:
-        torch.Tensor: A tensor containing the padded sequences.
-        
-    Raises:
-        None.
-    """
-    # Determine the maximum sequence length
-    max_len = max(len(seq) for seq in sequences)
-
-    # Pad each sequence using cp.pad
-    padded_sequences = [ops.pad(seq, (0, 0, 0, max_len - len(seq)), mode='constant', value=padding_value) for seq in sequences]
-    # Stack the padded sequences along the appropriate axis
-    if batch_first:
-        padded_sequence = ops.stack(padded_sequences)
-    else:
-        padded_sequence = ops.stack(padded_sequences, 1)
-    return padded_sequence
 
 __all__ = [
     "SpeechT5ForSpeechToText",
