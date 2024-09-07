@@ -1238,7 +1238,6 @@ class Pix2StructTextModel(Pix2StructPreTrainedModel):
         loss = None
         if labels is not None:
             loss_fct = nn.CrossEntropyLoss(ignore_index=-100, reduction="mean")
-
             loss = loss_fct(logits.view(-1, logits.shape[-1]), labels.view(-1))
 
         if not return_dict:

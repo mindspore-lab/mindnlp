@@ -153,7 +153,7 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
 
 def dropout(input, p=0.5, training=True):
     if USE_PYBOOST:
-        return mindspore.mint.dropout(input, p, training)
+        return mindspore.mint.nn.functional.dropout(input, p, training)
     return ops.dropout(input, p, training)
 
 def dropout2d(input, p=0.5, training=False):
@@ -169,7 +169,7 @@ def drop_and_mask(keep_prob, seed=None):
 dense_ = ops.Dense()
 def linear(input, weight, bias=None):
     if USE_PYBOOST:
-        return mindspore.mint.linear(input, weight, bias)
+        return mindspore.mint.nn.functional.linear(input, weight, bias)
     return dense_(input, weight, bias)
 
 
@@ -347,7 +347,7 @@ def kl_div(logits, labels, reduction='mean', log_target=False):
 
 def softmax(input, dim=-1, *, dtype=None):
     if USE_PYBOOST:
-        return mindspore.mint.softmax(input, dim, dtype=dtype)
+        return mindspore.mint.nn.functional.softmax(input, dim, dtype=dtype)
     if dim is None:
         dim = -1
     return ops.softmax(input, dim, dtype=dtype)
@@ -358,7 +358,7 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     if bias is None:
         bias = ops.zeros(normalized_shape, dtype=input.dtype)
     if USE_PYBOOST:
-        return mindspore.mint.layer_norm(input, normalized_shape, weight, bias, eps)
+        return mindspore.mint.nn.functional.layer_norm(input, normalized_shape, weight, bias, eps)
     if weight is not None:
         begin_axis = input.ndim - weight.ndim
     else:
@@ -1086,7 +1086,7 @@ def pixel_unshuffle(input, downscale_factor):
 
 def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corners=False):
     if USE_PYBOOST:
-        return mindspore.mint.grid_sample(input, grid, mode, padding_mode, align_corners)
+        return mindspore.mint.nn.functional.grid_sample(input, grid, mode, padding_mode, align_corners)
     return ops.grid_sample(input, grid, mode, padding_mode, align_corners)
 
 def cosine_similarity(x1, x2, dim=1, eps=1e-8):
