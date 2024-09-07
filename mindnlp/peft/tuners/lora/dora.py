@@ -33,7 +33,7 @@ class DoraLinearLayer(nn.Module):
         return weight_norm
     def update_layer(self, *, base_layer, lora_A, lora_B, scaling, place_on_cpu=False) -> None:
         # temporarily convert fp16 to fp32, as fp16 can cause trouble on CPU with PyTorch < 2.2
-        dtype_is_fp16 = lora_A.dtype == mindspore.float16 
+        dtype_is_fp16 = lora_A.dtype == mindspore.float16
         if dtype_is_fp16:
             lora_A = lora_A.float()
             lora_B = lora_B.float()
@@ -167,4 +167,3 @@ class DoraConv2dLayer(DoraLinearLayer):
     def __repr__(self) -> str:
         rep = super().__repr__()
         return "lora.dora." + rep
-
