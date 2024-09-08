@@ -700,7 +700,7 @@ class LayoutLMv3Model(LayoutLMv3PreTrainedModel):
         >>> words = example["tokens"]
         >>> boxes = example["bboxes"]
 
-        >>> encoding = processor(image, words, boxes=boxes, return_tensors="pt")
+        >>> encoding = processor(image, words, boxes=boxes, return_tensors="ms")
 
         >>> outputs = model(**encoding)
         >>> last_hidden_states = outputs.last_hidden_state
@@ -901,7 +901,7 @@ class LayoutLMv3ForTokenClassification(LayoutLMv3PreTrainedModel):
         >>> boxes = example["bboxes"]
         >>> word_labels = example["ner_tags"]
 
-        >>> encoding = processor(image, words, boxes=boxes, word_labels=word_labels, return_tensors="pt")
+        >>> encoding = processor(image, words, boxes=boxes, word_labels=word_labels, return_tensors="ms")
 
         >>> outputs = model(**encoding)
         >>> loss = outputs.loss
@@ -1005,7 +1005,7 @@ class LayoutLMv3ForQuestionAnswering(LayoutLMv3PreTrainedModel):
         >>> words = example["tokens"]
         >>> boxes = example["bboxes"]
 
-        >>> encoding = processor(image, question, words, boxes=boxes, return_tensors="pt")
+        >>> encoding = processor(image, question, words, boxes=boxes, return_tensors="ms")
         >>> start_positions = mindspore.tensor([1])
         >>> end_positions = mindspore.tensor([3])
 
@@ -1112,7 +1112,7 @@ class LayoutLMv3ForSequenceClassification(LayoutLMv3PreTrainedModel):
         >>> words = example["tokens"]
         >>> boxes = example["bboxes"]
 
-        >>> encoding = processor(image, words, boxes=boxes, return_tensors="pt")
+        >>> encoding = processor(image, words, boxes=boxes, return_tensors="ms")
         >>> sequence_label = mindspore.tensor([1])
 
         >>> outputs = model(**encoding, labels=sequence_label)

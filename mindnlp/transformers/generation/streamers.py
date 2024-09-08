@@ -59,7 +59,7 @@ class TextStreamer(BaseStreamer):
         ...
         >>> tok = AutoTokenizer.from_pretrained("openai-community/gpt2")
         >>> model = AutoModelForCausalLM.from_pretrained("openai-community/gpt2")
-        >>> inputs = tok(["An increasing sequence: one,"], return_tensors="pt")
+        >>> inputs = tok(["An increasing sequence: one,"], return_tensors="ms")
         >>> streamer = TextStreamer(tok)
         ...
         >>> # Despite returning the usual output, the streamer will also print the generated text to stdout.
@@ -199,7 +199,7 @@ class TextIteratorStreamer(TextStreamer):
         ...
         >>> tok = AutoTokenizer.from_pretrained("openai-community/gpt2")
         >>> model = AutoModelForCausalLM.from_pretrained("openai-community/gpt2")
-        >>> inputs = tok(["An increasing sequence: one,"], return_tensors="pt")
+        >>> inputs = tok(["An increasing sequence: one,"], return_tensors="ms")
         >>> streamer = TextIteratorStreamer(tok)
         ...
         >>> # Run the generation in a separate thread, so that we can fetch the generated text in a non-blocking way.

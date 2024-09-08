@@ -26,11 +26,9 @@ import math
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
-from mindspore.common.initializer import initializer, Normal
+from mindnlp.core import nn, ops, no_grad
+from mindnlp.core.nn import CrossEntropyLoss
 
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, StaticCache
 from ...modeling_attn_mask_utils import AttentionMaskConverter
@@ -40,7 +38,9 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import ALL_LAYERNORM_LAYERS
-from ....utils import logging
+from ....utils import (
+    logging,
+)
 from .configuration_cohere import CohereConfig
 
 
@@ -49,31 +49,69 @@ logger = logging.get_logger(__name__)
 _CONFIG_FOR_DOC = "CohereConfig"
 
 
-# Copied from transformers.models.llama.modeling_llama._get_unpad_data
-def _get_unpad_data(attention_mask):
-    seqlens_in_batch = attention_mask.sum(dim=-1, dtype=mindspore.int32)
-    indices = ops.nonzero(attention_mask.flatten()).flatten()
-    max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
-    return (
-        indices,
-        cu_seqlens,
-        max_seqlen_in_batch,
-    )
+# Copied from transformers.models.llama.modeling_llama._prepare_4d_causal_attention_mask_with_cache_position
+def _prepare_4d_causal_attention_mask_with_cache_position(
+    attention_mask: mindspore.Tensor,
+    sequence_length: int,
+    target_length: int,
+    dtype: mindspore.dtype,
+    min_dtype: float,
+    cache_position: mindspore.Tensor,
+    batch_size: int,
+):
+    """
+    Creates a causal 4D mask of shape `(batch_size, 1, query_length, key_value_length)` from a 2D mask of shape
+    `(batch_size, key_value_length)`, or if the input `attention_mask` is already 4D, do nothing.
+
+    Args:
+        attention_mask (`mindspore.Tensor`):
+            A 2D attention mask of shape `(batch_size, key_value_length)` or a 4D attention mask of shape `(batch_size, 1, query_length, key_value_length)`.
+        sequence_length (`int`):
+            The sequence length being processed.
+        target_length (`int`):
+            The target length: when generating with static cache, the mask should be as long as the static cache, to account for the 0 padding, the part of the cache that is not filled yet.
+        dtype (`ops.dtype`):
+            The dtype to use for the 4D attention mask.
+        min_dtype (`float`):
+            The minimum value representable with the dtype `dtype`.
+        cache_position (`mindspore.Tensor`):
+            Indices depicting the position of the input sequence tokens in the sequence.
+        batch_size (`mindspore.Tensor`):
+            Batch size.
+    """
+    if attention_mask is not None and attention_mask.dim() == 4:
+        # In this case we assume that the mask comes already in inverted form and requires no inversion or slicing.
+        causal_mask = attention_mask
+    else:
+        causal_mask = ops.full((sequence_length, target_length), fill_value=min_dtype, dtype=dtype)
+        if sequence_length != 1:
+            causal_mask = ops.triu(causal_mask, diagonal=1)
+        causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
+        causal_mask = causal_mask[None, None, :, :].broadcast_to((batch_size, 1, -1, -1))
+        if attention_mask is not None:
+            causal_mask = causal_mask.copy()  # copy to contiguous memory for in-place edit
+            mask_length = attention_mask.shape[-1]
+            padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
+            padding_mask = padding_mask == 0
+            causal_mask[:, :, :, :mask_length] = causal_mask[:, :, :, :mask_length].masked_fill(
+                padding_mask, min_dtype
+            )
+
+    return causal_mask
 
 
 class CohereLayerNorm(nn.Module):
     def __init__(self, hidden_size=None, eps=1e-5, bias=False):
         """The hidden size can be a tuple or an int. The tuple is used for QKNorm to normalize across head_dim"""
         super().__init__()
-        self.weight = Parameter(ops.ones(hidden_size))
+        self.weight = nn.Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
-        mean = hidden_states.mean(-1, keep_dims=True)
-        variance = (hidden_states - mean).pow(2).mean(-1, keep_dims=True)
+        mean = ops.mean(hidden_states, -1, keepdim=True)
+        variance = ops.mean((hidden_states - mean).pow(2), -1, keepdim=True)
         hidden_states = (hidden_states - mean) * ops.rsqrt(variance + self.variance_epsilon)
         hidden_states = self.weight.to(mindspore.float32) * hidden_states
         return hidden_states.to(input_dtype)
@@ -90,8 +128,9 @@ class CohereRotaryEmbedding(nn.Module):
         self.max_position_embeddings = max_position_embeddings
         self.base = base
         inv_freq = 1.0 / (self.base ** (ops.arange(0, self.dim, 2, dtype=mindspore.int64).float() / self.dim))
-        self.inv_freq = inv_freq
+        self.register_buffer("inv_freq", inv_freq, persistent=False)
 
+    @no_grad()
     def forward(self, x, position_ids):
         # x: [bs, num_attention_heads, seq_len, head_size]
         inv_freq_expanded = self.inv_freq[None, :, None].float().broadcast_to((position_ids.shape[0], -1, 1))
@@ -105,18 +144,17 @@ class CohereRotaryEmbedding(nn.Module):
         sin = emb.sin()
         return cos, sin
 
+
 def rotate_half(x):
     # Split and rotate
-    # x1 = x[..., ::2]
-    # x2 = x[..., 1::2]
-    x1 = ops.index_select(x, -1, ops.arange(0, x.shape[-1], 2))
-    x2 = ops.index_select(x, -1, ops.arange(1, x.shape[-1], 2))
+    x1 = x[..., ::2]
+    x2 = x[..., 1::2]
     rot_x = ops.stack([-x2, x1], dim=-1).flatten(start_dim=-2)
     return rot_x
 
+
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
-    """
-    Applies Rotary Position Embedding to the query and key tensors.
+    """Applies Rotary Position Embedding to the query and key tensors.
 
     Args:
         q (`mindspore.Tensor`): The query tensor.
@@ -132,7 +170,6 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
             k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes
             cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k. Similarly, if q and k have
             the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
-
     Returns:
         `tuple(mindspore.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
@@ -166,7 +203,7 @@ class CohereMLP(nn.Module):
 # Copied from transformers.models.llama.modeling_llama.repeat_kv
 def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     """
-    This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
+    This is the equivalent of ops.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
     num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)
     """
     batch, num_key_value_heads, slen, head_dim = hidden_states.shape
@@ -274,8 +311,8 @@ class CohereAttention(nn.Module):
             attn_weights = attn_weights + causal_mask
 
         # upcast attention to fp32
-        attn_weights = ops.softmax(attn_weights, dim=-1, dtype=mindspore.float32).to(query_states.dtype)
-        attn_weights = F.dropout(attn_weights, p=self.attention_dropout, training=self.training)
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=mindspore.float32).to(query_states.dtype)
+        attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
 
         if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
@@ -349,6 +386,7 @@ class CohereDecoderLayer(nn.Module):
             use_cache=use_cache,
             cache_position=cache_position,
         )
+
         # Fully Connected
         hidden_states_mlp = self.mlp(hidden_states)
 
@@ -376,27 +414,23 @@ class CoherePreTrainedModel(PreTrainedModel):
     _supports_flash_attn_2 = True
     _supports_sdpa = True
     _supports_cache_class = True
+    _supports_quantized_cache = True
     _supports_static_cache = True
 
-    def _init_weights(self, cell):
-        """Initialize the weights"""
-        if isinstance(cell, nn.Linear):
-            # Slightly different from the TF version which uses truncated_normal for initialization
-            # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            weight = initializer(Normal(self.config.initializer_range),
-                                                 cell.weight.shape,
-                                                 cell.weight.dtype)
-            if cell.padding_idx is not None:
-                weight[cell.padding_idx] = 0
+    def _init_weights(self, module):
+        std = self.config.initializer_range
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight[module.padding_idx] = 0
 
-            cell.weight.set_data(weight)
 
-# Copied from transformers.models.llama.modeling_llama.LlamaModel with Llama->Cohere
+# copied from transformers.models.llama.modeling_llama.LlamaModel with Llama->Cohere
+# TODO(joao): add me back asap :)
 class CohereModel(CoherePreTrainedModel):
     """
     Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`CohereDecoderLayer`]
@@ -427,6 +461,7 @@ class CohereModel(CoherePreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
+    # Ignore copy
     def forward(
         self,
         input_ids: mindspore.Tensor = None,
@@ -463,15 +498,16 @@ class CohereModel(CoherePreTrainedModel):
 
         past_seen_tokens = 0
         return_legacy_cache = False
-        if use_cache and not isinstance(past_key_values, Cache):  # kept for BC (non `Cache` `past_key_values` inputs)
+        if (
+            use_cache and not isinstance(past_key_values, Cache) and not self.training
+        ):  # kept for BC (non `Cache` `past_key_values` inputs)
             return_legacy_cache = True
             past_key_values = DynamicCache.from_legacy_cache(past_key_values)
 
         if cache_position is None:
             past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
             cache_position = ops.arange(
-                past_seen_tokens, past_seen_tokens + inputs_embeds.shape[1]
-            )
+                past_seen_tokens, past_seen_tokens + inputs_embeds.shape[1])
 
         if position_ids is None:
             position_ids = cache_position.unsqueeze(0)
@@ -515,6 +551,7 @@ class CohereModel(CoherePreTrainedModel):
                 )
 
             hidden_states = layer_outputs[0]
+
             if use_cache:
                 next_decoder_cache = layer_outputs[2 if output_attentions else 1]
 
@@ -548,11 +585,26 @@ class CohereModel(CoherePreTrainedModel):
         past_key_values: Cache,
         output_attentions: bool,
     ):
+        if self.config._attn_implementation == "flash_attention_2":
+            if attention_mask is not None and 0.0 in attention_mask:
+                return attention_mask
+            return None
+
         # For SDPA, when possible, we will rely on its `is_causal` argument instead of its `attn_mask` argument, in
         # order to dispatch on Flash Attention 2. This feature is not compatible with static cache, as SDPA will fail
         # to infer the attention mask.
         past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
         using_static_cache = isinstance(past_key_values, StaticCache)
+
+        # When output attentions is True, sdpa implementation's forward method calls the eager implementation's forward
+        if self.config._attn_implementation == "sdpa" and not using_static_cache and not output_attentions:
+            if AttentionMaskConverter._ignore_causal_mask_sdpa(
+                attention_mask,
+                inputs_embeds=input_tensor,
+                past_key_values_length=past_seen_tokens,
+                is_training=self.training,
+            ):
+                return None
 
         dtype = input_tensor.dtype
         min_dtype = float(ops.finfo(dtype).min)
@@ -566,36 +618,17 @@ class CohereModel(CoherePreTrainedModel):
                 else past_seen_tokens + sequence_length + 1
             )
 
-        if attention_mask is not None and attention_mask.dim() == 4:
-            # in this case we assume that the mask comes already in inverted form and requires no inversion or slicing
-            if attention_mask.max() != 0:
-                raise ValueError("Custom 4D attention mask should be passed in inverted form with max==0`")
-            causal_mask = attention_mask
-        else:
-            causal_mask = ops.full(
-                (sequence_length, target_length), fill_value=min_dtype, dtype=dtype
-            )
-            if sequence_length != 1:
-                causal_mask = ops.triu(causal_mask, diagonal=1)
-            causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
+        # In case the provided `attention` mask is 2D, we generate a causal mask here (4D).
+        causal_mask = _prepare_4d_causal_attention_mask_with_cache_position(
+            attention_mask,
+            sequence_length=sequence_length,
+            target_length=target_length,
+            dtype=dtype,
+            min_dtype=min_dtype,
+            cache_position=cache_position,
+            batch_size=input_tensor.shape[0],
+        )
 
-            causal_mask = causal_mask[None, None, :, :].broadcast_to((input_tensor.shape[0], 1, -1, -1))
-            if attention_mask is not None:
-                causal_mask = causal_mask.copy()  # copy to contiguous memory for in-place edit
-                mask_length = attention_mask.shape[-1]
-                padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
-                padding_mask = padding_mask == 0
-                causal_mask[:, :, :, :mask_length] = causal_mask[:, :, :, :mask_length].masked_fill(
-                    padding_mask, min_dtype
-                )
-        if (
-            attention_mask is not None
-            and not output_attentions
-        ):
-            # Attend to all tokens in fully masked rows in the causal_mask, for example the relevant first rows when
-            # using left padding. This is required by F.scaled_dot_product_attention memory-efficient attention path.
-            # Details: https://github.com/pytorch/pytorch/issues/110213
-            causal_mask = AttentionMaskConverter._unmask_unattended(causal_mask, min_dtype)
         return causal_mask
 
 
@@ -632,6 +665,7 @@ class CohereForCausalLM(CoherePreTrainedModel):
     def get_decoder(self):
         return self.model
 
+    # Ignore copy
     def forward(
         self,
         input_ids: mindspore.Tensor = None,
@@ -645,6 +679,7 @@ class CohereForCausalLM(CoherePreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         cache_position: Optional[mindspore.Tensor] = None,
+        num_logits_to_keep: int = 0,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
         Args:
@@ -653,25 +688,29 @@ class CohereForCausalLM(CoherePreTrainedModel):
                 config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
+            num_logits_to_keep (`int`, *optional*):
+                Calculate logits for the last `num_logits_to_keep` tokens. If `0`, calculate logits for all
+                `input_ids` (special case). Only last token logits are needed for generation, and calculating them only for that
+                token can save memory, which becomes pretty significant for long sequences or large vocabulary size.
+
         Returns:
-            `Union[Tuple, CausalLMOutputWithPast]`
 
         Example:
-            ```python
-            >>> from transformers import AutoTokenizer, CohereForCausalLM
-            ...
-            >>> model = CohereForCausalLM.from_pretrained("CohereForAI/c4ai-command-r-v01")
-            >>> tokenizer = AutoTokenizer.from_pretrained("CohereForAI/c4ai-command-r-v01")
-            ...
-            >>> prompt = "Hey, are you conscious? Can you talk to me?"
-            >>> inputs = tokenizer(prompt, return_tensors="pt")
-            ...
-            >>> # Generate
-            >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
-            >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-            "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
-            ```
-        """
+
+        ```python
+        >> from transformers import AutoTokenizer, CohereForCausalLM
+
+        >> model = CohereForCausalLM.from_pretrained("CohereForAI/c4ai-command-r-v01")
+        >> tokenizer = AutoTokenizer.from_pretrained("CohereForAI/c4ai-command-r-v01")
+
+        >> prompt = "Hey, are you conscious? Can you talk to me?"
+        >> inputs = tokenizer(prompt, return_tensors="pt")
+
+        >> # Generate
+        >> generate_ids = model.generate(inputs.input_ids, max_length=30)
+        >> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
+        ```"""
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -693,20 +732,24 @@ class CohereForCausalLM(CoherePreTrainedModel):
         )
 
         hidden_states = outputs[0]
-        logits = self.lm_head(hidden_states)
+        # Only compute necessary logits, and do not upcast them to float if we are not computing the loss
+        # TODO: remove the float() operation in v4.46
+        logits = self.lm_head(hidden_states[:, -num_logits_to_keep:, :]).float()
         logits = logits * self.logit_scale
-        logits = logits.float()
 
         loss = None
         if labels is not None:
+            # Upcast to float if we need to compute the loss to avoid potential precision issues
+            logits = logits.float()
             # Shift so that tokens < n predict n
             shift_logits = logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
+            loss_fct = CrossEntropyLoss()
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Enable model parallelism
-            loss = F.cross_entropy(shift_logits, shift_labels)
+            loss = loss_fct(shift_logits, shift_labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -727,46 +770,21 @@ class CohereForCausalLM(CoherePreTrainedModel):
         attention_mask=None,
         inputs_embeds=None,
         cache_position=None,
-        use_cache=None,
+        position_ids=None,
+        use_cache=True,
+        num_logits_to_keep=None,
         **kwargs,
     ):
-        use_cache = use_cache if use_cache is not None else self.config.use_cache
-
-        past_length = 0
+        # If we have cache: let's slice `input_ids` through `cache_position`, to keep only the unprocessed tokens
+        # Exception 1: when passing input_embeds, input_ids may be missing entries
+        # Exception 2: some generation methods do special slicing of input_ids, so we don't need to do it here
         if past_key_values is not None:
-            if isinstance(past_key_values, Cache):
-                past_length = cache_position[0] if cache_position is not None else past_key_values.get_seq_length()
-                max_cache_length = (
-                    mindspore.tensor(past_key_values.get_max_length())
-                    if past_key_values.get_max_length() is not None
-                    else None
-                )
-                cache_length = past_length if max_cache_length is None else ops.min(max_cache_length, past_length)
-            # TODO joao: remove this `else` after `generate` prioritizes `Cache` objects
-            else:
-                cache_length = past_length = past_key_values[0][0].shape[2]
-                max_cache_length = None
+            if inputs_embeds is not None:  # Exception 1
+                if 0 not in input_ids.shape:
+                    input_ids = input_ids[:, -cache_position.shape[0] :]
+            elif input_ids.shape[1] != cache_position.shape[0]:  # Default case (the "else", a no op, is Exception 2)
+                input_ids = input_ids[:, cache_position]
 
-            # Keep only the unprocessed tokens:
-            # 1 - If the length of the attention_mask exceeds the length of input_ids, then we are in a setting where
-            # some of the inputs are exclusively passed as part of the cache (e.g. when passing input_embeds as input)
-            if attention_mask is not None and attention_mask.shape[1] > input_ids.shape[1]:
-                input_ids = input_ids[:, -(attention_mask.shape[1] - past_length) :]
-            # 2 - If the past_length is smaller than input_ids', then input_ids holds all input tokens. We can discard
-            # input_ids based on the past_length.
-            elif past_length < input_ids.shape[1]:
-                input_ids = input_ids[:, past_length:]
-            # 3 - Otherwise (past_length >= input_ids.shape[1]), let's assume input_ids only has unprocessed tokens.
-
-            # If we are about to go beyond the maximum cache length, we need to crop the input attention mask.
-            if (
-                max_cache_length is not None
-                and attention_mask is not None
-                and cache_length + input_ids.shape[1] > max_cache_length
-            ):
-                attention_mask = attention_mask[:, -max_cache_length:]
-
-        position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
             position_ids = attention_mask.int().cumsum(-1) - 1
@@ -775,19 +793,33 @@ class CohereForCausalLM(CoherePreTrainedModel):
                 position_ids = position_ids[:, -input_ids.shape[1] :]
 
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
-        if inputs_embeds is not None and past_key_values is None:
-            model_inputs = {"inputs_embeds": inputs_embeds}
+        if inputs_embeds is not None and cache_position[0] == 0:
+            model_inputs = {"inputs_embeds": inputs_embeds, "input_ids": None}
         else:
-            # The `contiguous()` here is necessary to have a static stride during decoding. torchdynamo otherwise
-            # recompiles graphs as the stride of the inputs is a guard. Ref: https://github.com/huggingface/transformers/pull/29114
-            # TODO: use `next_tokens` directly instead.
-            model_inputs = {"input_ids": input_ids}
+            # The clone here is for the same reason as for `position_ids`.
+            model_inputs = {"input_ids": input_ids, "inputs_embeds": None}
 
-        input_length = position_ids.shape[-1] if position_ids is not None else input_ids.shape[-1]
-        if cache_position is None:
-            cache_position = ops.arange(past_length, past_length + input_length)
-        elif use_cache:
-            cache_position = cache_position[-input_length:]
+        if isinstance(past_key_values, StaticCache) and attention_mask.ndim == 2:
+            if model_inputs["inputs_embeds"] is not None:
+                batch_size, sequence_length, _ = model_inputs["inputs_embeds"].shape
+            else:
+                batch_size, sequence_length = model_inputs["input_ids"].shape
+
+            dtype = self.lm_head.weight.dtype
+            min_dtype = float(ops.finfo(dtype).min)
+
+            attention_mask = _prepare_4d_causal_attention_mask_with_cache_position(
+                attention_mask,
+                sequence_length=sequence_length,
+                target_length=past_key_values.get_max_length(),
+                dtype=dtype,
+                min_dtype=min_dtype,
+                cache_position=cache_position,
+                batch_size=batch_size,
+            )
+
+        if num_logits_to_keep is not None:
+            model_inputs["num_logits_to_keep"] = num_logits_to_keep
 
         model_inputs.update(
             {
@@ -799,15 +831,6 @@ class CohereForCausalLM(CoherePreTrainedModel):
             }
         )
         return model_inputs
-
-    @staticmethod
-    def _reorder_cache(past_key_values, beam_idx):
-        reordered_past = ()
-        for layer_past in past_key_values:
-            reordered_past += (
-                tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),
-            )
-        return reordered_past
 
 __all__ = [
     "CohereForCausalLM",

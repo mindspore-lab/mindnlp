@@ -1428,7 +1428,7 @@ class AlbertForMaskedLM(AlbertPreTrainedModel):
             >>> model = AlbertForMaskedLM.from_pretrained("albert-base-v2")
             ...
             >>> # add mask_token
-            >>> inputs = tokenizer("The capital of [MASK] is Paris.", return_tensors="pt")
+            >>> inputs = tokenizer("The capital of [MASK] is Paris.", return_tensors="ms")
             >>> with torch.no_grad():
             ...     logits = model(**inputs).logits
             ...
@@ -1440,7 +1440,7 @@ class AlbertForMaskedLM(AlbertPreTrainedModel):
             ```
 
             ```python
-            >>> labels = tokenizer("The capital of France is Paris.", return_tensors="pt")["input_ids"]
+            >>> labels = tokenizer("The capital of France is Paris.", return_tensors="ms")["input_ids"]
             >>> labels = torch.where(inputs.input_ids == tokenizer.mask_token_id, labels, -100)
             >>> outputs = model(**inputs, labels=labels)
             >>> round(outputs.loss.item(), 2)

@@ -20,9 +20,9 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore.common.initializer import initializer, Normal
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -34,7 +34,9 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
-from ....utils import logging
+from ....utils import (
+    logging,
+)
 from .configuration_canine import CanineConfig
 
 
@@ -106,7 +108,7 @@ class CanineEmbeddings(nn.Module):
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.register_buffer(
-            "position_ids", ops.broadcast_to(ops.arange(config.max_position_embeddings), (1, -1)), persistent=False
+            "position_ids", ops.arange(config.max_position_embeddings).broadcast_to((1, -1)), persistent=False
         )
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
 
@@ -218,6 +220,7 @@ class CharactersToMolecules(nn.Module):
         # text buffer). This is important in order to maintain alignment on TPUs
         # (i.e. a multiple of 128).
         downsampled_truncated = downsampled[:, 0:-1, :]
+
         # We also keep [CLS] as a separate sequence position since we always
         # want to reserve a position (and the model capacity that goes along
         # with that) in the deep BERT stack.
@@ -378,7 +381,7 @@ class CanineSelfAttention(nn.Module):
 
         context_layer = ops.matmul(attention_probs, value_layer)
 
-        context_layer = context_layer.permute(0, 2, 1, 3)
+        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
 
@@ -536,6 +539,7 @@ class CanineAttention(nn.Module):
                     attention_probs_chunks.append(attention_outputs_chunk[1])
 
             attention_output = ops.cat(attention_output_chunks, dim=1)
+
         attention_output = self.output(attention_output, hidden_states)
         outputs = (attention_output,)
         if not self.local:
@@ -616,6 +620,7 @@ class CanineLayer(nn.Module):
             output_attentions=output_attentions,
         )
         attention_output = self_attention_outputs[0]
+
         outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
 
         layer_output = apply_chunking_to_forward(
@@ -782,22 +787,21 @@ class CaninePreTrainedModel(PreTrainedModel):
     base_model_prefix = "canine"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv1d)):
+        if isinstance(module, (nn.Linear, nn.Conv1d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
-            if cell.padding_idx:
-                cell.weight.data[cell.padding_idx] = 0
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight[module.padding_idx] = 0
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
 
 class CanineModel(CaninePreTrainedModel):
@@ -859,7 +863,7 @@ class CanineModel(CaninePreTrainedModel):
         # We don't assume that `from_tensor` is a mask (although it could be). We
         # don't actually care if we attend *from* padding tokens (only *to* padding)
         # tokens so we create a tensor of all ones.
-        broadcast_ones = ops.ones(batch_size, from_seq_length, 1, dtype=mindspore.float32)
+        broadcast_ones = ops.ones((batch_size, from_seq_length, 1), dtype=mindspore.float32)
 
         # Here we broadcast along two dimensions to create the mask.
         mask = broadcast_ones * to_mask
@@ -890,24 +894,22 @@ class CanineModel(CaninePreTrainedModel):
 
         molecules_without_extra_cls = molecules[:, 1:, :]
         # `repeated`: [batch_size, almost_char_seq_len, molecule_hidden_size]
-        if 0 not in molecules_without_extra_cls.shape:
-            repeated = ops.repeat_interleave(molecules_without_extra_cls, repeats=rate, dim=-2)
+        repeated = ops.repeat_interleave(molecules_without_extra_cls, repeats=rate, dim=-2)
 
         # So far, we've repeated the elements sufficient for any `char_seq_length`
         # that's a multiple of `downsampling_rate`. Now we account for the last
         # n elements (n < `downsampling_rate`), i.e. the remainder of floor
         # division. We do this by repeating the last molecule a few extra times.
         last_molecule = molecules[:, -1:, :]
-        remainder_length = ops.fmod(mindspore.tensor(char_seq_length, dtype=mindspore.int32),
-                                    mindspore.tensor(rate, dtype=mindspore.int32)).item()
+        remainder_length = ops.fmod(mindspore.tensor(char_seq_length, mindspore.float32),
+                                    mindspore.tensor(rate)).int().item()
         remainder_repeated = ops.repeat_interleave(
             last_molecule,
             # +1 molecule to compensate for truncation.
             repeats=remainder_length + rate,
             dim=-2,
         )
-        if 0 in molecules_without_extra_cls.shape:
-            return remainder_repeated
+
         # `repeated`: [batch_size, char_seq_len, molecule_hidden_size]
         return ops.cat([repeated, remainder_repeated], dim=-2)
 
@@ -944,7 +946,7 @@ class CanineModel(CaninePreTrainedModel):
         batch_size, seq_length = input_shape
 
         if attention_mask is None:
-            attention_mask = ops.ones(batch_size, seq_length)
+            attention_mask = ops.ones(((batch_size, seq_length)))
         if token_type_ids is None:
             token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
@@ -1002,6 +1004,7 @@ class CanineModel(CaninePreTrainedModel):
         # this, it seems that molecules and characters require a very different
         # feature space; intuitively, this makes sense.
         init_molecule_encoding = self.chars_to_molecules(input_char_encoding)
+
         # Deep BERT encoder
         # `molecule_sequence_output`: shape (batch_size, mol_seq_len, mol_dim)
         encoder_outputs = self.encoder(
@@ -1129,14 +1132,17 @@ class CanineForSequenceClassification(CaninePreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = F.mse_loss(logits, labels)
+                    loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = F.binary_cross_entropy_with_logits(logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -1187,7 +1193,7 @@ class CanineForMultipleChoice(CaninePreTrainedModel):
         token_type_ids = token_type_ids.view(-1, token_type_ids.shape[-1]) if token_type_ids is not None else None
         position_ids = position_ids.view(-1, position_ids.shape[-1]) if position_ids is not None else None
         inputs_embeds = (
-            inputs_embeds.view(-1, inputs_embeds.size(-2), inputs_embeds.shape[-1])
+            inputs_embeds.view(-1, inputs_embeds.shape[-2], inputs_embeds.shape[-1])
             if inputs_embeds is not None
             else None
         )
@@ -1212,7 +1218,8 @@ class CanineForMultipleChoice(CaninePreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = F.cross_entropy(reshaped_logits, labels)
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1267,10 +1274,10 @@ class CanineForTokenClassification(CaninePreTrainedModel):
         >>> model = CanineForTokenClassification.from_pretrained("google/canine-s")
 
         >>> inputs = tokenizer(
-        ...     "HuggingFace is a company based in Paris and New York", add_special_tokens=False, return_tensors="pt"
+        ...     "HuggingFace is a company based in Paris and New York", add_special_tokens=False, return_tensors="ms"
         ... )
 
-        >>> with ops.no_grad():
+        >>> with no_grad():
         ...     logits = model(**inputs).logits
 
         >>> predicted_token_class_ids = logits.argmax(-1)
@@ -1308,7 +1315,8 @@ class CanineForTokenClassification(CaninePreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1374,7 +1382,7 @@ class CanineForQuestionAnswering(CaninePreTrainedModel):
         sequence_output = outputs[0]
 
         logits = self.qa_outputs(sequence_output)
-        start_logits, end_logits = logits.split(1, axis=-1)
+        start_logits, end_logits = ops.split(logits, 1, dim=-1)
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
 
@@ -1390,8 +1398,9 @@ class CanineForQuestionAnswering(CaninePreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:

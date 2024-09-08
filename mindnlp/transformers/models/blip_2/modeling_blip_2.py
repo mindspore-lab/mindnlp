@@ -2019,7 +2019,7 @@ class Blip2Model(Blip2PreTrainedModel):
         ...
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
         >>> outputs = model.get_image_features(**inputs)
         ```
     """
@@ -2205,7 +2205,7 @@ class Blip2Model(Blip2PreTrainedModel):
             >>> model = Blip2Model.from_pretrained("Salesforce/blip2-opt-2.7b")
             ...
             >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/blip2-opt-2.7b")
-            >>> inputs = tokenizer(["a photo of a cat"], padding=True, return_tensors="pt")
+            >>> inputs = tokenizer(["a photo of a cat"], padding=True, return_tensors="ms")
             >>> text_features = model.get_text_features(**inputs)
             ```
         """
@@ -2266,7 +2266,7 @@ class Blip2Model(Blip2PreTrainedModel):
             >>> processor = AutoProcessor.from_pretrained("Salesforce/blip2-opt-2.7b")
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
-            >>> inputs = processor(images=image, return_tensors="pt")
+            >>> inputs = processor(images=image, return_tensors="ms")
             >>> image_outputs = model.get_image_features(**inputs)
             ```
         """
@@ -2312,7 +2312,7 @@ class Blip2Model(Blip2PreTrainedModel):
             ...
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
-            >>> inputs = processor(images=image, return_tensors="pt")
+            >>> inputs = processor(images=image, return_tensors="ms")
             >>> qformer_outputs = model.get_qformer_features(**inputs)
             ```
         """
@@ -2378,7 +2378,7 @@ class Blip2Model(Blip2PreTrainedModel):
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
             >>> prompt = "Question: how many cats are there? Answer:"
-            >>> inputs = processor(images=image, text=prompt, return_tensors="pt").to(torch.float16)
+            >>> inputs = processor(images=image, text=prompt, return_tensors="ms").to(torch.float16)
             ...
             >>> outputs = model(**inputs)
             ```
@@ -2723,7 +2723,7 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
             Image captioning (without providing a text prompt):
 
             ```python
-            >>> inputs = processor(images=image, return_tensors="pt").to(torch.float16)
+            >>> inputs = processor(images=image, return_tensors="ms").to(torch.float16)
             ...
             >>> generated_ids = model.generate(**inputs)
             >>> generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
@@ -2735,7 +2735,7 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
 
             ```python
             >>> prompt = "Question: how many cats are there? Answer:"
-            >>> inputs = processor(images=image, text=prompt, return_tensors="pt").to(dtype=torch.float16)
+            >>> inputs = processor(images=image, text=prompt, return_tensors="ms").to(dtype=torch.float16)
             ...
             >>> generated_ids = model.generate(**inputs)
             >>> generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
@@ -2751,7 +2751,7 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
             ...     "Salesforce/blip2-opt-2.7b", load_in_8bit=True, ms_dtype=torch.bfloat16
             ... )  # doctest: +IGNORE_RESULT
             ...
-            >>> inputs = processor(images=image, text=prompt, return_tensors="pt").to(dtype=torch.bfloat16)
+            >>> inputs = processor(images=image, text=prompt, return_tensors="ms").to(dtype=torch.bfloat16)
             ...
             >>> generated_ids = model.generate(**inputs)
             >>> generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()

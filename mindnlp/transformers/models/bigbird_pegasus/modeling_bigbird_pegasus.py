@@ -4004,7 +4004,7 @@ class BigBirdPegasusForCausalLM(BigBirdPegasusPreTrainedModel):
             ...     "google/bigbird-pegasus-large-arxiv", add_cross_attention=False
             ... )
             >>> assert model.config.is_decoder, f"{model.__class__} has to be configured as a decoder."
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> logits = outputs.logits

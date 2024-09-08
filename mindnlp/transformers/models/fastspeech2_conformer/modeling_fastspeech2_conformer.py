@@ -1177,7 +1177,7 @@ class FastSpeech2ConformerModel(FastSpeech2ConformerPreTrainedModel):
         ... )
 
         >>> tokenizer = FastSpeech2ConformerTokenizer.from_pretrained("espnet/fastspeech2_conformer")
-        >>> inputs = tokenizer("some text to convert to speech", return_tensors="pt")
+        >>> inputs = tokenizer("some text to convert to speech", return_tensors="ms")
         >>> input_ids = inputs["input_ids"]
 
         >>> model = FastSpeech2ConformerModel.from_pretrained("espnet/fastspeech2_conformer")
@@ -1564,7 +1564,7 @@ class FastSpeech2ConformerWithHifiGan(PreTrainedModel):
         ... )
 
         >>> tokenizer = FastSpeech2ConformerTokenizer.from_pretrained("espnet/fastspeech2_conformer")
-        >>> inputs = tokenizer("some text to convert to speech", return_tensors="pt")
+        >>> inputs = tokenizer("some text to convert to speech", return_tensors="ms")
         >>> input_ids = inputs["input_ids"]
 
         >>> model = FastSpeech2ConformerWithHifiGan.from_pretrained("espnet/fastspeech2_conformer_with_hifigan")

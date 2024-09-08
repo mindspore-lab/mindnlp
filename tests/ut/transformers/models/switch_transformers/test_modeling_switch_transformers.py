@@ -1050,7 +1050,7 @@ class SwitchTransformerModelIntegrationTests(unittest.TestCase):
         tokenizer = AutoTokenizer.from_pretrained("google-t5/t5-small", use_fast=False, legacy=False)
 
         input_ids = tokenizer(
-            "The human walks into a bar and orders a <extra_id_0>", return_tensors="pt"
+            "The human walks into a bar and orders a <extra_id_0>", return_tensors="ms"
         ).input_ids
         sequences = model.generate(input_ids)
         output_str = tokenizer.batch_decode(sequences, skip_special_tokens=True)[0]
@@ -1058,7 +1058,7 @@ class SwitchTransformerModelIntegrationTests(unittest.TestCase):
 
         input_ids = tokenizer(
             "A <extra_id_0> walks into a bar and orders a <extra_id_1> with <extra_id_2> pinch of <extra_id_3>.",
-            return_tensors="pt",
+            return_tensors="ms",
         ).input_ids
         sequences = model.generate(input_ids)
         output_str = tokenizer.batch_decode(sequences, skip_special_tokens=False)[0]
@@ -1079,7 +1079,7 @@ class SwitchTransformerModelIntegrationTests(unittest.TestCase):
         inputs = [
             "A <extra_id_0> walks into a bar and orders a <extra_id_1> with <extra_id_2> pinch of <extra_id_3>."
         ] * BATCH_SIZE
-        encoded_input = tokenizer.batch_encode_plus(inputs, return_tensors="pt")
+        encoded_input = tokenizer.batch_encode_plus(inputs, return_tensors="ms")
 
         sequences = model.generate(**encoded_input)
         batch_output = tokenizer.batch_decode(sequences, skip_special_tokens=False)

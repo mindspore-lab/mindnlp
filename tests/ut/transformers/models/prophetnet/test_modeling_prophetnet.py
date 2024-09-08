@@ -1223,7 +1223,7 @@ class ProphetNetModelIntegrationTest(unittest.TestCase):
             " with the departments of the university. USTC is listed in the top 16 national key universities, becoming"
             " the youngest national key university.".lower()
         )
-        input_ids = tokenizer([ARTICLE_TO_SUMMARIZE], max_length=511, return_tensors="pt").input_ids
+        input_ids = tokenizer([ARTICLE_TO_SUMMARIZE], max_length=511, return_tensors="ms").input_ids
 
         summary_ids = model.generate(
             input_ids, num_beams=4, length_penalty=1.0, no_repeat_ngram_size=3, early_stopping=True
@@ -1239,7 +1239,7 @@ class ProphetNetModelIntegrationTest(unittest.TestCase):
             [EXPECTED_SUMMARIZE_512],
             generated_titles,
         )
-        input_ids = tokenizer([ARTICLE_TO_SUMMARIZE], max_length=99, return_tensors="pt").input_ids
+        input_ids = tokenizer([ARTICLE_TO_SUMMARIZE], max_length=99, return_tensors="ms").input_ids
         # actually 98 tokens are used. max_length=100 contains bos and eos.
         summary_ids = model.generate(
             input_ids, num_beams=4, length_penalty=1.0, no_repeat_ngram_size=3, early_stopping=True
@@ -1270,7 +1270,7 @@ class ProphetNetModelIntegrationTest(unittest.TestCase):
             "April 4, 1975 [SEP] Microsoft was founded by Bill Gates and Paul Allen on April 4, 1975.",
         ]
 
-        input_ids = tokenizer(INPUTS, truncation=True, padding=True, return_tensors="pt").input_ids
+        input_ids = tokenizer(INPUTS, truncation=True, padding=True, return_tensors="ms").input_ids
 
         gen_output = model.generate(input_ids, num_beams=5, early_stopping=True)
         generated_questions = tokenizer.batch_decode(gen_output, skip_special_tokens=True)

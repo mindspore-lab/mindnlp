@@ -552,7 +552,7 @@ PLBART_GENERATION_EXAMPLE = r"""
 
     >>> # en_XX is the language symbol id <LID> for English
     >>> TXT = "<s> Is 0 the <mask> Fibonacci number ? </s> en_XX"
-    >>> input_ids = tokenizer([TXT], add_special_tokens=False, return_tensors="pt").input_ids
+    >>> input_ids = tokenizer([TXT], add_special_tokens=False, return_tensors="ms").input_ids
 
     >>> logits = model(input_ids).logits
     >>> masked_index = (input_ids[0] == tokenizer.mask_token_id).nonzero().item()
@@ -1624,7 +1624,7 @@ class PLBartForCausalLM(PLBartPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("uclanlp/plbart-base")
         >>> model = PLBartForCausalLM.from_pretrained("uclanlp/plbart-base", add_cross_attention=False)
         >>> assert model.config.is_decoder, f"{model.__class__} has to be configured as a decoder."
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> logits = outputs.logits

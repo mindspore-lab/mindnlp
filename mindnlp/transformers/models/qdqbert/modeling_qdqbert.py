@@ -1099,7 +1099,7 @@ class QDQBertLMHeadModel(QDQBertPreTrainedModel):
         >>> config.is_decoder = True
         >>> model = QDQBertLMHeadModel.from_pretrained("google-bert/bert-base-cased", config=config)
 
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> prediction_logits = outputs.logits
@@ -1353,7 +1353,7 @@ class QDQBertForNextSentencePrediction(QDQBertPreTrainedModel):
 
         >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
         >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
-        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
+        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="ms")
 
         >>> outputs = model(**encoding, labels=torch.LongTensor([1]))
         >>> logits = outputs.logits
