@@ -847,7 +847,7 @@ class Gemma2ForCausalLM(Gemma2PreTrainedModel):
                 position_ids = position_ids[:, -input_ids.shape[1] :]
                 # This `clone` call is needed to avoid recapturing cuda graphs with `torch.compile`'s
                 # `mode="reduce-overhead`, as otherwise the input `position_ids` would have various stride
-                # during the decoding. Here, simply using `.contiguous()` is not sufficient as in the
+                # during the decoding. Here, simply using `` is not sufficient as in the
                 # batch size = 1 case, `position_ids` is already contiguous but with varying stride
                 # which retriggers a capture.
 

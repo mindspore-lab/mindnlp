@@ -861,7 +861,7 @@ class SpeechT5Attention(nn.Module):
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2).contiguous()
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def forward(
         self,
@@ -929,7 +929,7 @@ class SpeechT5Attention(nn.Module):
 
         # relative attention bias
         if position_bias is not None:
-            reshape_q = query_states.contiguous().view(bsz * self.num_heads, -1, self.head_dim).swapaxes(0, 1)
+            reshape_q = query_states.view(bsz * self.num_heads, -1, self.head_dim).swapaxes(0, 1)
             rel_pos_bias = ops.matmul(reshape_q, position_bias.swapaxes(-2, -1))
             rel_pos_bias = rel_pos_bias.swapaxes(0, 1).view(
                 bsz * self.num_heads, position_bias.shape[0], position_bias.shape[1]

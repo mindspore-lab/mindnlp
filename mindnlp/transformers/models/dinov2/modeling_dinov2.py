@@ -210,7 +210,7 @@ class Dinov2SelfAttention(nn.Module):
 
         context_layer = ops.matmul(attention_probs, value_layer)
 
-        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
+        context_layer = context_layer.permute(0, 2, 1, 3)
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(new_context_layer_shape)
 
@@ -735,7 +735,7 @@ class Dinov2Backbone(Dinov2PreTrainedModel, BackboneMixin):
                     batch_size, _, height, width = pixel_values.shape
                     patch_size = self.config.patch_size
                     hidden_state = hidden_state.reshape(batch_size, height // patch_size, width // patch_size, -1)
-                    hidden_state = hidden_state.permute(0, 3, 1, 2).contiguous()
+                    hidden_state = hidden_state.permute(0, 3, 1, 2)
                 feature_maps += (hidden_state,)
 
         if not return_dict:

@@ -513,7 +513,7 @@ class FastSpeech2ConformerAttention(nn.Module):
 
         attn_weights = self.dropout(attn_weights)
         attn_output = ops.matmul(attn_weights, ops.transpose(value_states, 1, 2))
-        attn_output = ops.transpose(attn_output, 1, 2).contiguous().view(bsz, q_len, -1)
+        attn_output = ops.transpose(attn_output, 1, 2).view(bsz, q_len, -1)
 
         attn_output = self.linear_out(attn_output)
 

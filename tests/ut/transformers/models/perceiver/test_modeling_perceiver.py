@@ -832,7 +832,7 @@ def extract_image_patches(x, kernel, stride=1, dilation=1):
 
     # Extract patches
     patches = x.unfold(2, kernel, stride).unfold(3, kernel, stride)
-    patches = patches.permute(0, 4, 5, 1, 2, 3).contiguous()
+    patches = patches.permute(0, 4, 5, 1, 2, 3)
 
     return patches.view(b, -1, patches.shape[-2], patches.shape[-1])
 
