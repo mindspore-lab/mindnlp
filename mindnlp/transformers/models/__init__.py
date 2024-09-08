@@ -75,6 +75,7 @@ from . import (
     detr,
     deta,
     deit,
+    depth_anything,
     dinov2,
     distilbert,
     donut,
@@ -307,6 +308,7 @@ from .deberta_v2 import *
 from .decision_transformer import *
 from .deformable_detr import *
 from .deepseek_v2 import *
+from .depth_anything import *
 from .detr import *
 from .deta import *
 from .deit import *
@@ -541,6 +543,7 @@ __all__.extend(decision_transformer.__all__)
 __all__.extend(deformable_detr.__all__)
 __all__.extend(deepseek_v2.__all__)
 __all__.extend(deit.__all__)
+__all__.extend(depth_anything.__all__)
 __all__.extend(dinov2.__all__)
 __all__.extend(distilbert.__all__)
 __all__.extend(donut.__all__)
