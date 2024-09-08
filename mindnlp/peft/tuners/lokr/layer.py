@@ -1017,7 +1017,7 @@ def make_kron(w1, w2, scale=1.0):
     """
     if len(w2.shape) == 4:
         w1 = w1.unsqueeze(2).unsqueeze(2)
-    # w2 = w2.contiguous()
+    # w2 = w2
     rebuild = ops.kron(w1, w2)
 
     return rebuild * scale

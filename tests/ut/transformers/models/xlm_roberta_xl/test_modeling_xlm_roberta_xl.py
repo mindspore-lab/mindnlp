@@ -309,9 +309,9 @@ class XLMRobertaXLModelTester:
         config.num_choices = self.num_choices
         model = XLMRobertaXLForMultipleChoice(config=config)
         model.set_train(False)
-        multiple_choice_inputs_ids = input_ids.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
-        multiple_choice_token_type_ids = token_type_ids.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
-        multiple_choice_input_mask = input_mask.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
+        multiple_choice_inputs_ids = input_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
+        multiple_choice_token_type_ids = token_type_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
+        multiple_choice_input_mask = input_mask.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
         result = model(
             multiple_choice_inputs_ids,
             attention_mask=multiple_choice_input_mask,
@@ -508,9 +508,9 @@ class XLMRobertaXLModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.Te
         self.assertTrue(ops.all(ops.eq(position_ids, expected_positions)))
 
 
+@slow
 @require_mindspore
 class XLMRobertaModelXLIntegrationTest(unittest.TestCase):
-    @unittest.skip(reason="Model is too large to be tested on the CI")
     def test_xlm_roberta_xl(self):
         model = XLMRobertaXLModel.from_pretrained("facebook/xlm-roberta-xl",from_pt=True)
         input_ids = mindspore.tensor(
@@ -528,7 +528,6 @@ class XLMRobertaModelXLIntegrationTest(unittest.TestCase):
         # compare the actual values for a slice of last dim
         self.assertTrue(np.allclose(output[:, :, -1].asnumpy(), expected_output_values_last_dim.asnumpy(), atol=1e-3))
 
-    @unittest.skip(reason="Model is too large to be tested on the CI")
     def test_xlm_roberta_xxl(self):
         model = XLMRobertaXLModel.from_pretrained("facebook/xlm-roberta-xxl",from_pt=True)
         input_ids = mindspore.tensor(

@@ -218,6 +218,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("wav2vec2-conformer", "Wav2Vec2ConformerConfig"),
         ("whisper", "WhisperConfig"),
         ("xclip", "XCLIPConfig"),
+        ("xlm", "XLMConfig"),
         ("xlm-roberta", "XLMRobertaConfig"),
         ("xlm-roberta-xl", "XLMRobertaXLConfig"),
         ("xlm-prophetnet", "XLMProphetNetConfig"),

@@ -65,14 +65,12 @@ class XmodEmbeddings(nn.Module):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        # self.register_buffer(
-        #     "position_ids", .arange(config.max_position_embeddings).expand((1, -1)), persistent=False
-        # )
-        self.position_ids = ops.arange(config.max_position_embeddings).expand((1, -1))
-        # self.register_buffer(
-        #     "token_type_ids", torch.zeros(self.position_ids.shape, dtype=mindspore.int64), persistent=False
-        # )
-        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
+        self.register_buffer(
+            "position_ids", ops.arange(config.max_position_embeddings).broadcast_to((1, -1)), persistent=False
+        )
+        self.register_buffer(
+            "token_type_ids", ops.zeros(self.position_ids.shape, dtype=mindspore.int64), persistent=False
+        )
         # End copy
         self.padding_idx = config.pad_token_id
         self.position_embeddings = nn.Embedding(
@@ -102,7 +100,7 @@ class XmodEmbeddings(nn.Module):
         if token_type_ids is None:
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
+                buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to((input_shape[0], seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
                 token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
@@ -134,7 +132,7 @@ class XmodEmbeddings(nn.Module):
         position_ids = ops.arange(
             self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64
         )
-        return position_ids.unsqueeze(0).expand(input_shape)
+        return position_ids.unsqueeze(0).broadcast_to(input_shape)
 
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaSelfAttention with Roberta->Xmod
@@ -261,7 +259,7 @@ class XmodSelfAttention(nn.Module):
 
         context_layer = ops.matmul(attention_probs, value_layer)
 
-        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
+        context_layer = context_layer.permute(0, 2, 1, 3)
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(new_context_layer_shape)
 
@@ -823,7 +821,7 @@ class XmodModel(XmodPreTrainedModel):
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
                 buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
+                buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to((batch_size, seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
                 token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
@@ -999,8 +997,8 @@ class XmodForCausalLM(XmodPreTrainedModel):
         lm_loss = None
         if labels is not None:
             # we are doing next-token prediction; shift prediction scores and input ids by one
-            shifted_prediction_scores = prediction_scores[:, :-1, :].contiguous()
-            labels = labels[:, 1:].contiguous()
+            shifted_prediction_scores = prediction_scores[:, :-1, :]
+            labels = labels[:, 1:]
             lm_loss = F.cross_entropy(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
@@ -1477,8 +1475,8 @@ class XmodForQuestionAnswering(XmodPreTrainedModel):
 
         logits = self.qa_outputs(sequence_output)
         start_logits, end_logits = logits.split(1, axis=-1)
-        start_logits = start_logits.squeeze(-1).contiguous()
-        end_logits = end_logits.squeeze(-1).contiguous()
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
 
         total_loss = None
         if start_positions is not None and end_positions is not None:

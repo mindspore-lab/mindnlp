@@ -567,7 +567,7 @@ def _in_projection_packed(
             # self-attention
             # proj = linear(q, w, b)
             # # reshape to 3, E and not E, 3 is deliberate for better memory coalescing and keeping same order as chunk()
-            # proj = proj.unflatten(-1, (3, E)).unsqueeze(0).swapaxes(0, -2).squeeze(-2).contiguous()
+            # proj = proj.unflatten(-1, (3, E)).unsqueeze(0).swapaxes(0, -2).squeeze(-2)
             # return proj[0], proj[1], proj[2]
             return linear(q, w, b).chunk(3, axis=-1)
         else:
@@ -580,7 +580,7 @@ def _in_projection_packed(
             # q_proj = linear(q, w_q, b_q)
             # kv_proj = linear(k, w_kv, b_kv)
             # # reshape to 2, E and not E, 2 is deliberate for better memory coalescing and keeping same order as chunk()
-            # kv_proj = kv_proj.unflatten(-1, (2, E)).unsqueeze(0).swapaxes(0, -2).squeeze(-2).contiguous()
+            # kv_proj = kv_proj.unflatten(-1, (2, E)).unsqueeze(0).swapaxes(0, -2).squeeze(-2)
             # return (q_proj, kv_proj[0], kv_proj[1])
             return (linear(q, w_q, b_q),) + linear(k, w_kv, b_kv).chunk(2, axis=-1)
     else:
