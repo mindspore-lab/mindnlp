@@ -965,7 +965,7 @@ class XmodForCausalLM(XmodPreTrainedModel):
         >>> model = XmodForCausalLM.from_pretrained("facebook/xmod-base", config=config)
         >>> model.set_default_language("en_XX")
 
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> prediction_logits = outputs.logits

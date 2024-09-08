@@ -580,7 +580,7 @@ class MgpstrForSceneTextRecognition(MgpstrPreTrainedModel):
         >>> image = Image.open(requests.get(url, stream=True).raw).convert("RGB")
 
         >>> processor = MgpstrProcessor.from_pretrained("alibaba-damo/mgp-str-base")
-        >>> pixel_values = processor(images=image, return_tensors="pt").pixel_values
+        >>> pixel_values = processor(images=image, return_tensors="ms").pixel_values
 
         >>> model = MgpstrForSceneTextRecognition.from_pretrained("alibaba-damo/mgp-str-base")
 

@@ -656,7 +656,7 @@ class TvltModel(TvltPreTrainedModel):
         >>> processor = TvltProcessor.from_pretrained("ZinengTang/tvlt-base")
         >>> model = TvltModel.from_pretrained("ZinengTang/tvlt-base")
 
-        >>> input_dict = processor(images, audio, sampling_rate=44100, return_tensors="pt")
+        >>> input_dict = processor(images, audio, sampling_rate=44100, return_tensors="ms")
 
         >>> outputs = model(**input_dict)
         >>> loss = outputs.loss
@@ -994,7 +994,7 @@ class TvltForPreTraining(TvltPreTrainedModel):
         >>> processor = TvltProcessor.from_pretrained("ZinengTang/tvlt-base")
         >>> model = TvltForPreTraining.from_pretrained("ZinengTang/tvlt-base")
         >>> input_dict = processor(
-        ...     images, audio, images_mixed, sampling_rate=44100, mask_pixel=True, mask_audio=True, return_tensors="pt"
+        ...     images, audio, images_mixed, sampling_rate=44100, mask_pixel=True, mask_audio=True, return_tensors="ms"
         ... )
 
         >>> outputs = model(**input_dict)
@@ -1174,7 +1174,7 @@ class TvltForAudioVisualClassification(TvltPreTrainedModel):
         >>> audio = list(np.random.randn(10000))
         >>> processor = TvltProcessor.from_pretrained("ZinengTang/tvlt-base")
         >>> model = TvltForAudioVisualClassification.from_pretrained("ZinengTang/tvlt-base")
-        >>> input_dict = processor(images, audio, sampling_rate=44100, return_tensors="pt")
+        >>> input_dict = processor(images, audio, sampling_rate=44100, return_tensors="ms")
 
         >>> outputs = model(**input_dict)
         >>> loss = outputs.loss

@@ -696,7 +696,7 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
         >>> # add bounding boxes of cls + sep tokens
         >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
 
-        >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
+        >>> encoding = tokenizer(" ".join(words), return_tensors="ms")
         >>> input_ids = encoding["input_ids"]
         >>> attention_mask = encoding["attention_mask"]
         >>> token_type_ids = encoding["token_type_ids"]
@@ -842,13 +842,13 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
         >>> # add bounding boxes of cls + sep tokens
         >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
 
-        >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
+        >>> encoding = tokenizer(" ".join(words), return_tensors="ms")
         >>> input_ids = encoding["input_ids"]
         >>> attention_mask = encoding["attention_mask"]
         >>> token_type_ids = encoding["token_type_ids"]
         >>> bbox = mindspore.tensor([token_boxes])
 
-        >>> labels = tokenizer("Hello world", return_tensors="pt")["input_ids"]
+        >>> labels = tokenizer("Hello world", return_tensors="ms")["input_ids"]
 
         >>> outputs = model(
         ...     input_ids=input_ids,
@@ -955,7 +955,7 @@ class LayoutLMForSequenceClassification(LayoutLMPreTrainedModel):
         >>> # add bounding boxes of cls + sep tokens
         >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
 
-        >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
+        >>> encoding = tokenizer(" ".join(words), return_tensors="ms")
         >>> input_ids = encoding["input_ids"]
         >>> attention_mask = encoding["attention_mask"]
         >>> token_type_ids = encoding["token_type_ids"]
@@ -1080,7 +1080,7 @@ class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
         >>> # add bounding boxes of cls + sep tokens
         >>> token_boxes = [[0, 0, 0, 0]] + token_boxes + [[1000, 1000, 1000, 1000]]
 
-        >>> encoding = tokenizer(" ".join(words), return_tensors="pt")
+        >>> encoding = tokenizer(" ".join(words), return_tensors="ms")
         >>> input_ids = encoding["input_ids"]
         >>> attention_mask = encoding["attention_mask"]
         >>> token_type_ids = encoding["token_type_ids"]
@@ -1196,7 +1196,7 @@ class LayoutLMForQuestionAnswering(LayoutLMPreTrainedModel):
         >>> boxes = example["bboxes"]
 
         >>> encoding = tokenizer(
-        ...     question.split(), words, is_split_into_words=True, return_token_type_ids=True, return_tensors="pt"
+        ...     question.split(), words, is_split_into_words=True, return_token_type_ids=True, return_tensors="ms"
         ... )
         >>> bbox = []
         >>> for i, s, w in zip(encoding.input_ids[0], encoding.sequence_ids(0), encoding.word_ids(0)):

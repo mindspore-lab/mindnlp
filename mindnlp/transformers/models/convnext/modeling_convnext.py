@@ -707,7 +707,7 @@ class ConvNextBackbone(ConvNextPreTrainedModel, BackboneMixin):
         >>> processor = AutoImageProcessor.from_pretrained("facebook/convnext-tiny-224")
         >>> model = AutoBackbone.from_pretrained("facebook/convnext-tiny-224")
         ...
-        >>> inputs = processor(image, return_tensors="pt")
+        >>> inputs = processor(image, return_tensors="ms")
         >>> outputs = model(**inputs)
         ```
     """
@@ -768,7 +768,7 @@ class ConvNextBackbone(ConvNextPreTrainedModel, BackboneMixin):
             >>> processor = AutoImageProcessor.from_pretrained("facebook/convnext-tiny-224")
             >>> model = AutoBackbone.from_pretrained("facebook/convnext-tiny-224")
             ...
-            >>> inputs = processor(image, return_tensors="pt")
+            >>> inputs = processor(image, return_tensors="ms")
             >>> outputs = model(**inputs)
             ```
         """

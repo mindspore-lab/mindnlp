@@ -429,7 +429,7 @@ class M2M100ModelIntegrationTests(unittest.TestCase):
     #     ]
 
     #     # The below article tests that we don't add any hypotheses outside of the top n_beams
-    #     dct = tokenizer(src_fr, padding=True, return_tensors="pt")
+    #     dct = tokenizer(src_fr, padding=True, return_tensors="ms")
 
     #     hypotheses_batch = model.generate(
     #         input_ids=dct["input_ids"].to(torch_device),

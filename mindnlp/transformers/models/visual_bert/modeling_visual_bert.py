@@ -630,7 +630,7 @@ class VisualBertModel(VisualBertPreTrainedModel):
         tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
         model = VisualBertModel.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
 
-        inputs = tokenizer("The capital of France is Paris.", return_tensors="pt")
+        inputs = tokenizer("The capital of France is Paris.", return_tensors="ms")
         visual_embeds = get_visual_embeddings(image).unsqueeze(0)
         visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
         visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
@@ -807,7 +807,7 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
         tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
         model = VisualBertForPreTraining.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
 
-        inputs = tokenizer("The capital of France is [MASK].", return_tensors="pt")
+        inputs = tokenizer("The capital of France is [MASK].", return_tensors="ms")
         visual_embeds = get_visual_embeddings(image).unsqueeze(0)
         visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
         visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
@@ -821,7 +821,7 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
         )
         max_length = inputs["input_ids"].shape[-1] + visual_embeds.shape[-2]
         labels = tokenizer(
-            "The capital of France is Paris.", return_tensors="pt", padding="max_length", max_length=max_length
+            "The capital of France is Paris.", return_tensors="ms", padding="max_length", max_length=max_length
         )["input_ids"]
         sentence_image_labels = mindspore.tensor(1).unsqueeze(0)  # Batch_size
 
@@ -942,7 +942,7 @@ class VisualBertForMultipleChoice(VisualBertPreTrainedModel):
 
         labels = mindspore.tensor(0).unsqueeze(0)  # choice0 is correct (according to Wikipedia ;)), batch size 1
 
-        encoding = tokenizer([[prompt, prompt], [choice0, choice1]], return_tensors="pt", padding=True)
+        encoding = tokenizer([[prompt, prompt], [choice0, choice1]], return_tensors="ms", padding=True)
         # batch size is 1
         inputs_dict = {k: v.unsqueeze(0) for k, v in encoding.items()}
         inputs_dict.update(
@@ -1073,7 +1073,7 @@ class VisualBertForQuestionAnswering(VisualBertPreTrainedModel):
         model = VisualBertForQuestionAnswering.from_pretrained("uclanlp/visualbert-vqa")
 
         text = "Who is eating the apple?"
-        inputs = tokenizer(text, return_tensors="pt")
+        inputs = tokenizer(text, return_tensors="ms")
         visual_embeds = get_visual_embeddings(image).unsqueeze(0)
         visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
         visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
@@ -1190,7 +1190,7 @@ class VisualBertForVisualReasoning(VisualBertPreTrainedModel):
         model = VisualBertForVisualReasoning.from_pretrained("uclanlp/visualbert-nlvr2")
 
         text = "Who is eating the apple?"
-        inputs = tokenizer(text, return_tensors="pt")
+        inputs = tokenizer(text, return_tensors="ms")
         visual_embeds = get_visual_embeddings(image).unsqueeze(0)
         visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
         visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
@@ -1347,7 +1347,7 @@ class VisualBertForRegionToPhraseAlignment(VisualBertPreTrainedModel):
         model = VisualBertForRegionToPhraseAlignment.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
 
         text = "Who is eating the apple?"
-        inputs = tokenizer(text, return_tensors="pt")
+        inputs = tokenizer(text, return_tensors="ms")
         visual_embeds = get_visual_embeddings(image).unsqueeze(0)
         visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
         visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)

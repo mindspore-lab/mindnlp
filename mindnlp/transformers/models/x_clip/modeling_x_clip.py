@@ -715,7 +715,7 @@ class XCLIPTextModel(XCLIPPreTrainedModel):
         >>> model = XCLIPTextModel.from_pretrained("microsoft/xclip-base-patch32")
         >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/xclip-base-patch32")
 
-        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
 
         >>> outputs = model(**inputs)
         >>> last_hidden_state = outputs.last_hidden_state
@@ -973,7 +973,7 @@ class XCLIPVisionModel(XCLIPPreTrainedModel):
         >>> processor = AutoProcessor.from_pretrained("microsoft/xclip-base-patch32")
         >>> model = XCLIPVisionModel.from_pretrained("microsoft/xclip-base-patch32")
 
-        >>> pixel_values = processor(videos=list(video), return_tensors="pt").pixel_values
+        >>> pixel_values = processor(videos=list(video), return_tensors="ms").pixel_values
 
         >>> batch_size, num_frames, num_channels, height, width = pixel_values.shape
         >>> pixel_values = pixel_values.reshape(-1, num_channels, height, width)
@@ -1195,7 +1195,7 @@ class XCLIPModel(XCLIPPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/xclip-base-patch32")
         >>> model = AutoModel.from_pretrained("microsoft/xclip-base-patch32")
 
-        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
         >>> text_features = model.get_text_features(**inputs)
         ```"""
         # Use X_CLIP model's config for some fields (if specified) instead of those of vision & text components.
@@ -1297,7 +1297,7 @@ class XCLIPModel(XCLIPPreTrainedModel):
         >>> processor = AutoProcessor.from_pretrained("microsoft/xclip-base-patch32")
         >>> model = AutoModel.from_pretrained("microsoft/xclip-base-patch32")
 
-        >>> inputs = processor(videos=list(video), return_tensors="pt")
+        >>> inputs = processor(videos=list(video), return_tensors="ms")
 
         >>> video_features = model.get_video_features(**inputs)
         ```"""
@@ -1415,7 +1415,7 @@ class XCLIPModel(XCLIPPreTrainedModel):
         >>> inputs = processor(
         ...     text=["playing sports", "eating spaghetti", "go shopping"],
         ...     videos=list(video),
-        ...     return_tensors="pt",
+        ...     return_tensors="ms",
         ...     padding=True,
         ... )
 

@@ -1906,7 +1906,7 @@ class MegatronBertForPreTraining(MegatronBertPreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained("nvidia/megatron-bert-cased-345m")
             >>> model = MegatronBertForPreTraining.from_pretrained("nvidia/megatron-bert-cased-345m")
             ...
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> prediction_logits = outputs.prediction_logits
@@ -2076,7 +2076,7 @@ class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained("nvidia/megatron-bert-cased-345m")
             >>> model = MegatronBertForCausalLM.from_pretrained("nvidia/megatron-bert-cased-345m", is_decoder=True)
             ...
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> prediction_logits = outputs.logits
@@ -2419,7 +2419,7 @@ class MegatronBertForNextSentencePrediction(MegatronBertPreTrainedModel):
         ...
         >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
         >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
-        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
+        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="ms")
         ...
         >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
         >>> logits = outputs.logits
@@ -2483,7 +2483,7 @@ class MegatronBertForNextSentencePrediction(MegatronBertPreTrainedModel):
             ...
             >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
             >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
-            >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
+            >>> encoding = tokenizer(prompt, next_sentence, return_tensors="ms")
             ...
             >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
             >>> logits = outputs.logits

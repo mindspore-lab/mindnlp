@@ -618,7 +618,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
         >>> url = "https://www.ilankelman.org/stopsigns/australia.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = processor(text=prompt, images=image, return_tensors="pt")
+        >>> inputs = processor(text=prompt, images=image, return_tensors="ms")
 
         >>> # Generate
         >>> generate_ids = model.generate(**inputs, max_length=30)

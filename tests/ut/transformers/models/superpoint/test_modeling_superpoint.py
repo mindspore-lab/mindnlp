@@ -27,7 +27,7 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn
+    from mindnlp.core import no_grad
 
     from mindnlp.transformers import (
         SuperPointForKeypointDetection,
@@ -192,7 +192,7 @@ class SuperPointModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             model.set_train(False)
 
-            with mindspore._no_grad():
+            with no_grad():
                 outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             hidden_states = outputs.hidden_states
@@ -231,7 +231,7 @@ class SuperPointModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             model.set_train(False)
 
-            with mindspore._no_grad():
+            with no_grad():
                 model_inputs = self._prepare_for_class(inputs_dict, model_class)
                 # Provide an arbitrary sized Tensor as labels to model inputs
                 model_inputs["labels"] = ops.rand((128, 128))
@@ -259,8 +259,8 @@ class SuperPointModelIntegrationTest(unittest.TestCase):
         model = SuperPointForKeypointDetection.from_pretrained("magic-leap-community/superpoint")
         preprocessor = self.default_image_processor
         images = prepare_imgs()
-        inputs = preprocessor(images=images, return_tensors="ms")     #return_tensors="pt"  to  return_tensors="ms"
-        with mindspore._no_grad():
+        inputs = preprocessor(images=images, return_tensors="ms")     #return_tensors="ms"  to  return_tensors="ms"
+        with no_grad():
             outputs = model(**inputs)
         expected_number_keypoints_image0 = 567
         expected_number_keypoints_image1 = 830
