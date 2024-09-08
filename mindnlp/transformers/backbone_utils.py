@@ -21,7 +21,6 @@ from typing import Iterable, List, Optional, Tuple, Union
 
 
 class BackboneType(enum.Enum):
-
     r"""
     Represents the types of backbone structures.
     
@@ -32,7 +31,8 @@ class BackboneType(enum.Enum):
 
 
 def verify_out_features_out_indices(
-    out_features: Optional[Iterable[str]], out_indices: Optional[Iterable[int]], stage_names: Optional[Iterable[str]]
+        out_features: Optional[Iterable[str]], out_indices: Optional[Iterable[int]],
+        stage_names: Optional[Iterable[str]]
 ):
     """
     Verify that out_indices and out_features are valid for the given stage_names.
@@ -78,9 +78,9 @@ def verify_out_features_out_indices(
 
 
 def _align_output_features_output_indices(
-    out_features: Optional[List[str]],
-    out_indices: Optional[Union[List[int], Tuple[int]]],
-    stage_names: List[str],
+        out_features: Optional[List[str]],
+        out_indices: Optional[Union[List[int], Tuple[int]]],
+        stage_names: List[str],
 ):
     """
     Finds the corresponding `out_features` and `out_indices` for the given `stage_names`.
@@ -110,9 +110,9 @@ def _align_output_features_output_indices(
 
 
 def get_aligned_output_features_output_indices(
-    out_features: Optional[List[str]],
-    out_indices: Optional[Union[List[int], Tuple[int]]],
-    stage_names: List[str],
+        out_features: Optional[List[str]],
+        out_indices: Optional[Union[List[int], Tuple[int]]],
+        stage_names: List[str],
 ) -> Tuple[List[str], List[int]]:
     """
     Get the `out_features` and `out_indices` so that they are aligned.
@@ -351,14 +351,14 @@ class BackboneMixin:
         """
         signature = dict(inspect.signature(self.forward).parameters)
         filtered_kwargs = {k: v for k, v in kwargs.items() if k in signature}
-        return self(*args, **filtered_kwargs) # pylint: disable=not-callable
+        return self(*args, **filtered_kwargs)  # pylint: disable=not-callable
 
     def forward(
-        self,
-        pixel_values,
-        output_hidden_states: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            pixel_values,
+            output_hidden_states: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ):
         r"""
         This method, named 'forward', is defined in the class 'BackboneMixin' and is responsible for performing a
@@ -396,6 +396,7 @@ class BackboneConfigMixin:
     """
     A Mixin to support handling the `out_features` and `out_indices` attributes for the backbone configurations.
     """
+
     @property
     def out_features(self):
         r"""
@@ -489,10 +490,10 @@ def load_backbone(config):
 
     # If any of thhe following are set, then the config passed in is from a model which contains a backbone.
     if (
-        backbone_config is None
-        and use_timm_backbone is None
-        and backbone_checkpoint is None
-        and backbone_checkpoint is None
+            backbone_config is None
+            and use_timm_backbone is None
+            and backbone_checkpoint is None
+            and backbone_checkpoint is None
     ):
         return AutoBackbone.from_config(config=config, **backbone_kwargs)
 
@@ -520,12 +521,13 @@ def load_backbone(config):
         backbone = AutoBackbone.from_config(config=backbone_config)
     return backbone
 
+
 def verify_backbone_config_arguments(
-    use_timm_backbone: bool,
-    use_pretrained_backbone: bool,
-    backbone: Optional[str],
-    backbone_config: Optional[Union[dict, "PretrainedConfig"]],
-    backbone_kwargs: Optional[dict],
+        use_timm_backbone: bool,
+        use_pretrained_backbone: bool,
+        backbone: Optional[str],
+        backbone_config: Optional[Union[dict, "PretrainedConfig"]],
+        backbone_kwargs: Optional[dict],
 ):
     """
     Verify that the config arguments to be passed to load_backbone are valid

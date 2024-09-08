@@ -1092,6 +1092,7 @@ class DPTForDepthEstimation(DPTPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], DepthEstimatorOutput]:
+
         r"""
         Args:
             pixel_values (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):

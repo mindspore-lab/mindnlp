@@ -55,7 +55,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         # ("data2vec-vision", "BeitImageProcessor"),
         # ("deformable_detr", "DeformableDetrImageProcessor"),
         ("deit", "DeiTImageProcessor"),
-        # ("depth_anything", "DPTImageProcessor"),
+        ("depth_anything", "DPTImageProcessor"),
         ("deta", "DetaImageProcessor"),
         ("detr", "DetrImageProcessor"),
         # ("dinat", "ViTImageProcessor"),
@@ -122,6 +122,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("vitmatte", "VitMatteImageProcessor"),
         ("xclip", "CLIPImageProcessor"),
         # ("yolos", "YolosImageProcessor"),
+        ("zoedepth", ("ZoeDepthImageProcessor",)),
     ]
 )
 

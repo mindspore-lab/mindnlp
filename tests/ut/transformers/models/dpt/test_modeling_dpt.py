@@ -320,6 +320,7 @@ class DPTModelIntegrationTest(unittest.TestCase):
         outputs = model(**inputs)
         predicted_depth = outputs.predicted_depth
 
+
         # verify the predicted depth
         expected_shape = (1, 384, 384)
         self.assertEqual(predicted_depth.shape, expected_shape)
