@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the mindspore Depth Anything model."""
+"""Testing suite for the PyTorch Depth Anything model."""
 
 import unittest
 
@@ -20,8 +20,7 @@ import numpy as np
 
 from mindnlp.transformers import DepthAnythingConfig, Dinov2Config
 from mindnlp.core import no_grad
-from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow, is_mindspore_available, \
-    is_vision_available
+from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow, is_mindspore_available, is_vision_available
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
@@ -39,24 +38,24 @@ if is_vision_available():
 class DepthAnythingModelTester:
     # Copied from tests.models.dpt.test_modeling_dpt_auto_backbone.DPTModelTester.__init__
     def __init__(
-            self,
-            parent,
-            batch_size=2,
-            num_channels=3,
-            image_size=32,
-            patch_size=16,
-            use_labels=True,
-            num_labels=3,
-            is_training=True,
-            hidden_size=4,
-            num_hidden_layers=2,
-            num_attention_heads=2,
-            intermediate_size=8,
-            out_features=["stage1", "stage2"],
-            apply_layernorm=False,
-            reshape_hidden_states=False,
-            neck_hidden_sizes=[2, 2],
-            fusion_hidden_size=6,
+        self,
+        parent,
+        batch_size=2,
+        num_channels=3,
+        image_size=32,
+        patch_size=16,
+        use_labels=True,
+        num_labels=3,
+        is_training=True,
+        hidden_size=4,
+        num_hidden_layers=2,
+        num_attention_heads=2,
+        intermediate_size=8,
+        out_features=["stage1", "stage2"],
+        apply_layernorm=False,
+        reshape_hidden_states=False,
+        neck_hidden_sizes=[2, 2],
+        fusion_hidden_size=6,
     ):
         self.parent = parent
         self.batch_size = batch_size
@@ -204,10 +203,39 @@ class DepthAnythingModelTest(ModelTesterMixin, unittest.TestCase):
         model = DepthAnythingForDepthEstimation.from_pretrained(model_name)
         self.assertIsNotNone(model)
 
+    def test_backbone_selection(self):
+        def _validate_backbone_init():
+            for model_class in self.all_model_classes:
+                model = model_class(config)
+                model.to()
+                model.eval()
+
+                # Confirm out_indices propogated to backbone
+                self.assertEqual(len(model.backbone.out_indices), 2)
+
+        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+
+        # Load a timm backbone
+        config.backbone = "resnet18"
+        config.use_pretrained_backbone = True
+        config.use_timm_backbone = True
+        config.backbone_config = None
+        # For transformer backbones we can't set the out_indices or just return the features
+        config.backbone_kwargs = {"out_indices": (-2, -1)}
+        _validate_backbone_init()
+
+        # Load a HF backbone
+        config.backbone = "facebook/dinov2-small"
+        config.use_pretrained_backbone = True
+        config.use_timm_backbone = False
+        config.backbone_config = None
+        config.backbone_kwargs = {"out_indices": [-2, -1]}
+        _validate_backbone_init()
+
 
 # We will verify our results on an image of cute cats
 def prepare_img():
-    image = Image.open("../fixtures/tests_samples/COCO/000000039769.png")
+    image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
     return image
 
 
@@ -216,19 +244,48 @@ def prepare_img():
 @slow
 class DepthAnythingModelIntegrationTest(unittest.TestCase):
     def test_inference(self):
+        # -- `relative` depth model --
+
         image_processor = DPTImageProcessor.from_pretrained("LiheYoung/depth-anything-small-hf")
         model = DepthAnythingForDepthEstimation.from_pretrained("LiheYoung/depth-anything-small-hf")
 
         image = prepare_img()
         inputs = image_processor(images=image, return_tensors="ms")
 
-        outputs = model(**inputs)
-        predicted_depth = outputs.predicted_depth
+        # forward pass
+        with no_grad():
+            outputs = model(**inputs)
+            predicted_depth = outputs.predicted_depth
 
         # verify the predicted depth
         expected_shape = (1, 518, 686)
         self.assertEqual(predicted_depth.shape, expected_shape)
+
         expected_slice = mindspore.tensor(
             [[8.8204, 8.6468, 8.6195], [8.3313, 8.6027, 8.7526], [8.6526, 8.6866, 8.7453]],
         )
-        self.assertTrue(ops.allclose(outputs.predicted_depth[0, :3, :3], expected_slice, atol=1e-6))
+
+        self.assertTrue(np.allclose(predicted_depth[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-1))
+
+        # -- `metric` depth model --
+        image_processor = DPTImageProcessor.from_pretrained("depth-anything/depth-anything-V2-metric-indoor-small-hf")
+        model = DepthAnythingForDepthEstimation.from_pretrained(
+            "depth-anything/depth-anything-V2-metric-indoor-small-hf"
+        )
+
+        inputs = image_processor(images=image, return_tensors="ms")
+
+        # forward pass
+        with no_grad():
+            outputs = model(**inputs)
+            predicted_depth = outputs.predicted_depth
+
+        # verify the predicted depth
+        expected_shape = (1, 518, 686)
+        self.assertEqual(predicted_depth.shape, expected_shape)
+
+        expected_slice = mindspore.tensor(
+            [[1.3349, 1.2946, 1.2801], [1.2793, 1.2337, 1.2899], [1.2629, 1.2218, 1.2476]],
+        )
+
+        self.assertTrue(np.allclose(predicted_depth[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))

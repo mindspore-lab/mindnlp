@@ -25,29 +25,9 @@ from ..auto.configuration_auto import CONFIG_MAPPING
 logger = logging.get_logger(__name__)
 
 
-# def verify_backbone_config_arguments(
-#         use_timm_backbone: bool,
-#         use_pretrained_backbone: bool,
-#         backbone: Optional[str],
-#         backbone_config: Optional[Union[dict, "PretrainedConfig"]],
-#         backbone_kwargs: Optional[dict],
-# ):
-#     """
-#     Verify that the config arguments to be passed to load_backbone are valid
-#     """
-#     if backbone_config is not None and backbone is not None:
-#         raise ValueError("You can't specify both `backbone` and `backbone_config`.")
-#
-#     if backbone_config is not None and use_timm_backbone:
-#         raise ValueError("You can't specify both `backbone_config` and `use_timm_backbone`.")
-#
-#     if backbone_kwargs is not None and backbone_kwargs and backbone_config is not None:
-#         raise ValueError("You can't specify both `backbone_kwargs` and `backbone_config`.")
-
-
 class DepthAnythingConfig(PretrainedConfig):
     r"""
-    This is the configuration class to store the configuration of a [`DepthAnythingModel`]. It is used to instantiate an DepthAnything
+    This is the configuration class to store the configuration of a [`DepthAnythingModel`]. It is used to instantiate a DepthAnything
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the
     defaults will yield a similar configuration to that of the DepthAnything
     [LiheYoung/depth-anything-small-hf](https://huggingface.co/LiheYoung/depth-anything-small-hf) architecture.
@@ -87,11 +67,16 @@ class DepthAnythingConfig(PretrainedConfig):
             The index of the features to use in the depth estimation head.
         head_hidden_size (`int`, *optional*, defaults to 32):
             The number of output channels in the second convolution of the depth estimation head.
+        depth_estimation_type (`str`, *optional*, defaults to `"relative"`):
+            The type of depth estimation to use. Can be one of `["relative", "metric"]`.
+        max_depth (`float`, *optional*):
+            The maximum depth to use for the "metric" depth estimation head. 20 should be used for indoor models
+            and 80 for outdoor models. For "relative" depth estimation, this value is ignored.
 
     Example:
 
     ```python
-    >>> from mindnlp.transformers import DepthAnythingConfig, DepthAnythingForDepthEstimation
+    >>> from transformers import DepthAnythingConfig, DepthAnythingForDepthEstimation
 
     >>> # Initializing a DepthAnything small style configuration
     >>> configuration = DepthAnythingConfig()
@@ -120,6 +105,8 @@ class DepthAnythingConfig(PretrainedConfig):
             fusion_hidden_size=64,
             head_in_index=-1,
             head_hidden_size=32,
+            depth_estimation_type="relative",
+            max_depth=None,
             **kwargs,
     ):
         super().__init__(**kwargs)
@@ -159,6 +146,10 @@ class DepthAnythingConfig(PretrainedConfig):
         self.fusion_hidden_size = fusion_hidden_size
         self.head_in_index = head_in_index
         self.head_hidden_size = head_hidden_size
+        if depth_estimation_type not in ["relative", "metric"]:
+            raise ValueError("depth_estimation_type must be one of ['relative', 'metric']")
+        self.depth_estimation_type = depth_estimation_type
+        self.max_depth = max_depth if max_depth else 1
 
     def to_dict(self):
         """

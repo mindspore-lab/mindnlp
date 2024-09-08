@@ -46,7 +46,6 @@ DEPTH_ANYTHING_INPUTS_DOCSTRING = r"""
         pixel_values (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
             Pixel values. Pixel values can be obtained using [`AutoImageProcessor`]. See [`DPTImageProcessor.__call__`]
             for details.
-
         output_attentions (`bool`, *optional*):
             Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
             tensors for more detail.
@@ -76,6 +75,7 @@ class DepthAnythingReassembleLayer(nn.Module):
     def forward(self, hidden_state):
         hidden_state = self.projection(hidden_state)
         hidden_state = self.resize(hidden_state)
+
         return hidden_state
 
 
@@ -182,20 +182,27 @@ class DepthAnythingFeatureFusionLayer(nn.Module):
         self.residual_layer2 = DepthAnythingPreActResidualLayer(config)
 
     def forward(self, hidden_state, residual=None, size=None):
-        # 存在差异
         if residual is not None:
             if hidden_state.shape != residual.shape:
-                residual = F.interpolate(
-                    residual, size=(hidden_state.shape[2], hidden_state.shape[3]), mode="bilinear", align_corners=True,
-                    recompute_scale_factor=False,
+                residual = nn.functional.interpolate(
+                    residual, size=(hidden_state.shape[2], hidden_state.shape[3]), mode="bilinear", align_corners=False
                 )
             hidden_state = hidden_state + self.residual_layer1(residual)
 
         hidden_state = self.residual_layer2(hidden_state)
 
+        # modifier = {"scale_factor": 2.} if size is None else {"size": size}
+        #
+        # hidden_state = nn.functional.interpolate(
+        #     hidden_state,
+        #     **modifier,
+        #     mode="bilinear",
+        #     align_corners=True,
+        # )
+
         if size is None:
             modifier = {"scale_factor": 2.}
-            hidden_state = F.interpolate(
+            hidden_state = nn.functional.interpolate(
                 hidden_state,
                 **modifier,
                 mode="bilinear",
@@ -204,12 +211,11 @@ class DepthAnythingFeatureFusionLayer(nn.Module):
             )
         else:
             modifier = {"size": size}
-            hidden_state = F.interpolate(
+            hidden_state = nn.functional.interpolate(
                 hidden_state,
                 **modifier,
                 mode="bilinear",
                 align_corners=True,
-                recompute_scale_factor=False,
             )
         hidden_state = self.projection(hidden_state)
 
@@ -270,7 +276,7 @@ class DepthAnythingPreTrainedModel(PreTrainedModel):
             nn.init.ones_(module.weight)
 
 
-class DepthAnythingNeck(nn.Module):  # 此处出现差距
+class DepthAnythingNeck(nn.Module):
     """
     DepthAnythingNeck. A neck is a module that is normally used between the backbone and the head. It takes a list of tensors as
     input and produces another list of tensors as output. For DepthAnything, it includes 2 stages:
@@ -297,13 +303,11 @@ class DepthAnythingNeck(nn.Module):  # 此处出现差距
 
     def forward(self, hidden_states: List[mindspore.Tensor], patch_height=None, patch_width=None) -> List[
         mindspore.Tensor]:
-
         """
         Args:
             hidden_states (`List[mindspore.Tensor]`, each of shape `(batch_size, sequence_length, hidden_size)` or `(batch_size, hidden_size, height, width)`):
                 List of hidden states from the backbone.
         """
-
         if not isinstance(hidden_states, (tuple, list)):
             raise TypeError("hidden_states should be a tuple or list of tensors")
 
@@ -317,6 +321,7 @@ class DepthAnythingNeck(nn.Module):  # 此处出现差距
 
         # fusion blocks
         output = self.fusion_stage(features)
+
         return output
 
 
@@ -324,7 +329,8 @@ class DepthAnythingDepthEstimationHead(nn.Module):
     """
     Output head consisting of 3 convolutional layers. It progressively halves the feature dimension and upsamples
     the predictions to the input resolution after the first convolutional layer (details can be found in the DPT paper's
-    supplementary material).
+    supplementary material). The final activation function is either ReLU or Sigmoid, depending on the depth estimation
+    type (relative or metric). For metric depth estimation, the output is scaled by the maximum depth used during pretraining.
     """
 
     def __init__(self, config):
@@ -338,7 +344,13 @@ class DepthAnythingDepthEstimationHead(nn.Module):
         self.conv2 = nn.Conv2d(features // 2, config.head_hidden_size, kernel_size=3, stride=1, padding=1)
         self.activation1 = nn.ReLU()
         self.conv3 = nn.Conv2d(config.head_hidden_size, 1, kernel_size=1, stride=1, padding=0)
-        self.activation2 = nn.ReLU()
+        if config.depth_estimation_type == "relative":
+            self.activation2 = nn.ReLU()
+        elif config.depth_estimation_type == "metric":
+            self.activation2 = nn.Sigmoid()
+        else:
+            raise ValueError(f"Unknown depth estimation type: {config.depth_estimation_type}")
+        self.max_depth = config.max_depth
 
     def forward(self, hidden_states: List[mindspore.Tensor], patch_height, patch_width) -> mindspore.Tensor:
         hidden_states = hidden_states[self.head_in_index]
@@ -349,13 +361,11 @@ class DepthAnythingDepthEstimationHead(nn.Module):
             (int(patch_height * self.patch_size), int(patch_width * self.patch_size)),
             mode="bilinear",
             align_corners=True,
-            recompute_scale_factor=False,
         )
-
         predicted_depth = self.conv2(predicted_depth)
         predicted_depth = self.activation1(predicted_depth)
         predicted_depth = self.conv3(predicted_depth)
-        predicted_depth = self.activation2(predicted_depth)
+        predicted_depth = self.activation2(predicted_depth) * self.max_depth
         predicted_depth = predicted_depth.squeeze(axis=1)  # shape (batch_size, height, width)
 
         return predicted_depth
@@ -390,7 +400,7 @@ class DepthAnythingForDepthEstimation(DepthAnythingPreTrainedModel):
 
         Examples:
         ```python
-        >>> from  import AutoImageProcessor, AutoModelForDepthEstimation
+        >>> from transformers import AutoImageProcessor, AutoModelForDepthEstimation
         >>> import torch
         >>> import numpy as np
         >>> from PIL import Image
@@ -414,7 +424,7 @@ class DepthAnythingForDepthEstimation(DepthAnythingPreTrainedModel):
         ...     predicted_depth.unsqueeze(1),
         ...     size=image.size[::-1],
         ...     mode="bicubic",
-        ...     align_corners=True,
+        ...     align_corners=False,
         ... )
 
         >>> # visualize the prediction
@@ -422,23 +432,19 @@ class DepthAnythingForDepthEstimation(DepthAnythingPreTrainedModel):
         >>> formatted = (output * 255 / np.max(output)).astype("uint8")
         >>> depth = Image.fromarray(formatted)
         ```"""
-
         loss = None
         if labels is not None:
             raise NotImplementedError("Training is not implemented yet")
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
 
         outputs = self.backbone.forward_with_filtered_kwargs(
             pixel_values, output_hidden_states=output_hidden_states, output_attentions=output_attentions
         )
-
         hidden_states = outputs.feature_maps
 
         _, _, height, width = pixel_values.shape
