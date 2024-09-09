@@ -1198,7 +1198,7 @@ class WhisperModel(WhisperPreTrainedModel):
          >>> model = WhisperModel.from_pretrained("openai/whisper-base")
          >>> feature_extractor = AutoFeatureExtractor.from_pretrained("openai/whisper-base")
          >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-         >>> inputs = feature_extractor(ds[0]["audio"]["array"], return_tensors="pt")
+         >>> inputs = feature_extractor(ds[0]["audio"]["array"], return_tensors="ms")
          >>> input_features = inputs.input_features
          >>> decoder_input_ids = mindspore.tensor([[1, 1]]) * model.config.decoder_start_token_id
          >>> last_hidden_state = model(input_features, decoder_input_ids=decoder_input_ids).last_hidden_state
@@ -1336,7 +1336,7 @@ class WhisperForConditionalGeneration(WhisperGenerationMixin, WhisperPreTrainedM
 
         >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
 
-        >>> inputs = processor(ds[0]["audio"]["array"], return_tensors="pt")
+        >>> inputs = processor(ds[0]["audio"]["array"], return_tensors="ms")
         >>> input_features = inputs.input_features
 
         >>> generated_ids = model.generate(inputs=input_features)
@@ -1613,7 +1613,7 @@ class WhisperForCausalLM(WhisperPreTrainedModel):
         >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
         >>> sample = ds[0]["audio"]
         >>> input_features = processor(
-        ...     sample["array"], sampling_rate=sample["sampling_rate"], return_tensors="pt"
+        ...     sample["array"], sampling_rate=sample["sampling_rate"], return_tensors="ms"
         ... ).input_features
 
         >>> predicted_ids = model.generate(input_features, assistant_model=assistant_model)
@@ -1778,7 +1778,7 @@ class WhisperForAudioClassification(WhisperPreTrainedModel):
         >>> sample = next(iter(ds))
 
         >>> inputs = feature_extractor(
-        ...     sample["audio"]["array"], sampling_rate=sample["audio"]["sampling_rate"], return_tensors="pt"
+        ...     sample["audio"]["array"], sampling_rate=sample["audio"]["sampling_rate"], return_tensors="ms"
         ... )
         >>> input_features = inputs.input_features
 

@@ -687,7 +687,7 @@ class Pop2PianoModelIntegrationTests(unittest.TestCase):
 
             processor = Pop2PianoProcessor.from_pretrained("sweetcocoa/pop2piano")
             input_features = processor.feature_extractor(
-                speech_input1, sampling_rate=sampling_rate, return_tensors="pt"
+                speech_input1, sampling_rate=sampling_rate, return_tensors="ms"
             )
 
             model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano")
@@ -717,7 +717,7 @@ class Pop2PianoModelIntegrationTests(unittest.TestCase):
             ds = load_dataset("sweetcocoa/pop2piano_ci", split="test")
 
             output_fe = feature_extractor(
-                ds["audio"][0]["array"], sampling_rate=ds["audio"][0]["sampling_rate"], return_tensors="pt"
+                ds["audio"][0]["array"], sampling_rate=ds["audio"][0]["sampling_rate"], return_tensors="ms"
             )
             output_model = model.generate(input_features=output_fe["input_features"], composer="composer1")
             output_tokenizer = tokenizer.batch_decode(token_ids=output_model, feature_extractor_output=output_fe)

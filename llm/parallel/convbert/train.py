@@ -23,7 +23,6 @@ def parallel_setup():
         parallel_mode=mindspore.ParallelMode.DATA_PARALLEL,
     )
     mindspore.set_context(mode=mindspore.GRAPH_MODE)
-    mindspore.set_context(device_target="GPU")
 
 
 class ConvBertTrainNet(nn.Module):

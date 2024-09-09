@@ -35,11 +35,12 @@ from dataclasses import dataclass
 
 import numpy as np
 import mindspore
-from mindspore import Tensor
+from mindspore import Tensor, Parameter
 from mindspore.train.serialization import _exec_save, _parse_ckpt_proto, tensor_to_np_type, tensor_to_ms_type
 
 import safetensors
 import safetensors.numpy
+from safetensors import deserialize
 
 from mindnlp.configs import SUPPORT_BF16
 from .nn import Module
@@ -755,6 +756,13 @@ def _open_zipfile_writer(name_or_buffer):
         container = _open_zipfile_writer_buffer
     return container(name_or_buffer)
 
+def _rebuild_parameter(data, requires_grad, backward_hooks):
+    param = Parameter(data, requires_grad=requires_grad)
+    # NB: This line exists only for backwards compatibility; the
+    # general expectation is that backward_hooks is an empty
+    # OrderedDict.  See Note [Don't serialize hooks]
+    return param
+
 def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, backward_hooks, metadata=None):
     '''Rebuilds a tensor based on the provided parameters.
     
@@ -789,7 +797,7 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
     else:
         order = "C"
         array = array.reshape(size, order=order)
-    param = mindspore.Tensor(array)
+    param = Tensor.from_numpy(array)
     return param
 
 @dataclass
@@ -1114,7 +1122,7 @@ def _legacy_load(f, pickle_module, **pickle_load_args):
         if array.dtype == bfloat16 and not SUPPORT_BF16:
             logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
             array = array.astype(np.float16)
-        new_result[k] = mindspore.Tensor(array)
+        new_result[k] = Tensor.from_numpy(array)
 
     return new_result
 
@@ -1291,6 +1299,37 @@ def _save(obj, zip_file, pickle_module, pickle_protocol):
         storage_data = storage.inner_data
         zip_file.write_record(name, storage_data)
 
+_MS_TYPES = {
+    "F64": mindspore.float64,
+    "F32": mindspore.float32,
+    "F16": mindspore.float16,
+    "BF16": mindspore.bfloat16,
+    "I64": mindspore.int64,
+    "U64": mindspore.uint64,
+    "I32": mindspore.int32,
+    "U32": mindspore.uint32,
+    "I16": mindspore.int16,
+    "U16": mindspore.uint16,
+    "I8": mindspore.int8,
+    "U8": mindspore.uint8,
+    "BOOL": mindspore.bool_,
+}
+
+_NP_TYPES = {
+    "F64": np.float64,
+    "F32": np.float32,
+    "F16": np.float16,
+    "BF16": bfloat16,
+    "I64": np.int64,
+    "U64": np.uint64,
+    "I32": np.int32,
+    "U32": np.uint32,
+    "I16": np.int16,
+    "U16": np.uint16,
+    "I8": np.int8,
+    "U8": np.uint8,
+    "BOOL": bool,
+}
 
 def safe_load_file(filename):
     """
@@ -1306,19 +1345,31 @@ def safe_load_file(filename):
         FileNotFoundError: If the specified file 'filename' does not exist.
         ValueError: If the data in the file is not in the correct format to create MindSpore Parameters.
     """
-    with safetensors.safe_open(filename, 'np') as f:
-        for key in f.keys():
-            dtype = f.get_tensor(key).dtype
-            break
+    with open(filename, "rb") as f:
+        data = f.read()
 
-    state_dict = safetensors.numpy.load_file(filename)
-    if (not SUPPORT_BF16 and dtype != bfloat16) or SUPPORT_BF16:
-        out_states = {k: mindspore.Tensor(v) for k, v in state_dict.items()}
-        return out_states
+    safeview = deserialize(data)
 
-    out_states = {k: mindspore.Tensor(v.astype(np.float16)) for k, v in state_dict.items()}
-    return out_states
+    result = {}
+    try:
+        for k, v in safeview:
+            dtype = _MS_TYPES[v["dtype"]]
+            if (not SUPPORT_BF16 and dtype != mindspore.bfloat16) or SUPPORT_BF16:
+                arr = Tensor.convert_bytes_to_tensor(bytes(v["data"]), tuple(v["shape"]), dtype)
+                result[k] = Tensor(arr)
+            else:
+                raise TypeError('Do not support bfloat16 on current device, use numpy as convert buffer to boost load.')
+        return result
 
+    except Exception as e:
+        for k, v in safeview:
+            dtype = _NP_TYPES[v["dtype"]]
+            arr = np.frombuffer(v["data"], dtype=dtype).reshape(v["shape"])
+            if (not SUPPORT_BF16 and dtype != bfloat16) or SUPPORT_BF16:
+                result[k] = Tensor.from_numpy(arr)
+            else:
+                result[k] = Tensor.from_numpy(arr.astype(np.float16))
+        return result
 
 def safe_save_file(tensor_dict, filename, metadata=None):
     """

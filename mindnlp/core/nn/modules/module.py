@@ -8,6 +8,7 @@ from collections import OrderedDict, namedtuple
 import mindspore
 from mindspore import Tensor, Parameter
 from mindspore.common._stub_tensor import StubTensor
+from mindspore.common.dtype import Float
 
 from ...utils import hooks
 from ...utils.hooks import RemovableHandle
@@ -569,7 +570,7 @@ class Module:
                 if buffers is not None and name in buffers:
                     if value is not None and not isinstance(value, Tensor):
                         raise TypeError(f"cannot assign '{type(value)}' as buffer '{name}' "
-                                        "(torch.Tensor or None expected)"
+                                        "(mindspore.Tensor or None expected)"
                                         )
                     for hook in _global_buffer_registration_hooks.values():
                         output = hook(self, name, value)
@@ -693,7 +694,7 @@ class Module:
                 input_param = state_dict[key]
                 if not isinstance(input_param, Tensor):
                     error_msgs.append(f'While copying the parameter named "{key}", '
-                                      'expected torch.Tensor or Tensor-like object from checkpoint but '
+                                      'expected mindspore.Tensor or Tensor-like object from checkpoint but '
                                       f'received {type(input_param)}'
                                       )
                     continue
@@ -876,8 +877,8 @@ class Module:
             >>> # xdoctest: +SKIP("undefined vars")
             >>> for param in model.parameters():
             >>>     print(type(param), param.shape)
-            <class 'torch.Tensor'> (20L,)
-            <class 'torch.Tensor'> (20L, 1L, 5L, 5L)
+            <class 'mindspore.Tensor'> (20L,)
+            <class 'mindspore.Tensor'> (20L, 1L, 5L, 5L)
 
         """
         for name, param in self.named_parameters(recurse=recurse):
@@ -1003,15 +1004,15 @@ class Module:
                 are direct members of this module.
 
         Yields:
-            torch.Tensor: module buffer
+            mindspore.Tensor: module buffer
 
         Example::
 
             >>> # xdoctest: +SKIP("undefined vars")
             >>> for buf in model.buffers():
             >>>     print(type(buf), buf.shape)
-            <class 'torch.Tensor'> (20L,)
-            <class 'torch.Tensor'> (20L, 1L, 5L, 5L)
+            <class 'mindspore.Tensor'> (20L,)
+            <class 'mindspore.Tensor'> (20L, 1L, 5L, 5L)
 
         """
         for _, buf in self.named_buffers(recurse=recurse):
@@ -1029,7 +1030,7 @@ class Module:
             remove_duplicate (bool, optional): whether to remove the duplicated buffers in the result. Defaults to True.
 
         Yields:
-            (str, torch.Tensor): Tuple containing the name and buffer
+            (str, mindspore.Tensor): Tuple containing the name and buffer
 
         Example::
 
@@ -1202,7 +1203,7 @@ class Module:
     def to(self, dtype=None):
         def convert(t):
             try:
-                return t.to(dtype)
+                return t.to(dtype) if isinstance(t.dtype, Float) else t
             except NotImplementedError as e:
                 if str(e) == "Cannot copy out of meta tensor; no data!":
                     raise NotImplementedError(
@@ -1315,7 +1316,7 @@ class Module:
                 Default: ``None``.
             prefix (str, optional): a prefix added to parameter and buffer
                 names to compose the keys in state_dict. Default: ``''``.
-            keep_vars (bool, optional): by default the :class:`~torch.Tensor` s
+            keep_vars (bool, optional): by default the :class:`~mindspore.Tensor` s
                 returned in the state dict are detached from autograd. If it's
                 set to ``True``, detaching will not be performed.
                 Default: ``False``.

@@ -1,5 +1,3 @@
-
-
 # coding=utf-8
 # Copyright 2022 Microsoft Research and The HuggingFace Inc. team. All rights reserved.
 #
@@ -14,22 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" MindSpore Swin Transformer model."""
+"""MindSpore Swin Transformer model."""
 
 import collections.abc
 import math
 import warnings
-from itertools import repeat
 from dataclasses import dataclass
-from typing import Optional, Tuple, Union, Iterable
+from typing import Optional, Tuple, Union
 
-import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
-from mindspore.common.initializer import initializer, Normal
-
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+
 from ...activations import ACT2FN
 from ...modeling_outputs import BackboneOutput
 from ...modeling_utils import PreTrainedModel
@@ -43,6 +37,20 @@ from .configuration_swin import SwinConfig
 
 
 logger = logging.get_logger(__name__)
+
+# General docstring
+_CONFIG_FOR_DOC = "SwinConfig"
+
+# Base docstring
+_CHECKPOINT_FOR_DOC = "microsoft/swin-tiny-patch4-window7-224"
+_EXPECTED_OUTPUT_SHAPE = [1, 49, 768]
+
+# Image classification docstring
+_IMAGE_CLASS_CHECKPOINT = "microsoft/swin-tiny-patch4-window7-224"
+_IMAGE_CLASS_EXPECTED_OUTPUT = "tabby, tabby cat"
+
+
+# drop_path, SwinPatchEmbeddings, SwinPatchMerging and SwinDropPath are from the timm library.
 
 
 @dataclass
@@ -122,8 +130,8 @@ class SwinMaskedImageModelingOutput(ModelOutput):
     Args:
         loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `bool_masked_pos` is provided):
             Masked image modeling (MLM) loss.
-        reforwardion (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
-            Reforwarded pixel values.
+        reconstruction (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
+            Reconstructed pixel values.
         hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
             shape `(batch_size, sequence_length, hidden_size)`.
@@ -144,7 +152,7 @@ class SwinMaskedImageModelingOutput(ModelOutput):
     """
 
     loss: Optional[mindspore.Tensor] = None
-    reforwardion: mindspore.Tensor = None
+    reconstruction: mindspore.Tensor = None
     hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
     attentions: Optional[Tuple[mindspore.Tensor, ...]] = None
     reshaped_hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
@@ -152,11 +160,11 @@ class SwinMaskedImageModelingOutput(ModelOutput):
     @property
     def logits(self):
         warnings.warn(
-            "logits attribute is deprecated."
-            " Please use the reforwardion attribute to retrieve the final output instead.",
+            "logits attribute is deprecated and will be removed in version 5 of Transformers."
+            " Please use the reconstruction attribute to retrieve the final output instead.",
             FutureWarning,
         )
-        return self.reforwardion
+        return self.reconstruction
 
 
 @dataclass
@@ -195,16 +203,6 @@ class SwinImageClassifierOutput(ModelOutput):
     reshaped_hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
 
 
-def _ntuple(n):
-    def parse(x):
-        if isinstance(x, Iterable):
-            return x
-        return tuple(repeat(x, n))
-    return parse
-
-to_2tuple = _ntuple(2)
-
-
 def window_partition(input_feature, window_size):
     """
     Partitions the given input into windows.
@@ -227,51 +225,6 @@ def window_reverse(windows, window_size, height, width):
     return windows
 
 
-class WindowPartition(nn.Module):
-    def __init__(
-        self,
-        window_size: int,
-    ) -> None:
-        super(WindowPartition, self).__init__()
-
-        self.window_size = window_size
-
-    def forward(self, x: mindspore.Tensor) -> mindspore.Tensor:
-        b, h, w, c = x.shape
-        x = ops.reshape(x, (b, h // self.window_size, self.window_size, w // self.window_size, self.window_size, c))
-        x = ops.permute(x, (0, 1, 3, 2, 4, 5))
-        x = ops.reshape(x, (b * h * w // (self.window_size**2), self.window_size, self.window_size, c))
-        return x
-
-
-class WindowReverse(nn.Module):
-    def forward(
-        self,
-        windows: mindspore.Tensor,
-        window_size: int,
-        h: int,
-        w: int,
-    ) -> mindspore.Tensor:
-        b = windows.shape[0] // (h * w // window_size // window_size)
-        x = ops.reshape(windows, (b, h // window_size, w // window_size, window_size, window_size, -1))
-        x = ops.permute(x, (0, 1, 3, 2, 4, 5))
-        x = ops.permute(x, (b, h, w, -1))
-        return x
-
-
-class Roll(nn.Module):
-
-    def __init__(self, shift_size: int, shift_axis: Tuple[int] = (1, 2)):
-        super().__init__()
-
-        self.shift_size = to_2tuple(shift_size)
-        self.shift_axis = shift_axis
-
-    def forward(self, x: mindspore.Tensor) -> mindspore.Tensor:
-        x = np.roll(x.numpy(), self.shift_size, self.shift_axis)
-        return Tensor.from_numpy(x)
-
-
 class SwinEmbeddings(nn.Module):
     """
     Construct the patch and position embeddings. Optionally, also the mask token.
@@ -283,31 +236,77 @@ class SwinEmbeddings(nn.Module):
         self.patch_embeddings = SwinPatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
         self.patch_grid = self.patch_embeddings.grid_size
-        self.mask_token = Parameter(ops.zeros(1, 1, config.embed_dim)) if use_mask_token else None
+        self.mask_token = nn.Parameter(ops.zeros(1, 1, config.embed_dim)) if use_mask_token else None
 
         if config.use_absolute_embeddings:
-            self.position_embeddings = Parameter(ops.zeros(1, num_patches + 1, config.embed_dim))
+            self.position_embeddings = nn.Parameter(ops.zeros(1, num_patches + 1, config.embed_dim))
         else:
             self.position_embeddings = None
 
         self.norm = nn.LayerNorm(config.embed_dim)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.patch_size = config.patch_size
+        self.config = config
+
+    # Copied from transformers.models.vit.modeling_vit.ViTEmbeddings.interpolate_pos_encoding
+    def interpolate_pos_encoding(self, embeddings: mindspore.Tensor, height: int, width: int) -> mindspore.Tensor:
+        """
+        This method allows to interpolate the pre-trained position encodings, to be able to use the model on higher resolution
+        images.
+        """
+
+        num_patches = embeddings.shape[1] - 1
+        num_positions = self.position_embeddings.shape[1] - 1
+
+        # always interpolate when tracing to ensure the exported model works for dynamic input shapes
+        if num_patches == num_positions and height == width:
+            return self.position_embeddings
+
+        class_pos_embed = self.position_embeddings[:, :1]
+        patch_pos_embed = self.position_embeddings[:, 1:]
+
+        dim = embeddings.shape[-1]
+
+        new_height = height // self.patch_size
+        new_width = width // self.patch_size
+
+        sqrt_num_positions = mindspore.tensor(num_positions**0.5)
+        patch_pos_embed = patch_pos_embed.reshape(1, sqrt_num_positions, sqrt_num_positions, dim)
+        patch_pos_embed = patch_pos_embed.permute(0, 3, 1, 2)
+
+        patch_pos_embed = nn.functional.interpolate(
+            patch_pos_embed,
+            size=(new_height, new_width),
+            mode="bicubic",
+            align_corners=False,
+        )
+
+        patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
+
+        return ops.cat((class_pos_embed, patch_pos_embed), dim=1)
 
     def forward(
-        self, pixel_values: Optional[mindspore.Tensor], bool_masked_pos: Optional[mindspore.Tensor] = None
+        self,
+        pixel_values: Optional[mindspore.Tensor],
+        bool_masked_pos: Optional[mindspore.Tensor] = None,
+        interpolate_pos_encoding: bool = False,
     ) -> Tuple[mindspore.Tensor]:
+        _, num_channels, height, width = pixel_values.shape
         embeddings, output_dimensions = self.patch_embeddings(pixel_values)
         embeddings = self.norm(embeddings)
         batch_size, seq_len, _ = embeddings.shape
 
         if bool_masked_pos is not None:
-            mask_tokens = self.mask_token.expand(batch_size, seq_len, -1)
+            mask_tokens = self.mask_token.broadcast_to((batch_size, seq_len, -1))
             # replace the masked visual tokens by mask_tokens
             mask = bool_masked_pos.unsqueeze(-1).type_as(mask_tokens)
             embeddings = embeddings * (1.0 - mask) + mask_tokens * mask
 
         if self.position_embeddings is not None:
-            embeddings = embeddings + self.position_embeddings
+            if interpolate_pos_encoding:
+                embeddings = embeddings + self.interpolate_pos_encoding(embeddings, height, width)
+            else:
+                embeddings = embeddings + self.position_embeddings
 
         embeddings = self.dropout(embeddings)
 
@@ -334,29 +333,25 @@ class SwinPatchEmbeddings(nn.Module):
         self.num_patches = num_patches
         self.grid_size = (image_size[0] // patch_size[0], image_size[1] // patch_size[1])
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size)
 
     def maybe_pad(self, pixel_values, height, width):
         if width % self.patch_size[1] != 0:
             pad_values = (0, self.patch_size[1] - width % self.patch_size[1])
-            pixel_values = ops.pad(pixel_values, pad_values)
+            pixel_values = nn.functional.pad(pixel_values, pad_values)
         if height % self.patch_size[0] != 0:
             pad_values = (0, 0, 0, self.patch_size[0] - height % self.patch_size[0])
-            pixel_values = ops.pad(pixel_values, pad_values)
+            pixel_values = nn.functional.pad(pixel_values, pad_values)
         return pixel_values
 
     def forward(self, pixel_values: Optional[mindspore.Tensor]) -> Tuple[mindspore.Tensor, Tuple[int]]:
         _, num_channels, height, width = pixel_values.shape
-        if num_channels != self.num_channels:
-            raise ValueError(
-                "Make sure that the channel dimension of the pixel values match with the one set in the configuration."
-            )
         # pad the input to be divisible by self.patch_size, if needed
         pixel_values = self.maybe_pad(pixel_values, height, width)
         embeddings = self.projection(pixel_values)
         _, _, height, width = embeddings.shape
         output_dimensions = (height, width)
-        embeddings = embeddings.flatten(start_dim=2).swapaxes(1, 2)
+        embeddings = ops.transpose(ops.flatten(embeddings, 2), 1, 2)
 
         return embeddings, output_dimensions
 
@@ -385,7 +380,7 @@ class SwinPatchMerging(nn.Module):
         should_pad = (height % 2 == 1) or (width % 2 == 1)
         if should_pad:
             pad_values = (0, 0, 0, width % 2, 0, height % 2)
-            input_feature = ops.pad(input_feature, pad_values)
+            input_feature = nn.functional.pad(input_feature, pad_values)
 
         return input_feature
 
@@ -430,8 +425,8 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
         return input
     keep_prob = 1 - drop_prob
     shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
-    random_tensor = keep_prob + ops.rand(*shape, dtype=input.dtype)
-    random_tensor = ops.floor(random_tensor)  # binarize
+    random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
+    random_tensor = random_tensor.floor()  # binarize
     output = input.div(keep_prob) * random_tensor
     return output
 
@@ -466,7 +461,7 @@ class SwinSelfAttention(nn.Module):
             window_size if isinstance(window_size, collections.abc.Iterable) else (window_size, window_size)
         )
 
-        self.relative_position_bias_table = Parameter(
+        self.relative_position_bias_table = nn.Parameter(
             ops.zeros((2 * self.window_size[0] - 1) * (2 * self.window_size[1] - 1), num_heads)
         )
 
@@ -474,20 +469,20 @@ class SwinSelfAttention(nn.Module):
         coords_h = ops.arange(self.window_size[0])
         coords_w = ops.arange(self.window_size[1])
         coords = ops.stack(meshgrid([coords_h, coords_w], indexing="ij"))
-        coords_flatten = ops.flatten(coords, start_dim=1)
+        coords_flatten = ops.flatten(coords, 1)
         relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :]
         relative_coords = relative_coords.permute(1, 2, 0)
         relative_coords[:, :, 0] += self.window_size[0] - 1
         relative_coords[:, :, 1] += self.window_size[1] - 1
         relative_coords[:, :, 0] *= 2 * self.window_size[1] - 1
         relative_position_index = relative_coords.sum(-1)
-        self.relative_position_index = relative_position_index
+        self.register_buffer("relative_position_index", relative_position_index)
 
         self.query = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
         self.key = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
         self.value = nn.Linear(self.all_head_size, self.all_head_size, bias=config.qkv_bias)
 
-        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
@@ -509,7 +504,7 @@ class SwinSelfAttention(nn.Module):
         query_layer = self.transpose_for_scores(mixed_query_layer)
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_layer, ops.transpose(key_layer, -1, -2))
 
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
@@ -531,7 +526,7 @@ class SwinSelfAttention(nn.Module):
             attention_scores = attention_scores.view(-1, self.num_attention_heads, dim, dim)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, dim=-1)
+        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -555,7 +550,7 @@ class SwinSelfOutput(nn.Module):
     def __init__(self, config, dim):
         super().__init__()
         self.dense = nn.Linear(dim, dim)
-        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -621,7 +616,7 @@ class SwinOutput(nn.Module):
     def __init__(self, config, dim):
         super().__init__()
         self.dense = nn.Linear(int(config.mlp_ratio * dim), dim)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -642,16 +637,11 @@ class SwinLayer(nn.Module):
         self.layernorm_after = nn.LayerNorm(dim, eps=config.layer_norm_eps)
         self.intermediate = SwinIntermediate(config, dim)
         self.output = SwinOutput(config, dim)
-        # mindcv impl.
-        self.roll_pos = Roll(self.shift_size)
-        self.roll_neg = Roll(-self.shift_size)
-        self.window_partition = WindowPartition(self.window_size)
-        self.window_reverse = WindowReverse()
 
     def set_shift_and_window_size(self, input_resolution):
         if min(input_resolution) <= self.window_size:
             # if window size is larger than input resolution, we don't partition windows
-            self.shift_size = 0
+            self.shift_size = mindspore.tensor(0)
             self.window_size = min(input_resolution)
 
     def get_attn_mask(self, height, width, dtype):
@@ -674,7 +664,7 @@ class SwinLayer(nn.Module):
                     img_mask[:, height_slice, width_slice, :] = count
                     count += 1
 
-            mask_windows = window_partition(img_mask, self.window_size).astype(dtype)
+            mask_windows = window_partition(img_mask, self.window_size)
             mask_windows = mask_windows.view(-1, self.window_size * self.window_size)
             attn_mask = mask_windows.unsqueeze(1) - mask_windows.unsqueeze(2)
             attn_mask = attn_mask.masked_fill(attn_mask != 0, float(-100.0)).masked_fill(attn_mask == 0, float(0.0))
@@ -686,7 +676,7 @@ class SwinLayer(nn.Module):
         pad_right = (self.window_size - width % self.window_size) % self.window_size
         pad_bottom = (self.window_size - height % self.window_size) % self.window_size
         pad_values = (0, 0, 0, pad_right, 0, pad_bottom)
-        hidden_states = ops.pad(hidden_states, pad_values)
+        hidden_states = nn.functional.pad(hidden_states, pad_values)
         return hidden_states, pad_values
 
     def forward(
@@ -715,15 +705,16 @@ class SwinLayer(nn.Module):
         _, height_pad, width_pad, _ = hidden_states.shape
         # cyclic shift
         if self.shift_size > 0:
-            #shifted_hidden_states = ops.roll(hidden_states, shifts=(-self.shift_size, -self.shift_size), dims=(1, 2))
-            shifted_hidden_states = self.roll_neg(hidden_states)
+            shifted_hidden_states = ops.roll(hidden_states, shifts=(-self.shift_size, -self.shift_size), dims=(1, 2))
         else:
             shifted_hidden_states = hidden_states
 
         # partition windows
         hidden_states_windows = window_partition(shifted_hidden_states, self.window_size)
         hidden_states_windows = hidden_states_windows.view(-1, self.window_size * self.window_size, channels)
-        attn_mask = self.get_attn_mask(height_pad, width_pad, dtype=hidden_states.dtype)
+        attn_mask = self.get_attn_mask(
+            height_pad, width_pad, dtype=hidden_states.dtype
+        )
 
         attention_outputs = self.attention(
             hidden_states_windows, attn_mask, head_mask, output_attentions=output_attentions
@@ -736,8 +727,7 @@ class SwinLayer(nn.Module):
 
         # reverse cyclic shift
         if self.shift_size > 0:
-            #attention_windows = ops.roll(shifted_windows, shifts=(self.shift_size, self.shift_size), dims=(1, 2))
-            attention_windows = self.roll_pos(shifted_windows)
+            attention_windows = ops.roll(shifted_windows, shifts=(self.shift_size, self.shift_size), dims=(1, 2))
         else:
             attention_windows = shifted_windows
 
@@ -932,14 +922,12 @@ class SwinPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         """Initialize the weights"""
         if isinstance(module, (nn.Linear, nn.Conv2d)):
-            # Slightly different from the TF version which uses truncated_normal for initialization
-            # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.set_data(initializer(Normal(sigma=self.config.initializer_range), module.weight.shape, module.weight.dtype))
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
             if module.bias is not None:
-                module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))
+                nn.init.zeros_(module.bias)
         elif isinstance(module, nn.LayerNorm):
-            module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))
-            module.weight.set_data(initializer('ones', module.weight.shape, module.weight.dtype))
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
 
 class SwinModel(SwinPreTrainedModel):
@@ -976,6 +964,7 @@ class SwinModel(SwinPreTrainedModel):
         head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
+        interpolate_pos_encoding: bool = False,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SwinModelOutput]:
         r"""
@@ -998,7 +987,9 @@ class SwinModel(SwinPreTrainedModel):
         # and head_mask is converted to shape [num_hidden_layers x batch x num_heads x seq_length x seq_length]
         head_mask = self.get_head_mask(head_mask, len(self.config.depths))
 
-        embedding_output, input_dimensions = self.embeddings(pixel_values, bool_masked_pos=bool_masked_pos)
+        embedding_output, input_dimensions = self.embeddings(
+            pixel_values, bool_masked_pos=bool_masked_pos, interpolate_pos_encoding=interpolate_pos_encoding
+        )
 
         encoder_outputs = self.encoder(
             embedding_output,
@@ -1014,8 +1005,8 @@ class SwinModel(SwinPreTrainedModel):
 
         pooled_output = None
         if self.pooler is not None:
-            pooled_output = self.pooler(sequence_output.swapaxes(1, 2))
-            pooled_output = ops.flatten(pooled_output, start_dim=1)
+            pooled_output = self.pooler(ops.transpose(sequence_output, 1, 2))
+            pooled_output = ops.flatten(pooled_output, 1)
 
         if not return_dict:
             output = (sequence_output, pooled_output) + encoder_outputs[1:]
@@ -1055,6 +1046,7 @@ class SwinForMaskedImageModeling(SwinPreTrainedModel):
         head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
+        interpolate_pos_encoding: bool = False,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SwinMaskedImageModelingOutput]:
         r"""
@@ -1082,8 +1074,8 @@ class SwinForMaskedImageModeling(SwinPreTrainedModel):
         >>> bool_masked_pos = ops.randint(low=0, high=2, size=(1, num_patches)).bool()
 
         >>> outputs = model(pixel_values, bool_masked_pos=bool_masked_pos)
-        >>> loss, reforwarded_pixel_values = outputs.loss, outputs.reforwardion
-        >>> list(reforwarded_pixel_values.shape)
+        >>> loss, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
+        >>> list(reconstructed_pixel_values.shape)
         [1, 3, 192, 192]
         ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -1094,38 +1086,38 @@ class SwinForMaskedImageModeling(SwinPreTrainedModel):
             head_mask=head_mask,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
+            interpolate_pos_encoding=interpolate_pos_encoding,
             return_dict=return_dict,
         )
 
         sequence_output = outputs[0]
         # Reshape to (batch_size, num_channels, height, width)
-        sequence_output = sequence_output.swapaxes(1, 2)
+        sequence_output = ops.transpose(sequence_output, 1, 2)
         batch_size, num_channels, sequence_length = sequence_output.shape
         height = width = math.floor(sequence_length**0.5)
         sequence_output = sequence_output.reshape(batch_size, num_channels, height, width)
 
-        # Reforward pixel values
-        reforwarded_pixel_values = self.decoder(sequence_output)
+        # Reconstruct pixel values
+        reconstructed_pixel_values = self.decoder(sequence_output)
 
         masked_im_loss = None
         if bool_masked_pos is not None:
             size = self.config.image_size // self.config.patch_size
             bool_masked_pos = bool_masked_pos.reshape(-1, size, size)
             mask = (
-                bool_masked_pos.repeat_interleave(self.config.patch_size, 1)
-                .repeat_interleave(self.config.patch_size, 2)
+                ops.repeat_interleave(ops.repeat_interleave(bool_masked_pos, self.config.patch_size, 1), self.config.patch_size, 2)
                 .unsqueeze(1)
             )
-            reforwardion_loss = ops.l1_loss(pixel_values, reforwarded_pixel_values, reduction="none")
-            masked_im_loss = (reforwardion_loss * mask).sum() / (mask.sum() + 1e-5) / self.config.num_channels
+            reconstruction_loss = nn.functional.l1_loss(pixel_values, reconstructed_pixel_values, reduction="none")
+            masked_im_loss = (reconstruction_loss * mask).sum() / (mask.sum() + 1e-5) / self.config.num_channels
 
         if not return_dict:
-            output = (reforwarded_pixel_values,) + outputs[2:]
+            output = (reconstructed_pixel_values,) + outputs[2:]
             return ((masked_im_loss,) + output) if masked_im_loss is not None else output
 
         return SwinMaskedImageModelingOutput(
             loss=masked_im_loss,
-            reforwardion=reforwarded_pixel_values,
+            reconstruction=reconstructed_pixel_values,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
             reshaped_hidden_states=outputs.reshaped_hidden_states,
@@ -1154,6 +1146,7 @@ class SwinForImageClassification(SwinPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
+        interpolate_pos_encoding: bool = False,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SwinImageClassifierOutput]:
         r"""
@@ -1169,6 +1162,7 @@ class SwinForImageClassification(SwinPreTrainedModel):
             head_mask=head_mask,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
+            interpolate_pos_encoding=interpolate_pos_encoding,
             return_dict=return_dict,
         )
 
@@ -1181,7 +1175,7 @@ class SwinForImageClassification(SwinPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == [mindspore.int64, mindspore.int32, int]):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1308,7 +1302,6 @@ class SwinBackbone(SwinPreTrainedModel, BackboneMixin):
             hidden_states=outputs.hidden_states if output_hidden_states else None,
             attentions=outputs.attentions,
         )
-
 
 __all__ = [
     'SwinModel',

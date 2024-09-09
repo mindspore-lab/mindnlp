@@ -745,7 +745,7 @@ class RealmReaderProjection(nn.Module):
             return starts, ends, span_masks
 
         def mask_to_score(mask, dtype=mindspore.float32):
-            return (1.0 - mask.type(dtype)) * np.finfo(mindspore.dtype_to_nptype(dtype)).min
+            return (1.0 - mask.type(dtype)) * float(ops.finfo(dtype).min)
 
         # [reader_beam_size, max_sequence_len, span_hidden_size * 2]
         hidden_states = self.dense_intermediate(hidden_states)
@@ -787,7 +787,7 @@ class RealmPreTrainedModel(PreTrainedModel):
         elif isinstance(module, nn.Embedding):
             nn.init.normal_(module.weight,mean=0.0,std=self.config.initializer_range)
             if module.padding_idx is not None:
-                module.weight.data[module.padding_idx] = 0
+                module.weight[module.padding_idx] = 0
         elif isinstance(module, nn.LayerNorm):
             nn.init.zeros_(module.bias)
             nn.init.ones_(module.weight)
@@ -987,7 +987,7 @@ class RealmEmbedder(RealmPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("google/realm-cc-news-pretrained-embedder")
         >>> model = RealmEmbedder.from_pretrained("google/realm-cc-news-pretrained-embedder")
 
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> projected_score = outputs.projected_score
@@ -1097,8 +1097,8 @@ class RealmScorer(RealmPreTrainedModel):
         >>> input_texts = ["How are you?", "What is the item in the picture?"]
         >>> candidates_texts = [["Hello world!", "Nice to meet you!"], ["A cute cat.", "An adorable dog."]]
 
-        >>> inputs = tokenizer(input_texts, return_tensors="pt")
-        >>> candidates_inputs = tokenizer.batch_encode_candidates(candidates_texts, max_length=10, return_tensors="pt")
+        >>> inputs = tokenizer(input_texts, return_tensors="ms")
+        >>> candidates_inputs = tokenizer.batch_encode_candidates(candidates_texts, max_length=10, return_tensors="ms")
 
         >>> outputs = model(
         ...     **inputs,
@@ -1233,7 +1233,7 @@ class RealmKnowledgeAugEncoder(RealmPreTrainedModel):
         >>> # batch_size = 2, num_candidates = 2
         >>> text = [["Hello world!", "Nice to meet you!"], ["The cute cat.", "The adorable dog."]]
 
-        >>> inputs = tokenizer.batch_encode_candidates(text, max_length=10, return_tensors="pt")
+        >>> inputs = tokenizer.batch_encode_candidates(text, max_length=10, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> logits = outputs.logits
         ```"""
@@ -1427,7 +1427,7 @@ class RealmReader(RealmPreTrainedModel):
                 """Loss based on the negative marginal log-likelihood."""
 
                 def mask_to_score(mask, dtype=mindspore.float32):
-                    return (1.0 - mask.type(dtype)) * np.finfo(mindspore.dtype_to_nptype(dtype)).min
+                    return (1.0 - mask.type(dtype)) * float(ops.finfo(dtype).min)
 
                 # []
                 log_numerator = ops.logsumexp(logits + mask_to_score(is_correct, dtype=logits.dtype), dim=-1)
@@ -1525,7 +1525,7 @@ class RealmForOpenQA(RealmPreTrainedModel):
         >>> model = RealmForOpenQA.from_pretrained("google/realm-orqa-nq-openqa", retriever=retriever)
 
         >>> question = "Who is the pioneer in modern computer science?"
-        >>> question_ids = tokenizer([question], return_tensors="pt")
+        >>> question_ids = tokenizer([question], return_tensors="ms")
         >>> answer_ids = tokenizer(
         ...     ["alan mathison turing"],
         ...     add_special_tokens=False,

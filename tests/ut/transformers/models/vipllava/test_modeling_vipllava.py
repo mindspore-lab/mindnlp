@@ -34,7 +34,7 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 if is_mindspore_available():
     import mindspore as ms
-    from mindspore import ops
+    from mindnlp.core import ops, no_grad
 
 if is_vision_available():
     from PIL import Image
@@ -168,6 +168,27 @@ class VipLlavaForConditionalGenerationModelTest(ModelTesterMixin, unittest.TestC
         self.model_tester = VipLlavaVisionText2TextModelTester(self)
         self.config_tester = ConfigTester(
             self, config_class=VipLlavaConfig, has_text_modality=False)
+
+    # overwrite inputs_embeds tests because we need to delete "pixel values" for LVLMs
+    def test_inputs_embeds(self):
+        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+
+        for model_class in self.all_model_classes:
+            model = model_class(config)
+            model.eval()
+
+            inputs = self._prepare_for_class(inputs_dict, model_class)
+
+            input_ids = inputs["input_ids"]
+            del inputs["input_ids"]
+            del inputs["pixel_values"]
+
+            wte = model.get_input_embeddings()
+            inputs["inputs_embeds"] = wte(input_ids)
+
+            with no_grad():
+                model(**inputs)
+
 
     @unittest.skip(
         reason="This architecure seem to not compute gradients properly when using GC, check: https://github.com/huggingface/transformers/pull/27124"
@@ -340,9 +361,6 @@ class VipLlavaForConditionalGenerationModelTest(ModelTesterMixin, unittest.TestC
 
     # Copied from tests.test_modeling_common.ModelTesterMixin.test_tie_model_weights with config.vocab_size->config.text_config.vocab_size
     def test_tie_model_weights(self):
-        if not self.test_torchscript:
-            return
-
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def check_same_values(layer_1, layer_2):

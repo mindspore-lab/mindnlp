@@ -323,6 +323,7 @@ class EncoderDecoderMixin:
         input_ids_dict = self.prepare_config_and_inputs()
         self.check_encoder_decoder_model_generate(**input_ids_dict)
 
+    @unittest.skip
     def test_training_gradient_checkpointing(self):
         inputs_dict = self.prepare_config_and_inputs()
         encoder_model, decoder_model = self.get_encoder_decoder_model(

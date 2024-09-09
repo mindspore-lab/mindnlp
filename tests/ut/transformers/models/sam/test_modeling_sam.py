@@ -12,12 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the MindSpore SAM model. """
+"""Testing suite for the MindSpore SAM model."""
+
 import gc
 import unittest
 
 import requests
-import numpy as np
+
 from mindnlp.transformers import SamConfig, SamMaskDecoderConfig, SamPromptEncoderConfig, SamVisionConfig, pipeline
 from mindnlp.utils.testing_utils import require_mindspore, slow
 from mindnlp.utils import is_mindspore_available, is_vision_available
@@ -29,7 +30,7 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn
+    from mindnlp.core import nn, ops, no_grad
 
     from mindnlp.transformers import SamModel, SamProcessor
 
@@ -229,36 +230,40 @@ class SamModelTester:
 
     def create_and_check_model(self, config, pixel_values):
         model = SamModel(config=config)
-        model.set_train(False)
-        result = model(pixel_values)
+        model.eval()
+        with no_grad():
+            result = model(pixel_values)
         self.parent.assertEqual(result.iou_scores.shape, (self.batch_size, 1, 3))
         self.parent.assertEqual(result.pred_masks.shape[:3], (self.batch_size, 1, 3))
 
     def create_and_check_get_image_features(self, config, pixel_values):
         model = SamModel(config=config)
-        model.set_train(False)
-        result = model.get_image_embeddings(pixel_values)
+        model.eval()
+        with no_grad():
+            result = model.get_image_embeddings(pixel_values)
         self.parent.assertEqual(result[0].shape, (self.output_channels, 12, 12))
 
     def create_and_check_get_image_hidden_states(self, config, pixel_values):
         model = SamModel(config=config)
-        model.set_train(False)
-        result = model.vision_encoder(
-            pixel_values,
-            output_hidden_states=True,
-            return_dict=True,
-        )
+        model.eval()
+        with no_grad():
+            result = model.vision_encoder(
+                pixel_values,
+                output_hidden_states=True,
+                return_dict=True,
+            )
 
         # after computing the convolutional features
         expected_hidden_states_shape = (self.batch_size, 12, 12, 36)
         self.parent.assertEqual(len(result[1]), self.num_hidden_layers + 1)
         self.parent.assertEqual(result[1][0].shape, expected_hidden_states_shape)
 
-        result = model.vision_encoder(
-            pixel_values,
-            output_hidden_states=True,
-            return_dict=False,
-        )
+        with no_grad():
+            result = model.vision_encoder(
+                pixel_values,
+                output_hidden_states=True,
+                return_dict=False,
+            )
 
         # after computing the convolutional features
         expected_hidden_states_shape = (self.batch_size, 12, 12, 36)
@@ -325,7 +330,7 @@ class SamModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     def test_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -355,8 +360,9 @@ class SamModelTest(ModelTesterMixin, unittest.TestCase):
             inputs_dict["output_hidden_states"] = False
             config.return_dict = True
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             vision_attentions = outputs.vision_attentions
             self.assertEqual(len(vision_attentions), self.model_tester.num_hidden_layers)
@@ -368,8 +374,9 @@ class SamModelTest(ModelTesterMixin, unittest.TestCase):
             del inputs_dict["output_attentions"]
             config.output_attentions = True
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             vision_attentions = outputs.vision_attentions
             self.assertEqual(len(vision_attentions), self.model_tester.num_hidden_layers)
 
@@ -422,10 +429,6 @@ class SamModelTest(ModelTesterMixin, unittest.TestCase):
     def test_hidden_states_output(self):
         pass
 
-    def check_pt_tf_outputs(self, tf_outputs, pt_outputs, model_class, tol=5e-5, name="outputs", attributes=None):
-        # Use a slightly higher default tol to make the tests non-flaky
-        super().check_pt_tf_outputs(tf_outputs, pt_outputs, model_class, tol=tol, name=name, attributes=attributes)
-
     @slow
     def test_model_from_pretrained(self):
         model_name = "facebook/sam-vit-huge"
@@ -456,22 +459,23 @@ class SamModelIntegrationTest(unittest.TestCase):
         model = SamModel.from_pretrained("facebook/sam-vit-base")
         processor = SamProcessor.from_pretrained("facebook/sam-vit-base")
 
-        model.set_train(False)
+        model.eval()
 
         raw_image = prepare_image()
         inputs = processor(images=raw_image, return_tensors="ms")
 
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
         scores = outputs.iou_scores.squeeze()
         masks = outputs.pred_masks[0, 0, 0, 0, :3]
-        self.assertTrue(np.allclose(scores[-1].asnumpy(), mindspore.tensor(0.4515).asnumpy(), atol=2e-4))
-        self.assertTrue(np.allclose(masks.asnumpy(), mindspore.tensor([-4.1800, -3.4948, -3.4481]).asnumpy(), atol=2e-4))
+        self.assertTrue(ops.allclose(scores[-1], mindspore.tensor(0.4515), atol=2e-4))
+        self.assertTrue(ops.allclose(masks, mindspore.tensor([-4.1800, -3.4948, -3.4481]), atol=2e-4))
 
     def test_inference_mask_generation_one_point_one_bb(self):
         model = SamModel.from_pretrained("facebook/sam-vit-base")
         processor = SamProcessor.from_pretrained("facebook/sam-vit-base")
 
-        model.set_train(False)
+        model.eval()
 
         raw_image = prepare_image()
         input_boxes = [[[650, 900, 1000, 1250]]]
@@ -481,19 +485,20 @@ class SamModelIntegrationTest(unittest.TestCase):
             images=raw_image, input_boxes=input_boxes, input_points=input_points, return_tensors="ms"
         )
 
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
         scores = outputs.iou_scores.squeeze()
         masks = outputs.pred_masks[0, 0, 0, 0, :3]
-        self.assertTrue(np.allclose(scores[-1].asnumpy(), mindspore.tensor(0.9566).asnumpy(), atol=2e-4))
+        self.assertTrue(ops.allclose(scores[-1], mindspore.tensor(0.9566), atol=2e-4))
         self.assertTrue(
-            np.allclose(masks.asnumpy(), mindspore.tensor([-12.7729, -12.3665, -12.6061]).asnumpy(), atol=2e-4)
+            ops.allclose(masks, mindspore.tensor([-12.7729, -12.3665, -12.6061]), atol=2e-4)
         )
 
     def test_inference_mask_generation_batched_points_batched_images(self):
         model = SamModel.from_pretrained("facebook/sam-vit-base")
         processor = SamProcessor.from_pretrained("facebook/sam-vit-base")
 
-        model.set_train(False)
+        model.eval()
 
         raw_image = prepare_image()
         input_points = [
@@ -502,7 +507,8 @@ class SamModelIntegrationTest(unittest.TestCase):
         ]
 
         inputs = processor(images=[raw_image, raw_image], input_points=input_points, return_tensors="ms")
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
         scores = outputs.iou_scores.squeeze()
         masks = outputs.pred_masks[0, 0, 0, 0, :3]
 
@@ -523,14 +529,14 @@ class SamModelIntegrationTest(unittest.TestCase):
             ]
         )
         EXPECTED_MASKS = mindspore.tensor([-2.8550, -2.7988, -2.9625])
-        self.assertTrue(np.allclose(scores.asnumpy(), EXPECTED_SCORES.asnumpy(), atol=1e-3))
-        self.assertTrue(np.allclose(masks.asnumpy(), EXPECTED_MASKS.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(scores, EXPECTED_SCORES, atol=1e-3))
+        self.assertTrue(ops.allclose(masks, EXPECTED_MASKS, atol=1e-3))
 
     def test_inference_mask_generation_one_point_one_bb_zero(self):
         model = SamModel.from_pretrained("facebook/sam-vit-base")
         processor = SamProcessor.from_pretrained("facebook/sam-vit-base")
 
-        model.set_train(False)
+        model.eval()
 
         raw_image = prepare_image()
         input_boxes = [[[620, 900, 1000, 1255]]]
@@ -545,16 +551,17 @@ class SamModelIntegrationTest(unittest.TestCase):
             return_tensors="ms",
         )
 
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
         scores = outputs.iou_scores.squeeze()
 
-        self.assertTrue(np.allclose(scores[-1].asnumpy(), mindspore.tensor(0.7894).asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(scores[-1], mindspore.tensor(0.7894), atol=1e-4))
 
     def test_inference_mask_generation_one_point(self):
         model = SamModel.from_pretrained("facebook/sam-vit-base")
         processor = SamProcessor.from_pretrained("facebook/sam-vit-base")
 
-        model.set_train(False)
+        model.eval()
 
         raw_image = prepare_image()
 
@@ -565,24 +572,26 @@ class SamModelIntegrationTest(unittest.TestCase):
             images=raw_image, input_points=input_points, input_labels=input_labels, return_tensors="ms"
         )
 
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
         scores = outputs.iou_scores.squeeze()
-        self.assertTrue(np.allclose(scores[-1].asnumpy(), mindspore.tensor(0.9675).asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(scores[-1], mindspore.tensor(0.9675), atol=1e-4))
 
         # With no label
         input_points = [[[400, 650]]]
 
         inputs = processor(images=raw_image, input_points=input_points, return_tensors="ms")
 
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
         scores = outputs.iou_scores.squeeze()
-        self.assertTrue(np.allclose(scores[-1].asnumpy(), mindspore.tensor(0.9675).asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(scores[-1], mindspore.tensor(0.9675), atol=1e-4))
 
     def test_inference_mask_generation_two_points(self):
         model = SamModel.from_pretrained("facebook/sam-vit-base")
         processor = SamProcessor.from_pretrained("facebook/sam-vit-base")
 
-        model.set_train(False)
+        model.eval()
 
         raw_image = prepare_image()
 
@@ -593,23 +602,25 @@ class SamModelIntegrationTest(unittest.TestCase):
             images=raw_image, input_points=input_points, input_labels=input_labels, return_tensors="ms"
         )
 
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
         scores = outputs.iou_scores.squeeze()
-        self.assertTrue(np.allclose(scores[-1].asnumpy(), mindspore.tensor(0.9762).asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(scores[-1], mindspore.tensor(0.9762), atol=1e-4))
 
         # no labels
         inputs = processor(images=raw_image, input_points=input_points, return_tensors="ms")
 
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
         scores = outputs.iou_scores.squeeze()
 
-        self.assertTrue(np.allclose(scores[-1].asnumpy(), mindspore.tensor(0.9762).asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(scores[-1], mindspore.tensor(0.9762), atol=1e-4))
 
     def test_inference_mask_generation_two_points_batched(self):
         model = SamModel.from_pretrained("facebook/sam-vit-base")
         processor = SamProcessor.from_pretrained("facebook/sam-vit-base")
 
-        model.set_train(False)
+        model.eval()
 
         raw_image = prepare_image()
 
@@ -620,16 +631,17 @@ class SamModelIntegrationTest(unittest.TestCase):
             images=[raw_image, raw_image], input_points=input_points, input_labels=input_labels, return_tensors="ms"
         )
 
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
         scores = outputs.iou_scores.squeeze()
-        self.assertTrue(np.allclose(scores[0][-1].asnumpy(), mindspore.tensor(0.9762).asnumpy(), atol=1e-4))
-        self.assertTrue(np.allclose(scores[1][-1].asnumpy(), mindspore.tensor(0.9637).asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(scores[0][-1], mindspore.tensor(0.9762), atol=1e-4))
+        self.assertTrue(ops.allclose(scores[1][-1], mindspore.tensor(0.9637), atol=1e-4))
 
     def test_inference_mask_generation_one_box(self):
         model = SamModel.from_pretrained("facebook/sam-vit-base")
         processor = SamProcessor.from_pretrained("facebook/sam-vit-base")
 
-        model.set_train(False)
+        model.eval()
 
         raw_image = prepare_image()
 
@@ -637,15 +649,16 @@ class SamModelIntegrationTest(unittest.TestCase):
 
         inputs = processor(images=raw_image, input_boxes=input_boxes, return_tensors="ms")
 
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
         scores = outputs.iou_scores.squeeze()
-        self.assertTrue(np.allclose(scores[-1].asnumpy(), mindspore.tensor(0.7937).asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(scores[-1], mindspore.tensor(0.7937), atol=1e-4))
 
     def test_inference_mask_generation_batched_image_one_point(self):
         model = SamModel.from_pretrained("facebook/sam-vit-base")
         processor = SamProcessor.from_pretrained("facebook/sam-vit-base")
 
-        model.set_train(False)
+        model.eval()
 
         raw_image = prepare_image()
         raw_dog_image = prepare_dog_img()
@@ -653,45 +666,49 @@ class SamModelIntegrationTest(unittest.TestCase):
         input_points = [[[820, 1080]], [[220, 470]]]
 
         inputs = processor(images=[raw_image, raw_dog_image], input_points=input_points, return_tensors="ms")
-        outputs = model(**inputs)
+
+        with no_grad():
+            outputs = model(**inputs)
         scores_batched = outputs.iou_scores.squeeze()
 
         input_points = [[[220, 470]]]
 
         inputs = processor(images=raw_dog_image, input_points=input_points, return_tensors="ms")
 
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
         scores_single = outputs.iou_scores.squeeze()
-        self.assertTrue(np.allclose(scores_batched[1, :].asnumpy(), scores_single.asnumpy(), atol=1e-4))
+
+        self.assertTrue(ops.allclose(scores_batched[1, :], scores_single, atol=1e-4))
 
     def test_inference_mask_generation_two_points_point_batch(self):
         model = SamModel.from_pretrained("facebook/sam-vit-base")
         processor = SamProcessor.from_pretrained("facebook/sam-vit-base")
 
-        model.set_train(False)
+        model.eval()
 
         raw_image = prepare_image()
 
-        input_points = mindspore.Tensor([[[400, 650]], [[220, 470]]], mindspore.float32)  # fmt: skip
+        input_points = mindspore.Tensor([[[400, 650]], [[220, 470]]])  # fmt: skip
 
         input_points = input_points.unsqueeze(0)
+
         inputs = processor(raw_image, input_points=input_points, return_tensors="ms")
 
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
 
         iou_scores = outputs.iou_scores
         self.assertTrue(iou_scores.shape == (1, 2, 3))
-
-        self.assertTrue(np.allclose(
-            iou_scores.asnumpy(), mindspore.tensor([[[0.9105, 0.9825, 0.9675], [0.7646, 0.7943, 0.7774]]]).asnumpy(),
-            atol=1e-4, rtol=1e-4
-        ))
+        assert ops.allclose(
+            iou_scores, mindspore.tensor([[[0.9105, 0.9825, 0.9675], [0.7646, 0.7943, 0.7774]]]), atol=1e-4, rtol=1e-4
+        )
 
     def test_inference_mask_generation_three_boxes_point_batch(self):
         model = SamModel.from_pretrained("facebook/sam-vit-base")
         processor = SamProcessor.from_pretrained("facebook/sam-vit-base")
 
-        model.set_train(False)
+        model.eval()
 
         raw_image = prepare_image()
 
@@ -705,14 +722,15 @@ class SamModelIntegrationTest(unittest.TestCase):
 
         inputs = processor(raw_image, input_boxes=input_boxes, return_tensors="ms")
 
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
 
         iou_scores = outputs.iou_scores
         self.assertTrue(iou_scores.shape == (1, 3, 3))
-        self.assertTrue(np.allclose(iou_scores.asnumpy(), EXPECTED_IOU.asnumpy(), atol=1e-4, rtol=1e-4))
+        assert ops.allclose(iou_scores, EXPECTED_IOU, atol=1e-4, rtol=1e-4)
 
-    # def test_dummy_pipeline_generation(self):
-    #     generator = pipeline("mask-generation", model="facebook/sam-vit-base")
-    #     raw_image = prepare_image()
+    def test_dummy_pipeline_generation(self):
+        generator = pipeline("mask-generation", model="facebook/sam-vit-base")
+        raw_image = prepare_image()
 
-    #     _ = generator(raw_image, points_per_batch=64)
+        _ = generator(raw_image, points_per_batch=64)

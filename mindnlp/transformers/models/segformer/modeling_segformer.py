@@ -16,10 +16,7 @@
 import math
 from typing import Optional, Tuple, Union
 
-import numpy as np
 import mindspore
-from mindspore import Tensor
-from mindspore.common.initializer import Normal
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
@@ -964,26 +961,26 @@ class SegformerPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
+
     config_class = SegformerConfig
     base_model_prefix = "segformer"
     main_input_name = "pixel_values"
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv2d)):
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.initialize(Normal(self.config.initializer_range))
-            if cell.bias is not None:
-                cell.bias.initialize('zeros')
-        elif isinstance(cell, nn.Embedding):
-            data = np.random.normal(0.0, self.config.initializer_range, size=cell.weight.shape)
-            if cell.padding_idx is not None:
-                data[cell.padding_idx] = 0
-            cell.weight.set_data(Tensor(data, cell.weight.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.bias.initialize('zeros')
-            cell.weight.initialize('ones')
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            module.weight.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight[module.padding_idx] = 0
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
 
 class SegformerModel(SegformerPreTrainedModel):
@@ -1429,7 +1426,7 @@ class SegformerDecodeHead(SegformerPreTrainedModel):
             encoder_hidden_state = encoder_hidden_state.permute(0, 2, 1)
             encoder_hidden_state = encoder_hidden_state.reshape(batch_size, -1, height, width)
             # upsample
-            encoder_hidden_state = ops.interpolate(
+            encoder_hidden_state = F.interpolate(
                 encoder_hidden_state, size=encoder_hidden_states[0].shape[2:], mode="bilinear", align_corners=False
             )
             all_hidden_states += (encoder_hidden_state,)
@@ -1501,7 +1498,7 @@ class SegformerForSemanticSegmentation(SegformerPreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
         ...
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> logits = outputs.logits  # shape (batch_size, num_labels, height/4, width/4)
         >>> list(logits.shape)
@@ -1560,7 +1557,7 @@ class SegformerForSemanticSegmentation(SegformerPreTrainedModel):
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
-            >>> inputs = image_processor(images=image, return_tensors="pt")
+            >>> inputs = image_processor(images=image, return_tensors="ms")
             >>> outputs = model(**inputs)
             >>> logits = outputs.logits  # shape (batch_size, num_labels, height/4, width/4)
             >>> list(logits.shape)
@@ -1586,13 +1583,13 @@ class SegformerForSemanticSegmentation(SegformerPreTrainedModel):
         loss = None
         if labels is not None:
             # upsample logits to the images' original size
-            upsampled_logits = ops.interpolate(
+            upsampled_logits = F.interpolate(
                 logits, size=labels.shape[-2:], mode="bilinear", align_corners=False
             )
             if self.config.num_labels > 1:
                 loss = F.cross_entropy(upsampled_logits, labels, ignore_index=self.config.semantic_loss_ignore_index)
             elif self.config.num_labels == 1:
-                valid_mask = ((labels >= 0) & (labels != self.config.semantic_loss_ignore_index)).float()
+                valid_mask = ((labels >= 0).int() & (labels != self.config.semantic_loss_ignore_index).int()).float()
                 loss = F.binary_cross_entropy_with_logits(upsampled_logits.squeeze(1), labels.float(), reduction="none")
                 loss = (loss * valid_mask).mean()
             else:

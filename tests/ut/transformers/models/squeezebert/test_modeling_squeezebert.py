@@ -260,10 +260,10 @@ class SqueezeBertModelTester:
         model = SqueezeBertForMultipleChoice(config=config)
         model.set_train(False)
         multiple_choice_inputs_ids = (
-            input_ids.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
+            input_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
         )
         multiple_choice_input_mask = (
-            input_mask.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
+            input_mask.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
         )
         result = model(
             multiple_choice_inputs_ids,

@@ -167,7 +167,7 @@ if __name__ == '__main__':
         init()
         rank_id = get_rank()
         rank_size = get_group_size()
-        mindspore.set_context(mode=mindspore.GRAPH_MODE, device_target="Ascend", device_id=rank_id)
+        mindspore.set_context(mode=mindspore.GRAPH_MODE, device_id=rank_id)
     else: 
         init("nccl")
         rank_id = get_rank()

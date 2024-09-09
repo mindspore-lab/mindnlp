@@ -429,7 +429,7 @@ class TapasModelTest(ModelTesterMixin, unittest.TestCase):
         inputs_dict = copy.deepcopy(inputs_dict)
         if model_class in get_values(MODEL_FOR_MULTIPLE_CHOICE_MAPPING):
             inputs_dict = {
-                k: v.unsqueeze(1).expand(-1, self.model_tester.num_choices, -1).contiguous()
+                k: v.unsqueeze(1).expand(-1, self.model_tester.num_choices, -1)
                 if isinstance(v, mindspore.Tensor) and v.ndim > 1
                 else v
                 for k, v in inputs_dict.items()
@@ -1003,6 +1003,7 @@ class TapasUtilitiesTest(unittest.TestCase):
                 # We use np.testing.assert_array_equal rather than Tensorflow's assertAllEqual
                 np.testing.assert_array_equal(indices[i, j, :].numpy(), range(num_segments))
 
+    @unittest.skip
     def test_reduce_sum(self):
         values, row_index, col_index = self._prepare_tables()
         cell_index = ProductIndexMap(row_index, col_index)

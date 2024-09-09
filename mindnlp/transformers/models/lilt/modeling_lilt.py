@@ -773,7 +773,7 @@ class LiltModel(LiltPreTrainedModel):
         >>> words = example["tokens"]
         >>> boxes = example["bboxes"]
 
-        >>> encoding = tokenizer(words, boxes=boxes, return_tensors="pt")
+        >>> encoding = tokenizer(words, boxes=boxes, return_tensors="ms")
 
         >>> outputs = model(**encoding)
         >>> last_hidden_states = outputs.last_hidden_state
@@ -920,7 +920,7 @@ class LiltForSequenceClassification(LiltPreTrainedModel):
         >>> words = example["tokens"]
         >>> boxes = example["bboxes"]
 
-        >>> encoding = tokenizer(words, boxes=boxes, return_tensors="pt")
+        >>> encoding = tokenizer(words, boxes=boxes, return_tensors="ms")
 
         >>> outputs = model(**encoding)
         >>> predicted_class_idx = outputs.logits.argmax(-1).item()
@@ -1031,7 +1031,7 @@ class LiltForTokenClassification(LiltPreTrainedModel):
         >>> words = example["tokens"]
         >>> boxes = example["bboxes"]
 
-        >>> encoding = tokenizer(words, boxes=boxes, return_tensors="pt")
+        >>> encoding = tokenizer(words, boxes=boxes, return_tensors="ms")
 
         >>> outputs = model(**encoding)
         >>> predicted_class_indices = outputs.logits.argmax(-1)
@@ -1152,7 +1152,7 @@ class LiltForQuestionAnswering(LiltPreTrainedModel):
         >>> words = example["tokens"]
         >>> boxes = example["bboxes"]
 
-        >>> encoding = tokenizer(words, boxes=boxes, return_tensors="pt")
+        >>> encoding = tokenizer(words, boxes=boxes, return_tensors="ms")
 
         >>> outputs = model(**encoding)
 

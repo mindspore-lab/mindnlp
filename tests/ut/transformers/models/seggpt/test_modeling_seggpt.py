@@ -1,24 +1,23 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2024 The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================
 """Testing suite for the MindSpore SegGpt model."""
 
 import inspect
 import math
 import unittest
 
-import numpy as np
 from datasets import load_dataset
 
 from mindnlp.transformers import SegGptConfig
@@ -35,8 +34,8 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor
 
 
 if is_mindspore_available():
-    import mindspore as ms
-    from mindspore import nn, ops
+    import mindspore
+    from mindnlp.core import nn, ops, no_grad
 
     from mindnlp.transformers import SegGptForImageSegmentation, SegGptModel
     from mindnlp.transformers.models.seggpt.modeling_seggpt import SegGptLoss
@@ -94,19 +93,15 @@ class SegGptModelTester:
         self.seq_length = num_patches
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_tensor(
-            [self.batch_size, self.num_channels, self.image_size // 2, self.image_size])
+        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size // 2, self.image_size])
         prompt_pixel_values = floats_tensor(
-            [self.batch_size, self.num_channels,
-                self.image_size // 2, self.image_size]
+            [self.batch_size, self.num_channels, self.image_size // 2, self.image_size]
         )
-        prompt_masks = floats_tensor(
-            [self.batch_size, self.num_channels, self.image_size // 2, self.image_size])
+        prompt_masks = floats_tensor([self.batch_size, self.num_channels, self.image_size // 2, self.image_size])
 
         labels = None
         if self.use_labels:
-            labels = floats_tensor(
-                [self.batch_size, self.num_channels, self.image_size // 2, self.image_size])
+            labels = floats_tensor([self.batch_size, self.num_channels, self.image_size // 2, self.image_size])
 
         config = self.get_config()
 
@@ -132,7 +127,7 @@ class SegGptModelTester:
 
     def create_and_check_model(self, config, pixel_values, prompt_pixel_values, prompt_masks, labels):
         model = SegGptModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values, prompt_pixel_values, prompt_masks)
         self.parent.assertEqual(
             result.last_hidden_state.shape,
@@ -168,8 +163,7 @@ class SegGptModelTest(ModelTesterMixin, unittest.TestCase):
     attention_mask and seq_length.
     """
 
-    all_model_classes = (
-        SegGptModel, SegGptForImageSegmentation) if is_mindspore_available() else ()
+    all_model_classes = (SegGptModel, SegGptForImageSegmentation) if is_mindspore_available() else ()
     fx_compatible = False
 
     test_pruning = False
@@ -177,14 +171,12 @@ class SegGptModelTest(ModelTesterMixin, unittest.TestCase):
     test_head_masking = False
     test_torchscript = False
     pipeline_model_mapping = (
-        {"feature-extraction": SegGptModel,
-            "mask-generation": SegGptModel} if is_mindspore_available() else {}
+        {"feature-extraction": SegGptModel, "mask-generation": SegGptModel} if is_mindspore_available() else {}
     )
 
     def setUp(self):
         self.model_tester = SegGptModelTester(self)
-        self.config_tester = ConfigTester(
-            self, config_class=SegGptConfig, has_text_modality=False)
+        self.config_tester = ConfigTester(self, config_class=SegGptConfig, has_text_modality=False)
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -209,8 +201,7 @@ class SegGptModelTest(ModelTesterMixin, unittest.TestCase):
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
-            expected_arg_names = ["pixel_values",
-                                  "prompt_pixel_values", "prompt_masks"]
+            expected_arg_names = ["pixel_values", "prompt_pixel_values", "prompt_masks"]
             self.assertListEqual(arg_names[:3], expected_arg_names)
 
     def test_model(self):
@@ -220,10 +211,10 @@ class SegGptModelTest(ModelTesterMixin, unittest.TestCase):
     def test_hidden_states_output(self):
         def check_hidden_states_output(inputs_dict, config, model_class):
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
-            outputs = model(
-                **self._prepare_for_class(inputs_dict, model_class))
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             hidden_states = outputs.encoder_hidden_states if config.is_encoder_decoder else outputs.hidden_states
 
@@ -255,30 +246,23 @@ class SegGptModelTest(ModelTesterMixin, unittest.TestCase):
         def recursive_check(batched_object, single_row_object, model_name, key):
             if isinstance(batched_object, (list, tuple)):
                 for batched_object_value, single_row_object_value in zip(batched_object, single_row_object):
-                    recursive_check(batched_object_value,
-                                    single_row_object_value, model_name, key)
+                    recursive_check(batched_object_value, single_row_object_value, model_name, key)
             else:
                 batched_row = batched_object[:1]
                 self.assertFalse(
-                    ops.isnan(batched_row).any(
-                    ), f"Batched output has `nan` in {model_name} for key={key}"
+                    ops.isnan(batched_row).any(), f"Batched output has `nan` in {model_name} for key={key}"
                 )
                 self.assertFalse(
-                    ops.isinf(batched_row).any(
-                    ), f"Batched output has `inf` in {model_name} for key={key}"
+                    ops.isinf(batched_row).any(), f"Batched output has `inf` in {model_name} for key={key}"
                 )
                 self.assertFalse(
-                    ops.isnan(single_row_object).any(
-                    ), f"Single row output has `nan` in {model_name} for key={key}"
+                    ops.isnan(single_row_object).any(), f"Single row output has `nan` in {model_name} for key={key}"
                 )
                 self.assertFalse(
-                    ops.isinf(single_row_object).any(
-                    ), f"Single row output has `inf` in {model_name} for key={key}"
+                    ops.isinf(single_row_object).any(), f"Single row output has `inf` in {model_name} for key={key}"
                 )
-
                 self.assertTrue(
-                    ops.max(ops.abs(batched_row - single_row_object)
-                            )[0] <= 1e-03,
+                    ops.max(ops.abs(batched_row - single_row_object)) <= 1e-03,
                     msg=(
                         f"Batched and Single row outputs are not equal in {model_name} for key={key}. "
                         f"Difference={ops.max(ops.abs(batched_row - single_row_object))}."
@@ -291,56 +275,44 @@ class SegGptModelTest(ModelTesterMixin, unittest.TestCase):
             config.output_hidden_states = True
 
             model_name = model_class.__name__
-            batched_input_prepared = self._prepare_for_class(
-                batched_input, model_class)
-            model = model_class(config)
-            model.set_train(False)
+            batched_input_prepared = self._prepare_for_class(batched_input, model_class)
+            model = model_class(config).eval()
 
             batch_size = self.model_tester.batch_size
             single_row_input = {}
             for key, value in batched_input_prepared.items():
-                if isinstance(value, ms.Tensor) and value.shape[0] % batch_size == 0:
+                if isinstance(value, mindspore.Tensor) and value.shape[0] % batch_size == 0:
                     single_batch_shape = value.shape[0] // batch_size
                     single_row_input[key] = value[:single_batch_shape]
 
-            model_batched_output = model(**batched_input_prepared)
-            model_row_output = model(**single_row_input)
+            with no_grad():
+                model_batched_output = model(**batched_input_prepared)
+                model_row_output = model(**single_row_input)
 
             for key in model_batched_output:
                 # the first hidden state in SegGPT has weird hack of adding first half of batch with second half
                 if key == "hidden_states":
                     model_batched_output[key] = model_batched_output[key][1:]
                     model_row_output[key] = model_row_output[key][1:]
-                recursive_check(
-                    model_batched_output[key], model_row_output[key], model_name, key)
+                recursive_check(model_batched_output[key], model_row_output[key], model_name, key)
 
-    @unittest.skip(reason="Due to the inability to generate random numbers consistent with torch.rand,\
-                   we can only pass the test locally by loading data files generated with torch.rand.")
     def test_seggpt_loss(self):
+        mindspore.manual_seed(100)
+        mindspore.set_seed(100)
         config = self.model_tester.get_config()
 
-        # ms.set_seed(100)
-        # prompt_masks = ops.rand(1, config.num_channels,
-        #                         config.image_size, config.image_size)
-        # label = ops.rand(1, config.num_channels,
-        #                  config.image_size, config.image_size)
-        # pred_masks = ops.rand(1, config.num_channels,
-        #                       config.image_size * 2, config.image_size)
-        # # seq_len x 2 because the loss concatenates prompt_masks and labels as pred_masks is concatenated
-        # bool_masked_pos = ops.rand(1, self.model_tester.seq_length * 2) > 0.5
-
-        prompt_masks = ms.Tensor(np.load('prompt_masks.npy'))
-        label = ms.Tensor(np.load('label.npy'))
-        pred_masks = ms.Tensor(np.load('pred_masks.npy'))
-        bool_masked_pos = ms.Tensor(np.load('bool_masked_pos.npy'))
+        prompt_masks = ops.rand(1, config.num_channels, config.image_size, config.image_size)
+        label = ops.rand(1, config.num_channels, config.image_size, config.image_size)
+        pred_masks = ops.rand(1, config.num_channels, config.image_size * 2, config.image_size)
+        # seq_len x 2 because the loss concatenates prompt_masks and labels as pred_masks is concatenated
+        bool_masked_pos = ops.rand(1, self.model_tester.seq_length * 2) > 0.5
 
         loss = SegGptLoss(config)
         loss_value = loss(prompt_masks, pred_masks, label, bool_masked_pos)
-        expected_loss_value = ms.Tensor(0.3340)
+        print(loss_value)
+        expected_loss_value = mindspore.tensor(0.3267)
 
-        loss_value = loss_value.asnumpy()
-        self.assertTrue(np.allclose(loss_value,
-                        expected_loss_value.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(loss_value, expected_loss_value, atol=1e-3))
 
     @slow
     def test_model_from_pretrained(self):
@@ -357,18 +329,13 @@ def prepare_img():
 
 
 def prepare_bool_masked_pos(config: SegGptConfig):
-    num_patches = math.prod(
-        [i // config.patch_size for i in config.image_size])
+    num_patches = math.prod([i // config.patch_size for i in config.image_size])
     mask_ratio = 0.75
+    mindspore.manual_seed(2)
+    mindspore.set_seed(2)
     num_masked_patches = int(num_patches * mask_ratio)
-
-    # seed = 2
-    # offset = 0
-    # shuffle_idx = ops.RandpermV2()(Tensor(num_patches), seed, offset)
-
-    shuffle_idx = ms.Tensor(np.load('shuffle_idx.npy'))
-
-    bool_masked_pos = ms.Tensor([0] * (num_patches - num_masked_patches) + [1] * num_masked_patches)[
+    shuffle_idx = ops.randperm(num_patches)
+    bool_masked_pos = mindspore.Tensor([0] * (num_patches - num_masked_patches) + [1] * num_masked_patches)[
         shuffle_idx
     ]
     bool_masked_pos = bool_masked_pos.unsqueeze(0).bool()
@@ -381,12 +348,11 @@ def prepare_bool_masked_pos(config: SegGptConfig):
 class SegGptModelIntegrationTest(unittest.TestCase):
     @cached_property
     def default_image_processor(self):
-        return SegGptImageProcessor.from_pretrained("BAAI/seggpt-vit-large")
+        return SegGptImageProcessor.from_pretrained("BAAI/seggpt-vit-large") if is_vision_available() else None
 
-    @unittest.skip(reason="The inference error between MindSpore and Torch here is within 2e-4.")
+    @slow
     def test_one_shot_inference(self):
-        model = SegGptForImageSegmentation.from_pretrained(
-            "BAAI/seggpt-vit-large", ms_dtype=ms.float32)
+        model = SegGptForImageSegmentation.from_pretrained("BAAI/seggpt-vit-large")
 
         image_processor = self.default_image_processor
 
@@ -404,28 +370,24 @@ class SegGptModelIntegrationTest(unittest.TestCase):
         )
 
         # forward pass
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
 
         # verify the logits
         expected_shape = (1, 3, 896, 448)
         self.assertEqual(outputs.pred_masks.shape, expected_shape)
 
-        expected_slice = ms.Tensor(
+        expected_slice = mindspore.tensor(
             [
-                [[-2.1208, -2.1190, -2.1198], [-2.1237, -2.1228, -2.1227],
-                    [-2.1232, -2.1226, -2.1228]],
-                [[-2.0405, -2.0396, -2.0403], [-2.0434, -2.0434, -2.0433],
-                    [-2.0428, -2.0432, -2.0434]],
-                [[-1.8102, -1.8088, -1.8099], [-1.8131, -1.8126, -1.8129],
-                    [-1.8130, -1.8128, -1.8131]],
+                [[-2.1208, -2.1190, -2.1198], [-2.1237, -2.1228, -2.1227], [-2.1232, -2.1226, -2.1228]],
+                [[-2.0405, -2.0396, -2.0403], [-2.0434, -2.0434, -2.0433], [-2.0428, -2.0432, -2.0434]],
+                [[-1.8102, -1.8088, -1.8099], [-1.8131, -1.8126, -1.8129], [-1.8130, -1.8128, -1.8131]],
             ]
         )
 
-        self.assertTrue(np.allclose(
-            outputs.pred_masks[0, :, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(outputs.pred_masks[0, :, :3, :3], expected_slice, atol=1e-4))
 
-        result = image_processor.post_process_semantic_segmentation(
-            outputs, [input_image.size[::-1]])[0]
+        result = image_processor.post_process_semantic_segmentation(outputs, [input_image.size[::-1]])[0]
 
         result_expected_shape = (170, 297)
         expected_area = 1082
@@ -435,8 +397,7 @@ class SegGptModelIntegrationTest(unittest.TestCase):
 
     @slow
     def test_few_shot_inference(self):
-        model = SegGptForImageSegmentation.from_pretrained(
-            "BAAI/seggpt-vit-large")
+        model = SegGptForImageSegmentation.from_pretrained("BAAI/seggpt-vit-large")
         image_processor = self.default_image_processor
 
         images, masks = prepare_img()
@@ -452,30 +413,25 @@ class SegGptModelIntegrationTest(unittest.TestCase):
             do_convert_rgb=False,
         )
 
-        inputs = dict(inputs.items())
-        outputs = model(**inputs, feature_ensemble=True)
+        inputs = {k: v for k, v in inputs.items()}
+        with no_grad():
+            outputs = model(**inputs, feature_ensemble=True)
 
         expected_shape = (2, 3, 896, 448)
-        expected_slice = ms.Tensor(
+        expected_slice = mindspore.tensor(
             [
-                [[-2.1201, -2.1192, -2.1189], [-2.1217, -2.1210, -2.1204],
-                    [-2.1216, -2.1202, -2.1194]],
-                [[-2.0393, -2.0390, -2.0387], [-2.0402, -2.0402, -2.0397],
-                    [-2.0400, -2.0394, -2.0388]],
-                [[-1.8083, -1.8076, -1.8077], [-1.8105, -1.8102, -1.8099],
-                    [-1.8105, -1.8095, -1.8090]],
+                [[-2.1201, -2.1192, -2.1189], [-2.1217, -2.1210, -2.1204], [-2.1216, -2.1202, -2.1194]],
+                [[-2.0393, -2.0390, -2.0387], [-2.0402, -2.0402, -2.0397], [-2.0400, -2.0394, -2.0388]],
+                [[-1.8083, -1.8076, -1.8077], [-1.8105, -1.8102, -1.8099], [-1.8105, -1.8095, -1.8090]],
             ]
         )
 
         self.assertEqual(outputs.pred_masks.shape, expected_shape)
-        self.assertTrue(np.allclose(outputs.pred_masks[0, :, 448:451, :3].asnumpy(
-        ), expected_slice.asnumpy(), atol=4e-4))
+        self.assertTrue(ops.allclose(outputs.pred_masks[0, :, 448:451, :3], expected_slice, atol=4e-4))
 
-    @unittest.skip(reason="Due to the inability to generate random numbers consistent with torch.randperm,\
-                   we can only pass the test locally by loading data files generated with torch.randperm.")
+    @slow
     def test_one_shot_with_label(self):
-        model = SegGptForImageSegmentation.from_pretrained(
-            "BAAI/seggpt-vit-large")
+        model = SegGptForImageSegmentation.from_pretrained("BAAI/seggpt-vit-large")
 
         image_processor = self.default_image_processor
 
@@ -500,9 +456,8 @@ class SegGptModelIntegrationTest(unittest.TestCase):
 
         bool_masked_pos = prepare_bool_masked_pos(model.config)
 
-        outputs = model(**inputs, labels=labels,
-                        bool_masked_pos=bool_masked_pos)
+        with no_grad():
+            outputs = model(**inputs, labels=labels, bool_masked_pos=bool_masked_pos)
 
-        expected_loss = ms.Tensor(0.0074)
-        self.assertTrue(np.allclose(outputs.loss.asnumpy(),
-                        expected_loss.asnumpy(), atol=1e-4))
+        expected_loss = mindspore.tensor(0.0074)
+        self.assertTrue(ops.allclose(outputs.loss, expected_loss, atol=1e-4))

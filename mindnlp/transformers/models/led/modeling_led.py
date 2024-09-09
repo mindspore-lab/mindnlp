@@ -23,7 +23,7 @@ import mindspore
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _create_4d_causal_attention_mask
@@ -539,19 +539,20 @@ class LEDEncoderSelfAttention(nn.Module):
         # helper variable
         num_global_attn_indices = is_index_global_attn.long().sum(axis=1)
         # max number of global attn indices in batch
-        max_num_global_attn_indices = ops.max(num_global_attn_indices).item()
+        with no_grad():
+            max_num_global_attn_indices = ops.max(num_global_attn_indices).item()
 
         # indices of global attn
-        is_index_global_attn_nonzero = is_index_global_attn.nonzero(as_tuple=True)
+        is_index_global_attn_nonzero = ops.nonzero(is_index_global_attn, as_tuple=True)
 
         # helper variable
         is_local_index_global_attn = ops.arange(max_num_global_attn_indices) < num_global_attn_indices.unsqueeze(dim=-1)
 
         # location of the non-padding values within global attention indices
-        is_local_index_global_attn_nonzero = is_local_index_global_attn.nonzero(as_tuple=True)
+        is_local_index_global_attn_nonzero = ops.nonzero(is_local_index_global_attn, as_tuple=True)
 
         # location of the padding values within global attention indices
-        is_local_index_no_global_attn_nonzero = (is_local_index_global_attn == 0).nonzero(as_tuple=True)
+        is_local_index_no_global_attn_nonzero = ops.nonzero((is_local_index_global_attn == 0), as_tuple=True)
         return (
             max_num_global_attn_indices,
             is_index_global_attn_nonzero,

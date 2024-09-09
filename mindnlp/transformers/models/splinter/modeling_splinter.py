@@ -848,7 +848,7 @@ class QuestionAwareSpanSelectionHead(nn.Module):
         index = positions.unsqueeze(-1).tile(
             (1, 1, dim)
         )  # [batch_size, num_positions, dim]
-        gathered_reps = ops.gather_elements(
+        gathered_reps = ops.gather(
             inputs, dim=1, index=index
         )  # [batch_size, num_positions, dim]
 

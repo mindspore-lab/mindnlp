@@ -12,18 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Mindspore ViT Hybrid model."""
+"""MindSpore ViT Hybrid model."""
 
 import collections.abc
 import math
 from typing import Dict, List, Optional, Set, Tuple, Union
 
-import mindspore as ms
-from mindspore import Parameter
-from mindspore.common.initializer import initializer, TruncatedNormal
-
+import mindspore
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling, ImageClassifierOutput
 from ...modeling_utils import PreTrainedModel
@@ -55,15 +53,15 @@ class ViTHybridEmbeddings(nn.Module):
     def __init__(self, config: ViTHybridConfig, use_mask_token: bool = False) -> None:
         super().__init__()
 
-        self.cls_token = Parameter(ops.randn(1, 1, config.hidden_size), 'cls_token')
-        self.mask_token = Parameter(ops.zeros(1, 1, config.hidden_size), 'mask_token') if use_mask_token else None
+        self.cls_token = nn.Parameter(ops.randn(1, 1, config.hidden_size))
+        self.mask_token = nn.Parameter(ops.zeros(1, 1, config.hidden_size)) if use_mask_token else None
         self.patch_embeddings = ViTHybridPatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
-        self.position_embeddings = Parameter(ops.randn(1, num_patches + 1, config.hidden_size), 'position_embeddings')
-        self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
+        self.position_embeddings = nn.Parameter(ops.randn(1, num_patches + 1, config.hidden_size))
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.config = config
 
-    def interpolate_pos_encoding(self, embeddings: ms.Tensor, height: int, width: int) -> ms.Tensor:
+    def interpolate_pos_encoding(self, embeddings: mindspore.Tensor, height: int, width: int) -> mindspore.Tensor:
         """
         This method allows to interpolate the pre-trained position encodings, to be able to use the model on higher
         resolution images.
@@ -86,12 +84,11 @@ class ViTHybridEmbeddings(nn.Module):
         height, width = height + 0.1, width + 0.1
         patch_pos_embed = patch_pos_embed.reshape(1, int(math.sqrt(num_positions)), int(math.sqrt(num_positions)), dim)
         patch_pos_embed = patch_pos_embed.permute(0, 3, 1, 2)
-        patch_pos_embed = ops.interpolate(
+        patch_pos_embed = nn.functional.interpolate(
             patch_pos_embed,
             scale_factor=(height / math.sqrt(num_positions), width / math.sqrt(num_positions)),
             mode="bicubic",
             align_corners=False,
-            recompute_scale_factor=True
         )
         if int(height) != patch_pos_embed.shape[-2] or int(width) != patch_pos_embed.shape[-1]:
             raise ValueError(f"Invalid height or width: {height}, {width}")
@@ -100,10 +97,10 @@ class ViTHybridEmbeddings(nn.Module):
 
     def forward(
         self,
-        pixel_values: ms.Tensor,
-        bool_masked_pos: Optional[ms.Tensor] = None,
+        pixel_values: mindspore.Tensor,
+        bool_masked_pos: Optional[mindspore.Tensor] = None,
         interpolate_pos_encoding: bool = False,
-    ) -> ms.Tensor:
+    ) -> mindspore.Tensor:
         batch_size, num_channels, height, width = pixel_values.shape
         embeddings = self.patch_embeddings(pixel_values, interpolate_pos_encoding=interpolate_pos_encoding)
 
@@ -166,9 +163,9 @@ class ViTHybridPatchEmbeddings(nn.Module):
         self.patch_size = patch_size
         self.num_channels = num_channels
 
-        self.projection = nn.Conv2d(feature_dim, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True)
+        self.projection = nn.Conv2d(feature_dim, hidden_size, kernel_size=patch_size, stride=patch_size)
 
-    def forward(self, pixel_values: ms.Tensor, interpolate_pos_encoding: bool = False) -> ms.Tensor:
+    def forward(self, pixel_values: mindspore.Tensor, interpolate_pos_encoding: bool = False) -> mindspore.Tensor:
         _, num_channels, height, width = pixel_values.shape
         if num_channels != self.num_channels:
             raise ValueError(
@@ -180,8 +177,9 @@ class ViTHybridPatchEmbeddings(nn.Module):
                     f"Input image size ({height}*{width}) doesn't match model"
                     f" ({self.image_size[0]}*{self.image_size[1]})."
                 )
+
         features = self.backbone(pixel_values).feature_maps[-1]
-        embeddings = self.projection(features).flatten(start_dim=2).swapaxes(1, 2)
+        embeddings = ops.transpose(ops.flatten(self.projection(features), 2), 1, 2)
 
         return embeddings
 
@@ -203,16 +201,16 @@ class ViTHybridSelfAttention(nn.Module):
         self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
         self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
 
-        self.dropout = nn.Dropout(p = config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
-    def transpose_for_scores(self, x: ms.Tensor) -> ms.Tensor:
+    def transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
 
     def forward(
-        self, hidden_states, head_mask: Optional[ms.Tensor] = None, output_attentions: bool = False
-    ) -> Union[Tuple[ms.Tensor, ms.Tensor], Tuple[ms.Tensor]]:
+        self, hidden_states, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False
+    ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
         mixed_query_layer = self.query(hidden_states)
 
         key_layer = self.transpose_for_scores(self.key(hidden_states))
@@ -220,12 +218,12 @@ class ViTHybridSelfAttention(nn.Module):
         query_layer = self.transpose_for_scores(mixed_query_layer)
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_layer, ops.transpose(key_layer, -1, -2))
 
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, dim=-1)
+        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -252,22 +250,21 @@ class ViTHybridSdpaSelfAttention(ViTHybridSelfAttention):
         self.attention_probs_dropout_prob = config.attention_probs_dropout_prob
 
     def forward(
-        self, hidden_states, head_mask: Optional[ms.Tensor] = None, output_attentions: bool = False
-    ) -> Union[Tuple[ms.Tensor, ms.Tensor], Tuple[ms.Tensor]]:
+        self, hidden_states, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False
+    ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
         mixed_query_layer = self.query(hidden_states)
 
         key_layer = self.transpose_for_scores(self.key(hidden_states))
         value_layer = self.transpose_for_scores(self.value(hidden_states))
         query_layer = self.transpose_for_scores(mixed_query_layer)
 
-        context_layer = F._scaled_dot_product_attention(
+        context_layer = nn.functional.scaled_dot_product_attention(
             query_layer,
             key_layer,
             value_layer,
             head_mask,
             self.attention_probs_dropout_prob if self.training else 0.0,
             is_causal=False,
-            is_training=self.training
         )
 
         context_layer = context_layer.permute(0, 2, 1, 3)
@@ -286,9 +283,9 @@ class ViTHybridSelfOutput(nn.Module):
     def __init__(self, config: ViTHybridConfig) -> None:
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -322,10 +319,10 @@ class ViTHybridAttention(nn.Module):
 
     def forward(
         self,
-        hidden_states: ms.Tensor,
-        head_mask: Optional[ms.Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
-    ) -> Union[Tuple[ms.Tensor, ms.Tensor], Tuple[ms.Tensor]]:
+    ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
         self_outputs = self.attention(hidden_states, head_mask, output_attentions)
 
         attention_output = self.output(self_outputs[0], hidden_states)
@@ -349,7 +346,7 @@ class ViTHybridIntermediate(nn.Module):
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def forward(self, hidden_states: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
 
@@ -360,9 +357,9 @@ class ViTHybridOutput(nn.Module):
     def __init__(self, config: ViTHybridConfig) -> None:
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
-        self.dropout = nn.Dropout(p = config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -387,15 +384,15 @@ class ViTHybridLayer(nn.Module):
         self.attention = VIT_HYBRID_ATTENTION_CLASSES[config._attn_implementation](config)
         self.intermediate = ViTHybridIntermediate(config)
         self.output = ViTHybridOutput(config)
-        self.layernorm_before = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(
         self,
-        hidden_states: ms.Tensor,
-        head_mask: Optional[ms.Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
-    ) -> Union[Tuple[ms.Tensor, ms.Tensor], Tuple[ms.Tensor]]:
+    ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
         self_attention_outputs = self.attention(
             self.layernorm_before(hidden_states),  # in ViTHybrid, layernorm is applied before self-attention
             head_mask,
@@ -428,8 +425,8 @@ class ViTHybridEncoder(nn.Module):
 
     def forward(
         self,
-        hidden_states: ms.Tensor,
-        head_mask: Optional[ms.Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
         output_hidden_states: bool = False,
         return_dict: bool = True,
@@ -481,63 +478,31 @@ class ViTHybridPreTrainedModel(PreTrainedModel):
     main_input_name = "pixel_values"
     supports_gradient_checkpointing = True
     _no_split_modules = ["ViTHybridEmbeddings", "ViTHybridLayer"]
-    _supports_sdpa = True
 
-    def _init_weights(self, cell: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
+    def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv2d)):
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
             # Upcast the input in `fp32` and cast it back to desired `dtype` to avoid
             # `trunc_normal_cpu` not implemented in `half` issues
-            cell.weight.set_data(initializer(TruncatedNormal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-
-        elif isinstance(cell, ViTHybridEmbeddings):
-            cell.position_embeddings.set_data(initializer(TruncatedNormal(self.config.initializer_range),
-                                             cell.position_embeddings.shape, cell.position_embeddings.dtype))
-
-            cell.cls_token.set_data(initializer(TruncatedNormal(self.config.initializer_range),
-                                             cell.cls_token.shape, cell.cls_token.dtype))
-
-
-VIT_START_DOCSTRING = r"""
-    This model is a Mindspore [ms.nn.Module] subclass. Use it
-    as a regular mindspore Module and refer to the mindspore documentation for all matter related to general usage and
-    behavior.
-
-    Parameters:
-        config ([`ViTHybridConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-VIT_INPUTS_DOCSTRING = r"""
-    Args:
-        pixel_values (`ms.Tensor` of shape `(batch_size, num_channels, height, width)`):
-            Pixel values. Pixel values can be obtained using [`AutoImageProcessor`]. See
-            [`ViTHybridImageProcessor.__call__`] for details.
-
-        head_mask (`ms.Tensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-            Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
-
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
-
+            nn.init.trunc_normal_(
+                module.weight, mean=0.0, std=self.config.initializer_range
+            )
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
+        elif isinstance(module, ViTHybridEmbeddings):
+            nn.init.trunc_normal_(
+                module.position_embeddings,
+                mean=0.0,
+                std=self.config.initializer_range,
+            )
+            nn.init.trunc_normal_(
+                module.cls_token,
+                mean=0.0,
+                std=self.config.initializer_range,
+            )
 
 
 class ViTHybridModel(ViTHybridPreTrainedModel):
@@ -548,7 +513,7 @@ class ViTHybridModel(ViTHybridPreTrainedModel):
         self.embeddings = ViTHybridEmbeddings(config, use_mask_token=use_mask_token)
         self.encoder = ViTHybridEncoder(config)
 
-        self.layernorm = nn.LayerNorm((config.hidden_size,), eps=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.pooler = ViTHybridPooler(config) if add_pooling_layer else None
 
         # Initialize weights and apply final processing
@@ -565,19 +530,18 @@ class ViTHybridModel(ViTHybridPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-
     def forward(
         self,
-        pixel_values: Optional[ms.Tensor] = None,
-        bool_masked_pos: Optional[ms.Tensor] = None,
-        head_mask: Optional[ms.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        bool_masked_pos: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         interpolate_pos_encoding: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
-        bool_masked_pos (`ms.BoolTensor` of shape `(batch_size, num_patches)`, *optional*):
+        bool_masked_pos (`mindspore.Tensor` of shape `(batch_size, num_patches)`, *optional*):
             Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -610,7 +574,7 @@ class ViTHybridModel(ViTHybridPreTrainedModel):
             head_mask=head_mask,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict
+            return_dict=return_dict,
         )
         sequence_output = encoder_outputs[0]
         sequence_output = self.layernorm(sequence_output)
@@ -643,11 +607,6 @@ class ViTHybridPooler(nn.Module):
         return pooled_output
 
 
-
-"""
-ViT Hybrid Model transformer with an image classification head on top (a linear layer on top of the final hidden
-state of the [CLS] token) e.g. for ImageNet.
-"""
 class ViTHybridForImageClassification(ViTHybridPreTrainedModel):
     def __init__(self, config: ViTHybridConfig) -> None:
         super().__init__(config)
@@ -661,19 +620,18 @@ class ViTHybridForImageClassification(ViTHybridPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-
     def forward(
         self,
-        pixel_values: Optional[ms.Tensor] = None,
-        head_mask: Optional[ms.Tensor] = None,
-        labels: Optional[ms.Tensor] = None,
+        pixel_values: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         interpolate_pos_encoding: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, ImageClassifierOutput]:
         r"""
-        labels (`ms.LongTensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
@@ -695,25 +653,26 @@ class ViTHybridForImageClassification(ViTHybridPreTrainedModel):
 
         loss = None
         if labels is not None:
-            #TODO
-            # labels = labels.to(logits.device)
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and labels.dtype in (ms.int64, ms.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = F.mse_loss(logits, labels)
+                    loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = F.binary_cross_entropy_with_logits(logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]

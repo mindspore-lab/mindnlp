@@ -852,7 +852,7 @@ class RobertaPreLayerNormForCausalLM(RobertaPreLayerNormPreTrainedModel):
         >>> config.is_decoder = True
         >>> model = RobertaPreLayerNormForCausalLM.from_pretrained("andreasmadsen/efficient_mlm_m0.40", config=config)
 
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> prediction_logits = outputs.logits
@@ -1044,8 +1044,6 @@ class RobertaPreLayerNormLMHead(nn.Module):
         # if self.decoder.bias.device.type == "meta":
         # self.decoder.bias = self.bias
         # else:
-        print('tie weights')
-        print(self.bias.asnumpy())
         self.bias = self.decoder.bias
 
 
