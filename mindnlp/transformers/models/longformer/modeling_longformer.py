@@ -2529,7 +2529,7 @@ class LongformerForMaskedLM(LongformerPreTrainedModel):
             ...     "My friends are <mask> but they eat too many carbs."
             ...     + " That's why I decide not to eat with them." * 300
             ... )
-            >>> input_ids = tokenizer([TXT], return_tensors="pt")["input_ids"]
+            >>> input_ids = tokenizer([TXT], return_tensors="ms")["input_ids"]
             >>> logits = model(input_ids).logits
             ...
             >>> masked_index = (input_ids[0] == tokenizer.mask_token_id).nonzero().item()
@@ -2842,7 +2842,7 @@ class LongformerForQuestionAnswering(LongformerPreTrainedModel):
             >>> model = LongformerForQuestionAnswering.from_pretrained("allenai/longformer-large-4096-finetuned-triviaqa")
             ...
             >>> question, text = "Who was Jim Henson?", "Jim Henson was a nice puppet"
-            >>> encoding = tokenizer(question, text, return_tensors="pt")
+            >>> encoding = tokenizer(question, text, return_tensors="ms")
             >>> input_ids = encoding["input_ids"]
             ...
             >>> # default is local attention everywhere

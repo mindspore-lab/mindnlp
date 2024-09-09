@@ -1303,7 +1303,7 @@ class CamembertForCausalLM(CamembertPreTrainedModel):
             >>> config.is_decoder = True
             >>> model = CamembertForCausalLM.from_pretrained("almanach/camembert-base", config=config)
             ...
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> prediction_logits = outputs.logits

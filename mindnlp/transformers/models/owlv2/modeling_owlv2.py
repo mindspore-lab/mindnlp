@@ -757,7 +757,7 @@ class Owlv2TextModel(Owlv2PreTrainedModel):
         >>> model = Owlv2TextModel.from_pretrained("google/owlv2-base-patch16")
         >>> processor = AutoProcessor.from_pretrained("google/owlv2-base-patch16")
         >>> inputs = processor(
-        ...     text=[["a photo of a cat", "a photo of a dog"], ["photo of a astranaut"]], return_tensors="pt"
+        ...     text=[["a photo of a cat", "a photo of a dog"], ["photo of a astranaut"]], return_tensors="ms"
         ... )
         >>> outputs = model(**inputs)
         >>> last_hidden_state = outputs.last_hidden_state
@@ -866,7 +866,7 @@ class Owlv2VisionModel(Owlv2PreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
 
         >>> outputs = model(**inputs)
         >>> last_hidden_state = outputs.last_hidden_state
@@ -936,7 +936,7 @@ class Owlv2Model(Owlv2PreTrainedModel):
         >>> model = Owlv2Model.from_pretrained("google/owlv2-base-patch16-ensemble")
         >>> processor = AutoProcessor.from_pretrained("google/owlv2-base-patch16-ensemble")
         >>> inputs = processor(
-        ...     text=[["a photo of a cat", "a photo of a dog"], ["photo of a astranaut"]], return_tensors="pt"
+        ...     text=[["a photo of a cat", "a photo of a dog"], ["photo of a astranaut"]], return_tensors="ms"
         ... )
         >>> text_features = model.get_text_features(**inputs)
         ```"""
@@ -972,7 +972,7 @@ class Owlv2Model(Owlv2PreTrainedModel):
         >>> processor = AutoProcessor.from_pretrained("google/owlv2-base-patch16-ensemble")
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
         >>> image_features = model.get_image_features(**inputs)
         ```"""
         # Use OWLv2 model's config for some fields (if specified) instead of those of vision & text components.
@@ -1018,7 +1018,7 @@ class Owlv2Model(Owlv2PreTrainedModel):
         >>> processor = AutoProcessor.from_pretrained("google/owlv2-base-patch16-ensemble")
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> inputs = processor(text=[["a photo of a cat", "a photo of a dog"]], images=image, return_tensors="pt")
+        >>> inputs = processor(text=[["a photo of a cat", "a photo of a dog"]], images=image, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
         >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
@@ -1401,7 +1401,7 @@ class Owlv2ForObjectDetection(Owlv2PreTrainedModel):
         >>> image = Image.open(requests.get(url, stream=True).raw)
         >>> query_url = "http://images.cocodataset.org/val2017/000000001675.jpg"
         >>> query_image = Image.open(requests.get(query_url, stream=True).raw)
-        >>> inputs = processor(images=image, query_images=query_image, return_tensors="pt")
+        >>> inputs = processor(images=image, query_images=query_image, return_tensors="ms")
 
         >>> # forward pass
         >>> with no_grad():
@@ -1509,7 +1509,7 @@ class Owlv2ForObjectDetection(Owlv2PreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
         >>> texts = [["a photo of a cat", "a photo of a dog"]]
-        >>> inputs = processor(text=texts, images=image, return_tensors="pt")
+        >>> inputs = processor(text=texts, images=image, return_tensors="ms")
 
         >>> # forward pass
         >>> with ops.no_grad():

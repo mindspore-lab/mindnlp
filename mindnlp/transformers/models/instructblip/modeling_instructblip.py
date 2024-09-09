@@ -1250,7 +1250,7 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         >>> url = "https://raw.githubusercontent.com/salesforce/LAVIS/main/docs/_static/Confusing-Pictures.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw).convert("RGB")
         >>> prompt = "What is unusual about this image?"
-        >>> inputs = processor(images=image, text=prompt, return_tensors="pt")
+        >>> inputs = processor(images=image, text=prompt, return_tensors="ms")
 
         >>> outputs = model.generate(
         ...     **inputs,

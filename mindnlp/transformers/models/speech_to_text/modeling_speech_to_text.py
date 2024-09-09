@@ -1132,7 +1132,7 @@ class Speech2TextModel(Speech2TextPreTrainedModel):
             >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/s2t-small-librispeech-asr")
             >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
             >>> inputs = feature_extractor(
-            ...     ds[0]["audio"]["array"], sampling_rate=ds[0]["audio"]["sampling_rate"], return_tensors="pt"
+            ...     ds[0]["audio"]["array"], sampling_rate=ds[0]["audio"]["sampling_rate"], return_tensors="ms"
             ... )
             >>> input_features = inputs.input_features
             >>> decoder_input_ids = mindspore.Tensor([[1, 1]]) * model.config.decoder_start_token_id
@@ -1271,7 +1271,7 @@ class Speech2TextForConditionalGeneration(Speech2TextPreTrainedModel):
             >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
             ...
             >>> inputs = processor(
-            ...     ds[0]["audio"]["array"], sampling_rate=ds[0]["audio"]["sampling_rate"], return_tensors="pt"
+            ...     ds[0]["audio"]["array"], sampling_rate=ds[0]["audio"]["sampling_rate"], return_tensors="ms"
             ... )
             >>> input_features = inputs.input_features
             ...

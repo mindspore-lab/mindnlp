@@ -810,7 +810,7 @@ class BitBackbone(BitPreTrainedModel, BackboneMixin):
         >>> processor = AutoImageProcessor.from_pretrained("google/bit-50")
         >>> model = AutoBackbone.from_pretrained("google/bit-50")
 
-        >>> inputs = processor(image, return_tensors="pt")
+        >>> inputs = processor(image, return_tensors="ms")
         >>> outputs = model(**inputs)
         ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict

@@ -365,7 +365,7 @@ class SegGptModelIntegrationTest(unittest.TestCase):
             images=input_image,
             prompt_images=prompt_image,
             prompt_masks=prompt_mask,
-            return_tensors="pt",
+            return_tensors="ms",
             do_convert_rgb=False,
         )
 
@@ -409,7 +409,7 @@ class SegGptModelIntegrationTest(unittest.TestCase):
             images=input_images,
             prompt_images=prompt_images,
             prompt_masks=prompt_masks,
-            return_tensors="pt",
+            return_tensors="ms",
             do_convert_rgb=False,
         )
 
@@ -446,11 +446,11 @@ class SegGptModelIntegrationTest(unittest.TestCase):
             images=input_image,
             prompt_masks=prompt_mask,
             prompt_images=prompt_image,
-            return_tensors="pt",
+            return_tensors="ms",
             do_convert_rgb=False,
         )
 
-        labels = image_processor(images=None, prompt_masks=label, return_tensors="pt", do_convert_rgb=False)[
+        labels = image_processor(images=None, prompt_masks=label, return_tensors="ms", do_convert_rgb=False)[
             "prompt_masks"
         ]
 

@@ -690,7 +690,7 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         >>> image_path = dataset["test"][0]["file"]
         >>> image = Image.open(image_path).convert("RGB")
 
-        >>> encoding = processor(image, return_tensors="pt")
+        >>> encoding = processor(image, return_tensors="ms")
 
         >>> outputs = model(**encoding)
         >>> last_hidden_states = outputs.last_hidden_state
@@ -848,7 +848,7 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
         ...     "microsoft/layoutlmv2-base-uncased", num_labels=dataset.info.features["label"].num_classes
         ... )
 
-        >>> encoding = processor(image, return_tensors="pt")
+        >>> encoding = processor(image, return_tensors="ms")
         >>> sequence_label = mindspore.tensor([data["label"]])
 
         >>> outputs = model(**encoding, labels=sequence_label)
@@ -1024,7 +1024,7 @@ class LayoutLMv2ForTokenClassification(LayoutLMv2PreTrainedModel):
         ...     word_labels=word_labels,
         ...     padding="max_length",
         ...     truncation=True,
-        ...     return_tensors="pt",
+        ...     return_tensors="ms",
         ... )
 
         >>> outputs = model(**encoding)
@@ -1141,7 +1141,7 @@ class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
         >>> image_path = dataset["test"][0]["file"]
         >>> image = Image.open(image_path).convert("RGB")
         >>> question = "When is coffee break?"
-        >>> encoding = processor(image, question, return_tensors="pt")
+        >>> encoding = processor(image, question, return_tensors="ms")
 
         >>> outputs = model(**encoding)
         >>> predicted_start_idx = outputs.start_logits.argmax(-1).item()

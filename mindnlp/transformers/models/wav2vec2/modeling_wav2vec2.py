@@ -1586,7 +1586,7 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
         >>> model = Wav2Vec2ForPreTraining.from_pretrained("facebook/wav2vec2-base")
 
         >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-        >>> input_values = feature_extractor(ds[0]["audio"]["array"], return_tensors="pt").input_values  # Batch size 1
+        >>> input_values = feature_extractor(ds[0]["audio"]["array"], return_tensors="ms").input_values  # Batch size 1
 
         >>> # compute masked indices
         >>> batch_size, raw_sequence_length = input_values.shape
