@@ -16,20 +16,20 @@
 
 import collections.abc
 from typing import Optional, Tuple, Union
+
 import mindspore
-from mindspore.common.initializer import initializer, TruncatedNormal, Constant
+from mindnlp.core import ops, nn
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindnlp.utils import logging
-
-from ...activations import ACT2FN
+from ...activations import ACT2CLS
 from ...modeling_outputs import (
     BaseModelOutputWithNoAttention,
     ImageClassifierOutputWithNoAttention,
 )
 from ...modeling_utils import PreTrainedModel
-
+from ....utils import (
+    logging,
+)
 from .configuration_swiftformer import SwiftFormerConfig
 
 
@@ -49,7 +49,7 @@ _IMAGE_CLASS_EXPECTED_OUTPUT = "tabby, tabby cat"
 
 class SwiftFormerPatchEmbedding(nn.Module):
     """
-    Patch Embedding Layer forwarded of two 2D convolutional layers.
+    Patch Embedding Layer constructed of two 2D convolutional layers.
 
     Input: tensor of shape `[batch_size, in_channels, height, width]`
 
@@ -62,24 +62,10 @@ class SwiftFormerPatchEmbedding(nn.Module):
         in_chs = config.num_channels
         out_chs = config.embed_dims[0]
         self.patch_embedding = nn.Sequential(
-            nn.Conv2d(
-                in_chs,
-                out_chs // 2,
-                kernel_size=3,
-                stride=2,
-                padding=1,
-                bias=True,
-            ),
+            nn.Conv2d(in_chs, out_chs // 2, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(out_chs // 2, eps=config.batch_norm_eps),
             nn.ReLU(),
-            nn.Conv2d(
-                out_chs // 2,
-                out_chs,
-                kernel_size=3,
-                stride=2,
-                padding=1,
-                bias=True,
-            ),
+            nn.Conv2d(out_chs // 2, out_chs, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(out_chs, eps=config.batch_norm_eps),
             nn.ReLU(),
         )
@@ -89,9 +75,7 @@ class SwiftFormerPatchEmbedding(nn.Module):
 
 
 # Copied from transformers.models.beit.modeling_beit.drop_path
-def drop_path(
-    input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = False
-) -> mindspore.Tensor:
+def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = False) -> mindspore.Tensor:
     """
     Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
 
@@ -104,11 +88,9 @@ def drop_path(
     if drop_prob == 0.0 or not training:
         return input
     keep_prob = 1 - drop_prob
-    shape = (input.shape[0],) + (1,) * (
-        input.ndim - 1
-    )  # work with diff dim tensors, not just 2D ConvNets
+    shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
     random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
-    random_tensor.floor_()  # binarize
+    random_tensor = random_tensor.floor()  # binarize
     output = input.div(keep_prob) * random_tensor
     return output
 
@@ -147,31 +129,11 @@ class SwiftFormerEmbeddings(nn.Module):
         in_chans = embed_dims[index]
         embed_dim = embed_dims[index + 1]
 
-        patch_size = (
-            patch_size
-            if isinstance(patch_size, collections.abc.Iterable)
-            else (patch_size, patch_size)
-        )
-        stride = (
-            stride if isinstance(stride, collections.abc.Iterable) else (stride, stride)
-        )
-        padding = (
-            padding
-            if isinstance(padding, collections.abc.Iterable)
-            else (padding, padding)
-        )
+        patch_size = patch_size if isinstance(patch_size, collections.abc.Iterable) else (patch_size, patch_size)
+        stride = stride if isinstance(stride, collections.abc.Iterable) else (stride, stride)
+        padding = padding if isinstance(padding, collections.abc.Iterable) else (padding, padding)
 
-        if len(padding) == 2:
-            padding = (padding[0], padding[0], padding[1], padding[1])
-
-        self.proj = nn.Conv2d(
-            in_chans,
-            embed_dim,
-            kernel_size=patch_size,
-            stride=stride,
-            padding=padding,
-            bias=True,
-        )
+        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=stride, padding=padding)
         self.norm = nn.BatchNorm2d(embed_dim, eps=config.batch_norm_eps)
 
     def forward(self, x):
@@ -193,21 +155,13 @@ class SwiftFormerConvEncoder(nn.Module):
         super().__init__()
         hidden_dim = int(config.mlp_ratio * dim)
 
-        self.depth_wise_conv = nn.Conv2d(
-            dim, dim, kernel_size=3, padding=1, groups=dim, bias=True
-        )
+        self.depth_wise_conv = nn.Conv2d(dim, dim, kernel_size=3, padding=1, groups=dim)
         self.norm = nn.BatchNorm2d(dim, eps=config.batch_norm_eps)
-        self.point_wise_conv1 = nn.Conv2d(
-            dim, hidden_dim, kernel_size=1, bias=True
-        )
+        self.point_wise_conv1 = nn.Conv2d(dim, hidden_dim, kernel_size=1)
         self.act = nn.GELU()
-        self.point_wise_conv2 = nn.Conv2d(
-            hidden_dim, dim, kernel_size=1, bias=True
-        )
+        self.point_wise_conv2 = nn.Conv2d(hidden_dim, dim, kernel_size=1)
         self.drop_path = nn.Dropout(p=config.drop_conv_encoder_rate)
-        self.layer_scale = mindspore.Parameter(
-            ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True
-        )
+        self.layer_scale = nn.Parameter(ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True)
 
     def forward(self, x):
         input = x
@@ -233,17 +187,10 @@ class SwiftFormerMlp(nn.Module):
         super().__init__()
         hidden_features = int(in_features * config.mlp_ratio)
         self.norm1 = nn.BatchNorm2d(in_features, eps=config.batch_norm_eps)
-        self.fc1 = nn.Conv2d(
-            in_features, hidden_features, 1, bias=True
-        )
-        self.act = ACT2FN["gelu_new"]
-        # if isinstance(config.hidden_act, str):
-        #     self.act_layer = ACT2CLS[config.hidden_act]
-        # else:
-        #     self.act_layer = config.hidden_act
-        self.fc2 = nn.Conv2d(
-            hidden_features, in_features, 1, bias=True
-        )
+        self.fc1 = nn.Conv2d(in_features, hidden_features, 1)
+        act_layer = ACT2CLS[config.hidden_act]
+        self.act = act_layer()
+        self.fc2 = nn.Conv2d(hidden_features, in_features, 1)
         self.drop = nn.Dropout(p=config.drop_mlp_rate)
 
     def forward(self, x):
@@ -308,21 +255,13 @@ class SwiftFormerLocalRepresentation(nn.Module):
     def __init__(self, config: SwiftFormerConfig, dim: int):
         super().__init__()
 
-        self.depth_wise_conv = nn.Conv2d(
-            dim, dim, kernel_size=3, padding=1, groups=dim, bias=True
-        )
+        self.depth_wise_conv = nn.Conv2d(dim, dim, kernel_size=3, padding=1, groups=dim)
         self.norm = nn.BatchNorm2d(dim, eps=config.batch_norm_eps)
-        self.point_wise_conv1 = nn.Conv2d(
-            dim, dim, kernel_size=1, bias=True
-        )
+        self.point_wise_conv1 = nn.Conv2d(dim, dim, kernel_size=1)
         self.act = nn.GELU()
-        self.point_wise_conv2 = nn.Conv2d(
-            dim, dim, kernel_size=1, bias=True
-        )
+        self.point_wise_conv2 = nn.Conv2d(dim, dim, kernel_size=1)
         self.drop_path = nn.Identity()
-        self.layer_scale = mindspore.Parameter(
-            ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True
-        )
+        self.layer_scale = nn.Parameter(ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True)
 
     def forward(self, x):
         input = x
@@ -345,9 +284,7 @@ class SwiftFormerEncoderBlock(nn.Module):
     Output: tensor of shape `[batch_size, channels,height, width]`
     """
 
-    def __init__(
-        self, config: SwiftFormerConfig, dim: int, drop_path: float = 0.0
-    ) -> None:
+    def __init__(self, config: SwiftFormerConfig, dim: int, drop_path: float = 0.0) -> None:
         super().__init__()
 
         layer_scale_init_value = config.layer_scale_init_value
@@ -356,26 +293,20 @@ class SwiftFormerEncoderBlock(nn.Module):
         self.local_representation = SwiftFormerLocalRepresentation(config, dim=dim)
         self.attn = SwiftFormerEfficientAdditiveAttention(config, dim=dim)
         self.linear = SwiftFormerMlp(config, in_features=dim)
-        self.drop_path = (
-            SwiftFormerDropPath(config) if drop_path > 0.0 else nn.Identity()
-        )
+        self.drop_path = SwiftFormerDropPath(config) if drop_path > 0.0 else nn.Identity()
         self.use_layer_scale = use_layer_scale
         if use_layer_scale:
-            self.layer_scale_1 = mindspore.Parameter(
-                layer_scale_init_value * ops.ones(dim).unsqueeze(-1).unsqueeze(-1),
-                requires_grad=True,
+            self.layer_scale_1 = nn.Parameter(
+                layer_scale_init_value * ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True
             )
-            self.layer_scale_2 = mindspore.Parameter(
-                layer_scale_init_value * ops.ones(dim).unsqueeze(-1).unsqueeze(-1),
-                requires_grad=True,
+            self.layer_scale_2 = nn.Parameter(
+                layer_scale_init_value * ops.ones(dim).unsqueeze(-1).unsqueeze(-1), requires_grad=True
             )
 
     def forward(self, x):
         x = self.local_representation(x)
         batch_size, channels, height, width = x.shape
-        res = self.attn(
-            x.permute(0, 2, 3, 1).reshape(batch_size, height * width, channels)
-        )
+        res = self.attn(x.permute(0, 2, 3, 1).reshape(batch_size, height * width, channels))
         res = res.reshape(batch_size, height, width, channels).permute(0, 3, 1, 2)
         if self.use_layer_scale:
             x = x + self.drop_path(self.layer_scale_1 * res)
@@ -405,16 +336,10 @@ class SwiftFormerStage(nn.Module):
 
         blocks = []
         for block_idx in range(depth):
-            block_dpr = (
-                config.drop_path_rate
-                * (block_idx + sum(layer_depths[:index]))
-                / (sum(layer_depths) - 1)
-            )
+            block_dpr = config.drop_path_rate * (block_idx + sum(layer_depths[:index])) / (sum(layer_depths) - 1)
 
             if depth - block_idx <= 1:
-                blocks.append(
-                    SwiftFormerEncoderBlock(config, dim=dim, drop_path=block_dpr)
-                )
+                blocks.append(SwiftFormerEncoderBlock(config, dim=dim, drop_path=block_dpr))
             else:
                 blocks.append(SwiftFormerConvEncoder(config, dim=dim))
 
@@ -456,13 +381,9 @@ class SwiftFormerEncoder(nn.Module):
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, BaseModelOutputWithNoAttention]:
         output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         all_hidden_states = (hidden_states,) if output_hidden_states else None
 
@@ -482,7 +403,6 @@ class SwiftFormerEncoder(nn.Module):
 
 class SwiftFormerPreTrainedModel(PreTrainedModel):
     """
-    default_image_processor
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
@@ -493,50 +413,15 @@ class SwiftFormerPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["SwiftFormerEncoderBlock"]
 
-    def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
+    def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.BatchNorm2d]) -> None:
         """Initialize the weights"""
         if isinstance(module, (nn.Conv2d, nn.Linear)):
-            module.weight.set_data(
-                initializer(
-                    TruncatedNormal(sigma=0.02),
-                    module.weight.shape,
-                    module.weight.dtype,
-                )
-            )
+            nn.init.trunc_normal_(module.weight, std=0.02)
             if module.bias is not None:
-                module.bias.set_data(
-                    initializer(Constant(value=0), module.bias.shape, module.bias.dtype)
-                )
-        elif isinstance(module, (nn.LayerNorm)):
-            module.bias.set_data(
-                initializer(Constant(value=0), module.bias.shape, module.bias.dtype)
-            )
-            module.weight.set_data(
-                initializer(
-                    Constant(value=1.0), module.weight.shape, module.weight.dtype
-                )
-            )
-
-
-SWIFTFORMER_START_DOCSTRING = r"""
-    Parameters:
-        config ([`SwiftFormerConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-SWIFTFORMER_INPUTS_DOCSTRING = r"""
-    Args:
-        pixel_values (`torch.FloatTensor` of shape `(batch_size, num_channels, height, width)`):
-            Pixel values. Pixel values can be obtained using [`AutoImageProcessor`]. See [`ViTImageProcessor.__call__`]
-            for details.
-
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
+                nn.init.constant_(module.bias, 0)
+        elif isinstance(module, (nn.BatchNorm2d)):
+            nn.init.constant_(module.bias, 0)
+            nn.init.constant_(module.weight, 1.0)
 
 
 class SwiftFormerModel(SwiftFormerPreTrainedModel):
@@ -556,15 +441,10 @@ class SwiftFormerModel(SwiftFormerPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithNoAttention]:
-
         output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if pixel_values is None:
             raise ValueError("You have to specify pixel_values")
@@ -575,7 +455,6 @@ class SwiftFormerModel(SwiftFormerPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
         if not return_dict:
             return tuple(v for v in encoder_outputs if v is not None)
 
@@ -596,16 +475,8 @@ class SwiftFormerForImageClassification(SwiftFormerPreTrainedModel):
 
         # Classifier head
         self.norm = nn.BatchNorm2d(embed_dims[-1], eps=config.batch_norm_eps)
-        self.head = (
-            nn.Linear(embed_dims[-1], self.num_labels)
-            if self.num_labels > 0
-            else nn.Identity()
-        )
-        self.dist_head = (
-            nn.Linear(embed_dims[-1], self.num_labels)
-            if self.num_labels > 0
-            else nn.Identity()
-        )
+        self.head = nn.Linear(embed_dims[-1], self.num_labels) if self.num_labels > 0 else nn.Identity()
+        self.dist_head = nn.Linear(embed_dims[-1], self.num_labels) if self.num_labels > 0 else nn.Identity()
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -618,15 +489,12 @@ class SwiftFormerForImageClassification(SwiftFormerPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[tuple, ImageClassifierOutputWithNoAttention]:
         r"""
-        Args:
-            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # run base model
         outputs = self.swiftformer(
@@ -639,8 +507,7 @@ class SwiftFormerForImageClassification(SwiftFormerPreTrainedModel):
 
         # run classification head
         sequence_output = self.norm(sequence_output)
-        sequence_output = sequence_output.flatten(start_dim=2).mean(-1)
-
+        sequence_output = ops.flatten(sequence_output, 2).mean(-1)
         cls_out = self.head(sequence_output)
         distillation_out = self.dist_head(sequence_output)
         logits = (cls_out + distillation_out) / 2
@@ -651,25 +518,23 @@ class SwiftFormerForImageClassification(SwiftFormerPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and labels.dtype in (
-                    mindspore.int64,
-                    mindspore.int32,
-                ):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = F.mse_loss(logits, labels)
+                    loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = F.cross_entropy(
-                    logits.view(-1, self.num_labels), labels.view(-1)
-                )
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = F.binary_cross_entropy_with_logits(logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -680,7 +545,6 @@ class SwiftFormerForImageClassification(SwiftFormerPreTrainedModel):
             logits=logits,
             hidden_states=outputs.hidden_states,
         )
-
 
 __all__ = [
     "SwiftFormerModel",

@@ -15,21 +15,11 @@
 ''' Wav2Vec2 Model '''
 
 from . import configuration_wav2vec2, feature_extraction_wav2vec2, processing_wav2vec2, tokenization_wav2vec2, modeling_wav2vec2
-from .configuration_wav2vec2 import WAV_2_VEC_2_PRETRAINED_CONFIG_ARCHIVE_MAP, Wav2Vec2Config
+from .configuration_wav2vec2 import *
 from .feature_extraction_wav2vec2 import Wav2Vec2FeatureExtractor
 from .processing_wav2vec2 import Wav2Vec2Processor
 from .tokenization_wav2vec2 import Wav2Vec2CTCTokenizer, Wav2Vec2Tokenizer
-from .modeling_wav2vec2 import (
-    WAV_2_VEC_2_PRETRAINED_MODEL_ARCHIVE_LIST,
-    Wav2Vec2ForAudioFrameClassification,
-    Wav2Vec2ForCTC,
-    Wav2Vec2ForMaskedLM,
-    Wav2Vec2ForPreTraining,
-    Wav2Vec2ForSequenceClassification,
-    Wav2Vec2ForXVector,
-    Wav2Vec2Model,
-    Wav2Vec2PreTrainedModel,
-)
+from .modeling_wav2vec2 import *
 
 __all__ = []
 __all__.extend(configuration_wav2vec2.__all__)

@@ -1013,10 +1013,10 @@ class MarianModel(MarianPreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-de")
             >>> model = MarianModel.from_pretrained("Helsinki-NLP/opus-mt-en-de")
             ...
-            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
+            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="ms")
             >>> decoder_inputs = tokenizer(
             ...     "<pad> Studien haben gezeigt dass es hilfreich ist einen Hund zu besitzen",
-            ...     return_tensors="pt",
+            ...     return_tensors="ms",
             ...     add_special_tokens=False,
             ... )
             >>> outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_inputs.input_ids)

@@ -369,7 +369,15 @@ class ConditionalDetrConvEncoder(nn.Module):
             self.model.feature_info.channels() if config.use_timm_backbone else self.model.channels
         )
 
-        backbone_model_type = config.backbone if config.use_timm_backbone else config.backbone_config.model_type
+        backbone_model_type = None
+        if config.backbone is not None:
+            backbone_model_type = config.backbone
+        elif config.backbone_config is not None:
+            backbone_model_type = config.backbone_config.model_type
+        else:
+            raise ValueError("Either `backbone` or `backbone_config` should be provided in the config")
+
+
         if "resnet" in backbone_model_type:
             for name, parameter in self.model.parameters_and_names():
                 if config.use_timm_backbone:
@@ -1495,7 +1503,7 @@ class ConditionalDetrModel(ConditionalDetrPreTrainedModel):
         >>> model = AutoModel.from_pretrained("microsoft/conditional-detr-resnet-50")
 
         >>> # prepare image for the model
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
 
         >>> # forward pass
         >>> outputs = model(**inputs)
@@ -1657,7 +1665,7 @@ class ConditionalDetrForObjectDetection(ConditionalDetrPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("microsoft/conditional-detr-resnet-50")
         >>> model = AutoModelForObjectDetection.from_pretrained("microsoft/conditional-detr-resnet-50")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
 
         >>> outputs = model(**inputs)
 
@@ -1852,7 +1860,7 @@ class ConditionalDetrForSegmentation(ConditionalDetrPreTrainedModel):
         >>> model = ConditionalDetrForSegmentation(config)
 
         >>> # prepare image for the model
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
 
         >>> # forward pass
         >>> outputs = model(**inputs)

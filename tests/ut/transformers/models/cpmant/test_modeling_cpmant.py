@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the PyTorch CPMAnt model. """
+""" Testing suite for the MindSpore CPMAnt model. """
 
 import unittest
 import numpy as np
@@ -214,7 +214,7 @@ class CpmAntForCausalLMlIntegrationTest(unittest.TestCase):
         tokenizer = CpmAntTokenizer.from_pretrained(model_path)
         texts = "今天天气不错，"
         expected_output = "今天天气不错，阳光明媚，我和妈妈一起去超市买东西。\n在超市里，我看到了一个很好玩的玩具，它的名字叫“机器人”。它有一个圆圆的脑袋，两只圆圆的眼睛，还有一个圆圆的"
-        model_inputs = tokenizer(texts, return_tensors="pt")
+        model_inputs = tokenizer(texts, return_tensors="ms")
         token_ids = model.generate(**model_inputs)
         output_texts = tokenizer.batch_decode(token_ids)
         self.assertEqual(expected_output, output_texts)
@@ -229,7 +229,7 @@ class CpmAntForCausalLMlIntegrationTest(unittest.TestCase):
             "今天天气不错，阳光明媚，我和妈妈一起去超市买东西。\n在超市里，我看到了一个很好玩的玩具，它的名字叫“机器人”。它有一个圆圆的脑袋，两只圆圆的眼睛，还有一个圆圆的",
             "新年快乐，万事如意！在这辞旧迎新的美好时刻，我谨代表《农村新技术》杂志社全体同仁，向一直以来关心、支持《农村新技术》杂志发展的各级领导、各界朋友和广大读者致以最诚挚的",
         ]
-        model_inputs = tokenizer(texts, return_tensors="pt", padding=True)
+        model_inputs = tokenizer(texts, return_tensors="ms", padding=True)
         token_ids = model.generate(**model_inputs)
         output_texts = tokenizer.batch_decode(token_ids)
         self.assertEqual(expected_output, output_texts)

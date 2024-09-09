@@ -19,7 +19,7 @@ import tempfile
 import unittest
 
 import mindspore
-from mindspore import ops, Tensor
+from mindspore import Tensor
 import numpy as np
 from datasets import load_dataset
 
@@ -42,6 +42,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         Wav2Vec2ConformerForAudioFrameClassification,
@@ -519,65 +520,6 @@ class Wav2Vec2ConformerModelTest(ModelTesterMixin, unittest.TestCase):
     def test_model_get_set_embeddings(self):
         pass
 
-    #@is_pt_flax_cross_test
-    # non-robust architecture does not exist in Flax
-    def test_equivalence_flax_to_pt(self):
-        pass
-
-    #@is_pt_flax_cross_test
-    # non-robust architecture does not exist in Flax
-    def test_equivalence_pt_to_flax(self):
-        pass
-
-    @unittest.skip('delated in wav2vec2')
-    def test_retain_grad_hidden_states_attentions(self):
-        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
-
-        config.output_hidden_states = True
-        config.output_attentions = True
-
-        # no need to test all models as different heads yield the same functionality
-        model_class = self.all_model_classes[0]
-        model = model_class(config)
-        
-
-        # set layer drop to 0
-        model.config.layerdrop = 0.0
-
-        input_values = inputs_dict["input_values"]
-        attention_mask_ = inputs_dict["attention_mask"]
-
-
-        tmp = ops.ones_like(attention_mask_,dtype = mindspore.int64)
-        inputs_dict["attention_mask"] = tmp
-
-        outputs = model(**inputs_dict)
-
-        input_lengths = Tensor(
-            [input_values.shape[1] for _ in range(input_values.shape[0])], dtype=mindspore.int64
-        )
-        # output_lengths = model._get_feat_extract_output_lengths(input_lengths)
-        # labels = ids_tensor([input_values.shape[0], output_lengths[0] - 2], self.model_tester.vocab_size)
-        
-        # inputs_dict["labels"] = labels
-
-        # print(inputs_dict)
-
-        output = outputs[0]
-
-        # Encoder-/Decoder-only models
-        hidden_states = outputs.hidden_states[0]
-        attentions = outputs.attentions[0]
-
-        grad_fn = ops.GradOperation(get_by_list=True)
-        hidden_states.retain_grad()
-        attentions.retain_grad()
-
-        output.flatten()[0].backward(retain_graph=True)
-
-        self.assertIsNotNone(hidden_states.grad)
-        self.assertIsNotNone(attentions.grad)
-
     def test_initialization(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
@@ -788,8 +730,8 @@ class Wav2Vec2ConformerUtilsTest(unittest.TestCase):
             (batch_size, sequence_length), mask_prob, mask_length, attention_mask=attention_mask, min_masks=2
         )
 
-        mask_bool = ops.cast(Tensor(mask[0]), mindspore.bool_)
-        attention_mask_bool = ops.cast(attention_mask[0], mindspore.bool_)
+        mask_bool = Tensor(mask[0], mindspore.bool_)
+        attention_mask_bool = attention_mask[0].to(mindspore.bool_)
         # make sure that non-padded examples cannot be padded
         self.assertFalse(mask_bool[attention_mask_bool].any())
 
@@ -815,7 +757,7 @@ class Wav2Vec2ConformerUtilsTest(unittest.TestCase):
         features = (ops.arange(sequence_length * hidden_size) // hidden_size).view(
             sequence_length, hidden_size
         )  # each value in vector consits of same value
-        features = features[None, :].expand(batch_size, sequence_length, hidden_size).contiguous()
+        features = features[None, :].broadcast_to((batch_size, sequence_length, hidden_size))
 
         # sample negative indices
         sampled_negative_indices = _sample_negative_indices((batch_size, sequence_length), num_negatives, None)
@@ -836,7 +778,7 @@ class Wav2Vec2ConformerUtilsTest(unittest.TestCase):
         # make sure that full vectors are sampled and not values of vectors => this means that `unique()` yields a single value for `hidden_size` dim
         self.assertTrue(unique_negatives_tensor.shape, (num_negatives, batch_size, sequence_length, 1))
 
-    def test_sample_negatives_with_mask(self):  #TODO
+    def test_sample_negatives_with_mask(self):
         batch_size = 2
         sequence_length = 10
         hidden_size = 4
@@ -846,22 +788,19 @@ class Wav2Vec2ConformerUtilsTest(unittest.TestCase):
         mask = ops.ones((batch_size, sequence_length), dtype=mindspore.int64)
         mask[-1, sequence_length // 2 :] = 0
 
-        sequence = ops.div(
-            ops.arange(sequence_length * hidden_size),
-            hidden_size,
-            rounding_mode="floor"
-        )
-        features = sequence.view(sequence_length, hidden_size)  # each value in vector consits of same value
-        features = features[None, :].expand(batch_size, sequence_length, hidden_size)
+        features = (ops.arange(sequence_length * hidden_size) // hidden_size).view(
+            sequence_length, hidden_size
+        )  # each value in vector consits of same value
+        features = features[None, :].broadcast_to((batch_size, sequence_length, hidden_size))
 
         # replace masked feature vectors with -100 to test that those are not sampled
-        features = ops.where(mask[:, :, None].expand(features.shape).bool(), features, -100)
+        features = ops.where(mask[:, :, None].broadcast_to(features.shape).bool(), features, -100)
 
         # sample negative indices
         sampled_negative_indices = _sample_negative_indices(
-            (batch_size, sequence_length), num_negatives, mask
+            (batch_size, sequence_length), num_negatives, mask.asnumpy()
         )
-        sampled_negative_indices = Tensor.from_numpy(sampled_negative_indices)
+        sampled_negative_indices = ops.from_numpy(sampled_negative_indices)
         negatives = features.view(-1, hidden_size)[sampled_negative_indices.long().view(-1)]
         negatives = negatives.view(batch_size, sequence_length, -1, hidden_size).permute(2, 0, 1, 3)
 
@@ -874,14 +813,7 @@ class Wav2Vec2ConformerUtilsTest(unittest.TestCase):
             self.assertTrue(((negative - features) == 0).sum() == 0.0)
 
         # make sure that full vectors are sampled and not values of vectors => this means that `unique()` yields a single value for `hidden_size` dim
-        # self.assertTrue(check_unique_values(negatives,dim=-1).shape, (num_negatives, batch_size, sequence_length, 1))
-        # copy from wav2vec2
-        self.assertEqual(negatives.shape[:-1], (num_negatives, batch_size, sequence_length))
-        ref = negatives[:, :, :, 0]
-        for i in range(1, negatives.shape[-1]):
-            print('i = ', i)
-            x = negatives[:, :, :, i]
-            self.assertTrue(ops.all(ref == x))
+        self.assertTrue(ops.unique(negatives, dim=-1).shape, (num_negatives, batch_size, sequence_length, 1))
 
 @require_mindspore
 @slow

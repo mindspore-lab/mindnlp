@@ -220,6 +220,7 @@ class ModelTesterMixin:
         return inputs_dict
 
     def test_save_load(self):
+        set_seed(123)
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def check_save_load(out1, out2):
@@ -1283,7 +1284,6 @@ class ModelTesterMixin:
             config.chunk_size_feed_forward = 1
             model = model_class(config)
             model.eval()
-
             hidden_states_with_chunk = model(**self._prepare_for_class(inputs_dict, model_class))[0]
             self.assertTrue(ops.allclose(hidden_states_no_chunk, hidden_states_with_chunk, atol=1e-3))
 
@@ -2406,7 +2406,6 @@ class ModelTesterMixin:
                                 is_special_classes
                                 and any(len(re.findall(target, name)) > 0 for target in special_param_names)
                             ):
-                                print(name)
                                 self.assertIn(
                                     param_mean,
                                     [0.0, 1.0],
@@ -3085,7 +3084,6 @@ class ModelTesterMixin:
 
         # Creating a position_ids tensor. note the repeating figures in the end.
         position_ids_shared_prefix = mindspore.tensor([[0, 1, 2, 3, 3, 3]], dtype=mindspore.int64)
-
         return input_ids, position_ids, input_ids_shared_prefix, mask_shared_prefix, position_ids_shared_prefix
 
     def test_custom_4d_attention_mask(self):
@@ -3125,7 +3123,6 @@ class ModelTesterMixin:
 
             out_last_tokens = logits[:, -1, :]  # last tokens in each batch line
             out_shared_prefix_last_tokens = logits_shared_prefix[0, -3:, :]  # last three tokens
-
             # comparing softmax-normalized logits:
             normalized_0 = F.softmax(out_last_tokens)
             normalized_1 = F.softmax(out_shared_prefix_last_tokens)

@@ -782,7 +782,7 @@ class FocalNetForMaskedImageModeling(FocalNetPreTrainedModel):
         >>> model = FocalNetForMaskedImageModeling(config)
 
         >>> num_patches = (model.config.image_size // model.config.patch_size) ** 2
-        >>> pixel_values = image_processor(images=image, return_tensors="pt").pixel_values
+        >>> pixel_values = image_processor(images=image, return_tensors="ms").pixel_values
         >>> # create random boolean mask of shape (batch_size, num_patches)
         >>> bool_masked_pos = torch.randint(low=0, high=2, size=(1, num_patches)).bool()
 
@@ -944,7 +944,7 @@ class FocalNetBackbone(FocalNetPreTrainedModel, BackboneMixin):
         >>> processor = AutoImageProcessor.from_pretrained("microsoft/focalnet-tiny-lrf")
         >>> model = AutoBackbone.from_pretrained("microsoft/focalnet-tiny-lrf")
 
-        >>> inputs = processor(image, return_tensors="pt")
+        >>> inputs = processor(image, return_tensors="ms")
         >>> outputs = model(**inputs)
         ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict

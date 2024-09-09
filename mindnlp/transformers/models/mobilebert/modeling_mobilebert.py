@@ -1864,7 +1864,7 @@ class MobileBertForNextSentencePrediction(MobileBertPreTrainedModel):
             ...
             >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
             >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
-            >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
+            >>> encoding = tokenizer(prompt, next_sentence, return_tensors="ms")
             ...
             >>> outputs = model(**encoding, labels=torch.LongTensor([1]))
             >>> loss = outputs.loss

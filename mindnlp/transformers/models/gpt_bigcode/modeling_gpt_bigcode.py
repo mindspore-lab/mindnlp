@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""MindNLP GPTBigCode model."""
+"""MindSpore GPTBigCode model."""
 
 import math
 from typing import List, Optional, Tuple, Union
@@ -19,8 +19,8 @@ from typing import List, Optional, Tuple, Union
 import mindspore
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+
 from ...activations import ACT2FN
-from ...modeling_attn_mask_utils import AttentionMaskConverter
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
     CausalLMOutputWithCrossAttentions,
@@ -28,8 +28,11 @@ from ...modeling_outputs import (
     TokenClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from ....utils import logging
+from ....utils import (
+    logging,
+)
 from .configuration_gpt_bigcode import GPTBigCodeConfig
+
 
 
 logger = logging.get_logger(__name__)
@@ -43,7 +46,7 @@ _CONFIG_FOR_DOC = "GPTBigCodeConfig"
 # TODO: Could have better fused kernels depending on scaling, dropout and head mask.
 #  Is it doable without writing 32 functions?
 def upcast_masked_softmax(
-    x: mindspore.Tensor, mask: mindspore.Tensor, mask_value: mindspore.Tensor, scale: float, softmax_dtype
+    x: mindspore.Tensor, mask: mindspore.Tensor, mask_value: mindspore.Tensor, scale: float, softmax_dtype: mindspore.dtype
 ):
     input_dtype = x.dtype
     x = x.to(softmax_dtype) * scale
@@ -52,7 +55,7 @@ def upcast_masked_softmax(
     return x
 
 
-def upcast_softmax(x: mindspore.Tensor, scale: float, softmax_dtype):
+def upcast_softmax(x: mindspore.Tensor, scale: float, softmax_dtype: mindspore.dtype):
     input_dtype = x.dtype
     x = x.to(softmax_dtype) * scale
     x = nn.functional.softmax(x, dim=-1).to(input_dtype)
@@ -150,8 +153,15 @@ class GPTBigCodeAttention(nn.Module):
             # No copy when layer_past is provided.
             key = key.reshape(batch_size * self.num_heads, self.head_dim, key_length)
 
-        attn_weights = ops.zeros(attn_view, dtype=query.dtype)
-        beta = 1
+        attn_weights = ops.empty(attn_view, dtype=query.dtype)
+        # if query.device.type == "cpu":
+        #     # This is needed because of a bug in pytorch https://github.com/pytorch/pytorch/issues/80588.
+        #     # The bug was fixed in https://github.com/pytorch/pytorch/pull/96086,
+        #     # but the fix has not been released as of pytorch version 2.0.0.
+        #     attn_weights = ops.zeros_like(attn_weights)
+        #     beta = 1
+        # else:
+        beta = 0
         attn_weights = ops.baddbmm(attn_weights, query, key, beta=beta, alpha=scale_factor).view(attn_shape)
 
         if upcast:
@@ -176,7 +186,7 @@ class GPTBigCodeAttention(nn.Module):
         # Mask heads if we want to
         if head_mask is not None:
             if self.multi_query:
-                head_mask = head_mask.swapaxes(1, 2)
+                head_mask = ops.transpose(head_mask, 1, 2)
             attn_weights = attn_weights * head_mask
 
         if self.multi_query:
@@ -211,28 +221,27 @@ class GPTBigCodeAttention(nn.Module):
             key_value = self.c_attn(encoder_hidden_states)
             attention_mask = encoder_attention_mask
         elif self.multi_query:
-            query, key_value = self.c_attn(hidden_states).split((self.embed_dim, 2 * self.kv_dim), axis=2)
+            query, key_value = ops.split(self.c_attn(hidden_states), (self.embed_dim, 2 * self.kv_dim), dim=2)
         else:
             # Note: We split as (self.num_heads, 3, self.head_dim) instead of (3, self.num_heads, self.head_dim),
             # i.e., the memory layout is not the same as GPT2.
             # This makes the concatenation with past_key_value more efficient.
             query, key_value = (
-                self.c_attn(hidden_states)
-                .view(*hidden_states.shape[:2], self.num_heads, 3 * self.head_dim)
-                .swapaxes(1, 2)
-                .split((self.head_dim, 2 * self.head_dim), axis=3)
+                ops.split(ops.transpose(
+                    self.c_attn(hidden_states).view(*hidden_states.shape[:2], self.num_heads, 3 * self.head_dim), 1, 2),
+                    (self.head_dim, 2 * self.head_dim), dim=3)
             )
 
         if layer_past is not None:
             key_value = ops.cat((layer_past, key_value), dim=-2)
         present = key_value if use_cache else None
 
-        key, value = key_value.split((self.head_dim, self.head_dim), axis=-1)
+        key, value = ops.split(key_value, (self.head_dim, self.head_dim), dim=-1)
 
-        attn_output, attn_weights = self._attn(query, key.swapaxes(-1, -2), value, attention_mask, head_mask)
+        attn_output, attn_weights = self._attn(query, ops.transpose(key, -1, -2), value, attention_mask, head_mask)
 
         if not self.multi_query:
-            attn_output = attn_output.swapaxes(1, 2).reshape(hidden_states.shape)
+            attn_output = ops.transpose(attn_output, 1, 2).reshape(hidden_states.shape)
         attn_output = self.c_proj(attn_output)
         attn_output = self.resid_dropout(attn_output)
 
@@ -240,7 +249,7 @@ class GPTBigCodeAttention(nn.Module):
         if output_attentions:
             if self.multi_query:
                 # Transpose to return weights in the usual format (batch_size, num_heads, query_length, key_length)
-                attn_weights = attn_weights.swapaxes(1, 2)
+                attn_weights = ops.transpose(attn_weights, 1, 2)
             outputs += (attn_weights,)
 
         return outputs  # a, present, (attentions)
@@ -380,8 +389,7 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
             #
             # Reference (Megatron-LM): https://github.com/NVIDIA/Megatron-LM/blob/main/megatron/model/gpt_model.py
             nn.init.normal_(
-                module.c_proj.weight,
-                mean=0.0, std=(self.config.initializer_range / math.sqrt(2 * self.config.n_layer))
+                module.c_proj.weight, mean=0.0, std=(self.config.initializer_range / math.sqrt(2 * self.config.n_layer))
             )
             module.c_proj._is_initialized = True
         elif isinstance(module, nn.Linear):
@@ -505,7 +513,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         else:
             # 4d mask is passed through the layers
             if attention_mask is not None:
-                self_attention_mask = (self_attention_mask * attention_mask.view(batch_size, 1, -1)).to(
+                self_attention_mask = self_attention_mask * attention_mask.view(batch_size, 1, -1).to(
                     dtype=mindspore.bool_
                 )
 
@@ -528,14 +536,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
                 if self.multi_query:
                     # gpt_bigcode using MQA has the bad taste to use a causal mask with shape
                     # [batch_size, target_length, 1, source_length], not compatible with SDPA, hence this transpose.
-                    self_attention_mask = self_attention_mask.swapaxes(1, 2)
-
-                if query_length > 1 and attention_mask is not None:
-                    # From MindNLP 2.1 onwards, F.scaled_dot_product_attention with the memory-efficient attention backend
-                    # produces nans if sequences are completely unattended in the attention mask. Details: https://github.com/pytorch/pytorch/issues/110213
-                    self_attention_mask = AttentionMaskConverter._unmask_unattended(
-                        self_attention_mask, min_dtype=min_dtype
-                    )
+                    self_attention_mask = ops.transpose(self_attention_mask, 1, 2)
 
             attention_mask = self_attention_mask
 

@@ -1056,7 +1056,7 @@ class Swin2SRForImageSuperResolution(Swin2SRPreTrainedModel):
          >>> url = "https://huggingface.co/spaces/jjourney1125/swin2sr/resolve/main/samples/butterfly.jpg"
          >>> image = Image.open(requests.get(url, stream=True).raw)
          >>> # prepare image for the model
-         >>> inputs = processor(image, return_tensors="pt")
+         >>> inputs = processor(image, return_tensors="ms")
 
          >>> # forward pass
          >>> with no_grad():

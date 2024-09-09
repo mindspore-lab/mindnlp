@@ -35,7 +35,7 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_
 
 if is_mindspore_available():
     import mindspore as ms
-    from mindspore import nn
+    from mindnlp.core import nn
 
     from mindnlp.transformers import XCLIPModel, XCLIPTextModel, XCLIPVisionModel
 

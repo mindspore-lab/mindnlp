@@ -53,7 +53,6 @@ if is_mindspore_available():
 if is_vision_available():
     from PIL import Image
 
-
 class Pix2StructVisionModelTester:
     def __init__(
         self,
@@ -583,6 +582,8 @@ class Pix2StructModelTest(ModelTesterMixin, unittest.TestCase):
             # Decoder input ids should be clamped to the maximum size of the vocabulary
             if "decoder_input_ids" in inputs_dict:
                 inputs_dict["decoder_input_ids"] = inputs_dict["decoder_input_ids"].clamp(max=model_vocab_size - 15 - 1)
+                inputs_dict["labels"] = inputs_dict["labels"].clamp(max=model_vocab_size - 15 - 1)
+
             model(**self._prepare_for_class(inputs_dict, model_class))
 
             # Check that adding and removing tokens has not modified the first part of the embedding matrix.
@@ -638,6 +639,7 @@ class Pix2StructModelTest(ModelTesterMixin, unittest.TestCase):
             # Decoder input ids should be clamped to the maximum size of the vocabulary
             if "decoder_input_ids" in inputs_dict:
                 inputs_dict["decoder_input_ids"] = inputs_dict["decoder_input_ids"].clamp(max=model_vocab_size - 15 - 1)
+                inputs_dict["labels"] = inputs_dict["labels"].clamp(max=model_vocab_size - 15 - 1)
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             model(**self._prepare_for_class(inputs_dict, model_class))
 

@@ -292,7 +292,7 @@ class VitMatteForImageMatting(VitMattePreTrainedModel):
         >>> trimap = Image.open(filepath).convert("L")
 
         >>> # prepare image + trimap for the model
-        >>> inputs = processor(images=image, trimaps=trimap, return_tensors="pt")
+        >>> inputs = processor(images=image, trimaps=trimap, return_tensors="ms")
 
         >>> with torch.no_grad():
         ...     alphas = model(**inputs).alphas
