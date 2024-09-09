@@ -104,7 +104,7 @@ class MinLengthLogitsProcessor(LogitsProcessor):
     >>> tokenizer = AutoTokenizer.from_pretrained("bigscience/bloomz-560m")
     >>> model = AutoModelForCausalLM.from_pretrained("bigscience/bloomz-560m")
 
-    >>> inputs = tokenizer("A number:", return_tensors="pt")
+    >>> inputs = tokenizer("A number:", return_tensors="ms")
     >>> gen_out = model.generate(**inputs)
     >>> print(tokenizer.batch_decode(gen_out, skip_special_tokens=True)[0])
     A number: one
@@ -165,7 +165,7 @@ class MinNewTokensLengthLogitsProcessor(LogitsProcessor):
     >>> tokenizer = AutoTokenizer.from_pretrained("bigscience/bloomz-560m")
     >>> model = AutoModelForCausalLM.from_pretrained("bigscience/bloomz-560m")
 
-    >>> inputs = tokenizer(["A number:"], return_tensors="pt")
+    >>> inputs = tokenizer(["A number:"], return_tensors="ms")
     >>> gen_out = model.generate(**inputs)
     >>> print(tokenizer.batch_decode(gen_out, skip_special_tokens=True)[0])
     A number: one
@@ -241,7 +241,7 @@ class TemperatureLogitsWarper(LogitsWarper):
     >>> tokenizer = AutoTokenizer.from_pretrained("openai-community/gpt2")
     >>> model = AutoModelForCausalLM.from_pretrained("openai-community/gpt2")
     >>> model.config.pad_token_id = model.config.eos_token_id
-    >>> inputs = tokenizer(["Hugging Face Company is"], return_tensors="pt")
+    >>> inputs = tokenizer(["Hugging Face Company is"], return_tensors="ms")
 
     >>> # With temperature=1.0, the default, we consistently get random outputs due to random sampling.
     >>> generate_kwargs = {"max_new_tokens": 10, "do_sample": True, "temperature": 1.0, "num_return_sequences": 2}
@@ -299,7 +299,7 @@ class RepetitionPenaltyLogitsProcessor(LogitsProcessor):
     >>> # Initializing the model and tokenizer for it
     >>> model = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2")
     >>> tokenizer = AutoTokenizer.from_pretrained("distilbert/distilgpt2")
-    >>> inputs = tokenizer(["I'm not going to"], return_tensors="pt")
+    >>> inputs = tokenizer(["I'm not going to"], return_tensors="ms")
 
     >>> # This shows a normal generate without any specific parameters
     >>> summary_ids = model.generate(**inputs)
@@ -353,7 +353,7 @@ class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
     >>> tokenizer = AutoTokenizer.from_pretrained("bigscience/bloomz-560m")
     >>> model = AutoModelForCausalLM.from_pretrained("bigscience/bloomz-560m")
 
-    >>> inputs = tokenizer(["Alice and Bob. The third member's name was"], return_tensors="pt")
+    >>> inputs = tokenizer(["Alice and Bob. The third member's name was"], return_tensors="ms")
     >>> gen_out = model.generate(**inputs)
     >>> print(tokenizer.batch_decode(gen_out, skip_special_tokens=True)[0])
     Alice and Bob. The third member's name was not mentioned.
@@ -406,7 +406,7 @@ class TopPLogitsWarper(LogitsWarper):
     >>> model = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2")
     >>> tokenizer = AutoTokenizer.from_pretrained("distilbert/distilgpt2")
 
-    >>> inputs = tokenizer("A sequence: 1, 2", return_tensors="pt")
+    >>> inputs = tokenizer("A sequence: 1, 2", return_tensors="ms")
 
     >>> # With sampling, the output is unexpected -- sometimes too unexpected.
     >>> outputs = model.generate(**inputs, do_sample=True)
@@ -473,7 +473,7 @@ class TopKLogitsWarper(LogitsWarper):
     >>> model = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2")
     >>> tokenizer = AutoTokenizer.from_pretrained("distilbert/distilgpt2")
 
-    >>> inputs = tokenizer("A sequence: A, B, C, D", return_tensors="pt")
+    >>> inputs = tokenizer("A sequence: A, B, C, D", return_tensors="ms")
 
     >>> # With sampling, the output is unexpected -- sometimes too unexpected.
     >>> outputs = model.generate(**inputs, do_sample=True)
@@ -537,7 +537,7 @@ class MinPLogitsWarper(LogitsWarper):
     >>> model = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2")
     >>> tokenizer = AutoTokenizer.from_pretrained("distilbert/distilgpt2")
 
-    >>> inputs = tokenizer("A sequence: 1, 2", return_tensors="pt")
+    >>> inputs = tokenizer("A sequence: 1, 2", return_tensors="ms")
 
     >>> # With sampling, the output is unexpected -- sometimes too unexpected.
     >>> outputs = model.generate(**inputs, do_sample=True)
@@ -610,7 +610,7 @@ class TypicalLogitsWarper(LogitsWarper):
     >>> model = AutoModelForCausalLM.from_pretrained("bigscience/bloomz-560m")
     >>> tokenizer = AutoTokenizer.from_pretrained("bigscience/bloomz-560m")
 
-    >>> inputs = tokenizer("1, 2, 3", return_tensors="pt")
+    >>> inputs = tokenizer("1, 2, 3", return_tensors="ms")
 
     >>> # We can see that greedy decoding produces a sequence of numbers
     >>> outputs = model.generate(**inputs)
@@ -698,7 +698,7 @@ class EpsilonLogitsWarper(LogitsWarper):
     >>> model = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2")
     >>> tokenizer = AutoTokenizer.from_pretrained("distilbert/distilgpt2")
 
-    >>> inputs = tokenizer("A sequence: 1, 2", return_tensors="pt")
+    >>> inputs = tokenizer("A sequence: 1, 2", return_tensors="ms")
 
     >>> # With sampling, the output is unexpected -- sometimes too unexpected.
     >>> outputs = model.generate(**inputs, do_sample=True)
@@ -779,7 +779,7 @@ class EtaLogitsWarper(LogitsWarper):
     >>> model = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2")
     >>> tokenizer = AutoTokenizer.from_pretrained("distilbert/distilgpt2")
 
-    >>> inputs = tokenizer("A sequence: 1, 2", return_tensors="pt")
+    >>> inputs = tokenizer("A sequence: 1, 2", return_tensors="ms")
 
     >>> # With sampling, the output is unexpected -- sometimes too unexpected.
     >>> outputs = model.generate(**inputs, do_sample=True)
@@ -927,7 +927,7 @@ class NoRepeatNGramLogitsProcessor(LogitsProcessor):
 
     >>> model = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2")
     >>> tokenizer = AutoTokenizer.from_pretrained("distilbert/distilgpt2")
-    >>> inputs = tokenizer(["Today I"], return_tensors="pt")
+    >>> inputs = tokenizer(["Today I"], return_tensors="ms")
 
     >>> output = model.generate(**inputs)
     >>> print(tokenizer.decode(output[0], skip_special_tokens=True))
@@ -979,7 +979,7 @@ class EncoderNoRepeatNGramLogitsProcessor(LogitsProcessor):
     >>> model = AutoModelForCausalLM.from_pretrained("bigscience/bloomz-560m")
     >>> tokenizer = AutoTokenizer.from_pretrained("bigscience/bloomz-560m")
 
-    >>> inputs = tokenizer("Alice: I love cats. What do you love?\nBob:", return_tensors="pt")
+    >>> inputs = tokenizer("Alice: I love cats. What do you love?\nBob:", return_tensors="ms")
 
     >>> # With greedy decoding, we see Bob repeating Alice's opinion. If Bob was a chatbot, it would be a poor one.
     >>> outputs = model.generate(**inputs)
@@ -1056,7 +1056,7 @@ class SequenceBiasLogitsProcessor(LogitsProcessor):
 
     >>> model = AutoModelForCausalLM.from_pretrained("openai-community/gpt2")
     >>> tokenizer = AutoTokenizer.from_pretrained("openai-community/gpt2")
-    >>> inputs = tokenizer(["The full name of Donald is Donald"], return_tensors="pt")
+    >>> inputs = tokenizer(["The full name of Donald is Donald"], return_tensors="ms")
 
     >>> summary_ids = model.generate(inputs["input_ids"], max_new_tokens=4)
     >>> print(tokenizer.batch_decode(summary_ids, skip_special_tokens=True)[0])
@@ -1201,7 +1201,7 @@ class NoBadWordsLogitsProcessor(SequenceBiasLogitsProcessor):
 
     >>> model = AutoModelForCausalLM.from_pretrained("openai-community/gpt2")
     >>> tokenizer = AutoTokenizer.from_pretrained("openai-community/gpt2")
-    >>> inputs = tokenizer(["In a word, the cake is a"], return_tensors="pt")
+    >>> inputs = tokenizer(["In a word, the cake is a"], return_tensors="ms")
 
     >>> output_ids = model.generate(inputs["input_ids"], max_new_tokens=5, pad_token_id=tokenizer.eos_token_id)
     >>> print(tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0])
@@ -1285,7 +1285,7 @@ class PrefixConstrainedLogitsProcessor(LogitsProcessor):
     >>> model = AutoModelForCausalLM.from_pretrained("bigscience/bloomz-560m")
     >>> tokenizer = AutoTokenizer.from_pretrained("bigscience/bloomz-560m")
 
-    >>> inputs = tokenizer("Alice and Bob", return_tensors="pt")
+    >>> inputs = tokenizer("Alice and Bob", return_tensors="ms")
 
     >>> # By default, it continues generating according to the model's logits
     >>> outputs = model.generate(**inputs, max_new_tokens=5)
@@ -1294,7 +1294,7 @@ class PrefixConstrainedLogitsProcessor(LogitsProcessor):
 
     >>> # We can contrain it with `prefix_allowed_tokens_fn` to force a certain behavior based on a prefix.
     >>> # For instance, we can force an entire entity to be generated when its beginning is detected.
-    >>> entity = tokenizer(" Bob Marley", return_tensors="pt").input_ids[0]  # 3 tokens
+    >>> entity = tokenizer(" Bob Marley", return_tensors="ms").input_ids[0]  # 3 tokens
     >>> def prefix_allowed_tokens_fn(batch_id, input_ids):
     ...     '''
     ...     Attempts to generate 'Bob Marley' when 'Bob' is detected.
@@ -1375,7 +1375,7 @@ class HammingDiversityLogitsProcessor(LogitsProcessor):
     ...     "bodies. The Solar System formed 4.6 billion years ago from the gravitational collapse of a giant "
     ...     "interstellar molecular cloud."
     ... )
-    >>> inputs = tokenizer("summarize: " + text, return_tensors="pt")
+    >>> inputs = tokenizer("summarize: " + text, return_tensors="ms")
 
     >>> # Generate diverse summary
     >>> outputs_diverse = model.generate(
@@ -1488,7 +1488,7 @@ class ForcedBOSTokenLogitsProcessor(LogitsProcessor):
     >>> model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-small")
     >>> tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-small")
 
-    >>> inputs = tokenizer("Translate from English to German: I love cats.", return_tensors="pt")
+    >>> inputs = tokenizer("Translate from English to German: I love cats.", return_tensors="ms")
 
     >>> # By default, it continues generating according to the model's logits
     >>> outputs = model.generate(**inputs, max_new_tokens=10)
@@ -1534,7 +1534,7 @@ class ForcedEOSTokenLogitsProcessor(LogitsProcessor):
     >>> model = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2")
     >>> tokenizer = AutoTokenizer.from_pretrained("distilbert/distilgpt2")
 
-    >>> inputs = tokenizer("A sequence: 1, 2, 3", return_tensors="pt")
+    >>> inputs = tokenizer("A sequence: 1, 2, 3", return_tensors="ms")
 
     >>> # By default, it continues generating according to the model's logits
     >>> outputs = model.generate(**inputs, max_new_tokens=10)
@@ -1615,7 +1615,7 @@ class ExponentialDecayLengthPenalty(LogitsProcessor):
     >>> tokenizer = AutoTokenizer.from_pretrained("openai-community/gpt2")
 
     >>> text = "Just wanted to let you know, I"
-    >>> inputs = tokenizer(text, return_tensors="pt")
+    >>> inputs = tokenizer(text, return_tensors="ms")
 
     >>> # Let's consider that we want short sentences, so we limit `max_length=30`. However, we observe that the answer
     >>> # tends to end abruptly.
@@ -1708,7 +1708,7 @@ class LogitNormalization(LogitsProcessor, LogitsWarper):
     >>> model = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2")
     >>> tokenizer = AutoTokenizer.from_pretrained("distilbert/distilgpt2")
 
-    >>> inputs = tokenizer("A sequence: 1, 2, 3", return_tensors="pt")
+    >>> inputs = tokenizer("A sequence: 1, 2, 3", return_tensors="ms")
 
     >>> # By default, the scores are not normalized -- the sum of their exponentials is NOT a normalized probability
     >>> # distribution, summing to 1
@@ -1745,7 +1745,7 @@ class SuppressTokensAtBeginLogitsProcessor(LogitsProcessor):
     >>> processor = AutoProcessor.from_pretrained("openai/whisper-tiny.en")
     >>> model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
     >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-    >>> inputs = processor(ds[0]["audio"]["array"], return_tensors="pt")
+    >>> inputs = processor(ds[0]["audio"]["array"], return_tensors="ms")
 
     >>> # Whisper has `begin_suppress_tokens` set by default (= `[220, 50256]`). 50256 is the EOS token, so this means
     >>> # it can't generate and EOS token in the first iteration, but it can in the others.
@@ -1797,7 +1797,7 @@ class SuppressTokensLogitsProcessor(LogitsProcessor):
     >>> processor = AutoProcessor.from_pretrained("openai/whisper-tiny.en")
     >>> model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
     >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-    >>> inputs = processor(ds[0]["audio"]["array"], return_tensors="pt")
+    >>> inputs = processor(ds[0]["audio"]["array"], return_tensors="ms")
 
     >>> # Whisper has a long list of suppressed tokens. For instance, in this case, the token 1 is suppressed by default.
     >>> outputs = model.generate(**inputs, return_dict_in_generate=True, output_scores=True)
@@ -1886,7 +1886,7 @@ class WhisperTimeStampLogitsProcessor(LogitsProcessor):
     >>> processor = AutoProcessor.from_pretrained("openai/whisper-tiny.en")
     >>> model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
     >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-    >>> inputs = processor(ds[3]["audio"]["array"], return_tensors="pt")
+    >>> inputs = processor(ds[3]["audio"]["array"], return_tensors="ms")
     >>> input_features = inputs.input_features
 
     >>> #Displaying timestamps
@@ -2077,7 +2077,7 @@ class ClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
     >>> inputs = processor(
     ...     text=["80s pop track with bassy drums and synth", "90s rock song with loud guitars and heavy drums"],
     ...     padding=True,
-    ...     return_tensors="pt",
+    ...     return_tensors="ms",
     ... )
     >>> audio_values = model.generate(**inputs, do_sample=True, guidance_scale=3, max_new_tokens=256)
     ```
@@ -2186,19 +2186,19 @@ class UnbatchedClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
 
     >>> model = AutoModelForCausalLM.from_pretrained("openai-community/gpt2")
     >>> tokenizer = AutoTokenizer.from_pretrained("openai-community/gpt2")
-    >>> inputs = tokenizer(["Today, a dragon flew over Paris, France,"], return_tensors="pt")
+    >>> inputs = tokenizer(["Today, a dragon flew over Paris, France,"], return_tensors="ms")
     >>> out = model.generate(inputs["input_ids"], guidance_scale=1.5)
     >>> tokenizer.batch_decode(out, skip_special_tokens=True)[0]
     'Today, a dragon flew over Paris, France, killing at least 50 people and injuring more than 100'
 
     >>> # with a negative prompt
-    >>> neg_inputs = tokenizer(["A very happy event happened,"], return_tensors="pt")
+    >>> neg_inputs = tokenizer(["A very happy event happened,"], return_tensors="ms")
     >>> out = model.generate(inputs["input_ids"], guidance_scale=2, negative_prompt_ids=neg_inputs["input_ids"])
     >>> tokenizer.batch_decode(out, skip_special_tokens=True)[0]
     'Today, a dragon flew over Paris, France, killing at least 130 people. French media reported that'
 
     >>> # with a positive prompt
-    >>> neg_inputs = tokenizer(["A very happy event happened,"], return_tensors="pt")
+    >>> neg_inputs = tokenizer(["A very happy event happened,"], return_tensors="ms")
     >>> out = model.generate(inputs["input_ids"], guidance_scale=0, negative_prompt_ids=neg_inputs["input_ids"])
     >>> tokenizer.batch_decode(out, skip_special_tokens=True)[0]
     "Today, a dragon flew over Paris, France, and I'm very happy to be here. I"
@@ -2356,7 +2356,7 @@ class WatermarkLogitsProcessor(LogitsProcessor):
 
     >>> model = AutoModelForCausalLM.from_pretrained("openai-community/gpt2")
     >>> tokenizer = AutoTokenizer.from_pretrained("openai-community/gpt2")
-    >>> inputs = tokenizer(["Alice and Bob are"], return_tensors="pt")
+    >>> inputs = tokenizer(["Alice and Bob are"], return_tensors="ms")
 
     >>> # normal generation
     >>> out = model.generate(inputs["input_ids"], max_length=20, do_sample=False)

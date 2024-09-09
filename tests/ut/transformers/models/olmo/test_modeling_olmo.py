@@ -385,7 +385,7 @@ class OlmoIntegrationTest(unittest.TestCase):
         EXPECTED_TEXT_COMPLETION = """Simply put, the theory of relativity states that \nthe speed of light is the same for all observers.\n\nThe theory of relativity is a theory of physics that describes the \nmovement of objects in space and time.\n\nThe theory of relativity is a theory of physics that describes the \nmovement of objects in space and time.\n\n"""
         prompt = "Simply put, the theory of relativity states that "
         tokenizer = AutoTokenizer.from_pretrained("allenai/OLMo-7B-hf", device_map="auto")
-        input_ids = tokenizer.encode(prompt, return_tensors="pt")
+        input_ids = tokenizer.encode(prompt, return_tensors="ms")
         model = OlmoForCausalLM.from_pretrained("allenai/OLMo-7B-hf", device_map="auto")
 
         # greedy generation outputs

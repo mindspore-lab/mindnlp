@@ -678,3 +678,18 @@ class BertModelIntegrationTest(unittest.TestCase):
             self.assertTrue(
                 ops.allclose(res_eager.last_hidden_state, res_sdpa.last_hidden_state, atol=1e-3, rtol=1e-3)
             )
+
+    @slow
+    def test_inference_time(self):
+        import time
+        model = BertModel.from_pretrained("google-bert/bert-base-uncased")
+        input_ids = mindspore.tensor([[0, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 2]])
+        attention_mask = mindspore.tensor([[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
+        infer_time = []
+        with no_grad():
+            for i in range(20):
+                s = time.time()
+                output = model(input_ids, attention_mask=attention_mask)[0]
+                t = time.time()
+                infer_time.append(t - s)
+        print(infer_time)

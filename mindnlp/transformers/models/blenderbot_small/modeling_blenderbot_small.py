@@ -1157,8 +1157,8 @@ class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
             >>> model = BlenderbotSmallModel.from_pretrained("facebook/blenderbot_small-90M")
             >>> tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot_small-90M")
             ...
-            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
-            >>> decoder_inputs = tokenizer("Studies show that", return_tensors="pt")  # Batch size 1
+            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="ms")
+            >>> decoder_inputs = tokenizer("Studies show that", return_tensors="ms")  # Batch size 1
             >>> outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_inputs.input_ids)
             ...
             >>> last_hidden_states = outputs.last_hidden_state
@@ -1304,8 +1304,8 @@ class BlenderbotSmallModel(BlenderbotSmallPreTrainedModel):
             >>> model = BlenderbotSmallModel.from_pretrained("facebook/blenderbot_small-90M")
             >>> tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot_small-90M")
             ...
-            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
-            >>> decoder_inputs = tokenizer("Studies show that", return_tensors="pt")  # Batch size 1
+            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="ms")
+            >>> decoder_inputs = tokenizer("Studies show that", return_tensors="ms")  # Batch size 1
             >>> outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_inputs.input_ids)
             ...
             >>> last_hidden_states = outputs.last_hidden_state
@@ -1976,7 +1976,7 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot_small-90M")
             >>> model = BlenderbotSmallForCausalLM.from_pretrained("facebook/blenderbot_small-90M", add_cross_attention=False)
             >>> assert model.config.is_decoder, f"{model.__class__} has to be configured as a decoder."
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> logits = outputs.logits

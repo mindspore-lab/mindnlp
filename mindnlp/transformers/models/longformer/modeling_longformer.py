@@ -24,7 +24,7 @@ import mindspore
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
@@ -405,7 +405,7 @@ def _get_question_end_index(input_ids, sep_token_id):
     """
     Computes the index of the first occurrence of `sep_token_id`.
     """
-    sep_token_indices = (input_ids == sep_token_id).nonzero()
+    sep_token_indices = ops.nonzero((input_ids == sep_token_id))
     batch_size = input_ids.shape[0]
 
     assert sep_token_indices.shape[1] == 2, "`input_ids` should have two dimensions"
@@ -1059,19 +1059,20 @@ class LongformerSelfAttention(nn.Module):
         # helper variable
         num_global_attn_indices = is_index_global_attn.long().sum(axis=1)
 
+        with no_grad():
         # max number of global attn indices in batch
-        max_num_global_attn_indices = num_global_attn_indices.max().item()
+            max_num_global_attn_indices = num_global_attn_indices.max().item()
 
         # indices of global attn
-        is_index_global_attn_nonzero = is_index_global_attn.nonzero(as_tuple=True)
+        is_index_global_attn_nonzero = ops.nonzero(is_index_global_attn, as_tuple=True)
         # helper variable
         is_local_index_global_attn = ops.arange(max_num_global_attn_indices) < num_global_attn_indices.unsqueeze(dim=-1)
 
         # location of the non-padding values within global attention indices
-        is_local_index_global_attn_nonzero = is_local_index_global_attn.nonzero(as_tuple=True)
+        is_local_index_global_attn_nonzero = ops.nonzero(is_local_index_global_attn, as_tuple=True)
 
         # location of the padding values within global attention indices
-        is_local_index_no_global_attn_nonzero = (is_local_index_global_attn == 0).nonzero(as_tuple=True)
+        is_local_index_no_global_attn_nonzero = ops.nonzero((is_local_index_global_attn == 0), as_tuple=True)
         return (
             max_num_global_attn_indices,
             is_index_global_attn_nonzero,
@@ -2528,7 +2529,7 @@ class LongformerForMaskedLM(LongformerPreTrainedModel):
             ...     "My friends are <mask> but they eat too many carbs."
             ...     + " That's why I decide not to eat with them." * 300
             ... )
-            >>> input_ids = tokenizer([TXT], return_tensors="pt")["input_ids"]
+            >>> input_ids = tokenizer([TXT], return_tensors="ms")["input_ids"]
             >>> logits = model(input_ids).logits
             ...
             >>> masked_index = (input_ids[0] == tokenizer.mask_token_id).nonzero().item()
@@ -2841,7 +2842,7 @@ class LongformerForQuestionAnswering(LongformerPreTrainedModel):
             >>> model = LongformerForQuestionAnswering.from_pretrained("allenai/longformer-large-4096-finetuned-triviaqa")
             ...
             >>> question, text = "Who was Jim Henson?", "Jim Henson was a nice puppet"
-            >>> encoding = tokenizer(question, text, return_tensors="pt")
+            >>> encoding = tokenizer(question, text, return_tensors="ms")
             >>> input_ids = encoding["input_ids"]
             ...
             >>> # default is local attention everywhere

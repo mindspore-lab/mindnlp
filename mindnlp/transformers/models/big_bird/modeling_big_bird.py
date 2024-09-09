@@ -3238,7 +3238,7 @@ class BigBirdForPreTraining(BigBirdPreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained("google/bigbird-roberta-base")
             >>> model = BigBirdForPreTraining.from_pretrained("google/bigbird-roberta-base")
             ...
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> prediction_logits = outputs.prediction_logits
@@ -3309,7 +3309,7 @@ class BigBirdForMaskedLM(BigBirdPreTrainedModel):
         'the highest values are very close to the theoretical maximum value'
         >>> # add mask_token
         >>> LONG_ARTICLE_TO_MASK = LONG_ARTICLE_TARGET.replace("maximum", "[MASK]")
-        >>> inputs = tokenizer(LONG_ARTICLE_TO_MASK, return_tensors="pt")
+        >>> inputs = tokenizer(LONG_ARTICLE_TO_MASK, return_tensors="ms")
         >>> # long article input
         >>> list(inputs["input_ids"].shape)
         [1, 919]
@@ -3426,7 +3426,7 @@ class BigBirdForMaskedLM(BigBirdPreTrainedModel):
             'the highest values are very close to the theoretical maximum value'
             >>> # add mask_token
             >>> LONG_ARTICLE_TO_MASK = LONG_ARTICLE_TARGET.replace("maximum", "[MASK]")
-            >>> inputs = tokenizer(LONG_ARTICLE_TO_MASK, return_tensors="pt")
+            >>> inputs = tokenizer(LONG_ARTICLE_TO_MASK, return_tensors="ms")
             >>> # long article input
             >>> list(inputs["input_ids"].shape)
             [1, 919]
@@ -3440,7 +3440,7 @@ class BigBirdForMaskedLM(BigBirdPreTrainedModel):
             ```
 
             ```python
-            >>> labels = tokenizer(LONG_ARTICLE_TARGET, return_tensors="pt")["input_ids"]
+            >>> labels = tokenizer(LONG_ARTICLE_TARGET, return_tensors="ms")["input_ids"]
             >>> labels = torch.where(inputs.input_ids == tokenizer.mask_token_id, labels, -100)
             >>> outputs = model(**inputs, labels=labels)
             >>> round(outputs.loss.item(), 2)
@@ -3903,7 +3903,7 @@ class BigBirdForSequenceClassification(BigBirdPreTrainedModel):
             >>> squad_ds = load_dataset("squad_v2", split="train")  # doctest: +IGNORE_RESULT
             ...
             >>> LONG_ARTICLE = squad_ds[81514]["context"]
-            >>> inputs = tokenizer(LONG_ARTICLE, return_tensors="pt")
+            >>> inputs = tokenizer(LONG_ARTICLE, return_tensors="ms")
             >>> # long input article
             >>> list(inputs["input_ids"].shape)
             [1, 919]
@@ -4265,7 +4265,7 @@ class BigBirdForQuestionAnswering(BigBirdPreTrainedModel):
         >>> # select random article and question
         >>> LONG_ARTICLE = squad_ds[81514]["context"]
         >>> QUESTION = squad_ds[81514]["question"]
-        >>> inputs = tokenizer(QUESTION, LONG_ARTICLE, return_tensors="pt")
+        >>> inputs = tokenizer(QUESTION, LONG_ARTICLE, return_tensors="ms")
         ...
         >>> with torch.no_grad():
         >>>     outputs = model(**inputs)
@@ -4353,7 +4353,7 @@ class BigBirdForQuestionAnswering(BigBirdPreTrainedModel):
             >>> QUESTION = squad_ds[81514]["question"]
             >>> QUESTION
             'During daytime how high can the temperatures reach?'
-            >>> inputs = tokenizer(QUESTION, LONG_ARTICLE, return_tensors="pt")
+            >>> inputs = tokenizer(QUESTION, LONG_ARTICLE, return_tensors="ms")
             >>> # long article and question input
             >>> list(inputs["input_ids"].shape)
             [1, 929]

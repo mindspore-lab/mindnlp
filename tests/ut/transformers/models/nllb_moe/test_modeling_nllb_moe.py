@@ -39,7 +39,6 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 if is_mindspore_available():
     import mindspore
 
-    mindspore.set_context(pynative_synchronize=True)
     from mindnlp.core import nn, ops
 
     from mindnlp.transformers import (
@@ -491,7 +490,7 @@ class NllbMoeModelIntegrationTests(unittest.TestCase):
             'Danius said, "Right now we are doing nothing. I have called and sent emails to his closest collaborator and received very friendly replies. For now, that is certainly enough."',
             "Previously, Ring's CEO, Jamie Siminoff, remarked the company started when his doorbell wasn't audible from his shop in his garage.",
         ]
-        inputs = tokenizer(FIRST_6_FLORES_200, padding=True, return_tensors="pt")
+        inputs = tokenizer(FIRST_6_FLORES_200, padding=True, return_tensors="ms")
         batch_translation = model.generate(
             **inputs, forced_bos_token_id=tokenizer.lang_code_to_id["fra_Latn"]
         )

@@ -407,7 +407,7 @@ def window_partition(hidden_state, window_size):
     hidden_state = hidden_state.view(
         batch_size, padded_height // window_size, window_size, padded_width // window_size, window_size, num_channels
     )
-    windows = hidden_state.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, num_channels)
+    windows = hidden_state.permute(0, 1, 3, 2, 4, 5).view(-1, window_size, window_size, num_channels)
     return windows, (padded_height, padded_width)
 
 
@@ -434,11 +434,11 @@ def window_unpartition(windows, window_size, pad_height_width, height_width):
     hidden_state = windows.view(
         batch_size, padded_height // window_size, padded_width // window_size, window_size, window_size, -1
     )
-    hidden_state = hidden_state.permute(0, 1, 3, 2, 4, 5).contiguous()
+    hidden_state = hidden_state.permute(0, 1, 3, 2, 4, 5)
     hidden_state = hidden_state.view(batch_size, padded_height, padded_width, -1)
 
     # We always have height <= padded_height and width <= padded_width
-    hidden_state = hidden_state[:, :height, :width, :].contiguous()
+    hidden_state = hidden_state[:, :height, :width, :]
     return hidden_state
 
 

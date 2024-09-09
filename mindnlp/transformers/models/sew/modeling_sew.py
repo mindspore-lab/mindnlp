@@ -962,7 +962,7 @@ class SEWPreTrainedModel(PreTrainedModel):
         )
         # these two operations makes sure that all values before the output lengths idxs are attended to
         attention_mask[(ops.arange(attention_mask.shape[0]), output_lengths - 1)] = 1
-        attention_mask = attention_mask.flip([-1]).cumsum(-1).flip([-1]).bool()
+        attention_mask = attention_mask.flip([-1]).int().cumsum(-1).flip([-1]).bool()
         return attention_mask
 
 
@@ -982,11 +982,7 @@ class SEWModel(SEWPreTrainedModel):
 
         if config.mask_time_prob > 0.0 or config.mask_feature_prob > 0.0:
             self.masked_spec_embed = mindspore.Parameter(
-                ops.uniform(
-                    shape=mindspore.Tensor(config.hidden_size),
-                    minval=mindspore.Tensor(0.0),
-                    maxval=mindspore.Tensor(1.0),
-                )
+                ops.randn((config.hidden_size))
             )
 
         self.encoder = SEWEncoder(config)
@@ -1258,7 +1254,7 @@ class SEWForCTC(SEWPreTrainedModel):
                 blank=self.config.pad_token_id,
                 reduction=self.config.ctc_loss_reduction,
                 zero_infinity=self.config.ctc_zero_infinity,
-            )[0]
+            )
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]

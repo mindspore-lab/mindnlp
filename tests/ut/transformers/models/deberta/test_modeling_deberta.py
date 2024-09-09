@@ -13,10 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import unittest
-import numpy as np
 
-from mindnlp.transformers import DebertaConfig
-from mindnlp.utils.testing_utils import require_sentencepiece, require_tokenizers, require_mindspore, slow, is_mindspore_available
+from mindnlp.transformers import DebertaConfig, is_mindspore_available
+from mindnlp.utils.testing_utils import require_sentencepiece, require_tokenizers, require_mindspore, slow
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, ids_tensor
@@ -25,6 +24,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 
 if is_mindspore_available():
     import mindspore
+    from mindnlp.core import nn, ops, no_grad
 
     from mindnlp.transformers import (
         DebertaForMaskedLM,
@@ -33,10 +33,9 @@ if is_mindspore_available():
         DebertaForTokenClassification,
         DebertaModel,
     )
-    from mindnlp.transformers.models.deberta.modeling_deberta import DEBERTA_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
-class DebertaModelTester(object):
+class DebertaModelTester:
     def __init__(
         self,
         parent,
@@ -144,8 +143,7 @@ class DebertaModelTester(object):
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = DebertaModel(config=config)
-
-        model.set_train(False)
+        model.eval()
         sequence_output = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids)[0]
         sequence_output = model(input_ids, token_type_ids=token_type_ids)[0]
         sequence_output = model(input_ids)[0]
@@ -156,8 +154,7 @@ class DebertaModelTester(object):
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = DebertaForMaskedLM(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
 
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
@@ -167,8 +164,7 @@ class DebertaModelTester(object):
     ):
         config.num_labels = self.num_labels
         model = DebertaForSequenceClassification(config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=sequence_labels)
         self.parent.assertListEqual(list(result.logits.shape), [self.batch_size, self.num_labels])
         self.check_loss_output(result)
@@ -178,8 +174,7 @@ class DebertaModelTester(object):
     ):
         config.num_labels = self.num_labels
         model = DebertaForTokenClassification(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.num_labels))
 
@@ -187,8 +182,7 @@ class DebertaModelTester(object):
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = DebertaForQuestionAnswering(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -275,9 +269,9 @@ class DebertaModelTest(ModelTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        for model_name in DEBERTA_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = DebertaModel.from_pretrained(model_name)
-            self.assertIsNotNone(model)
+        model_name = "microsoft/deberta-base"
+        model = DebertaModel.from_pretrained(model_name)
+        self.assertIsNotNone(model)
 
 
 @require_mindspore
@@ -294,9 +288,10 @@ class DebertaModelIntegrationTest(unittest.TestCase):
 
         input_ids = mindspore.tensor([[0, 31414, 232, 328, 740, 1140, 12695, 69, 46078, 1588, 2]])
         attention_mask = mindspore.tensor([[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
-        output = model(input_ids, attention_mask=attention_mask)[0]
+        with no_grad():
+            output = model(input_ids, attention_mask=attention_mask)[0]
         # compare the actual values for a slice.
         expected_slice = mindspore.tensor(
             [[[-0.5986, -0.8055, -0.8462], [1.4484, -0.9348, -0.8059], [0.3123, 0.0032, -1.4131]]]
         )
-        self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-4), f"{output[:, 1:4, 1:4]}")
+        self.assertTrue(ops.allclose(output[:, 1:4, 1:4], expected_slice, atol=1e-4), f"{output[:, 1:4, 1:4]}")

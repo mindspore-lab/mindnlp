@@ -561,7 +561,7 @@ class MobileNetV2ForSemanticSegmentation(MobileNetV2PreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("google/deeplabv3_mobilenet_v2_1.0_513")
         >>> model = MobileNetV2ForSemanticSegmentation.from_pretrained("google/deeplabv3_mobilenet_v2_1.0_513")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
 
         >>> with torch.no_grad():
         ...     outputs = model(**inputs)

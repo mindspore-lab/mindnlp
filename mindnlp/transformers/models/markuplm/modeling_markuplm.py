@@ -446,7 +446,7 @@ class MarkupLMSelfAttention(nn.Module):
 
         context_layer = ops.matmul(attention_probs, value_layer)
 
-        # context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
+        # context_layer = context_layer.permute(0, 2, 1, 3)
         context_layer = context_layer.permute(0, 2, 1, 3)
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(new_context_layer_shape)
@@ -805,7 +805,7 @@ class MarkupLMModel(MarkupLMPreTrainedModel):
 
         >>> html_string = "<html> <head> <title>Page Title</title> </head> </html>"
 
-        >>> encoding = processor(html_string, return_tensors="pt")
+        >>> encoding = processor(html_string, return_tensors="ms")
 
         >>> outputs = model(**encoding)
         >>> last_hidden_states = outputs.last_hidden_state
@@ -970,7 +970,7 @@ class MarkupLMForQuestionAnswering(MarkupLMPreTrainedModel):
         >>> html_string = "<html> <head> <title>My name is Niels</title> </head> </html>"
         >>> question = "What's his name?"
 
-        >>> encoding = processor(html_string, questions=question, return_tensors="pt")
+        >>> encoding = processor(html_string, questions=question, return_tensors="ms")
 
         >>> with torch.no_grad():
         ...     outputs = model(**encoding)
@@ -1002,8 +1002,8 @@ class MarkupLMForQuestionAnswering(MarkupLMPreTrainedModel):
 
         logits = self.qa_outputs(sequence_output)
         start_logits, end_logits = logits.split(1, axis=-1)
-        # start_logits = start_logits.squeeze(-1).contiguous()
-        # end_logits = end_logits.squeeze(-1).contiguous()
+        # start_logits = start_logits.squeeze(-1)
+        # end_logits = end_logits.squeeze(-1)
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
 
@@ -1088,7 +1088,7 @@ class MarkupLMForTokenClassification(MarkupLMPreTrainedModel):
         >>> nodes = ["hello", "world"]
         >>> xpaths = ["/html/body/div/li[1]/div/span", "/html/body/div/li[1]/div/span"]
         >>> node_labels = [1, 2]
-        >>> encoding = processor(nodes=nodes, xpaths=xpaths, node_labels=node_labels, return_tensors="pt")
+        >>> encoding = processor(nodes=nodes, xpaths=xpaths, node_labels=node_labels, return_tensors="ms")
 
         >>> with torch.no_grad():
         ...     outputs = model(**encoding)
@@ -1183,7 +1183,7 @@ class MarkupLMForSequenceClassification(MarkupLMPreTrainedModel):
         >>> model = AutoModelForSequenceClassification.from_pretrained("microsoft/markuplm-base", num_labels=7)
 
         >>> html_string = "<html> <head> <title>Page Title</title> </head> </html>"
-        >>> encoding = processor(html_string, return_tensors="pt")
+        >>> encoding = processor(html_string, return_tensors="ms")
 
         >>> with torch.no_grad():
         ...     outputs = model(**encoding)
