@@ -15,14 +15,13 @@
 """mindspore Depth Anything model."""
 
 from typing import List, Optional, Tuple, Union
-
 import mindspore
 from mindnlp.core import nn
 from mindnlp.core.nn import functional as F
 from ...backbone_utils import load_backbone
 from ...modeling_outputs import DepthEstimatorOutput
 from ...modeling_utils import PreTrainedModel
-from ....utils import logging, no_grad
+from ....utils import logging
 from .configuration_depth_anything import DepthAnythingConfig
 
 logger = logging.get_logger(__name__)
@@ -190,15 +189,6 @@ class DepthAnythingFeatureFusionLayer(nn.Module):
             hidden_state = hidden_state + self.residual_layer1(residual)
 
         hidden_state = self.residual_layer2(hidden_state)
-
-        # modifier = {"scale_factor": 2.} if size is None else {"size": size}
-        #
-        # hidden_state = nn.functional.interpolate(
-        #     hidden_state,
-        #     **modifier,
-        #     mode="bilinear",
-        #     align_corners=True,
-        # )
 
         if size is None:
             modifier = {"scale_factor": 2.}
@@ -415,7 +405,7 @@ class DepthAnythingForDepthEstimation(DepthAnythingPreTrainedModel):
         >>> # prepare image for the model
         >>> inputs = image_processor(images=image, return_tensors="pt")
 
-        >>> with no_grad():
+        >>> with torch.no_grad():
         ...     outputs = model(**inputs)
         ...     predicted_depth = outputs.predicted_depth
 

@@ -15,8 +15,6 @@
 """DepthAnything model configuration"""
 
 import copy
-from typing import Optional, Union
-
 from ...configuration_utils import PretrainedConfig
 from ....utils import logging
 from ...backbone_utils import verify_backbone_config_arguments

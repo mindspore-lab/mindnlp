@@ -12,14 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch Depth Anything model."""
+"""Testing suite for the mindspore Depth Anything model."""
 
 import unittest
 
 import numpy as np
 
 from mindnlp.transformers import DepthAnythingConfig, Dinov2Config
-from mindnlp.core import no_grad
 from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow, is_mindspore_available, is_vision_available
 
 from ...test_configuration_common import ConfigTester
@@ -234,7 +233,7 @@ class DepthAnythingModelTest(ModelTesterMixin, unittest.TestCase):
 
 # We will verify our results on an image of cute cats
 def prepare_img():
-    image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
+    image = Image.open("../fixtures/tests_samples/COCO/000000039769.png")
     return image
 
 
@@ -246,12 +245,11 @@ class DepthAnythingModelIntegrationTest(unittest.TestCase):
         # -- `relative` depth model --
         image_processor = DPTImageProcessor.from_pretrained("LiheYoung/depth-anything-small-hf")
         model = DepthAnythingForDepthEstimation.from_pretrained("LiheYoung/depth-anything-small-hf")
-        with no_grad():
-            image = prepare_img()
-            inputs = image_processor(images=image, return_tensors="ms")
+
+        image = prepare_img()
+        inputs = image_processor(images=image, return_tensors="ms")
 
         # forward pass
-
         outputs = model(**inputs)
         predicted_depth = outputs.predicted_depth
 
@@ -273,9 +271,8 @@ class DepthAnythingModelIntegrationTest(unittest.TestCase):
         inputs = image_processor(images=image, return_tensors="ms")
 
         # forward pass
-        with no_grad():
-            outputs = model(**inputs)
-            predicted_depth = outputs.predicted_depth
+        outputs = model(**inputs)
+        predicted_depth = outputs.predicted_depth
 
         # verify the predicted depth
         expected_shape = (1, 518, 686)
