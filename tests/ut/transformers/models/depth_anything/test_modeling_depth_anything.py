@@ -27,7 +27,6 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import nn, ops
     from mindnlp.transformers import DepthAnythingForDepthEstimation
 
 if is_vision_available():
@@ -245,27 +244,25 @@ def prepare_img():
 class DepthAnythingModelIntegrationTest(unittest.TestCase):
     def test_inference(self):
         # -- `relative` depth model --
-
         image_processor = DPTImageProcessor.from_pretrained("LiheYoung/depth-anything-small-hf")
         model = DepthAnythingForDepthEstimation.from_pretrained("LiheYoung/depth-anything-small-hf")
-
-        image = prepare_img()
-        inputs = image_processor(images=image, return_tensors="ms")
+        with no_grad():
+            image = prepare_img()
+            inputs = image_processor(images=image, return_tensors="ms")
 
         # forward pass
-        with no_grad():
-            outputs = model(**inputs)
-            predicted_depth = outputs.predicted_depth
+
+        outputs = model(**inputs)
+        predicted_depth = outputs.predicted_depth
 
         # verify the predicted depth
         expected_shape = (1, 518, 686)
         self.assertEqual(predicted_depth.shape, expected_shape)
-
         expected_slice = mindspore.tensor(
             [[8.8204, 8.6468, 8.6195], [8.3313, 8.6027, 8.7526], [8.6526, 8.6866, 8.7453]],
         )
 
-        self.assertTrue(np.allclose(predicted_depth[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-1))
+        self.assertTrue(np.allclose(predicted_depth[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-6))
 
         # -- `metric` depth model --
         image_processor = DPTImageProcessor.from_pretrained("depth-anything/depth-anything-V2-metric-indoor-small-hf")
