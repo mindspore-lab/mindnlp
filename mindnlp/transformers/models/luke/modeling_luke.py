@@ -965,7 +965,7 @@ class LukeModel(LukePreTrainedModel):
         >>> text = "Beyoncé lives in Los Angeles."
         >>> entity_spans = [(0, 7)]  # character-based entity span corresponding to "Beyoncé"
 
-        >>> encoding = tokenizer(text, entity_spans=entity_spans, add_prefix_space=True, return_tensors="pt")
+        >>> encoding = tokenizer(text, entity_spans=entity_spans, add_prefix_space=True, return_tensors="ms")
         >>> outputs = model(**encoding)
         >>> word_last_hidden_state = outputs.last_hidden_state
         >>> entity_last_hidden_state = outputs.entity_last_hidden_state
@@ -982,7 +982,7 @@ class LukeModel(LukePreTrainedModel):
         ... ]  # character-based entity spans corresponding to "Beyoncé" and "Los Angeles"
 
         >>> encoding = tokenizer(
-        ...     text, entities=entities, entity_spans=entity_spans, add_prefix_space=True, return_tensors="pt"
+        ...     text, entities=entities, entity_spans=entity_spans, add_prefix_space=True, return_tensors="ms"
         ... )
         >>> outputs = model(**encoding)
         >>> word_last_hidden_state = outputs.last_hidden_state
@@ -1320,7 +1320,7 @@ class LukeForEntityClassification(LukePreTrainedModel):
 
         >>> text = "Beyoncé lives in Los Angeles."
         >>> entity_spans = [(0, 7)]  # character-based entity span corresponding to "Beyoncé"
-        >>> inputs = tokenizer(text, entity_spans=entity_spans, return_tensors="pt")
+        >>> inputs = tokenizer(text, entity_spans=entity_spans, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> logits = outputs.logits
         >>> predicted_class_idx = logits.argmax(-1).item()
@@ -1427,7 +1427,7 @@ class LukeForEntityPairClassification(LukePreTrainedModel):
         ...     (0, 7),
         ...     (17, 28),
         ... ]  # character-based entity spans corresponding to "Beyoncé" and "Los Angeles"
-        >>> inputs = tokenizer(text, entity_spans=entity_spans, return_tensors="pt")
+        >>> inputs = tokenizer(text, entity_spans=entity_spans, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> logits = outputs.logits
         >>> predicted_class_idx = logits.argmax(-1).item()
@@ -1549,7 +1549,7 @@ class LukeForEntitySpanClassification(LukePreTrainedModel):
         ...     for end_pos in word_end_positions[i:]:
         ...         entity_spans.append((start_pos, end_pos))
 
-        >>> inputs = tokenizer(text, entity_spans=entity_spans, return_tensors="pt")
+        >>> inputs = tokenizer(text, entity_spans=entity_spans, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> logits = outputs.logits
         >>> predicted_class_indices = logits.argmax(-1).squeeze().tolist()

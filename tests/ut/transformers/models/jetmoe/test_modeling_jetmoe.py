@@ -395,7 +395,7 @@ class JetMoeIntegrationTest(unittest.TestCase):
         prompt = "My favourite condiment is "
         tokenizer = AutoTokenizer.from_pretrained("jetmoe/jetmoe-8b", use_fast=False)
         model = JetMoeForCausalLM.from_pretrained("jetmoe/jetmoe-8b", device_map="auto")
-        input_ids = tokenizer.encode(prompt, return_tensors="pt").to(model.model.embed_tokens.weight.device)
+        input_ids = tokenizer.encode(prompt, return_tensors="ms").to(model.model.embed_tokens.weight.device)
 
         # greedy generation outputs
         generated_ids = model.generate(input_ids, max_new_tokens=10, temperature=0)
@@ -417,7 +417,7 @@ class JetMoeIntegrationTest(unittest.TestCase):
         ]
         tokenizer = AutoTokenizer.from_pretrained("jetmoe/jetmoe-8b", use_fast=False)
         model = JetMoeForCausalLM.from_pretrained("jetmoe/jetmoe-8b", device_map="auto")
-        input_ids = tokenizer(prompt, return_tensors="pt", padding=True).to(model.model.embed_tokens.weight.device)
+        input_ids = tokenizer(prompt, return_tensors="ms", padding=True).to(model.model.embed_tokens.weight.device)
         print(input_ids)
 
         # greedy generation outputs

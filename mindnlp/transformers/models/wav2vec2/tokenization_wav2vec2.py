@@ -726,7 +726,7 @@ class Wav2Vec2CTCTokenizer(PreTrainedTokenizer):
             >>> sample = next(dataset_iter)
             ...
             >>> # forward sample through model to get greedily predicted transcription ids
-            >>> input_values = feature_extractor(sample["audio"]["array"], return_tensors="pt").input_values
+            >>> input_values = feature_extractor(sample["audio"]["array"], return_tensors="ms").input_values
             >>> logits = model(input_values).logits[0]
             >>> pred_ids = torch.argmax(logits, axis=-1)
             ...

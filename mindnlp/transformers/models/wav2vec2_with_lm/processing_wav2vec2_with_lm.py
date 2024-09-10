@@ -616,7 +616,7 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
             >>> sample = next(dataset_iter)
             ...
             >>> # forward sample through model to get greedily predicted transcription ids
-            >>> input_values = processor(sample["audio"]["array"], return_tensors="pt").input_values
+            >>> input_values = processor(sample["audio"]["array"], return_tensors="ms").input_values
             >>> with torch.no_grad():
             ...     logits = model(input_values).logits[0].cpu().numpy()
             ...

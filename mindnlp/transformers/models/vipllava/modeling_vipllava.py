@@ -290,7 +290,7 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
         >>> url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/compel-neg.png"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = processor(text=text, images=image, return_tensors="pt").to(0, mindspore.float16)
+        >>> inputs = processor(text=text, images=image, return_tensors="ms").to(0, mindspore.float16)
 
         >>> # Generate
         >>> generate_ids = model.generate(**inputs, max_new_tokens=20)

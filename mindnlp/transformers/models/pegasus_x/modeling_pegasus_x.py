@@ -785,7 +785,7 @@ PEGASUS_X_GENERATION_EXAMPLE = r"""
     ...     "amid dry conditions. The aim is to reduce the risk of wildfires. Nearly 800 thousand customers were "
     ...     "scheduled to be affected by the shutoffs which were expected to last through at least midday tomorrow."
     ... )
-    >>> inputs = tokenizer(ARTICLE_TO_SUMMARIZE, max_length=1024, return_tensors="pt")
+    >>> inputs = tokenizer(ARTICLE_TO_SUMMARIZE, max_length=1024, return_tensors="ms")
 
     >>> # Generate Summary
     >>> summary_ids = model.generate(inputs["input_ids"])
@@ -1386,8 +1386,8 @@ class PegasusXModel(PegasusXPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("google/pegasus-x-large")
         >>> model = PegasusModel.from_pretrained("google/pegasus-x-large")
 
-        >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
-        >>> decoder_inputs = tokenizer("Studies show that", return_tensors="pt")
+        >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="ms")
+        >>> decoder_inputs = tokenizer("Studies show that", return_tensors="ms")
         >>> outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_inputs.input_ids)
 
         >>> last_hidden_states = outputs.last_hidden_state

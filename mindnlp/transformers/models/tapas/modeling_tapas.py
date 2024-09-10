@@ -669,7 +669,7 @@ class TapasModel(TapasPreTrainedModel):
         >>> table = pd.DataFrame.from_dict(data)
         >>> queries = ["How many movies has George Clooney played in?", "How old is Brad Pitt?"]
 
-        >>> inputs = tokenizer(table=table, queries=queries, padding="max_length", return_tensors="pt")
+        >>> inputs = tokenizer(table=table, queries=queries, padding="max_length", return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> last_hidden_states = outputs.last_hidden_state
@@ -808,10 +808,10 @@ class TapasForMaskedLM(TapasPreTrainedModel):
         >>> table = pd.DataFrame.from_dict(data)
 
         >>> inputs = tokenizer(
-        ...     table=table, queries="How many [MASK] has George [MASK] played in?", return_tensors="pt"
+        ...     table=table, queries="How many [MASK] has George [MASK] played in?", return_tensors="ms"
         ... )
         >>> labels = tokenizer(
-        ...     table=table, queries="How many movies has George Clooney played in?", return_tensors="pt"
+        ...     table=table, queries="How many movies has George Clooney played in?", return_tensors="ms"
         ... )["input_ids"]
 
         >>> outputs = model(**inputs, labels=labels)
@@ -951,7 +951,7 @@ class TapasForQuestionAnswering(TapasPreTrainedModel):
         >>> table = pd.DataFrame.from_dict(data)
         >>> queries = ["How many movies has George Clooney played in?", "How old is Brad Pitt?"]
 
-        >>> inputs = tokenizer(table=table, queries=queries, padding="max_length", return_tensors="pt")
+        >>> inputs = tokenizer(table=table, queries=queries, padding="max_length", return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> logits = outputs.logits
@@ -1241,7 +1241,7 @@ class TapasForSequenceClassification(TapasPreTrainedModel):
         ...     "There are 3 actors which played in more than 60 movies",
         ... ]
 
-        >>> inputs = tokenizer(table=table, queries=queries, padding="max_length", return_tensors="pt")
+        >>> inputs = tokenizer(table=table, queries=queries, padding="max_length", return_tensors="ms")
         >>> labels = mindspore.tensor([1, 0])  # 1 means entailed, 0 means refuted
 
         >>> outputs = model(**inputs, labels=labels)

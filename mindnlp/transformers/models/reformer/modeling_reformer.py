@@ -2243,7 +2243,7 @@ class ReformerForMaskedLM(ReformerPreTrainedModel):
 
         >>> # add mask_token
         >>> tokenizer.add_special_tokens({"mask_token": "[MASK]"})  # doctest: +IGNORE_RESULT
-        >>> inputs = tokenizer("The capital of France is [MASK].", return_tensors="pt")
+        >>> inputs = tokenizer("The capital of France is [MASK].", return_tensors="ms")
 
         >>> # resize model's embedding matrix
         >>> model.resize_token_embeddings(new_num_tokens=model.config.vocab_size + 1)  # doctest: +IGNORE_RESULT
@@ -2259,7 +2259,7 @@ class ReformerForMaskedLM(ReformerPreTrainedModel):
         ```
 
         ```python
-        >>> labels = tokenizer("The capital of France is Paris.", return_tensors="pt")["input_ids"]
+        >>> labels = tokenizer("The capital of France is Paris.", return_tensors="ms")["input_ids"]
         >>> # mask labels of non-[MASK] tokens
         >>> labels = ops.where(
         ...     inputs.input_ids == tokenizer.mask_token_id, labels[:, : inputs["input_ids"].shape[-1]], -100
@@ -2348,7 +2348,7 @@ class ReformerForSequenceClassification(ReformerPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("google/reformer-crime-and-punishment")
         >>> model = ReformerForSequenceClassification.from_pretrained("google/reformer-crime-and-punishment")
 
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
 
         >>> with no_grad():
         ...     logits = model(**inputs).logits

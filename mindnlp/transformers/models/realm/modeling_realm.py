@@ -987,7 +987,7 @@ class RealmEmbedder(RealmPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("google/realm-cc-news-pretrained-embedder")
         >>> model = RealmEmbedder.from_pretrained("google/realm-cc-news-pretrained-embedder")
 
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> projected_score = outputs.projected_score
@@ -1097,8 +1097,8 @@ class RealmScorer(RealmPreTrainedModel):
         >>> input_texts = ["How are you?", "What is the item in the picture?"]
         >>> candidates_texts = [["Hello world!", "Nice to meet you!"], ["A cute cat.", "An adorable dog."]]
 
-        >>> inputs = tokenizer(input_texts, return_tensors="pt")
-        >>> candidates_inputs = tokenizer.batch_encode_candidates(candidates_texts, max_length=10, return_tensors="pt")
+        >>> inputs = tokenizer(input_texts, return_tensors="ms")
+        >>> candidates_inputs = tokenizer.batch_encode_candidates(candidates_texts, max_length=10, return_tensors="ms")
 
         >>> outputs = model(
         ...     **inputs,
@@ -1233,7 +1233,7 @@ class RealmKnowledgeAugEncoder(RealmPreTrainedModel):
         >>> # batch_size = 2, num_candidates = 2
         >>> text = [["Hello world!", "Nice to meet you!"], ["The cute cat.", "The adorable dog."]]
 
-        >>> inputs = tokenizer.batch_encode_candidates(text, max_length=10, return_tensors="pt")
+        >>> inputs = tokenizer.batch_encode_candidates(text, max_length=10, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> logits = outputs.logits
         ```"""
@@ -1525,7 +1525,7 @@ class RealmForOpenQA(RealmPreTrainedModel):
         >>> model = RealmForOpenQA.from_pretrained("google/realm-orqa-nq-openqa", retriever=retriever)
 
         >>> question = "Who is the pioneer in modern computer science?"
-        >>> question_ids = tokenizer([question], return_tensors="pt")
+        >>> question_ids = tokenizer([question], return_tensors="ms")
         >>> answer_ids = tokenizer(
         ...     ["alan mathison turing"],
         ...     add_special_tokens=False,

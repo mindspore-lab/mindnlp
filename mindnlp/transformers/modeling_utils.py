@@ -1022,7 +1022,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
         """
         :str: Identifies that this is a PyTorch model.
         """
-        return "pt"
+        return "ms"
 
     def __init__(self, config: PretrainedConfig, *inputs, **kwargs):
         super().__init__()

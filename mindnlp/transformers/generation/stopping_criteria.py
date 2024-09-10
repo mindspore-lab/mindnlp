@@ -238,7 +238,7 @@ class StopStringCriteria(StoppingCriteria):
 
     >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-2")
     >>> model = AutoModelForCausalLM.from_pretrained("microsoft/phi-2")
-    >>> inputs = tokenizer("The biggest states in the USA by land area:", return_tensors="pt")
+    >>> inputs = tokenizer("The biggest states in the USA by land area:", return_tensors="ms")
 
     >>> gen_out = model.generate(**inputs)
     >>> print(tokenizer.batch_decode(gen_out, skip_special_tokens=True)[0])
