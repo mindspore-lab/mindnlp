@@ -2843,7 +2843,7 @@ class GenerationMixin:
         generation_config: GenerationConfig,
         synced_gpus: bool,
         streamer: Optional["BaseStreamer"],
-        logits_warper: Optional[LogitsProcessorList],
+        logits_warper: Optional[LogitsProcessorList] = None,
         **model_kwargs,
     ) -> Union[GenerateNonBeamOutput, mindspore.Tensor]:
         r"""

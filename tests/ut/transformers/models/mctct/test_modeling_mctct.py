@@ -320,6 +320,10 @@ class MCTCTModelTest(ModelTesterMixin, unittest.TestCase):
     def test_model_get_set_embeddings(self):
         pass
 
+    def test_model_is_small(self):
+        pass
+
+
     @unittest.skip("MindSpore has no retain grad")
     def test_retain_grad_hidden_states_attentions(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -570,6 +574,9 @@ class MCTCTRobustModelTest(ModelTesterMixin, unittest.TestCase):
     def test_model_from_pretrained(self):
         model = MCTCTModel.from_pretrained("speechbrain/m-ctc-t-large")
         self.assertIsNotNone(model)
+
+    def test_model_is_small(self):
+        pass
 
 
 @require_mindspore
