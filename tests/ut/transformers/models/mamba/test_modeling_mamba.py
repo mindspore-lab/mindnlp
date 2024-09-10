@@ -410,6 +410,7 @@ class MambaIntegrationTests(unittest.TestCase):
         self.model_id = "state-spaces/mamba-2.8b-hf"
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
 
+    @slow
     def test_simple_generate(self):
         tokenizer = AutoTokenizer.from_pretrained("state-spaces/mamba-130m-hf")
         tokenizer.pad_token = tokenizer.eos_token

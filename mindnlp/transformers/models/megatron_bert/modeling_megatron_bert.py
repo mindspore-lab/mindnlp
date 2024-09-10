@@ -907,6 +907,7 @@ class MegatronBertForPreTraining(MegatronBertPreTrainedModel):
         >>> prediction_logits = outputs.prediction_logits
         >>> seq_relationship_logits = outputs.seq_relationship_logits
         ```"""
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.bert(
@@ -1023,6 +1024,7 @@ class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
 
         >>> prediction_logits = outputs.logits
         ```"""
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
             use_cache = False
@@ -1196,6 +1198,59 @@ class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
 
 
 class MegatronBertForNextSentencePrediction(MegatronBertPreTrainedModel):
+    """
+    Represents a MegatronBert model for next sentence prediction.
+
+    This class inherits from the MegatronBertPreTrainedModel and provides next sentence prediction functionality
+    using the Megatron BERT model.
+
+    The class forwardor initializes the MegatronBertForNextSentencePrediction model with the given configuration.
+
+    The `forward` method takes input tensors and computes the next sentence prediction loss.
+    It returns the next sentence predictor output.
+
+    Args:
+        input_ids (Optional[mindspore.Tensor], optional): The input tensor containing the indices of input sequence
+            tokens in the vocabulary. Defaults to None.
+        attention_mask (Optional[mindspore.Tensor], optional): The input tensor containing indices specifying which
+            tokens should be attended to. Defaults to None.
+        token_type_ids (Optional[mindspore.Tensor], optional): The input tensor containing the segment token indices
+            to differentiate the sequences. Defaults to None.
+        position_ids (Optional[mindspore.Tensor], optional): The input tensor containing the position indices of
+            each input token. Defaults to None.
+        head_mask (Optional[mindspore.Tensor], optional): The input tensor containing the mask for the attention heads.
+            Defaults to None.
+        inputs_embeds (Optional[mindspore.Tensor], optional): The input tensor containing the embedded inputs.
+            Defaults to None.
+        labels (Optional[mindspore.Tensor], optional): The tensor containing the labels for computing the next sequence
+            prediction loss. Defaults to None.
+        output_attentions (Optional[bool], optional): Whether to return attentions. Defaults to None.
+        output_hidden_states (Optional[bool], optional): Whether to return hidden states. Defaults to None.
+        return_dict (Optional[bool], optional): Whether to return a dictionary. Defaults to None.
+
+    Returns:
+        Union[Tuple, NextSentencePredictorOutput]: A tuple containing the next sentence prediction loss and the
+            next sentence predictor output.
+
+    Raises:
+        FutureWarning: If the `next_sentence_label` argument is used, as it is deprecated.
+
+    Example:
+        ```python
+        >>> from transformers import AutoTokenizer, MegatronBertForNextSentencePrediction
+        ...
+        >>> tokenizer = AutoTokenizer.from_pretrained("nvidia/megatron-bert-cased-345m")
+        >>> model = MegatronBertForNextSentencePrediction.from_pretrained("nvidia/megatron-bert-cased-345m")
+        ...
+        >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
+        >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
+        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="ms")
+        ...
+        >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
+        >>> logits = outputs.logits
+        >>> assert logits[0, 0] < logits[0, 1]  # next sentence was random
+        ```
+    """
     def __init__(self, config):
         super().__init__(config)
 
@@ -1230,7 +1285,6 @@ class MegatronBertForNextSentencePrediction(MegatronBertPreTrainedModel):
         Returns:
 
         Example:
-
         ```python
         >>> from transformers import AutoTokenizer, MegatronBertForNextSentencePrediction
         >>> import torch

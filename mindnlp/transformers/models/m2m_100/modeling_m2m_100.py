@@ -535,6 +535,7 @@ class M2M100PreTrainedModel(PreTrainedModel):
                 module.weight[module.padding_idx] = 0
 
 
+
 class M2M100Encoder(M2M100PreTrainedModel):
     """
     Transformer encoder consisting of *config.encoder_layers* self attention layers. Each layer is a

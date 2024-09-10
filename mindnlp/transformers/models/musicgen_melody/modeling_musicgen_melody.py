@@ -1483,6 +1483,7 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
         >>> logits.shape  # (bsz * num_codebooks, encoder_len + tgt_len, vocab_size)
         ops.Size([8, 249, 2048])
         ```"""
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         kwargs_text_encoder = {

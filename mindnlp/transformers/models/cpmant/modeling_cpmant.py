@@ -55,7 +55,7 @@ class CpmAntLayerNorm(nn.Module):
         if hidden_states.shape[-1] != self.dim_norm:
             raise AssertionError("hidden_states.shape[-1] != self.dim_norm")
         old_dtype = hidden_states.dtype
-        variance = ops.mean(hidden_states.to(mindspore.int32).pow(2), dim=-1, keepdim=True)
+        variance = ops.mean(hidden_states.to(mindspore.float32).pow(2), dim=-1, keepdim=True)
         hidden_states = (hidden_states * ops.rsqrt(variance + self.eps)).to(old_dtype) * self.weight
         return hidden_states
 

@@ -60,7 +60,6 @@ if is_mindspore_available():
     )
     from mindnlp.transformers import MusicgenMelodyProcessor
 
-mindspore.set_context(pynative_synchronize=True)
 
 def _config_zero_init(config):
     configs_no_init = copy.deepcopy(config)
