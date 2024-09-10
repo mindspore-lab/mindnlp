@@ -1269,7 +1269,7 @@ class DbrxForCausalLM(DbrxPreTrainedModel):
         >> tokenizer = AutoTokenizer.from_pretrained("databricks/dbrx-instruct")
 
         >> prompt = "Hey, are you conscious? Can you talk to me?"
-        >> inputs = tokenizer(prompt, return_tensors="pt")
+        >> inputs = tokenizer(prompt, return_tensors="ms")
 
         >> # Generate
         >> generate_ids = model.generate(inputs.input_ids, max_length=30)

@@ -20,7 +20,7 @@ from functools import reduce
 
 import mindspore
 
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import functional as F
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
@@ -422,7 +422,8 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
         special_image_token_mask = input_ids == self.config.image_token_index
         num_special_image_tokens = ops.sum(special_image_token_mask, dim=-1)
         # Compute the maximum embed dimension
-        max_embed_dim = (num_special_image_tokens.max() * (num_image_patches - 1)).item() + sequence_length
+        with no_grad():
+            max_embed_dim = (num_special_image_tokens.max() * (num_image_patches - 1)).item() + sequence_length
         nonzero = ops.nonzero(input_ids != self.config.image_token_index)
         batch_indices, non_image_indices = ops.chunk(nonzero, 2, -1)
 
@@ -520,7 +521,7 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel):
             >>> url = "https://www.ilankelman.org/stopsigns/australia.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
-            >>> inputs = processor(text=prompt, images=image, return_tensors="pt")
+            >>> inputs = processor(text=prompt, images=image, return_tensors="ms")
             ...
             >>> # Generate
             >>> generate_ids = model.generate(**inputs, max_new_tokens=15)

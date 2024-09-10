@@ -7,6 +7,7 @@ import mindspore
 from mindspore import ops, Tensor
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.function.random_func import _get_seed, _set_prim_op_user_data
+from mindspore.ops.operations import nn_ops
 
 from mindnlp.configs import USE_PYBOOST, DEVICE_TARGET
 from .modules._utils import _pair
@@ -152,7 +153,7 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
 
 def dropout(input, p=0.5, training=True):
     if USE_PYBOOST:
-        return mindspore.mint.dropout(input, p, training)
+        return mindspore.mint.nn.functional.dropout(input, p, training)
     return ops.dropout(input, p, training)
 
 def dropout2d(input, p=0.5, training=False):
@@ -168,11 +169,13 @@ def drop_and_mask(keep_prob, seed=None):
 dense_ = ops.Dense()
 def linear(input, weight, bias=None):
     if USE_PYBOOST:
-        return mindspore.mint.linear(input, weight, bias)
+        return mindspore.mint.nn.functional.linear(input, weight, bias)
     return dense_(input, weight, bias)
 
 
 def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean', pos_weight=None):
+    if input.shape != target.shape:
+        target = target.unsqueeze(1).expand_as(input).to(input.dtype)
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.binary_cross_entropy_with_logits(input, target, weight, reduction, pos_weight)
     return ops.binary_cross_entropy_with_logits(input, target, weight, pos_weight, reduction)
@@ -332,6 +335,11 @@ def mse_loss(input, target, reduction='mean'):
 def l1_loss(input, target, reduction='mean'):
     return ops.l1_loss(input, target, reduction)
 
+def smooth_l1_loss(input, target, beta=1.0, reduction='none'):
+    input = input.to(mindspore.float32)
+    target = target.to(mindspore.float32)
+    return ops.smooth_l1_loss(input, target, beta, reduction)
+
 def kl_div(logits, labels, reduction='mean', log_target=False):
     if log_target:
         labels = ops.log(labels)
@@ -339,7 +347,7 @@ def kl_div(logits, labels, reduction='mean', log_target=False):
 
 def softmax(input, dim=-1, *, dtype=None):
     if USE_PYBOOST:
-        return mindspore.mint.softmax(input, dim, dtype=dtype)
+        return mindspore.mint.nn.functional.softmax(input, dim, dtype=dtype)
     if dim is None:
         dim = -1
     return ops.softmax(input, dim, dtype=dtype)
@@ -350,7 +358,7 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     if bias is None:
         bias = ops.zeros(normalized_shape, dtype=input.dtype)
     if USE_PYBOOST:
-        return mindspore.mint.layer_norm(input, normalized_shape, weight, bias, eps)
+        return mindspore.mint.nn.functional.layer_norm(input, normalized_shape, weight, bias, eps)
     if weight is not None:
         begin_axis = input.ndim - weight.ndim
     else:
@@ -559,7 +567,7 @@ def _in_projection_packed(
             # self-attention
             # proj = linear(q, w, b)
             # # reshape to 3, E and not E, 3 is deliberate for better memory coalescing and keeping same order as chunk()
-            # proj = proj.unflatten(-1, (3, E)).unsqueeze(0).swapaxes(0, -2).squeeze(-2).contiguous()
+            # proj = proj.unflatten(-1, (3, E)).unsqueeze(0).swapaxes(0, -2).squeeze(-2)
             # return proj[0], proj[1], proj[2]
             return linear(q, w, b).chunk(3, axis=-1)
         else:
@@ -572,7 +580,7 @@ def _in_projection_packed(
             # q_proj = linear(q, w_q, b_q)
             # kv_proj = linear(k, w_kv, b_kv)
             # # reshape to 2, E and not E, 2 is deliberate for better memory coalescing and keeping same order as chunk()
-            # kv_proj = kv_proj.unflatten(-1, (2, E)).unsqueeze(0).swapaxes(0, -2).squeeze(-2).contiguous()
+            # kv_proj = kv_proj.unflatten(-1, (2, E)).unsqueeze(0).swapaxes(0, -2).squeeze(-2)
             # return (q_proj, kv_proj[0], kv_proj[1])
             return (linear(q, w_q, b_q),) + linear(k, w_kv, b_kv).chunk(2, axis=-1)
     else:
@@ -1050,7 +1058,20 @@ def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     return output
 
 def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0, reduction='mean', zero_infinity=False):
-    return ops.ctc_loss(log_probs, targets, input_lengths, target_lengths, blank, reduction, zero_infinity)[0]
+    ctc_loss_op = _get_cache_prim(nn_ops.CTCLossV2)(blank=blank, reduction="none", zero_infinity=zero_infinity)
+    loss, _ = ctc_loss_op(log_probs, targets, input_lengths, target_lengths)
+    if zero_infinity:
+        loss = ops.where(ops.isinf(loss), 0., loss)
+    if reduction == 'sum':
+        loss = loss.sum()
+    if reduction == 'mean':
+        input_type = loss.dtype
+        target_length_t = target_lengths.clip(1., None)
+        loss = loss.astype("float32")
+        loss = loss / target_length_t
+        loss = loss.mean()
+        loss = loss.astype(input_type)
+    return loss
 
 def one_hot(tensor, num_classes=-1):
     if USE_PYBOOST:
@@ -1065,7 +1086,7 @@ def pixel_unshuffle(input, downscale_factor):
 
 def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corners=False):
     if USE_PYBOOST:
-        return mindspore.mint.grid_sample(input, grid, mode, padding_mode, align_corners)
+        return mindspore.mint.nn.functional.grid_sample(input, grid, mode, padding_mode, align_corners)
     return ops.grid_sample(input, grid, mode, padding_mode, align_corners)
 
 def cosine_similarity(x1, x2, dim=1, eps=1e-8):

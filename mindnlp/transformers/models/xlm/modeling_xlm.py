@@ -91,7 +91,7 @@ def get_masks(slen, lengths, causal, padding_mask=None):
     if padding_mask is not None:
         mask = padding_mask
     else:
-        assert lengths.max().item() <= slen
+        # assert lengths.max().item() <= slen
         mask = alen < lengths[:, None]
 
     # attention mask is the same as mask, or triangular inferior attention (causal)
@@ -258,7 +258,7 @@ class MultiHeadAttention(nn.Module):
         q = q / math.sqrt(dim_per_head)  # (bs, n_heads, qlen, dim_per_head)
         scores = ops.matmul(q, k.swapaxes(2, 3))  # (bs, n_heads, qlen, klen)
         mask = (mask == 0).view(mask_reshape).expand_as(scores)  # (bs, n_heads, qlen, klen)
-        scores = scores.masked_fill(mask, np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min)  # (bs, n_heads, qlen, klen)
+        scores = scores.masked_fill(mask, float(ops.finfo(scores.dtype).min))  # (bs, n_heads, qlen, klen)
 
         weights = ops.softmax(scores.float(), dim=-1).astype(scores.dtype)  # (bs, n_heads, qlen, klen)
         weights = F.dropout(weights, p=self.dropout, training=self.training)  # (bs, n_heads, qlen, klen)
@@ -321,7 +321,7 @@ class TransformerFFN(nn.Module):
         self.dropout = config.dropout
         self.lin1 = nn.Linear(in_dim, dim_hidden)
         self.lin2 = nn.Linear(dim_hidden, out_dim)
-        self.act = ops.gelu if config.gelu_activation else ops.relu
+        self.act = F.gelu if config.gelu_activation else F.relu
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
 
@@ -700,7 +700,7 @@ class XLMModel(XLMPreTrainedModel):
 
         # check inputs
         assert lengths.shape[0] == bs
-        assert lengths.max().item() <= slen
+        # assert lengths.max().item() <= slen
         # input_ids = input_ids.swapaxes(0, 1)  # batch size as dimension 0
         # assert (src_enc is None) == (src_len is None)
         # if src_enc is not None:

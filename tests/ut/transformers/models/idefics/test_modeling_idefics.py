@@ -655,7 +655,7 @@ class IdeficsModelIntegrationTest(TestCasePlus):
         #     "HuggingFaceM4/tiny-random-idefics",quantization_config=quantization_config, device_map="auto"
         # )
         # processor = self.default_processor
-        # inputs = processor(prompts, return_tensors="pt", padding="longest").to(torch_device)
+        # inputs = processor(prompts, return_tensors="ms", padding="longest").to(torch_device)
         # generated_ids = model.generate(**inputs, max_length=100)
         # generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)
         # 

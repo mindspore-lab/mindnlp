@@ -117,7 +117,7 @@ class VisionTextDualEncoderModel(PreTrainedModel):
             >>> model = VisionTextDualEncoderModel.from_pretrained("clip-italian/clip-italian")
             >>> tokenizer = AutoTokenizer.from_pretrained("clip-italian/clip-italian")
             ...
-            >>> inputs = tokenizer(["una foto di un gatto", "una foto di un cane"], padding=True, return_tensors="pt")
+            >>> inputs = tokenizer(["una foto di un gatto", "una foto di un cane"], padding=True, return_tensors="ms")
             >>> text_features = model.get_text_features(**inputs)
             ```
         """
@@ -161,7 +161,7 @@ class VisionTextDualEncoderModel(PreTrainedModel):
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
-            >>> inputs = image_processor(images=image, return_tensors="pt")
+            >>> inputs = image_processor(images=image, return_tensors="ms")
             ...
             >>> image_features = model.get_image_features(**inputs)
             ```
@@ -219,7 +219,7 @@ class VisionTextDualEncoderModel(PreTrainedModel):
             ... ]
             >>> images = [Image.open(requests.get(url, stream=True).raw) for url in urls]
             >>> inputs = processor(
-            ...     text=["a photo of a cat", "a photo of a dog"], images=images, return_tensors="pt", padding=True
+            ...     text=["a photo of a cat", "a photo of a dog"], images=images, return_tensors="ms", padding=True
             ... )
             >>> outputs = model(
             ...     input_ids=inputs.input_ids,

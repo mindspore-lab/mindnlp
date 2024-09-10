@@ -10,12 +10,10 @@ from ..utils import get_default_dtype
 
 # bernoulli
 def bernoulli(input, p=0.5):
-    if DEVICE_TARGET == 'Ascend':
-        random_numbers = rand(*input.shape, dtype=input.dtype)
-        samples = random_numbers < p
-        samples = samples.int()
-        return samples
-    return ops.bernoulli(input, p)
+    random_numbers = rand(*input.shape, dtype=mindspore.float32)
+    samples = random_numbers < p
+    samples = samples.int()
+    return samples
 
 # multinomial
 def multinomial(input, num_samples, replacement=False):

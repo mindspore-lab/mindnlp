@@ -220,6 +220,7 @@ class ModelTesterMixin:
         return inputs_dict
 
     def test_save_load(self):
+        set_seed(123)
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def check_save_load(out1, out2):
@@ -1283,7 +1284,6 @@ class ModelTesterMixin:
             config.chunk_size_feed_forward = 1
             model = model_class(config)
             model.eval()
-
             hidden_states_with_chunk = model(**self._prepare_for_class(inputs_dict, model_class))[0]
             self.assertTrue(ops.allclose(hidden_states_no_chunk, hidden_states_with_chunk, atol=1e-3))
 
