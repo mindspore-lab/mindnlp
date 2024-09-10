@@ -178,7 +178,7 @@ def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean
         target = target.unsqueeze(1).expand_as(input).to(input.dtype)
     if USE_PYBOOST:
         return mindspore.mint.nn.functional.binary_cross_entropy_with_logits(input, target, weight, reduction, pos_weight)
-    return ops.binary_cross_entropy_with_logits(input, target, weight, pos_weight, reduction)
+    return ops.binary_cross_entropy_with_logits(input, target.astype(input.dtype), weight, pos_weight, reduction)
 
 def gumbel_softmax(logits: Tensor, tau: float = 1, hard: bool = False, eps: float = 1e-10, dim: int = -1) -> Tensor:
     if eps != 1e-10:

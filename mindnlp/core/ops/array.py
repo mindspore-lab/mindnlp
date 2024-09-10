@@ -48,6 +48,7 @@ def chunk(input, chunks, dim=0):
 def gather(input, dim, index):
     if USE_PYBOOST:
         return mindspore.mint.gather(input, dim, index)
+    index = ops.where(index < input.shape[dim], index, index - input.shape[dim])
     return ops.gather_elements(input, dim, index)
 
 def gather_nd(input, indices):

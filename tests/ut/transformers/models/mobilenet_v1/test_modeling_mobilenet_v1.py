@@ -1,24 +1,23 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2022 The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================
-"""Testing suite for the PyTorch MobileNetV1 model."""
+"""Testing suite for the MindSpore MobileNetV1 model."""
 
 import unittest
-import numpy as np
 
 from mindnlp.transformers import MobileNetV1Config
-from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow
+from mindnlp.utils.testing_utils import is_flaky, require_mindspore, require_vision, slow
 from mindnlp.utils import cached_property, is_mindspore_available, is_vision_available
 
 from ...test_configuration_common import ConfigTester
@@ -27,9 +26,9 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 
 if is_mindspore_available():
-    import mindspore as ms
-    from mindspore import ops
-    from mindspore import context
+    import mindspore
+    from mindnlp.core import nn, ops, no_grad
+
     from mindnlp.transformers import MobileNetV1ForImageClassification, MobileNetV1Model
 
 
@@ -110,7 +109,7 @@ class MobileNetV1ModelTester:
 
     def create_and_check_model(self, config, pixel_values, labels, pixel_labels):
         model = MobileNetV1Model(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values)
         self.parent.assertEqual(
             result.last_hidden_state.shape,
@@ -125,7 +124,7 @@ class MobileNetV1ModelTester:
     def create_and_check_for_image_classification(self, config, pixel_values, labels, pixel_labels):
         config.num_labels = self.num_labels
         model = MobileNetV1ForImageClassification(config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values, labels=labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
@@ -143,7 +142,7 @@ class MobileNetV1ModelTest(ModelTesterMixin, unittest.TestCase):
     attention_mask and seq_length.
     """
 
-    all_model_classes = (MobileNetV1ForImageClassification,) if is_mindspore_available() else ()
+    all_model_classes = (MobileNetV1Model, MobileNetV1ForImageClassification) if is_mindspore_available() else ()
     pipeline_model_mapping = (
         {"image-feature-extraction": MobileNetV1Model, "image-classification": MobileNetV1ForImageClassification}
         if is_mindspore_available()
@@ -181,9 +180,10 @@ class MobileNetV1ModelTest(ModelTesterMixin, unittest.TestCase):
     def test_hidden_states_output(self):
         def check_hidden_states_output(inputs_dict, config, model_class):
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             hidden_states = outputs.hidden_states
 
@@ -209,8 +209,12 @@ class MobileNetV1ModelTest(ModelTesterMixin, unittest.TestCase):
     @slow
     def test_model_from_pretrained(self):
         model_name = "google/mobilenet_v1_1.0_224"
-        model = MobileNetV1Model.from_pretrained(model_name,from_pt=True)
+        model = MobileNetV1Model.from_pretrained(model_name)
         self.assertIsNotNone(model)
+
+    @is_flaky(description="is_flaky https://github.com/huggingface/transformers/pull/31258")
+    def test_batching_equivalence(self):
+        super().test_batching_equivalence()
 
 
 # We will verify our results on an image of cute cats
@@ -231,18 +235,18 @@ class MobileNetV1ModelIntegrationTest(unittest.TestCase):
     @slow
     def test_inference_image_classification_head(self):
         model = MobileNetV1ForImageClassification.from_pretrained("google/mobilenet_v1_1.0_224")
-
         image_processor = self.default_image_processor
         image = prepare_img()
         inputs = image_processor(images=image, return_tensors="ms")
 
         # forward pass
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
 
         # verify the logits
         expected_shape = (1, 1001)
         self.assertEqual(outputs.logits.shape, expected_shape)
 
-        expected_slice = ms.tensor([-4.1739, -1.1233, 3.1205])
-        print(outputs.logits[0, :3], expected_slice)
-        self.assertTrue(np.allclose(outputs.logits[0, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        expected_slice = mindspore.tensor([-4.1739, -1.1233, 3.1205])
+        print(outputs.logits[0, :3])
+        self.assertTrue(ops.allclose(outputs.logits[0, :3], expected_slice, atol=1e-4))

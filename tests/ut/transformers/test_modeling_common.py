@@ -656,10 +656,10 @@ class ModelTesterMixin:
         def get_tensor_equivalence_function(batched_input):
             # models operating on continuous spaces have higher abs difference than LMs
             # instead, we can rely on cos distance for image/speech models, similar to `diffusers`
-            if "input_ids" not in batched_input:
-                return lambda tensor1, tensor2: (
-                    1.0 - F.cosine_similarity(tensor1.float().flatten(), tensor2.float().flatten(), dim=0, eps=1e-38)
-                )
+            # if "input_ids" not in batched_input:
+            #     return lambda tensor1, tensor2: (
+            #         1.0 - F.cosine_similarity(tensor1.float().flatten(), tensor2.float().flatten(), dim=0, eps=1e-38)
+            #     )
             return lambda tensor1, tensor2: ops.max(ops.abs(tensor1 - tensor2))
 
         def recursive_check(batched_object, single_row_object, model_name, key):
