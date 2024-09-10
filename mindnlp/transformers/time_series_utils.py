@@ -187,7 +187,7 @@ class NormalOutput(DistributionOutput):
 
     @classmethod
     def domain_map(cls, loc: mindspore.Tensor, scale: mindspore.Tensor):
-        scale = cls.squareplus(scale).clamp(ops.finfo(scale.dtype).eps)
+        scale = cls.squareplus(scale).clamp(min=(ops.finfo(scale.dtype).eps))
         return loc.squeeze(-1), scale.squeeze(-1)
 
 
