@@ -369,7 +369,7 @@ class MvpHeadTests(unittest.TestCase):
             mindspore.tensor([0, 11349, 495, 4040, 571, 2]),
         ]
         for ex, desired_result in zip(examples, fairseq_results):
-            mvp_toks = tokenizer.encode(ex, return_tensors="pt").squeeze()
+            mvp_toks = tokenizer.encode(ex, return_tensors="ms").squeeze()
             assert_tensors_close(desired_result.long(), mvp_toks, prefix=ex)
 
     def test_generate_fp16(self):
@@ -563,7 +563,7 @@ class MvpModelIntegrationTests(unittest.TestCase):
         EXPECTED_SUMMARY = "Listen to the radio.\nUse the Internet."
         dct = tok.batch_encode_plus(
             [PGE_ARTICLE],
-            return_tensors="pt",
+            return_tensors="ms",
         )
 
         hypotheses_batch = model.generate(**dct)
