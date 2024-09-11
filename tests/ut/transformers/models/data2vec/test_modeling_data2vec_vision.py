@@ -237,7 +237,7 @@ class Data2VecVisionModelTest(ModelTesterMixin, unittest.TestCase):
 
 
     def test_training_gradient_checkpointing(self):
-        self.skipTest()
+        pass
 
 
     def test_initialization(self):
