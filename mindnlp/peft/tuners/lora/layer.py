@@ -247,6 +247,7 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
             # initialize a the same way as the default for nn.Linear and b to zero
             nn.init.zeros_(self.lora_embedding_A[adapter_name])
             nn.init.normal_(self.lora_embedding_B[adapter_name])
+            
     def dora_init(self, adapter_name: str) -> None:
         if not self.lora_magnitude_vector:
             # first dora layer being added, add lora_magnitude_vector to the list of learnable parameters
