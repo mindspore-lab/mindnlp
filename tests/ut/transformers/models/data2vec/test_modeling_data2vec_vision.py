@@ -236,8 +236,6 @@ class Data2VecVisionModelTest(ModelTesterMixin, unittest.TestCase):
             loss = model(**inputs).loss
 
 
-    def test_training_gradient_checkpointing(self):
-        pass
 
 
     def test_initialization(self):
