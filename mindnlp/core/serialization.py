@@ -791,7 +791,7 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
         logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
         array = array.astype(np.float16)
 
-    if stride is not None and len(stride) > 1 and stride[0] == 1 and stride[1] > 1:
+    if stride is not None and len(stride) > 1 and stride[0] == 1:
         stride = tuple((s * 4 for s in stride))
         array = np.lib.stride_tricks.as_strided(array, size, stride)
     else:

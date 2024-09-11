@@ -12,13 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the PyTorch BioGPT model. """
+"""Testing suite for the MindSpore BioGPT model."""
 
 import math
 import unittest
-import numpy as np
-from mindnlp.transformers import BioGptConfig
-from mindnlp.utils.import_utils import is_mindspore_available, is_sacremoses_available
+
+from mindnlp.transformers import BioGptConfig, is_mindspore_available
 from mindnlp.utils.testing_utils import require_mindspore, slow
 
 from ...generation.test_utils import GenerationTesterMixin
@@ -30,7 +29,6 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attenti
 if is_mindspore_available():
     import mindspore
     from mindnlp.core import ops
-    from mindnlp.engine import set_seed
 
     from mindnlp.transformers import (
         BioGptForCausalLM,
@@ -39,7 +37,6 @@ if is_mindspore_available():
         BioGptModel,
         BioGptTokenizer,
     )
-    from mindnlp.transformers.models.biogpt.modeling_biogpt import BIOGPT_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 class BioGptModelTester:
@@ -134,8 +131,7 @@ class BioGptModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = BioGptModel(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask)
         result = model(input_ids)
         self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
@@ -153,8 +149,7 @@ class BioGptModelTester:
         encoder_attention_mask,
     ):
         model = BioGptForCausalLM(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
@@ -162,11 +157,10 @@ class BioGptModelTester:
         self, config, input_ids, input_mask, head_mask, token_type_ids, *args
     ):
         model = BioGptModel(config=config)
-
-        model.set_train(False)
+        model.eval()
 
         # create attention mask
-        attn_mask = ops.ones(*input_ids.shape, dtype=mindspore.int64)
+        attn_mask = ops.ones(input_ids.shape, dtype=mindspore.int64)
         half_seq_length = self.seq_length // 2
         attn_mask[:, half_seq_length:] = 0
 
@@ -184,7 +178,7 @@ class BioGptModelTester:
         # append to next input_ids and attn_mask
         next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         attn_mask = ops.cat(
-            [attn_mask, ops.ones(attn_mask.shape[0], 1, dtype=mindspore.int64)],
+            [attn_mask, ops.ones((attn_mask.shape[0], 1), dtype=mindspore.int64)],
             dim=1,
         )
 
@@ -198,14 +192,14 @@ class BioGptModelTester:
         output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_biogpt_model_past_large_inputs(
         self, config, input_ids, input_mask, head_mask, token_type_ids, *args
     ):
-        model = BioGptModel(config=config).set_train(False)
+        model = BioGptModel(config=config).eval()
 
-        attention_mask = ops.ones(*input_ids.shape, dtype=mindspore.int64)
+        attention_mask = ops.ones(input_ids.shape, dtype=mindspore.int64)
 
         # first forward pass
         outputs = model(input_ids, attention_mask=attention_mask, use_cache=True)
@@ -233,13 +227,12 @@ class BioGptModelTester:
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_forward_and_backwards(
         self, config, input_ids, input_mask, head_mask, token_type_ids, *args, gradient_checkpointing=False
     ):
         model = BioGptForCausalLM(config)
-
         if gradient_checkpointing:
             model.gradient_checkpointing_enable()
 
@@ -251,18 +244,17 @@ class BioGptModelTester:
     def create_and_check_biogpt_weight_initialization(self, config, *args):
         model = BioGptModel(config)
         model_std = model.config.initializer_range / math.sqrt(2 * model.config.num_hidden_layers)
-        for key in model.parameters_dict().keys():
+        for key in model.state_dict().keys():
             if "c_proj" in key and "weight" in key:
-                self.parent.assertLessEqual(abs(ops.std(model.parameters_dict()[key]) - model_std), 0.001)
-                self.parent.assertLessEqual(abs(ops.mean(model.parameters_dict()[key]) - 0.0), 0.01)
+                self.parent.assertLessEqual(abs(ops.std(model.state_dict()[key]) - model_std), 0.001)
+                self.parent.assertLessEqual(abs(ops.mean(model.state_dict()[key]) - 0.0), 0.01)
 
     def create_and_check_biogpt_for_token_classification(
         self, config, input_ids, input_mask, head_mask, token_type_ids, *args
     ):
         config.num_labels = self.num_labels
         model = BioGptForTokenClassification(config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.num_labels))
 
@@ -297,7 +289,7 @@ class BioGptModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
             "token-classification": BioGptForTokenClassification,
             "zero-shot": BioGptForSequenceClassification,
         }
-        if is_mindspore_available() and is_sacremoses_available()
+        if is_mindspore_available()
         else {}
     )
     test_pruning = False
@@ -323,6 +315,11 @@ class BioGptModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_biogpt_model_attention_mask_past(*config_and_inputs)
 
+    @unittest.skip
+    def test_biogpt_gradient_checkpointing(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_forward_and_backwards(*config_and_inputs, gradient_checkpointing=True)
+
     def test_biogpt_model_past_with_large_inputs(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_biogpt_model_past_large_inputs(*config_and_inputs)
@@ -338,7 +335,6 @@ class BioGptModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
     @slow
     def test_batch_generation(self):
         model = BioGptForCausalLM.from_pretrained("microsoft/biogpt")
-
         tokenizer = BioGptTokenizer.from_pretrained("microsoft/biogpt")
 
         tokenizer.padding_side = "left"
@@ -364,7 +360,7 @@ class BioGptModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
         inputs_non_padded = tokenizer(sentences[0], return_tensors="ms").input_ids
         output_non_padded = model.generate(input_ids=inputs_non_padded)
 
-        num_paddings = inputs_non_padded.shape[-1] - inputs["attention_mask"][-1].long().sum().item()
+        num_paddings = inputs_non_padded.shape[-1] - inputs["attention_mask"][-1].long().sum().cpu().item()
         inputs_padded = tokenizer(sentences[1], return_tensors="ms").input_ids
         output_padded = model.generate(input_ids=inputs_padded, max_length=model.config.max_length - num_paddings)
 
@@ -381,9 +377,9 @@ class BioGptModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
 
     @slow
     def test_model_from_pretrained(self):
-        for model_name in BIOGPT_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = BioGptModel.from_pretrained(model_name)
-            self.assertIsNotNone(model)
+        model_name = "microsoft/biogpt"
+        model = BioGptModel.from_pretrained(model_name)
+        self.assertIsNotNone(model)
 
     # Copied from tests.models.opt.test_modeling_opt.OPTModelTest.test_opt_sequence_classification_model with OPT->BioGpt,opt->biogpt,prepare_config_and_inputs->prepare_config_and_inputs_for_common
     def test_biogpt_sequence_classification_model(self):
@@ -393,8 +389,7 @@ class BioGptModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
         attention_mask = input_ids.ne(1)
         sequence_labels = ids_tensor([self.model_tester.batch_size], self.model_tester.type_sequence_label_size)
         model = BioGptForSequenceClassification(config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=attention_mask, labels=sequence_labels)
         self.assertEqual(result.logits.shape, (self.model_tester.batch_size, self.model_tester.num_labels))
 
@@ -409,8 +404,7 @@ class BioGptModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
             [self.model_tester.batch_size, config.num_labels], self.model_tester.type_sequence_label_size
         ).to(mindspore.float32)
         model = BioGptForSequenceClassification(config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=attention_mask, labels=sequence_labels)
         self.assertEqual(result.logits.shape, (self.model_tester.batch_size, self.model_tester.num_labels))
 
@@ -432,15 +426,15 @@ class BioGptModelIntegrationTest(unittest.TestCase):
             [[[-9.5236, -9.8918, 10.4557], [-11.0469, -9.6423, 8.1022], [-8.8664, -7.8826, 5.5325]]]
         )
 
-        self.assertTrue(np.allclose(output[:, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(output[:, :3, :3], expected_slice, atol=1e-4))
 
     @slow
     def test_biogpt_generation(self):
         tokenizer = BioGptTokenizer.from_pretrained("microsoft/biogpt")
         model = BioGptForCausalLM.from_pretrained("microsoft/biogpt")
 
-
-        set_seed(0)
+        mindspore.manual_seed(0)
+        mindspore.set_seed(0)
         tokenized = tokenizer("COVID-19 is", return_tensors="ms")
         output_ids = model.generate(
             **tokenized,

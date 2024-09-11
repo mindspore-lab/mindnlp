@@ -1245,10 +1245,10 @@ class MambaCache:
     def update_conv_state(
         self, layer_idx: int, new_conv_state: mindspore.Tensor, cache_position: mindspore.Tensor
     ) -> mindspore.Tensor:
-        conv_state = self.conv_states[layer_idx]
+        conv_state = self.conv_states[layer_idx].copy()
         cache_position = cache_position.clamp(0, self.conv_kernel_size - 1)
 
-        conv_state = conv_state.roll(shifts=-1, dims=-1)
+        conv_state = ops.roll(conv_state, shifts=-1, dims=-1)
         conv_state[:, :, cache_position] = new_conv_state
         self.conv_states[layer_idx][:] = 0
         self.conv_states[layer_idx] += conv_state
