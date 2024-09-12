@@ -542,8 +542,8 @@ class BloomModel(BloomPreTrainedModel):
             use_legacy_cache = True
             past_key_values = DynamicCache.from_legacy_cache(past_key_values)
             logger.warning_once(
-                "Using `past_key_values` as a tuple is deprecated.45. "
-                "Please use an appropriate `Cache` class (https://huggingface.co/docs/transformers/v4.41.3/en/internal/generation_utils#transformers.Cache)"
+                "Using `past_key_values` as a tuple is deprecated. "
+                "Please use an appropriate `Cache` class"
             )
 
         batch_size, seq_length, _ = inputs_embeds.shape

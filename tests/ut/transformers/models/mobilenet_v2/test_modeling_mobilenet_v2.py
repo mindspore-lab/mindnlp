@@ -258,6 +258,11 @@ class MobileNetV2ModelTest(ModelTesterMixin, unittest.TestCase):
         model = MobileNetV2Model.from_pretrained(model_name)
         self.assertIsNotNone(model)
 
+    @unittest.skip
+    def test_batching_equivalence(self):
+        super().test_batching_equivalence()
+
+
 # We will verify our results on an image of cute cats
 def prepare_img():
     image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")

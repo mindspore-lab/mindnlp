@@ -159,7 +159,7 @@ class M2M100ModelTester:
         return config, inputs_dict
 
     def create_and_check_decoder_model_past_large_inputs(self, config, inputs_dict):
-        model = M2M100Model(config=config).get_decoder()
+        model = M2M100Model(config=config).get_decoder().eval()
         input_ids = inputs_dict["input_ids"]
         attention_mask = inputs_dict["attention_mask"]
         head_mask = inputs_dict["head_mask"]
@@ -171,11 +171,12 @@ class M2M100ModelTester:
 
         # create hypothetical multiple next token and extent to next_input_ids
         next_tokens = ids_tensor((self.batch_size, 3), config.vocab_size)
-        next_attn_mask = ids_tensor((self.batch_size, 3), 2)
+        next_attn_mask = ids_tensor((self.batch_size, 3), 2).to(attention_mask.dtype)
 
         # append to next input_ids and
         next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
-        next_attention_mask = ops.cat([attention_mask.to(next_attn_mask.dtype), next_attn_mask], dim=-1)
+        next_attention_mask = ops.cat([attention_mask, next_attn_mask], dim=-1)
+
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["last_hidden_state"]
         output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
             "last_hidden_state"
@@ -189,7 +190,7 @@ class M2M100ModelTester:
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-2))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-2))
 
     def check_encoder_decoder_model_standalone(self, config, inputs_dict):
         model = M2M100Model(config=config).set_train(False)

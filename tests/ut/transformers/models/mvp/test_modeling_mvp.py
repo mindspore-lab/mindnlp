@@ -15,16 +15,14 @@
 """Testing suite for the MindSpore MVP model."""
 
 import copy
-import unittest
 import tempfile
-import numpy as np
-from mindnlp.transformers import MvpConfig
+import unittest
 
+from mindnlp.transformers import MvpConfig, is_mindspore_available
 from mindnlp.utils.testing_utils import (
     require_sentencepiece,
     require_tokenizers,
     require_mindspore,
-    is_mindspore_available,
     slow,
 )
 from mindnlp.utils import cached_property
@@ -32,12 +30,14 @@ from mindnlp.utils import cached_property
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
+# from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import ops
-    from mindnlp.transformers.models.mvp import(
+    from mindnlp.core import ops, no_grad
+
+    from mindnlp.transformers import (
         MvpForCausalLM,
         MvpForConditionalGeneration,
         MvpForQuestionAnswering,
@@ -160,7 +160,7 @@ class MvpModelTester:
         return config, inputs_dict
 
     def create_and_check_decoder_model_past_large_inputs(self, config, inputs_dict):
-        model = MvpModel(config=config).get_decoder().set_train(False)
+        model = MvpModel(config=config).get_decoder().eval()
         input_ids = inputs_dict["input_ids"]
         attention_mask = inputs_dict["attention_mask"]
         head_mask = inputs_dict["head_mask"]
@@ -173,10 +173,11 @@ class MvpModelTester:
         # create hypothetical multiple next token and extent to next_input_ids
         next_tokens = ids_tensor((self.batch_size, 3), config.vocab_size)
         next_attn_mask = ids_tensor((self.batch_size, 3), 2)
-        
+
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], dim=1)
-        next_attention_mask = ops.cat([attention_mask, next_attn_mask==1], dim=1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([attention_mask, next_attn_mask.astype(attention_mask.dtype)], dim=-1)
+
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["last_hidden_state"]
         output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
             "last_hidden_state"
@@ -190,10 +191,10 @@ class MvpModelTester:
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def check_encoder_decoder_model_standalone(self, config, inputs_dict):
-        model = MvpModel(config=config).set_train(False)
+        model = MvpModel(config=config).eval()
         outputs = model(**inputs_dict)
 
         encoder_last_hidden_state = outputs.encoder_last_hidden_state
@@ -202,7 +203,7 @@ class MvpModelTester:
         with tempfile.TemporaryDirectory() as tmpdirname:
             encoder = model.get_encoder()
             encoder.save_pretrained(tmpdirname)
-            encoder = MvpEncoder.from_pretrained(tmpdirname,from_pt=True)
+            encoder = MvpEncoder.from_pretrained(tmpdirname)
 
         encoder_last_hidden_state_2 = encoder(inputs_dict["input_ids"], attention_mask=inputs_dict["attention_mask"])[
             0
@@ -213,7 +214,7 @@ class MvpModelTester:
         with tempfile.TemporaryDirectory() as tmpdirname:
             decoder = model.get_decoder()
             decoder.save_pretrained(tmpdirname)
-            decoder = MvpDecoder.from_pretrained(tmpdirname,from_pt=True)
+            decoder = MvpDecoder.from_pretrained(tmpdirname)
 
         last_hidden_state_2 = decoder(
             input_ids=inputs_dict["decoder_input_ids"],
@@ -272,14 +273,14 @@ class MvpHeadTests(unittest.TestCase):
         config.num_labels = 3
         model = MvpForSequenceClassification(config)
         outputs = model(input_ids=input_ids, decoder_input_ids=input_ids, labels=labels)
-        self.assertEqual(outputs["logits"].shape,(batch_size, config.num_labels))
+        expected_shape = (batch_size, config.num_labels)
+        self.assertEqual(outputs["logits"].shape, expected_shape)
         self.assertIsInstance(outputs["loss"].item(), float)
 
     def test_question_answering_forward(self):
         config, input_ids, batch_size = self._get_config_and_data()
         sequence_labels = ids_tensor([batch_size], 2)
         model = MvpForQuestionAnswering(config)
-      
         outputs = model(
             input_ids=input_ids,
             start_positions=sequence_labels,
@@ -290,7 +291,6 @@ class MvpHeadTests(unittest.TestCase):
         self.assertEqual(outputs["end_logits"].shape, input_ids.shape)
         self.assertIsInstance(outputs["loss"].item(), float)
 
- 
     def test_lm_forward(self):
         config, input_ids, batch_size = self._get_config_and_data()
         lm_labels = ids_tensor([batch_size, input_ids.shape[1]], self.vocab_size)
@@ -316,7 +316,7 @@ class MvpHeadTests(unittest.TestCase):
         context = mindspore.tensor(
             [[71, 82, 18, 33, 46, 91, 2], [68, 34, 26, 58, 30, 2, 1]], dtype=mindspore.int64
         )
-        summary =mindspore.tensor([[82, 71, 82, 18, 2], [58, 68, 2, 1, 1]], dtype=mindspore.int64)
+        summary = mindspore.tensor([[82, 71, 82, 18, 2], [58, 68, 2, 1, 1]], dtype=mindspore.int64)
         outputs = lm_model(input_ids=context, decoder_input_ids=summary, labels=summary)
         expected_shape = (*summary.shape, config.vocab_size)
         self.assertEqual(outputs["logits"].shape, expected_shape)
@@ -338,11 +338,11 @@ class MvpHeadTests(unittest.TestCase):
             bos_token_id=0,
         )
         lm_model = MvpForConditionalGeneration(config)
-        lm_model.set_train(False)
+        lm_model.eval()
 
         max_length = 5
         generated_ids = lm_model.generate(
-            input_ids.copy(),
+            input_ids,
             do_sample=True,
             num_return_sequences=1,
             num_beams=2,
@@ -362,7 +362,7 @@ class MvpHeadTests(unittest.TestCase):
 
     @slow
     def test_tokenization(self):
-        tokenizer = MvpTokenizer.from_pretrained("RUCAIBox/mvp",from_pt=True)
+        tokenizer = MvpTokenizer.from_pretrained("RUCAIBox/mvp")
         examples = [" Hello world", " DomDramg"]  # need leading spaces for equality
         fairseq_results = [
             mindspore.tensor([0, 20920, 232, 2]),
@@ -372,27 +372,26 @@ class MvpHeadTests(unittest.TestCase):
             mvp_toks = tokenizer.encode(ex, return_tensors="ms").squeeze()
             assert_tensors_close(desired_result.long(), mvp_toks, prefix=ex)
 
-    # @require_mindspore
-    # def test_generate_fp16(self):
-    #     config, input_ids, batch_size = self._get_config_and_data()
-    #     attention_mask = input_ids.ne(1)
-    #     model = MvpForConditionalGeneration(config).set_train(False)
-    #     model.half()
-    #     model.generate(input_ids, attention_mask=attention_mask)
-    #     model.generate(num_beams=4, do_sample=True, early_stopping=False, num_return_sequences=3)
+    def test_generate_fp16(self):
+        config, input_ids, batch_size = self._get_config_and_data()
+        attention_mask = input_ids.ne(1)
+        model = MvpForConditionalGeneration(config).eval()
+        model.half()
+        model.generate(input_ids, attention_mask=attention_mask)
+        model.generate(num_beams=4, do_sample=True, early_stopping=False, num_return_sequences=3)
 
     def test_dummy_inputs(self):
         config, *_ = self._get_config_and_data()
-        model = MvpForConditionalGeneration(config).set_train(False)
+        model = MvpForConditionalGeneration(config).eval()
         model(**model.dummy_inputs)
 
     def test_resize_tokens_embeddings_more(self):
         config, input_ids, _ = self._get_config_and_data()
 
         def _get_embs(m):
-            return (m.get_input_embeddings().weight.data.copy(), m.get_output_embeddings().weight.data.copy())
+            return (m.get_input_embeddings().weight, m.get_output_embeddings().weight)
 
-        model = MvpForConditionalGeneration(config).set_train(False)
+        model = MvpForConditionalGeneration(config).eval()
         input, output = _get_embs(model)
         self.assertTrue(ops.eq(input, output).all())
         new_vocab_size = 45
@@ -406,18 +405,13 @@ class MvpHeadTests(unittest.TestCase):
 @require_mindspore
 class MvpModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (
-        (
-            # MvpModel,
-            MvpForConditionalGeneration,
-            MvpForSequenceClassification,
-            MvpForQuestionAnswering)
+        (MvpModel, MvpForConditionalGeneration, MvpForSequenceClassification, MvpForQuestionAnswering)
         if is_mindspore_available()
         else ()
     )
     all_generative_model_classes = (MvpForConditionalGeneration,) if is_mindspore_available() else ()
     pipeline_model_mapping = (
         {
-            "conversational": MvpForConditionalGeneration,
             "feature-extraction": MvpModel,
             "fill-mask": MvpForConditionalGeneration,
             "question-answering": MvpForQuestionAnswering,
@@ -436,21 +430,21 @@ class MvpModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     test_pruning = False
     test_missing_keys = False
 
-    # # TODO: Fix the failed tests
-    # def is_pipeline_test_to_skip(
-    #     self, pipeline_test_casse_name, config_class, model_architecture, tokenizer_name, processor_name
-    # ):
-    #     if (
-    #         pipeline_test_casse_name == "QAPipelineTests"
-    #         and tokenizer_name is not None
-    #         and not tokenizer_name.endswith("Fast")
-    #     ):
-    #         # `QAPipelineTests` fails for a few models when the slower tokenizer are used.
-    #         # (The slower tokenizers were never used for pipeline tests before the pipeline testing rework)
-    #         # TODO: check (and possibly fix) the `QAPipelineTests` with slower tokenizer
-    #         return True
+    # TODO: Fix the failed tests
+    def is_pipeline_test_to_skip(
+        self, pipeline_test_casse_name, config_class, model_architecture, tokenizer_name, processor_name
+    ):
+        if (
+            pipeline_test_casse_name == "QAPipelineTests"
+            and tokenizer_name is not None
+            and not tokenizer_name.endswith("Fast")
+        ):
+            # `QAPipelineTests` fails for a few models when the slower tokenizer are used.
+            # (The slower tokenizers were never used for pipeline tests before the pipeline testing rework)
+            # TODO: check (and possibly fix) the `QAPipelineTests` with slower tokenizer
+            return True
 
-    #     return False
+        return False
 
     def setUp(self):
         self.model_tester = MvpModelTester(self)
@@ -466,7 +460,7 @@ class MvpModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
             with tempfile.TemporaryDirectory() as tmpdirname:
                 model.save_pretrained(tmpdirname)
-                model2, info = model_class.from_pretrained(tmpdirname, output_loading_info=True,from_pt=True)
+                model2, info = model_class.from_pretrained(tmpdirname, output_loading_info=True)
             self.assertEqual(info["missing_keys"], [])
 
     def test_decoder_model_past_with_large_inputs(self):
@@ -483,7 +477,7 @@ class MvpModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
         for model_class in (MvpModel, MvpForConditionalGeneration, MvpForQuestionAnswering):
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
             inputs = copy.deepcopy(self._prepare_for_class(inputs_dict, model_class))
 
@@ -503,18 +497,17 @@ class MvpModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
                 inputs["inputs_embeds"] = wte(encoder_input_ids)
                 inputs["decoder_inputs_embeds"] = wte(decoder_input_ids)
 
-            model.set_train(False)
-            model(**inputs)[0]
+            with no_grad():
+                model(**inputs)[0]
 
-    # @require_mindspore
-    # def test_generate_fp16(self):
-    #     config, input_dict = self.model_tester.prepare_config_and_inputs()
-    #     input_ids = input_dict["input_ids"]
-    #     attention_mask = input_ids.ne(1)
-    #     model = MvpForConditionalGeneration(config).set_train(False)
-    #     model.half()
-    #     model.generate(input_ids, attention_mask=attention_mask)
-    #     model.generate(num_beams=4, do_sample=True, early_stopping=False, num_return_sequences=3)
+    def test_generate_fp16(self):
+        config, input_dict = self.model_tester.prepare_config_and_inputs()
+        input_ids = input_dict["input_ids"]
+        attention_mask = input_ids.ne(1)
+        model = MvpForConditionalGeneration(config).eval()
+        model.half()
+        model.generate(input_ids, attention_mask=attention_mask)
+        model.generate(num_beams=4, do_sample=True, early_stopping=False, num_return_sequences=3)
 
 
 def assert_tensors_close(a, b, atol=1e-12, prefix=""):
@@ -522,7 +515,7 @@ def assert_tensors_close(a, b, atol=1e-12, prefix=""):
     if a is None and b is None:
         return True
     try:
-        if np.allclose(a.asnumpy(), b.asnumpy(), atol=atol):
+        if ops.allclose(a, b, atol=atol):
             return True
         raise
     except Exception:
@@ -550,21 +543,21 @@ class MvpModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_inference_no_head(self):
-        model = MvpModel.from_pretrained("RUCAIBox/mvp",from_pt=True)
+        model = MvpModel.from_pretrained("RUCAIBox/mvp")
         input_ids = _long_tensor([[0, 31414, 232, 328, 740, 1140, 12695, 69, 46078, 1588, 2]])
         attention_mask = input_ids.ne(model.config.pad_token_id)
-        model.set_train(False)
-        output = model(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
-       
-        self.assertEqual(output.shape, (1, 11, 1024))
+        with no_grad():
+            output = model(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
+        expected_shape = (1, 11, 1024)
+        self.assertEqual(output.shape, expected_shape)
         expected_slice = mindspore.tensor(
             [[0.3461, 0.3624, 0.2689], [0.3461, 0.3624, 0.2689], [-0.1562, 1.1637, -0.3784]]
         )
-        self.assertTrue(np.allclose(output[:, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(output[:, :3, :3], expected_slice, atol=1e-3))
 
     @slow
     def test_summarization_inference(self):
-        model = MvpForConditionalGeneration.from_pretrained("RUCAIBox/mvp",from_pt=True)
+        model = MvpForConditionalGeneration.from_pretrained("RUCAIBox/mvp")
         tok = self.default_tokenizer
         PGE_ARTICLE = """ Listen to local radio broadcasts for advertisements that reference casinos in your area.\nIf none are in your area, listen to national radio broadcasts for advertisements of casinos in other areas.\nNote the location that is mentioned in each advertisement that involves a casino.\nIf no locations are mentioned, note any additional contact information, such as a website or phone number. Use that information to find out where the casinos are.;\n,\n\nIf you learn about more than 1 casino on the radio, use the Internet to search the distance between your location and each casino. Sites such as maps.google.com or mapquest.com will help you in this search.'"""  # fmt: skip
         EXPECTED_SUMMARY = "Listen to the radio.\nUse the Internet."
@@ -698,7 +691,7 @@ class MvpStandaloneDecoderModelTester:
         lm_labels,
     ):
         config.use_cache = True
-        model = MvpDecoder(config=config).set_train(False)
+        model = MvpDecoder(config=config).eval()
         # first forward pass
         outputs = model(input_ids, use_cache=True)
         outputs_use_cache_conf = model(input_ids)
@@ -724,7 +717,7 @@ class MvpStandaloneDecoderModelTester:
         output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        assert np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3)
+        assert ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)
 
     def create_and_check_decoder_model_attention_mask_past(
         self,
@@ -733,7 +726,7 @@ class MvpStandaloneDecoderModelTester:
         attention_mask,
         lm_labels,
     ):
-        model = MvpDecoder(config=config).set_train(False)
+        model = MvpDecoder(config=config).eval()
 
         # create attention mask
         attn_mask = ops.ones(input_ids.shape, dtype=mindspore.int64)
@@ -771,7 +764,7 @@ class MvpStandaloneDecoderModelTester:
         output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        assert np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3)
+        assert ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -814,6 +807,6 @@ class MvpStandaloneDecoderModelTest(ModelTesterMixin, GenerationTesterMixin, uni
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_decoder_model_attention_mask_past(*config_and_inputs)
 
+    @unittest.skip(reason="Decoder cannot keep gradients")
     def test_retain_grad_hidden_states_attentions(self):
-        # decoder cannot keep gradients
         return

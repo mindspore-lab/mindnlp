@@ -16,19 +16,12 @@
 
 import math
 from typing import List, Optional, Tuple, Union
-import numpy as np
-import mindspore
-from mindspore.common.api import _no_grad
-from mindspore import Tensor
-from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.core import nn, ops, get_default_dtype
-from mindnlp.core.nn import functional as F
-from mindnlp.utils import (
-    logging,
-)
+import mindspore
+from mindnlp.core import nn, ops, no_grad, get_default_dtype
+from mindnlp.core.nn import CrossEntropyLoss
+
 from ...activations import ACT2FN
-#from ...integrations.deepspeed import is_deepspeed_zero3_enabled
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -37,6 +30,9 @@ from ...modeling_outputs import (
     Seq2SeqModelOutput,
 )
 from ...modeling_utils import PreTrainedModel
+from ....utils import (
+    logging,
+)
 from .configuration_m2m_100 import M2M100Config
 
 
@@ -58,7 +54,7 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     if pad_token_id is None:
         raise ValueError("self.model.config.pad_token_id has to be defined.")
     # replace possible -100 values in labels by `pad_token_id`
-    shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
+    shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
 
     return shifted_input_ids
 
@@ -101,8 +97,8 @@ class M2M100SinusoidalPositionalEmbedding(nn.Module):
     def make_weights(self, num_embeddings: int, embedding_dim: int, padding_idx: Optional[int] = None):
         emb_weights = self.get_embedding(num_embeddings, embedding_dim, padding_idx)
         if hasattr(self, "weights"):
-            # in forward put the weights on the correct dtype and device of the param
-            emb_weights = emb_weights.to(dtype=self.weights.dtype, device=self.weights.device)
+            # in forward put the weights on the correct dtype the param
+            emb_weights = emb_weights.to(dtype=self.weights.dtype)
 
         self.register_buffer("weights", emb_weights, persistent=False)
 
@@ -127,7 +123,7 @@ class M2M100SinusoidalPositionalEmbedding(nn.Module):
 
         return emb.to(get_default_dtype())
 
-    @_no_grad()
+    @no_grad()
     def forward(
         self, input_ids: mindspore.Tensor = None, inputs_embeds: mindspore.Tensor = None, past_key_values_length: int = 0
     ):
@@ -153,7 +149,7 @@ class M2M100SinusoidalPositionalEmbedding(nn.Module):
         Args:
             inputs_embeds: mindspore.Tensor
 
-        Returns: torch.Tensor
+        Returns: mindspore.Tensor
         """
         input_shape = inputs_embeds.shape[:-1]
         sequence_length = input_shape[1]
@@ -162,6 +158,7 @@ class M2M100SinusoidalPositionalEmbedding(nn.Module):
             self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64
         )
         return position_ids.unsqueeze(0).broadcast_to(input_shape) + past_key_values_length
+
 
 # Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->M2M100
 class M2M100Attention(nn.Module):
@@ -199,7 +196,7 @@ class M2M100Attention(nn.Module):
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+        return ops.transpose(tensor.view(bsz, seq_len, self.num_heads, self.head_dim), 1, 2)
 
     def forward(
         self,
@@ -263,7 +260,7 @@ class M2M100Attention(nn.Module):
         value_states = value_states.reshape(*proj_shape)
 
         src_len = key_states.shape[1]
-        attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
+        attn_weights = ops.bmm(query_states, ops.transpose(key_states, 1, 2))
 
         if attn_weights.shape != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
@@ -279,7 +276,7 @@ class M2M100Attention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, dim=-1)
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -300,7 +297,7 @@ class M2M100Attention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = nn.functional.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -311,7 +308,7 @@ class M2M100Attention(nn.Module):
             )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
-        attn_output = attn_output.swapaxes(1, 2)
+        attn_output = ops.transpose(attn_output, 1, 2)
 
         # Use the `embed_dim` from the config (stored in the class) rather than `hidden_state` because `attn_output` can be
         # partitioned across GPUs when using tensor-parallelism.
@@ -320,19 +317,6 @@ class M2M100Attention(nn.Module):
         attn_output = self.out_proj(attn_output)
 
         return attn_output, attn_weights_reshaped, past_key_value
-
-
-# Copied from transformers.models.llama.modeling_llama._get_unpad_data
-def _get_unpad_data(attention_mask):
-    seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
-    indices = ops.nonzero(attention_mask.flatten()).flatten()
-    max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = F.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
-    return (
-        indices,
-        cu_seqlens,
-        max_seqlen_in_batch,
-    )
 
 
 # Copied from transformers.models.mbart.modeling_mbart.MBartEncoderLayer with MBart->M2M100, MBART->M2M100
@@ -381,15 +365,15 @@ class M2M100EncoderLayer(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         residual = hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         if hidden_states.dtype == mindspore.float16 and (
@@ -486,7 +470,7 @@ class M2M100DecoderLayer(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         # Cross-Attention Block
@@ -506,7 +490,7 @@ class M2M100DecoderLayer(nn.Module):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
 
             # add cross-attn to positions 3,4 of present_key_value tuple
@@ -516,9 +500,9 @@ class M2M100DecoderLayer(nn.Module):
         residual = hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         outputs = (hidden_states,)
@@ -539,36 +523,17 @@ class M2M100PreTrainedModel(PreTrainedModel):
     _no_split_modules = ["M2M100EncoderLayer", "M2M100DecoderLayer"]
     _supports_flash_attn_2 = True
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         std = self.config.init_std
-        if isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(std),cell.weight.shape,cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer("zeros",cell.bias.shape,cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0,std,cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-            cell.weight.set_data(Tensor(weight,cell.weight.dtype))
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight[module.padding_idx] = 0
 
-
-M2M_100_GENERATION_EXAMPLE = r"""
-    Translation example:
-
-    ```python
-    >>> from transformers import AutoTokenizer, M2M100ForConditionalGeneration
-
-    >>> model = M2M100ForConditionalGeneration.from_pretrained("facebook/m2m100_418M")
-    >>> tokenizer = AutoTokenizer.from_pretrained("facebook/m2m100_418M")
-
-    >>> text_to_translate = "Life is like a box of chocolates"
-    >>> model_inputs = tokenizer(text_to_translate, return_tensors="ms")
-
-    >>> # translate to French
-    >>> gen_tokens = model.generate(**model_inputs, forced_bos_token_id=tokenizer.get_lang_id("fr"))
-    >>> print(tokenizer.batch_decode(gen_tokens, skip_special_tokens=True))
-    ```
-"""
 
 
 class M2M100Encoder(M2M100PreTrainedModel):
@@ -606,6 +571,7 @@ class M2M100Encoder(M2M100PreTrainedModel):
         )
         self.layers = nn.ModuleList([M2M100EncoderLayer(config) for _ in range(config.encoder_layers)])
         self.layer_norm = nn.LayerNorm(config.d_model)
+        self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
@@ -681,12 +647,15 @@ class M2M100Encoder(M2M100PreTrainedModel):
         embed_pos = self.embed_positions(input_ids, inputs_embeds)
 
         hidden_states = inputs_embeds + embed_pos
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
-            # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-            attention_mask = _prepare_4d_attention_mask(attention_mask, inputs_embeds.dtype)
+            if self._use_flash_attention_2:
+                attention_mask = attention_mask if 0 in attention_mask else None
+            else:
+                # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
+                attention_mask = _prepare_4d_attention_mask(attention_mask, inputs_embeds.dtype)
 
         encoder_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
@@ -705,8 +674,9 @@ class M2M100Encoder(M2M100PreTrainedModel):
 
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             dropout_probability = ops.rand([])
+
             skip_the_layer = self.training and (dropout_probability < self.layerdrop)
-            if not skip_the_layer: #or deepspeed_zero3_is_enabled:
+            if not skip_the_layer:
                 # under deepspeed zero3 all gpus must run in sync
 
                 if self.gradient_checkpointing and self.training:
@@ -775,6 +745,7 @@ class M2M100Decoder(M2M100PreTrainedModel):
             self.padding_idx,
         )
         self.layers = nn.ModuleList([M2M100DecoderLayer(config) for _ in range(config.decoder_layers)])
+        self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
         self.layer_norm = nn.LayerNorm(config.d_model)
 
         self.gradient_checkpointing = False
@@ -885,15 +856,22 @@ class M2M100Decoder(M2M100PreTrainedModel):
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
 
+        if self._use_flash_attention_2:
+            # 2d mask is passed through the layers
+            combined_attention_mask = attention_mask if (attention_mask is not None and 0 in attention_mask) else None
+        else:
             # 4d mask is passed through the layers
-        combined_attention_mask = _prepare_4d_causal_attention_mask(
+            combined_attention_mask = _prepare_4d_causal_attention_mask(
                 attention_mask, input_shape, inputs_embeds, past_key_values_length
             )
 
         # expand encoder attention mask
         if encoder_hidden_states is not None and encoder_attention_mask is not None:
-            # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-            encoder_attention_mask = _prepare_4d_attention_mask(
+            if self._use_flash_attention_2:
+                encoder_attention_mask = encoder_attention_mask if 0 in encoder_attention_mask else None
+            else:
+                # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
+                encoder_attention_mask = _prepare_4d_attention_mask(
                     encoder_attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1]
                 )
 
@@ -902,12 +880,12 @@ class M2M100Decoder(M2M100PreTrainedModel):
 
         hidden_states = inputs_embeds + positions
 
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
                 logger.warning_once(
-                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
+                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`."
                 )
                 use_cache = False
 
@@ -934,7 +912,7 @@ class M2M100Decoder(M2M100PreTrainedModel):
             dropout_probability = ops.rand([])
 
             skip_the_layer = self.training and (dropout_probability < self.layerdrop)
-            if not skip_the_layer: #or deepspeed_zero3_is_enabled:
+            if not skip_the_layer:
                 # under deepspeed zero3 all gpus must run in sync
 
                 past_key_value = past_key_values[idx] if past_key_values is not None else None
@@ -1001,7 +979,6 @@ class M2M100Decoder(M2M100PreTrainedModel):
         )
 
 
-
 class M2M100Model(M2M100PreTrainedModel):
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -1014,6 +991,12 @@ class M2M100Model(M2M100PreTrainedModel):
 
         self.encoder = M2M100Encoder(config, self.shared)
         self.decoder = M2M100Decoder(config, self.shared)
+
+        if config._attn_implementation == "flash_attention_2":
+            logger.warning_once(
+                "Attention with Flash Attention 2 does not support `layer_head_mask`. If you need this feature, please use standard attention."
+            )
+
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1035,7 +1018,6 @@ class M2M100Model(M2M100PreTrainedModel):
 
     def get_decoder(self):
         return self.decoder
-
 
     def forward(
         self,
@@ -1111,7 +1093,6 @@ class M2M100Model(M2M100PreTrainedModel):
         )
 
 
-
 class M2M100ForConditionalGeneration(M2M100PreTrainedModel):
     base_model_prefix = "model"
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
@@ -1135,7 +1116,6 @@ class M2M100ForConditionalGeneration(M2M100PreTrainedModel):
 
     def set_output_embeddings(self, new_embeddings):
         self.lm_head = new_embeddings
-
 
     def forward(
         self,
@@ -1193,7 +1173,8 @@ class M2M100ForConditionalGeneration(M2M100PreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = F.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss_fct = CrossEntropyLoss()
+            masked_lm_loss = loss_fct(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]
@@ -1260,4 +1241,5 @@ class M2M100ForConditionalGeneration(M2M100PreTrainedModel):
 __all__ = [
     "M2M100ForConditionalGeneration",
     "M2M100Model",
-    "M2M100PreTrainedModel",]
+    "M2M100PreTrainedModel"
+]
