@@ -192,7 +192,7 @@ class DepthAnythingFeatureFusionLayer(nn.Module):
 
         if size is None:
             modifier = {"scale_factor": 2.}
-            hidden_state = nn.functional.interpolate(
+            hidden_state = F.interpolate(
                 hidden_state,
                 **modifier,
                 mode="bilinear",
@@ -201,11 +201,12 @@ class DepthAnythingFeatureFusionLayer(nn.Module):
             )
         else:
             modifier = {"size": size}
-            hidden_state = nn.functional.interpolate(
+            hidden_state = F.interpolate(
                 hidden_state,
                 **modifier,
                 mode="bilinear",
                 align_corners=True,
+                recompute_scale_factor=False
             )
         hidden_state = self.projection(hidden_state)
 

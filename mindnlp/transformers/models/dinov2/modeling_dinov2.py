@@ -97,6 +97,7 @@ class Dinov2Embeddings(nn.Module):
             scale_factor=(float(height / math.sqrt(num_positions)), float(width / math.sqrt(num_positions))),
             mode="bicubic",
             align_corners=False,
+            recompute_scale_factor=True,
         ).to(dtype=target_dtype)
         if int(height) != patch_pos_embed.shape[-2] or int(width) != patch_pos_embed.shape[-1]:
             raise ValueError("Width or height does not match with the interpolated position embeddings")

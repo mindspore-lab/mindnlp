@@ -230,7 +230,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
 
 CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
     [
-        # Add archive maps here)
+        # Add archive maps here
         ("albert", "ALBERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("align", "ALIGN_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("altclip", "ALTCLIP_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -512,8 +512,8 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("deformable_detr", "Deformable DETR"),
         ("deepseek_v2", "Deepseek_v2"),
         ("deit", "DeiT"),
-        ("depth_anything","DepthAnything"),
-        ("depth_anything_v2","DepthAnything-v2"),
+        ("depth_anything", "Depth Anything"),
+        ("depth_anything_v2", "Depth Anything V2"),
         ("deplot", "DePlot"),
         ("deta", "DETA"),
         ("detr", "DETR"),
