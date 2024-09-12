@@ -18,6 +18,7 @@ import unittest
 
 import numpy as np
 
+from mindnlp.core import ops
 from mindnlp.transformers import DepthAnythingConfig, Dinov2Config
 from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow, is_mindspore_available, is_vision_available
 
@@ -260,7 +261,7 @@ class DepthAnythingModelIntegrationTest(unittest.TestCase):
             [[8.8204, 8.6468, 8.6195], [8.3313, 8.6027, 8.7526], [8.6526, 8.6866, 8.7453]],
         )
 
-        self.assertTrue(np.allclose(predicted_depth[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-6))
+        self.assertTrue(ops.allclose(predicted_depth[0, :3, :3], expected_slice, atol=1e-6))
 
         # -- `metric` depth model --
         image_processor = DPTImageProcessor.from_pretrained("depth-anything/depth-anything-V2-metric-indoor-small-hf")
