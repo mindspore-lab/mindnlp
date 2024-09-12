@@ -21,6 +21,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindnlp.core import ops, nn, no_grad
+from mindnlp.configs import ON_ORANGE_PI
 
 from ...utils.logging import get_logger
 
@@ -320,13 +321,40 @@ class RepetitionPenaltyLogitsProcessor(LogitsProcessor):
         self.penalty = penalty
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-        score = ops.gather(scores, 1, input_ids)
+        if ON_ORANGE_PI:
+            return self._create_score_penalties(input_ids, scores)
+        else:
+            score = ops.gather(scores, 1, input_ids)
 
         # if score < 0 then repetition penalty has to be multiplied to reduce the token probabilities
         score = ops.where(score < 0, score * self.penalty, score / self.penalty)
 
         scores_processed = ops.scatter(scores, 1, input_ids, score)
         return scores_processed
+
+    def _create_score_penalties(self, input_ids: mindspore.Tensor, logits: mindspore.Tensor) -> mindspore.Tensor:
+        logit_penalties = ops.tf_gather(logits, input_ids, axis=1, batch_dims=1)
+        logit_penalties = ops.where(logit_penalties > 0, 1 / self.penalty, logit_penalties)
+        logit_penalties = ops.where(logit_penalties < 0, self.penalty, logit_penalties)
+
+        # Scatters the penalties
+        token_penalties = ops.ones(logits.shape)
+        batch_size = input_ids.shape[0]
+        seq_len = input_ids.shape[1]  # the sequence length has dynamic size, hence the dynamic shape
+        indexable_prev_input_ids = ops.concat(
+            (
+                ops.unsqueeze(ops.tile(ops.range(batch_size), (seq_len,)), dim=-1),
+                ops.unsqueeze(ops.reshape(input_ids, [-1]), dim=-1),
+            ),
+            dim=1,
+        )
+        token_penalties = ops.tf_scatter_nd_update(
+            token_penalties, indices=indexable_prev_input_ids, updates=ops.reshape(logit_penalties, [-1])
+        )
+
+        scores = ops.mul(logits, token_penalties)
+
+        return scores
 
 
 class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
@@ -437,7 +465,9 @@ class TopPLogitsWarper(LogitsWarper):
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         if self.filter_value == -float("Inf"):
             self.filter_value = float(ops.finfo(scores.dtype).min)
+
         sorted_logits, sorted_indices = ops.sort(scores, descending=False)
+
         cumulative_probs = ops.cumsum(ops.softmax(sorted_logits, dim=-1), dim=-1)
 
         # Remove tokens with cumulative top_p above the threshold (token with 0 are kept)
@@ -450,6 +480,37 @@ class TopPLogitsWarper(LogitsWarper):
         scores_processed = scores.masked_fill(indices_to_remove, self.filter_value)
         return scores_processed
 
+    def tf_like_call(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        topk_scores, topk_indices = ops.topk(scores, scores.shape[-1])
+
+        mask_scores = ops.full(scores.shape, self.filter_value, dtype=scores.dtype)
+        cumulative_probs = ops.cumsum(ops.softmax(topk_scores, dim=-1), dim=-1)
+        score_mask = cumulative_probs < self.top_p
+
+        # Also include the token that is higher than top_p (the first false = shift and insert a True on the left)
+        score_mask = ops.concat((ops.ones([score_mask.shape[0], 1], dtype=mindspore.bool_),
+                                 score_mask[:, :-1]), dim=-1)
+
+        # Ensure min tokens to keep
+        score_mask = ops.concat(
+            (
+                ops.ones([score_mask.shape[0], self.min_tokens_to_keep], dtype=mindspore.bool_),
+                score_mask[:, self.min_tokens_to_keep :],
+            ),
+            dim=-1,
+        )
+
+        # Mask the values that do not fit the criteria
+        topk_next_scores = ops.where(score_mask, topk_scores, mask_scores)
+
+        # Undo the topk sorting: converts the 2D matrix of per-row original indices of shape (batch_size, vocab_size)
+        # to a 3D tensor of shape (batch_size, vocab_size, 2) containing the original score coordinate, from which we
+        # can scatter (i.e. `scatter_indices[row, col, :]` is a tensor containing `[row, topk_indices[row, col]]`)
+        scatter_rows = ops.tile(ops.unsqueeze(ops.range(topk_indices.shape[0]), dim=-1), (1, topk_indices.shape[-1]))
+        scatter_indices = ops.stack((scatter_rows, topk_indices), dim=-1)
+        next_scores = ops.tf_scatter_nd(scatter_indices, topk_next_scores, shape=topk_next_scores.shape)
+
+        return next_scores
 
 class TopKLogitsWarper(LogitsWarper):
     r"""

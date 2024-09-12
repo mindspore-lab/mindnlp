@@ -25,7 +25,7 @@ import mindspore
 from mindnlp.core import nn, ops, no_grad
 import mindnlp.core.nn.functional as F
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from mindnlp.configs import USE_PYBOOST, SUPPORT_VIEW
+from mindnlp.configs import use_pyboost, SUPPORT_VIEW
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, StaticCache
 from ...modeling_outputs import (
@@ -117,7 +117,7 @@ class LlamaRMSNorm(nn.Module):
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
-        if not self.training and USE_PYBOOST:
+        if not self.training and use_pyboost():
             return F.rms_norm(hidden_states, self.weight, self.variance_epsilon)
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
