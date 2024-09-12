@@ -214,7 +214,7 @@ class ModelTesterMixin:
             elif model_class.__name__ in get_values(MODEL_FOR_SEMANTIC_SEGMENTATION_MAPPING_NAMES):
                 batch_size, num_channels, height, width = inputs_dict["pixel_values"].shape
                 inputs_dict["labels"] = ops.zeros(
-                    [self.model_tester.batch_size, height, width]
+                    (self.model_tester.batch_size, height, width)
                 ).long()
 
         return inputs_dict
