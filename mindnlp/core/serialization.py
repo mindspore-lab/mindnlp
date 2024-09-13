@@ -800,6 +800,10 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
     param = Tensor.from_numpy(array)
     return param
 
+def _rebuild_from_type_v2(func, new_type, args, state):
+    ret = func(*args)
+    return ret
+
 @dataclass
 class FakeParameter:
 
@@ -1213,7 +1217,8 @@ def _load(zip_file, pickle_module, overall_storage=None, pickle_file='data.pkl',
                 return eval(name)
             if mod_name == 'torch':
                 return str(name)
-
+            if mod_name == 'torch._tensor':
+                return eval(name)
             mod_name = load_module_mapping.get(mod_name, mod_name)
             return super().find_class(mod_name, name)
 

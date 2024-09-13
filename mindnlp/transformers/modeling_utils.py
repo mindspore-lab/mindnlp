@@ -2766,6 +2766,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
                                     # "_commit_hash": commit_hash,
                                     **has_file_kwargs,
                                 }
+
                                 if not has_file(pretrained_model_name_or_path, safe_weights_name, **has_file_kwargs):
                                     Thread(
                                         target=auto_conversion,
