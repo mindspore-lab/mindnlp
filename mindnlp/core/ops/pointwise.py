@@ -1,11 +1,11 @@
 """pointwise op"""
 import mindspore
 from mindspore import ops
-from mindnlp.configs import USE_PYBOOST
+from mindnlp.configs import use_pyboost
 
 # abs
 def abs(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.abs(input)
     return ops.abs(input)
 
@@ -31,7 +31,7 @@ def arccosh(input):
 
 # add
 def add(input, other, *, alpha=1):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.add(input, other, alpha=alpha)
     if alpha != 1:
         other = mul(alpha, other)
@@ -83,7 +83,7 @@ def arctanh(input):
 
 # atan2
 def atan2(input, other):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.atan2(input, other)
     return ops.atan2(input, other)
 
@@ -115,13 +115,13 @@ def bitwise_right_shift(input, other):
 
 # ceil
 def ceil(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.ceil(input)
     return ops.ceil(input)
 
 # clamp
 def clamp(input, min=None, max=None):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.clamp(input, min, max)
     return ops.clamp(input, min, max)
 
@@ -137,7 +137,7 @@ def clip(input, min=None, max=None):
 
 # cos
 def cos(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.cos(input)
     return ops.cos(input)
 
@@ -151,7 +151,7 @@ def deg2rad(input):
 
 # div
 def div(input, other, *, rounding_mode=None):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.div(input, other, rounding_mode=rounding_mode)
     return ops.div(input, other, rounding_mode=rounding_mode)
 
@@ -165,7 +165,7 @@ def digamma(input):
 
 # erf
 def erf(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.erf(input)
     return ops.erf(input)
 
@@ -175,13 +175,13 @@ def erfc(input):
 
 # erfinv
 def erfinv(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.erfinv(input)
     return ops.erfinv(input)
 
 # exp
 def exp(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.exp(input)
     return ops.exp(input)
 
@@ -208,7 +208,7 @@ def float_power(input, exponent):
 
 # floor
 def floor(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.floor(input)
     return ops.floor(input)
 
@@ -244,7 +244,7 @@ def lgamma(input):
 
 # log
 def log(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.log(input)
     return ops.log(input)
 
@@ -266,19 +266,19 @@ def log2(input):
 
 # logical_and
 def logical_and(input, other):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.logical_and(input, other)
     return ops.logical_and(input, other)
 
 # logical_not
 def logical_not(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.logical_not(input)
     return ops.logical_not(input)
 
 # logical_or
 def logical_or(input, other):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.logical_or(input, other)
     return ops.logical_or(input, other)
 
@@ -306,7 +306,7 @@ def igammac(input, other):
 
 # mul
 def mul(input, other):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.mul(input, other)
     return ops.mul(input, other)
 
@@ -324,7 +324,7 @@ def nan_to_num(input, nan=0.0, posinf=None, neginf=None):
 
 # neg
 def neg(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.neg(input)
     return ops.neg(input)
 
@@ -346,7 +346,7 @@ def positive(input):
 
 # pow
 def pow(input, exponent):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.pow(input, exponent)
     return ops.pow(input, exponent)
 
@@ -369,7 +369,7 @@ def real(input):
 
 # reciprocal
 def reciprocal(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.reciprocal(input)
     return ops.reciprocal(input)
 
@@ -383,13 +383,13 @@ def round(input):
 
 # rsqrt
 def rsqrt(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.rsqrt(input)
     return ops.rsqrt(input)
 
 # sigmoid
 def sigmoid(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.sigmoid(input)
     return ops.sigmoid(input)
 
@@ -403,7 +403,7 @@ def sign(input):
 
 # sin
 def sin(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.sin(input)
     return ops.sin(input)
 
@@ -417,25 +417,25 @@ def sinh(input):
 
 # softmax
 def softmax(input, dim=-1, *, dtype=None):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.softmax(input, dim, dtype=dtype)
     return ops.softmax(input, dim, dtype=dtype)
 
 # sqrt
 def sqrt(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.sqrt(input)
     return ops.sqrt(input)
 
 # square
 def square(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.square(input)
     return ops.square(input)
 
 # sub
 def sub(input, other):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.sub(input, other)
     return ops.sub(input, other)
 
@@ -449,7 +449,7 @@ def tan(input):
 
 # tanh
 def tanh(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.tanh(input)
     return ops.tanh(input)
 

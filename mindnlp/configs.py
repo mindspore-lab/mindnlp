@@ -25,6 +25,7 @@ DEVICE_TARGET = mindspore.get_context('device_target')
 GENERATOR_SEED = version.parse(mindspore.__version__) >= version.parse('2.3.0')
 SUPPORT_VIEW = GENERATOR_SEED
 SUPPORT_BF16 = GENERATOR_SEED and '910b' in SOC
+ON_ORANGE_PI = '310b' in SOC
 USE_PYBOOST = version.parse(mindspore.__version__) >= version.parse('2.3.0') and DEVICE_TARGET == 'Ascend'
 DEFAULT_DTYPE = mindspore.float32
 
@@ -71,3 +72,12 @@ IMAGENET_DEFAULT_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_DEFAULT_STD = [0.229, 0.224, 0.225]
 IMAGENET_STANDARD_MEAN = [0.5, 0.5, 0.5]
 IMAGENET_STANDARD_STD = [0.5, 0.5, 0.5]
+
+def set_pyboost(mode: bool):
+    """set global pyboost"""
+    global USE_PYBOOST
+    USE_PYBOOST = mode
+
+def use_pyboost():
+    """set global pyboost"""
+    return USE_PYBOOST
