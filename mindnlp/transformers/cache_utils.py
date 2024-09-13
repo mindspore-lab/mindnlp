@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import mindspore
 
 from mindnlp.core import nn, ops
+from mindnlp.configs import ON_ORANGE_PI
 from .configuration_utils import PretrainedConfig
 from ..utils import logging
 
@@ -446,8 +447,12 @@ class DynamicCache(Cache):
     def batch_select_indices(self, indices: mindspore.Tensor):
         """Only keep the `indices` in the batch dimension of the cache. Used in contrastive search."""
         for layer_idx in range(len(self)):
-            self.key_cache[layer_idx] = self.key_cache[layer_idx][indices, ...]
-            self.value_cache[layer_idx] = self.value_cache[layer_idx][indices, ...]
+            if ON_ORANGE_PI:
+                self.key_cache[layer_idx] = ops.getitem(self.key_cache[layer_idx], (indices, Ellipsis))
+                self.value_cache[layer_idx] = ops.getitem(self.value_cache[layer_idx], (indices, Ellipsis))
+            else:
+                self.key_cache[layer_idx] = self.key_cache[layer_idx][indices, ...]
+                self.value_cache[layer_idx] = self.value_cache[layer_idx][indices, ...]
 
 
 class QuantizedCache(DynamicCache):

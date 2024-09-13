@@ -28,15 +28,15 @@ def tanh(input):
     return ops.tanh(input)
 
 def sigmoid(input):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return mindspore.mint.nn.functional.sigmoid(input)
     return ops.sigmoid(input)
 
 def silu(input):
+    if DEVICE_TARGET == 'CPU' or ON_ORANGE_PI:
+        return input * sigmoid(input)
     if use_pyboost():
         return mindspore.mint.nn.functional.silu(input)
-    if DEVICE_TARGET == 'CPU':
-        return input * sigmoid(input)
     return ops.silu(input)
 
 def mish(input):
