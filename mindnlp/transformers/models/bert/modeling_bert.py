@@ -195,8 +195,8 @@ class BertSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
+            key_layer = ops.cat([past_key_value[0], key_layer.to(past_key_value[0].dtype)], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer.to(past_key_value[1].dtype)], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))

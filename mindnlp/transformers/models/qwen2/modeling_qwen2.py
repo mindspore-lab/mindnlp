@@ -38,7 +38,7 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ....utils import logging
-from ....configs import SUPPORT_VIEW, USE_PYBOOST
+from ....configs import SUPPORT_VIEW, use_pyboost
 from .configuration_qwen2 import Qwen2Config
 
 
@@ -119,7 +119,7 @@ class Qwen2RMSNorm(nn.Module):
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
-        if not self.training and USE_PYBOOST:
+        if not self.training and use_pyboost():
             return F.rms_norm(hidden_states, self.weight, self.variance_epsilon)
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
