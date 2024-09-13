@@ -25,7 +25,7 @@ import mindspore
 from mindnlp.core import nn, ops, no_grad
 import mindnlp.core.nn.functional as F
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from mindnlp.configs import use_pyboost, SUPPORT_VIEW
+from mindnlp.configs import use_pyboost, SUPPORT_VIEW, ON_ORANGE_PI
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, StaticCache
 from ...modeling_outputs import (
@@ -82,7 +82,9 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
         if sequence_length != 1:
             causal_mask = ops.triu(causal_mask, diagonal=1)
         causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
-        causal_mask = causal_mask[None, None, :, :].broadcast_to((batch_size, 1, -1, -1))
+        # causal_mask = causal_mask[None, None, :, :].broadcast_to((batch_size, 1, -1, -1))
+        # speed up by unsqueeze
+        causal_mask = causal_mask.view(1, 1, *causal_mask.shape).broadcast_to((batch_size, 1, -1, -1))
         if attention_mask is not None:
             if SUPPORT_VIEW:
                 causal_mask = causal_mask.contiguous()  # copy to contiguous memory for in-place edit
@@ -90,7 +92,7 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
                 causal_mask = causal_mask.copy()
             mask_length = attention_mask.shape[-1]
             # padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
-            padding_mask = ops.narrow(causal_mask, -1, 0, mask_length) + attention_mask[:, None, None, :]
+            padding_mask = ops.narrow(causal_mask, -1, 0, mask_length) + attention_mask.view(attention_mask.shape[0], 1, 1, attention_mask.shape[1])
             padding_mask = padding_mask == 0
             # causal_mask[:, :, :, :mask_length] = ops.narrow(causal_mask, -1, 0, mask_length).masked_fill(
             #     padding_mask, min_dtype
@@ -117,7 +119,7 @@ class LlamaRMSNorm(nn.Module):
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
-        if not self.training and use_pyboost():
+        if not self.training and use_pyboost() and not ON_ORANGE_PI:
             return F.rms_norm(hidden_states, self.weight, self.variance_epsilon)
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
@@ -200,10 +202,10 @@ class LlamaRotaryEmbedding(nn.Module):
             self._dynamic_frequency_update(position_ids)
 
         # Core RoPE block
-        inv_freq_expanded = self.inv_freq[None, :, None].float().broadcast_to((position_ids.shape[0], -1, 1))
-        position_ids_expanded = position_ids[:, None, :].float()
+        inv_freq_expanded = self.inv_freq.view(1, -1, 1).float().broadcast_to((position_ids.shape[0], -1, 1))
+        position_ids_expanded = ops.unsqueeze(position_ids, 1).float()
         # Force float32 (see https://github.com/huggingface/transformers/pull/29285)
-        freqs = ops.transpose((inv_freq_expanded.float() @ position_ids_expanded.float()), 1, 2)
+        freqs = ops.transpose(ops.matmul(inv_freq_expanded.float(), position_ids_expanded.float()), 1, 2)
         emb = ops.cat((freqs, freqs), dim=-1)
         cos = emb.cos()
         sin = emb.sin()
@@ -423,7 +425,8 @@ class LlamaAttention(nn.Module):
         attn_weights = ops.matmul(query_states, ops.transpose(key_states, 2, 3)) / math.sqrt(self.head_dim)
 
         if attention_mask is not None:  # no matter the length, we just slice it
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
+            # causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
+            causal_mask = ops.narrow(attention_mask, 3, 0, key_states.shape[-2])
             attn_weights = attn_weights + causal_mask
 
         # upcast attention to fp32
@@ -895,7 +898,8 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         if past_key_values is not None:
             if inputs_embeds is not None:  # Exception 1
                 if 0 not in input_ids.shape:
-                    input_ids = input_ids[:, -cache_position.shape[0] :]
+                    # input_ids = input_ids[:, -cache_position.shape[0] :]
+                    input_ids = ops.narrow(input_ids, 1, input_ids.shape[1] - cache_position.shape[0], cache_position.shape[0])
             elif input_ids.shape[1] != cache_position.shape[0]:  # Default case (the "else", a no op, is Exception 2)
                 # input_ids = input_ids[:, cache_position]
                 input_ids = ops.index_select(input_ids, -1, cache_position)
@@ -905,8 +909,8 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             position_ids = ops.cumsum(attention_mask.int(), -1) - 1
             position_ids = ops.masked_fill(position_ids, attention_mask == 0, 1)
             if past_key_values:
-                position_ids = position_ids[:, -input_ids.shape[1] :]
-
+                # position_ids = position_ids[:, -input_ids.shape[1] :]
+                position_ids = ops.narrow(position_ids, 1, position_ids.shape[1] - input_ids.shape[1], input_ids.shape[1])
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
         if inputs_embeds is not None and cache_position[0] == 0:
             model_inputs = {"inputs_embeds": inputs_embeds}
@@ -1015,7 +1019,12 @@ class LlamaForSequenceClassification(LlamaPreTrainedModel):
             else:
                 sequence_lengths = -1
 
-        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
+        if ON_ORANGE_PI:
+            if isinstance(sequence_lengths, mindspore.Tensor):
+                sequence_lengths = sequence_lengths.to(mindspore.int32)
+            pooled_logits = ops.getitem(logits, (ops.arange(batch_size), sequence_lengths))
+        else:
+            pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
 
         loss = None
         if labels is not None:
