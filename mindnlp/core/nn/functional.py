@@ -9,34 +9,34 @@ from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.function.random_func import _get_seed, _set_prim_op_user_data
 from mindspore.ops.operations import nn_ops
 
-from mindnlp.configs import USE_PYBOOST, DEVICE_TARGET
+from mindnlp.configs import DEVICE_TARGET, ON_ORANGE_PI, use_pyboost
 from .modules._utils import _pair
 
 def gelu(input, approximate='none'):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.gelu(input, approximate)
     return ops.gelu(input, approximate)
 
 def relu(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.relu(input)
     return ops.relu(input)
 
 def tanh(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.tanh(input)
     return ops.tanh(input)
 
 def sigmoid(input):
-    if USE_PYBOOST:
+    if use_pyboost() and not ON_ORANGE_PI:
         return mindspore.mint.nn.functional.sigmoid(input)
     return ops.sigmoid(input)
 
 def silu(input):
-    if USE_PYBOOST:
-        return mindspore.mint.nn.functional.silu(input)
-    if DEVICE_TARGET == 'CPU':
+    if DEVICE_TARGET == 'CPU' or ON_ORANGE_PI:
         return input * sigmoid(input)
+    if use_pyboost():
+        return mindspore.mint.nn.functional.silu(input)
     return ops.silu(input)
 
 def mish(input):
@@ -46,7 +46,7 @@ def relu6(input):
     return ops.relu6(input)
 
 def elu(input, alpha=1.0):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.elu(input, alpha)
     return ops.elu(input, alpha)
 
@@ -54,7 +54,7 @@ def glu(input, dim=-1):
     return ops.glu(input, dim)
 
 def softplus(input, beta=1, threshold=20):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.softplus(input, beta, threshold)
     return ops.softplus(input, beta, threshold)
 
@@ -62,7 +62,7 @@ def logsigmoid(input):
     return ops.logsigmoid(input)
 
 def leaky_relu(input, alpha=0.2):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.leaky_relu(input, alpha)
     return ops.leaky_relu(input, alpha)
 
@@ -131,7 +131,7 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
     Returns:
     - numpy array: The result of the average pooling operation.
     """
-    if USE_PYBOOST:
+    if use_pyboost():
         if stride is None:
             stride = kernel_size
 
@@ -152,7 +152,9 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
     return ops.avg_pool2d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
 def dropout(input, p=0.5, training=True):
-    if USE_PYBOOST:
+    if not training or p == 0:
+        return input
+    if use_pyboost() and not ON_ORANGE_PI:
         return mindspore.mint.nn.functional.dropout(input, p, training)
     return ops.dropout(input, p, training)
 
@@ -168,7 +170,14 @@ def drop_and_mask(keep_prob, seed=None):
 
 dense_ = ops.Dense()
 def linear(input, weight, bias=None):
-    if USE_PYBOOST:
+    if ON_ORANGE_PI:
+        input = input.to(mindspore.float16)
+        weight = weight.to(mindspore.float16)
+        if bias is not None:
+            bias = bias.to(mindspore.float16)
+            return dense_(input, weight) + bias
+        return dense_(input, weight)
+    if use_pyboost():
         return mindspore.mint.nn.functional.linear(input, weight, bias)
     return dense_(input, weight, bias)
 
@@ -176,9 +185,9 @@ def linear(input, weight, bias=None):
 def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean', pos_weight=None):
     if input.shape != target.shape:
         target = target.unsqueeze(1).expand_as(input).to(input.dtype)
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.binary_cross_entropy_with_logits(input, target, weight, reduction, pos_weight)
-    return ops.binary_cross_entropy_with_logits(input, target, weight, pos_weight, reduction)
+    return ops.binary_cross_entropy_with_logits(input, target.astype(input.dtype), weight, pos_weight, reduction)
 
 def gumbel_softmax(logits: Tensor, tau: float = 1, hard: bool = False, eps: float = 1e-10, dim: int = -1) -> Tensor:
     if eps != 1e-10:
@@ -206,7 +215,7 @@ def log_softmax(input, dim=-1, dtype=None):
     return out
 
 def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0, scale_grad_by_freq=False):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.ops.auto_generate.gen_ops_prim.embedding_op(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq)
     return ops.gather(weight, input, 0)
 
@@ -219,7 +228,7 @@ def apply_rotary_pos_emb(query, key, cos, sin, position_ids, cos_format=0):
     )
 
 def pad(input, pad, mode='constant', value=0.0):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.pad(input, pad, mode, value)
     if mode in ['reflect', 'circular']:
         return ops.pad(input, pad, mode)
@@ -234,6 +243,7 @@ def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean', la
     return _nll_loss(input, target, weight)[0]
 
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
+    input = input.to(mindspore.float32)
     class_dim = 0 if input.ndim == 1 else 1
     if target.dtype in [mindspore.float32, mindspore.float16]:
         return _cross_entropy(input, target, class_dim, weight, reduction, label_smoothing)
@@ -345,19 +355,28 @@ def kl_div(logits, labels, reduction='mean', log_target=False):
         labels = ops.log(labels)
     return ops.kl_div(logits, labels, reduction)
 
+def manual_softmax(x, dim=-1):
+    exp_x = ops.exp(x - ops.max(x, axis=dim, keepdims=True)[0])
+    return exp_x / ops.sum(exp_x, dim=dim, keepdim=True)
+
 def softmax(input, dim=-1, *, dtype=None):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.softmax(input, dim, dtype=dtype)
+    if dtype is not None:
+        input = input.to(dtype)
     if dim is None:
         dim = -1
-    return ops.softmax(input, dim, dtype=dtype)
+    if ON_ORANGE_PI:
+        return manual_softmax(input, dim)
+    softmax_ = _get_cache_prim(ops.Softmax)(dim)
+    return softmax_(input)
 
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     if weight is None:
         weight = ops.ones(normalized_shape, dtype=input.dtype)
     if bias is None:
         bias = ops.zeros(normalized_shape, dtype=input.dtype)
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.layer_norm(input, normalized_shape, weight, bias, eps)
     if weight is not None:
         begin_axis = input.ndim - weight.ndim
@@ -403,7 +422,7 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None, trainin
     if bias is None:
         bias = ops.zeros(input.shape[1])
 
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.batch_norm(
             input,
             running_mean,
@@ -433,7 +452,7 @@ def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     return ops.conv2d(input, weight, bias=bias, stride=stride, pad_mode=pad_mode, padding=padding, dilation=dilation, groups=groups)
 
 def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
     return ops.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
 
@@ -459,7 +478,7 @@ def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode
         return output_1d
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.group_norm(input, num_groups, weight, bias, eps)
     input_shape = input.shape
     input = input.reshape(input_shape[0], num_groups, -1)
@@ -1019,12 +1038,12 @@ def _none_or_dtype(input: Optional[mindspore.Tensor]) -> Optional[int]:
     raise RuntimeError("input to _none_or_dtype() must be None or mindspore.Tensor")
 
 def unfold(input, kernel_size, dilation=1, padding=0, stride=1):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.unfold(input, kernel_size, dilation, padding, stride)
     return ops.unfold(input, kernel_size, dilation, padding, stride)
 
 def fold(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.fold(input, output_size, kernel_size, dilation, padding, stride)
     return ops.fold(input, output_size, kernel_size, dilation, padding, stride)
 
@@ -1074,7 +1093,7 @@ def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0, reducti
     return loss
 
 def one_hot(tensor, num_classes=-1):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.one_hot(tensor, num_classes)
     return ops.one_hot(tensor, num_classes)
 
@@ -1085,7 +1104,7 @@ def pixel_unshuffle(input, downscale_factor):
     return ops.pixel_shuffle(input, downscale_factor)
 
 def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corners=False):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.grid_sample(input, grid, mode, padding_mode, align_corners)
     return ops.grid_sample(input, grid, mode, padding_mode, align_corners)
 

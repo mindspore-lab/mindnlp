@@ -31,7 +31,7 @@ from mindspore.common.initializer import initializer, Normal
 from mindspore import dtype as mstype
 from mindnlp.utils import logging
 
-from mindnlp.configs import USE_PYBOOST
+from mindnlp.configs import use_pyboost
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 from .configuration_baichuan import BaiChuanConfig
@@ -391,7 +391,7 @@ class RMSNorm(nn.Module):
             ValueError: If the input hidden_states is not a valid tensor or numpy array.
             RuntimeError: If an error occurs during the normalization process.
         """
-        if USE_PYBOOST:
+        if use_pyboost():
             return F.rms_norm(hidden_states, self.weight, self.variance_epsilon)
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
