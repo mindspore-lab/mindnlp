@@ -7,7 +7,7 @@ import mindspore
 from mindnlp.core import nn, ops
 import mindnlp.core.nn.functional as F
 from mindnlp.core.nn import CrossEntropyLoss, LayerNorm, MSELoss, BCEWithLogitsLoss
-from mindnlp.configs import USE_PYBOOST
+from mindnlp.configs import use_pyboost
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
@@ -139,7 +139,7 @@ class RMSNorm(nn.Module):
         self.eps = eps
 
     def forward(self, hidden_states: mindspore.Tensor):
-        if not self.training and USE_PYBOOST:
+        if not self.training and use_pyboost():
             return F.rms_norm(hidden_states, self.weight, self.eps)
         input_dtype = hidden_states.dtype
         variance = ops.mean(hidden_states.to(mindspore.float32).pow(2), -1, keepdim=True)

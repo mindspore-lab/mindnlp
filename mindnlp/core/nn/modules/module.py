@@ -12,9 +12,9 @@ from mindspore import Tensor, Parameter
 from mindspore.common._stub_tensor import StubTensor
 from mindspore.common.dtype import Float
 
+from mindnlp.configs import ON_ORANGE_PI, set_pyboost
 from ...utils import hooks
 from ...utils.hooks import RemovableHandle
-
 
 T = TypeVar('T', bound='Module')
 
@@ -1196,6 +1196,8 @@ class Module:
         Returns:
             Module: self
         """
+        if ON_ORANGE_PI:
+            set_pyboost(not mode)
         self.training = mode
         for module in self.children():
             module.train(mode)

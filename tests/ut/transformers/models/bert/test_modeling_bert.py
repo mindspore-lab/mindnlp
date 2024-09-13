@@ -49,7 +49,6 @@ if is_mindspore_available():
         logging,
     )
 
-
 class BertModelTester:
     def __init__(
         self,

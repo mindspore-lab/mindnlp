@@ -35,7 +35,7 @@ if platform.system().lower() == 'linux':
     if '910' in SOC:
         os.environ["MS_ALLOC_CONF"] = 'enable_vmm:True,vmm_align_size:2MB'
 
-    if SOC == 'ascend910':
+    if SOC in ('ascend910', 'ascend310b'):
         context.set_context(ascend_config={"precision_mode": "allow_mix_precision"})
 
 from mindspore import jit as ms_jit
