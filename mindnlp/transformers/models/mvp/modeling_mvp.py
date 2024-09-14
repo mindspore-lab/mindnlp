@@ -18,13 +18,10 @@ import copy
 import math
 from typing import List, Optional, Tuple, Union
 
-import numpy as np
 import mindspore
-from mindspore.common.initializer import initializer,Normal
-
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindnlp.utils import logging
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
@@ -37,11 +34,16 @@ from ...modeling_outputs import (
     Seq2SeqSequenceClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
-
+from ....utils import (
+    logging,
+)
 from .configuration_mvp import MvpConfig
 
 
 logger = logging.get_logger(__name__)
+
+_CHECKPOINT_FOR_DOC = "RUCAIBox/mvp"
+_CONFIG_FOR_DOC = "MvpConfig"
 
 # Base model docstring
 _EXPECTED_OUTPUT_SHAPE = [1, 8, 1024]
@@ -52,14 +54,14 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     """
     Shift input ids one token to the right.
     """
-    shifted_input_ids = input_ids.new_zeros(input_ids.shape)
+    shifted_input_ids = ops.zeros(input_ids.shape, dtype=input_ids.dtype)
     shifted_input_ids[:, 1:] = input_ids[:, :-1].copy()
     shifted_input_ids[:, 0] = decoder_start_token_id
 
     if pad_token_id is None:
         raise ValueError("self.model.config.pad_token_id has to be defined.")
     # replace possible -100 values in labels by `pad_token_id`
-    shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
+    shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
 
     return shifted_input_ids
 
@@ -118,7 +120,7 @@ class MvpAttention(nn.Module):
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+        return ops.transpose(tensor.view(bsz, seq_len, self.num_heads, self.head_dim), 1, 2)
 
     def forward(
         self,
@@ -175,7 +177,7 @@ class MvpAttention(nn.Module):
             value_states = ops.cat([attn_prompt[1].broadcast_to((bsz, -1, -1, -1)), value_states], dim=2)
             if attention_mask is not None:
                 prompt_mask = ops.zeros(bsz, 1, tgt_len, attn_prompt[0].shape[1])
-                attention_mask = ops.cat([prompt_mask, attention_mask], dim=-1)
+                attention_mask = ops.cat([prompt_mask, attention_mask], dim=(-1))
 
         proj_shape = (bsz * self.num_heads, -1, self.head_dim)
         query_states = self._shape(query_states, tgt_len, bsz).view(*proj_shape)
@@ -183,7 +185,7 @@ class MvpAttention(nn.Module):
         value_states = value_states.view(*proj_shape)
 
         src_len = key_states.shape[1]
-        attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
+        attn_weights = ops.bmm(query_states, ops.transpose(key_states, 1, 2))
 
         if attn_weights.shape != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
@@ -199,7 +201,7 @@ class MvpAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = ops.softmax(attn_weights, dim=-1)
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -220,7 +222,7 @@ class MvpAttention(nn.Module):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = nn.functional.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
 
@@ -231,7 +233,7 @@ class MvpAttention(nn.Module):
             )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
-        attn_output = attn_output.swapaxes(1, 2)
+        attn_output = ops.transpose(attn_output, 1, 2)
 
         # Use the `embed_dim` from the config (stored in the class) rather than `hidden_state` because `attn_output` can be
         # partitioned aross GPUs when using tensor-parallelism.
@@ -251,13 +253,13 @@ class MvpEncoderLayer(nn.Module):
             num_heads=config.encoder_attention_heads,
             dropout=config.attention_dropout,
         )
-        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
         self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
         self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
-        self.final_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
     def forward(
         self,
@@ -288,22 +290,22 @@ class MvpEncoderLayer(nn.Module):
             attn_prompt=self_attn_prompt,
             output_attentions=output_attentions,
         )
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
         if hidden_states.dtype == mindspore.float16 and (
             ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any()
         ):
-            clamp_value = np.finfo(hidden_states.asnumpy().dtype).max - 1000
+            clamp_value = float(ops.finfo(hidden_states.dtype).max) - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -329,17 +331,17 @@ class MvpDecoderLayer(nn.Module):
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
 
-        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         self.encoder_attn = MvpAttention(
             self.embed_dim,
             config.decoder_attention_heads,
             dropout=config.attention_dropout,
             is_decoder=True,
         )
-        self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
         self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
-        self.final_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
     def forward(
         self,
@@ -355,7 +357,30 @@ class MvpDecoderLayer(nn.Module):
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = True,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
+        """
+        Args:
+            hidden_states (`mindspore.Tensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
+            attention_mask (`mindspore.Tensor`): attention mask of size
+                `(batch, 1, tgt_len, src_len)` where padding elements are indicated by very large negative values.
+            encoder_hidden_states (`mindspore.Tensor`):
+                cross attention input to the layer of shape `(batch, seq_len, embed_dim)`
+            encoder_attention_mask (`mindspore.Tensor`): encoder attention mask of size
+                `(batch, 1, tgt_len, src_len)` where padding elements are indicated by very large negative values.
+            layer_head_mask (`mindspore.Tensor`): mask for attention heads in a given layer of size
+                `(encoder_attention_heads,)`.
+            cross_attn_layer_head_mask (`mindspore.Tensor`): mask for cross-attention heads in a given layer of
+                size `(decoder_attention_heads,)`.
+            self_attn_prompt (`mindspore.Tensor`): prompt of self attention of shape
+                `(2, decoder_attention_heads, pro_len, head_dim)`.
+            cross_attn_prompt (`mindspore.Tensor`): prompt of cross attention of shape
+                `(2, decoder_attention_heads, pro_len, head_dim)`.
+            past_key_value (`Tuple(mindspore.Tensor)`): cached past key and value projection states
+            output_attentions (`bool`, *optional*):
+                Whether or not to return the attentions tensors of all attention layers. See `attentions` under
+                returned tensors for more detail.
+        """
         residual = hidden_states
+
         # Self Attention
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
@@ -368,7 +393,7 @@ class MvpDecoderLayer(nn.Module):
             attn_prompt=self_attn_prompt,
             output_attentions=output_attentions,
         )
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
@@ -389,7 +414,7 @@ class MvpDecoderLayer(nn.Module):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states = self.encoder_attn_layer_norm(hidden_states)
 
@@ -399,9 +424,9 @@ class MvpDecoderLayer(nn.Module):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = F.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
@@ -474,16 +499,13 @@ class MvpPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         std = self.config.init_std
         if isinstance(module, nn.Linear):
-            module.weight.set_data(initializer(Normal(std,mean=0.0),module.weight.shape,module.weight.dtype))
+            nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.bias is not None:
-                module.bias.set_data(initializer('zeros',module.bias.shape,module.bias.dtype))
+                nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
-            weight = np.random.normal(
-                0.0, std, module.weight.shape
-            )
-            if module.padding_idx:
-                weight[module.padding_idx] = 0
-            module.weight.set_data(mindspore.Tensor(weight, module.weight.dtype))
+            nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight[module.padding_idx] = 0
 
     @property
     def dummy_inputs(self):
@@ -494,7 +516,6 @@ class MvpPreTrainedModel(PreTrainedModel):
             "input_ids": input_ids,
         }
         return dummy_inputs
-
 
 
 class MvpEncoder(MvpPreTrainedModel):
@@ -531,7 +552,7 @@ class MvpEncoder(MvpPreTrainedModel):
             embed_dim,
         )
         self.layers = nn.ModuleList([MvpEncoderLayer(config) for _ in range(config.encoder_layers)])
-        self.layernorm_embedding = nn.LayerNorm([embed_dim])
+        self.layernorm_embedding = nn.LayerNorm(embed_dim)
 
         self.use_prompt = use_prompt
         if use_prompt:
@@ -624,7 +645,7 @@ class MvpEncoder(MvpPreTrainedModel):
 
         hidden_states = inputs_embeds + embed_pos
         hidden_states = self.layernorm_embedding(hidden_states)
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # layer-wise prompt
         if self.use_prompt:
@@ -660,24 +681,24 @@ class MvpEncoder(MvpPreTrainedModel):
             if to_drop:
                 layer_outputs = (None, None)
             else:
-                    ###_gradient_checkpointing_func未支持
-                # if self.gradient_checkpointing and self.training:
-                #     layer_outputs = self._gradient_checkpointing_func(
-                #         encoder_layer.__call__,
-                #         hidden_states,
-                #         attention_mask,
-                #         (head_mask[idx] if head_mask is not None else None),
-                #         (self_attn_prompt[idx] if self.use_prompt else None),
-                #         output_attentions,
-                #     )
-                # else:
-                layer_outputs = encoder_layer(
-                    hidden_states,
-                    attention_mask,
-                    layer_head_mask=(head_mask[idx] if head_mask is not None else None),
-                    self_attn_prompt=(self_attn_prompt[idx] if self.use_prompt else None),
-                    output_attentions=output_attentions,
-                )
+                if self.gradient_checkpointing and self.training:
+                    layer_outputs = self._gradient_checkpointing_func(
+                        encoder_layer.__call__,
+                        hidden_states,
+                        attention_mask,
+                        (head_mask[idx] if head_mask is not None else None),
+                        (self_attn_prompt[idx] if self.use_prompt else None),
+                        output_attentions,
+                    )
+                else:
+                    layer_outputs = encoder_layer(
+                        hidden_states,
+                        attention_mask,
+                        layer_head_mask=(head_mask[idx] if head_mask is not None else None),
+                        self_attn_prompt=(self_attn_prompt[idx] if self.use_prompt else None),
+                        output_attentions=output_attentions,
+                    )
+
                 hidden_states = layer_outputs[0]
 
             if output_attentions:
@@ -723,7 +744,7 @@ class MvpDecoder(MvpPreTrainedModel):
             config.d_model,
         )
         self.layers = nn.ModuleList([MvpDecoderLayer(config) for _ in range(config.decoder_layers)])
-        self.layernorm_embedding = nn.LayerNorm([config.d_model])
+        self.layernorm_embedding = nn.LayerNorm(config.d_model)
 
         self.use_prompt = use_prompt
         if use_prompt:
@@ -805,8 +826,7 @@ class MvpDecoder(MvpPreTrainedModel):
                 - 1 indicates the head is **not masked**,
                 - 0 indicates the head is **masked**.
 
-            past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed
-                or when `config.use_cache=True`):
+            past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
                 Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
                 shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
                 shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`.
@@ -852,8 +872,10 @@ class MvpDecoder(MvpPreTrainedModel):
 
         # past_key_values_length
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
+
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids) * self.embed_scale
+
         attention_mask = _prepare_4d_causal_attention_mask(
             attention_mask, input_shape, inputs_embeds, past_key_values_length
         )
@@ -871,7 +893,7 @@ class MvpDecoder(MvpPreTrainedModel):
         hidden_states = inputs_embeds + positions
         hidden_states = self.layernorm_embedding(hidden_states)
 
-        hidden_states = F.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # layer-wise prompt
         if self.use_prompt:
@@ -912,37 +934,37 @@ class MvpDecoder(MvpPreTrainedModel):
 
             past_key_value = past_key_values[idx] if past_key_values is not None else None
 
-            # if self.gradient_checkpointing and self.training:
-            #     layer_outputs = self._gradient_checkpointing_func(
-            #         decoder_layer.__call__,
-            #         hidden_states,
-            #         attention_mask,
-            #         encoder_hidden_states,
-            #         encoder_attention_mask,
-            #         head_mask[idx] if head_mask is not None else None,
-            #         cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None,
-            #         self_attn_prompt[idx] if self.use_prompt else None,
-            #         cross_attn_prompt[idx] if self.use_prompt else None,
-            #         None,
-            #         output_attentions,
-            #         use_cache,
-            #     )
-            # else:
-            layer_outputs = decoder_layer(
-                hidden_states,
-                attention_mask=attention_mask,
-                encoder_hidden_states=encoder_hidden_states,
-                encoder_attention_mask=encoder_attention_mask,
-                layer_head_mask=(head_mask[idx] if head_mask is not None else None),
-                cross_attn_layer_head_mask=(
-                    cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None
-                ),
-                self_attn_prompt=(self_attn_prompt[idx] if self.use_prompt else None),
-                cross_attn_prompt=(cross_attn_prompt[idx] if self.use_prompt else None),
-                past_key_value=past_key_value,
-                output_attentions=output_attentions,
-                use_cache=use_cache,
-            )
+            if self.gradient_checkpointing and self.training:
+                layer_outputs = self._gradient_checkpointing_func(
+                    decoder_layer.__call__,
+                    hidden_states,
+                    attention_mask,
+                    encoder_hidden_states,
+                    encoder_attention_mask,
+                    head_mask[idx] if head_mask is not None else None,
+                    cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None,
+                    self_attn_prompt[idx] if self.use_prompt else None,
+                    cross_attn_prompt[idx] if self.use_prompt else None,
+                    None,
+                    output_attentions,
+                    use_cache,
+                )
+            else:
+                layer_outputs = decoder_layer(
+                    hidden_states,
+                    attention_mask=attention_mask,
+                    encoder_hidden_states=encoder_hidden_states,
+                    encoder_attention_mask=encoder_attention_mask,
+                    layer_head_mask=(head_mask[idx] if head_mask is not None else None),
+                    cross_attn_layer_head_mask=(
+                        cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None
+                    ),
+                    self_attn_prompt=(self_attn_prompt[idx] if self.use_prompt else None),
+                    cross_attn_prompt=(cross_attn_prompt[idx] if self.use_prompt else None),
+                    past_key_value=past_key_value,
+                    output_attentions=output_attentions,
+                    use_cache=use_cache,
+                )
             hidden_states = layer_outputs[0]
 
             if use_cache:
@@ -972,7 +994,6 @@ class MvpDecoder(MvpPreTrainedModel):
             attentions=all_self_attns,
             cross_attentions=all_cross_attentions,
         )
-
 
 
 class MvpModel(MvpPreTrainedModel):
@@ -1009,10 +1030,10 @@ class MvpModel(MvpPreTrainedModel):
     def set_lightweight_tuning(self):
         assert self.use_prompt, "If you want to use lightweight tuning, make sure that `use_prompt=True`."
 
-        self.requires_grad(False)
-        self.encoder.self_attn_prompt.requires_grad(True)
-        self.decoder.self_attn_prompt.requires_grad(True)
-        self.decoder.cross_attn_prompt.requires_grad(True)
+        self.requires_grad_(False)
+        self.encoder.self_attn_prompt.requires_grad_(True)
+        self.decoder.self_attn_prompt.requires_grad_(True)
+        self.decoder.cross_attn_prompt.requires_grad_(True)
 
     def forward(
         self,
@@ -1045,10 +1066,14 @@ class MvpModel(MvpPreTrainedModel):
             decoder_input_ids = shift_tokens_right(
                 input_ids, self.config.pad_token_id, self.config.decoder_start_token_id
             )
+
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states)
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
         if encoder_outputs is None:
             encoder_outputs = self.encoder(
                 input_ids=input_ids,
@@ -1085,6 +1110,7 @@ class MvpModel(MvpPreTrainedModel):
 
         if not return_dict:
             return decoder_outputs + encoder_outputs
+
         return Seq2SeqModelOutput(
             last_hidden_state=decoder_outputs.last_hidden_state,
             past_key_values=decoder_outputs.past_key_values,
@@ -1097,14 +1123,13 @@ class MvpModel(MvpPreTrainedModel):
         )
 
 
-
 class MvpForConditionalGeneration(MvpPreTrainedModel):
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
 
     def __init__(self, config: MvpConfig):
         super().__init__(config)
         self.model = MvpModel(config)
-        self.final_logits_bias=ops.zeros((1, self.model.shared.num_embeddings))
+        self.register_buffer("final_logits_bias", ops.zeros((1, self.model.shared.num_embeddings)))
         self.lm_head = nn.Linear(config.d_model, self.model.shared.num_embeddings, bias=False)
 
         # Initialize weights and apply final processing
@@ -1128,7 +1153,7 @@ class MvpForConditionalGeneration(MvpPreTrainedModel):
         else:
             extra_bias = ops.zeros((1, new_num_tokens - old_num_tokens))
             new_bias = ops.cat([self.final_logits_bias, extra_bias], dim=1)
-        self.final_logits_bias=new_bias
+        self.register_buffer("final_logits_bias", new_bias)
 
     def get_output_embeddings(self):
         return self.lm_head
@@ -1138,7 +1163,7 @@ class MvpForConditionalGeneration(MvpPreTrainedModel):
 
     def set_lightweight_tuning(self):
         self.model.set_lightweight_tuning()
-        self.lm_head.requires_grad(False)
+        self.lm_head.requires_grad_(False)
 
     def forward(
         self,
@@ -1160,14 +1185,12 @@ class MvpForConditionalGeneration(MvpPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqLMOutput]:
         r"""
-        Args:
-            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
-                config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
-                (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
+            config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
+            (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
-            `Union[Tuple, Seq2SeqLMOutput]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1197,13 +1220,12 @@ class MvpForConditionalGeneration(MvpPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        # print( self.lm_head(outputs[0]).shape)
-        # print(self.final_logits_bias.shape)
         lm_logits = self.lm_head(outputs[0]) + self.final_logits_bias
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = F.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss_fct = CrossEntropyLoss()
+            masked_lm_loss = loss_fct(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]
@@ -1273,7 +1295,6 @@ class MvpForConditionalGeneration(MvpPreTrainedModel):
         return reordered_past
 
 
-
 class MvpForSequenceClassification(MvpPreTrainedModel):
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -1292,7 +1313,7 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
 
     def set_lightweight_tuning(self):
         self.model.set_lightweight_tuning()
-        self.classification_head.requires_grad(False)
+        self.classification_head.requires_grad_(False)
 
     def forward(
         self,
@@ -1313,10 +1334,9 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqSequenceClassifierOutput]:
         r"""
-        Args:
-            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-                config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
@@ -1326,6 +1346,7 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
             raise NotImplementedError(
                 f"Passing input embeddings is currently not supported for {self.__class__.__name__}"
             )
+
         outputs = self.model(
             input_ids,
             attention_mask=attention_mask,
@@ -1343,32 +1364,40 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
             return_dict=return_dict,
         )
         hidden_states = outputs[0]  # last hidden state
+
         eos_mask = input_ids.eq(self.config.eos_token_id)
-        # if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
-        #     raise ValueError("All examples must have the same number of <eos> tokens.")
-        sentence_representation = hidden_states[eos_mask, ].view(hidden_states.shape[0], -1, hidden_states.shape[-1])[:,-1,:]
+
+        sentence_representation = hidden_states[eos_mask].view(hidden_states.shape[0], -1, hidden_states.shape[-1])[
+            :, -1, :
+        ]
         logits = self.classification_head(sentence_representation)
+
         loss = None
         if labels is not None:
             if self.config.problem_type is None:
                 if self.config.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.config.num_labels > 1 and (labels.dtype in (mindspore.int64,mindspore.int32)):
+                elif self.config.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
+
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.config.num_labels == 1:
-                    loss = F.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = F.mse_loss(logits, labels)
+                    loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = F.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.config.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = F.binary_cross_entropy_with_logits(logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
+
         return Seq2SeqSequenceClassifierOutput(
             loss=loss,
             logits=logits,
@@ -1378,23 +1407,28 @@ class MvpForSequenceClassification(MvpPreTrainedModel):
             cross_attentions=outputs.cross_attentions,
             encoder_last_hidden_state=outputs.encoder_last_hidden_state,
             encoder_hidden_states=outputs.encoder_hidden_states,
-            encoder_attentions=outputs.encoder_attentions)
+            encoder_attentions=outputs.encoder_attentions,
+        )
+
 
 class MvpForQuestionAnswering(MvpPreTrainedModel):
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config):
         super().__init__(config)
+
         config.num_labels = 2
         self.num_labels = config.num_labels
+
         self.model = MvpModel(config)
         self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
+
         # Initialize weights and apply final processing
         self.post_init()
 
     def set_lightweight_tuning(self):
         self.model.set_lightweight_tuning()
-        self.qa_outputs.requires_grad(False)
+        self.qa_outputs.requires_grad_(False)
 
     def forward(
         self,
@@ -1416,19 +1450,19 @@ class MvpForQuestionAnswering(MvpPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Seq2SeqQuestionAnsweringModelOutput]:
         r"""
-        Args:
-            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for position (index) of the start of the labelled span for computing the token classification loss.
-                Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
-                are not taken into account for computing the loss.
-            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for position (index) of the end of the labelled span for computing the token classification loss.
-                Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
-                are not taken into account for computing the loss.
+        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the start of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+            are not taken into account for computing the loss.
+        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the end of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+            are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if start_positions is not None and end_positions is not None:
             use_cache = False
+
         outputs = self.model(
             input_ids,
             attention_mask=attention_mask,
@@ -1445,11 +1479,14 @@ class MvpForQuestionAnswering(MvpPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
+
         sequence_output = outputs[0]
+
         logits = self.qa_outputs(sequence_output)
-        start_logits, end_logits = logits.split(1, axis=-1)
+        start_logits, end_logits = ops.split(logits, 1, dim=-1)
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
+
         total_loss = None
         if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, split add a dimension
@@ -1461,15 +1498,19 @@ class MvpForQuestionAnswering(MvpPreTrainedModel):
             ignored_index = start_logits.shape[1]
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
-            start_loss = F.cross_entropy(start_logits, start_positions,ignore_index=ignored_index)
-            end_loss =F.cross_entropy(end_logits, end_positions,ignore_index=ignored_index)
+
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
+
         if not return_dict:
             output = (
                 start_logits,
                 end_logits,
             ) + outputs[1:]
             return ((total_loss,) + output) if total_loss is not None else output
+
         return Seq2SeqQuestionAnsweringModelOutput(
             loss=total_loss,
             start_logits=start_logits,
@@ -1483,12 +1524,14 @@ class MvpForQuestionAnswering(MvpPreTrainedModel):
             encoder_attentions=outputs.encoder_attentions,
         )
 
+
 # Copied from transformers.models.bart.modeling_bart.BartDecoderWrapper with Bart->Mvp
 class MvpDecoderWrapper(MvpPreTrainedModel):
     """
     This wrapper class is a helper class to correctly load pretrained checkpoints when the causal language model is
     used in combination with the [`EncoderDecoderModel`] framework.
     """
+
     def __init__(self, config):
         super().__init__(config)
         self.decoder = MvpDecoder(config)
@@ -1506,7 +1549,9 @@ class MvpForCausalLM(MvpPreTrainedModel):
         config.is_encoder_decoder = False
         super().__init__(config)
         self.model = MvpDecoderWrapper(config)
+
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1530,7 +1575,7 @@ class MvpForCausalLM(MvpPreTrainedModel):
 
     def set_lightweight_tuning(self):
         self.model.set_lightweight_tuning()
-        self.lm_head.requires_grad(False)
+        self.lm_head.requires_grad_(False)
 
     def forward(
         self,
@@ -1548,12 +1593,96 @@ class MvpForCausalLM(MvpPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithCrossAttentions]:
+        r"""
+        Args:
+            input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
+                Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
+                provide it.
+
+                Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
+                [`PreTrainedTokenizer.__call__`] for details.
+
+                [What are input IDs?](../glossary#input-ids)
+            attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
+                [What are attention masks?](../glossary#attention-mask)
+            encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
+                if the model is configured as a decoder.
+            encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used
+                in the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+            head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
+                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
+
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
+
+            cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
+                Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
+
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
+
+            past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+                Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
+                shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
+                shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional
+                tensors are only required when the model is used as a decoder in a Sequence to Sequence model.
+
+                Contains pre-computed hidden-states (key and values in the self-attention blocks and in the
+                cross-attention blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
+
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those
+                that don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of
+                all `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
+                config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
+                (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
+                (see `past_key_values`).
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+            output_attentions (`bool`, *optional*):
+                Whether or not to return the attentions tensors of all attention layers. See `attentions` under
+                returned tensors for more detail.
+            output_hidden_states (`bool`, *optional*):
+                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors
+                for more detail.
+            return_dict (`bool`, *optional*):
+                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
+
+        Returns:
+
+        Example:
+
+        ```python
+        >>> from transformers import AutoTokenizer, MvpForCausalLM
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("RUCAIBox/mvp")
+        >>> model = MvpForCausalLM.from_pretrained("RUCAIBox/mvp", add_cross_attention=False)
+
+        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        >>> outputs = model(**inputs)
+
+        >>> logits = outputs.logits
+        >>> list(logits.shape)
+        [1, 8, 50267]
+        ```"""
 
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
         outputs = self.model.decoder(
             input_ids=input_ids,
@@ -1569,14 +1698,18 @@ class MvpForCausalLM(MvpPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
+
         logits = self.lm_head(outputs[0])
+
         loss = None
         if labels is not None:
-            loss = F.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]
             return (loss,) + output if loss is not None else output
+
         return CausalLMOutputWithCrossAttentions(
             loss=loss,
             logits=logits,
@@ -1591,7 +1724,7 @@ class MvpForCausalLM(MvpPreTrainedModel):
     ):
         # if model is used as a decoder in encoder-decoder model, the decoder attention mask is created on the fly
         if attention_mask is None:
-            attention_mask = input_ids.new_ones(input_ids.shape)
+            attention_mask = ops.ones(input_ids.shape, dtype=input_ids.dtype)
 
         if past_key_values:
             past_length = past_key_values[0][0].shape[2]
@@ -1627,4 +1760,5 @@ __all__=[
     "MvpForQuestionAnswering",
     "MvpForSequenceClassification",
     "MvpModel",
-    "MvpPreTrainedModel"]
+    "MvpPreTrainedModel"
+]

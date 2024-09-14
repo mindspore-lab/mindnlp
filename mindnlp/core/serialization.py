@@ -791,7 +791,7 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
         logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
         array = array.astype(np.float16)
 
-    if stride is not None and len(stride) > 1 and stride[0] == 1 and stride[1] > 1:
+    if stride is not None and len(stride) > 1 and stride[0] == 1:
         stride = tuple((s * 4 for s in stride))
         array = np.lib.stride_tricks.as_strided(array, size, stride)
     else:
@@ -799,6 +799,10 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
         array = array.reshape(size, order=order)
     param = Tensor.from_numpy(array)
     return param
+
+def _rebuild_from_type_v2(func, new_type, args, state):
+    ret = func(*args)
+    return ret
 
 @dataclass
 class FakeParameter:
@@ -1213,7 +1217,8 @@ def _load(zip_file, pickle_module, overall_storage=None, pickle_file='data.pkl',
                 return eval(name)
             if mod_name == 'torch':
                 return str(name)
-
+            if mod_name == 'torch._tensor':
+                return eval(name)
             mod_name = load_module_mapping.get(mod_name, mod_name)
             return super().find_class(mod_name, name)
 
