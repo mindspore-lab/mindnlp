@@ -713,7 +713,7 @@ class ViTMAEModel(ViTMAEPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("facebook/vit-mae-base")
         >>> model = ViTMAEModel.from_pretrained("facebook/vit-mae-base")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> last_hidden_states = outputs.last_hidden_state
         ```"""
@@ -1059,7 +1059,7 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("facebook/vit-mae-base")
         >>> model = ViTMAEForPreTraining.from_pretrained("facebook/vit-mae-base")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> loss = outputs.loss
         >>> mask = outputs.mask

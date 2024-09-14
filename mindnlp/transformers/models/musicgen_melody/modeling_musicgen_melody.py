@@ -2165,7 +2165,7 @@ class MusicgenMelodyForConditionalGeneration(PreTrainedModel):
             >>> inputs = processor(
             ...     text=["80s pop track with bassy drums and synth", "90s rock song with loud guitars and heavy drums"],
             ...     padding=True,
-            ...     return_tensors="pt",
+            ...     return_tensors="ms",
             ... )
             ...
             >>> pad_token_id = model.generation_config.pad_token_id

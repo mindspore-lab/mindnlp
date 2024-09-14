@@ -641,7 +641,7 @@ class ViltModel(ViltPreTrainedModel):
         >>> processor = ViltProcessor.from_pretrained("dandelin/vilt-b32-mlm")
         >>> model = ViltModel.from_pretrained("dandelin/vilt-b32-mlm")
 
-        >>> inputs = processor(image, text, return_tensors="pt")
+        >>> inputs = processor(image, text, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> last_hidden_states = outputs.last_hidden_state
         ```"""
@@ -796,7 +796,7 @@ class ViltForMaskedLM(ViltPreTrainedModel):
         >>> model = ViltForMaskedLM.from_pretrained("dandelin/vilt-b32-mlm")
 
         >>> # prepare inputs
-        >>> encoding = processor(image, text, return_tensors="pt")
+        >>> encoding = processor(image, text, return_tensors="ms")
 
         >>> # forward pass
         >>> outputs = model(**encoding)
@@ -962,7 +962,7 @@ class ViltForQuestionAnswering(ViltPreTrainedModel):
         >>> model = ViltForQuestionAnswering.from_pretrained("dandelin/vilt-b32-finetuned-vqa")
 
         >>> # prepare inputs
-        >>> encoding = processor(image, text, return_tensors="pt")
+        >>> encoding = processor(image, text, return_tensors="ms")
 
         >>> # forward pass
         >>> outputs = model(**encoding)
@@ -1059,7 +1059,7 @@ class ViltForImageAndTextRetrieval(ViltPreTrainedModel):
         >>> scores = dict()
         >>> for text in texts:
         ...     # prepare inputs
-        ...     encoding = processor(image, text, return_tensors="pt")
+        ...     encoding = processor(image, text, return_tensors="ms")
         ...     outputs = model(**encoding)
         ...     scores[text] = outputs.logits[0, :].item()
         ```"""
@@ -1154,7 +1154,7 @@ class ViltForImagesAndTextClassification(ViltPreTrainedModel):
         >>> model = ViltForImagesAndTextClassification.from_pretrained("dandelin/vilt-b32-finetuned-nlvr2")
 
         >>> # prepare inputs
-        >>> encoding = processor([image1, image2], text, return_tensors="pt")
+        >>> encoding = processor([image1, image2], text, return_tensors="ms")
 
         >>> # forward pass
         >>> outputs = model(input_ids=encoding.input_ids, pixel_values=encoding.pixel_values.unsqueeze(0))

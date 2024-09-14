@@ -827,7 +827,7 @@ class StableLmForCausalLM(StableLmPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("stabilityai/stablelm-3b-4e1t")
 
         >>> prompt = "The weather is always wonderful in"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
+        >>> inputs = tokenizer(prompt, return_tensors="ms")
 
         >>> # Generate
         >>> generate_ids = model.generate(inputs.input_ids, max_length=30)

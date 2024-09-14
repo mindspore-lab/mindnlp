@@ -1429,7 +1429,7 @@ class DetaModel(DetaPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("jozhang97/deta-swin-large-o365")
         >>> model = DetaModel.from_pretrained("jozhang97/deta-swin-large-o365", two_stage=False)
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
 
         >>> outputs = model(**inputs)
 
@@ -1742,7 +1742,7 @@ class DetaForObjectDetection(DetaPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("jozhang97/deta-swin-large")
         >>> model = DetaForObjectDetection.from_pretrained("jozhang97/deta-swin-large")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> # convert outputs (bounding boxes and class logits) to Pascal VOC format (xmin, ymin, xmax, ymax)
