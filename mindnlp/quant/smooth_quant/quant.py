@@ -22,8 +22,9 @@ class BatchMatMulV2(PrimitiveWithInfer):
         return x1_shape[:-1] + [x2_shape[-1]]
 
     def infer_dtype(self, x_dtype, v_dtype, bias_dtype=None):
+        if x_dtype == mindspore.TensorType(mindspore.int8):
+            return mindspore.TensorType(mindspore.int32)
         return x_dtype
-
 
 matmulInteger = BatchMatMulV2()
 
