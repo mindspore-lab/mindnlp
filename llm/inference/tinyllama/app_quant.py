@@ -5,7 +5,6 @@ from mindnlp.transformers import StoppingCriteria, StoppingCriteriaList, TextIte
 from mindnlp.quant.smooth_quant import quantize, w8x8
 from threading import Thread
 
-mindspore.set_context(pynative_synchronize=True)
 # Loading the tokenizer and model from Hugging Face's model hub.
 tokenizer = AutoTokenizer.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
 model = AutoModelForCausalLM.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0", ms_dtype=mindspore.float16)
