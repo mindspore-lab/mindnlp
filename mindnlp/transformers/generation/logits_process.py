@@ -466,6 +466,10 @@ class TopPLogitsWarper(LogitsWarper):
         if self.filter_value == -float("Inf"):
             self.filter_value = float(ops.finfo(scores.dtype).min)
 
+
+        if ON_ORANGE_PI:
+            return self.tf_like_call(input_ids, scores)
+
         sorted_logits, sorted_indices = ops.sort(scores, descending=False)
 
         cumulative_probs = ops.cumsum(ops.softmax(sorted_logits, dim=-1), dim=-1)

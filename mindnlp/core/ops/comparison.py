@@ -2,7 +2,7 @@
 import numpy as np
 import mindspore
 from mindspore import ops
-from mindnlp.configs import use_pyboost, ON_ORANGE_PI
+from mindnlp.configs import use_pyboost
 
 # allclose
 def allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
@@ -128,8 +128,6 @@ def not_equal(input, other):
 
 # sort
 def sort(input, *, dim=-1, descending=False, stable=False):
-    if ON_ORANGE_PI:
-        return topk(input, input.shape[dim], dim, descending)
     if use_pyboost():
         return mindspore.mint.sort(input, dim=dim, descending=descending, stable=stable)
     return ops.sort(input, dim, descending)
