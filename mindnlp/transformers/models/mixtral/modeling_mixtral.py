@@ -873,7 +873,7 @@ class MixtralForCausalLM(MixtralPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("mistralai/Mixtral-8x7B-v0.1")
 
         >>> prompt = "Hey, are you conscious? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
+        >>> inputs = tokenizer(prompt, return_tensors="ms")
 
         >>> # Generate
         >>> generate_ids = model.generate(inputs.input_ids, max_length=30)

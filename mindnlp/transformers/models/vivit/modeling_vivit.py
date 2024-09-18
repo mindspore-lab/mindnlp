@@ -536,7 +536,7 @@ class VivitModel(VivitPreTrainedModel):
         >>> model = VivitModel.from_pretrained("google/vivit-b-16x2-kinetics400")
 
         >>> # prepare video for the model
-        >>> inputs = image_processor(list(video), return_tensors="pt")
+        >>> inputs = image_processor(list(video), return_tensors="ms")
 
         >>> # forward pass
         >>> outputs = model(**inputs)
@@ -674,7 +674,7 @@ class VivitForVideoClassification(VivitPreTrainedModel):
         >>> image_processor = VivitImageProcessor.from_pretrained("google/vivit-b-16x2-kinetics400")
         >>> model = VivitForVideoClassification.from_pretrained("google/vivit-b-16x2-kinetics400")
 
-        >>> inputs = image_processor(list(video), return_tensors="pt")
+        >>> inputs = image_processor(list(video), return_tensors="ms")
 
         >>> with torch.no_grad():
         ...     outputs = model(**inputs)

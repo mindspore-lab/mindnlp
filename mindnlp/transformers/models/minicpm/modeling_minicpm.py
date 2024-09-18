@@ -1149,7 +1149,7 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
         ...
         >>> prompt = "Hey, are you conscious? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
+        >>> inputs = tokenizer(prompt, return_tensors="ms")
         ...
         >>> # Generate
         >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
@@ -1328,7 +1328,7 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
             ...
             >>> prompt = "Hey, are you conscious? Can you talk to me?"
-            >>> inputs = tokenizer(prompt, return_tensors="pt")
+            >>> inputs = tokenizer(prompt, return_tensors="ms")
             ...
             >>> # Generate
             >>> generate_ids = model.generate(inputs.input_ids, max_length=30)

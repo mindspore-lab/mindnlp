@@ -1,4 +1,4 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,8 +13,15 @@
 # limitations under the License.
 # ============================================================================
 """
-moss model init
+gemma2 Model.
 """
-from .moss import *
-from .moss_configuration import *
-from .moss_tokenization import *
+
+from . import configuration_gemma2, modeling_gemma2
+
+from .configuration_gemma2 import *
+from .modeling_gemma2 import *
+
+
+__all__ = []
+__all__.extend(configuration_gemma2.__all__)
+__all__.extend(modeling_gemma2.__all__)

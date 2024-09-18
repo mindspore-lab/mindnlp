@@ -344,9 +344,6 @@ class LlavaForConditionalGenerationModelTest(ModelTesterMixin, unittest.TestCase
 
     # Copied from tests.test_modeling_common.ModelTesterMixin.test_tie_model_weights with config.vocab_size->config.text_config.vocab_size
     def test_tie_model_weights(self):
-        if not self.test_torchscript:
-            return
-
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def check_same_values(layer_1, layer_2):

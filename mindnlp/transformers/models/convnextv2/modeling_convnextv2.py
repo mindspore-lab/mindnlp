@@ -473,7 +473,7 @@ class ConvNextV2Backbone(ConvNextV2PreTrainedModel, BackboneMixin):
         >>> processor = AutoImageProcessor.from_pretrained("facebook/convnextv2-tiny-1k-224")
         >>> model = AutoBackbone.from_pretrained("facebook/convnextv2-tiny-1k-224")
 
-        >>> inputs = processor(image, return_tensors="pt")
+        >>> inputs = processor(image, return_tensors="ms")
         >>> outputs = model(**inputs)
         ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict

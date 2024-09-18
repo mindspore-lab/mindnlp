@@ -811,7 +811,7 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
         >>> config.is_decoder = True
         >>> model = GPTNeoXForCausalLM.from_pretrained("EleutherAI/gpt-neox-20b", config=config)
 
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> prediction_logits = outputs.logits

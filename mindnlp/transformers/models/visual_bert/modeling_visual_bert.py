@@ -19,15 +19,9 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
-from mindspore.common.initializer import initializer, Normal
-
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindnlp.utils import (
-    ModelOutput,
-    logging,
-)
+from mindnlp.core.nn import CrossEntropyLoss, KLDivLoss, LogSoftmax
+
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -37,7 +31,10 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
-
+from ....utils import (
+    ModelOutput,
+    logging,
+)
 from .configuration_visual_bert import VisualBertConfig
 
 
@@ -45,6 +42,7 @@ logger = logging.get_logger(__name__)
 
 _CONFIG_FOR_DOC = "VisualBertConfig"
 _CHECKPOINT_FOR_DOC = "uclanlp/visualbert-vqa-coco-pre"
+
 
 class VisualBertEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings and visual embeddings."""
@@ -58,21 +56,24 @@ class VisualBertEmbeddings(nn.Module):
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
 
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.position_ids = ops.arange(config.max_position_embeddings).reshape((1, -1))
+        self.register_buffer(
+            "position_ids", ops.arange(config.max_position_embeddings).broadcast_to((1, -1)), persistent=False
+        )
+
         # For Visual Features
         # Token type and position embedding for image features
         self.visual_token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
         self.visual_position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
 
         if config.special_visual_initialize:
-            self.visual_token_type_embeddings.weight = Parameter(
+            self.visual_token_type_embeddings.weight = nn.Parameter(
                 self.token_type_embeddings.weight.clone(), requires_grad=True
             )
-            self.visual_position_embeddings.weight = Parameter(
+            self.visual_position_embeddings.weight = nn.Parameter(
                 self.position_embeddings.weight.clone(), requires_grad=True
             )
 
@@ -194,7 +195,7 @@ class VisualBertSelfAttention(nn.Module):
         self.key = nn.Linear(config.hidden_size, self.all_head_size)
         self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
-        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
@@ -216,7 +217,7 @@ class VisualBertSelfAttention(nn.Module):
         query_layer = self.transpose_for_scores(mixed_query_layer)
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_layer, ops.transpose(key_layer, -1, -2))
 
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
         if attention_mask is not None:
@@ -224,7 +225,7 @@ class VisualBertSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, dim=-1)
+        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -250,8 +251,8 @@ class VisualBertSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -324,8 +325,8 @@ class VisualBertOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -456,7 +457,7 @@ class VisualBertPredictionHeadTransform(nn.Module):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -475,7 +476,7 @@ class VisualBertLMPredictionHead(nn.Module):
         # an output-only bias for each token.
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
-        self.bias = Parameter(ops.zeros(config.vocab_size),"bias")
+        self.bias = nn.Parameter(ops.zeros(config.vocab_size))
 
         # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
         self.decoder.bias = self.bias
@@ -512,18 +513,19 @@ class VisualBertPreTrainedModel(PreTrainedModel):
     base_model_prefix = "visual_bert"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Embedding)):
+        if isinstance(module, (nn.Linear, nn.Embedding)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        if isinstance(cell, nn.Linear) and cell.bias is not None:
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
+        if isinstance(module, nn.Linear) and module.bias is not None:
+            nn.init.zeros_(module.bias)
+
 
 @dataclass
 class VisualBertForPreTrainingOutput(ModelOutput):
@@ -539,14 +541,12 @@ class VisualBertForPreTrainingOutput(ModelOutput):
         seq_relationship_logits (`mindspore.Tensor` of shape `(batch_size, 2)`):
             Prediction scores of the sentence-image prediction (classification) head (scores of True/False continuation
             before SoftMax).
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed
-            or when `config.output_hidden_states=True`):
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when
-            `config.output_attentions=True`):
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
@@ -560,8 +560,10 @@ class VisualBertForPreTrainingOutput(ModelOutput):
     hidden_states: Optional[Tuple[mindspore.Tensor]] = None
     attentions: Optional[Tuple[mindspore.Tensor]] = None
 
+
 class VisualBertModel(VisualBertPreTrainedModel):
     """
+
     The model can behave as an encoder (with only self-attention) following the architecture described in [Attention is
     all you need](https://arxiv.org/abs/1706.03762) by Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit,
     Llion Jones, Aidan N. Gomez, Lukasz Kaiser and Illia Polosukhin.
@@ -617,35 +619,34 @@ class VisualBertModel(VisualBertPreTrainedModel):
         r"""
 
         Returns:
-            `Union[Tuple[mindspore.Tensor], BaseModelOutputWithPooling]`
 
         Example:
-            ```python
-            >>> # Assumption: *get_visual_embeddings(image)* gets the visual embeddings of the image.
-            >>> from transformers import AutoTokenizer, VisualBertModel
-            >>> import mindspore, ops
-            ...
-            >>> tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
-            >>> model = VisualBertModel.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
-            ...
-            >>> inputs = tokenizer("The capital of France is Paris.", return_tensors="pt")
-            >>> visual_embeds = get_visual_embeddings(image).unsqueeze(0)
-            >>> visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
-            >>> visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
-            ...
-            >>> inputs.update(
-            ...     {
-            ...         "visual_embeds": visual_embeds,
-            ...         "visual_token_type_ids": visual_token_type_ids,
-            ...         "visual_attention_mask": visual_attention_mask,
-            ...     }
-            ... )
-            ...
-            >>> outputs = model(**inputs)
-            ...
-            >>> last_hidden_states = outputs.last_hidden_state
-            ```
-        """
+
+        ```python
+        # Assumption: *get_visual_embeddings(image)* gets the visual embeddings of the image.
+        from transformers import AutoTokenizer, VisualBertModel
+        import torch
+
+        tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
+        model = VisualBertModel.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
+
+        inputs = tokenizer("The capital of France is Paris.", return_tensors="ms")
+        visual_embeds = get_visual_embeddings(image).unsqueeze(0)
+        visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
+        visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
+
+        inputs.update(
+            {
+                "visual_embeds": visual_embeds,
+                "visual_token_type_ids": visual_token_type_ids,
+                "visual_attention_mask": visual_attention_mask,
+            }
+        )
+
+        outputs = model(**inputs)
+
+        last_hidden_states = outputs.last_hidden_state
+        ```"""
 
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -746,7 +747,6 @@ class VisualBertModel(VisualBertPreTrainedModel):
             attentions=encoder_outputs.attentions,
         )
 
-
 class VisualBertForPreTraining(VisualBertPreTrainedModel):
     _tied_weights_keys = ["cls.predictions.decoder.weight", "cls.predictions.decoder.bias"]
 
@@ -785,54 +785,61 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
         sentence_image_labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple[mindspore.Tensor], VisualBertForPreTrainingOutput]:
         r"""
-        Args:
-            labels (`mindspore.Tensor` of shape `(batch_size, total_sequence_length)`, *optional*):
-                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
-                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
-                loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
-            sentence_image_labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the sentence-image prediction (classification) loss. Input should be a sequence pair
-                (see `input_ids` docstring) Indices should be in `[0, 1]`:
+        labels (`mindspore.Tensor` of shape `(batch_size, total_sequence_length)`, *optional*):
+            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        sentence_image_labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sentence-image prediction (classification) loss. Input should be a sequence pair
+            (see `input_ids` docstring) Indices should be in `[0, 1]`:
 
-                - 0 indicates sequence B is a matching pair of sequence A for the given image,
-                - 1 indicates sequence B is a random sequence w.r.t A for the given image.
+            - 0 indicates sequence B is a matching pair of sequence A for the given image,
+            - 1 indicates sequence B is a random sequence w.r.t A for the given image.
 
         Returns:
-            `Union[Tuple[mindspore.Tensor], VisualBertForPreTrainingOutput]`
 
         Example:
-            ```python
-            >>> # Assumption: *get_visual_embeddings(image)* gets the visual embeddings of the image in the batch.
-            >>> from transformers import AutoTokenizer, VisualBertForPreTraining
-            ...
-            >>> tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
-            >>> model = VisualBertForPreTraining.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
-            ...
-            >>> inputs = tokenizer("The capital of France is [MASK].", return_tensors="pt")
-            >>> visual_embeds = get_visual_embeddings(image).unsqueeze(0)
-            >>> visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
-            >>> visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
-            ...
-            >>> inputs.update(
-            ...     {
-            ...         "visual_embeds": visual_embeds,
-            ...         "visual_token_type_ids": visual_token_type_ids,
-            ...         "visual_attention_mask": visual_attention_mask,
-            ...     }
-            ... )
-            >>> max_length = inputs["input_ids"].shape[-1] + visual_embeds.shape[-2]
-            >>> labels = tokenizer(
-            ...     "The capital of France is Paris.", return_tensors="pt", padding="max_length", max_length=max_length
-            ... )["input_ids"]
-            >>> sentence_image_labels = mindspore.Tensor(1).unsqueeze(0)  # Batch_size
-            ...
-            >>> outputs = model(**inputs, labels=labels, sentence_image_labels=sentence_image_labels)
-            >>> loss = outputs.loss
-            >>> prediction_logits = outputs.prediction_logits
-            >>> seq_relationship_logits = outputs.seq_relationship_logits
-            ```
-        """
+
+        ```python
+        # Assumption: *get_visual_embeddings(image)* gets the visual embeddings of the image in the batch.
+        from transformers import AutoTokenizer, VisualBertForPreTraining
+
+        tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
+        model = VisualBertForPreTraining.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
+
+        inputs = tokenizer("The capital of France is [MASK].", return_tensors="ms")
+        visual_embeds = get_visual_embeddings(image).unsqueeze(0)
+        visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
+        visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
+
+        inputs.update(
+            {
+                "visual_embeds": visual_embeds,
+                "visual_token_type_ids": visual_token_type_ids,
+                "visual_attention_mask": visual_attention_mask,
+            }
+        )
+        max_length = inputs["input_ids"].shape[-1] + visual_embeds.shape[-2]
+        labels = tokenizer(
+            "The capital of France is Paris.", return_tensors="ms", padding="max_length", max_length=max_length
+        )["input_ids"]
+        sentence_image_labels = mindspore.tensor(1).unsqueeze(0)  # Batch_size
+
+
+        outputs = model(**inputs, labels=labels, sentence_image_labels=sentence_image_labels)
+        loss = outputs.loss
+        prediction_logits = outputs.prediction_logits
+        seq_relationship_logits = outputs.seq_relationship_logits
+        ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        if labels is not None:
+            total_size = attention_mask.shape[-1] + visual_attention_mask.shape[-1]
+            if labels.shape[-1] != total_size:
+                raise ValueError(
+                    "The labels provided should have same sequence length as total attention mask. "
+                    f"Found labels with sequence length {labels.shape[-1]}, expected {total_size}."
+                )
 
         outputs = self.visual_bert(
             input_ids,
@@ -855,26 +862,14 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
 
         total_loss = None
         if labels is not None and sentence_image_labels is not None:
-            total_size = attention_mask.shape[-1] + visual_attention_mask.shape[-1]
-            if labels.shape[-1] != total_size:
-                raise ValueError(
-                    "The labels provided should have same sequence length as total attention mask. "
-                    f"Found labels with sequence length {labels.shape[-1]}, expected {total_size}."
-                )
-
-            masked_lm_loss = F.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
-            sentence_image_loss = F.cross_entropy(seq_relationship_score.view(-1, 2), sentence_image_labels.view(-1))
+            loss_fct = CrossEntropyLoss()
+            masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            sentence_image_loss = loss_fct(seq_relationship_score.view(-1, 2), sentence_image_labels.view(-1))
             total_loss = masked_lm_loss + sentence_image_loss
 
-        if labels is not None and sentence_image_labels is None:
-            total_size = attention_mask.shape[-1] + visual_attention_mask.shape[-1]
-            if labels.shape[-1] != total_size:
-                raise ValueError(
-                    "The labels provided should have same sequence length as total attention mask. "
-                    f"Found labels with sequence length {labels.shape[-1]}, expected {total_size}."
-                )
-
-            total_loss = F.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+        elif labels is not None:
+            loss_fct = CrossEntropyLoss()
+            total_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores, seq_relationship_score) + outputs[2:]
@@ -888,12 +883,13 @@ class VisualBertForPreTraining(VisualBertPreTrainedModel):
             attentions=outputs.attentions,
         )
 
+
 class VisualBertForMultipleChoice(VisualBertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
 
         self.visual_bert = VisualBertModel(config)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.cls = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
@@ -917,53 +913,51 @@ class VisualBertForMultipleChoice(VisualBertPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple[mindspore.Tensor], MultipleChoiceModelOutput]:
         r"""
-        Args:
-            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-                num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-                `input_ids` above)
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+            `input_ids` above)
 
         Returns:
-            `Union[Tuple[mindspore.Tensor], MultipleChoiceModelOutput]`
 
         Example:
-            ```python
-            >>> # Assumption: *get_visual_embeddings(image)* gets the visual embeddings of the image in the batch.
-            >>> from transformers import AutoTokenizer, VisualBertForMultipleChoice
-            >>> import mindspore, ops
-            ...
-            >>> tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
-            >>> model = VisualBertForMultipleChoice.from_pretrained("uclanlp/visualbert-vcr")
-            ...
-            >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
-            >>> choice0 = "It is eaten with a fork and a knife."
-            >>> choice1 = "It is eaten while held in the hand."
-            ...
-            >>> visual_embeds = get_visual_embeddings(image)
-            >>> # (batch_size, num_choices, visual_seq_length, visual_embedding_dim)
-            >>> visual_embeds = visual_embeds.expand(1, 2, *visual_embeds.shape)
-            >>> visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
-            >>> visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
-            ...
-            >>> labels = mindspore.Tensor(0).unsqueeze(0)  # choice0 is correct (according to Wikipedia ;)), batch size 1
-            ...
-            >>> encoding = tokenizer([[prompt, prompt], [choice0, choice1]], return_tensors="pt", padding=True)
-            >>> # batch size is 1
-            >>> inputs_dict = {k: v.unsqueeze(0) for k, v in encoding.items()}
-            >>> inputs_dict.update(
-            ...     {
-            ...         "visual_embeds": visual_embeds,
-            ...         "visual_attention_mask": visual_attention_mask,
-            ...         "visual_token_type_ids": visual_token_type_ids,
-            ...         "labels": labels,
-            ...     }
-            ... )
-            >>> outputs = model(**inputs_dict)
-            ...
-            >>> loss = outputs.loss
-            >>> logits = outputs.logits
-            ```
-        """
+
+        ```python
+        # Assumption: *get_visual_embeddings(image)* gets the visual embeddings of the image in the batch.
+        from transformers import AutoTokenizer, VisualBertForMultipleChoice
+        import torch
+
+        tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
+        model = VisualBertForMultipleChoice.from_pretrained("uclanlp/visualbert-vcr")
+
+        prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
+        choice0 = "It is eaten with a fork and a knife."
+        choice1 = "It is eaten while held in the hand."
+
+        visual_embeds = get_visual_embeddings(image)
+        # (batch_size, num_choices, visual_seq_length, visual_embedding_dim)
+        visual_embeds = visual_embeds.expand(1, 2, *visual_embeds.shape)
+        visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
+        visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
+
+        labels = mindspore.tensor(0).unsqueeze(0)  # choice0 is correct (according to Wikipedia ;)), batch size 1
+
+        encoding = tokenizer([[prompt, prompt], [choice0, choice1]], return_tensors="ms", padding=True)
+        # batch size is 1
+        inputs_dict = {k: v.unsqueeze(0) for k, v in encoding.items()}
+        inputs_dict.update(
+            {
+                "visual_embeds": visual_embeds,
+                "visual_attention_mask": visual_attention_mask,
+                "visual_token_type_ids": visual_token_type_ids,
+                "labels": labels,
+            }
+        )
+        outputs = model(**inputs_dict)
+
+        loss = outputs.loss
+        logits = outputs.logits
+        ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
 
@@ -1017,7 +1011,8 @@ class VisualBertForMultipleChoice(VisualBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = F.cross_entropy(reshaped_logits, labels)
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1031,14 +1026,13 @@ class VisualBertForMultipleChoice(VisualBertPreTrainedModel):
         )
 
 
-
 class VisualBertForQuestionAnswering(VisualBertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
 
         self.visual_bert = VisualBertModel(config)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.cls = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
@@ -1062,44 +1056,42 @@ class VisualBertForQuestionAnswering(VisualBertPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        Args:
-            labels (`mindspore.Tensor` of shape `(batch_size, total_sequence_length)`, *optional*):
-                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-                config.num_labels - 1]`. A KLDivLoss is computed between the labels and the returned logits.
+        labels (`mindspore.Tensor` of shape `(batch_size, total_sequence_length)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. A KLDivLoss is computed between the labels and the returned logits.
 
         Returns:
-            `Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]`
 
         Example:
-            ```python
-            >>> # Assumption: *get_visual_embeddings(image)* gets the visual embeddings of the image in the batch.
-            >>> from transformers import AutoTokenizer, VisualBertForQuestionAnswering
-            >>> import mindspore, ops
-            ...
-            >>> tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
-            >>> model = VisualBertForQuestionAnswering.from_pretrained("uclanlp/visualbert-vqa")
-            ...
-            >>> text = "Who is eating the apple?"
-            >>> inputs = tokenizer(text, return_tensors="pt")
-            >>> visual_embeds = get_visual_embeddings(image).unsqueeze(0)
-            >>> visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
-            >>> visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
-            ...
-            >>> inputs.update(
-            ...     {
-            ...         "visual_embeds": visual_embeds,
-            ...         "visual_token_type_ids": visual_token_type_ids,
-            ...         "visual_attention_mask": visual_attention_mask,
-            ...     }
-            ... )
-            ...
-            >>> labels = mindspore.Tensor([[0.0, 1.0]]).unsqueeze(0)  # Batch size 1, Num labels 2
-            ...
-            >>> outputs = model(**inputs, labels=labels)
-            >>> loss = outputs.loss
-            >>> scores = outputs.logits
-            ```
-        """
+
+        ```python
+        # Assumption: *get_visual_embeddings(image)* gets the visual embeddings of the image in the batch.
+        from transformers import AutoTokenizer, VisualBertForQuestionAnswering
+        import torch
+
+        tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
+        model = VisualBertForQuestionAnswering.from_pretrained("uclanlp/visualbert-vqa")
+
+        text = "Who is eating the apple?"
+        inputs = tokenizer(text, return_tensors="ms")
+        visual_embeds = get_visual_embeddings(image).unsqueeze(0)
+        visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
+        visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
+
+        inputs.update(
+            {
+                "visual_embeds": visual_embeds,
+                "visual_token_type_ids": visual_token_type_ids,
+                "visual_attention_mask": visual_attention_mask,
+            }
+        )
+
+        labels = mindspore.tensor([[0.0, 1.0]]).unsqueeze(0)  # Batch size 1, Num labels 2
+
+        outputs = model(**inputs, labels=labels)
+        loss = outputs.loss
+        scores = outputs.logits
+        ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # Get the index of the last text token
@@ -1127,7 +1119,7 @@ class VisualBertForQuestionAnswering(VisualBertPreTrainedModel):
         index_to_gather = (
             index_to_gather.unsqueeze(-1).unsqueeze(-1).broadcast_to((index_to_gather.shape[0], 1, sequence_output.shape[-1]))
         )
-        pooled_output = ops.gather_elements(sequence_output,1 , index_to_gather)
+        pooled_output = ops.gather(sequence_output, 1, index_to_gather)
 
         pooled_output = self.dropout(pooled_output)
         logits = self.cls(pooled_output)
@@ -1136,7 +1128,8 @@ class VisualBertForQuestionAnswering(VisualBertPreTrainedModel):
         loss = None
         if labels is not None:
             loss_fct = nn.KLDivLoss(reduction="batchmean")
-            reshaped_logits = F.log_softmax(reshaped_logits, dim=-1)
+            log_softmax = nn.LogSoftmax(dim=-1)
+            reshaped_logits = log_softmax(reshaped_logits)
             loss = loss_fct(reshaped_logits, labels)
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1149,13 +1142,14 @@ class VisualBertForQuestionAnswering(VisualBertPreTrainedModel):
             attentions=outputs.attentions,
         )
 
+
 class VisualBertForVisualReasoning(VisualBertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
 
         self.visual_bert = VisualBertModel(config)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.cls = nn.Linear(config.hidden_size, config.num_labels)  # 2
 
         # Initialize weights and apply final processing
@@ -1179,44 +1173,42 @@ class VisualBertForVisualReasoning(VisualBertPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        Args:
-            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-                config.num_labels - 1]`. A classification loss is computed (Cross-Entropy) against these labels.
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. A classification loss is computed (Cross-Entropy) against these labels.
 
         Returns:
-            `Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]`
 
         Example:
-            ```python
-            >>> # Assumption: *get_visual_embeddings(image)* gets the visual embeddings of the image in the batch.
-            >>> from transformers import AutoTokenizer, VisualBertForVisualReasoning
-            >>> import mindspore
-            ...
-            >>> tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
-            >>> model = VisualBertForVisualReasoning.from_pretrained("uclanlp/visualbert-nlvr2")
-            ...
-            >>> text = "Who is eating the apple?"
-            >>> inputs = tokenizer(text, return_tensors="pt")
-            >>> visual_embeds = get_visual_embeddings(image).unsqueeze(0)
-            >>> visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
-            >>> visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
-            ...
-            >>> inputs.update(
-            ...     {
-            ...         "visual_embeds": visual_embeds,
-            ...         "visual_token_type_ids": visual_token_type_ids,
-            ...         "visual_attention_mask": visual_attention_mask,
-            ...     }
-            ... )
-            ...
-            >>> labels = mindspore.Tensor(1).unsqueeze(0)  # Batch size 1, Num choices 2
-            ...
-            >>> outputs = model(**inputs, labels=labels)
-            >>> loss = outputs.loss
-            >>> scores = outputs.logits
-            ```
-        """
+
+        ```python
+        # Assumption: *get_visual_embeddings(image)* gets the visual embeddings of the image in the batch.
+        from transformers import AutoTokenizer, VisualBertForVisualReasoning
+        import torch
+
+        tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
+        model = VisualBertForVisualReasoning.from_pretrained("uclanlp/visualbert-nlvr2")
+
+        text = "Who is eating the apple?"
+        inputs = tokenizer(text, return_tensors="ms")
+        visual_embeds = get_visual_embeddings(image).unsqueeze(0)
+        visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
+        visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
+
+        inputs.update(
+            {
+                "visual_embeds": visual_embeds,
+                "visual_token_type_ids": visual_token_type_ids,
+                "visual_attention_mask": visual_attention_mask,
+            }
+        )
+
+        labels = mindspore.tensor(1).unsqueeze(0)  # Batch size 1, Num choices 2
+
+        outputs = model(**inputs, labels=labels)
+        loss = outputs.loss
+        scores = outputs.logits
+        ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.visual_bert(
@@ -1243,7 +1235,8 @@ class VisualBertForVisualReasoning(VisualBertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = F.cross_entropy(reshaped_logits, labels.view(-1).astype(mindspore.int32))
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(reshaped_logits, labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1273,7 +1266,7 @@ class VisualBertRegionToPhraseAttention(nn.Module):
         self.key = nn.Linear(config.hidden_size, self.all_head_size)
         self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
-        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
@@ -1291,7 +1284,7 @@ class VisualBertRegionToPhraseAttention(nn.Module):
         query_layer = self.transpose_for_scores(mixed_query_layer)
         key_layer = self.transpose_for_scores(mixed_key_layer)
 
-        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_layer, ops.transpose(key_layer, -1, -2))
 
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
@@ -1300,6 +1293,7 @@ class VisualBertRegionToPhraseAttention(nn.Module):
         attention_scores = attention_scores.squeeze(1)
         return attention_scores
 
+
 class VisualBertForRegionToPhraseAlignment(VisualBertPreTrainedModel):
     _tied_weights_keys = ["cls.predictions.decoder.bias"]
 
@@ -1307,7 +1301,7 @@ class VisualBertForRegionToPhraseAlignment(VisualBertPreTrainedModel):
         super().__init__(config)
 
         self.visual_bert = VisualBertModel(config)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.cls = VisualBertPreTrainingHeads(config)
         self.attention = VisualBertRegionToPhraseAttention(config)
 
@@ -1333,51 +1327,49 @@ class VisualBertForRegionToPhraseAlignment(VisualBertPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
         r"""
-        Args:
-            region_to_phrase_position (`mindspore.Tensor` of shape `(batch_size, total_sequence_length)`, *optional*):
-                The positions depicting the position of the image embedding corresponding to the textual tokens.
+        region_to_phrase_position (`mindspore.Tensor` of shape `(batch_size, total_sequence_length)`, *optional*):
+            The positions depicting the position of the image embedding corresponding to the textual tokens.
 
-            labels (`mindspore.Tensor` of shape `(batch_size, total_sequence_length, visual_sequence_length)`, *optional*):
-                Labels for computing the masked language modeling loss. KLDivLoss is computed against these labels and the
-                outputs from the attention layer.
+        labels (`mindspore.Tensor` of shape `(batch_size, total_sequence_length, visual_sequence_length)`, *optional*):
+            Labels for computing the masked language modeling loss. KLDivLoss is computed against these labels and the
+            outputs from the attention layer.
 
         Returns:
-            `Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]`
 
         Example:
-            ```python
-            >>> # Assumption: *get_visual_embeddings(image)* gets the visual embeddings of the image in the batch.
-            >>> from transformers import AutoTokenizer, VisualBertForRegionToPhraseAlignment
-            >>> import mindspore
-            ...
-            >>> tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
-            >>> model = VisualBertForRegionToPhraseAlignment.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
-            ...
-            >>> text = "Who is eating the apple?"
-            >>> inputs = tokenizer(text, return_tensors="ms")
-            >>> visual_embeds = get_visual_embeddings(image).unsqueeze(0)
-            >>> visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
-            >>> visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
-            >>> region_to_phrase_position = ops.ones((1, inputs["input_ids"].shape[-1] + visual_embeds.shape[-2]))
-            ...
-            >>> inputs.update(
-            ...     {
-            ...         "region_to_phrase_position": region_to_phrase_position,
-            ...         "visual_embeds": visual_embeds,
-            ...         "visual_token_type_ids": visual_token_type_ids,
-            ...         "visual_attention_mask": visual_attention_mask,
-            ...     }
-            ... )
-            ...
-            >>> labels = ops.ones(
-            ...     (1, inputs["input_ids"].shape[-1] + visual_embeds.shape[-2], visual_embeds.shape[-2])
-            ... )  # Batch size 1
-            ...
-            >>> outputs = model(**inputs, labels=labels)
-            >>> loss = outputs.loss
-            >>> scores = outputs.logits
-            ```
-        """
+
+        ```python
+        # Assumption: *get_visual_embeddings(image)* gets the visual embeddings of the image in the batch.
+        from transformers import AutoTokenizer, VisualBertForRegionToPhraseAlignment
+        import torch
+
+        tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
+        model = VisualBertForRegionToPhraseAlignment.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
+
+        text = "Who is eating the apple?"
+        inputs = tokenizer(text, return_tensors="ms")
+        visual_embeds = get_visual_embeddings(image).unsqueeze(0)
+        visual_token_type_ids = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.int64)
+        visual_attention_mask = ops.ones(visual_embeds.shape[:-1], dtype=mindspore.float32)
+        region_to_phrase_position = ops.ones((1, inputs["input_ids"].shape[-1] + visual_embeds.shape[-2]))
+
+        inputs.update(
+            {
+                "region_to_phrase_position": region_to_phrase_position,
+                "visual_embeds": visual_embeds,
+                "visual_token_type_ids": visual_token_type_ids,
+                "visual_attention_mask": visual_attention_mask,
+            }
+        )
+
+        labels = ops.ones(
+            (1, inputs["input_ids"].shape[-1] + visual_embeds.shape[-2], visual_embeds.shape[-2])
+        )  # Batch size 1
+
+        outputs = model(**inputs, labels=labels)
+        loss = outputs.loss
+        scores = outputs.logits
+        ```"""
         if region_to_phrase_position is None:
             raise ValueError("`region_to_phrase_position` should not be None when using Flickr Model.")
 
@@ -1400,16 +1392,17 @@ class VisualBertForRegionToPhraseAlignment(VisualBertPreTrainedModel):
         )
 
         sequence_output = outputs[0]
+
         region_to_phrase_position_mask = (region_to_phrase_position != -1).long()
 
         # Make the -1 become 0
         region_to_phrase_position = region_to_phrase_position * region_to_phrase_position_mask
 
         # Selected_positions = batch x selected position x dim
-        expanded_region_to_phrase_positions = region_to_phrase_position.unsqueeze(2).broadcast_to((
-            region_to_phrase_position.shape[0], region_to_phrase_position.shape[1], sequence_output.shape[2]
-        ))
-        selected_positions = sequence_output.gather_elements(1,expanded_region_to_phrase_positions)
+        expanded_region_to_phrase_positions = region_to_phrase_position.unsqueeze(2).broadcast_to(
+            (region_to_phrase_position.shape[0], region_to_phrase_position.shape[1], sequence_output.shape[2])
+        )
+        selected_positions = ops.gather(sequence_output, 1, expanded_region_to_phrase_positions)
 
         # Visual Features = batch x visual_feature_length x dim
         # This will need separate image and visual masks.
@@ -1429,8 +1422,9 @@ class VisualBertForRegionToPhraseAlignment(VisualBertPreTrainedModel):
             # scores = batch x selected position x visual_feature
             # scores = selected_positions.bmm(visual_features.transpose(1,2))
             # label = batch x selected_postion x needed position
-            loss_fct = F.kl_div(reduction="batchmean")
-            scores = F.log_softmax(logits, dim=-1)
+            loss_fct = KLDivLoss(reduction="batchmean")
+            log_softmax = LogSoftmax(dim=-1)
+            scores = log_softmax(logits)
             loss = loss_fct(scores, labels)
 
         if not return_dict:

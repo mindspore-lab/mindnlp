@@ -253,7 +253,7 @@ class PeftModel(nn.Module):
 
         return load_result
 
-    def get_nb_trainable_parameters(self) -> tuple[int, int]:
+    def get_nb_trainable_parameters(self):
         r"""
         Returns the number of trainable parameters and the number of all parameters in the model.
         """

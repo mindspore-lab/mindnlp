@@ -70,7 +70,7 @@ class SeamlessM4TTokenizer(PreTrainedTokenizer):
         ... )
         >>> example_english_phrase = " UN Chief Says There Is No Military Solution in Syria"
         >>> expected_translation_french = "Le chef de l'ONU affirme qu'il n'y a pas de solution militaire en Syrie."
-        >>> inputs = tokenizer(example_english_phrase, text_target=expected_translation_french, return_tensors="pt")
+        >>> inputs = tokenizer(example_english_phrase, text_target=expected_translation_french, return_tensors="ms")
         ```
 
     Args:

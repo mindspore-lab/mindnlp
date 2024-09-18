@@ -1530,7 +1530,7 @@ class ClvpModelForConditionalGeneration(ClvpPreTrainedModel):
         >>> model = ClvpModelForConditionalGeneration.from_pretrained("susnato/clvp_dev")
 
         >>> # Generate processor output and text embeds
-        >>> processor_output = processor(text=text, return_tensors="pt")
+        >>> processor_output = processor(text=text, return_tensors="ms")
         >>> text_embeds = model.get_text_features(input_ids=processor_output["input_ids"])
         ```
         """
@@ -1602,7 +1602,7 @@ class ClvpModelForConditionalGeneration(ClvpPreTrainedModel):
         >>> model = ClvpModelForConditionalGeneration.from_pretrained("susnato/clvp_dev")
 
         >>> # Generate processor output and model output
-        >>> processor_output = processor(raw_speech=audio, sampling_rate=sr, text=text, return_tensors="pt")
+        >>> processor_output = processor(raw_speech=audio, sampling_rate=sr, text=text, return_tensors="ms")
         >>> speech_embeds = model.get_speech_features(
         ...     input_ids=processor_output["input_ids"], input_features=processor_output["input_features"]
         ... )
@@ -1673,7 +1673,7 @@ class ClvpModelForConditionalGeneration(ClvpPreTrainedModel):
         >>> model = ClvpModelForConditionalGeneration.from_pretrained("susnato/clvp_dev")
 
         >>> # processor outputs and model outputs
-        >>> processor_output = processor(raw_speech=audio, sampling_rate=sr, text=text, return_tensors="pt")
+        >>> processor_output = processor(raw_speech=audio, sampling_rate=sr, text=text, return_tensors="ms")
         >>> outputs = model(
         ...     input_ids=processor_output["input_ids"],
         ...     input_features=processor_output["input_features"],

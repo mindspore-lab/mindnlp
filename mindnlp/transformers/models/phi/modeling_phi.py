@@ -776,7 +776,7 @@ class PhiForCausalLM(PhiPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-1")
 
         >>> prompt = "This is an example script ."
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
+        >>> inputs = tokenizer(prompt, return_tensors="ms")
 
         >>> # Generate
         >>> generate_ids = model.generate(inputs.input_ids, max_length=30)

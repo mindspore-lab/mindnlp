@@ -2404,7 +2404,7 @@ class BridgeTowerModel(BridgeTowerPreTrainedModel):
         >>> processor = BridgeTowerProcessor.from_pretrained("BridgeTower/bridgetower-base")
         >>> model = BridgeTowerModel.from_pretrained("BridgeTower/bridgetower-base")
         ...
-        >>> inputs = processor(image, text, return_tensors="pt")
+        >>> inputs = processor(image, text, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> outputs.keys()
         odict_keys(['text_features', 'image_features', 'pooler_output'])
@@ -2566,7 +2566,7 @@ class BridgeTowerModel(BridgeTowerPreTrainedModel):
             >>> processor = BridgeTowerProcessor.from_pretrained("BridgeTower/bridgetower-base")
             >>> model = BridgeTowerModel.from_pretrained("BridgeTower/bridgetower-base")
             ...
-            >>> inputs = processor(image, text, return_tensors="pt")
+            >>> inputs = processor(image, text, return_tensors="ms")
             >>> outputs = model(**inputs)
             >>> outputs.keys()
             odict_keys(['text_features', 'image_features', 'pooler_output'])
@@ -3072,7 +3072,7 @@ class BridgeTowerForMaskedLM(BridgeTowerPreTrainedModel):
             >>> model = BridgeTowerForMaskedLM.from_pretrained("BridgeTower/bridgetower-base-itm-mlm")
             ...
             >>> # prepare inputs
-            >>> encoding = processor(image, text, return_tensors="pt")
+            >>> encoding = processor(image, text, return_tensors="ms")
             ...
             >>> # forward pass
             >>> outputs = model(**encoding)
@@ -3140,7 +3140,7 @@ class BridgeTowerForImageAndTextRetrieval(BridgeTowerPreTrainedModel):
         >>> model = BridgeTowerForImageAndTextRetrieval.from_pretrained("BridgeTower/bridgetower-base-itm-mlm")
         >>> scores = dict()
         >>> for text in texts:
-        ...     encoding = processor(image, text, return_tensors="pt")
+        ...     encoding = processor(image, text, return_tensors="ms")
         ...     outputs = model(**encoding)
         ...     scores[text] = outputs.logits[0, 1].item()
         ```
@@ -3209,7 +3209,7 @@ class BridgeTowerForImageAndTextRetrieval(BridgeTowerPreTrainedModel):
             >>> scores = dict()
             >>> for text in texts:
             ...     # prepare inputs
-            ...     encoding = processor(image, text, return_tensors="pt")
+            ...     encoding = processor(image, text, return_tensors="ms")
             ...     outputs = model(**encoding)
             ...     scores[text] = outputs.logits[0, 1].item()
             ```
@@ -3384,10 +3384,10 @@ class BridgeTowerForContrastiveLearning(BridgeTowerPreTrainedModel):
             >>> processor = BridgeTowerProcessor.from_pretrained("BridgeTower/bridgetower-large-itm-mlm-itc")
             >>> model = BridgeTowerForContrastiveLearning.from_pretrained("BridgeTower/bridgetower-large-itm-mlm-itc")
             ...
-            >>> inputs = processor(images, texts, padding=True, return_tensors="pt")
+            >>> inputs = processor(images, texts, padding=True, return_tensors="ms")
             >>> loss = model(**inputs, return_loss=True).loss
             ...
-            >>> inputs = processor(images, texts[::-1], padding=True, return_tensors="pt")
+            >>> inputs = processor(images, texts[::-1], padding=True, return_tensors="ms")
             >>> loss_swapped = model(**inputs, return_loss=True).loss
             ...
             >>> print("Loss", round(loss.item(), 4))

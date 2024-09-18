@@ -1933,7 +1933,7 @@ class AltCLIPVisionModel(AltCLIPPreTrainedModel):
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
-            >>> inputs = processor(images=image, return_tensors="pt")
+            >>> inputs = processor(images=image, return_tensors="ms")
             ...
             >>> outputs = model(**inputs)
             >>> last_hidden_state = outputs.last_hidden_state
@@ -2179,7 +2179,7 @@ class AltCLIPTextModel(AltCLIPPreTrainedModel):
         >>> model = AltCLIPTextModel.from_pretrained("BAAI/AltCLIP")
         >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
         >>> texts = ["it's a cat", "it's a dog"]
-        >>> inputs = processor(text=texts, padding=True, return_tensors="pt")
+        >>> inputs = processor(text=texts, padding=True, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> last_hidden_state = outputs.last_hidden_state
         >>> pooled_output = outputs.pooler_output  # pooled CLS states
@@ -2296,7 +2296,7 @@ class AltCLIPTextModel(AltCLIPPreTrainedModel):
             ...
             >>> texts = ["it's a cat", "it's a dog"]
             ...
-            >>> inputs = processor(text=texts, padding=True, return_tensors="pt")
+            >>> inputs = processor(text=texts, padding=True, return_tensors="ms")
             ...
             >>> outputs = model(**inputs)
             >>> last_hidden_state = outputs.last_hidden_state
@@ -2360,7 +2360,7 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
         >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
         >>> image_features = model.get_image_features(**inputs)
         ...
         >>> model = AltCLIPModel.from_pretrained("BAAI/AltCLIP")
@@ -2368,7 +2368,7 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
         >>> inputs = processor(
-        ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
+        ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="ms", padding=True
         ... )
         >>> outputs = model(**inputs)
         >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
@@ -2443,7 +2443,7 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
             ...
             >>> model = AltCLIPModel.from_pretrained("BAAI/AltCLIP")
             >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
-            >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+            >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
             >>> text_features = model.get_text_features(**inputs)
             ```
         """
@@ -2491,7 +2491,7 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
             >>> processor = AutoProcessor.from_pretrained("BAAI/AltCLIP")
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
-            >>> inputs = processor(images=image, return_tensors="pt")
+            >>> inputs = processor(images=image, return_tensors="ms")
             >>> image_features = model.get_image_features(**inputs)
             ```
         """
@@ -2542,7 +2542,7 @@ class AltCLIPModel(AltCLIPPreTrainedModel):
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
             >>> inputs = processor(
-            ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
+            ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="ms", padding=True
             ... )
             >>> outputs = model(**inputs)
             >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score

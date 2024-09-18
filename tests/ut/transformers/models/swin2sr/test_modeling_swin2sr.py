@@ -12,26 +12,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the MindSpore Swin2SR model."""
+"""Testing suite for the PyTorch Swin2SR model."""
 
 import unittest
-import numpy as np
 
 from mindnlp.transformers import Swin2SRConfig
-from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow, is_mindspore_available, is_vision_available
+from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow
+from mindnlp.utils import is_mindspore_available, is_vision_available
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_tensor, ids_tensor
+# from ...test_pipeline_mixin import PipelineTesterMixin
+
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn
+    from mindnlp.core import nn, ops, no_grad
 
     from mindnlp.transformers import Swin2SRForImageSuperResolution, Swin2SRModel
 
 if is_vision_available():
     from PIL import Image
-
     from mindnlp.transformers import Swin2SRImageProcessor
 
 
@@ -129,7 +130,7 @@ class Swin2SRModelTester:
 
     def create_and_check_model(self, config, pixel_values, labels):
         model = Swin2SRModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values)
 
         self.parent.assertEqual(
@@ -138,7 +139,7 @@ class Swin2SRModelTester:
 
     def create_and_check_for_image_super_resolution(self, config, pixel_values, labels):
         model = Swin2SRForImageSuperResolution(config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values)
 
         expected_image_size = self.image_size * self.upscale
@@ -156,7 +157,7 @@ class Swin2SRModelTester:
 
 @require_mindspore
 class Swin2SRModelTest(ModelTesterMixin, unittest.TestCase):
-    all_model_classes = (Swin2SRForImageSuperResolution,) if is_mindspore_available() else ()
+    all_model_classes = (Swin2SRModel, Swin2SRForImageSuperResolution) if is_mindspore_available() else ()
     pipeline_model_mapping = (
         {"image-feature-extraction": Swin2SRModel, "image-to-image": Swin2SRForImageSuperResolution}
         if is_mindspore_available()
@@ -167,18 +168,20 @@ class Swin2SRModelTest(ModelTesterMixin, unittest.TestCase):
     test_pruning = False
     test_resize_embeddings = False
     test_head_masking = False
+    test_torchscript = False
 
     def setUp(self):
         self.model_tester = Swin2SRModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=Swin2SRConfig, embed_dim=37)
+        self.config_tester = ConfigTester(
+            self,
+            config_class=Swin2SRConfig,
+            embed_dim=37,
+            has_text_modality=False,
+            common_properties=["image_size", "patch_size", "num_channels"],
+        )
 
     def test_config(self):
-        self.config_tester.create_and_test_config_to_json_string()
-        self.config_tester.create_and_test_config_to_json_file()
-        self.config_tester.create_and_test_config_from_and_save_pretrained()
-        self.config_tester.create_and_test_config_with_num_labels()
-        self.config_tester.check_config_can_be_init_without_params()
-        self.config_tester.check_config_arguments_init()
+        self.config_tester.run_common_tests()
 
     def test_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -188,7 +191,8 @@ class Swin2SRModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_for_image_super_resolution(*config_and_inputs)
 
-    @unittest.skip(reason="MindSpore need mpirun to launch multi-process for data_parallel")
+    # TODO: check if this works again for PyTorch 2.x.y
+    @unittest.skip(reason="Got `CUDA error: misaligned address` with PyTorch 2.0.0.")
     def test_multi_gpu_data_parallel_forward(self):
         pass
 
@@ -223,7 +227,7 @@ class Swin2SRModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             self.assertIsInstance(model.get_input_embeddings(), (nn.Module))
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     @slow
     def test_model_from_pretrained(self):
@@ -238,7 +242,7 @@ class Swin2SRModelTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            for name, param in model.parameters_and_names():
+            for name, param in model.named_parameters():
                 if "logit_scale" in name:
                     continue
                 if param.requires_grad:
@@ -257,8 +261,9 @@ class Swin2SRModelTest(ModelTesterMixin, unittest.TestCase):
             inputs_dict["output_hidden_states"] = False
             config.return_dict = True
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.attentions
             expected_num_attentions = len(self.model_tester.depths)
             self.assertEqual(len(attentions), expected_num_attentions)
@@ -268,8 +273,9 @@ class Swin2SRModelTest(ModelTesterMixin, unittest.TestCase):
             config.output_attentions = True
             window_size_squared = config.window_size**2
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.attentions
             self.assertEqual(len(attentions), expected_num_attentions)
 
@@ -283,8 +289,9 @@ class Swin2SRModelTest(ModelTesterMixin, unittest.TestCase):
             inputs_dict["output_attentions"] = True
             inputs_dict["output_hidden_states"] = True
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             self.assertEqual(out_len + 1, len(outputs))
 
@@ -310,12 +317,34 @@ class Swin2SRModelIntegrationTest(unittest.TestCase):
         inputs = processor(images=image, return_tensors="ms")
 
         # forward pass
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
 
         # verify the logits
         expected_shape = (1, 3, 976, 1296)
         self.assertEqual(outputs.reconstruction.shape, expected_shape)
-        expected_slice = mindspore.Tensor(
+        expected_slice = mindspore.tensor(
             [[0.5458, 0.5546, 0.5638], [0.5526, 0.5565, 0.5651], [0.5396, 0.5426, 0.5621]]
         )
-        self.assertTrue(np.allclose(outputs.reconstruction[0, 0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(outputs.reconstruction[0, 0, :3, :3], expected_slice, atol=1e-4))
+
+    def test_inference_fp16(self):
+        processor = Swin2SRImageProcessor()
+        model = Swin2SRForImageSuperResolution.from_pretrained(
+            "caidas/swin2SR-classical-sr-x2-64", torch_dtype=mindspore.float16
+        )
+
+        image = Image.open("./tests/fixtures/tests_samples/COCO/000000039769.png")
+        inputs = processor(images=image, return_tensors="ms").to(model.dtype)
+
+        # forward pass
+        with no_grad():
+            outputs = model(**inputs)
+
+        # verify the logits
+        expected_shape = (1, 3, 976, 1296)
+        self.assertEqual(outputs.reconstruction.shape, expected_shape)
+        expected_slice = mindspore.tensor(
+            [[0.5454, 0.5542, 0.5640], [0.5518, 0.5562, 0.5649], [0.5391, 0.5425, 0.5620]], dtype=model.dtype
+        )
+        self.assertTrue(ops.allclose(outputs.reconstruction[0, 0, :3, :3], expected_slice, atol=1e-4))

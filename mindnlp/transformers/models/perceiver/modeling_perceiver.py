@@ -711,7 +711,7 @@ class PerceiverModel(PerceiverPreTrainedModel):
         >>> # you can then do a forward pass as follows:
         >>> tokenizer = PerceiverTokenizer()
         >>> text = "hello world"
-        >>> inputs = tokenizer(text, return_tensors="pt").input_ids
+        >>> inputs = tokenizer(text, return_tensors="ms").input_ids
 
         >>> with no_grad():
         ...     outputs = model(inputs=inputs)
@@ -757,7 +757,7 @@ class PerceiverModel(PerceiverPreTrainedModel):
         >>> image_processor = PerceiverImageProcessor()
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> inputs = image_processor(image, return_tensors="pt").pixel_values
+        >>> inputs = image_processor(image, return_tensors="ms").pixel_values
 
         >>> with no_grad():
         ...     outputs = model(inputs=inputs)
@@ -929,10 +929,10 @@ class PerceiverForMaskedLM(PerceiverPreTrainedModel):
 
         >>> # training
         >>> text = "This is an incomplete sentence where some words are missing."
-        >>> inputs = tokenizer(text, padding="max_length", return_tensors="pt")
+        >>> inputs = tokenizer(text, padding="max_length", return_tensors="ms")
         >>> # mask " missing."
         >>> inputs["input_ids"][0, 52:61] = tokenizer.mask_token_id
-        >>> labels = tokenizer(text, padding="max_length", return_tensors="pt").input_ids
+        >>> labels = tokenizer(text, padding="max_length", return_tensors="ms").input_ids
 
         >>> outputs = model(**inputs, labels=labels)
         >>> loss = outputs.loss
@@ -945,7 +945,7 @@ class PerceiverForMaskedLM(PerceiverPreTrainedModel):
 
         >>> # inference
         >>> text = "This is an incomplete sentence where some words are missing."
-        >>> encoding = tokenizer(text, padding="max_length", return_tensors="pt")
+        >>> encoding = tokenizer(text, padding="max_length", return_tensors="ms")
 
         >>> # mask bytes corresponding to " missing.". Note that the model performs much better if the masked span starts with a space.
         >>> encoding["input_ids"][0, 52:61] = tokenizer.mask_token_id
@@ -1048,7 +1048,7 @@ class PerceiverForSequenceClassification(PerceiverPreTrainedModel):
         >>> model = PerceiverForSequenceClassification.from_pretrained("deepmind/language-perceiver")
 
         >>> text = "hello world"
-        >>> inputs = tokenizer(text, return_tensors="pt").input_ids
+        >>> inputs = tokenizer(text, return_tensors="ms").input_ids
         >>> outputs = model(inputs=inputs)
         >>> logits = outputs.logits
         >>> list(logits.shape)
@@ -1172,7 +1172,7 @@ class PerceiverForImageClassificationLearned(PerceiverPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("deepmind/vision-perceiver-learned")
         >>> model = PerceiverForImageClassificationLearned.from_pretrained("deepmind/vision-perceiver-learned")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt").pixel_values
+        >>> inputs = image_processor(images=image, return_tensors="ms").pixel_values
         >>> outputs = model(inputs=inputs)
         >>> logits = outputs.logits
         >>> list(logits.shape)
@@ -1301,7 +1301,7 @@ class PerceiverForImageClassificationFourier(PerceiverPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("deepmind/vision-perceiver-fourier")
         >>> model = PerceiverForImageClassificationFourier.from_pretrained("deepmind/vision-perceiver-fourier")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt").pixel_values
+        >>> inputs = image_processor(images=image, return_tensors="ms").pixel_values
         >>> outputs = model(inputs=inputs)
         >>> logits = outputs.logits
         >>> list(logits.shape)
@@ -1429,7 +1429,7 @@ class PerceiverForImageClassificationConvProcessing(PerceiverPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("deepmind/vision-perceiver-conv")
         >>> model = PerceiverForImageClassificationConvProcessing.from_pretrained("deepmind/vision-perceiver-conv")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt").pixel_values
+        >>> inputs = image_processor(images=image, return_tensors="ms").pixel_values
         >>> outputs = model(inputs=inputs)
         >>> logits = outputs.logits
         >>> list(logits.shape)

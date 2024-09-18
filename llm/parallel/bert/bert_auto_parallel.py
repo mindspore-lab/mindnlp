@@ -184,7 +184,6 @@ def parallel_setup():
     mindspore.reset_auto_parallel_context()
     mindspore.set_auto_parallel_context(parallel_mode=mindspore.ParallelMode.AUTO_PARALLEL, search_mode="sharding_propagation")
     mindspore.set_context(mode=mindspore.GRAPH_MODE)
-    mindspore.set_context(device_target="GPU")
 
 if __name__ == "__main__":
     parallel_setup()

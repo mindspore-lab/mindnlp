@@ -29,7 +29,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 
 if is_mindspore_available():
     import mindspore as ms
-    from mindspore import ops
+    from mindnlp.core import ops
     from mindnlp.transformers.models.auto.modeling_auto import (
         MODEL_FOR_PRETRAINING_MAPPING,
         MODEL_FOR_QUESTION_ANSWERING_MAPPING,
@@ -39,7 +39,6 @@ if is_mindspore_available():
         LxmertForQuestionAnswering,
         LxmertModel,
     )
-
 
 class LxmertModelTester:
     def __init__(

@@ -1565,7 +1565,7 @@ class RobertaForCausalLM(RobertaPreTrainedModel):
             >>> config.is_decoder = True
             >>> model = RobertaForCausalLM.from_pretrained("roberta-base", config=config)
             ...
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> prediction_logits = outputs.logits

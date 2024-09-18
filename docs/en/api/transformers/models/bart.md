@@ -1,5 +1,4 @@
 :::mindnlp.transformers.models.bart.configuration_bart.BartConfig
-:::mindnlp.transformers.models.bart.modeling_bart.BART_PRETRAINED_MODEL_ARCHIVE_LIST
 :::mindnlp.transformers.models.bart.modeling_bart.BartForCausalLM
 :::mindnlp.transformers.models.bart.modeling_bart.BartForConditionalGeneration
 :::mindnlp.transformers.models.bart.modeling_bart.BartForQuestionAnswering

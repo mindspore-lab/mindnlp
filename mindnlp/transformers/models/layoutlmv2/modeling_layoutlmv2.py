@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2018 The Microsoft Research Asia LayoutLM Team Authors and the HuggingFace Inc. team.
+# Copyright 2021 Microsoft Research The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,21 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Mindnlp LayoutLMv2 model."""
+"""MindSpore LayoutLMv2 model."""
 
 import math
 from typing import Optional, Tuple, Union
 
 import mindspore
-import numpy as np
-from mindspore import Tensor, Parameter
+from mindnlp.core import nn, ops, no_grad
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-from mindspore.common.initializer import Normal, initializer, Constant
-
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
-from ...ms_utils import apply_chunking_to_forward
-from ....utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -36,48 +30,22 @@ from ...modeling_outputs import (
     TokenClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
+from ...ms_utils import apply_chunking_to_forward
+from ....utils import logging
 from .configuration_layoutlmv2 import LayoutLMv2Config
 from .visual_backbone import build_resnet_fpn_backbone
+
 
 logger = logging.get_logger(__name__)
 
 _CHECKPOINT_FOR_DOC = "microsoft/layoutlmv2-base-uncased"
 _CONFIG_FOR_DOC = "LayoutLMv2Config"
 
-LAYOUTLMV2_PRETRAINED_MODEL_ARCHIVE_LIST = [
-    "microsoft/layoutlmv2-base-uncased",
-    "microsoft/layoutlmv2-large-uncased",
-]
-
 
 class LayoutLMv2Embeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings."""
+
     def __init__(self, config):
-        """
-        Initializes the LayoutLMv2Embeddings class with the provided configuration.
-        
-        Args:
-            self: The instance of the LayoutLMv2Embeddings class.
-            config:
-                An object containing configuration parameters for the embeddings.
-
-                - vocab_size (int): The size of the vocabulary.
-                - hidden_size (int): The size of the hidden layers.
-                - pad_token_id (int): The padding token ID.
-                - max_position_embeddings (int): The maximum position embeddings.
-                - max_2d_position_embeddings (int): The maximum 2D position embeddings.
-                - coordinate_size (int): The size of coordinate embeddings.
-                - shape_size (int): The size of shape embeddings.
-                - type_vocab_size (int): The size of the token type vocabulary.
-                - layer_norm_eps (float): The epsilon value for LayerNorm.
-                - hidden_dropout_prob (float): The dropout probability.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         super(LayoutLMv2Embeddings, self).__init__()
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
@@ -88,30 +56,14 @@ class LayoutLMv2Embeddings(nn.Module):
         self.w_position_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.shape_size)
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
 
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-        self.position_ids = mindspore.Tensor(np.arange(0, config.max_position_embeddings)).broadcast_to(
-                (1, -1))
+        self.register_buffer(
+            "position_ids", ops.arange(config.max_position_embeddings).expand((1, -1)), persistent=False
+        )
 
     def _calc_spatial_position_embeddings(self, bbox):
-        """
-        This method calculates spatial position embeddings based on the provided bounding box coordinates.
-
-        Args:
-            self: An instance of the LayoutLMv2Embeddings class.
-            bbox: A tensor containing bounding box coordinates in the shape (batch_size, num_boxes, 4).
-                The four coordinates represent the left, upper, right, and lower positions of each bounding box.
-                The values should be within the range of 0 to 1000.
-
-        Returns:
-            spatial_position_embeddings: A tensor containing the calculated spatial position embeddings.
-                The embeddings include left, upper, right, and lower position embeddings,
-                as well as height and width position embeddings concatenated along the last dimension.
-
-        Raises:
-            IndexError: Raised if the coordinate values in bbox are outside the valid range of 0 to 1000.
-        """
         try:
             left_position_embeddings = self.x_position_embeddings(bbox[:, :, 0])
             upper_position_embeddings = self.y_position_embeddings(bbox[:, :, 1])
@@ -138,31 +90,7 @@ class LayoutLMv2Embeddings(nn.Module):
 
 
 class LayoutLMv2SelfAttention(nn.Module):
-    """
-    LayoutLMv2SelfAttention is the self-attention layer for LayoutLMv2. It is based on the implementation of
-    """
     def __init__(self, config):
-        """
-        Initializes the LayoutLMv2SelfAttention class.
-
-        Args:
-            self (LayoutLMv2SelfAttention): An instance of the LayoutLMv2SelfAttention class.
-            config (object): The configuration object that contains the settings for the self-attention layer.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If the hidden size is not a multiple of the number of attention heads and the configuration
-                object does not have an 'embedding_size' attribute.
-
-        This method initializes the LayoutLMv2SelfAttention class by setting the necessary attributes and layers.
-        It checks if the hidden size is divisible by the number of attention heads and raises a ValueError if not.
-        The method also determines if the fast_qkv (fast query, key, value) method should be used based on the configuration.
-        If fast_qkv is enabled, it creates a dense layer for the query, key, and value (qkv_linear), along with biases
-        (q_bias and v_bias). Otherwise, it creates separate dense layers for query, key, and value. Finally, it sets the
-        dropout layer based on the configuration's attention_probs_dropout_prob value.
-        """
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
             raise ValueError(
@@ -179,55 +107,29 @@ class LayoutLMv2SelfAttention(nn.Module):
 
         if config.fast_qkv:
             self.qkv_linear = nn.Linear(config.hidden_size, 3 * self.all_head_size, bias=False)
-            self.q_bias = Parameter(initializer(Constant(0.0), [1, 1, self.all_head_size], mindspore.float32))
-            self.v_bias = Parameter(initializer(Constant(0.0), [1, 1, self.all_head_size], mindspore.float32))
+            self.q_bias = nn.Parameter(ops.zeros(1, 1, self.all_head_size))
+            self.v_bias = nn.Parameter(ops.zeros(1, 1, self.all_head_size))
         else:
             self.query = nn.Linear(config.hidden_size, self.all_head_size)
             self.key = nn.Linear(config.hidden_size, self.all_head_size)
             self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
-        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
-        """
-        Args:
-            self (LayoutLMv2SelfAttention): The instance of the LayoutLMv2SelfAttention class.
-            x (tensor): The input tensor to be transposed for attention scores calculation.
-
-        Returns:
-            tensor: The transposed tensor for attention scores calculation. 
-                It has the shape (batch_size, num_attention_heads, sequence_length, attention_head_size).
-
-        Raises:
-            None
-        """
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
     def compute_qkv(self, hidden_states):
-        """
-        This method computes the query, key, and value tensors for LayoutLMv2 self-attention mechanism.
-
-        Args:
-            self (LayoutLMv2SelfAttention): The instance of LayoutLMv2SelfAttention class.
-            hidden_states (tensor): The input tensor representing the hidden states.
-
-        Returns:
-            (tuple): A tuple containing the query (q), key (k), and value (v) tensors.
-
-        Raises:
-            ValueError: If the dimensions of the query (q) tensor and the q_bias tensor do not match.
-            ValueError: If the dimensions of the value (v) tensor and the v_bias tensor do not match.
-        """
         if self.fast_qkv:
             qkv = self.qkv_linear(hidden_states)
             q, k, v = ops.chunk(qkv, 3, dim=-1)
-            if q.ndimension() == self.q_bias.ndimension():
+            if q.ndim == self.q_bias.ndim:
                 q = q + self.q_bias
                 v = v + self.v_bias
             else:
-                _sz = (1,) * (q.ndimension() - 1) + (-1,)
+                _sz = (1,) * (q.ndim - 1) + (-1,)
                 q = q + self.q_bias.view(*_sz)
                 v = v + self.v_bias.view(*_sz)
         else:
@@ -237,44 +139,14 @@ class LayoutLMv2SelfAttention(nn.Module):
         return q, k, v
 
     def forward(
-            self,
-            hidden_states,
-            attention_mask=None,
-            head_mask=None,
-            output_attentions=False,
-            rel_pos=None,
-            rel_2d_pos=None,
+        self,
+        hidden_states,
+        attention_mask=None,
+        head_mask=None,
+        output_attentions=False,
+        rel_pos=None,
+        rel_2d_pos=None,
     ):
-        """
-        Constructs the self-attention mechanism for the LayoutLMv2 model.
-
-        Args:
-            self (LayoutLMv2SelfAttention): The instance of the LayoutLMv2SelfAttention class.
-            hidden_states (Tensor): The input hidden states with shape (batch_size, sequence_length, hidden_size).
-            attention_mask (Tensor, optional): The attention mask with shape (batch_size, sequence_length). 
-                It is a binary mask where 1's indicate the positions to attend and 0's indicate the positions to
-                ignore. Defaults to None.
-            head_mask (Tensor, optional): The head mask with shape (num_heads,) or (num_layers, num_heads). 
-                It masks the attention weights of specific heads. Defaults to None.
-            output_attentions (bool, optional): Whether to output the attention probabilities. Defaults to False.
-            rel_pos (Tensor, optional): The relative position bias with shape 
-                (num_heads, sequence_length, sequence_length). It contains relative position information between 
-                each token pair. Defaults to None.
-            rel_2d_pos (Tensor, optional): The relative 2D position bias with shape 
-                (num_heads, sequence_length, sequence_length). It contains relative 2D position information 
-                between each token pair. Defaults to None.
-
-        Returns:
-            tuple: A tuple containing the context layer and attention probabilities 
-                if output_attentions is True, otherwise only the context layer.
-                
-                - context_layer (Tensor): The output context layer with shape (batch_size, sequence_length, hidden_size).
-                - attention_probs (Tensor, optional): The attention probabilities with shape 
-                (batch_size, num_heads, sequence_length, sequence_length) if output_attentions is True.
-
-        Raises:
-            None
-        """
         q, k, v = self.compute_qkv(hidden_states)
 
         # (B, L, H*D) -> (B, H, L, D)
@@ -284,16 +156,15 @@ class LayoutLMv2SelfAttention(nn.Module):
 
         query_layer = query_layer / math.sqrt(self.attention_head_size)
         # [BSZ, NAT, L, L]
-        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_layer, ops.transpose(key_layer, -1, -2))
         if self.has_relative_attention_bias:
             attention_scores += rel_pos
         if self.has_spatial_attention_bias:
             attention_scores += rel_2d_pos
-        attention_scores = ops.masked_fill(
-            attention_scores.astype(mindspore.float32), ops.stop_gradient(attention_mask.astype(mindspore.bool_)),
-            float("-1e10")
+        attention_scores = attention_scores.float().masked_fill(
+            attention_mask.to(mindspore.bool_), float(ops.finfo(attention_scores.dtype).min)
         )
-        attention_probs = ops.softmax(attention_scores, dim=-1, dtype=mindspore.float32).type_as(value_layer)
+        attention_probs = nn.functional.softmax(attention_scores, dim=-1, dtype=mindspore.float32).type_as(value_layer)
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
         attention_probs = self.dropout(attention_probs)
@@ -312,55 +183,20 @@ class LayoutLMv2SelfAttention(nn.Module):
 
 
 class LayoutLMv2Attention(nn.Module):
-    """
-    LayoutLMv2Attention is the attention layer for LayoutLMv2. It is based on the implementation of
-    """
     def __init__(self, config):
-        """
-        Initialize the LayoutLMv2Attention class.
-
-        Args:
-            self (LayoutLMv2Attention): The instance of the LayoutLMv2Attention class.
-            config: Represents the configuration settings for the LayoutLMv2Attention instance.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         super().__init__()
         self.self = LayoutLMv2SelfAttention(config)
         self.output = LayoutLMv2SelfOutput(config)
 
     def forward(
-            self,
-            hidden_states,
-            attention_mask=None,
-            head_mask=None,
-            output_attentions=False,
-            rel_pos=None,
-            rel_2d_pos=None,
+        self,
+        hidden_states,
+        attention_mask=None,
+        head_mask=None,
+        output_attentions=False,
+        rel_pos=None,
+        rel_2d_pos=None,
     ):
-        """
-        This method 'forward' is defined in the class 'LayoutLMv2Attention' and is responsible for
-        forwarding the attention mechanism in the LayoutLMv2 model.
-
-        Args:
-            self (LayoutLMv2Attention): The instance of the LayoutLMv2Attention class.
-            hidden_states (torch.Tensor): The input hidden states to the attention mechanism.
-            attention_mask (torch.Tensor, optional): Mask to prevent attention to certain positions. Default is None.
-            head_mask (torch.Tensor, optional): Mask to hide certain heads of the attention mechanism. Default is None.
-            output_attentions (bool): Whether to output attentions weights. Default is False.
-            rel_pos (torch.Tensor, optional): Relative position encoding. Default is None.
-            rel_2d_pos (torch.Tensor, optional): 2D relative position encoding. Default is None.
-
-        Returns:
-            tuple: A tuple containing the attention output and additional outputs from the attention mechanism.
-
-        Raises:
-            None
-        """
         self_outputs = self.self(
             hidden_states,
             attention_mask,
@@ -375,51 +211,13 @@ class LayoutLMv2Attention(nn.Module):
 
 
 class LayoutLMv2SelfOutput(nn.Module):
-    """
-    LayoutLMv2SelfOutput is the output layer for LayoutLMv2Attention. It is based on the implementation of BertSelfOutput.
-    """
     def __init__(self, config):
-        """
-        Initializes the LayoutLMv2SelfOutput class.
-
-        Args:
-            self (object): The instance of the class.
-            config (object):
-                An object containing configuration parameters.
-
-                - hidden_size (int): The size of the hidden state.
-                - layer_norm_eps (float): The epsilon value for LayerNorm.
-                - hidden_dropout_prob (float): The dropout probability for hidden layers.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states, input_tensor):
-        """
-        Constructs the self-attention output of the LayoutLMv2 transformer model.
-
-        Args:
-            self (LayoutLMv2SelfOutput): An instance of the LayoutLMv2SelfOutput class.
-            hidden_states (torch.Tensor): The input hidden states tensor of shape (batch_size, sequence_length, hidden_size).
-                These are the intermediate outputs of the self-attention layer.
-            input_tensor (torch.Tensor): The input tensor of shape (batch_size, sequence_length, hidden_size).
-                This tensor represents the input embeddings to the self-attention layer.
-
-        Returns:
-            torch.Tensor: The output tensor of shape (batch_size, sequence_length, hidden_size).
-                This tensor represents the forwarded self-attention output.
-
-        Raises:
-            None.
-        """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
@@ -428,32 +226,7 @@ class LayoutLMv2SelfOutput(nn.Module):
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate with Bert->LayoutLMv2
 class LayoutLMv2Intermediate(nn.Module):
-    """
-    LayoutLMv2Intermediate is a simple feedforward network. It is based on the implementation of BertIntermediate.
-    """
     def __init__(self, config):
-        """
-        Initialize the LayoutLMv2Intermediate class.
-
-        Args:
-            self (object): The current instance of the class.
-            config (object): An object containing configuration parameters for the intermediate layer.
-                It must have the following attributes:
-
-                - hidden_size (int): The size of the hidden layer.
-                - intermediate_size (int): The size of the intermediate layer.
-                - hidden_act (str or function): The activation function for the hidden layer.
-                If a string, it should be a key in the ACT2FN dictionary.
-
-        Returns:
-            None.
-
-        Raises:
-            TypeError: If the config parameter is not provided.
-            ValueError: If the config parameter does not contain the required attributes.
-            KeyError: If the hidden activation function specified in the config parameter
-                is not found in the ACT2FN dictionary.
-        """
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
@@ -462,23 +235,6 @@ class LayoutLMv2Intermediate(nn.Module):
             self.intermediate_act_fn = config.hidden_act
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-        """
-        Method 'forward' in the class 'LayoutLMv2Intermediate'.
-
-        Args:
-            self: LayoutLMv2Intermediate object.
-                Represents the instance of the LayoutLMv2Intermediate class.
-            hidden_states: mindspore.Tensor.
-                Input tensor containing hidden states that need to be processed.
-
-        Returns:
-            mindspore.Tensor.
-                Processed hidden states returned after passing through the dense layer
-                and intermediate activation function.
-
-        Raises:
-            None.
-        """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
@@ -486,48 +242,13 @@ class LayoutLMv2Intermediate(nn.Module):
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->LayoutLM
 class LayoutLMv2Output(nn.Module):
-    """
-    LayoutLMv2Output is the output layer for LayoutLMv2Intermediate. It is based on the implementation of BertOutput.
-    """
     def __init__(self, config):
-        """
-        Initializes a new instance of the LayoutLMv2Output class.
-
-        Args:
-            self: The instance of the LayoutLMv2Output class.
-            config: An object containing configuration parameters for the LayoutLMv2Output model.
-
-        Returns:
-            None.
-
-        Raises:
-            TypeError: If the config parameter is not of the expected type.
-            ValueError: If the config parameters do not meet the required constraints.
-            RuntimeError: If an error occurs during the initialization process.
-        """
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
-        """
-        Constructs the LayoutLMv2Output for the given hidden states and input tensor.
-
-        Args:
-            self (LayoutLMv2Output): An instance of the LayoutLMv2Output class.
-            hidden_states (mindspore.Tensor): A tensor representing the hidden states.
-                This tensor is expected to have a shape of (batch_size, sequence_length, hidden_size).
-            input_tensor (mindspore.Tensor): A tensor representing the input.
-                This tensor is expected to have the same shape as the hidden states.
-
-        Returns:
-            mindspore.Tensor: A tensor representing the forwarded LayoutLMv2Output.
-                This tensor has the same shape as the hidden states.
-
-        Raises:
-            None.
-        """
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
@@ -535,27 +256,7 @@ class LayoutLMv2Output(nn.Module):
 
 
 class LayoutLMv2Layer(nn.Module):
-    """
-    LayoutLMv2Layer is made up of self-attention and feedforward network. It is based on the implementation of BertLayer.
-    """
     def __init__(self, config):
-        """Initialize a LayoutLMv2Layer.
-
-        Args:
-            self: Instance of the LayoutLMv2Layer class.
-            config:
-                Configuration object containing parameters for the layer initialization.
-
-                - Type: object
-                - Purpose: To configure the layer with specific settings.
-                - Restrictions: Must be a valid configuration object.
-
-        Returns:
-            None
-
-        Raises:
-            TypeError: If the config parameter is not of the expected type.
-        """
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
@@ -564,42 +265,14 @@ class LayoutLMv2Layer(nn.Module):
         self.output = LayoutLMv2Output(config)
 
     def forward(
-            self,
-            hidden_states,
-            attention_mask=None,
-            head_mask=None,
-            output_attentions=False,
-            rel_pos=None,
-            rel_2d_pos=None,
+        self,
+        hidden_states,
+        attention_mask=None,
+        head_mask=None,
+        output_attentions=False,
+        rel_pos=None,
+        rel_2d_pos=None,
     ):
-        """
-        Constructs a LayoutLMv2Layer by applying the attention mechanism and feed-forward neural network to
-        the input hidden states.
-
-        Args:
-            self: An instance of the LayoutLMv2Layer class.
-            hidden_states (torch.Tensor): The input hidden states of shape `(batch_size, sequence_length, hidden_size)`.
-            attention_mask (torch.Tensor, optional): The attention mask tensor of shape `(batch_size, sequence_length)`.
-                Defaults to None.
-            head_mask (torch.Tensor, optional): The tensor to mask selected heads of the multi-head attention module.
-                Defaults to None.
-            output_attentions (bool, optional): Whether to output the attention weights. Defaults to False.
-            rel_pos (torch.Tensor, optional): The tensor of relative position encoding of shape
-                `(batch_size, num_heads, sequence_length, sequence_length)`. Defaults to None.
-            rel_2d_pos (torch.Tensor, optional): The tensor of 2D relative position encoding of shape
-                `(batch_size, num_heads, sequence_length, sequence_length, 2)`. Defaults to None.
-
-        Returns:
-            outputs (tuple):
-                A tuple of the following tensors:
-
-                - layer_output (torch.Tensor): The output tensor of shape `(batch_size, sequence_length, hidden_size)`.
-                - attention_weights (torch.Tensor, optional): The attention weights tensor of shape
-                `(batch_size, num_heads, sequence_length, sequence_length)`. Only returned if `output_attentions=True`.
-
-        Raises:
-            None.
-        """
         self_attention_outputs = self.attention(
             hidden_states,
             attention_mask,
@@ -620,90 +293,57 @@ class LayoutLMv2Layer(nn.Module):
         return outputs
 
     def feed_forward_chunk(self, attention_output):
-        """
-        Performs a feed forward operation on the given attention output in the LayoutLMv2Layer.
-
-        Args:
-            self (LayoutLMv2Layer): An instance of the LayoutLMv2Layer class.
-            attention_output: The attention output tensor to be processed.
-                It should have shape (batch_size, sequence_length, hidden_size).
-
-        Returns:
-            None: This method modifies the internal state of the LayoutLMv2Layer instance.
-
-        Raises:
-            None.
-
-        """
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
         return layer_output
 
 
-def relative_position_bucket(
-        relative_position, bidirectional=True, num_buckets=32, max_distance=128
-):
-    '''Calculate the relative position bucket.
+def relative_position_bucket(relative_position, bidirectional=True, num_buckets=32, max_distance=128):
+    """
+    Adapted from Mesh Tensorflow:
+    https://github.com/tensorflow/mesh/blob/0cb87fe07da627bf0b7e60475d59f95ed6b5be3d/mesh_tensorflow/transformer/transformer_layers.py#L593
+    Translate relative position to a bucket number for relative attention. The relative position is defined as
+    memory_position - query_position, i.e. the distance in tokens from the attending position to the attended-to
+    position. If bidirectional=False, then positive relative positions are invalid. We use smaller buckets for small
+    absolute relative_position and larger buckets for larger absolute relative_positions. All relative positions
+    >=max_distance map to the same bucket. All relative positions <=-max_distance map to the same bucket. This should
+    allow for more graceful generalization to longer sequences than the model has been trained on.
 
     Args:
-        relative_position (mindspore.Tensor): A tensor containing the relative position.
-        bidirectional (bool): A boolean flag indicating whether to use bidirectional buckets (default: True).
-        num_buckets (int): An integer specifying the number of buckets to use (default: 32).
-        max_distance (int): An integer representing the maximum distance to bucket (default: 128).
+        relative_position: an int32 Tensor
+        bidirectional: a boolean - whether the attention is bidirectional
+        num_buckets: an integer
+        max_distance: an integer
 
     Returns:
-        mindspore.Tensor: A tensor containing the calculated relative position bucket.
+        a Tensor with the same shape as relative_position, containing int32 values in the range [0, num_buckets)
+    """
 
-    Raises:
-        TypeError: If the input tensor 'relative_position' is not a valid tensor.
-        ValueError: If the 'num_buckets' or 'max_distance' values are less than or equal to zero.
-    '''
     ret = 0
     if bidirectional:
         num_buckets //= 2
-        ret += (relative_position > 0).astype(mindspore.int64) * num_buckets
+        ret += (relative_position > 0).long() * num_buckets
         n = ops.abs(relative_position)
     else:
-        n = ops.maximum(
-            -relative_position, ops.zeros_like(relative_position)
-        )  # to be confirmed
-    # Now n is in the range [0, inf)
+        n = ops.max(-relative_position, ops.zeros_like(relative_position))
+    # now n is in the range [0, inf)
+
     # half of the buckets are for exact increments in positions
     max_exact = num_buckets // 2
     is_small = n < max_exact
 
     # The other half of the buckets are for logarithmically bigger bins in positions up to max_distance
     val_if_large = max_exact + (
-            ops.log(n.astype(mindspore.float32) / max_exact) / math.log(max_distance / max_exact) * (
-            num_buckets - max_exact)
-    ).astype(mindspore.int64)
-
-    val_if_large = ops.minimum(
-        val_if_large, ops.full_like(val_if_large, num_buckets - 1)
-    )
+        ops.log(n.float() / max_exact) / math.log(max_distance / max_exact) * (num_buckets - max_exact)
+    ).to(mindspore.int64)
+    val_if_large = ops.minimum(val_if_large, ops.full_like(val_if_large, num_buckets - 1))
 
     ret += ops.where(is_small, n, val_if_large)
     return ret
 
 
 class LayoutLMv2Encoder(nn.Module):
-    """
-    LayoutLMv2Encoder is a stack of LayoutLMv2Layer. It is based on the implementation of BertEncoder.
-    """
     def __init__(self, config):
-        '''
-        Initializes a LayoutLMv2Encoder object.
-
-        Args:
-            config (object): The configuration object containing the parameters for the LayoutLMv2Encoder.
-                It is used to initialize various attributes of the LayoutLMv2Encoder.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        '''
         super().__init__()
         self.config = config
         self.layer = nn.ModuleList([LayoutLMv2Layer(config) for _ in range(config.num_hidden_layers)])
@@ -725,50 +365,21 @@ class LayoutLMv2Encoder(nn.Module):
         self.gradient_checkpointing = False
 
     def _calculate_1d_position_embeddings(self, position_ids):
-        """
-        This method calculates 1D position embeddings for the LayoutLMv2Encoder.
-
-        Args:
-            self (LayoutLMv2Encoder): The instance of the LayoutLMv2Encoder class.
-            position_ids (torch.Tensor): A 1D tensor representing the position IDs of tokens.
-                It is used to calculate the relative position embeddings.
-                Expected to be a tensor of shape (batch_size,) with integer values representing the position IDs.
-
-        Returns:
-            None: This method does not return a value. It updates the internal state of the LayoutLMv2Encoder instance
-                to store the calculated relative position embeddings.
-
-        Raises:
-            RuntimeError: If the input position_ids tensor is not a torch.Tensor or has an incorrect shape.
-            ValueError: If the number of buckets specified for relative position bucketing (rel_pos_bins) is less than 1.
-            ValueError: If the max_distance for relative position bucketing (max_rel_pos) is less than 1.
-        """
         rel_pos_mat = position_ids.unsqueeze(-2) - position_ids.unsqueeze(-1)
         rel_pos = relative_position_bucket(
             rel_pos_mat,
             num_buckets=self.rel_pos_bins,
             max_distance=self.max_rel_pos,
         )
-        rel_pos = self.rel_pos_bias.weight.t()[rel_pos].permute(0, 3, 1, 2)
+        # Since this is a simple indexing operation that is independent of the input,
+        # no need to track gradients for this operation
+        #
+        # Without this no_grad context, training speed slows down significantly
+        with no_grad():
+            rel_pos = self.rel_pos_bias.weight.t()[rel_pos].permute(0, 3, 1, 2)
         return rel_pos
 
     def _calculate_2d_position_embeddings(self, bbox):
-        """
-        Method to calculate 2D position embeddings based on the given bounding box.
-
-        Args:
-            self (LayoutLMv2Encoder): The instance of the LayoutLMv2Encoder class.
-            bbox (torch.Tensor): A 3D tensor representing the bounding box coordinates with shape
-                (batch_size, num_boxes, 4). The bounding box tensor contains the x and y coordinates of the top-left
-                and bottom-right corners of each box.
-
-        Returns:
-            None: This method does not return any value directly.
-                It calculates and updates the relative 2D position embeddings.
-
-        Raises:
-            None.
-        """
         position_coord_x = bbox[:, :, 0]
         position_coord_y = bbox[:, :, 3]
         rel_pos_x_2d_mat = position_coord_x.unsqueeze(-2) - position_coord_x.unsqueeze(-1)
@@ -783,44 +394,27 @@ class LayoutLMv2Encoder(nn.Module):
             num_buckets=self.rel_2d_pos_bins,
             max_distance=self.max_rel_2d_pos,
         )
-        rel_pos_x = self.rel_pos_x_bias.weight.t()[rel_pos_x].permute(0, 3, 1, 2)
-        rel_pos_y = self.rel_pos_y_bias.weight.t()[rel_pos_y].permute(0, 3, 1, 2)
+        # Since this is a simple indexing operation that is independent of the input,
+        # no need to track gradients for this operation
+        #
+        # Without this no_grad context, training speed slows down significantly
+        with no_grad():
+            rel_pos_x = self.rel_pos_x_bias.weight.t()[rel_pos_x].permute(0, 3, 1, 2)
+            rel_pos_y = self.rel_pos_y_bias.weight.t()[rel_pos_y].permute(0, 3, 1, 2)
         rel_2d_pos = rel_pos_x + rel_pos_y
         return rel_2d_pos
 
     def forward(
-            self,
-            hidden_states,
-            attention_mask=None,
-            head_mask=None,
-            output_attentions=False,
-            output_hidden_states=False,
-            return_dict=True,
-            bbox=None,
-            position_ids=None,
+        self,
+        hidden_states,
+        attention_mask=None,
+        head_mask=None,
+        output_attentions=False,
+        output_hidden_states=False,
+        return_dict=True,
+        bbox=None,
+        position_ids=None,
     ):
-        """
-        This method forwards the LayoutLMv2Encoder.
-
-        Args:
-            self: The instance of the class LayoutLMv2Encoder.
-            hidden_states (Tensor): The input hidden states to the encoder.
-            attention_mask (Tensor, optional): Mask to avoid performing attention on padding token indices.
-            head_mask (List, optional): Mask for attention heads. Defaults to None.
-            output_attentions (bool, optional): Whether to output attentions. Defaults to False.
-            output_hidden_states (bool, optional): Whether to output hidden states. Defaults to False.
-            return_dict (bool, optional): Whether to return the output as a dictionary. Defaults to True.
-            bbox (Tensor, optional): Bounding box coordinates for spatial attention bias. Defaults to None.
-            position_ids (Tensor, optional): Position IDs for relative positional embeddings. Defaults to None.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If the input parameters are not in the expected format.
-            RuntimeError: If an error occurs during the execution of the method.
-            IndexError: If there is an issue with accessing elements in the head_mask list.
-        """
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
 
@@ -882,56 +476,38 @@ class LayoutLMv2PreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-    _keys_to_ignore_on_load_unexpected = ['num_batches_tracked']
+
     config_class = LayoutLMv2Config
-    pretrained_model_archive_map = LAYOUTLMV2_PRETRAINED_MODEL_ARCHIVE_LIST
     base_model_prefix = "layoutlmv2"
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range),
-                                             cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            if cell.padding_idx is not None:
-                weight[cell.padding_idx] = 0
-            cell.weight.set_data(Tensor(weight, dtype=cell.weight.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        if isinstance(module, nn.Linear):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight[module.padding_idx] = 0
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
+        elif isinstance(module, LayoutLMv2Model):
+            if hasattr(module, "visual_segment_embedding"):
+                nn.init.normal_(module.visual_segment_embedding, mean=0.0, std=self.config.initializer_range)
 
 
 class LayoutLMv2VisualBackbone(nn.Module):
-    """
-    LayoutLMv2VisualBackbone is a visual backbone for LayoutLMv2. It is based on the implementation of VisualBackboneBase.
-    """
     def __init__(self, config):
-        """
-        Initializes an instance of the LayoutLMv2VisualBackbone class.
-
-        Args:
-            self: The instance of the class itself.
-            config: An object that contains configuration parameters.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If the lengths of the pixel mean and pixel standard deviation in the configuration are not equal.
-        """
-        super(LayoutLMv2VisualBackbone, self).__init__()
+        super().__init__()
         self.cfg = config.get_detectron2_config()
         self.backbone = build_resnet_fpn_backbone(self.cfg)
 
-        if len(self.cfg.MODEL.PIXEL_MEAN) != len(self.cfg.MODEL.PIXEL_STD):
-            raise ValueError(
-                "cfg.model.pixel_mean is not equal with cfg.model.pixel_std."
-            )
+        assert len(self.cfg.MODEL.PIXEL_MEAN) == len(self.cfg.MODEL.PIXEL_STD)
         num_channels = len(self.cfg.MODEL.PIXEL_MEAN)
-
         self.register_buffer(
             "pixel_mean",
             mindspore.Tensor(self.cfg.MODEL.PIXEL_MEAN).view(num_channels, 1, 1),
@@ -941,103 +517,29 @@ class LayoutLMv2VisualBackbone(nn.Module):
             "pixel_std", mindspore.Tensor(self.cfg.MODEL.PIXEL_STD).view(num_channels, 1, 1), persistent=False
         )
         self.out_feature_key = "p2"
-        # if torch.are_deterministic_algorithms_enabled():
-        #     logger.warning("using `AvgPool2d` instead of `AdaptiveAvgPool2d`")
-        #     input_shape = (224, 224)
-        #     backbone_stride = self.backbone.output_shape()[self.out_feature_key].stride
-        #     self.pool = nn.AvgPool2d(
-        #         (
-        #             math.ceil(math.ceil(input_shape[0] / backbone_stride) / config.image_feature_pool_shape[0]),
-        #             math.ceil(math.ceil(input_shape[1] / backbone_stride) / config.image_feature_pool_shape[1]),
-        #         )
-        #     )
-        # else:
         self.pool = nn.AdaptiveAvgPool2d(tuple(config.image_feature_pool_shape[:2]))
         if len(config.image_feature_pool_shape) == 2:
             config.image_feature_pool_shape.append(self.backbone.output_shape()[self.out_feature_key].channels)
         assert self.backbone.output_shape()[self.out_feature_key].channels == config.image_feature_pool_shape[2]
 
     def forward(self, images):
-        """
-        This method 'forward' is defined within the class 'LayoutLMv2VisualBackbone'
-        and is responsible for processing images through the visual backbone network.
-
-        Args:
-            self:
-                An instance of the 'LayoutLMv2VisualBackbone' class.
-
-                - Type: LayoutLMv2VisualBackbone
-                - Purpose: Represents the current instance of the LayoutLMv2VisualBackbone class.
-
-            images:
-                The input images to be processed by the visual backbone.
-
-                - Type: N-dimensional array
-                - Purpose: Represents the input images for processing.
-                - Restrictions: Must be compatible with the model input size.
-
-        Returns:
-            features:
-                The processed features of the input images after passing through the visual backbone network.
-
-                - Type: Numpy array
-                - Purpose: Represents the extracted features from the input images.
-
-        Raises:
-            None.
-        """
-        images_input = (images - self.pixel_mean) / self.pixel_std
+        images_input = ((images if ops.is_tensor(images) else images.tensor) - self.pixel_mean) / self.pixel_std
         features = self.backbone(images_input)
         for item in features:
             if item[0] == self.out_feature_key:
                 features = item[1]
-        features = self.pool(features)
-        return features.flatten(start_dim=2).transpose(0, 2, 1)
+
+        features = ops.transpose(self.pool(features).flatten(start_dim=2), 1, 2)
+        return features
 
 
 class LayoutLMv2Pooler(nn.Module):
-    """
-    LayoutLMv2Pooler is a simple feedforward network. It is based on the implementation of BertPooler.
-    """
     def __init__(self, config):
-        """
-        Initializes a new instance of the LayoutLMv2Pooler class.
-
-        Args:
-            self (LayoutLMv2Pooler): The current instance of the LayoutLMv2Pooler class.
-            config: The configuration object specifying the settings for the LayoutLMv2Pooler.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
     def forward(self, hidden_states):
-        """
-        Constructs the pooled output tensor for the LayoutLMv2Pooler class.
-
-        Args:
-            self: An instance of the LayoutLMv2Pooler class.
-            hidden_states (torch.Tensor): A tensor of shape (batch_size, sequence_length, hidden_size)
-                representing the hidden states of the input sequence.
-
-        Returns:
-            torch.Tensor: A tensor of shape (batch_size, hidden_size) representing the pooled output.
-
-        Raises:
-            None.
-
-        This method takes the hidden states of the input sequence and applies pooling to obtain a
-        pooled output tensor. It first selects the first token tensor from the hidden states tensor
-        using slicing, and then passes it through a dense layer. The resulting tensor is then
-        activated using the specified activation function. Finally, the pooled output tensor is
-        returned.
-        """
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
         first_token_tensor = hidden_states[:, 0]
@@ -1047,41 +549,18 @@ class LayoutLMv2Pooler(nn.Module):
 
 
 class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
-    """
-    LayoutLMv2Model is a LayoutLMv2 model with a visual backbone. It is based on the implementation of LayoutLMv2Model.
-    """
     def __init__(self, config):
-        """
-        Initializes an instance of the LayoutLMv2Model class.
-
-        Args:
-            self: The instance of the LayoutLMv2Model class.
-            config:
-                A configuration object containing various settings and hyperparameters for the model.
-
-                - Type: dict
-                - Purpose: Configure the model with specific settings.
-                - Restrictions: Must contain specific keys and values required by the model.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If the provided configuration is missing required keys or has invalid values.
-            TypeError: If the configuration object is not of the expected type.
-        """
         super().__init__(config)
         self.config = config
         self.has_visual_segment_embedding = config.has_visual_segment_embedding
-        self.use_visual_backbone = config.use_visual_backbone
         self.embeddings = LayoutLMv2Embeddings(config)
-        if self.use_visual_backbone is True:
-            self.visual = LayoutLMv2VisualBackbone(config)
-            self.visual_proj = nn.Linear(config.image_feature_pool_shape[-1], config.hidden_size)
+
+        self.visual = LayoutLMv2VisualBackbone(config)
+        self.visual_proj = nn.Linear(config.image_feature_pool_shape[-1], config.hidden_size)
         if self.has_visual_segment_embedding:
-            self.visual_segment_embedding = Parameter(nn.Embedding(1, config.hidden_size).weight[0])
-        self.visual_LayerNorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
-        self.visual_dropout = nn.Dropout(p=config.hidden_dropout_prob)
+            self.visual_segment_embedding = nn.Parameter(nn.Embedding(1, config.hidden_size).weight[0])
+        self.visual_LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.visual_dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.encoder = LayoutLMv2Encoder(config)
         self.pooler = LayoutLMv2Pooler(config)
@@ -1090,63 +569,12 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-        """
-        This method returns the input embeddings of the LayoutLMv2Model.
-
-        Args:
-            self: The instance of the LayoutLMv2Model class.
-
-        Returns:
-            None: This method returns the input embeddings of the LayoutLMv2Model.
-                The input embeddings are of type 'None'.
-
-        Raises:
-            None.
-        """
         return self.embeddings.word_embeddings
 
     def set_input_embeddings(self, value):
-        """
-        Sets the input embeddings for the LayoutLMv2Model.
-
-        Args:
-            self (LayoutLMv2Model): An instance of the LayoutLMv2Model class.
-            value: The input embeddings to be set. It should be a tensor or any object that can be assigned to
-                the word_embeddings attribute of the embeddings object.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         self.embeddings.word_embeddings = value
 
     def _calc_text_embeddings(self, input_ids, bbox, position_ids, token_type_ids, inputs_embeds=None):
-        """
-        Calculates the text embeddings for the LayoutLMv2Model.
-
-        Args:
-            self (LayoutLMv2Model): The instance of the LayoutLMv2Model class.
-            input_ids (Tensor): The input tensor of shape [batch_size, seq_length] containing the input token IDs.
-            bbox (Tensor): The input tensor of shape [batch_size, seq_length, 4]
-                containing the bounding box coordinates for each token.
-            position_ids (Tensor): The input tensor of shape [batch_size, seq_length]
-                containing the positional IDs for each token.
-            token_type_ids (Tensor): The input tensor of shape [batch_size, seq_length]
-                containing the token type IDs for each token.
-            inputs_embeds (Tensor, optional): The optional input tensor of shape [batch_size, seq_length, hidden_size]
-                containing pre-computed embeddings.
-
-        Returns:
-            Tensor: The resulting tensor of shape [batch_size, seq_length, hidden_size] containing
-                the calculated text embeddings.
-
-        Raises:
-            MindSporeError: If the input_ids and inputs_embeds tensors have incompatible shapes.
-            MindSporeError: If the position_ids and input_ids tensors have incompatible shapes.
-            MindSporeError: If the token_type_ids and input_ids tensors have incompatible shapes.
-        """
         if input_ids is not None:
             input_shape = input_ids.shape
         else:
@@ -1162,7 +590,6 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
 
         if inputs_embeds is None:
             inputs_embeds = self.embeddings.word_embeddings(input_ids)
-
         position_embeddings = self.embeddings.position_embeddings(position_ids)
         spatial_position_embeddings = self.embeddings._calc_spatial_position_embeddings(bbox)
         token_type_embeddings = self.embeddings.token_type_embeddings(token_type_ids)
@@ -1173,106 +600,52 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         return embeddings
 
     def _calc_img_embeddings(self, image, bbox, position_ids):
-        """
-        Calculate image embeddings for the LayoutLMv2Model.
-
-        Args:
-            self (LayoutLMv2Model): The instance of the LayoutLMv2Model class.
-            image (numpy.ndarray): The input image for which embeddings need to be calculated.
-            bbox (numpy.ndarray): The bounding box coordinates associated with the image.
-            position_ids (numpy.ndarray): The position IDs used for positional embeddings.
-
-        Returns:
-            The calculated embeddings are stored within the class instance.
-
-        Raises:
-            ValueError: If the image is None and visual backbone is required.
-            TypeError: If the image data type cannot be converted to 'mindspore.float32'.
-            AssertionError: If an unexpected condition occurs while calculating embeddings.
-        """
-        use_image_info = self.use_visual_backbone and image is not None
+        visual_embeddings = self.visual_proj(self.visual(image))
         position_embeddings = self.embeddings.position_embeddings(position_ids)
-        spatial_position_embeddings = self.embeddings._calc_spatial_position_embeddings(
-            bbox
-        )
-        if use_image_info:
-            visual_embeddings = self.visual_proj(self.visual(image.astype(mindspore.float32)))
-            embeddings = (
-                    visual_embeddings + position_embeddings + spatial_position_embeddings
-            )
-        else:
-            embeddings = position_embeddings + spatial_position_embeddings
+        spatial_position_embeddings = self.embeddings._calc_spatial_position_embeddings(bbox)
+        embeddings = visual_embeddings + position_embeddings + spatial_position_embeddings
         if self.has_visual_segment_embedding:
             embeddings += self.visual_segment_embedding
         embeddings = self.visual_LayerNorm(embeddings)
         embeddings = self.visual_dropout(embeddings)
         return embeddings
 
-    def _calc_visual_bbox(self, image_feature_pool_shape, bbox, visual_shape):
-        '''
-        Calculate the visual bounding box based on the given image features.
-
-        Args:
-            self (LayoutLMv2Model): An instance of the LayoutLMv2Model class.
-            image_feature_pool_shape (tuple): The shape of the image feature pool as (y_size, x_size).
-            bbox (tensor): The bounding box tensor.
-            visual_shape (tuple): The desired shape of the visual bounding box.
-
-        Returns:
-            visual_bbox (tensor): The calculated visual bounding box tensor.
-
-        Raises:
-            None.
-        '''
-        x_size = image_feature_pool_shape[1]
-        y_size = image_feature_pool_shape[0]
-        visual_bbox_x = mindspore.Tensor(
-            np.arange(0, 1000 * (x_size + 1), 1000) // x_size, dtype=mindspore.int64
+    def _calc_visual_bbox(self, image_feature_pool_shape, bbox, final_shape):
+        visual_bbox_x = ops.div(
+            ops.arange(
+                0,
+                1000 * (image_feature_pool_shape[1] + 1),
+                1000,
+                dtype=bbox.dtype,
+            ),
+            self.config.image_feature_pool_shape[1],
+            rounding_mode="floor",
         )
-        visual_bbox_y = mindspore.Tensor(
-            np.arange(0, 1000 * (y_size + 1), 1000) // y_size, dtype=mindspore.int64
+        visual_bbox_y = ops.div(
+            ops.arange(
+                0,
+                1000 * (self.config.image_feature_pool_shape[0] + 1),
+                1000,
+                dtype=bbox.dtype,
+            ),
+            self.config.image_feature_pool_shape[0],
+            rounding_mode="floor",
         )
-        expand_shape = image_feature_pool_shape[0:2]
-        expand_shape = tuple(expand_shape)
         visual_bbox = ops.stack(
             [
-                visual_bbox_x[:-1].broadcast_to(expand_shape),
-                visual_bbox_y[:-1].broadcast_to(expand_shape[::-1]).transpose((1, 0)),
-                visual_bbox_x[1:].broadcast_to(expand_shape),
-                visual_bbox_y[1:].broadcast_to(expand_shape[::-1]).transpose((1, 0)),
+                visual_bbox_x[:-1].tile((image_feature_pool_shape[0], 1)),
+                ops.transpose(visual_bbox_y[:-1].tile((image_feature_pool_shape[1], 1)), 0, 1),
+                visual_bbox_x[1:].tile((image_feature_pool_shape[0], 1)),
+                ops.transpose(visual_bbox_y[1:].tile((image_feature_pool_shape[1], 1)), 0, 1),
             ],
             dim=-1,
-        ).reshape((expand_shape[0] * expand_shape[1], bbox.shape[-1]))
-        visual_bbox = visual_bbox.broadcast_to(
-            (visual_shape[0], visual_bbox.shape[0], visual_bbox.shape[1])
-        )
+        ).view(-1, bbox.shape[-1])
+
+        visual_bbox = visual_bbox.tile((final_shape[0], 1, 1))
+
         return visual_bbox
 
     def _get_input_shape(self, input_ids=None, inputs_embeds=None):
-        """
-        Returns the shape of the input tensor for the LayoutLMv2Model.
-
-        Args:
-            self (LayoutLMv2Model): The instance of the LayoutLMv2Model class.
-            input_ids (Optional[torch.Tensor]): The input tensor representing the tokenized input sequence.
-                Default: None.
-            inputs_embeds (Optional[torch.Tensor]): The input tensor representing the embedded input sequence.
-                Default: None.
-
-        Returns:
-            torch.Size or Tuple[int]: The shape of the input tensor, excluding the batch size dimension.
-
-        Raises:
-            ValueError: If both input_ids and inputs_embeds are specified.
-            ValueError: If neither input_ids nor inputs_embeds are specified.
-
-        Note:
-            - It is required to specify either input_ids or inputs_embeds.
-            - If input_ids is specified, the shape of the input_ids tensor is returned.
-            - If inputs_embeds is specified, the shape of the inputs_embeds tensor,
-            excluding the last dimension, is returned.
-            - The shape represents the dimensions of the input tensor, excluding the batch size dimension.
-        """
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
         elif input_ids is not None:
@@ -1283,48 +656,48 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
     def forward(
-            self,
-            input_ids: Optional[mindspore.Tensor] = None,
-            bbox: Optional[mindspore.Tensor] = None,
-            image: Optional[mindspore.Tensor] = None,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            token_type_ids: Optional[mindspore.Tensor] = None,
-            position_ids: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            inputs_embeds: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            return_dict: Optional[bool] = None,
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        bbox: Optional[mindspore.Tensor] = None,
+        image: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Return:
-            Union[Tuple, BaseModelOutputWithPooling]
 
-        Example:
-            ```python
-            >>> from transformers import AutoProcessor, LayoutLMv2Model, set_seed
-            >>> from PIL import Image
-            >>> import torch
-            >>> from datasets import load_dataset
-            ...
-            >>> set_seed(88)
-            ...
-            >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased")
-            >>> model = LayoutLMv2Model.from_pretrained("microsoft/layoutlmv2-base-uncased")
-            ...
-            ...
-            >>> dataset = load_dataset("hf-internal-testing/fixtures_docvqa")
-            >>> image_path = dataset["test"][0]["file"]
-            >>> image = Image.open(image_path).convert("RGB")
-            ...
-            >>> encoding = processor(image, return_tensors="pt")
-            ...
-            >>> outputs = model(**encoding)
-            >>> last_hidden_states = outputs.last_hidden_state
-            ...
-            >>> last_hidden_states.shape
-            ops.Size([1, 342, 768])
-            ```
+        Examples:
+
+        ```python
+        >>> from transformers import AutoProcessor, LayoutLMv2Model, set_seed
+        >>> from PIL import Image
+        >>> import torch
+        >>> from datasets import load_dataset
+
+        >>> set_seed(0)
+
+        >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased")
+        >>> model = LayoutLMv2Model.from_pretrained("microsoft/layoutlmv2-base-uncased")
+
+
+        >>> dataset = load_dataset("hf-internal-testing/fixtures_docvqa", trust_remote_code=True)
+        >>> image_path = dataset["test"][0]["file"]
+        >>> image = Image.open(image_path).convert("RGB")
+
+        >>> encoding = processor(image, return_tensors="ms")
+
+        >>> outputs = model(**encoding)
+        >>> last_hidden_states = outputs.last_hidden_state
+
+        >>> last_hidden_states.shape
+        [1, 342, 768])
+        ```
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1336,11 +709,9 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
 
         visual_shape = list(input_shape)
         visual_shape[1] = self.config.image_feature_pool_shape[0] * self.config.image_feature_pool_shape[1]
-        # visual_shape = ops.Size(visual_shape)
         # needs a new copy of input_shape for tracing. Otherwise wrong dimensions will occur
         final_shape = list(self._get_input_shape(input_ids, inputs_embeds))
         final_shape[1] += visual_shape[1]
-        # final_shape = ops.Size(final_shape)
 
         visual_bbox = self._calc_visual_bbox(self.config.image_feature_pool_shape, bbox, final_shape)
         final_bbox = ops.cat([bbox, visual_bbox], dim=1)
@@ -1348,8 +719,7 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         if attention_mask is None:
             attention_mask = ops.ones(input_shape)
 
-        visual_attention_mask = ops.ones(tuple(visual_shape), dtype=mindspore.float32)
-        attention_mask = attention_mask.astype(visual_attention_mask.dtype)
+        visual_attention_mask = ops.ones(visual_shape, dtype=attention_mask.dtype)
         final_attention_mask = ops.cat([attention_mask, visual_attention_mask], dim=1)
 
         if token_type_ids is None:
@@ -1358,12 +728,11 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         if position_ids is None:
             seq_length = input_shape[1]
             position_ids = self.embeddings.position_ids[:, :seq_length]
-            position_ids = position_ids.broadcast_to(input_shape)
+            position_ids = position_ids.expand(input_shape)
 
-        visual_position_ids = mindspore.Tensor(np.arange(0, visual_shape[1])).broadcast_to(
-            (input_shape[0], visual_shape[1])
+        visual_position_ids = ops.arange(0, visual_shape[1], dtype=mindspore.int64).tile(
+            (input_shape[0], 1)
         )
-        position_ids = position_ids.astype(visual_position_ids.dtype)
         final_position_ids = ops.cat([position_ids, visual_position_ids], dim=1)
 
         if bbox is None:
@@ -1390,13 +759,12 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         extended_attention_mask = (1.0 - extended_attention_mask) * float(ops.finfo(self.dtype).min)
 
         if head_mask is not None:
-            if head_mask.ndim == 1:
+            if head_mask.dim() == 1:
                 head_mask = head_mask.unsqueeze(0).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
-                head_mask = head_mask.broadcast_to(self.config.num_hidden_layers, -1, -1, -1, -1)
-            elif head_mask.ndim == 2:
+                head_mask = head_mask.expand(self.config.num_hidden_layers, -1, -1, -1, -1)
+            elif head_mask.dim() == 2:
                 head_mask = head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
-            head_mask_dtype = next(iter(self.parameters_dict().items()))[1].dtype
-            head_mask = head_mask.to(dtype=head_mask_dtype)
+            head_mask = head_mask.to(dtype=next(self.parameters()).dtype)
         else:
             head_mask = [None] * self.config.num_hidden_layers
 
@@ -1425,109 +793,74 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
 
 
 class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
-    """
-    LayoutLMv2ForSequenceClassification is a LayoutLMv2 model with a sequence classification head on top (a linear
-    layer on top of the pooled output) It is based on the implementation of LayoutLMv2ForSequenceClassification.
-    """
     def __init__(self, config):
-        """
-        Initializes a new instance of the LayoutLMv2ForSequenceClassification class.
-
-        Args:
-            self: The object instance.
-            config:
-                An instance of the LayoutLMv2Config class containing the configuration parameters for the model.
-
-                - Type: LayoutLMv2Config
-                - Purpose: Specifies the model's configuration parameters.
-                - Restrictions: None
-
-        Returns:
-            None
-
-        Raises:
-            None
-        """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.layoutlmv2 = LayoutLMv2Model(config)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.classifier = nn.Linear(config.hidden_size * 3, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
     def get_input_embeddings(self):
-        """
-        Method to retrieve the input embeddings from the LayoutLMv2 model for sequence classification.
-
-        Args:
-            self: LayoutLMv2ForSequenceClassification object.
-                Represents the instance of the LayoutLMv2ForSequenceClassification class.
-
-        Returns:
-            None: This method returns None as it simply retrieves the input embeddings without any additional processing.
-
-        Raises:
-            None.
-        """
         return self.layoutlmv2.embeddings.word_embeddings
 
     def forward(
-            self,
-            input_ids: Optional[mindspore.Tensor] = None,
-            bbox: Optional[mindspore.Tensor] = None,
-            image: Optional[mindspore.Tensor] = None,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            token_type_ids: Optional[mindspore.Tensor] = None,
-            position_ids: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            inputs_embeds: Optional[mindspore.Tensor] = None,
-            labels: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            return_dict: Optional[bool] = None,
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        bbox: Optional[mindspore.Tensor] = None,
+        image: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
-        Args:
-            labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
 
         Returns:
-            Union[Tuple, SequenceClassifierOutput]
 
         Example:
-            ```python
-            >>> from transformers import AutoProcessor, LayoutLMv2ForSequenceClassification, set_seed
-            >>> from PIL import Image
-            >>> import torch
-            >>> from datasets import load_dataset
-            ...
-            >>> set_seed(88)
-            ...
-            >>> dataset = load_dataset("rvl_cdip", split="train", streaming=True)
-            >>> data = next(iter(dataset))
-            >>> image = data["image"].convert("RGB")
-            ...
-            >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased")
-            >>> model = LayoutLMv2ForSequenceClassification.from_pretrained(
-            ...     "microsoft/layoutlmv2-base-uncased", num_labels=dataset.info.features["label"].num_classes
-            ... )
-            ...
-            >>> encoding = processor(image, return_tensors="pt")
-            >>> sequence_label = torch.tensor([data["label"]])
-            ...
-            >>> outputs = model(**encoding, labels=sequence_label)
-            ...
-            >>> loss, logits = outputs.loss, outputs.logits
-            >>> predicted_idx = logits.argmax(dim=-1).item()
-            >>> predicted_answer = dataset.info.features["label"].names[4]
-            >>> predicted_idx, predicted_answer
-            (4, 'advertisement')
-            ```
+
+        ```python
+        >>> from transformers import AutoProcessor, LayoutLMv2ForSequenceClassification, set_seed
+        >>> from PIL import Image
+        >>> import torch
+        >>> from datasets import load_dataset
+
+        >>> set_seed(0)
+
+        >>> dataset = load_dataset("aharley/rvl_cdip", split="train", streaming=True, trust_remote_code=True)
+        >>> data = next(iter(dataset))
+        >>> image = data["image"].convert("RGB")
+
+        >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased")
+        >>> model = LayoutLMv2ForSequenceClassification.from_pretrained(
+        ...     "microsoft/layoutlmv2-base-uncased", num_labels=dataset.info.features["label"].num_classes
+        ... )
+
+        >>> encoding = processor(image, return_tensors="ms")
+        >>> sequence_label = mindspore.tensor([data["label"]])
+
+        >>> outputs = model(**encoding, labels=sequence_label)
+
+        >>> loss, logits = outputs.loss, outputs.logits
+        >>> predicted_idx = logits.argmax(dim=-1).item()
+        >>> predicted_answer = dataset.info.features["label"].names[4]
+        >>> predicted_idx, predicted_answer  # results are not good without further fine-tuning
+        (7, 'advertisement')
+        ```
         """
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if input_ids is not None and inputs_embeds is not None:
@@ -1583,8 +916,8 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
         cls_final_output = sequence_output[:, 0, :]
 
         # average-pool the visual embeddings
-        pooled_initial_image_embeddings = initial_image_embeddings.mean(axis=1)
-        pooled_final_image_embeddings = final_image_embeddings.mean(axis=1)
+        pooled_initial_image_embeddings = ops.mean(initial_image_embeddings, dim=1)
+        pooled_final_image_embeddings = ops.mean(final_image_embeddings, dim=1)
         # concatenate with cls_final_output
         sequence_output = ops.cat(
             [cls_final_output, pooled_initial_image_embeddings, pooled_final_image_embeddings], dim=1
@@ -1610,7 +943,7 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1).astype(mindspore.int32))
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -1627,117 +960,83 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
 
 
 class LayoutLMv2ForTokenClassification(LayoutLMv2PreTrainedModel):
-    """
-    LayoutLMv2ForTokenClassification is a LayoutLMv2 model with a token classification head.
-    It is based on the implementation of LayoutLMv2ForTokenClassification.
-    """
     def __init__(self, config):
-        """
-        Initializes a LayoutLMv2ForTokenClassification instance.
-
-        Args:
-            self (LayoutLMv2ForTokenClassification): The instance of the LayoutLMv2ForTokenClassification class.
-            config:
-                An object containing the configuration settings for the LayoutLMv2 model.
-
-                - Type: LayoutLMv2Config
-                - Purpose: Specifies the configuration parameters for the model.
-                - Restrictions: Must be an instance of LayoutLMv2Config.
-
-        Returns:
-            None.
-
-        Raises:
-            TypeError: If the 'config' parameter is not an instance of LayoutLMv2Config.
-        """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.layoutlmv2 = LayoutLMv2Model(config)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
 
     def get_input_embeddings(self):
-        """
-        Returns the input embeddings for LayoutLMv2ForTokenClassification.
-
-        Args:
-            self: An instance of the LayoutLMv2ForTokenClassification class.
-
-        Returns:
-            None: The method returns the input embeddings for the LayoutLMv2ForTokenClassification.
-
-        Raises:
-            None.
-        """
         return self.layoutlmv2.embeddings.word_embeddings
 
     def forward(
-            self,
-            input_ids: Optional[mindspore.Tensor] = None,
-            bbox: Optional[mindspore.Tensor] = None,
-            image: Optional[mindspore.Tensor] = None,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            token_type_ids: Optional[mindspore.Tensor] = None,
-            position_ids: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            inputs_embeds: Optional[mindspore.Tensor] = None,
-            labels: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            return_dict: Optional[bool] = None,
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        bbox: Optional[mindspore.Tensor] = None,
+        image: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
-        Args:
-            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
 
         Returns:
-            Union[Tuple, TokenClassifierOutput]
 
         Example:
-            ```python
-            >>> from transformers import AutoProcessor, LayoutLMv2ForTokenClassification, set_seed
-            >>> from PIL import Image
-            >>> from datasets import load_dataset
-            ...
-            >>> set_seed(88)
-            ...
-            >>> datasets = load_dataset("nielsr/funsd", split="test")
-            >>> labels = datasets.features["ner_tags"].feature.names
-            >>> id2label = {v: k for v, k in enumerate(labels)}
-            ...
-            >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased", revision="no_ocr")
-            >>> model = LayoutLMv2ForTokenClassification.from_pretrained(
-            ...     "microsoft/layoutlmv2-base-uncased", num_labels=len(labels)
-            ... )
-            ...
-            >>> data = datasets[0]
-            >>> image = Image.open(data["image_path"]).convert("RGB")
-            >>> words = data["words"]
-            >>> boxes = data["bboxes"]  # make sure to normalize your bounding boxes
-            >>> word_labels = data["ner_tags"]
-            >>> encoding = processor(
-            ...     image,
-            ...     words,
-            ...     boxes=boxes,
-            ...     word_labels=word_labels,
-            ...     padding="max_length",
-            ...     truncation=True,
-            ...     return_tensors="pt",
-            ... )
-            ...
-            >>> outputs = model(**encoding)
-            >>> logits, loss = outputs.logits, outputs.loss
-            ...
-            >>> predicted_token_class_ids = logits.argmax(-1)
-            >>> predicted_tokens_classes = [id2label[t.item()] for t in predicted_token_class_ids[0]]
-            >>> predicted_tokens_classes[:5]
-            ['B-ANSWER', 'B-HEADER', 'B-HEADER', 'B-HEADER', 'B-HEADER']
-            ```
+
+        ```python
+        >>> from transformers import AutoProcessor, LayoutLMv2ForTokenClassification, set_seed
+        >>> from PIL import Image
+        >>> from datasets import load_dataset
+
+        >>> set_seed(0)
+
+        >>> datasets = load_dataset("nielsr/funsd", split="test", trust_remote_code=True)
+        >>> labels = datasets.features["ner_tags"].feature.names
+        >>> id2label = {v: k for v, k in enumerate(labels)}
+
+        >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased", revision="no_ocr")
+        >>> model = LayoutLMv2ForTokenClassification.from_pretrained(
+        ...     "microsoft/layoutlmv2-base-uncased", num_labels=len(labels)
+        ... )
+
+        >>> data = datasets[0]
+        >>> image = Image.open(data["image_path"]).convert("RGB")
+        >>> words = data["words"]
+        >>> boxes = data["bboxes"]  # make sure to normalize your bounding boxes
+        >>> word_labels = data["ner_tags"]
+        >>> encoding = processor(
+        ...     image,
+        ...     words,
+        ...     boxes=boxes,
+        ...     word_labels=word_labels,
+        ...     padding="max_length",
+        ...     truncation=True,
+        ...     return_tensors="ms",
+        ... )
+
+        >>> outputs = model(**encoding)
+        >>> logits, loss = outputs.logits, outputs.loss
+
+        >>> predicted_token_class_ids = logits.argmax(-1)
+        >>> predicted_tokens_classes = [id2label[t.item()] for t in predicted_token_class_ids[0]]
+        >>> predicted_tokens_classes[:5]  # results are not good without further fine-tuning
+        ['I-HEADER', 'I-HEADER', 'I-QUESTION', 'I-HEADER', 'I-QUESTION']
+        ```
         """
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.layoutlmv2(
@@ -1767,7 +1066,7 @@ class LayoutLMv2ForTokenClassification(LayoutLMv2PreTrainedModel):
         loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1).astype(mindspore.int32))
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1782,27 +1081,7 @@ class LayoutLMv2ForTokenClassification(LayoutLMv2PreTrainedModel):
 
 
 class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
-    """
-
-    LayoutLMv2ForQuestionAnswering is a LayoutLMv2 model with a question answering head.
-    It is based on the implementation of LayoutLMv2ForQuestionAnswering.
-    """
     def __init__(self, config, has_visual_segment_embedding=True):
-        """
-        Initialize the LayoutLMv2ForQuestionAnswering class.
-
-        Args:
-            self (LayoutLMv2ForQuestionAnswering): The object instance of the LayoutLMv2ForQuestionAnswering class.
-            config (LayoutLMv2Config): The configuration object for the LayoutLMv2 model.
-            has_visual_segment_embedding (bool, optional): A boolean flag indicating whether visual segment embedding
-                is enabled. Defaults to True.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         super().__init__(config)
         self.num_labels = config.num_labels
         config.has_visual_segment_embedding = has_visual_segment_embedding
@@ -1813,92 +1092,79 @@ class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
-        """
-        Method to retrieve the input embeddings from LayoutLMv2 model for question answering.
-
-        Args:
-            self (LayoutLMv2ForQuestionAnswering): The instance of the LayoutLMv2ForQuestionAnswering class.
-                This parameter represents the current instance of the LayoutLMv2ForQuestionAnswering class
-                where the method is called. It is used to access the model's embeddings to retrieve the input embeddings.
-
-        Returns:
-            None: This method does not return any value. It simply returns the word embeddings from the LayoutLMv2 model.
-
-        Raises:
-            None
-        """
         return self.layoutlmv2.embeddings.word_embeddings
 
     def forward(
-            self,
-            input_ids: Optional[mindspore.Tensor] = None,
-            bbox: Optional[mindspore.Tensor] = None,
-            image: Optional[mindspore.Tensor] = None,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            token_type_ids: Optional[mindspore.Tensor] = None,
-            position_ids: Optional[mindspore.Tensor] = None,
-            head_mask: Optional[mindspore.Tensor] = None,
-            inputs_embeds: Optional[mindspore.Tensor] = None,
-            start_positions: Optional[mindspore.Tensor] = None,
-            end_positions: Optional[mindspore.Tensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            return_dict: Optional[bool] = None,
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        bbox: Optional[mindspore.Tensor] = None,
+        image: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        start_positions: Optional[mindspore.Tensor] = None,
+        end_positions: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         r"""
-        Args:
-            start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-                Labels for position (index) of the start of the labelled span for computing the token classification loss.
-                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-                are not taken into account for computing the loss.
-            end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-                Labels for position (index) of the end of the labelled span for computing the token classification loss.
-                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-                are not taken into account for computing the loss.
+        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the start of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+            are not taken into account for computing the loss.
+        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the end of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+            are not taken into account for computing the loss.
 
         Returns:
-            Union[Tuple, QuestionAnsweringModelOutput]
 
         Example:
-            In this example below, we give the LayoutLMv2 model an image (of texts) and ask it a question. It will give us
-            a prediction of what it thinks the answer is (the span of the answer within the texts parsed from the image).
-            ```python
-            >>> from transformers import AutoProcessor, LayoutLMv2ForQuestionAnswering, set_seed
-            >>> import torch
-            >>> from PIL import Image
-            >>> from datasets import load_dataset
-            ...
-            >>> set_seed(88)
-            >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased")
-            >>> model = LayoutLMv2ForQuestionAnswering.from_pretrained("microsoft/layoutlmv2-base-uncased")
-            ...
-            >>> dataset = load_dataset("hf-internal-testing/fixtures_docvqa")
-            >>> image_path = dataset["test"][0]["file"]
-            >>> image = Image.open(image_path).convert("RGB")
-            >>> question = "When is coffee break?"
-            >>> encoding = processor(image, question, return_tensors="pt")
-            ...
-            >>> outputs = model(**encoding)
-            >>> predicted_start_idx = outputs.start_logits.argmax(-1).item()
-            >>> predicted_end_idx = outputs.end_logits.argmax(-1).item()
-            >>> predicted_start_idx, predicted_end_idx
-            (154, 287)
-            >>> predicted_answer_tokens = encoding.input_ids.squeeze()[predicted_start_idx : predicted_end_idx + 1]
-            >>> predicted_answer = processor.tokenizer.decode(predicted_answer_tokens)
-            >>> predicted_answer  # results are not very good without further fine-tuning
-            'council mem - bers conducted by trrf treasurer philip g. kuehn to get answers which the public ...
-            ```
 
-            ```python
-            >>> target_start_index = torch.tensor([7])
-            >>> target_end_index = torch.tensor([14])
-            >>> outputs = model(**encoding, start_positions=target_start_index, end_positions=target_end_index)
-            >>> predicted_answer_span_start = outputs.start_logits.argmax(-1).item()
-            >>> predicted_answer_span_end = outputs.end_logits.argmax(-1).item()
-            >>> predicted_answer_span_start, predicted_answer_span_end
-            (154, 287)
-            ```
+        In this example below, we give the LayoutLMv2 model an image (of texts) and ask it a question. It will give us
+        a prediction of what it thinks the answer is (the span of the answer within the texts parsed from the image).
+
+        ```python
+        >>> from transformers import AutoProcessor, LayoutLMv2ForQuestionAnswering, set_seed
+        >>> import torch
+        >>> from PIL import Image
+        >>> from datasets import load_dataset
+
+        >>> set_seed(0)
+        >>> processor = AutoProcessor.from_pretrained("microsoft/layoutlmv2-base-uncased")
+        >>> model = LayoutLMv2ForQuestionAnswering.from_pretrained("microsoft/layoutlmv2-base-uncased")
+
+        >>> dataset = load_dataset("hf-internal-testing/fixtures_docvqa", trust_remote_code=True)
+        >>> image_path = dataset["test"][0]["file"]
+        >>> image = Image.open(image_path).convert("RGB")
+        >>> question = "When is coffee break?"
+        >>> encoding = processor(image, question, return_tensors="ms")
+
+        >>> outputs = model(**encoding)
+        >>> predicted_start_idx = outputs.start_logits.argmax(-1).item()
+        >>> predicted_end_idx = outputs.end_logits.argmax(-1).item()
+        >>> predicted_start_idx, predicted_end_idx
+        (30, 191)
+
+        >>> predicted_answer_tokens = encoding.input_ids.squeeze()[predicted_start_idx : predicted_end_idx + 1]
+        >>> predicted_answer = processor.tokenizer.decode(predicted_answer_tokens)
+        >>> predicted_answer  # results are not good without further fine-tuning
+        ```
+
+        ```python
+        >>> target_start_index = mindspore.tensor([7])
+        >>> target_end_index = mindspore.tensor([14])
+        >>> outputs = model(**encoding, start_positions=target_start_index, end_positions=target_end_index)
+        >>> predicted_answer_span_start = outputs.start_logits.argmax(-1).item()
+        >>> predicted_answer_span_end = outputs.end_logits.argmax(-1).item()
+        >>> predicted_answer_span_start, predicted_answer_span_end
+        (30, 191)
+        ```
         """
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.layoutlmv2(
@@ -1925,13 +1191,12 @@ class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
         sequence_output = outputs[0][:, :seq_length]
 
         logits = self.qa_outputs(sequence_output)
-        start_logits, end_logits = logits.split(1, axis=-1)
+        start_logits, end_logits = ops.split(logits, 1, dim=-1)
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
 
         total_loss = None
         if start_positions is not None and end_positions is not None:
-            # If we are on multi-GPU, split add a dimension
             if len(start_positions.shape) > 1:
                 start_positions = start_positions.squeeze(-1)
             if len(end_positions.shape) > 1:
@@ -1942,9 +1207,7 @@ class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
             end_positions = end_positions.clamp(0, ignored_index)
 
             loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
-            start_positions = start_positions.astype(mindspore.int32)
             start_loss = loss_fct(start_logits, start_positions)
-            end_positions = end_positions.astype(mindspore.int32)
             end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
@@ -1960,9 +1223,7 @@ class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
             attentions=outputs.attentions,
         )
 
-
 __all__ = [
-    "LAYOUTLMV2_PRETRAINED_MODEL_ARCHIVE_LIST",
     "LayoutLMv2ForQuestionAnswering",
     "LayoutLMv2ForSequenceClassification",
     "LayoutLMv2ForTokenClassification",

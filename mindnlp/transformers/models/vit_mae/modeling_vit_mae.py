@@ -12,8 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" MindSpore ViT MAE (masked autoencoder) model."""
-
+"""MindSpore ViT MAE (masked autoencoder) model."""
 
 import collections.abc
 import math
@@ -23,19 +22,16 @@ from typing import Optional, Set, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
-from mindspore.common.initializer import initializer, Normal, XavierUniform
-
-
 from mindnlp.core import nn, ops
-from mindnlp.utils import (
-    ModelOutput,
-    logging
-)
+
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
+from ....utils import (
+    ModelOutput,
+    logging,
+)
 from .configuration_vit_mae import ViTMAEConfig
 
 
@@ -81,7 +77,7 @@ class ViTMAEDecoderOutput(ModelOutput):
 
     Args:
         logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, patch_size ** 2 * num_channels)`):
-            Pixel reforwardion logits.
+            Pixel reconstruction logits.
         hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`. Hidden-states of the model at the output of each layer
@@ -104,9 +100,9 @@ class ViTMAEForPreTrainingOutput(ModelOutput):
 
     Args:
         loss (`mindspore.Tensor` of shape `(1,)`):
-            Pixel reforwardion loss.
+            Pixel reconstruction loss.
         logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, patch_size ** 2 * num_channels)`):
-            Pixel reforwardion logits.
+            Pixel reconstruction logits.
         mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
             Tensor indicating which patches are masked (1) and which are not (0).
         ids_restore (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
@@ -199,12 +195,12 @@ class ViTMAEEmbeddings(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        self.cls_token = Parameter(ops.zeros(1, 1, config.hidden_size), 'cls_token')
+        self.cls_token = nn.Parameter(ops.zeros(1, 1, config.hidden_size))
         self.patch_embeddings = ViTMAEPatchEmbeddings(config)
         self.num_patches = self.patch_embeddings.num_patches
         # fixed sin-cos embedding
-        self.position_embeddings = Parameter(
-            ops.zeros(1, self.num_patches + 1, config.hidden_size), 'position_embeddings', requires_grad=False
+        self.position_embeddings = nn.Parameter(
+            ops.zeros(1, self.num_patches + 1, config.hidden_size), requires_grad=False
         )
         self.config = config
         self.initialize_weights()
@@ -214,13 +210,49 @@ class ViTMAEEmbeddings(nn.Module):
         pos_embed = get_2d_sincos_pos_embed(
             self.position_embeddings.shape[-1], int(self.patch_embeddings.num_patches**0.5), add_cls_token=True
         )
-        self.position_embeddings.assign_value(Tensor.from_numpy(pos_embed).float().unsqueeze(0))
-        # initialize patch_embeddings like nn.Linear (instead of nn.Conv2d)
+        self.position_embeddings.assign_value(ops.from_numpy(pos_embed).float().unsqueeze(0))
 
-        w = self.patch_embeddings.projection.weight.data
-        w.set_data(Tensor((initializer(XavierUniform(), shape=w.shape, dtype=mindspore.float32))))
+        # initialize patch_embeddings like nn.Linear (instead of nn.Conv2d)
+        w = self.patch_embeddings.projection.weight
+        nn.init.xavier_uniform_(w)
+
         # timm's trunc_normal_(std=.02) is effectively normal_(std=0.02) as cutoff is too big (2.)
-        self.cls_token.set_data(Tensor((initializer(Normal(sigma=self.config.initializer_range), shape=self.cls_token.shape, dtype=mindspore.float32))))
+        nn.init.normal_(self.cls_token, std=self.config.initializer_range)
+
+    def interpolate_pos_encoding(self, embeddings: mindspore.Tensor, height: int, width: int) -> mindspore.Tensor:
+        """
+        This method allows to interpolate the pre-trained position encodings, to be able to use the model on higher
+        resolution images.
+
+        Source:
+        https://github.com/facebookresearch/dino/blob/de9ee3df6cf39fac952ab558447af1fa1365362a/vision_transformer.py#L174
+        """
+        num_patches = embeddings.shape[1] - 1
+        num_positions = self.position_embeddings.shape[1] - 1
+
+        if num_patches == num_positions and height == width:
+            return self.position_embeddings
+
+        class_pos_embed = self.position_embeddings[:, 0, :]
+        patch_pos_embed = self.position_embeddings[:, 1:, :]
+        dim = embeddings.shape[-1]
+        h0 = height // self.config.patch_size
+        w0 = width // self.config.patch_size
+        # we add a small number to avoid floating point error in the interpolation
+        # see discussion at https://github.com/facebookresearch/dino/issues/8
+        h0, w0 = h0 + 0.1, w0 + 0.1
+        patch_pos_embed = patch_pos_embed.reshape(1, int(math.sqrt(num_positions)), int(math.sqrt(num_positions)), dim)
+        patch_pos_embed = patch_pos_embed.permute(0, 3, 1, 2)
+        patch_pos_embed = nn.functional.interpolate(
+            patch_pos_embed,
+            scale_factor=(h0 / math.sqrt(num_positions), w0 / math.sqrt(num_positions)),
+            mode="bicubic",
+            align_corners=False,
+        )
+        if int(h0) != patch_pos_embed.shape[-2] or int(w0) != patch_pos_embed.shape[-1]:
+            raise ValueError("Width or height does not match with the interpolated position embeddings")
+        patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
+        return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), dim=1)
 
     def random_masking(self, sequence, noise=None):
         """
@@ -236,7 +268,7 @@ class ViTMAEEmbeddings(nn.Module):
         len_keep = int(seq_length * (1 - self.config.mask_ratio))
 
         if noise is None:
-            noise = ops.rand(batch_size, seq_length)  # noise in [0, 1]
+            noise = ops.rand(batch_size, seq_length,)  # noise in [0, 1]
 
         # sort noise for each sample
         ids_shuffle = ops.argsort(noise, dim=1)  # ascend: small is keep, large is remove
@@ -244,7 +276,8 @@ class ViTMAEEmbeddings(nn.Module):
 
         # keep the first subset
         ids_keep = ids_shuffle[:, :len_keep]
-        sequence_unmasked = ops.gather(sequence, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, dim))
+        sequence_unmasked = ops.gather(sequence, dim=1, index=ids_keep.unsqueeze(-1).tile((1, 1, dim)))
+
         # generate the binary mask: 0 is keep, 1 is remove
         mask = ops.ones([batch_size, seq_length])
         mask[:, :len_keep] = 0
@@ -253,18 +286,22 @@ class ViTMAEEmbeddings(nn.Module):
 
         return sequence_unmasked, mask, ids_restore
 
-    def forward(self, pixel_values, noise=None):
+    def forward(self, pixel_values, noise=None, interpolate_pos_encoding: bool = False):
         batch_size, num_channels, height, width = pixel_values.shape
-        embeddings = self.patch_embeddings(pixel_values)
+        embeddings = self.patch_embeddings(pixel_values, interpolate_pos_encoding=interpolate_pos_encoding)
+        if interpolate_pos_encoding:
+            position_embeddings = self.interpolate_pos_encoding(embeddings, height, width)
+        else:
+            position_embeddings = self.position_embeddings
 
         # add position embeddings w/o cls token
-        embeddings = embeddings + self.position_embeddings[:, 1:, :]
+        embeddings = embeddings + position_embeddings[:, 1:, :]
 
         # masking: length -> length * config.mask_ratio
         embeddings, mask, ids_restore = self.random_masking(embeddings, noise)
 
         # append cls token
-        cls_token = self.cls_token + self.position_embeddings[:, :1, :]
+        cls_token = self.cls_token + position_embeddings[:, :1, :]
         cls_tokens = cls_token.broadcast_to((embeddings.shape[0], -1, -1))
         embeddings = ops.cat((cls_tokens, embeddings), dim=1)
 
@@ -290,19 +327,20 @@ class ViTMAEPatchEmbeddings(nn.Module):
         self.num_channels = num_channels
         self.num_patches = num_patches
 
-        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size, bias=True)
+        self.projection = nn.Conv2d(num_channels, hidden_size, kernel_size=patch_size, stride=patch_size)
 
-    def forward(self, pixel_values):
+    def forward(self, pixel_values, interpolate_pos_encoding: bool = False):
         batch_size, num_channels, height, width = pixel_values.shape
         if num_channels != self.num_channels:
             raise ValueError(
                 "Make sure that the channel dimension of the pixel values match with the one set in the configuration."
             )
-        if height != self.image_size[0] or width != self.image_size[1]:
+
+        if not interpolate_pos_encoding and (height != self.image_size[0] or width != self.image_size[1]):
             raise ValueError(
                 f"Input image size ({height}*{width}) doesn't match model ({self.image_size[0]}*{self.image_size[1]})."
             )
-        x = self.projection(pixel_values).flatten(start_dim=2).swapaxes(1, 2)
+        x = ops.transpose(ops.flatten(self.projection(pixel_values), 2), 1, 2)
         return x
 
 
@@ -324,7 +362,7 @@ class ViTMAESelfAttention(nn.Module):
         self.key = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
         self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=config.qkv_bias)
 
-        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
@@ -341,12 +379,12 @@ class ViTMAESelfAttention(nn.Module):
         query_layer = self.transpose_for_scores(mixed_query_layer)
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_layer, ops.transpose(key_layer, -1, -2))
 
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
         # Normalize the attention scores to probabilities.
-        attention_probs = ops.softmax(attention_scores, dim=-1)
+        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -367,6 +405,38 @@ class ViTMAESelfAttention(nn.Module):
         return outputs
 
 
+# Copied from transformers.models.vit.modeling_vit.ViTSdpaSelfAttention ViT->ViTMAE
+class ViTMAESdpaSelfAttention(ViTMAESelfAttention):
+    def __init__(self, config: ViTMAEConfig) -> None:
+        super().__init__(config)
+        self.attention_probs_dropout_prob = config.attention_probs_dropout_prob
+
+    def forward(
+        self, hidden_states, head_mask: Optional[mindspore.Tensor] = None, output_attentions: bool = False
+    ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
+        mixed_query_layer = self.query(hidden_states)
+
+        key_layer = self.transpose_for_scores(self.key(hidden_states))
+        value_layer = self.transpose_for_scores(self.value(hidden_states))
+        query_layer = self.transpose_for_scores(mixed_query_layer)
+
+        context_layer = nn.functional.scaled_dot_product_attention(
+            query_layer,
+            key_layer,
+            value_layer,
+            head_mask,
+            self.attention_probs_dropout_prob if self.training else 0.0,
+            is_causal=False,
+            # scale=None,
+        )
+
+        context_layer = context_layer.permute(0, 2, 1, 3)
+        new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
+        context_layer = context_layer.view(new_context_layer_shape)
+
+        return context_layer, None
+
+
 # Copied from transformers.models.vit.modeling_vit.ViTSelfOutput with ViT->ViTMAE
 class ViTMAESelfOutput(nn.Module):
     """
@@ -377,7 +447,7 @@ class ViTMAESelfOutput(nn.Module):
     def __init__(self, config: ViTMAEConfig) -> None:
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -426,6 +496,13 @@ class ViTMAEAttention(nn.Module):
         return outputs
 
 
+# Copied from transformers.models.vit.modeling_vit.ViTSdpaAttention with ViT->ViTMAE
+class ViTMAESdpaAttention(ViTMAEAttention):
+    def __init__(self, config: ViTMAEConfig) -> None:
+        super().__init__(config)
+        self.attention = ViTMAESdpaSelfAttention(config)
+
+
 # Copied from transformers.models.vit.modeling_vit.ViTIntermediate ViT->ViTMAE
 class ViTMAEIntermediate(nn.Module):
     def __init__(self, config: ViTMAEConfig) -> None:
@@ -448,9 +525,9 @@ class ViTMAEOutput(nn.Module):
     def __init__(self, config: ViTMAEConfig) -> None:
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def forward(self, hidden_states: mindspore.Tensor, input_tensor:mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
 
@@ -459,7 +536,13 @@ class ViTMAEOutput(nn.Module):
         return hidden_states
 
 
-# Copied from transformers.models.vit.modeling_vit.ViTLayer with ViT->ViTMAE
+VITMAE_ATTENTION_CLASSES = {
+    "eager": ViTMAEAttention,
+    "sdpa": ViTMAESdpaAttention,
+}
+
+
+# Copied from transformers.models.vit.modeling_vit.ViTLayer with ViT->ViTMAE,VIT->VITMAE
 class ViTMAELayer(nn.Module):
     """This corresponds to the Block class in the timm implementation."""
 
@@ -467,11 +550,11 @@ class ViTMAELayer(nn.Module):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
-        self.attention = ViTMAEAttention(config)
+        self.attention = VITMAE_ATTENTION_CLASSES[config._attn_implementation](config)
         self.intermediate = ViTMAEIntermediate(config)
         self.output = ViTMAEOutput(config)
-        self.layernorm_before = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(
         self,
@@ -479,7 +562,6 @@ class ViTMAELayer(nn.Module):
         head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
     ) -> Union[Tuple[mindspore.Tensor, mindspore.Tensor], Tuple[mindspore.Tensor]]:
-
         self_attention_outputs = self.attention(
             self.layernorm_before(hidden_states),  # in ViTMAE, layernorm is applied before self-attention
             head_mask,
@@ -519,7 +601,6 @@ class ViTMAEEncoder(nn.Module):
         output_hidden_states: bool = False,
         return_dict: bool = True,
     ) -> Union[tuple, BaseModelOutput]:
-
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
 
@@ -566,20 +647,21 @@ class ViTMAEPreTrainedModel(PreTrainedModel):
     base_model_prefix = "vit"
     main_input_name = "pixel_values"
     supports_gradient_checkpointing = True
+    _supports_sdpa = True
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv2d)):
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
-                                             cell.weight.shape,cell.weight.dtype))
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+
 
 class ViTMAEModel(ViTMAEPreTrainedModel):
     def __init__(self, config):
@@ -589,7 +671,7 @@ class ViTMAEModel(ViTMAEPreTrainedModel):
         self.embeddings = ViTMAEEmbeddings(config)
         self.encoder = ViTMAEEncoder(config)
 
-        self.layernorm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -613,6 +695,7 @@ class ViTMAEModel(ViTMAEPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        interpolate_pos_encoding: bool = False,
     ) -> Union[Tuple, ViTMAEModelOutput]:
         r"""
         Returns:
@@ -630,7 +713,7 @@ class ViTMAEModel(ViTMAEPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("facebook/vit-mae-base")
         >>> model = ViTMAEModel.from_pretrained("facebook/vit-mae-base")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> last_hidden_states = outputs.last_hidden_state
         ```"""
@@ -649,7 +732,11 @@ class ViTMAEModel(ViTMAEPreTrainedModel):
         # input head_mask has shape [num_heads] or [num_hidden_layers x num_heads]
         # and head_mask is converted to shape [num_hidden_layers x batch x num_heads x seq_length x seq_length]
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
-        embedding_output, mask, ids_restore = self.embeddings(pixel_values, noise=noise)
+
+        embedding_output, mask, ids_restore = self.embeddings(
+            pixel_values, noise=noise, interpolate_pos_encoding=interpolate_pos_encoding
+        )
+
         encoder_outputs = self.encoder(
             embedding_output,
             head_mask=head_mask,
@@ -676,9 +763,9 @@ class ViTMAEDecoder(nn.Module):
     def __init__(self, config, num_patches):
         super().__init__()
         self.decoder_embed = nn.Linear(config.hidden_size, config.decoder_hidden_size, bias=True)
-        self.mask_token = Parameter(ops.zeros(1, 1, config.decoder_hidden_size), 'mask_token')
-        self.decoder_pos_embed = Parameter(
-            ops.zeros(1, num_patches + 1, config.decoder_hidden_size),  'decoder_pos_embed', requires_grad=False
+        self.mask_token = nn.Parameter(ops.zeros(1, 1, config.decoder_hidden_size))
+        self.decoder_pos_embed = nn.Parameter(
+            ops.zeros(1, num_patches + 1, config.decoder_hidden_size), requires_grad=False
         )  # fixed sin-cos embedding
 
         decoder_config = deepcopy(config)
@@ -690,7 +777,7 @@ class ViTMAEDecoder(nn.Module):
             [ViTMAELayer(decoder_config) for _ in range(config.decoder_num_hidden_layers)]
         )
 
-        self.decoder_norm = nn.LayerNorm([config.decoder_hidden_size], eps=config.layer_norm_eps)
+        self.decoder_norm = nn.LayerNorm(config.decoder_hidden_size, eps=config.layer_norm_eps)
         self.decoder_pred = nn.Linear(
             config.decoder_hidden_size, config.patch_size**2 * config.num_channels, bias=True
         )  # encoder to decoder
@@ -698,15 +785,56 @@ class ViTMAEDecoder(nn.Module):
         self.config = config
         self.initialize_weights(num_patches)
 
+    def interpolate_pos_encoding(self, embeddings: mindspore.Tensor) -> mindspore.Tensor:
+        """
+        This method is a modified version of the interpolation function for ViT-mae model at the deocder, that
+        allows to interpolate the pre-trained decoder position encodings, to be able to use the model on higher
+        resolution images.
+
+        Source:
+        https://github.com/facebookresearch/dino/blob/de9ee3df6cf39fac952ab558447af1fa1365362a/vision_transformer.py#L174
+        """
+
+        # -1 removes the class dimension since we later append it without interpolation
+        embeddings_positions = embeddings.shape[1] - 1
+        num_positions = self.decoder_pos_embed.shape[1] - 1
+
+        # Separation of class token and patch tokens
+        class_pos_embed = self.decoder_pos_embed[:, 0, :]
+        patch_pos_embed = self.decoder_pos_embed[:, 1:, :]
+
+        # To retain the final 3d tensor with the required dimensions
+        dim = self.decoder_pos_embed.shape[-1]
+
+        # Increasing a dimension to enable bicubic interpolation
+        patch_pos_embed = patch_pos_embed.reshape(1, 1, -1, dim)
+
+        # permute to bring the dimension to be interpolated, to the last
+        patch_pos_embed = patch_pos_embed.permute(0, 3, 1, 2)
+
+        # Interpolating the decoder position embeddings shape wrt embeddings shape i.e (x).
+        # 1 keeps the other dimension constant
+        patch_pos_embed = nn.functional.interpolate(
+            patch_pos_embed,
+            scale_factor=(1, embeddings_positions / num_positions),
+            mode="bicubic",
+            align_corners=False,
+        )
+
+        # Converting back to the original shape
+        patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
+        # Adding the class token back
+        return ops.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), dim=1)
+
     def initialize_weights(self, num_patches):
         # initialize (and freeze) position embeddings by sin-cos embedding
         decoder_pos_embed = get_2d_sincos_pos_embed(
             self.decoder_pos_embed.shape[-1], int(num_patches**0.5), add_cls_token=True
         )
-        self.decoder_pos_embed.assign_value(Tensor.from_numpy(decoder_pos_embed).float().unsqueeze(0))
+        self.decoder_pos_embed.assign_value(ops.from_numpy(decoder_pos_embed).float().unsqueeze(0))
 
         # timm's trunc_normal_(std=.02) is effectively normal_(std=0.02) as cutoff is too big (2.)
-        self.mask_token.set_data(Tensor((initializer(Normal(sigma=self.config.initializer_range), shape=self.mask_token.shape, dtype=mindspore.float32))))
+        nn.init.normal_(self.mask_token, std=self.config.initializer_range)
 
     def forward(
         self,
@@ -715,18 +843,23 @@ class ViTMAEDecoder(nn.Module):
         output_attentions=False,
         output_hidden_states=False,
         return_dict=True,
+        interpolate_pos_encoding: bool = False,
     ):
         # embed tokens
         x = self.decoder_embed(hidden_states)
 
         # append mask tokens to sequence
-        mask_tokens = self.mask_token.repeat(x.shape[0], ids_restore.shape[1] + 1 - x.shape[1], 1)
+        mask_tokens = self.mask_token.tile((x.shape[0], ids_restore.shape[1] + 1 - x.shape[1], 1))
         x_ = ops.cat([x[:, 1:, :], mask_tokens], dim=1)  # no cls token
-        x_ = ops.gather(x_, dim=1, index=ids_restore.unsqueeze(-1).repeat(1, 1, x.shape[2]))  # unshuffle
+        # unshuffle
+        x_ = ops.gather(x_, dim=1, index=ids_restore.unsqueeze(-1).tile((1, 1, x.shape[2])))
         x = ops.cat([x[:, :1, :], x_], dim=1)  # append cls token
-
         # add pos embed
-        hidden_states = x + self.decoder_pos_embed
+        if interpolate_pos_encoding:
+            decoder_pos_embed = self.interpolate_pos_encoding(x)
+        else:
+            decoder_pos_embed = self.decoder_pos_embed
+        hidden_states = x + decoder_pos_embed
 
         # apply Transformer layers (blocks)
         all_hidden_states = () if output_hidden_states else None
@@ -769,6 +902,7 @@ class ViTMAEDecoder(nn.Module):
             attentions=all_self_attentions,
         )
 
+
 class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -791,11 +925,13 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def patchify(self, pixel_values):
+    def patchify(self, pixel_values, interpolate_pos_encoding: bool = False):
         """
         Args:
             pixel_values (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
                 Pixel values.
+            interpolate_pos_encoding (`bool`, *optional*, default `False`):
+                interpolation flag passed during the forward pass.
 
         Returns:
             `mindspore.Tensor` of shape `(batch_size, num_patches, patch_size**2 * num_channels)`:
@@ -803,7 +939,9 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         """
         patch_size, num_channels = self.config.patch_size, self.config.num_channels
         # sanity checks
-        if (pixel_values.shape[2] != pixel_values.shape[3]) or (pixel_values.shape[2] % patch_size != 0):
+        if not interpolate_pos_encoding and (
+            pixel_values.shape[2] != pixel_values.shape[3] or pixel_values.shape[2] % patch_size != 0
+        ):
             raise ValueError("Make sure the pixel values have a squared size that is divisible by the patch size")
         if pixel_values.shape[1] != num_channels:
             raise ValueError(
@@ -812,38 +950,50 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
 
         # patchify
         batch_size = pixel_values.shape[0]
-        num_patches_one_direction = pixel_values.shape[2] // patch_size
+        num_patches_h = pixel_values.shape[2] // patch_size
+        num_patches_w = pixel_values.shape[3] // patch_size
         patchified_pixel_values = pixel_values.reshape(
-            batch_size, num_channels, num_patches_one_direction, patch_size, num_patches_one_direction, patch_size
+            batch_size, num_channels, num_patches_h, patch_size, num_patches_w, patch_size
         )
         patchified_pixel_values = ops.einsum("nchpwq->nhwpqc", patchified_pixel_values)
         patchified_pixel_values = patchified_pixel_values.reshape(
-            batch_size, num_patches_one_direction * num_patches_one_direction, patch_size**2 * num_channels
+            batch_size, num_patches_h * num_patches_w, patch_size**2 * num_channels
         )
         return patchified_pixel_values
 
-    def unpatchify(self, patchified_pixel_values):
+    def unpatchify(self, patchified_pixel_values, original_image_size: Optional[Tuple[int, int]] = None):
         """
         Args:
             patchified_pixel_values (`mindspore.Tensor` of shape `(batch_size, num_patches, patch_size**2 * num_channels)`:
                 Patchified pixel values.
+            original_image_size (`Tuple[int, int]`, *optional*):
+                Original image size.
 
         Returns:
             `mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`:
                 Pixel values.
         """
         patch_size, num_channels = self.config.patch_size, self.config.num_channels
-        num_patches_one_direction = int(patchified_pixel_values.shape[1] ** 0.5)
+        original_image_size = (
+            original_image_size
+            if original_image_size is not None
+            else (self.config.image_size, self.config.image_size)
+        )
+        original_height, original_width = original_image_size
+        num_patches_h = original_height // patch_size
+        num_patches_w = original_width // patch_size
         # sanity check
-        if num_patches_one_direction**2 != patchified_pixel_values.shape[1]:
-            raise ValueError("Make sure that the number of patches can be squared")
+        if num_patches_h * num_patches_w != patchified_pixel_values.shape[1]:
+            raise ValueError(
+                f"The number of patches in the patchified pixel values {patchified_pixel_values.shape[1]}, does not match the number of patches on original image {num_patches_h}*{num_patches_w}"
+            )
 
         # unpatchify
         batch_size = patchified_pixel_values.shape[0]
         patchified_pixel_values = patchified_pixel_values.reshape(
             batch_size,
-            num_patches_one_direction,
-            num_patches_one_direction,
+            num_patches_h,
+            num_patches_w,
             patch_size,
             patch_size,
             num_channels,
@@ -852,12 +1002,12 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         pixel_values = patchified_pixel_values.reshape(
             batch_size,
             num_channels,
-            num_patches_one_direction * patch_size,
-            num_patches_one_direction * patch_size,
+            num_patches_h * patch_size,
+            num_patches_w * patch_size,
         )
         return pixel_values
 
-    def forward_loss(self, pixel_values, pred, mask):
+    def forward_loss(self, pixel_values, pred, mask, interpolate_pos_encoding: bool = False):
         """
         Args:
             pixel_values (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
@@ -866,19 +1016,20 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
                 Predicted pixel values.
             mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
                 Tensor indicating which patches are masked (1) and which are not (0).
+            interpolate_pos_encoding (`bool`, *optional*, default `False`):
+                interpolation flag passed during the forward pass.
 
         Returns:
-            `mindspore.Tensor`: Pixel reforwardion loss.
+            `mindspore.Tensor`: Pixel reconstruction loss.
         """
-        target = self.patchify(pixel_values)
+        target = self.patchify(pixel_values, interpolate_pos_encoding=interpolate_pos_encoding)
         if self.config.norm_pix_loss:
-            mean = target.mean(dim=-1, keepdim=True)
-            var = target.var(dim=-1, keepdim=True)
+            mean = ops.mean(target, dim=-1, keepdim=True)
+            var = ops.var(target, dim=-1, keepdim=True)
             target = (target - mean) / (var + 1.0e-6) ** 0.5
 
         loss = (pred - target) ** 2
-        loss = loss.mean(axis=-1)  # [N, L], mean loss per patch
-
+        loss = ops.mean(loss, dim=-1)  # [N, L], mean loss per patch
         loss = (loss * mask).sum() / mask.sum()  # mean loss on removed patches
         return loss
 
@@ -890,6 +1041,7 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        interpolate_pos_encoding: bool = False,
     ) -> Union[Tuple, ViTMAEForPreTrainingOutput]:
         r"""
         Returns:
@@ -907,13 +1059,14 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("facebook/vit-mae-base")
         >>> model = ViTMAEForPreTraining.from_pretrained("facebook/vit-mae-base")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> loss = outputs.loss
         >>> mask = outputs.mask
         >>> ids_restore = outputs.ids_restore
         ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
         outputs = self.vit(
             pixel_values,
             noise=noise,
@@ -921,15 +1074,17 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            interpolate_pos_encoding=interpolate_pos_encoding,
         )
+
         latent = outputs.last_hidden_state
         ids_restore = outputs.ids_restore
         mask = outputs.mask
 
-        decoder_outputs = self.decoder(latent, ids_restore)
+        decoder_outputs = self.decoder(latent, ids_restore, interpolate_pos_encoding=interpolate_pos_encoding)
         logits = decoder_outputs.logits  # shape (batch_size, num_patches, patch_size*patch_size*num_channels)
 
-        loss = self.forward_loss(pixel_values, logits, mask)
+        loss = self.forward_loss(pixel_values, logits, mask, interpolate_pos_encoding=interpolate_pos_encoding)
 
         if not return_dict:
             output = (logits, mask, ids_restore) + outputs[2:]

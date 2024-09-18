@@ -34,7 +34,7 @@ import mindspore
 from mindspore import Tensor
 from mindspore._c_expression import typing # pylint: disable=no-name-in-module, import-error
 from mindspore.communication import get_group_size
-from mindnlp.configs import GENERATOR_SEED
+from mindnlp.configs import GENERATOR_SEED, ON_ORANGE_PI
 from mindnlp.core import nn, ops, set_default_dtype, get_default_dtype
 from mindnlp.core.serialization import load, save_checkpoint, load_checkpoint, safe_save_file, safe_load_file
 from mindnlp.core.nn import CrossEntropyLoss, Identity
@@ -1022,7 +1022,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
         """
         :str: Identifies that this is a PyTorch model.
         """
-        return "pt"
+        return "ms"
 
     def __init__(self, config: PretrainedConfig, *inputs, **kwargs):
         super().__init__()
@@ -1622,14 +1622,14 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
         # numbers of tokens to copy
         n = min(old_num_tokens, new_num_tokens)
 
-        new_embeddings.weight.data[:n, :] = old_embeddings.weight.data[:n, :]
+        new_embeddings.weight[:n, :] = old_embeddings.weight[:n, :]
 
         # Replace weights in old_embeddings and return to maintain the same embedding type.
         # This ensures correct functionality when a Custom Embedding class is passed as input.
         # The input and output embedding types remain consistent. (c.f. https://github.com/huggingface/transformers/pull/31979)
 
         old_embeddings.weight = new_embeddings.weight
-        old_embeddings.num_embeddings = new_embeddings.weight.data.shape[0]
+        old_embeddings.num_embeddings = new_embeddings.weight.shape[0]
         if old_embeddings.padding_idx is not None and (new_num_tokens - 1) < old_embeddings.padding_idx:
             old_embeddings.padding_idx = None
 
@@ -2766,6 +2766,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
                                     # "_commit_hash": commit_hash,
                                     **has_file_kwargs,
                                 }
+
                                 if not has_file(pretrained_model_name_or_path, safe_weights_name, **has_file_kwargs):
                                     Thread(
                                         target=auto_conversion,
@@ -3484,11 +3485,11 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
         Shows a one-time warning if the input_ids appear to contain padding and no attention mask was given.
         """
 
-        if (attention_mask is not None) or (self.config.pad_token_id is None):
+        if (attention_mask is not None) or (self.config.pad_token_id is None) or ON_ORANGE_PI:
             return
 
         # Check only the first and last input IDs to reduce overhead.
-        if self.config.pad_token_id in input_ids[:, [-1, 0]].asnumpy():
+        if self.config.pad_token_id in input_ids.asnumpy()[:, [-1, 0]]:
             warn_string = (
                 "We strongly recommend passing in an `attention_mask` since your input_ids may be padded. See "
                 "https://huggingface.co/docs/transformers/troubleshooting"
@@ -4003,7 +4004,7 @@ def find_tied_parameters(model: nn.Module, **kwargs):
     </Tip>
 
     Args:
-        model (`torch.nn.Module`): The model to inspect.
+        model (`nn.Module`): The model to inspect.
 
     Returns:
         List[List[str]]: A list of lists of parameter names being all tied together.
@@ -4012,7 +4013,7 @@ def find_tied_parameters(model: nn.Module, **kwargs):
 
     ```py
     >>> from collections import OrderedDict
-    >>> import torch.nn as nn
+    >>> import nn as nn
 
     >>> model = nn.Sequential(OrderedDict([("linear1", nn.Linear(4, 4)), ("linear2", nn.Linear(4, 4))]))
     >>> model.linear2.weight = model.linear1.weight

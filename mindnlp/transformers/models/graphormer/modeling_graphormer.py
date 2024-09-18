@@ -1285,7 +1285,7 @@ class GraphormerForGraphClassification(GraphormerPreTrainedModel):
 
         loss = None
         if labels is not None:
-            mask = 1 - ops.isnan(labels.to(mindspore.float32)) # invert True and False
+            mask = (1 - ops.isnan(labels.to(mindspore.float32))).bool() # invert True and False
 
             if self.num_classes == 1:  # regression
                 loss_fct = MSELoss()

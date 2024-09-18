@@ -24,7 +24,7 @@ from .....common import MindNLPTestCase
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         XLMForMultipleChoice,

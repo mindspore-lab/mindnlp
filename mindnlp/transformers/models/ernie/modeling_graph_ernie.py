@@ -1843,7 +1843,7 @@ class MSErnieForPreTraining(MSErniePreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
             >>> model = ErnieForPreTraining.from_pretrained("nghuyong/ernie-1.0-base-zh")
             ...
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> prediction_logits = outputs.prediction_logits
@@ -2370,7 +2370,7 @@ class MSErnieForNextSentencePrediction(MSErniePreTrainedModel):
         ...
         >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
         >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
-        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
+        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="ms")
         ...
         >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
         >>> logits = outputs.logits
@@ -2441,7 +2441,7 @@ class MSErnieForNextSentencePrediction(MSErniePreTrainedModel):
             ...
             >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
             >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
-            >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
+            >>> encoding = tokenizer(prompt, next_sentence, return_tensors="ms")
             ...
             >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
             >>> logits = outputs.logits

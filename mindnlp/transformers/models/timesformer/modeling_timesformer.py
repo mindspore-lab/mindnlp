@@ -581,7 +581,7 @@ class TimesformerModel(TimesformerPreTrainedModel):
         >>> model = TimesformerModel.from_pretrained("facebook/timesformer-base-finetuned-k400")
 
         >>> # prepare video for the model
-        >>> inputs = image_processor(list(video), return_tensors="pt")
+        >>> inputs = image_processor(list(video), return_tensors="ms")
 
         >>> # forward pass
         >>> outputs = model(**inputs)
@@ -711,7 +711,7 @@ class TimesformerForVideoClassification(TimesformerPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("MCG-NJU/videomae-base-finetuned-kinetics")
         >>> model = TimesformerForVideoClassification.from_pretrained("facebook/timesformer-base-finetuned-k400")
 
-        >>> inputs = image_processor(list(video), return_tensors="pt")
+        >>> inputs = image_processor(list(video), return_tensors="ms")
 
         >>> with no_grad():
         ...     outputs = model(**inputs)

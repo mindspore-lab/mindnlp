@@ -1,4 +1,3 @@
-:::mindnlp.transformers.models.chatglm.modeling_chatglm.CHATGLM_6B_PRETRAINED_MODEL_ARCHIVE_LIST
 :::mindnlp.transformers.models.chatglm.modeling_chatglm.ChatGLMModel
 :::mindnlp.transformers.models.chatglm.modeling_chatglm.ChatGLMPreTrainedModel
 :::mindnlp.transformers.models.chatglm.modeling_chatglm.ChatGLMForConditionalGeneration

@@ -340,7 +340,7 @@ class CustomPipeline(Pipeline):
         return preprocess_kwargs, {}, {}
 
     def preprocess(self, text, maybe_arg=2):
-        input_ids = self.tokenizer(text, return_tensors="pt")
+        input_ids = self.tokenizer(text, return_tensors="ms")
         return input_ids
 
     def _forward(self, model_inputs):

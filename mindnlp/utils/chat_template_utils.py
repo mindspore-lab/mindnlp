@@ -244,7 +244,7 @@ def get_json_schema(func: Callable) -> Dict:
     >>>     tools=[multiply_schema],
     >>>     chat_template="tool_use",
     >>>     return_dict=True,
-    >>>     return_tensors="pt",
+    >>>     return_tensors="ms",
     >>>     add_generation_prompt=True
     >>> )
     >>> # The formatted chat can now be passed to model.generate()

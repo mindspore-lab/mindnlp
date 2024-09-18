@@ -12,18 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the MindSpore BigBirdPegasus model. """
+"""Testing suite for the MindSpore BigBirdPegasus model."""
+
 import copy
 import tempfile
 import unittest
 
-import numpy as np
-from mindnlp.transformers import BigBirdPegasusConfig
+from mindnlp.transformers import BigBirdPegasusConfig, is_mindspore_available
 from mindnlp.utils.testing_utils import (
     require_sentencepiece,
     require_tokenizers,
     require_mindspore,
-    is_mindspore_available,
     slow,
 )
 
@@ -35,7 +34,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import ops
+    from mindnlp.core import ops, no_grad
 
     from mindnlp.transformers import (
         BigBirdPegasusForCausalLM,
@@ -51,7 +50,6 @@ if is_mindspore_available():
     )
 
 MODEL_ID = "google/bigbird-pegasus-large-pubmed"
-
 
 def prepare_bigbird_pegasus_inputs_dict(
     config,
@@ -166,7 +164,7 @@ class BigBirdPegasusModelTester:
         return config, inputs_dict
 
     def create_and_check_decoder_model_past_large_inputs(self, config, inputs_dict):
-        model = BigBirdPegasusModel(config=config).get_decoder().set_train(False)
+        model = BigBirdPegasusModel(config=config).get_decoder().eval()
         input_ids = inputs_dict["input_ids"]
         attention_mask = inputs_dict["attention_mask"]
 
@@ -181,7 +179,7 @@ class BigBirdPegasusModelTester:
 
         # append to next input_ids and
         next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
-        next_attention_mask = ops.cat([attention_mask, next_attn_mask.astype(mindspore.bool_)], dim=-1)
+        next_attention_mask = ops.cat([attention_mask, next_attn_mask.to(attention_mask.dtype)], dim=-1)
 
         output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["last_hidden_state"]
         output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
@@ -196,10 +194,10 @@ class BigBirdPegasusModelTester:
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-2))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-2))
 
     def check_encoder_decoder_model_standalone(self, config, inputs_dict):
-        model = BigBirdPegasusModel(config=config).set_train(False)
+        model = BigBirdPegasusModel(config=config).eval()
         outputs = model(**inputs_dict)
 
         encoder_last_hidden_state = outputs.encoder_last_hidden_state
@@ -231,7 +229,7 @@ class BigBirdPegasusModelTester:
         self.parent.assertTrue((last_hidden_state_2 - last_hidden_state).abs().max().item() < 1e-3)
 
     def create_and_check_model(self, config, inputs_dict):
-        model = BigBirdPegasusModel(config=config).set_train(False)
+        model = BigBirdPegasusModel(config=config).eval()
         input_ids = inputs_dict["input_ids"]
         decoder_input_ids = inputs_dict["decoder_input_ids"]
         result = model(input_ids, decoder_input_ids=decoder_input_ids, use_cache=True)
@@ -253,7 +251,6 @@ class BigBirdPegasusModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
     all_generative_model_classes = (BigBirdPegasusForConditionalGeneration,) if is_mindspore_available() else ()
     pipeline_model_mapping = (
         {
-            "conversational": BigBirdPegasusForConditionalGeneration,
             "feature-extraction": BigBirdPegasusModel,
             "question-answering": BigBirdPegasusForQuestionAnswering,
             "summarization": BigBirdPegasusForConditionalGeneration,
@@ -298,19 +295,14 @@ class BigBirdPegasusModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
         input_ids = input_ids[:batch_size, :sequence_length]
         attention_mask = attention_mask[:batch_size, :sequence_length]
 
-        # generate max 3 tokens
-        max_length = input_ids.shape[-1] + 3
         if config.eos_token_id is not None and config.pad_token_id is None:
             # hack to allow generate for models such as GPT2 as is done in `generate()`
             config.pad_token_id = config.eos_token_id
-        return config, input_ids, attention_mask, max_length
+        return config, input_ids, attention_mask
 
     def setUp(self):
         self.model_tester = BigBirdPegasusModelTester(self)
         self.config_tester = ConfigTester(self, config_class=BigBirdPegasusConfig)
-
-    def test_training(self):
-        pass
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -341,14 +333,15 @@ class BigBirdPegasusModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
 
     def test_generate_without_input_ids(self):
         if self.model_tester.attention_type == "block_sparse":
-            # this test can never pass for BigBird-block-sparse attention since input_ids must be multiple of block_size
-            return
+            self.skipTest(
+                "Cannot pass for BigBird-block-sparse attention since input_ids must be multiple of block_size"
+            )
         super().test_generate_without_input_ids()
 
     def test_retain_grad_hidden_states_attentions(self):
         if self.model_tester.attention_type == "block_sparse":
             # this test can't pass since attention matrix (which is getting returned) can't have gradients (& just 0 at many locations)
-            return
+            self.skipTest(reason="Cannot pass since returned attention matrix can't have gradients")
         super().test_retain_grad_hidden_states_attentions()
 
     # BigBirdPegasusForSequenceClassification does not support inputs_embeds
@@ -361,7 +354,7 @@ class BigBirdPegasusModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
             BigBirdPegasusForQuestionAnswering,
         ):
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
             inputs = copy.deepcopy(self._prepare_for_class(inputs_dict, model_class))
 
@@ -381,14 +374,14 @@ class BigBirdPegasusModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
                 inputs["inputs_embeds"] = wte(encoder_input_ids)
                 inputs["decoder_inputs_embeds"] = wte(decoder_input_ids)
 
-            model(**inputs)[0]
+            with no_grad():
+                model(**inputs)[0]
 
-    @require_mindspore
     def test_generate_fp16(self):
         config, input_dict = self.model_tester.prepare_config_and_inputs()
         input_dict.pop("decoder_attention_mask")
         input_dict.pop("decoder_input_ids")
-        model = BigBirdPegasusForConditionalGeneration(config).set_train(False)
+        model = BigBirdPegasusForConditionalGeneration(config).eval()
         model.half()
         model.generate(**input_dict)
         model.generate(**input_dict, do_sample=True, early_stopping=False, num_return_sequences=3)
@@ -407,7 +400,7 @@ class BigBirdPegasusModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
         config.block_size = 16
         config.attention_type = attn_type
         model = BigBirdPegasusForConditionalGeneration(config)
-        model.set_train(False)
+        model.eval()
 
         chunk_length = 32
 
@@ -426,15 +419,18 @@ class BigBirdPegasusModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
             [target_ids_without_padding, target_ids_with_padding], dtype=mindspore.int64
         )
 
-        logits_batched = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels).logits
+        with no_grad():
+            logits_batched = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels).logits
 
-        logits_single_first = model(input_ids=input_ids[:1, :-chunk_length], labels=labels[:1]).logits
+        with no_grad():
+            logits_single_first = model(input_ids=input_ids[:1, :-chunk_length], labels=labels[:1]).logits
 
-        self.assertTrue(np.allclose(logits_batched[0, -3:].asnumpy(), logits_single_first[0, -3:].asnumpy(), atol=tolerance))
+        self.assertTrue(ops.allclose(logits_batched[0, -3:], logits_single_first[0, -3:], atol=tolerance))
 
-        logits_single_second = model(input_ids=input_ids[1:], labels=labels[1:, :-4]).logits
+        with no_grad():
+            logits_single_second = model(input_ids=input_ids[1:], labels=labels[1:, :-4]).logits
 
-        self.assertTrue(np.allclose(logits_batched[1, :3].asnumpy(), logits_single_second[0, :3].asnumpy(), atol=tolerance))
+        self.assertTrue(ops.allclose(logits_batched[1, :3], logits_single_second[0, :3], atol=tolerance))
 
     def test_auto_padding(self):
         ids = [[7, 6, 9] * 65]
@@ -444,7 +440,7 @@ class BigBirdPegasusModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
         decoder_input_ids = mindspore.tensor([[33, 5, 8] * 3], dtype=mindspore.int64)
 
         config.block_size = 8
-        model = BigBirdPegasusForConditionalGeneration(config).set_train(False)
+        model = BigBirdPegasusForConditionalGeneration(config).eval()
         output1 = model(input_ids=input_ids, attention_mask=attention_mask, decoder_input_ids=decoder_input_ids)[
             "logits"
         ]
@@ -456,7 +452,7 @@ class BigBirdPegasusModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
             "logits"
         ]
 
-        self.assertTrue(np.allclose(output1.asnumpy(), output2.asnumpy(), atol=1e-5))
+        self.assertTrue(ops.allclose(output1, output2, atol=1e-5))
 
     def test_for_change_to_full_attn(self):
         self.model_tester.seq_length = 9
@@ -464,16 +460,22 @@ class BigBirdPegasusModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.
 
         # automatic switch will happen
         config.attention_type = "block_sparse"
-        model = BigBirdPegasusForConditionalGeneration(config).set_train(False)
-        state_dict = model.parameters_dict()
+        model = BigBirdPegasusForConditionalGeneration(config).eval()
+        state_dict = model.state_dict()
         outputs1 = model(**input_dict)["logits"]
 
         config.attention_type = "original_full"
-        model = BigBirdPegasusForConditionalGeneration(config).set_train(False)
+        model = BigBirdPegasusForConditionalGeneration(config).eval()
         model.load_state_dict(state_dict)
         outputs2 = model(**input_dict)["logits"]
 
-        self.assertTrue(np.allclose(outputs1.asnumpy(), outputs2.asnumpy(), atol=1e-5))
+        self.assertTrue(ops.allclose(outputs1, outputs2, atol=1e-5))
+
+    @unittest.skip(
+        reason="This architecure has tied weights by default and there is no way to remove it, check: https://github.com/huggingface/transformers/pull/31771#issuecomment-2210915245"
+    )
+    def test_load_save_without_tied_weights(self):
+        pass
 
 
 @require_mindspore
@@ -503,7 +505,6 @@ class BigBirdPegasusModelIntegrationTests(unittest.TestCase):
         model = BigBirdPegasusForConditionalGeneration.from_pretrained(
             MODEL_ID, attention_type="block_sparse", block_size=16, num_random_blocks=3
         )
-        model
 
         input_ids = self._get_dummy_input_ids()
         target_ids = self._get_dummy_target_ids()
@@ -519,12 +520,11 @@ class BigBirdPegasusModelIntegrationTests(unittest.TestCase):
 
         # fmt: on
         self.assertTrue(
-            np.allclose(prediction_logits[0, 4:8, 128:156].asnumpy(), expected_prediction_logits_slice.asnumpy(), atol=1e-4)
+            ops.allclose(prediction_logits[0, 4:8, 128:156], expected_prediction_logits_slice, atol=1e-4)
         )
 
     def test_inference_full_attn(self):
         model = BigBirdPegasusForConditionalGeneration.from_pretrained(MODEL_ID, attention_type="original_full")
-        model
 
         input_ids = self._get_dummy_input_ids()
         target_ids = self._get_dummy_target_ids()
@@ -539,7 +539,7 @@ class BigBirdPegasusModelIntegrationTests(unittest.TestCase):
         )
         # fmt: on
         self.assertTrue(
-            np.allclose(prediction_logits[0, 4:8, 128:156].asnumpy(), expected_prediction_logits_slice.asnumpy(), atol=1e-4)
+            ops.allclose(prediction_logits[0, 4:8, 128:156], expected_prediction_logits_slice, atol=1e-4)
         )
 
     def test_seq_to_seq_generation(self):
@@ -700,7 +700,7 @@ class BigBirdPegasusStandaloneDecoderModelTester:
         lm_labels,
     ):
         config.use_cache = True
-        model = BigBirdPegasusDecoder(config=config).set_train(False)
+        model = BigBirdPegasusDecoder(config=config).eval()
         # first forward pass
         outputs = model(input_ids, use_cache=True)
         outputs_use_cache_conf = model(input_ids)
@@ -726,7 +726,7 @@ class BigBirdPegasusStandaloneDecoderModelTester:
         output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        assert np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3)
+        assert ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3)
 
     def create_and_check_decoder_model_attention_mask_past(
         self,
@@ -735,10 +735,10 @@ class BigBirdPegasusStandaloneDecoderModelTester:
         attention_mask,
         lm_labels,
     ):
-        model = BigBirdPegasusDecoder(config=config).set_train(False)
+        model = BigBirdPegasusDecoder(config=config).eval()
 
         # create attention mask
-        attn_mask = ops.ones(*input_ids.shape, dtype=mindspore.int64)
+        attn_mask = ops.ones(input_ids.shape, dtype=mindspore.int64)
 
         half_seq_length = input_ids.shape[-1] // 2
         attn_mask[:, half_seq_length:] = 0
@@ -757,7 +757,7 @@ class BigBirdPegasusStandaloneDecoderModelTester:
         # append to next input_ids and attn_mask
         next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         attn_mask = ops.cat(
-            [attn_mask, ops.ones(attn_mask.shape[0], 1, dtype=mindspore.int64)],
+            [attn_mask, ops.ones((attn_mask.shape[0], 1), dtype=mindspore.int64)],
             dim=1,
         )
 
@@ -773,7 +773,7 @@ class BigBirdPegasusStandaloneDecoderModelTester:
         # test that outputs are equal for slice
         # big bird has extremely high logits which requires
         # such a high error tolerance here
-        assert np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=5e-1)
+        assert ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=5e-1)
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -807,6 +807,6 @@ class BigBirdPegasusStandaloneDecoderModelTest(ModelTesterMixin, GenerationTeste
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_decoder_model_attention_mask_past(*config_and_inputs)
 
+    @unittest.skip("Decoder cannot retain gradients")
     def test_retain_grad_hidden_states_attentions(self):
-        # decoder cannot keep gradients
         return

@@ -1,43 +1,56 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2021 ASAPP Inc. and the HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-"""Mindspore SEW model."""
+"""MindSpore SEW model."""
 
 import math
 import warnings
 from collections.abc import Sequence
 from typing import Optional, Tuple, Union
+
 import numpy as np
 import mindspore
-from mindspore.common.initializer import initializer, Normal
-
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindnlp.utils import logging
-from ...modeling_utils import PreTrainedModel
-from .configuration_sew_d import SEWDConfig
-from ...modeling_outputs import (
-    BaseModelOutput,
-    CausalLMOutput,
-    SequenceClassifierOutput,
-)
+from mindnlp.core.nn import CrossEntropyLoss, LayerNorm
+
 from ...activations import ACT2FN
+from ...modeling_outputs import BaseModelOutput, CausalLMOutput, SequenceClassifierOutput
+from ...modeling_utils import PreTrainedModel
+from ....utils import logging
+from .configuration_sew_d import SEWDConfig
 
 
 logger = logging.get_logger(__name__)
 
 _HIDDEN_STATES_START_POSITION = 1
+
+
+# General docstring
+_CONFIG_FOR_DOC = "SEWDConfig"
+
+# Base docstring
+_CHECKPOINT_FOR_DOC = "asapp/sew-d-tiny-100k-ft-ls100h"
+_EXPECTED_OUTPUT_SHAPE = [1, 292, 384]
+
+# CTC docstring
+_CTC_EXPECTED_OUTPUT = "'MISTER QUILTER IS THE APOSTIL OF THE MIDDLE CLASSES AND WE ARE GLAD TO WELCOME HIS GOSPEL'"
+_CTC_EXPECTED_LOSS = 0.21
+
+# Audio class docstring
+_SEQ_CLASS_CHECKPOINT = "anton-l/sew-d-mid-400k-ft-keyword-spotting"
+_SEQ_CLASS_EXPECTED_OUTPUT = "'_unknown_'"
+_SEQ_CLASS_EXPECTED_LOSS = 3.16
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2._compute_mask_indices
@@ -131,11 +144,7 @@ def _compute_mask_indices(
             dummy_mask_idx = spec_aug_mask_idx[0]
 
         spec_aug_mask_idx = np.concatenate(
-            [
-                spec_aug_mask_idx,
-                np.ones(max_num_masked_span - num_masked_span, dtype=np.int32)
-                * dummy_mask_idx,
-            ]
+            [spec_aug_mask_idx, np.ones(max_num_masked_span - num_masked_span, dtype=np.int32) * dummy_mask_idx]
         )
         spec_aug_mask_idxs.append(spec_aug_mask_idx)
 
@@ -145,22 +154,18 @@ def _compute_mask_indices(
     spec_aug_mask_idxs = np.broadcast_to(
         spec_aug_mask_idxs[:, :, None], (batch_size, max_num_masked_span, mask_length)
     )
-    spec_aug_mask_idxs = spec_aug_mask_idxs.reshape(
-        batch_size, max_num_masked_span * mask_length
-    )
+    spec_aug_mask_idxs = spec_aug_mask_idxs.reshape(batch_size, max_num_masked_span * mask_length)
 
     # add offset to the starting indexes so that indexes now create a span
     offsets = np.arange(mask_length)[None, None, :]
-    offsets = np.broadcast_to(
-        offsets, (batch_size, max_num_masked_span, mask_length)
-    ).reshape(batch_size, max_num_masked_span * mask_length)
+    offsets = np.broadcast_to(offsets, (batch_size, max_num_masked_span, mask_length)).reshape(
+        batch_size, max_num_masked_span * mask_length
+    )
     spec_aug_mask_idxs = spec_aug_mask_idxs + offsets
 
     # ensure that we cannot have indices larger than sequence_length
     if spec_aug_mask_idxs.max() > sequence_length - 1:
-        spec_aug_mask_idxs[spec_aug_mask_idxs > sequence_length - 1] = (
-            sequence_length - 1
-        )
+        spec_aug_mask_idxs[spec_aug_mask_idxs > sequence_length - 1] = sequence_length - 1
 
     # scatter indices to mask
     np.put_along_axis(spec_aug_mask, spec_aug_mask_idxs, 1, -1)
@@ -174,20 +179,13 @@ def make_log_bucket_position(relative_pos, bucket_size, max_position):
     mid = bucket_size // 2
     abs_pos = ops.where(
         (relative_pos < mid) & (relative_pos > -mid),
-        mindspore.Tensor(mid - 1).type_as(relative_pos),
+        mindspore.tensor(mid - 1).type_as(relative_pos),
         ops.abs(relative_pos),
     )
     log_pos = (
-        ops.ceil(
-            ops.log(mindspore.tensor((abs_pos / mid).to(mindspore.float32)))
-            / ops.log(mindspore.tensor((max_position - 1) / mid).to(mindspore.float32))
-            * (mid - 1)
-        )
-        + mid
+        ops.ceil(ops.log(abs_pos / mid) / ops.log(mindspore.tensor((max_position - 1) / mid)) * (mid - 1)) + mid
     )
-    bucket_pos = ops.where(
-        abs_pos <= mid, relative_pos.type_as(log_pos), log_pos * sign
-    )
+    bucket_pos = ops.where(abs_pos <= mid, relative_pos.type_as(log_pos), log_pos * sign)
     return bucket_pos
 
 
@@ -221,58 +219,19 @@ def build_relative_position(query_size, key_size, bucket_size=-1, max_position=-
     return rel_pos_ids
 
 
+# Copied from transformers.models.deberta.modeling_deberta.c2p_dynamic_expand
 def c2p_dynamic_expand(c2p_pos, query_layer, relative_pos):
-    return c2p_pos.broadcast_to(
-        (
-            [
-                query_layer.shape[0],
-                query_layer.shape[1],
-                query_layer.shape[2],
-                relative_pos.shape[-1],
-            ]
-        )
-    )
+    return c2p_pos.broadcast_to([query_layer.shape[0], query_layer.shape[1], query_layer.shape[2], relative_pos.shape[-1]])
 
 
+# Copied from transformers.models.deberta.modeling_deberta.p2c_dynamic_expand
 def p2c_dynamic_expand(c2p_pos, query_layer, key_layer):
-    return c2p_pos.broadcast_to(
-        (
-            [
-                query_layer.shape[0],
-                query_layer.shape[1],
-                key_layer.shape[-2],
-                key_layer.shape[-2],
-            ]
-        )
-    )
+    return c2p_pos.broadcast_to([query_layer.shape[0], query_layer.shape[1], key_layer.shape[-2], key_layer.shape[-2]])
 
 
+# Copied from transformers.models.deberta.modeling_deberta.pos_dynamic_expand
 def pos_dynamic_expand(pos_index, p2c_att, key_layer):
-    return pos_index.broadcast_to(
-        (p2c_att.shape[:2] + (pos_index.shape[-2], key_layer.shape[-2]))
-    )
-
-
-# Copied from transformers.models.deberta.modeling_deberta.get_mask
-def get_mask(input, local_context):
-    if not isinstance(local_context, DropoutContext):
-        dropout = local_context
-        mask = None
-    else:
-        dropout = local_context.dropout
-        dropout *= local_context.scale
-        mask = local_context.mask if local_context.reuse_mask else None
-
-    if dropout > 0 and mask is None:
-        mask = (1 - ops.bernoulli(input=ops.zeros_like(input), p=1 - dropout)).to(
-            mindspore.bool_
-        )
-
-    if isinstance(local_context, DropoutContext):
-        if local_context.mask is None:
-            local_context.mask = mask
-
-    return mask, dropout
+    return pos_index.broadcast_to(p2c_att.shape[:2] + (pos_index.shape[-2], key_layer.shape[-2]))
 
 
 # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2NoLayerNormConvLayer with Wav2Vec2->SEWD
@@ -311,7 +270,7 @@ class SEWDLayerNormConvLayer(nn.Module):
             stride=config.conv_stride[layer_id],
             bias=config.conv_bias,
         )
-        self.layer_norm = nn.LayerNorm(self.out_conv_dim)
+        self.layer_norm = nn.LayerNorm(self.out_conv_dim, elementwise_affine=True)
         self.activation = ACT2FN[config.feat_extract_activation]
 
     def forward(self, hidden_states):
@@ -341,9 +300,7 @@ class SEWDGroupNormConvLayer(nn.Module):
         )
         self.activation = ACT2FN[config.feat_extract_activation]
 
-        self.layer_norm = nn.GroupNorm(
-            num_groups=self.out_conv_dim, num_channels=self.out_conv_dim, affine=True
-        )
+        self.layer_norm = nn.GroupNorm(num_groups=self.out_conv_dim, num_channels=self.out_conv_dim, affine=True)
 
     def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
@@ -357,15 +314,16 @@ class SEWDPositionalConvEmbedding(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.conv = nn.Conv1d(
-            in_channels=config.hidden_size,
-            out_channels=config.hidden_size,
+            config.hidden_size,
+            config.hidden_size,
             kernel_size=config.num_conv_pos_embeddings,
             padding=config.num_conv_pos_embeddings // 2,
             groups=config.num_conv_pos_embedding_groups,
             stride=config.squeeze_factor,
-            bias=True,
         )
-        self.conv = nn.utils.weight_norm(self.conv, dim=2)
+
+
+        self.conv = nn.utils.weight_norm(self.conv, name="weight", dim=2)
 
         self.padding = SEWDSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -394,9 +352,7 @@ class SEWDSamePadLayer(nn.Module):
 class SEWDUpsampling(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.projection = nn.Linear(
-            config.hidden_size, config.hidden_size * config.squeeze_factor
-        )
+        self.projection = nn.Linear(config.hidden_size, config.hidden_size * config.squeeze_factor)
         self.activation = ACT2FN[config.feat_extract_activation]
         self.squeeze_factor = config.squeeze_factor
 
@@ -409,9 +365,7 @@ class SEWDUpsampling(nn.Module):
             bsz, src_len, src_embed_dim = hidden_states.shape
             tgt_len = src_len * self.squeeze_factor
             tgt_embed_dim = src_embed_dim // self.squeeze_factor
-            hidden_states = hidden_states.reshape(
-                bsz, src_len, self.squeeze_factor, tgt_embed_dim
-            )
+            hidden_states = hidden_states.reshape(bsz, src_len, self.squeeze_factor, tgt_embed_dim)
             hidden_states = hidden_states.reshape(bsz, tgt_len, tgt_embed_dim)
 
         return hidden_states
@@ -426,14 +380,10 @@ class SEWDFeatureEncoder(nn.Module):
 
         if config.feat_extract_norm == "group":
             conv_layers = [SEWDGroupNormConvLayer(config, layer_id=0)] + [
-                SEWDNoLayerNormConvLayer(config, layer_id=i + 1)
-                for i in range(config.num_feat_extract_layers - 1)
+                SEWDNoLayerNormConvLayer(config, layer_id=i + 1) for i in range(config.num_feat_extract_layers - 1)
             ]
         elif config.feat_extract_norm == "layer":
-            conv_layers = [
-                SEWDLayerNormConvLayer(config, layer_id=i)
-                for i in range(config.num_feat_extract_layers)
-            ]
+            conv_layers = [SEWDLayerNormConvLayer(config, layer_id=i) for i in range(config.num_feat_extract_layers)]
         else:
             raise ValueError(
                 f"`config.feat_extract_norm` is {config.feat_extract_norm}, but has to be one of ['group', 'layer']"
@@ -443,7 +393,7 @@ class SEWDFeatureEncoder(nn.Module):
         self._requires_grad = True
 
     def _freeze_parameters(self):
-        for name, param in self.parameters_and_names():
+        for param in self.parameters():
             param.requires_grad = False
         self._requires_grad = False
 
@@ -500,155 +450,24 @@ class ContextPooler(nn.Module):
         return self.config.hidden_size
 
 
-# Copied from transformers.models.deberta.modeling_deberta.XSoftmax with deberta->deberta_v2
-class XSoftmax(nn.Module):
-
+class XSoftmax(mindspore.nn.Cell):
     def __init__(self, dim=-1):
-
         super().__init__()
         self.dim = dim
 
-    def forward(self, input, mask):
-        """
-        Constructs a softmax operation with masking for a given input tensor.
-
-        Args:
-            self (XSoftmax): An instance of the XSoftmax class.
-            input (Tensor): The input tensor on which the softmax operation is performed.
-            mask (Tensor): A tensor representing the mask used for masking certain elements in the input tensor.
-
-        Returns:
-            None. The method modifies the input tensor in-place and does not return any value.
-
-        Raises:
-            - TypeError: If the input tensor or the mask tensor is not of the expected type.
-            - ValueError: If the dimensions of the input tensor and the mask tensor do not match.
-            - RuntimeError: If an error occurs during the softmax operation or masking process.
-        """
+    def construct(self, input, mask):
         rmask = ~(mask.to(mindspore.bool_))
-        output = input.masked_fill(rmask, float(ops.finfo(input.dtype).min))
+
+        output = input.masked_fill(rmask, mindspore.tensor(ops.finfo(input.dtype).min))
         output = ops.softmax(output, self.dim)
         output = output.masked_fill(rmask, 0)
         return output
 
-    def brop(self, input, mask, output, grad_output):
-        """
-        This method, 'brop', is a member of the 'XSoftmax' class and performs a specific operation on the given input, mask, output, and grad_output parameters.
-
-        Args:
-            self: An instance of the 'XSoftmax' class.
-            input: The input parameter of type <input_type>. It represents the input value used in the operation.
-            mask: The mask parameter of type <mask_type>. It represents a mask used in the operation. <Additional details about the purpose and restrictions of the mask parameter.>
-            output: The output parameter of type <output_type>. It represents the output value of the operation.
-            grad_output: The grad_output parameter of type <grad_output_type>. It represents the gradient of the output value.
-
-        Returns:
-            dx: A value of type <dx_type>. It represents the final result of the operation. <Additional details about the purpose and format of the dx value.>
-            None
-
-        Raises:
-            <Exception1>: <Description of when and why this exception may be raised.>
-            <Exception2>: <Description of when and why this exception may be raised.>
-            .
-            .
-            <Additional exceptions that may be raised during the execution of the method.>
-        """
-        dx = ops.mul(
-            output,
-            ops.sub(
-                grad_output,
-                ops.sum(ops.mul(output, grad_output), self.dim, keepdim=True),
-            ),
-        )
+    def bprop(self, input, mask, output, grad_output):
+        dx = ops.mul(output, ops.sub(grad_output, ops.sum(ops.mul(output, grad_output), self.dim, keepdim=True)))
         return dx, None
 
-
-# Copied from transformers.models.deberta.modeling_deberta.DropoutContext
-class DropoutContext:
-    '''
-    dropout context for optimization
-    '''
-    def __init__(self):
-        self.dropout = 0
-        self.mask = None
-        self.scale = 1
-        self.reuse_mask = True
-
-
-class XDropout(nn.Module):
-    """Optimized dropout function to save computation and memory by using mask operation instead of multiplication."""
-
-    def __init__(self, local_ctx):
-        super(XDropout, self).__init__()
-        self.local_ctx = local_ctx
-
-    def forward(self, input):
-        mask, dropout = get_mask(input, self.local_ctx)
-        scale = 1.0 / (1 - dropout)
-        if dropout > 0:
-            output = input * mask * scale
-        else:
-            output = input
-        return output
-
-    def bprop(self, input, output, dout):
-        mask, dropout = get_mask(input, self.local_ctx)
-        scale = 1.0 / (1 - dropout)
-        if dropout > 0:
-            grad_input = dout * mask * scale
-        else:
-            grad_input = dout
-        return grad_input, None
-
-
-# Copied from transformers.models.deberta.modeling_deberta.StableDropout
-class StableDropout(nn.Module):
-    """
-    Optimized dropout module for stabilizing the training
-
-    Args:
-        drop_prob (float): the dropout probabilities
-    """
-
-    def __init__(self, drop_prob):
-        super().__init__()
-        self.drop_prob = drop_prob
-        self.count = 0
-        self.context_stack = None
-
-    def forward(self, x):
-        """
-        Call the module
-
-        Args:
-            x (`mindspore.Tensor`): The input tensor to apply dropout
-        """
-        if self.training and self.drop_prob > 0:
-            return XDropout(self.get_context())(x)
-        return x
-
-    def clear_context(self):
-        self.count = 0
-        self.context_stack = None
-
-    def init_context(self, reuse_mask=True, scale=1):
-        if self.context_stack is None:
-            self.context_stack = []
-        self.count = 0
-        for c in self.context_stack:
-            c.reuse_mask = reuse_mask
-            c.scale = scale
-
-    def get_context(self):
-        if self.context_stack is not None:
-            if self.count >= len(self.context_stack):
-                self.context_stack.append(DropoutContext())
-            ctx = self.context_stack[self.count]
-            ctx.dropout = self.drop_prob
-            self.count += 1
-            return ctx
-        else:
-            return self.drop_prob
+StableDropout = nn.Dropout
 
 
 # Copied from transformers.models.deberta.modeling_deberta.DebertaSelfOutput with DebertaV2->SEWD, DebertaLayerNorm->LayerNorm, hidden_dropout_prob->activation_dropout
@@ -656,9 +475,7 @@ class SEWDSelfOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], eps=config.layer_norm_eps
-        )
+        self.LayerNorm = LayerNorm(config.hidden_size, config.layer_norm_eps)
         self.dropout = StableDropout(config.activation_dropout)
 
     def forward(self, hidden_states, input_tensor):
@@ -689,22 +506,14 @@ class DisentangledSelfAttention(nn.Module):
             )
         self.num_attention_heads = config.num_attention_heads
         _attention_head_size = config.hidden_size // config.num_attention_heads
-        self.attention_head_size = getattr(
-            config, "attention_head_size", _attention_head_size
-        )
+        self.attention_head_size = getattr(config, "attention_head_size", _attention_head_size)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
-        self.query_proj = nn.Linear(
-            config.hidden_size, self.all_head_size, bias=True
-        )
+        self.query_proj = nn.Linear(config.hidden_size, self.all_head_size, bias=True)
         self.key_proj = nn.Linear(config.hidden_size, self.all_head_size, bias=True)
-        self.value_proj = nn.Linear(
-            config.hidden_size, self.all_head_size, bias=True
-        )
+        self.value_proj = nn.Linear(config.hidden_size, self.all_head_size, bias=True)
 
         self.share_att_key = getattr(config, "share_att_key", False)
-        self.pos_att_type = (
-            config.pos_att_type if config.pos_att_type is not None else []
-        )
+        self.pos_att_type = config.pos_att_type if config.pos_att_type is not None else []
         self.relative_attention = getattr(config, "relative_attention", False)
 
         if self.relative_attention:
@@ -720,17 +529,13 @@ class DisentangledSelfAttention(nn.Module):
 
             if not self.share_att_key:
                 if "c2p" in self.pos_att_type:
-                    self.pos_key_proj = nn.Linear(
-                        config.hidden_size, self.all_head_size, bias=True
-                    )
+                    self.pos_key_proj = nn.Linear(config.hidden_size, self.all_head_size, bias=True)
                 if "p2c" in self.pos_att_type:
-                    self.pos_query_proj = nn.Linear(
-                        config.hidden_size, self.all_head_size
-                    )
+                    self.pos_query_proj = nn.Linear(config.hidden_size, self.all_head_size)
 
         self.dropout = StableDropout(config.attention_dropout)
 
-    def swapaxes_for_scores(self, x, attention_heads):
+    def transpose_for_scores(self, x, attention_heads):
         new_x_shape = x.shape[:-1] + (attention_heads, -1)
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3).view(-1, x.shape[1], x.shape[-1])
@@ -744,18 +549,40 @@ class DisentangledSelfAttention(nn.Module):
         relative_pos=None,
         rel_embeddings=None,
     ):
+        """
+        Call the module
 
+        Args:
+            hidden_states (`mindspore.Tensor`):
+                Input states to the module usually the output from previous layer, it will be the Q,K and V in
+                *Attention(Q,K,V)*
+
+            attention_mask (`mindspore.Tensor`):
+                An attention mask matrix of shape [*B*, *N*, *N*] where *B* is the batch size, *N* is the maximum
+                sequence length in which element [i,j] = *1* means the *i* th token in the input can attend to the *j*
+                th token.
+
+            output_attentions (`bool`, *optional*):
+                Whether return the attention matrix.
+
+            query_states (`mindspore.Tensor`, *optional*):
+                The *Q* state in *Attention(Q,K,V)*.
+
+            relative_pos (`mindspore.Tensor`):
+                The relative position encoding between the tokens in the sequence. It's of shape [*B*, *N*, *N*] with
+                values ranging in [*-max_relative_positions*, *max_relative_positions*].
+
+            rel_embeddings (`mindspore.Tensor`):
+                The embedding of relative distances. It's a tensor of shape [\\(2 \\times
+                \\text{max_relative_positions}\\), *hidden_size*].
+
+
+        """
         if query_states is None:
             query_states = hidden_states
-        query_layer = self.swapaxes_for_scores(
-            self.query_proj(query_states), self.num_attention_heads
-        )
-        key_layer = self.swapaxes_for_scores(
-            self.key_proj(hidden_states), self.num_attention_heads
-        )
-        value_layer = self.swapaxes_for_scores(
-            self.value_proj(hidden_states), self.num_attention_heads
-        )
+        query_layer = self.transpose_for_scores(self.query_proj(query_states), self.num_attention_heads)
+        key_layer = self.transpose_for_scores(self.key_proj(hidden_states), self.num_attention_heads)
+        value_layer = self.transpose_for_scores(self.value_proj(hidden_states), self.num_attention_heads)
 
         rel_att = None
         # Take the dot product between "query" and "key" to get the raw attention scores.
@@ -764,13 +591,8 @@ class DisentangledSelfAttention(nn.Module):
             scale_factor += 1
         if "p2c" in self.pos_att_type:
             scale_factor += 1
-        scale = ops.sqrt(
-            mindspore.Tensor(query_layer.shape[-1], dtype=mindspore.float32)
-            * scale_factor
-        )
-        attention_scores = ops.bmm(
-            query_layer, key_layer.swapaxes(-1, -2) / scale.to(dtype=query_layer.dtype)
-        )
+        scale = ops.sqrt(mindspore.tensor(query_layer.shape[-1], dtype=mindspore.float32) * scale_factor)
+        attention_scores = ops.bmm(query_layer, key_layer.swapaxes(-1, -2) / scale.to(dtype=query_layer.dtype))
         if self.relative_attention:
             rel_embeddings = self.pos_dropout(rel_embeddings)
             rel_att = self.disentangled_attention_bias(
@@ -780,28 +602,19 @@ class DisentangledSelfAttention(nn.Module):
         if rel_att is not None:
             attention_scores = attention_scores + rel_att
         attention_scores = attention_scores.view(
-            -1,
-            self.num_attention_heads,
-            attention_scores.shape[-2],
-            attention_scores.shape[-1],
+            -1, self.num_attention_heads, attention_scores.shape[-2], attention_scores.shape[-1]
         )
 
         # bsz x height x length x dimension
-        xsoftmax = XSoftmax(-1)
-        attention_probs = xsoftmax(attention_scores, attention_mask)
+        attention_probs = XSoftmax(-1)(attention_scores, attention_mask)
         attention_probs = self.dropout(attention_probs)
         context_layer = ops.bmm(
-            attention_probs.view(
-                -1, attention_probs.shape[-2], attention_probs.shape[-1]
-            ),
-            value_layer,
+            attention_probs.view(-1, attention_probs.shape[-2], attention_probs.shape[-1]), value_layer
         )
-        context_layer = context_layer.view(
-            -1,
-            self.num_attention_heads,
-            context_layer.shape[-2],
-            context_layer.shape[-1],
-        ).permute(0, 2, 1, 3)
+        context_layer = (
+            context_layer.view(-1, self.num_attention_heads, context_layer.shape[-2], context_layer.shape[-1])
+            .permute(0, 2, 1, 3)
+        )
         new_context_layer_shape = context_layer.shape[:-2] + (-1,)
         context_layer = context_layer.view(new_context_layer_shape)
         if output_attentions:
@@ -809,9 +622,7 @@ class DisentangledSelfAttention(nn.Module):
         else:
             return context_layer
 
-    def disentangled_attention_bias(
-        self, query_layer, key_layer, relative_pos, rel_embeddings, scale_factor
-    ):
+    def disentangled_attention_bias(self, query_layer, key_layer, relative_pos, rel_embeddings, scale_factor):
         if relative_pos is None:
             q = query_layer.shape[-2]
             relative_pos = build_relative_position(
@@ -826,65 +637,45 @@ class DisentangledSelfAttention(nn.Module):
             relative_pos = relative_pos.unsqueeze(1)
         # bsz x height x query x key
         elif relative_pos.dim() != 4:
-            raise ValueError(
-                f"Relative position ids must be of dim 2 or 3 or 4. {relative_pos.dim()}"
-            )
+            raise ValueError(f"Relative position ids must be of dim 2 or 3 or 4. {relative_pos.dim()}")
 
         att_span = self.pos_ebd_size
         relative_pos = relative_pos.long()
 
         rel_embeddings = rel_embeddings[0 : att_span * 2, :].unsqueeze(0)
         if self.share_att_key:
-            pos_query_layer = self.swapaxes_for_scores(
+            pos_query_layer = self.transpose_for_scores(
                 self.query_proj(rel_embeddings), self.num_attention_heads
-            ).repeat(query_layer.shape[0] // self.num_attention_heads, 1, 1)
-            pos_key_layer = self.swapaxes_for_scores(
-                self.key_proj(rel_embeddings), self.num_attention_heads
-            ).repeat(query_layer.shape[0] // self.num_attention_heads, 1, 1)
+            ).tile((query_layer.shape[0] // self.num_attention_heads, 1, 1))
+            pos_key_layer = self.transpose_for_scores(self.key_proj(rel_embeddings), self.num_attention_heads).tile(
+                (query_layer.shape[0] // self.num_attention_heads, 1, 1)
+            )
         else:
             if "c2p" in self.pos_att_type:
-                pos_key_layer = self.swapaxes_for_scores(
+                pos_key_layer = self.transpose_for_scores(
                     self.pos_key_proj(rel_embeddings), self.num_attention_heads
-                ).repeat(
-                    query_layer.shape[0] // self.num_attention_heads, 1, 1
-                )  # .split(self.all_head_size, dim=-1)
+                ).tile((query_layer.shape[0] // self.num_attention_heads, 1, 1))  # .split(self.all_head_size, dim=-1)
             if "p2c" in self.pos_att_type:
-                pos_query_layer = self.swapaxes_for_scores(
+                pos_query_layer = self.transpose_for_scores(
                     self.pos_query_proj(rel_embeddings), self.num_attention_heads
-                ).repeat(
-                    query_layer.shape[0] // self.num_attention_heads, 1, 1
-                )  # .split(self.all_head_size, dim=-1)
+                ).tile((query_layer.shape[0] // self.num_attention_heads, 1, 1))  # .split(self.all_head_size, dim=-1)
 
         score = 0
         # content->position
         if "c2p" in self.pos_att_type:
-            scale = ops.sqrt(
-                mindspore.Tensor(pos_key_layer.shape[-1], dtype=mindspore.float32)
-                * scale_factor
-            )
+            scale = ops.sqrt(mindspore.tensor(pos_key_layer.shape[-1], dtype=mindspore.float32) * scale_factor)
             c2p_att = ops.bmm(query_layer, pos_key_layer.swapaxes(-1, -2))
             c2p_pos = ops.clamp(relative_pos + att_span, 0, att_span * 2 - 1)
-            c2p_att = ops.gather_elements(
+            c2p_att = ops.gather(
                 c2p_att,
                 dim=-1,
-                index=c2p_pos.squeeze(0).expand(
-                    (
-                        (
-                            query_layer.shape[0],
-                            query_layer.shape[1],
-                            relative_pos.shape[-1],
-                        )
-                    )
-                ),
+                index=c2p_pos.squeeze(0).broadcast_to([query_layer.shape[0], query_layer.shape[1], relative_pos.shape[-1]]),
             )
             score += c2p_att / scale.to(dtype=c2p_att.dtype)
 
         # position->content
         if "p2c" in self.pos_att_type:
-            scale = ops.sqrt(
-                mindspore.Tensor(pos_query_layer.shape[-1], dtype=mindspore.float32)
-                * scale_factor
-            )
+            scale = ops.sqrt(mindspore.tensor(pos_query_layer.shape[-1], dtype=mindspore.float32) * scale_factor)
             if key_layer.shape[-2] != query_layer.shape[-2]:
                 r_pos = build_relative_position(
                     key_layer.shape[-2],
@@ -897,13 +688,11 @@ class DisentangledSelfAttention(nn.Module):
                 r_pos = relative_pos
 
             p2c_pos = ops.clamp(-r_pos + att_span, 0, att_span * 2 - 1)
-            p2c_att = ops.bmm(key_layer, pos_query_layer.swapaxes(-1, -2))
-            p2c_att = ops.gather_elements(
+            p2c_att = ops.bmm(key_layer, ops.swapaxes(pos_query_layer, -1, -2))
+            p2c_att = ops.gather(
                 p2c_att,
                 dim=-1,
-                index=p2c_pos.squeeze(0).expand(
-                    (query_layer.shape[0], key_layer.shape[-2], key_layer.shape[-2])
-                ),
+                index=p2c_pos.squeeze(0).broadcast_to([query_layer.shape[0], key_layer.shape[-2], key_layer.shape[-2]]),
             ).swapaxes(-1, -2)
             score += p2c_att / scale.to(dtype=p2c_att.dtype)
 
@@ -968,9 +757,7 @@ class SEWDOutput(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], eps=config.layer_norm_eps
-        )
+        self.LayerNorm = LayerNorm(config.hidden_size, config.layer_norm_eps)
         self.dropout = StableDropout(config.activation_dropout)
         self.config = config
 
@@ -1024,23 +811,16 @@ class ConvLayer(nn.Module):
         groups = getattr(config, "conv_groups", 1)
         self.conv_act = getattr(config, "conv_act", "tanh")
         self.conv = nn.Conv1d(
-            config.hidden_size,
-            config.hidden_size,
-            kernel_size,
-            padding=(kernel_size - 1) // 2,
-            groups=groups,
-            bias=True,
+            config.hidden_size, config.hidden_size, kernel_size, padding=(kernel_size - 1) // 2, groups=groups
         )
-        self.LayerNorm = nn.LayerNorm(
-            [config.hidden_size], eps=config.layer_norm_eps
-        )
+        self.LayerNorm = LayerNorm(config.hidden_size, config.layer_norm_eps)
         self.dropout = StableDropout(config.hidden_dropout_prob)
         self.config = config
 
     def forward(self, hidden_states, residual_states, input_mask):
         out = self.conv(hidden_states.permute(0, 2, 1)).permute(0, 2, 1)
         rmask = (1 - input_mask).bool()
-        out.masked_fill_(rmask.unsqueeze(-1).expand((out.shape)), 0)
+        out.masked_fill_(rmask.unsqueeze(-1).broadcast_to(out.shape), 0)
         out = ACT2FN[self.conv_act](self.dropout(out))
 
         layer_norm_input = residual_states + out
@@ -1067,9 +847,7 @@ class SEWDTransformerEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        self.layer = nn.ModuleList(
-            [SEWDLayer(config) for _ in range(config.num_hidden_layers)]
-        )
+        self.layer = nn.ModuleList([SEWDLayer(config) for _ in range(config.num_hidden_layers)])
         self.relative_attention = getattr(config, "relative_attention", False)
 
         if self.relative_attention:
@@ -1085,19 +863,12 @@ class SEWDTransformerEncoder(nn.Module):
 
             self.rel_embeddings = nn.Embedding(pos_ebd_size, config.hidden_size)
 
-        self.norm_rel_ebd = [
-            x.strip()
-            for x in getattr(config, "norm_rel_ebd", "none").lower().split("|")
-        ]
+        self.norm_rel_ebd = [x.strip() for x in getattr(config, "norm_rel_ebd", "none").lower().split("|")]
 
         if "layer_norm" in self.norm_rel_ebd:
-            self.LayerNorm = nn.LayerNorm(
-                [config.hidden_size], eps=config.layer_norm_eps
-            )
+            self.LayerNorm = LayerNorm(config.hidden_size, config.layer_norm_eps, elementwise_affine=True)
 
-        self.conv = (
-            ConvLayer(config) if getattr(config, "conv_kernel_size", 0) > 0 else None
-        )
+        self.conv = ConvLayer(config) if getattr(config, "conv_kernel_size", 0) > 0 else None
         self.gradient_checkpointing = False
 
     def get_rel_embedding(self):
@@ -1109,9 +880,7 @@ class SEWDTransformerEncoder(nn.Module):
     def get_attention_mask(self, attention_mask):
         if attention_mask.dim() <= 2:
             extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
-            attention_mask = extended_attention_mask * extended_attention_mask.squeeze(
-                -2
-            ).unsqueeze(-1)
+            attention_mask = extended_attention_mask * extended_attention_mask.squeeze(-2).unsqueeze(-1)
         elif attention_mask.dim() == 3:
             attention_mask = attention_mask.unsqueeze(1)
 
@@ -1119,11 +888,7 @@ class SEWDTransformerEncoder(nn.Module):
 
     def get_rel_pos(self, hidden_states, query_states=None, relative_pos=None):
         if self.relative_attention and relative_pos is None:
-            q = (
-                query_states.shape[-2]
-                if query_states is not None
-                else hidden_states.shape[-2]
-            )
+            q = query_states.shape[-2] if query_states is not None else hidden_states.shape[-2]
             relative_pos = build_relative_position(
                 q,
                 hidden_states.shape[-2],
@@ -1202,15 +967,9 @@ class SEWDTransformerEncoder(nn.Module):
             all_hidden_states = all_hidden_states + (output_states,)
 
         if not return_dict:
-            return tuple(
-                v
-                for v in [output_states, all_hidden_states, all_attentions]
-                if v is not None
-            )
+            return tuple(v for v in [output_states, all_hidden_states, all_attentions] if v is not None)
         return BaseModelOutput(
-            last_hidden_state=output_states,
-            hidden_states=all_hidden_states,
-            attentions=all_attentions,
+            last_hidden_state=output_states, hidden_states=all_hidden_states, attentions=all_attentions
         )
 
 
@@ -1226,7 +985,7 @@ class SEWDEncoder(nn.Module):
 
     def forward(
         self,
-        hidden_states: mindspore.Tensor,
+        hidden_states: mindspore.tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
         output_hidden_states: bool = False,
@@ -1247,7 +1006,7 @@ class SEWDEncoder(nn.Module):
             attention_ids = (
                 ops.arange(0, max_encoder_length)
                 .view(1, -1)
-                .expand((output_lengths.shape[0], -1))
+                .broadcast_to((output_lengths.shape[0], -1))
             )
             attention_mask = (attention_ids < output_lengths.view(-1, 1)).long()
 
@@ -1257,31 +1016,18 @@ class SEWDEncoder(nn.Module):
         position_embeddings = self.pos_conv_embed(hidden_states)
         pooled_hidden_states = self.pool(hidden_states)
         min_length = min(position_embeddings.shape[-1], pooled_hidden_states.shape[-1])
-        hidden_states = (
-            pooled_hidden_states[..., :min_length]
-            + position_embeddings[..., :min_length]
-        )
+        hidden_states = pooled_hidden_states[..., :min_length] + position_embeddings[..., :min_length]
         hidden_states = hidden_states.swapaxes(1, 2)
 
-        encoder_outputs = self.encoder(
-            hidden_states, attention_mask, output_hidden_states, output_attentions
-        )
+        encoder_outputs = self.encoder(hidden_states, attention_mask, output_hidden_states, output_attentions)
 
         hidden_states = self.upsample(encoder_outputs.last_hidden_state)
         if hidden_states.shape[1] < n_input_timesteps:
-            hidden_states = ops.pad(
-                hidden_states, (0, 0, 0, n_input_timesteps - hidden_states.shape[1])
-            )
+            hidden_states = nn.functional.pad(hidden_states, (0, 0, 0, n_input_timesteps - hidden_states.shape[1]))
 
         if not return_dict:
             return tuple(
-                v
-                for v in [
-                    hidden_states,
-                    encoder_outputs.hidden_states,
-                    encoder_outputs.attentions,
-                ]
-                if v is not None
+                v for v in [hidden_states, encoder_outputs.hidden_states, encoder_outputs.attentions] if v is not None
             )
         return BaseModelOutput(
             last_hidden_state=hidden_states,
@@ -1301,83 +1047,48 @@ class SEWDPreTrainedModel(PreTrainedModel):
     main_input_name = "input_values"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, cell):
-        """Initialize the weights."""
-        if isinstance(cell, SEWDPositionalConvEmbedding):
-            # 使用正态分布初始化权重
-            cell.conv.weight.set_data(
-                initializer(
-                    Normal(
-                        mean=0,
-                        sigma=2
-                        * math.sqrt(
-                            1 / (cell.conv.kernel_size[0] * cell.conv.in_channels)
-                        ),
-                    ),
-                    cell.conv.weight.shape,
-                    cell.conv.weight.dtype,
-                )
+    def _init_weights(self, module):
+        """Initialize the weights"""
+        if isinstance(module, SEWDPositionalConvEmbedding):
+            nn.init.normal_(
+                module.conv.weight,
+                mean=0,
+                std=2 * math.sqrt(1 / (module.conv.kernel_size[0] * module.conv.in_channels)),
             )
-            cell.conv.bias.set_data(
-                initializer("zeros", cell.conv.bias.shape, cell.conv.bias.dtype)
-            )
-        elif isinstance(cell, nn.Linear):
-            # 使用正态分布初始化权重
-            cell.weight.set_data(
-                initializer(
-                    Normal(0.0, self.config.initializer_range),
-                    cell.weight.shape,
-                    cell.weight.dtype,
-                )
-            )
-        elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
-            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(
-                initializer("ones", cell.weight.shape, cell.weight.dtype)
-            )
-        elif isinstance(cell, nn.Conv1d):
-            # 使用kaiming正态分布初始化权重
-            cell.weight.set_data(
-                initializer("he_normal", cell.weight.shape, cell.weight.dtype)
-            )
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(
-                0.0, self.config.initializer_range, cell.weight.shape
-            )
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0.0
+            nn.init.constant_(module.conv.bias, 0)
+        elif isinstance(module, nn.Linear):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+        elif isinstance(module, (nn.LayerNorm, nn.GroupNorm)):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
+        elif isinstance(module, nn.Conv1d):
+            nn.init.kaiming_normal_(module.weight)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight[module.padding_idx] = 0
 
-            cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
+        if isinstance(module, (nn.Linear, nn.Conv1d)) and module.bias is not None:
+            nn.init.zeros_(module.bias)
 
-        if isinstance(cell, (nn.Linear, nn.Conv1d)) and cell.bias is not None:
-            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
-
-    def _get_feat_extract_output_lengths(
-        self, input_lengths: Union[mindspore.Tensor, int]
-    ):
+    def _get_feat_extract_output_lengths(self, input_lengths: Union[mindspore.Tensor, int]):
         """
         Computes the output length of the convolutional layers
         """
 
         def _conv_out_length(input_length, kernel_size, stride):
             # 1D convolutional layer output length formula taken
-            return (
-                ops.div(input_length - kernel_size, stride, rounding_mode="floor") + 1
-            )
+            return ops.div(input_length - kernel_size, stride, rounding_mode="floor") + 1
 
-        for kernel_size, stride in zip(
-            self.config.conv_kernel, self.config.conv_stride
-        ):
+        for kernel_size, stride in zip(self.config.conv_kernel, self.config.conv_stride):
             input_lengths = _conv_out_length(input_lengths, kernel_size, stride)
 
         return input_lengths
 
-    def _get_feature_vector_attention_mask(
-        self, feature_vector_length: int, attention_mask: mindspore.Tensor
-    ):
-        output_lengths = self._get_feat_extract_output_lengths(
-            attention_mask.sum(-1)
-        ).to(mindspore.int64)
+    def _get_feature_vector_attention_mask(self, feature_vector_length: int, attention_mask: mindspore.Tensor):
+        output_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(-1)).to(mindspore.int64)
         batch_size = attention_mask.shape[0]
 
         attention_mask = ops.zeros(
@@ -1395,9 +1106,7 @@ class SEWDModel(SEWDPreTrainedModel):
         super().__init__(config)
         self.config = config
         self.feature_extractor = SEWDFeatureEncoder(config)
-        self.layer_norm = nn.LayerNorm(
-            [config.conv_dim[-1]], eps=config.feature_layer_norm_eps
-        )
+        self.layer_norm = nn.LayerNorm(config.conv_dim[-1], eps=config.feature_layer_norm_eps)
 
         self.project_features = config.conv_dim[-1] != config.hidden_size
         if self.project_features:
@@ -1405,13 +1114,7 @@ class SEWDModel(SEWDPreTrainedModel):
         self.feature_dropout = nn.Dropout(config.feat_proj_dropout)
 
         if config.mask_time_prob > 0.0 or config.mask_feature_prob > 0.0:
-            self.masked_spec_embed = mindspore.Parameter(
-                ops.uniform(
-                    shape=mindspore.Tensor(config.hidden_size),
-                    minval=mindspore.Tensor(0.0),
-                    maxval=mindspore.Tensor(1.0),
-                )
-            )
+            self.masked_spec_embed = nn.Parameter(ops.randn(config.hidden_size))
 
         self.encoder = SEWDEncoder(config)
 
@@ -1439,9 +1142,7 @@ class SEWDModel(SEWDPreTrainedModel):
 
         if mask_time_indices is not None:
             # apply SpecAugment along time axis with given mask_time_indices
-            hidden_states[mask_time_indices] = self.masked_spec_embed.to(
-                hidden_states.dtype
-            )
+            hidden_states[mask_time_indices] = self.masked_spec_embed.to(hidden_states.dtype)
         elif self.config.mask_time_prob > 0 and self.training:
             mask_time_indices = _compute_mask_indices(
                 (batch_size, sequence_length),
@@ -1450,12 +1151,8 @@ class SEWDModel(SEWDPreTrainedModel):
                 attention_mask=attention_mask,
                 min_masks=self.config.mask_time_min_masks,
             )
-            mask_time_indices = mindspore.Tensor(
-                mask_time_indices, dtype=mindspore.bool_
-            )
-            hidden_states[mask_time_indices] = self.masked_spec_embed.to(
-                hidden_states.dtype
-            )
+            mask_time_indices = mindspore.tensor(mask_time_indices, dtype=mindspore.bool_)
+            hidden_states[mask_time_indices] = self.masked_spec_embed.to(hidden_states.dtype)
 
         if self.config.mask_feature_prob > 0 and self.training:
             # generate indices & apply SpecAugment along feature axis
@@ -1465,12 +1162,8 @@ class SEWDModel(SEWDPreTrainedModel):
                 mask_length=self.config.mask_feature_length,
                 min_masks=self.config.mask_feature_min_masks,
             )
-            mask_feature_indices = mindspore.Tensor(
-                mask_feature_indices, dtype=mindspore.bool_
-            )
-            mask_feature_indices = mask_feature_indices[:, None].expand(
-                (-1, sequence_length, -1)
-            )
+            mask_feature_indices = mindspore.tensor(mask_feature_indices, dtype=mindspore.bool_)
+            mask_feature_indices = mask_feature_indices[:, None].broadcast_to((-1, sequence_length, -1))
             hidden_states[mask_feature_indices] = 0
 
         return hidden_states
@@ -1484,19 +1177,11 @@ class SEWDModel(SEWDPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutput]:
-        output_attentions = (
-            output_attentions
-            if output_attentions is not None
-            else self.config.output_attentions
-        )
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         extract_features = self.feature_extractor(input_values)
         extract_features = extract_features.swapaxes(1, 2)
@@ -1508,13 +1193,9 @@ class SEWDModel(SEWDPreTrainedModel):
 
         if attention_mask is not None:
             # compute reduced attention_mask corresponding to feature vectors
-            attention_mask = self._get_feature_vector_attention_mask(
-                hidden_states.shape[1], attention_mask
-            )
+            attention_mask = self._get_feature_vector_attention_mask(hidden_states.shape[1], attention_mask)
 
-        hidden_states = self._mask_hidden_states(
-            hidden_states, mask_time_indices=mask_time_indices
-        )
+        hidden_states = self._mask_hidden_states(hidden_states, mask_time_indices=mask_time_indices)
 
         encoder_outputs = self.encoder(
             hidden_states,
@@ -1554,9 +1235,7 @@ class SEWDForCTC(SEWDPreTrainedModel):
                 "or define `vocab_size` of your model's configuration."
             )
         output_hidden_size = (
-            config.output_hidden_size
-            if hasattr(config, "add_adapter") and config.add_adapter
-            else config.hidden_size
+            config.output_hidden_size if hasattr(config, "add_adapter") and config.add_adapter else config.hidden_size
         )
         self.lm_head = nn.Linear(output_hidden_size, config.vocab_size)
 
@@ -1577,17 +1256,9 @@ class SEWDForCTC(SEWDPreTrainedModel):
         # ok to repurpose this function here.
         target_lang = self.target_lang
 
-        if (
-            target_lang is not None
-            and getattr(self.config, "adapter_attn_dim", None) is None
-        ):
-            raise ValueError(
-                f"Cannot pass `target_lang`: {target_lang} if `config.adapter_attn_dim` is not defined."
-            )
-        elif (
-            target_lang is None
-            and getattr(self.config, "adapter_attn_dim", None) is not None
-        ):
+        if target_lang is not None and getattr(self.config, "adapter_attn_dim", None) is None:
+            raise ValueError(f"Cannot pass `target_lang`: {target_lang} if `config.adapter_attn_dim` is not defined.")
+        elif target_lang is None and getattr(self.config, "adapter_attn_dim", None) is not None:
             logger.info("By default `target_lang` is set to 'eng'.")
         elif target_lang is not None:
             self.load_adapter(target_lang)
@@ -1598,7 +1269,7 @@ class SEWDForCTC(SEWDPreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated. "
+            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -1616,7 +1287,7 @@ class SEWDForCTC(SEWDPreTrainedModel):
         Calling this function will disable the gradient computation for the base model so that its parameters will not
         be updated during training. Only the classification head will be updated.
         """
-        for name, param in self.sew_d.parameters_and_names():
+        for param in self.sew_d.parameters():
             param.requires_grad = False
 
     def forward(
@@ -1635,10 +1306,10 @@ class SEWDForCTC(SEWDPreTrainedModel):
             All labels set to `-100` are ignored (masked), the loss is only computed for labels in `[0, ...,
             config.vocab_size - 1]`.
         """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        if labels is not None and labels.max() >= self.config.vocab_size:
+            raise ValueError(f"Label values must be <= vocab_size: {self.config.vocab_size}")
 
         outputs = self.sew_d(
             input_values,
@@ -1655,30 +1326,22 @@ class SEWDForCTC(SEWDPreTrainedModel):
 
         loss = None
         if labels is not None:
-            if labels.max() >= self.config.vocab_size:
-                raise ValueError(
-                    f"Label values must be <= vocab_size: {self.config.vocab_size}"
-                )
-
             # retrieve loss input_lengths from attention_mask
             attention_mask = (
-                attention_mask
-                if attention_mask is not None
-                else ops.ones_like(input_values, dtype=mindspore.int64)
+                attention_mask if attention_mask is not None else ops.ones_like(input_values, dtype=mindspore.int64)
             )
-            input_lengths = self._get_feat_extract_output_lengths(
-                attention_mask.sum(-1)
-            ).to(mindspore.int64)
+            input_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(-1)).to(mindspore.int64)
 
             # assuming that padded tokens are filled with -100
             # when not being attended to
             labels_mask = labels >= 0
             target_lengths = labels_mask.sum(-1)
+            flattened_targets = labels.masked_select(labels_mask)
 
             # ctc_loss doesn't support fp16
-            log_probs = F.log_softmax(logits, dim=-1).swapaxes(0, 1)
+            log_probs = nn.functional.log_softmax(logits, dim=-1, dtype=mindspore.float32).swapaxes(0, 1)
 
-            loss = F.ctc_loss(
+            loss = nn.functional.ctc_loss(
                 log_probs,
                 labels,
                 input_lengths,
@@ -1686,17 +1349,14 @@ class SEWDForCTC(SEWDPreTrainedModel):
                 blank=self.config.pad_token_id,
                 reduction=self.config.ctc_loss_reduction,
                 zero_infinity=self.config.ctc_zero_infinity,
-            )[0]
+            )
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]
             return ((loss,) + output) if loss is not None else output
 
         return CausalLMOutput(
-            loss=loss,
-            logits=logits,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
+            loss=loss, logits=logits, hidden_states=outputs.hidden_states, attentions=outputs.attentions
         )
 
 
@@ -1710,11 +1370,9 @@ class SEWDForSequenceClassification(SEWDPreTrainedModel):
                 "Sequence classification does not support the use of SEWD adapters (config.add_adapter=True)"
             )
         self.sew_d = SEWDModel(config)
-        num_layers = (
-            config.num_hidden_layers + 1
-        )  # transformer layers + input embeddings
+        num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
-            self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers)
+            self.layer_weights = nn.Parameter(ops.ones(num_layers) / num_layers)
         self.projector = nn.Linear(config.hidden_size, config.classifier_proj_size)
         self.classifier = nn.Linear(config.classifier_proj_size, config.num_labels)
 
@@ -1727,7 +1385,7 @@ class SEWDForSequenceClassification(SEWDPreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated. "
+            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -1745,7 +1403,7 @@ class SEWDForSequenceClassification(SEWDPreTrainedModel):
         Calling this function will disable the gradient computation for the base model so that its parameters will not
         be updated during training. Only the classification head will be updated.
         """
-        for name, param in self.sew_d.parameters_and_names():
+        for param in self.sew_d.parameters():
             param.requires_grad = False
 
     def forward(
@@ -1764,12 +1422,8 @@ class SEWDForSequenceClassification(SEWDPreTrainedModel):
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
 
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
-        output_hidden_states = (
-            True if self.config.use_weighted_layer_sum else output_hidden_states
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = True if self.config.use_weighted_layer_sum else output_hidden_states
 
         outputs = self.sew_d(
             input_values,
@@ -1782,30 +1436,25 @@ class SEWDForSequenceClassification(SEWDPreTrainedModel):
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
             hidden_states = ops.stack(hidden_states, dim=1)
-            norm_weights = ops.softmax(self.layer_weights, dim=-1)
-            hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(dim=1)
+            norm_weights = nn.functional.softmax(self.layer_weights, dim=-1)
+            hidden_states = ops.sum((hidden_states * norm_weights.view(-1, 1, 1)), dim=1)
         else:
             hidden_states = outputs[0]
 
         hidden_states = self.projector(hidden_states)
         if attention_mask is None:
-            pooled_output = hidden_states.mean(axis=1)
+            pooled_output = ops.mean(hidden_states, dim=1)
         else:
-            padding_mask = self._get_feature_vector_attention_mask(
-                hidden_states.shape[1], attention_mask
-            )
+            padding_mask = self._get_feature_vector_attention_mask(hidden_states.shape[1], attention_mask)
             hidden_states[~padding_mask] = 0.0
-            pooled_output = hidden_states.sum(axis=1) / padding_mask.sum(axis=1).view(
-                -1, 1
-            )
+            pooled_output = ops.sum(hidden_states, dim=1) / ops.sum(padding_mask, dim=1).view(-1, 1)
 
         logits = self.classifier(pooled_output)
 
         loss = None
         if labels is not None:
-            loss = F.cross_entropy(
-                logits.view(-1, self.config.num_labels), labels.view(-1)
-            )
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.config.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]
@@ -1818,32 +1467,9 @@ class SEWDForSequenceClassification(SEWDPreTrainedModel):
             attentions=outputs.attentions,
         )
 
-
 __all__ = [
-    "SEWDNoLayerNormConvLayer",
-    "SEWDLayerNormConvLayer",
-    "SEWDGroupNormConvLayer",
-    "SEWDPositionalConvEmbedding",
-    "SEWDSamePadLayer",
-    "SEWDUpsampling",
-    "SEWDFeatureEncoder",
-    "SEWDFeatureExtractor",
-    "ContextPooler",
-    "XSoftmax",
-    "DropoutContext",
-    "XDropout",
-    "StableDropout",
-    "SEWDSelfOutput",
-    "DisentangledSelfAttention",
-    "SEWDAttention",
-    "SEWDIntermediate",
-    "SEWDOutput",
-    "SEWDLayer",
-    "ConvLayer",
-    "SEWDTransformerEncoder",
-    "SEWDEncoder",
-    "SEWDPreTrainedModel",
-    "SEWDModel",
     "SEWDForCTC",
     "SEWDForSequenceClassification",
+    "SEWDModel",
+    "SEWDPreTrainedModel",
 ]

@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch XLM RoBERTa xl,xxl model."""
+"""MindSpore XLM RoBERTa xl,xxl model."""
 
 import math
 from typing import List, Optional, Tuple, Union
@@ -145,7 +145,7 @@ class XLMRobertaXLEmbeddings(nn.Module):
         if token_type_ids is None:
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
+                buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to((input_shape[0], seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
                 token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
@@ -934,7 +934,7 @@ class XLMRobertaXLForCausalLM(XLMRobertaXLPreTrainedModel):
             >>> config.is_decoder = True
             >>> model = XLMRobertaForCausalLM.from_pretrained("roberta-base", config=config)
             ...
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> prediction_logits = outputs.logits
@@ -1170,10 +1170,11 @@ class XLMRobertaXLLMHead(nn.Module):
 
     def forward(self, features, **kwargs):
         x = self.dense(features)
-        x = ops.gelu(x)
+        x = F.gelu(x)
         x = self.layer_norm(x)
         x = self.decoder(x)
         return x
+
     def _tie_weights(self):
         # To tie those two weights if they get disconnected
         self.bias = self.decoder.bias

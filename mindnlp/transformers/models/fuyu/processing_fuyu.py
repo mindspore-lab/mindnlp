@@ -536,7 +536,7 @@ class FuyuProcessor(ProcessorMixin):
 
         # --- Preprocess images using self.image_processor ---
 
-        # We hard code "pt" here because the rest of the processing assumes torch tensors
+        # We hard code "ms" here because the rest of the processing assumes torch tensors
         image_encoding = self.image_processor.preprocess(images, return_tensors="ms")
         batch_images = image_encoding["images"]
         image_unpadded_heights = image_encoding["image_unpadded_heights"]

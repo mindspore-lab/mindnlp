@@ -456,7 +456,7 @@ class WhisperGenerationMixin:
         >>> audio = [x["array"] for x in audio]
 
         >>> # make sure to NOT truncate the input audio, to return the `attention_mask` and to pad to the longest audio
-        >>> inputs = processor(audio, return_tensors="pt", truncation=False, padding="longest", return_attention_mask=True, sampling_rate=16_000)
+        >>> inputs = processor(audio, return_tensors="ms", truncation=False, padding="longest", return_attention_mask=True, sampling_rate=16_000)
         >>> inputs = inputs.to("cuda", mindspore.float32)
 
         >>> # transcribe audio to ids
@@ -476,7 +476,7 @@ class WhisperGenerationMixin:
 
         >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
 
-        >>> inputs = processor(ds[0]["audio"]["array"], return_tensors="pt")
+        >>> inputs = processor(ds[0]["audio"]["array"], return_tensors="ms")
         >>> input_features = inputs.input_features
 
         >>> generated_ids = model.generate(inputs=input_features)

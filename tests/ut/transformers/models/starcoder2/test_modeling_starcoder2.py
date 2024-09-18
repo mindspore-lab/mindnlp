@@ -12,17 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the PyTorch Starcoder2 model. """
+"""Testing suite for the PyTorch Starcoder2 model."""
 
-
+import tempfile
 import unittest
 
-import numpy as np
+import pytest
+
 from mindnlp.transformers import Starcoder2Config
 from mindnlp.utils.testing_utils import (
+    is_mindspore_available,
     require_mindspore,
+    require_mindspore_gpu,
     slow,
-    is_mindspore_available
 )
 
 from ...generation.test_utils import GenerationTesterMixin
@@ -33,12 +35,13 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import nn, ops
 
     from mindnlp.transformers import (
         AutoTokenizer,
         Starcoder2ForCausalLM,
         Starcoder2ForSequenceClassification,
+        Starcoder2ForTokenClassification,
         Starcoder2Model,
     )
 
@@ -147,8 +150,7 @@ class Starcoder2ModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = Starcoder2Model(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask)
         result = model(input_ids)
         self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
@@ -168,8 +170,7 @@ class Starcoder2ModelTester:
     ):
         config.add_cross_attention = True
         model = Starcoder2Model(config)
-
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -198,8 +199,7 @@ class Starcoder2ModelTester:
         encoder_attention_mask,
     ):
         model = Starcoder2ForCausalLM(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
@@ -219,8 +219,7 @@ class Starcoder2ModelTester:
         config.is_decoder = True
         config.add_cross_attention = True
         model = Starcoder2ForCausalLM(config=config)
-
-        model.set_train(False)
+        model.eval()
 
         # first forward pass
         outputs = model(
@@ -237,8 +236,8 @@ class Starcoder2ModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([input_mask, next_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([input_mask, next_mask], dim=-1)
 
         output_from_no_past = model(
             next_input_ids,
@@ -264,7 +263,7 @@ class Starcoder2ModelTester:
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     # Copied from tests.models.llama.test_modeling_llama.LlamaModelTester.prepare_config_and_inputs_for_common
     def prepare_config_and_inputs_for_common(self):
@@ -286,13 +285,16 @@ class Starcoder2ModelTester:
 # Copied from transformers.tests.models.mistral.test_modeling_mistral.MistralModelTest with Mistral->Starcoder2
 class Starcoder2ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (
-        (Starcoder2Model, Starcoder2ForCausalLM, Starcoder2ForSequenceClassification) if is_mindspore_available() else ()
+        (Starcoder2Model, Starcoder2ForCausalLM, Starcoder2ForSequenceClassification, Starcoder2ForTokenClassification)
+        if is_mindspore_available()
+        else ()
     )
     all_generative_model_classes = (Starcoder2ForCausalLM,) if is_mindspore_available() else ()
     pipeline_model_mapping = (
         {
             "feature-extraction": Starcoder2Model,
             "text-classification": Starcoder2ForSequenceClassification,
+            "token-classification": Starcoder2ForTokenClassification,
             "text-generation": Starcoder2ForCausalLM,
             "zero-shot": Starcoder2ForSequenceClassification,
         }
@@ -333,8 +335,7 @@ class Starcoder2ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
         attention_mask = input_ids.ne(1)
         sequence_labels = ids_tensor([self.model_tester.batch_size], self.model_tester.type_sequence_label_size)
         model = Starcoder2ForSequenceClassification(config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=attention_mask, labels=sequence_labels)
         self.assertEqual(result.logits.shape, (self.model_tester.batch_size, self.model_tester.num_labels))
 
@@ -346,8 +347,7 @@ class Starcoder2ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
         attention_mask = input_ids.ne(1)
         sequence_labels = ids_tensor([self.model_tester.batch_size], self.model_tester.type_sequence_label_size)
         model = Starcoder2ForSequenceClassification(config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=attention_mask, labels=sequence_labels)
         self.assertEqual(result.logits.shape, (self.model_tester.batch_size, self.model_tester.num_labels))
 
@@ -361,25 +361,38 @@ class Starcoder2ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
             [self.model_tester.batch_size, config.num_labels], self.model_tester.type_sequence_label_size
         ).to(mindspore.float32)
         model = Starcoder2ForSequenceClassification(config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=attention_mask, labels=sequence_labels)
         self.assertEqual(result.logits.shape, (self.model_tester.batch_size, self.model_tester.num_labels))
 
-    @unittest.skip("Starcoder2 buffers include complex numbers, which breaks this test")
+    # Copied from tests.models.llama.test_modeling_llama.LlamaModelTest.test_llama_token_classification_model with Llama->Starcoder2,llama->Starcoder2
+    def test_Starcoder2_token_classification_model(self):
+        config, input_dict = self.model_tester.prepare_config_and_inputs_for_common()
+        config.num_labels = 3
+        input_ids = input_dict["input_ids"]
+        attention_mask = input_ids.ne(1)
+        token_labels = ids_tensor([self.model_tester.batch_size, self.model_tester.seq_length], config.num_labels)
+        model = Starcoder2ForTokenClassification(config=config)
+        model.eval()
+        result = model(input_ids, attention_mask=attention_mask, labels=token_labels)
+        self.assertEqual(
+            result.logits.shape,
+            (self.model_tester.batch_size, self.model_tester.seq_length, self.model_tester.num_labels),
+        )
+
+    @unittest.skip(reason="Starcoder2 buffers include complex numbers, which breaks this test")
     def test_save_load_fast_init_from_base(self):
         pass
 
-    @unittest.skip("Starcoder2 uses GQA on all models so the KV cache is a non standard format")
+    @unittest.skip(reason="Starcoder2 uses GQA on all models so the KV cache is a non standard format")
     def test_past_key_values_format(self):
         pass
 
 
 @slow
-@require_mindspore
+@require_mindspore_gpu
 class Starcoder2IntegrationTest(unittest.TestCase):
-
-    def test_starcoder2_batched_generation_eager(self):
+    def test_starcoder2_batched_generation_sdpa(self):
         EXPECTED_TEXT = [
             "Hello my name is Younes and I am a student at the University of Liverpool. I am currently studying for my MSc in Computer Science. I am interested in the field of Machine Learning and I am currently working on",
             "def hello_world():\n\treturn 'Hello World!'\n\n@app.route('/hello/<name>')\ndef hello_name(name):\n\treturn 'Hello %s!' % name\n\n@app",
@@ -387,7 +400,7 @@ class Starcoder2IntegrationTest(unittest.TestCase):
         model_id = "bigcode/starcoder2-7b"
 
         model = Starcoder2ForCausalLM.from_pretrained(
-            model_id, ms_dtype=mindspore.float16
+            model_id, torch_dtype=mindspore.float16, device_map="auto", attn_implementation="sdpa"
         )
         tokenizer = AutoTokenizer.from_pretrained(model_id)
         tokenizer.pad_token = tokenizer.eos_token
@@ -397,5 +410,65 @@ class Starcoder2IntegrationTest(unittest.TestCase):
 
         output = model.generate(**inputs, max_new_tokens=40, do_sample=False)
         output_text = tokenizer.batch_decode(output, skip_special_tokens=True)
-        print(output_text, EXPECTED_TEXT)
         self.assertEqual(EXPECTED_TEXT, output_text)
+
+    def test_starcoder2_batched_generation_eager(self):
+        EXPECTED_TEXT = [
+            "Hello my name is Younes and I am a student at the University of Liverpool. I am currently studying for my MSc in Computer Science. I am interested in the field of Machine Learning and I am currently working on",
+            "def hello_world():\n\treturn 'Hello World!'\n\n@app.route('/hello/<name>')\ndef hello_name(name):\n\treturn 'Hello %s!' % name\n\n@app",
+        ]
+        model_id = "bigcode/starcoder2-7b"
+
+        model = Starcoder2ForCausalLM.from_pretrained(
+            model_id, torch_dtype=mindspore.float16, device_map="auto", attn_implementation="eager"
+        )
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
+        tokenizer.pad_token = tokenizer.eos_token
+
+        text = ["Hello my name is Younes and", "def hello_world():"]
+        inputs = tokenizer(text, return_tensors="ms", padding=True)
+
+        output = model.generate(**inputs, max_new_tokens=40, do_sample=False)
+        output_text = tokenizer.batch_decode(output, skip_special_tokens=True)
+        self.assertEqual(EXPECTED_TEXT, output_text)
+
+    # @require_flash_attn
+    # @pytest.mark.flash_attn_test
+    # def test_starcoder2_batched_generation_fa2(self):
+    #     EXPECTED_TEXT = [
+    #         "Hello my name is Younes and I am a student at the University of Liverpool. I am currently studying for my MSc in Computer Science. I am interested in the field of Machine Learning and I am currently working on",
+    #         "def hello_world():\n\treturn 'Hello World!'\n\n@app.route('/hello/<name>')\ndef hello_name(name):\n\treturn 'Hello %s!' % name\n\n@app",
+    #     ]
+    #     model_id = "bigcode/starcoder2-7b"
+
+    #     model = Starcoder2ForCausalLM.from_pretrained(
+    #         model_id, torch_dtype=mindspore.float16, device_map="auto", attn_implementation="flash_attention_2"
+    #     )
+    #     tokenizer = AutoTokenizer.from_pretrained(model_id)
+    #     tokenizer.pad_token = tokenizer.eos_token
+
+    #     text = ["Hello my name is Younes and", "def hello_world():"]
+    #     inputs = tokenizer(text, return_tensors="ms", padding=True)
+
+    #     output = model.generate(**inputs, max_new_tokens=40, do_sample=False)
+    #     output_text = tokenizer.batch_decode(output, skip_special_tokens=True)
+    #     self.assertEqual(EXPECTED_TEXT, output_text)
+
+    # @require_bitsandbytes
+    # def test_starcoder2_batched_generation_4bit(self):
+    #     EXPECTED_TEXT = [
+    #         'Hello my name is Younes and I am a student at the University of Maryland. I am currently working on a project that is related to the topic of "How to make a game". I am currently working on a project',
+    #         'def hello_world():\n\treturn "Hello World"\n\n@app.route(\'/hello/<name>\')\ndef hello_name(name):\n\treturn "Hello " + name\n\n@app.route',
+    #     ]
+    #     model_id = "bigcode/starcoder2-7b"
+
+    #     model = Starcoder2ForCausalLM.from_pretrained(model_id, load_in_4bit=True)
+    #     tokenizer = AutoTokenizer.from_pretrained(model_id)
+    #     tokenizer.pad_token = tokenizer.eos_token
+
+    #     text = ["Hello my name is Younes and", "def hello_world():"]
+    #     inputs = tokenizer(text, return_tensors="ms", padding=True)
+
+    #     output = model.generate(**inputs, max_new_tokens=40, do_sample=False)
+    #     output_text = tokenizer.batch_decode(output, skip_special_tokens=True)
+    #     self.assertEqual(EXPECTED_TEXT, output_text)

@@ -86,7 +86,7 @@ class IA3Layer(BaseTunerLayer):
         self.is_feedforward = is_feedforward
         base_layer = self.get_base_layer()
         if isinstance(base_layer, nn.Linear):
-            in_features, out_features = base_layer.in_channels, base_layer.out_channels
+            in_features, out_features = base_layer.in_features, base_layer.out_features
         elif isinstance(base_layer, nn.Conv2d):
             in_features, out_features = base_layer.in_channels, base_layer.out_channels
         elif isinstance(base_layer, nn.Embedding):

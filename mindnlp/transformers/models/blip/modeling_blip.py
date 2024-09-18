@@ -958,17 +958,17 @@ class BlipModel(BlipPreTrainedModel):
         >>> from transformers import AutoProcessor, BlipModel
         >>> model = BlipModel.from_pretrained("Salesforce/blip-image-captioning-base")
         >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-        >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+        >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
         >>> text_features = model.get_text_features(**inputs)
         ...
         >>> from PIL import Image
         >>> import requests
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
         >>> image_features = model.get_image_features(**inputs)
         ...
-        >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True)
+        >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="ms", padding=True)
         >>> outputs = model(**inputs)
         >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
         >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
@@ -1054,7 +1054,7 @@ class BlipModel(BlipPreTrainedModel):
             >>> model = BlipModel.from_pretrained("Salesforce/blip-image-captioning-base")
             >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
             ...
-            >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+            >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
             >>> text_features = model.get_text_features(**inputs)
             ```
         """
@@ -1094,7 +1094,7 @@ class BlipModel(BlipPreTrainedModel):
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
-            >>> inputs = processor(images=image, return_tensors="pt")
+            >>> inputs = processor(images=image, return_tensors="ms")
             ...
             >>> image_features = model.get_image_features(**inputs)
             ```
@@ -1136,7 +1136,7 @@ class BlipModel(BlipPreTrainedModel):
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
             >>> inputs = processor(
-            ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
+            ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="ms", padding=True
             ... )
             ...
             >>> outputs = model(**inputs)
@@ -1234,7 +1234,7 @@ class BlipForConditionalGeneration(BlipPreTrainedModel):
         >>> image = Image.open(requests.get(url, stream=True).raw)
         >>> text = "A picture of"
         ...
-        >>> inputs = processor(images=image, text=text, return_tensors="pt")
+        >>> inputs = processor(images=image, text=text, return_tensors="ms")
         ...
         >>> outputs = model(**inputs)
         ```
@@ -1319,7 +1319,7 @@ class BlipForConditionalGeneration(BlipPreTrainedModel):
             >>> image = Image.open(requests.get(url, stream=True).raw)
             >>> text = "A picture of"
             ...
-            >>> inputs = processor(images=image, text=text, return_tensors="pt")
+            >>> inputs = processor(images=image, text=text, return_tensors="ms")
             ...
             >>> outputs = model(**inputs)
             ```
@@ -1391,7 +1391,7 @@ class BlipForConditionalGeneration(BlipPreTrainedModel):
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
-            >>> inputs = processor(images=image, return_tensors="pt")
+            >>> inputs = processor(images=image, return_tensors="ms")
             ...
             >>> outputs = model.generate(**inputs)
             >>> print(processor.decode(outputs[0], skip_special_tokens=True))
@@ -1536,8 +1536,8 @@ class BlipForQuestionAnswering(BlipPreTrainedModel):
             >>> # training
             >>> text = "How many cats are in the picture?"
             >>> label = "2"
-            >>> inputs = processor(images=image, text=text, return_tensors="pt")
-            >>> labels = processor(text=label, return_tensors="pt").input_ids
+            >>> inputs = processor(images=image, text=text, return_tensors="ms")
+            >>> labels = processor(text=label, return_tensors="ms").input_ids
             ...
             >>> inputs["labels"] = labels
             >>> outputs = model(**inputs)
@@ -1546,7 +1546,7 @@ class BlipForQuestionAnswering(BlipPreTrainedModel):
             ...
             >>> # inference
             >>> text = "How many cats are in the picture?"
-            >>> inputs = processor(images=image, text=text, return_tensors="pt")
+            >>> inputs = processor(images=image, text=text, return_tensors="ms")
             >>> outputs = model.generate(**inputs)
             >>> print(processor.decode(outputs[0], skip_special_tokens=True))
             2
@@ -1650,7 +1650,7 @@ class BlipForQuestionAnswering(BlipPreTrainedModel):
             >>> image = Image.open(requests.get(url, stream=True).raw)
             >>> text = "How many cats are in the picture?"
             ...
-            >>> inputs = processor(images=image, text=text, return_tensors="pt")
+            >>> inputs = processor(images=image, text=text, return_tensors="ms")
             ...
             >>> outputs = model.generate(**inputs)
             >>> print(processor.decode(outputs[0], skip_special_tokens=True))
@@ -1807,7 +1807,7 @@ class BlipForImageTextRetrieval(BlipPreTrainedModel):
             >>> image = Image.open(requests.get(url, stream=True).raw)
             >>> text = "an image of a cat"
             ...
-            >>> inputs = processor(images=image, text=text, return_tensors="pt")
+            >>> inputs = processor(images=image, text=text, return_tensors="ms")
             >>> outputs = model(**inputs)
             ```
         """

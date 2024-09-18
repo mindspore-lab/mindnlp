@@ -13,39 +13,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-
 """MindSpore RWKV model."""
 
 import math
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
-import numpy as np
 
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore.nn import Cell
+from mindspore.ops import Custom
+from mindnlp.core import nn, ops, no_grad
+from mindnlp.core.nn import CrossEntropyLoss, functional as F
 
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindnlp.utils import logging, ModelOutput
 from ...modeling_utils import PreTrainedModel
+from ....utils import (
+    ModelOutput,
+    logging,
+)
 from .configuration_rwkv import RwkvConfig
+
 
 logger = logging.get_logger(__name__)
 
-RWKV_PRETRAINED_MODEL_ARCHIVE_LIST = [
-    "RWKV/rwkv-4-169m-pile",
-    "RWKV/rwkv-4-430m-pile",
-    "RWKV/rwkv-4-1b5-pile",
-    "RWKV/rwkv-4-3b-pile",
-    "RWKV/rwkv-4-7b-pile",
-    "RWKV/rwkv-4-14b-pile",
-    "RWKV/rwkv-raven-1b5",
-    "RWKV/rwkv-raven-3b",
-    "RWKV/rwkv-raven-7b",
-    "RWKV/rwkv-raven-14b",
-    # See all RWKV models at https://hf-mirror.com/models?filter=rwkv
-]
+_CHECKPOINT_FOR_DOC = "RWKV/rwkv-4-169m-pile"
+_CONFIG_FOR_DOC = "RwkvConfig"
+
 
 WKV_SHAPE_INFER = {
     'wkv_forward': lambda w, u, k, v: k,
@@ -69,7 +61,7 @@ def load_wkv_cuda_kernel(func_name, context_length):
 
     from ...kernel_utils import compile_kernel
     so_path = compile_kernel(kernel_name="wkv", Tmax=context_length)
-    wkv_op = ops.Custom(
+    wkv_op = Custom(
         str(so_path) + ':' + func_name,
         out_shape=WKV_SHAPE_INFER[func_name],
         out_dtype=WKV_DTYPE_INFER[func_name],
@@ -79,7 +71,7 @@ def load_wkv_cuda_kernel(func_name, context_length):
     return wkv_op
 
 
-class RwkvLinearAttention(nn.Module):
+class RwkvLinearAttention(Cell):
     """RWKV linear attention"""
     def __init__(self, config):
         """
@@ -105,7 +97,7 @@ class RwkvLinearAttention(nn.Module):
 
         self.wkv_backward = load_wkv_cuda_kernel('wkv_backward', config.context_length)
 
-    def forward(self, time_decay, time_first, key, value, state=None, return_state=False):
+    def construct(self, time_decay, time_first, key, value, state=None, return_state=False):
         """
         Constructs the linear attention mechanism for the RwkvLinearAttention class.
         
@@ -182,10 +174,9 @@ class RwkvLinearAttention(nn.Module):
 
         return (gw, gu, gk.astype(dtype), gv.astype(dtype))
 
-
 def rwkv_linear_attention_cpu(time_decay, time_first, key, value, state=None, return_state=False):
-    """CPU WKV implementation."""
-    # For CPU fallback. Will be slower and probably take more memory than the custom CUDA kernel
+    # For CPU fallback. Will be slower and probably take more memory than the custom CUDA kernel if not executed
+    # within a no_grad.
     _, seq_length, _ = key.shape
     output = ops.zeros_like(key)
 
@@ -227,25 +218,12 @@ def rwkv_linear_attention_cpu(time_decay, time_first, key, value, state=None, re
     return output, state
 
 
+
 class RwkvSelfAttention(nn.Module):
-    """RWKV self attention"""
     def __init__(self, config, layer_id=0):
-        """
-        Initializes an instance of the RwkvSelfAttention class.
-        
-        Args:
-            self (RwkvSelfAttention): The instance of the class.
-            config (object): The configuration object containing various settings.
-            layer_id (int, optional): The ID of the layer. Defaults to 0.
-        
-        Returns:
-            None
-        
-        Raises:
-            None
-        """
         super().__init__()
         self.config = config
+
         device_target = mindspore.get_context('device_target')
         if device_target == 'GPU':
             self.rwkv_linear_attention = RwkvLinearAttention(config)
@@ -259,26 +237,27 @@ class RwkvSelfAttention(nn.Module):
         )
         self.attention_hidden_size = attention_hidden_size
 
-        self.time_decay = Parameter(Tensor(np.zeros(attention_hidden_size), mindspore.float32), 'time_decay')
-        self.time_first = Parameter(Tensor(np.zeros(attention_hidden_size), mindspore.float32), 'time_decay')
+        self.time_decay = nn.Parameter(ops.empty(attention_hidden_size))
+        self.time_first = nn.Parameter(ops.empty(attention_hidden_size))
 
-        self.time_mix_key = Parameter(Tensor(np.zeros((1, 1, hidden_size)), mindspore.float32), 'time_mix_key')
-        self.time_mix_value = Parameter(Tensor(np.zeros((1, 1, hidden_size)), mindspore.float32), 'time_mix_value')
-        self.time_mix_receptance = Parameter(Tensor(np.zeros((1, 1, hidden_size)), mindspore.float32), 'time_mix_receptance')
+        self.time_mix_key = nn.Parameter(ops.empty(1, 1, hidden_size))
+        self.time_mix_value = nn.Parameter(ops.empty(1, 1, hidden_size))
+        self.time_mix_receptance = nn.Parameter(ops.empty(1, 1, hidden_size))
 
-        self.time_shift = nn.ZeroPad2d((0, 0, 1, -1))
+        self.time_shift = nn.ZeroPad2d((0, 0, 1, 0))
         self.key = nn.Linear(hidden_size, attention_hidden_size, bias=False)
         self.value = nn.Linear(hidden_size, attention_hidden_size, bias=False)
         self.receptance = nn.Linear(hidden_size, attention_hidden_size, bias=False)
         self.output = nn.Linear(attention_hidden_size, hidden_size, bias=False)
 
+    # TODO: maybe jit, otherwise move inside forward
     def extract_key_value(self, hidden, state=None):
-        """extrac key value"""
         # Mix hidden with the previous timestep to produce key, value, receptance
         if hidden.shape[1] == 1 and state is not None:
             shifted = state[1][:, :, self.layer_id]
         else:
             shifted = self.time_shift(hidden)
+            shifted = shifted[:, :-1,] # mindspore has error when ZeroPad2d has negtive shape.
             if state is not None:
                 shifted[:, 0] = state[1][:, :, self.layer_id]
         key = hidden * self.time_mix_key + shifted * (1 - self.time_mix_key)
@@ -293,25 +272,6 @@ class RwkvSelfAttention(nn.Module):
         return receptance, key, value, state
 
     def forward(self, hidden, state=None, use_cache=False):
-        """
-        Construct method in the RwkvSelfAttention class.
-        
-        This method forwards the self-attention mechanism for the Rwkv model. It takes in the hidden input,
-        the state, and a flag indicating whether to use cache or not. It returns the output of the attention mechanism
-        and the updated state.
-
-        Args:
-            self: The RwkvSelfAttention object.
-            hidden: A tensor containing the hidden input.
-            state: A tensor containing the current state (default: None).
-            use_cache: A boolean flag indicating whether to use cache (default: False).
-
-        Returns:
-            A tuple containing the output of the attention mechanism and the updated state.
-
-        Raises:
-            None.
-        """
         receptance, key, value, state = self.extract_key_value(hidden, state=state)
         layer_state = tuple(s[:, :, self.layer_id] for s in state[2:]) if state is not None else None
         rwkv, layer_state = self.rwkv_linear_attention(
@@ -332,32 +292,7 @@ class RwkvSelfAttention(nn.Module):
 
 
 class RwkvFeedForward(nn.Module):
-    """RWKV feed forward"""
     def __init__(self, config, layer_id=0):
-        """
-        Initializes a new instance of the RwkvFeedForward class.
-
-        Args:
-            self: The instance of the RwkvFeedForward class.
-            config:
-                The configuration for the feedforward layer, containing the hidden size and intermediate size parameters.
-
-                - Type: object
-                - Purpose: Specifies the configuration settings for the feedforward layer.
-                - Restrictions: None
-            layer_id:
-                The ID of the layer.
-
-                - ype: int
-                - Purpose: Specifies the ID of the layer.
-                - Restrictions: Defaults to 0 if not provided.
-
-        Returns:
-            None.
-
-        Raises:
-            None
-        """
         super().__init__()
         self.config = config
         self.layer_id = layer_id
@@ -366,45 +301,24 @@ class RwkvFeedForward(nn.Module):
             config.intermediate_size if config.intermediate_size is not None else 4 * config.hidden_size
         )
 
-        self.time_shift = nn.ZeroPad2d((0, 0, 1, -1))
-        self.time_mix_key = Parameter(Tensor(np.zeros((1, 1, hidden_size)), mindspore.float32), 'time_mix_key')
-        self.time_mix_receptance =Parameter(Tensor(np.zeros((1, 1, hidden_size)), mindspore.float32), 'time_mix_receptance')
+        self.time_shift = nn.ZeroPad2d((0, 0, 1, 0))
+        self.time_mix_key = nn.Parameter(ops.empty(1, 1, hidden_size))
+        self.time_mix_receptance = nn.Parameter(ops.empty(1, 1, hidden_size))
 
         self.key = nn.Linear(hidden_size, intermediate_size, bias=False)
         self.receptance = nn.Linear(hidden_size, hidden_size, bias=False)
         self.value = nn.Linear(intermediate_size, hidden_size, bias=False)
 
     def forward(self, hidden, state=None):
-        """
-        This method 'forward' is defined in the class 'RwkvFeedForward' and is responsible for forwarding the value
-        and state based on the input parameters.
-
-        Args:
-            self: The instance of the RwkvFeedForward class.
-            hidden (array): The input array representing the hidden state. It is used to calculate the key, value,
-                and receptance. The array should have the shape (batch_size, sequence_length, feature_dim).
-            state (array, optional): The optional input array representing the state. It is used for calculating
-                the shifted value. If provided, it should have the same shape as 'hidden' (batch_size, sequence_length,
-                feature_dim). Default is None.
-
-        Returns:
-            tuple: A tuple containing the calculated receptance and the updated state.
-                The receptance is a weighted value based on the key and shifted values.
-                The updated state represents the modified state based on the input hidden array.
-
-        Raises:
-            ValueError: If the shape of the 'hidden' array is not compatible for the calculations required in the method.
-            IndexError: If the 'state' is provided and its shape does not match with the 'hidden' array.
-            TypeError: If the input parameters are not of the expected type.
-        """
         if hidden.shape[1] == 1 and state is not None:
             shifted = state[0][:, :, self.layer_id]
         else:
             shifted = self.time_shift(hidden)
+            shifted = shifted[:, :-1,] # mindspore has error when ZeroPad2d has negtive shape.
             if state is not None:
                 shifted[:, 0] = state[0][:, :, self.layer_id]
-        key = hidden * self.time_mix_key + shifted * (1 - self.time_mix_key)
-        receptance = hidden * self.time_mix_receptance + shifted * (1 - self.time_mix_receptance)
+        key = hidden * self.time_mix_key + shifted * (1. - self.time_mix_key)
+        receptance = hidden * self.time_mix_receptance + shifted * (1. - self.time_mix_receptance)
 
         key = ops.square(F.relu(self.key(key)))
         value = self.value(key)
@@ -417,64 +331,24 @@ class RwkvFeedForward(nn.Module):
 
 
 class RwkvBlock(nn.Module):
-    """RWKV block"""
     def __init__(self, config, layer_id):
-        """
-        Initialize the RwkvBlock.
-
-        Args:
-            self: The instance of the RwkvBlock class.
-            config:
-                An object containing configuration settings for the block.
-
-                - Type: object
-                - Purpose: Specifies the configuration settings for the block.
-            layer_id:
-                An integer representing the layer id.
-
-                - Type: int
-                - Purpose: Identifies the layer to which the block belongs.
-                - Restrictions: Must be a non-negative integer.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If layer_id is a negative integer.
-        """
         super().__init__()
         self.config = config
         self.layer_id = layer_id
 
         if layer_id == 0:
-            self.pre_ln = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_epsilon)
+            self.pre_ln = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_epsilon)
 
-        self.ln1 = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_epsilon)
-        self.ln2 = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_epsilon)
+        self.ln1 = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_epsilon)
+        self.ln2 = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_epsilon)
 
         self.attention = RwkvSelfAttention(config, layer_id)
         self.feed_forward = RwkvFeedForward(config, layer_id)
 
     def forward(self, hidden, state=None, use_cache=False, output_attentions=False):
-        """
-        Method to forward a RwkvBlock.
-
-        Args:
-            self: The instance of the RwkvBlock class.
-            hidden (Tensor): The input hidden tensor to be processed.
-            state (Tensor, optional): The current state tensor. Defaults to None.
-            use_cache (bool, optional): Flag indicating whether to use cache. Defaults to False.
-            output_attentions (bool): Flag indicating whether to output attentions.
-
-        Returns:
-            Tuple: A tuple containing the processed hidden tensor and the updated state tensor.
-                If output_attentions is True, the tuple also includes the attention tensor; otherwise, it includes None.
-
-        Raises:
-            None.
-        """
         if self.layer_id == 0:
             hidden = self.pre_ln(hidden)
+
 
         attention, state = self.attention(self.ln1(hidden), state=state, use_cache=use_cache)
         hidden = hidden + attention
@@ -496,25 +370,28 @@ class RwkvPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
+
     config_class = RwkvConfig
     base_model_prefix = "rwkv"
     _no_split_modules = ["RwkvBlock"]
     _keep_in_fp32_modules = ["time_decay", "time_first"]
+    supports_gradient_checkpointing = True
+    _is_stateful = True
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights."""
-        if isinstance(cell, RwkvSelfAttention):
-            layer_id = cell.layer_id
-            num_hidden_layers = cell.config.num_hidden_layers
-            hidden_size = cell.config.hidden_size
-            attention_hidden_size = cell.attention_hidden_size
+        if isinstance(module, RwkvSelfAttention):
+            layer_id = module.layer_id
+            num_hidden_layers = module.config.num_hidden_layers
+            hidden_size = module.config.hidden_size
+            attention_hidden_size = module.attention_hidden_size
 
             ratio_0_to_1 = layer_id / (num_hidden_layers - 1)  # 0 to 1
             ratio_1_to_almost0 = 1.0 - (layer_id / num_hidden_layers)  # 1 to ~0
 
-            time_weight = Tensor(
+            time_weight = mindspore.tensor(
                 [i / hidden_size for i in range(hidden_size)],
-                dtype=cell.time_mix_key.dtype,
+                dtype=module.time_mix_key.dtype,
             )
             time_weight = time_weight[None, None, :]
 
@@ -522,37 +399,39 @@ class RwkvPreTrainedModel(PreTrainedModel):
                 -5 + 8 * (h / (attention_hidden_size - 1)) ** (0.7 + 1.3 * ratio_0_to_1)
                 for h in range(attention_hidden_size)
             ]
-            decay_speed = Tensor(decay_speed, dtype=cell.time_decay.dtype)
+            decay_speed = mindspore.tensor(decay_speed, dtype=module.time_decay.dtype)
             zigzag = (
-                Tensor(
+                mindspore.tensor(
                     [(i + 1) % 3 - 1 for i in range(attention_hidden_size)],
-                    dtype=cell.time_first.dtype
+                    dtype=module.time_first.dtype,
                 )
                 * 0.5
             )
 
-            cell.time_decay.set_data(decay_speed)
-            cell.time_first.set_data(ops.ones_like(cell.time_first * math.log(0.3) + zigzag))
+            with no_grad():
+                ops.assign(module.time_decay, decay_speed)
+                ops.assign(module.time_first, ops.ones_like(module.time_first * math.log(0.3) + zigzag))
 
-            cell.time_mix_key.set_data(ops.pow(time_weight, ratio_1_to_almost0))
-            cell.time_mix_value.set_data(ops.pow(time_weight, ratio_1_to_almost0) + 0.3 * ratio_0_to_1)
-            cell.time_mix_receptance.set_data(ops.pow(time_weight, 0.5 * ratio_1_to_almost0))
-
-        elif isinstance(cell, RwkvFeedForward):
-            layer_id = cell.layer_id
-            num_hidden_layers = cell.config.num_hidden_layers
-            hidden_size = cell.config.hidden_size
+                ops.assign(module.time_mix_key, ops.pow(time_weight, ratio_1_to_almost0))
+                ops.assign(module.time_mix_value, ops.pow(time_weight, ratio_1_to_almost0) + 0.3 * ratio_0_to_1)
+                ops.assign(module.time_mix_receptance, ops.pow(time_weight, 0.5 * ratio_1_to_almost0))
+        elif isinstance(module, RwkvFeedForward):
+            layer_id = module.layer_id
+            num_hidden_layers = module.config.num_hidden_layers
+            hidden_size = module.config.hidden_size
 
             ratio_1_to_almost0 = 1.0 - (layer_id / num_hidden_layers)  # 1 to ~0
 
-            time_weight = Tensor(
+            time_weight = mindspore.tensor(
                 [i / hidden_size for i in range(hidden_size)],
-                dtype=cell.time_mix_key.dtype
+                dtype=module.time_mix_key.dtype,
             )
             time_weight = time_weight[None, None, :]
 
-            cell.time_mix_key.set_data(ops.pow(time_weight, ratio_1_to_almost0))
-            cell.time_mix_receptance.set_data(ops.pow(time_weight, ratio_1_to_almost0))
+            with no_grad():
+                ops.assign(module.time_mix_key, ops.pow(time_weight, ratio_1_to_almost0))
+                ops.assign(module.time_mix_receptance, ops.pow(time_weight, ratio_1_to_almost0))
+
 
 @dataclass
 class RwkvOutput(ModelOutput):
@@ -565,20 +444,19 @@ class RwkvOutput(ModelOutput):
         state (list of five `mindspore.Tensor` of shape `(batch_size, hidden_size, num_hidden_layers)`):
             The state of the model at the last time step. Can be used in a forward method with the next `input_ids` to
             avoid providing the old `input_ids`.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed
-            or when `config.output_hidden_states=True`):
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
             one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed
-            or when `config.output_attentions=True`):
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
+
     last_hidden_state: mindspore.Tensor = None
     state: Optional[List[mindspore.Tensor]] = None
     hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
@@ -598,20 +476,19 @@ class RwkvCausalLMOutput(ModelOutput):
         state (list of five `mindspore.Tensor` of shape `(batch_size, hidden_size, num_hidden_layers)`):
             The state of the model at the last time step. Can be used in a forward method with the next `input_ids` to
             avoid providing the old `input_ids`.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed
-            or when `config.output_hidden_states=True`):
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
             Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
             one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed
-            or when `config.output_attentions=True`):
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
             Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
     """
+
     loss: Optional[mindspore.Tensor] = None
     logits: mindspore.Tensor = None
     state: Optional[List[mindspore.Tensor]] = None
@@ -620,74 +497,25 @@ class RwkvCausalLMOutput(ModelOutput):
 
 
 class RwkvModel(RwkvPreTrainedModel):
-    """RWKV Model"""
     def __init__(self, config):
-        """
-        Initializes an instance of the RwkvModel class.
-
-        Args:
-            self: The instance of the class.
-            config:
-                An object containing the configuration parameters for the model.
-
-                - Type: Any valid object
-                - Purpose: Specifies the model configuration.
-                - Restrictions: None
-
-        Returns:
-            None
-
-        Raises:
-            None
-        """
         super().__init__(config)
 
         self.embeddings = nn.Embedding(config.vocab_size, config.hidden_size)
         self.blocks = nn.ModuleList([RwkvBlock(config, layer_id=idx) for idx in range(config.num_hidden_layers)])
-        self.ln_out = nn.LayerNorm([config.hidden_size])
+        self.ln_out = nn.LayerNorm(config.hidden_size)
 
         self.layers_are_rescaled = False
+
+        self.gradient_checkpointing = False
 
         # Initialize weights and apply final processing
         self.post_init()
 
     def get_input_embeddings(self):
-        """
-        This method returns the input embeddings used in the RwkvModel class.
-
-        Args:
-            self: The instance of the RwkvModel class.
-
-        Returns:
-            embeddings: This method returns the input embeddings associated with the RwkvModel instance.
-
-        Raises:
-            None.
-        """
         return self.embeddings
 
     def set_input_embeddings(self, new_embeddings):
-        """
-        Sets the input embeddings for the RwkvModel.
-
-        Args:
-            self (RwkvModel): The instance of the RwkvModel class.
-            new_embeddings: A new set of input embeddings to be assigned to the RwkvModel.
-                This should be of the same type and shape as the current embeddings.
-                The input embeddings are used as the initial embeddings for the model.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         self.embeddings = new_embeddings
-
-    # def __call__(self, *args, **kwargs):
-    #     if self.training == self.layers_are_rescaled:
-    #         self._rescale_layers()
-    #     return super().__call__(*args, **kwargs)
 
     def forward(
         self,
@@ -700,29 +528,6 @@ class RwkvModel(RwkvPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, RwkvOutput]:
-        """
-        This method forwards the RwkvModel based on the provided input and configuration parameters.
-
-        Args:
-            self: The instance of the RwkvModel class.
-            input_ids (Optional[mindspore.Tensor]): The input tensor containing token indices. Default is None.
-            attention_mask (Optional[mindspore.Tensor]): The attention mask tensor to mask out specific tokens.
-                Default is None.
-            inputs_embeds (Optional[mindspore.Tensor]): The input embeddings tensor. Default is None.
-            state (Optional[List[mindspore.Tensor]]): The list of state tensors for caching. Default is None.
-            use_cache (Optional[bool]): Flag indicating whether to use caching. Default is None.
-            output_attentions (Optional[bool]): Flag indicating whether to output attentions. Default is None.
-            output_hidden_states (Optional[bool]): Flag indicating whether to output hidden states. Default is None.
-            return_dict (Optional[bool]): Flag indicating whether to return a dictionary. Default is None.
-
-        Returns:
-            Union[Tuple, RwkvOutput]: The output of the method, which can be a tuple of hidden states, states,
-                hidden states history, and attentions, or an instance of RwkvOutput.
-
-        Raises:
-            ValueError: If both input_ids and inputs_embeds are specified at the same time, or if neither input_ids
-                nor inputs_embeds are specified.
-        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -730,32 +535,50 @@ class RwkvModel(RwkvPreTrainedModel):
         use_cache = use_cache if use_cache is not None else (self.config.use_cache if not self.training else False)
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
+        if attention_mask is None:
+            logger.warning_once("`attention_mask` was passed, but it is unused in this model.")
+
         if self.training == self.layers_are_rescaled:
             self._rescale_layers()
 
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
-        if input_ids is None and inputs_embeds is None:
+        elif input_ids is None and inputs_embeds is None:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
+
         if inputs_embeds is None:
             inputs_embeds = self.embeddings(input_ids)
 
         if use_cache and state is None:
             shape = (inputs_embeds.shape[0], self.config.hidden_size, self.config.num_hidden_layers)
             state = [
-                ops.zeros(shape, dtype=inputs_embeds.dtype if i <= 1 else mindspore.float32)
+                ops.zeros(
+                    *shape, dtype=inputs_embeds.dtype if i <= 1 else mindspore.float32
+                )
                 for i in range(5)
             ]
             state[4] -= 1e30
+
+        if self.gradient_checkpointing and self.training:
+            if use_cache:
+                logger.warning_once(
+                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
+                )
+                use_cache = False
 
         hidden_states = inputs_embeds
 
         all_self_attentions = () if output_attentions else None
         all_hidden_states = () if output_hidden_states else None
         for idx, block in enumerate(self.blocks):
-            hidden_states, state, attentions = block(
-                hidden_states, state=state, use_cache=use_cache, output_attentions=output_attentions
-            )
+            if self.gradient_checkpointing and self.training:
+                hidden_states, state, attentions = self._gradient_checkpointing_func(
+                    block.__call__, hidden_states, state, use_cache, output_attentions
+                )
+            else:
+                hidden_states, state, attentions = block(
+                    hidden_states, state=state, use_cache=use_cache, output_attentions=output_attentions
+                )
 
             if (
                 self.layers_are_rescaled
@@ -786,61 +609,40 @@ class RwkvModel(RwkvPreTrainedModel):
         )
 
     def _rescale_layers(self):
-        """
-        Rescales the layers of the RwkvModel based on the training status.
-
-        Args:
-            self (RwkvModel): The instance of the RwkvModel class.
-
-        Returns:
-            None.
-
-        Raises:
-            None
-        """
         # Layers should be rescaled for inference only.
         if self.layers_are_rescaled == (not self.training):
             return
         if self.config.rescale_every > 0:
-            for block_id, block in enumerate(self.blocks):
-                if self.training:
-                    block.attention.output.weight.set_data(block.attention.output.weight * \
-                                                           (2 ** int(block_id // self.config.rescale_every)))
-                    block.feed_forward.value.weight.set_data(block.feed_forward.value.weight * \
-                                                             (2 ** int(block_id // self.config.rescale_every)))
-                else:
-                    # Deal with quantization statistics
-                    if hasattr(block.attention.output.weight, "SCB"):
-                        block.attention.output.weight.SCB.set_data(block.attention.output.weight.SCB / \
-                                                                   (2 ** int(block_id // self.config.rescale_every)))
-                        block.feed_forward.value.weight.SCB.set_data(block.feed_forward.value.weight.SCB / \
-                                                                     (2 ** int(block_id // self.config.rescale_every)))
+            with no_grad():
+                for block_id, block in enumerate(self.blocks):
+                    if self.training:
+                        ops.assign(block.attention.output.weight,
+                                   block.attention.output.weight.mul(float(2 ** int(block_id // self.config.rescale_every))))
+                        ops.assign(block.feed_forward.value.weight,
+                                   block.feed_forward.value.weight.mul_(float(2 ** int(block_id // self.config.rescale_every))))
                     else:
-                        block.attention.output.weight.set_data(block.attention.output.weight / \
-                                                            (2 ** int(block_id // self.config.rescale_every)))
-                        block.feed_forward.value.weight.set_data(block.feed_forward.value.weight / \
-                                                                (2 ** int(block_id // self.config.rescale_every)))
+                        # Deal with quantization statistics
+                        if hasattr(block.attention.output.weight, "SCB"):
+                            ops.assign(block.attention.output.weight.SCB,
+                                       block.attention.output.weight.SCB.div(float(2 ** int(block_id // self.config.rescale_every))))
+                            ops.assign(block.feed_forward.value.weight.SCB,
+                                       block.feed_forward.value.weight.SCB.div(float(2 ** int(block_id // self.config.rescale_every))))
+                        elif hasattr(block.attention.output.weight, "quant_state"):
+                            self._bnb_4bit_dequantize_and_rescale(block.attention.output, block_id)
+                            self._bnb_4bit_dequantize_and_rescale(block.feed_forward.value, block_id)
+                        else:
+                            ops.assign(block.attention.output.weight,
+                                       block.attention.output.weight.div(float(2 ** int(block_id // self.config.rescale_every))))
+                            ops.assign(block.feed_forward.value.weight,
+                                       block.feed_forward.value.weight.div(float(2 ** int(block_id // self.config.rescale_every))))
+
         self.layers_are_rescaled = not self.training
 
 
 class RwkvForCausalLM(RwkvPreTrainedModel):
-    """RWKV for causal LM"""
     _tied_weights_keys = ["head.weight"]
 
     def __init__(self, config):
-        """
-        Initializes an instance of the RwkvForCausalLM class.
-
-        Args:
-            self (RwkvForCausalLM): The instance of the RwkvForCausalLM class.
-            config (object): The configuration object containing various settings for the model.
-
-        Returns:
-            None
-
-        Raises:
-            None
-        """
         super().__init__(config)
         self.rwkv = RwkvModel(config)
         self.head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
@@ -849,15 +651,12 @@ class RwkvForCausalLM(RwkvPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
-        """get output embeddings"""
         return self.head
 
     def set_output_embeddings(self, new_embeddings):
-        """set output embeddings"""
         self.head = new_embeddings
 
-    def prepare_inputs_for_generation(self, input_ids, state=None, inputs_embeds=None, **kwargs):
-        """prepare inputs"""
+    def prepare_inputs_for_generation(self, input_ids, state=None, inputs_embeds=None, use_cache=None, **kwargs):
         # only last token for inputs_ids if the state is passed along.
         if state is not None:
             input_ids = input_ids[:, -1].unsqueeze(-1)
@@ -869,6 +668,7 @@ class RwkvForCausalLM(RwkvPreTrainedModel):
             model_inputs = {"input_ids": input_ids}
 
         model_inputs["state"] = state
+        model_inputs["use_cache"] = use_cache
         return model_inputs
 
     def forward(
@@ -884,11 +684,10 @@ class RwkvForCausalLM(RwkvPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, RwkvCausalLMOutput]:
         r"""
-        Args:
-            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -911,7 +710,8 @@ class RwkvForCausalLM(RwkvPreTrainedModel):
             shift_logits = logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         if not return_dict:
             output = (logits,) + rwkv_outputs[1:]
@@ -926,7 +726,6 @@ class RwkvForCausalLM(RwkvPreTrainedModel):
         )
 
 __all__ = [
-    "RWKV_PRETRAINED_MODEL_ARCHIVE_LIST",
     "RwkvForCausalLM",
     "RwkvModel",
     "RwkvPreTrainedModel",

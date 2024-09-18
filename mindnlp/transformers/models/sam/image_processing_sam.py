@@ -47,7 +47,8 @@ from ....utils import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
+    from mindnlp.core.nn import functional as F
 
 
 logger = logging.get_logger(__name__)
@@ -787,7 +788,7 @@ class SamImageProcessor(BaseImageProcessor):
             (`mindspore.Tensor`): Batched masks in batch_size, num_channels, height, width) format, where (height, width)
             is given by original_size.
         """
-        requires_backends(self, ["torch"])
+        requires_backends(self, ["mindspore"])
         pad_size = self.pad_size if pad_size is None else pad_size
         target_image_size = (pad_size["height"], pad_size["width"])
         if isinstance(original_sizes, (mindspore.Tensor, np.ndarray)):
@@ -797,12 +798,12 @@ class SamImageProcessor(BaseImageProcessor):
         output_masks = []
         for i, original_size in enumerate(original_sizes):
             if isinstance(masks[i], np.ndarray):
-                masks[i] = mindspore.Tensor.from_numpy(masks[i])
+                masks[i] = mindspore.Tensor(masks[i], dtype=mindspore.float32)
             elif not isinstance(masks[i], mindspore.Tensor):
                 raise ValueError("Input masks should be a list of `mindspore.tensors` or a list of `np.ndarray`")
-            interpolated_mask = ops.interpolate(masks[i], target_image_size, mode="bilinear", align_corners=False)
+            interpolated_mask = F.interpolate(masks[i], target_image_size, mode="bilinear", align_corners=False)
             interpolated_mask = interpolated_mask[..., : reshaped_input_sizes[i][0], : reshaped_input_sizes[i][1]]
-            interpolated_mask = ops.interpolate(interpolated_mask, original_size, mode="bilinear", align_corners=False)
+            interpolated_mask = F.interpolate(interpolated_mask, original_size, mode="bilinear", align_corners=False)
             if binarize:
                 interpolated_mask = interpolated_mask > mask_threshold
             output_masks.append(interpolated_mask)
@@ -1244,7 +1245,7 @@ def _is_box_near_crop_edge(boxes, crop_box, orig_box, atol=20.0):
     near_crop_edge = ops.isclose(boxes, crop_box_torch[None, :], atol=atol, rtol=0)
     near_image_edge = ops.isclose(boxes, orig_box_torch[None, :], atol=atol, rtol=0)
     near_crop_edge = ops.logical_and(near_crop_edge, ~near_image_edge)
-    return ops.any(near_crop_edge, axis=1)
+    return ops.any(near_crop_edge, dim=1)
 
 
 def _batched_mask_to_box(masks: "mindspore.Tensor"):
@@ -1273,23 +1274,23 @@ def _batched_mask_to_box(masks: "mindspore.Tensor"):
     height, width = shape[-2:]
 
     # Get top and bottom edges
-    in_height, _ = ops.max(masks, axis=-1)
+    in_height, _ = ops.max(masks, dim=-1)
     in_height_coords = in_height * ops.arange(height)[None, :]
-    bottom_edges, _ = ops.max(in_height_coords, axis=-1)
+    bottom_edges, _ = ops.max(in_height_coords, dim=-1)
     in_height_coords = in_height_coords + height * (~in_height)
-    top_edges, _ = ops.min(in_height_coords, axis=-1)
+    top_edges, _ = ops.min(in_height_coords, dim=-1)
 
     # Get left and right edges
-    in_width, _ = ops.max(masks, axis=-2)
+    in_width, _ = ops.max(masks, dim=-2)
     in_width_coords = in_width * ops.arange(width)[None, :]
-    right_edges, _ = ops.max(in_width_coords, axis=-1)
+    right_edges, _ = ops.max(in_width_coords, dim=-1)
     in_width_coords = in_width_coords + width * (~in_width)
-    left_edges, _ = ops.min(in_width_coords, axis=-1)
+    left_edges, _ = ops.min(in_width_coords, dim=-1)
 
     # If the mask is empty the right edge will be to the left of the left edge.
     # Replace these boxes with [0, 0, 0, 0]
     empty_filter = (right_edges < left_edges) | (bottom_edges < top_edges)
-    out = ops.stack([left_edges, top_edges, right_edges, bottom_edges], axis=-1)
+    out = ops.stack([left_edges, top_edges, right_edges, bottom_edges], dim=-1)
     out = out * (~empty_filter).unsqueeze(-1)
 
     # Return to original shape
@@ -1486,7 +1487,7 @@ def nms(boxes: mindspore.Tensor, scores: mindspore.Tensor, iou_threshold: float)
             is not within the valid range.
     """
     box_with_score = ops.stack((boxes, scores))
-    _, _, selected_mask = _get_cache_prim(ops.NMSWithMask)(iou_threshold)(box_with_score)
+    _, _, selected_mask = _get_cache_prim(mindspore.ops.NMSWithMask)(iou_threshold)(box_with_score)
     return ops.nonzero(selected_mask).reshape(-1)
 
 __all__ = ['SamImageProcessor']

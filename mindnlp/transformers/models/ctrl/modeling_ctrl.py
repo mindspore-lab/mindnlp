@@ -291,7 +291,7 @@ class CTRLModel(CTRLPreTrainedModel):
         >>> model = CTRLModel.from_pretrained("Salesforce/ctrl")
 
         >>> # CTRL was trained with control codes as the first token
-        >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="pt")
+        >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="ms")
         >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
 
         >>> outputs = model(**inputs)
@@ -477,7 +477,7 @@ class CTRLLMHeadModel(CTRLPreTrainedModel):
         >>> model = CTRLLMHeadModel.from_pretrained("Salesforce/ctrl")
 
         >>> # CTRL was trained with control codes as the first token
-        >>> inputs = tokenizer("Wikipedia The llama is", return_tensors="pt")
+        >>> inputs = tokenizer("Wikipedia The llama is", return_tensors="ms")
         >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
 
         >>> sequence_ids = model.generate(inputs["input_ids"])
@@ -592,7 +592,7 @@ class CTRLForSequenceClassification(CTRLPreTrainedModel):
         >>> model = CTRLForSequenceClassification.from_pretrained("Salesforce/ctrl")
 
         >>> # CTRL was trained with control codes as the first token
-        >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="pt")
+        >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="ms")
         >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
 
         >>> with torch.no_grad():
@@ -629,7 +629,7 @@ class CTRLForSequenceClassification(CTRLPreTrainedModel):
         ... )
 
         >>> # CTRL was trained with control codes as the first token
-        >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="pt")
+        >>> inputs = tokenizer("Opinion My dog is cute", return_tensors="ms")
         >>> assert inputs["input_ids"][0, 0].item() in tokenizer.control_codes.values()
 
         >>> with torch.no_grad():

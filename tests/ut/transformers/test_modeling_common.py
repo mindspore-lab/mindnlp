@@ -214,12 +214,13 @@ class ModelTesterMixin:
             elif model_class.__name__ in get_values(MODEL_FOR_SEMANTIC_SEGMENTATION_MAPPING_NAMES):
                 batch_size, num_channels, height, width = inputs_dict["pixel_values"].shape
                 inputs_dict["labels"] = ops.zeros(
-                    [self.model_tester.batch_size, height, width]
+                    (self.model_tester.batch_size, height, width)
                 ).long()
 
         return inputs_dict
 
     def test_save_load(self):
+        set_seed(123)
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def check_save_load(out1, out2):
@@ -1283,7 +1284,6 @@ class ModelTesterMixin:
             config.chunk_size_feed_forward = 1
             model = model_class(config)
             model.eval()
-
             hidden_states_with_chunk = model(**self._prepare_for_class(inputs_dict, model_class))[0]
             self.assertTrue(ops.allclose(hidden_states_no_chunk, hidden_states_with_chunk, atol=1e-3))
 
@@ -1753,7 +1753,8 @@ class ModelTesterMixin:
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def set_nan_tensor_to_zero(t):
-            t[t != t] = 0
+            # t[t != t] = 0
+            t = ops.where(t != t, 0, t)
             return t
 
         def check_equivalence(model, tuple_inputs, dict_inputs, additional_kwargs={}):
@@ -1935,7 +1936,8 @@ class ModelTesterMixin:
                 # some models infer position ids/attn mask differently when input ids
                 # by check if pad_token let's make sure no padding is in input ids
                 not_pad_token_id = pad_token_id + 1 if max(0, pad_token_id - 1) == 0 else pad_token_id - 1
-                input_ids[input_ids == pad_token_id] = not_pad_token_id
+                input_ids = ops.where(input_ids == pad_token_id, not_pad_token_id, input_ids)
+                # input_ids[input_ids == pad_token_id] = not_pad_token_id
                 del inputs["input_ids"]
                 inputs_embeds = wte(input_ids)
                 with no_grad():
@@ -1944,8 +1946,10 @@ class ModelTesterMixin:
             else:
                 encoder_input_ids = inputs["input_ids"]
                 decoder_input_ids = inputs.get("decoder_input_ids", encoder_input_ids)
-                encoder_input_ids[encoder_input_ids == pad_token_id] = max(0, pad_token_id + 1)
-                decoder_input_ids[decoder_input_ids == pad_token_id] = max(0, pad_token_id + 1)
+                # encoder_input_ids[encoder_input_ids == pad_token_id] = max(0, pad_token_id + 1)
+                # decoder_input_ids[decoder_input_ids == pad_token_id] = max(0, pad_token_id + 1)
+                encoder_input_ids = ops.where(encoder_input_ids == pad_token_id, max(0, pad_token_id + 1), encoder_input_ids)
+                decoder_input_ids = ops.where(decoder_input_ids == pad_token_id, max(0, pad_token_id + 1), decoder_input_ids)
                 del inputs["input_ids"]
                 inputs.pop("decoder_input_ids", None)
                 inputs_embeds = wte(encoder_input_ids)
@@ -3084,7 +3088,6 @@ class ModelTesterMixin:
 
         # Creating a position_ids tensor. note the repeating figures in the end.
         position_ids_shared_prefix = mindspore.tensor([[0, 1, 2, 3, 3, 3]], dtype=mindspore.int64)
-
         return input_ids, position_ids, input_ids_shared_prefix, mask_shared_prefix, position_ids_shared_prefix
 
     def test_custom_4d_attention_mask(self):
@@ -3124,7 +3127,6 @@ class ModelTesterMixin:
 
             out_last_tokens = logits[:, -1, :]  # last tokens in each batch line
             out_shared_prefix_last_tokens = logits_shared_prefix[0, -3:, :]  # last three tokens
-
             # comparing softmax-normalized logits:
             normalized_0 = F.softmax(out_last_tokens)
             normalized_1 = F.softmax(out_shared_prefix_last_tokens)

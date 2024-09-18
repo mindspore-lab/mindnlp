@@ -37,7 +37,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attenti
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         CodeLlamaTokenizer,
@@ -46,7 +46,6 @@ if is_mindspore_available():
         LlamaModel,
         LlamaTokenizer,
     )
-
 
 class LlamaModelTester:
     def __init__(
@@ -230,8 +229,8 @@ class LlamaModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([input_mask, next_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([input_mask, next_mask], dim=-1)
 
         output_from_no_past = model(
             next_input_ids,
@@ -414,18 +413,18 @@ class LlamaModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
 
 @require_mindspore
 class LlamaIntegrationTest(unittest.TestCase):
-    @unittest.skip("Logits are not exactly the same, once we fix the instabalities somehow, will update!")
     @slow
     def test_model_7b_logits(self):
         input_ids = [1, 306, 4658, 278, 6593, 310, 2834, 338]
-        model = LlamaForCausalLM.from_pretrained("meta-llama/Llama-2-7b-hf", device_map="auto")
+        model = LlamaForCausalLM.from_pretrained("shakechen/Llama-2-7b-hf", mirror='modelscope', ms_dtype=mindspore.float16)
+
         out = model(mindspore.tensor([input_ids]))
         # Expected mean on dim = -1
         EXPECTED_MEAN = mindspore.tensor([[-6.6550, -4.1227, -4.9859, -3.2406, 0.8262, -3.0033, 1.2964, -3.3699]])
-        # torch.testing.assert_close(out.mean(-1), EXPECTED_MEAN, atol=1e-2, rtol=1e-2)
+        assert ops.allclose(out.logits.mean(-1), EXPECTED_MEAN, atol=1e-2, rtol=1e-2)
         # slicing logits[0, 0, 0:30]
         EXPECTED_SLICE = mindspore.tensor([-12.8281, -7.4453, -0.4639, -8.0625, -7.2500, -8.0000, -6.4883, -7.7695, -7.8438, -7.0312, -6.2188, -7.1328, -1.8496, 1.9961, -8.6250, -6.7227, -12.8281, -6.9492, -7.0742, -7.7852, -7.5820, -7.9062, -6.9375, -7.9805, -8.3438, -8.1562, -8.0469, -7.6250, -7.7422, -7.3398,])  # fmt: skip
-        # torch.testing.assert_close(out[0, 0, :30], EXPECTED_SLICE, atol=1e-5, rtol=1e-5)
+        assert ops.allclose(out.logits[0, 0, :30], EXPECTED_SLICE, atol=1e-5, rtol=1e-5)
 
     @unittest.skip("Logits are not exactly the same, once we fix the instabalities somehow, will update!")
     @slow
@@ -567,3 +566,30 @@ end
         ]
         infilling = tokenizer.batch_decode(generated_ids)
         self.assertEqual(infilling, EXPECTED_INFILLING)
+
+
+@require_mindspore
+class TinyLlamaIntegrationTest(unittest.TestCase):
+    @slow
+    def test_model_1_1b_logits(self):
+        from mindnlp.transformers import AutoTokenizer, pipeline
+        model = "TinyLlama/TinyLlama_v1.1"
+        tokenizer = AutoTokenizer.from_pretrained(model)
+        pipeline = pipeline(
+            "text-generation",
+            model=model,
+            ms_dtype=mindspore.float16,
+            # device_map="auto",
+        )
+
+        sequences = pipeline(
+            'The TinyLlama project aims to pretrain a 1.1B Llama model on 3 trillion tokens. With some proper optimization, we can achieve this within a span of "just" 90 days using 16 A100-40G GPUs 🚀🚀. The training has started on 2023-09-01.',
+            do_sample=True,
+            top_k=10,
+            num_return_sequences=1,
+            repetition_penalty=1.5,
+            eos_token_id=tokenizer.eos_token_id,
+            max_length=500,
+        )
+        for seq in sequences:
+            print(f"Result: {seq['generated_text']}")

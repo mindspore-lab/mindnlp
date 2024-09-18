@@ -1449,7 +1449,7 @@ class BertGenerationDecoder(BertGenerationPreTrainedModel):
             ...     "google/bert_for_seq_generation_L-24_bbc_encoder", config=config
             ... )
             ...
-            >>> inputs = tokenizer("Hello, my dog is cute", return_token_type_ids=False, return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_token_type_ids=False, return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> prediction_logits = outputs.logits

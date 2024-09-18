@@ -1611,7 +1611,7 @@ class DistilBertForMultipleChoice(DistilBertPreTrainedModel):
         >>> labels = mindspore.Tensor(0).unsqueeze(0)  # choice0 is correct (according to Wikipedia ;)), batch size 1
         ...
         >>> # encoding the prompts and choices
-        >>> encoding = tokenizer([[prompt, choice0], [prompt, choice1]], return_tensors="pt", padding=True)
+        >>> encoding = tokenizer([[prompt, choice0], [prompt, choice1]], return_tensors="ms", padding=True)
         >>> outputs = model(**{k: v.unsqueeze(0) for k, v in encoding.items()}, labels=labels)  # batch size is 1
         ...
         >>> # calculating the loss and logits
@@ -1702,7 +1702,7 @@ class DistilBertForMultipleChoice(DistilBertPreTrainedModel):
             >>> choice1 = "It is eaten while held in the hand."
             >>> labels = mindspore.Tensor(0).unsqueeze(0)  # choice0 is correct (according to Wikipedia ;)), batch size 1
             ...
-            >>> encoding = tokenizer([[prompt, choice0], [prompt, choice1]], return_tensors="pt", padding=True)
+            >>> encoding = tokenizer([[prompt, choice0], [prompt, choice1]], return_tensors="ms", padding=True)
             >>> outputs = model(**{k: v.unsqueeze(0) for k, v in encoding.items()}, labels=labels)  # batch size is 1
             ...
             >>> # the linear classifier still needs to be trained

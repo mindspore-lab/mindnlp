@@ -1900,6 +1900,9 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
 
+        kwargs_has_attention_mask = model_kwargs.get("attention_mask", None) is not None
+        self._prepare_special_tokens(generation_config, kwargs_has_attention_mask)
+
         logits_processor = self._get_logits_processor(
             generation_config=generation_config,
             input_ids_seq_length=input_ids_seq_length,

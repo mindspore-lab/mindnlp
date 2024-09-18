@@ -20,7 +20,6 @@ from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple, Union
 
 import mindspore
-from mindspore.common.initializer import initializer, Normal
 import mindnlp.core.nn.functional as F
 from mindnlp.core import nn, ops
 
@@ -48,7 +47,7 @@ _CHECKPOINT_FOR_DOC = "laion/clap-htsat-fused"
 def interpolate(hidden_states, ratio):
     """
     Interpolate data in time domain. This is used to compensate the resolution reduction in downsampling of a CNN.
-s
+
     Args:
         hidden_states (`mindspore.Tensor` of shape (batch_size, time_length, classes_num)):
             Input hidden states
@@ -56,7 +55,7 @@ s
             The ratio of the length of the output to the length of the input.
     """
     (batch_size, time_length, classes_num) = hidden_states.shape
-    upsampled = hidden_states[:, :, None, :].repeat(1, 1, ratio, 1)
+    upsampled = hidden_states[:, :, None, :].tile((1, 1, ratio, 1))
     upsampled = upsampled.reshape(batch_size, time_length * ratio, classes_num)
     return upsampled
 
@@ -192,19 +191,19 @@ class ClapOutput(ModelOutput):
     Args:
         loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `return_loss` is `True`):
             Contrastive loss for audio-text similarity.
-        logits_per_audio:(`mindspore.Tensor` of shape `(audio_batch_size, text_batch_size)`):
+        logits_per_audio (`mindspore.Tensor` of shape `(audio_batch_size, text_batch_size)`):
             The scaled dot product scores between `audio_embeds` and `text_embeds`. This represents the audio-text
             similarity scores.
-        logits_per_text:(`mindspore.Tensor` of shape `(text_batch_size, audio_batch_size)`):
+        logits_per_text (`mindspore.Tensor` of shape `(text_batch_size, audio_batch_size)`):
             The scaled dot product scores between `text_embeds` and `audio_embeds`. This represents the text-audio
             similarity scores.
-        text_embeds(`mindspore.Tensor` of shape `(batch_size, output_dim`):
+        text_embeds (`mindspore.Tensor` of shape `(batch_size, output_dim`):
             The text embeddings obtained by applying the projection layer to the pooled output of [`ClapTextModel`].
-        audio_embeds(`mindspore.Tensor` of shape `(batch_size, output_dim`):
+        audio_embeds (`mindspore.Tensor` of shape `(batch_size, output_dim`):
             The audio embeddings obtained by applying the projection layer to the pooled output of [`ClapAudioModel`].
-        text_model_output(`BaseModelOutputWithPooling`):
+        text_model_output (`BaseModelOutputWithPooling`):
             The output of the [`ClapTextModel`].
-        audio_model_output(`BaseModelOutputWithPooling`):
+        audio_model_output (`BaseModelOutputWithPooling`):
             The output of the [`ClapAudioModel`].
     """
 
@@ -382,7 +381,7 @@ class ClapAudioPatchEmbed(nn.Module):
             hidden_states = self.proj(hidden_states)
 
         if self.flatten:
-            hidden_states = hidden_states.flatten(start_dim=2).swapaxes(1, 2)
+            hidden_states = ops.transpose(ops.flatten(hidden_states, 2), 1, 2)
         hidden_states = self.norm(hidden_states)
         return hidden_states
 
@@ -446,7 +445,7 @@ class ClapAudioSelfAttention(nn.Module):
         query_layer = self.transpose_for_scores(mixed_query_layer)
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_layer, ops.transpose(key_layer, -1, -2))
 
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
@@ -588,7 +587,7 @@ class ClapAudioLayer(nn.Module):
     def set_shift_and_window_size(self, input_resolution):
         if min(input_resolution) <= self.window_size:
             # if window size is larger than input resolution, we don't partition windows
-            self.shift_size = 0
+            self.shift_size = mindspore.tensor(0)
             self.window_size = min(input_resolution)
 
     def get_attn_mask(self, height, width, dtype):
@@ -660,8 +659,7 @@ class ClapAudioLayer(nn.Module):
         hidden_states_windows = window_partition(shifted_hidden_states, self.window_size)
         hidden_states_windows = hidden_states_windows.view(-1, self.window_size * self.window_size, channels)
         attn_mask = self.get_attn_mask(
-            height_pad, width_pad, dtype=hidden_states.dtype
-        )
+            height_pad, width_pad, dtype=hidden_states.dtype)
 
         attention_outputs = self.attention(
             hidden_states_windows, attn_mask, head_mask, output_attentions=output_attentions
@@ -897,14 +895,14 @@ class ClapAudioEncoder(nn.Module):
         always_partition: Optional[bool] = False,
         return_dict: Optional[bool] = True,
     ) -> Union[Tuple, ClapAudioModelOutput]:
-        input_features = input_features.swapaxes(1, 3)
+        input_features = ops.transpose(input_features, 1, 3)
         normalized_input_features = self.batch_norm(input_features)
-        normalized_input_features = normalized_input_features.swapaxes(1, 3)
+        normalized_input_features = ops.transpose(normalized_input_features, 1, 3)
 
         is_longer_list_idx = None
         if self.enable_fusion:
             is_longer_list = is_longer
-            is_longer_list_idx = ops.nonzero(is_longer_list == 1)[0]
+            is_longer_list_idx = ops.nonzero(is_longer_list == 1, as_tuple=True)[0]
 
         hidden_states = self.reshape_mel2img(normalized_input_features)
 
@@ -1114,8 +1112,7 @@ class ClapTextEmbeddings(nn.Module):
         sequence_length = input_shape[1]
 
         position_ids = ops.arange(
-            self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64
-        )
+            self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64)
         return position_ids.unsqueeze(0).broadcast_to(input_shape)
 
 
@@ -1201,7 +1198,7 @@ class ClapTextSelfAttention(nn.Module):
             past_key_value = (key_layer, value_layer)
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_layer, ops.transpose(key_layer, -1, -2))
 
         if self.position_embedding_type in ('relative_key', 'relative_key_query'):
             query_length, key_length = query_layer.shape[2], key_layer.shape[2]
@@ -1564,48 +1561,28 @@ class ClapPreTrainedModel(PreTrainedModel):
     base_model_prefix = "clap"
     supports_gradient_checkpointing = False
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
         factor = self.config.initializer_factor
 
-        if isinstance(cell, ClapTextEmbeddings):
-            # module.position_embeddings.weight.data.normal_(mean=0.0, std=factor * 0.02)
-            # module.token_type_embeddings.weight.data.normal_(mean=0.0, std=factor * 0.02)
-            cell.position_embeddings.weight.set_data(
-                initializer(Normal(factor * 0.02),
-                            cell.position_embeddings.weight.shape, cell.position_embeddings.weight.dtype))
-            cell.token_type_embeddings.weight.set_data(
-                initializer(Normal(factor * 0.02),
-                            cell.token_type_embeddings.weight.shape, cell.token_type_embeddings.weight.dtype))
-        elif isinstance(cell, ClapModel):
-            # nn.init.normal_(module.logit_scale_a, std=factor * 0.02)
-            # nn.init.normal_(module.logit_scale_t, std=factor * 0.02)
-            cell.logit_scale_a.set_data(
-                initializer(Normal(factor * 0.02),
-                            cell.logit_scale_a.shape, cell.logit_scale_a.dtype))
-            cell.logit_scale_t.set_data(
-                initializer(Normal(factor * 0.02),
-                            cell.logit_scale_t.shape, cell.logit_scale_t.dtype))
+        if isinstance(module, ClapTextEmbeddings):
+            nn.init.normal_(module.position_embeddings.weight, mean=0.0, std=factor * 0.02)
+            nn.init.normal_(module.token_type_embeddings.weight, mean=0.0, std=factor * 0.02)
+        elif isinstance(module, ClapModel):
+            nn.init.normal_(module.logit_scale_a, std=factor * 0.02)
+            nn.init.normal_(module.logit_scale_t, std=factor * 0.02)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=factor * 0.02)
 
-        elif isinstance(cell, nn.Embedding):
-            # module.weight.data.normal_(mean=0.0, std=factor * 0.02)
-            cell.weight.data.set_data(
-                initializer(Normal(factor * 0.02),
-                            cell.weight.data.shape, cell.weight.data.dtype))
-
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, (nn.Conv2d, nn.Linear)):
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
+        elif isinstance(module, (nn.Conv2d, nn.Linear)):
             in_proj_std = (self.config.hidden_size**-0.5) * ((2 * self.config.num_hidden_layers) ** -0.5) * factor
-            # nn.init.normal_(module.weight, std=in_proj_std)
-            # if module.bias is not None:
-            #     module.bias.data.zero_()
-            cell.weight.data.set_data(
-                initializer(Normal(in_proj_std),
-                            cell.weight.data.shape, cell.weight.data.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            nn.init.normal_(module.weight, std=in_proj_std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+
 
 class ClapAudioModel(ClapPreTrainedModel):
     config_class = ClapAudioConfig
@@ -1643,7 +1620,7 @@ class ClapAudioModel(ClapPreTrainedModel):
         >>> model = ClapAudioModel.from_pretrained("laion/clap-htsat-fused")
         >>> processor = AutoProcessor.from_pretrained("laion/clap-htsat-fused")
 
-        >>> inputs = processor(audios=audio_sample, return_tensors="pt")
+        >>> inputs = processor(audios=audio_sample, return_tensors="ms")
 
         >>> outputs = model(**inputs)
         >>> last_hidden_state = outputs.last_hidden_state
@@ -1886,7 +1863,7 @@ class ClapModel(ClapPreTrainedModel):
         >>> model = ClapModel.from_pretrained("laion/clap-htsat-unfused")
         >>> tokenizer = AutoTokenizer.from_pretrained("laion/clap-htsat-unfused")
 
-        >>> inputs = tokenizer(["the sound of a cat", "the sound of a dog"], padding=True, return_tensors="pt")
+        >>> inputs = tokenizer(["the sound of a cat", "the sound of a dog"], padding=True, return_tensors="ms")
         >>> text_features = model.get_text_features(**inputs)
         ```"""
         # Use CLAP model's config for some fields (if specified) instead of those of audio & text components.
@@ -1934,7 +1911,7 @@ class ClapModel(ClapPreTrainedModel):
         >>> model = ClapModel.from_pretrained("laion/clap-htsat-unfused")
         >>> feature_extractor = AutoFeatureExtractor.from_pretrained("laion/clap-htsat-unfused")
         >>> random_audio = ops.rand((16_000))
-        >>> inputs = feature_extractor(random_audio, return_tensors="pt")
+        >>> inputs = feature_extractor(random_audio, return_tensors="ms")
         >>> audio_features = model.get_audio_features(**inputs)
         ```"""
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -1985,7 +1962,7 @@ class ClapModel(ClapPreTrainedModel):
 
         >>> input_text = ["Sound of a dog", "Sound of vaccum cleaner"]
 
-        >>> inputs = processor(text=input_text, audios=audio_sample, return_tensors="pt", padding=True)
+        >>> inputs = processor(text=input_text, audios=audio_sample, return_tensors="ms", padding=True)
 
         >>> outputs = model(**inputs)
         >>> logits_per_audio = outputs.logits_per_audio  # this is the audio-text similarity score
@@ -2088,7 +2065,7 @@ class ClapTextModelWithProjection(ClapPreTrainedModel):
         >>> model = ClapTextModelWithProjection.from_pretrained("laion/clap-htsat-unfused")
         >>> tokenizer = AutoTokenizer.from_pretrained("laion/clap-htsat-unfused")
 
-        >>> inputs = tokenizer(["a sound of a cat", "a sound of a dog"], padding=True, return_tensors="pt")
+        >>> inputs = tokenizer(["a sound of a cat", "a sound of a dog"], padding=True, return_tensors="ms")
 
         >>> outputs = model(**inputs)
         >>> text_embeds = outputs.text_embeds
@@ -2157,7 +2134,7 @@ class ClapAudioModelWithProjection(ClapPreTrainedModel):
         >>> dataset = load_dataset("hf-internal-testing/ashraq-esc50-1-dog-example")
         >>> audio_sample = dataset["train"]["audio"][0]["array"]
 
-        >>> inputs = processor(audios=audio_sample, return_tensors="pt")
+        >>> inputs = processor(audios=audio_sample, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> audio_embeds = outputs.audio_embeds
         ```"""
@@ -2190,11 +2167,11 @@ class ClapAudioModelWithProjection(ClapPreTrainedModel):
             hidden_states=audio_outputs.hidden_states,
         )
 
-__all__=[
-        "ClapModel",
-        "ClapPreTrainedModel",
-        "ClapTextModel",
-        "ClapTextModelWithProjection",
-        "ClapAudioModel",
-        "ClapAudioModelWithProjection",
-    ]
+__all__ = [
+    "ClapModel",
+    "ClapPreTrainedModel",
+    "ClapTextModel",
+    "ClapTextModelWithProjection",
+    "ClapAudioModel",
+    "ClapAudioModelWithProjection",
+]

@@ -1129,8 +1129,8 @@ class BlenderbotModel(BlenderbotPreTrainedModel):
             >>> model = BlenderbotModel.from_pretrained("facebook/blenderbot-400M-distill")
             >>> tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot-400M-distill")
             ...
-            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
-            >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="pt").input_ids  # Batch size 1
+            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="ms")
+            >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="ms").input_ids  # Batch size 1
             >>> outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_input_ids)
             ...
             >>> last_hidden_states = outputs.last_hidden_state
@@ -1258,8 +1258,8 @@ class BlenderbotModel(BlenderbotPreTrainedModel):
             >>> model = BlenderbotModel.from_pretrained("facebook/blenderbot-400M-distill")
             >>> tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot-400M-distill")
             ...
-            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
-            >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="pt").input_ids  # Batch size 1
+            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="ms")
+            >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="ms").input_ids  # Batch size 1
             >>> outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_input_ids)
             ...
             >>> last_hidden_states = outputs.last_hidden_state
@@ -1981,7 +1981,7 @@ class BlenderbotForCausalLM(BlenderbotPreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot-400M-distill")
             >>> model = BlenderbotForCausalLM.from_pretrained("facebook/blenderbot-400M-distill", add_cross_attention=False)
             >>> assert model.config.is_decoder, f"{model.__class__} has to be configured as a decoder."
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> logits = outputs.logits

@@ -12,31 +12,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the PyTorch LayoutLMv2 model. """
+"""Testing suite for the MindSpore LayoutLMv2 model."""
 
 import unittest
-from typing import *
-
-import numpy as np
-
-from mindnlp.utils.testing_utils import slow
-from mindspore import ops, Tensor
-from mindspore.ops import functional as F
-from mindnlp.utils import require_mindspore
+from typing import List, Tuple
+from mindnlp.utils.testing_utils import require_mindspore, slow
+from mindnlp.utils import is_mindspore_available
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, _config_zero_init, ids_tensor, random_attention_mask
+# from ...test_pipeline_mixin import PipelineTesterMixin
 
-import mindspore
 
-from mindnlp.transformers import (
-    LayoutLMv2Config,
-    LayoutLMv2ForQuestionAnswering,
-    LayoutLMv2ForSequenceClassification,
-    LayoutLMv2ForTokenClassification,
-    LayoutLMv2Model,
-)
-from mindnlp.transformers.models.layoutlmv2.modeling_layoutlmv2 import LAYOUTLMV2_PRETRAINED_MODEL_ARCHIVE_LIST
+if is_mindspore_available():
+    import mindspore
+    from mindnlp.core import ops, no_grad
+    import mindnlp.core.nn.functional as F
+
+    from mindnlp.transformers import (
+        LayoutLMv2Config,
+        LayoutLMv2ForQuestionAnswering,
+        LayoutLMv2ForSequenceClassification,
+        LayoutLMv2ForTokenClassification,
+        LayoutLMv2Model,
+    )
 
 
 class ImageList:
@@ -77,113 +76,37 @@ class ImageList:
         size = self.image_sizes[idx]
         return self.tensor[idx, ..., : size[0], : size[1]]
 
-    def astype(self, dtype) -> "ImageList":
-        """
-        Returns a new ImageList with the tensor converted to the specified data type.
-
-        Args:
-            dtype: The desired data type.
-
-        Returns:
-            A new ImageList object with the tensor of the specified data type.
-        """
-        new_tensor = self.tensor.astype(dtype)
-        return ImageList(new_tensor, self.image_sizes)
-
-    @staticmethod
-    def from_tensors(
-            tensors: List[mindspore.Tensor],
-            size_divisibility: int = 0,
-            pad_value: float = 0.0,
-            padding_constraints: Optional[Dict[str, int]] = None,
-    ) -> "ImageList":
-        """
-        Args:
-            tensors: a tuple or list of `mindspore.Tensor`, each of shape (Hi, Wi) or
-                (C_1, ..., C_K, Hi, Wi) where K >= 1. The Tensors will be padded
-                to the same shape with `pad_value`.
-            size_divisibility (int): If `size_divisibility > 0`, add padding to ensure
-                the common height and width is divisible by `size_divisibility`.
-                This depends on the model and many models need a divisibility of 32.
-            pad_value (float): value to pad.
-            padding_constraints (optional[Dict]): If given, it would follow the format as
-                {"size_divisibility": int, "square_size": int}, where `size_divisibility` will
-                overwrite the above one if presented and `square_size` indicates the
-                square padding size if `square_size` > 0.
-        Returns:
-            an `ImageList`.
-        """
-        assert len(tensors) > 0
-        assert isinstance(tensors, (tuple, list))
-        for t in tensors:
-            assert isinstance(t, mindspore.Tensor), type(t)
-            assert t.shape[:-2] == tensors[0].shape[:-2], t.shape
-
-        image_sizes = [(im.shape[-2], im.shape[-1]) for im in tensors]
-        image_sizes_tensor = [Tensor.shapes_to_tensor(x) for x in image_sizes]
-        max_size = ops.stack(image_sizes_tensor).max(0).values
-
-        if padding_constraints is not None:
-            square_size = padding_constraints.get("square_size", 0)
-            if square_size > 0:
-                # pad to square.
-                max_size[0] = max_size[1] = square_size
-            if "size_divisibility" in padding_constraints:
-                size_divisibility = padding_constraints["size_divisibility"]
-        if size_divisibility > 1:
-            stride = size_divisibility
-            # the last two dims are H,W, both subject to divisibility requirement
-            max_size = (max_size + (stride - 1)).div(stride, rounding_mode="floor") * stride
-
-        image_sizes = image_sizes_tensor
-
-        if len(tensors) == 1:
-            image_size = image_sizes[0]
-            padding_size = [0, max_size[-1] - image_size[1], 0, max_size[-2] - image_size[0]]
-            batched_imgs = ops.pad(tensors[0], padding_size, value=pad_value).unsqueeze_(0)
-        else:
-            # max_size can be a tensor in tracing mode, therefore convert to list
-            batch_shape = [len(tensors)] + list(tensors[0].shape[:-2]) + list(max_size)
-            batched_imgs = tensors[0].new_full(batch_shape, pad_value)
-            for i, img in enumerate(tensors):
-                # Use `batched_imgs` directly instead of `img, pad_img = zip(tensors, batched_imgs)`
-                # Tracing mode cannot capture `copy_()` of temporary locals
-                batched_imgs[i, ..., : img.shape[-2], : img.shape[-1]].copy_(img)
-
-        return ImageList(batched_imgs.contiguous(), image_sizes)
-
-
 class LayoutLMv2ModelTester:
     def __init__(
-            self,
-            parent,
-            batch_size=2,
-            num_channels=3,
-            image_size=4,
-            seq_length=7,
-            is_training=True,
-            use_input_mask=True,
-            use_token_type_ids=True,
-            use_labels=True,
-            vocab_size=99,
-            hidden_size=36,
-            num_hidden_layers=2,
-            num_attention_heads=4,
-            intermediate_size=37,
-            hidden_act="gelu",
-            hidden_dropout_prob=0.1,
-            attention_probs_dropout_prob=0.1,
-            max_position_embeddings=512,
-            type_vocab_size=16,
-            type_sequence_label_size=2,
-            initializer_range=0.02,
-            image_feature_pool_shape=[7, 7, 256],
-            coordinate_size=6,
-            shape_size=6,
-            num_labels=3,
-            num_choices=4,
-            scope=None,
-            range_bbox=1000,
+        self,
+        parent,
+        batch_size=2,
+        num_channels=3,
+        image_size=4,
+        seq_length=7,
+        is_training=True,
+        use_input_mask=True,
+        use_token_type_ids=True,
+        use_labels=True,
+        vocab_size=99,
+        hidden_size=36,
+        num_hidden_layers=2,
+        num_attention_heads=4,
+        intermediate_size=37,
+        hidden_act="gelu",
+        hidden_dropout_prob=0.1,
+        attention_probs_dropout_prob=0.1,
+        max_position_embeddings=512,
+        type_vocab_size=16,
+        type_sequence_label_size=2,
+        initializer_range=0.02,
+        image_feature_pool_shape=[7, 7, 256],
+        coordinate_size=6,
+        shape_size=6,
+        num_labels=3,
+        num_choices=4,
+        scope=None,
+        range_bbox=1000,
     ):
         self.parent = parent
         self.batch_size = batch_size
@@ -230,7 +153,10 @@ class LayoutLMv2ModelTester:
                     bbox[i, j, 2] = bbox[i, j, 0]
                     bbox[i, j, 0] = t
 
-        image = ImageList(ops.randn((2, 3, 224, 224)), image_sizes=[(224, 224), (224, 224)]).tensor
+        image = ImageList(
+            ops.zeros(self.batch_size, self.num_channels, self.image_size, self.image_size),
+            self.image_size,
+        )
 
         input_mask = None
         if self.use_input_mask:
@@ -245,12 +171,7 @@ class LayoutLMv2ModelTester:
         if self.use_labels:
             sequence_labels = ids_tensor([self.batch_size], self.type_sequence_label_size)
             token_labels = ids_tensor([self.batch_size, self.seq_length], self.num_labels)
-            # use smaller resnet backbone to make tests faster
-        custom_config = {
-            "MODEL.RESNETS.DEPTH": 18,
-            "MODEL.RESNETS.RES2_OUT_CHANNELS": 64,
-            "MODEL.RESNETS.NUM_GROUPS": 1
-        }
+
         config = LayoutLMv2Config(
             vocab_size=self.vocab_size,
             hidden_size=self.hidden_size,
@@ -267,16 +188,20 @@ class LayoutLMv2ModelTester:
             image_feature_pool_shape=self.image_feature_pool_shape,
             coordinate_size=self.coordinate_size,
             shape_size=self.shape_size,
-            custom_config=custom_config
         )
+
+        # use smaller resnet backbone to make tests faster
+        config.detectron2_config_args["MODEL.RESNETS.DEPTH"] = 18
+        config.detectron2_config_args["MODEL.RESNETS.RES2_OUT_CHANNELS"] = 64
+        config.detectron2_config_args["MODEL.RESNETS.NUM_GROUPS"] = 1
 
         return config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
 
     def create_and_check_model(
-            self, config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
+        self, config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
     ):
         model = LayoutLMv2Model(config=config)
-        model.set_train(False)
+        model.eval()
 
         result = model(input_ids, bbox=bbox, image=image, attention_mask=input_mask, token_type_ids=token_type_ids)
         result = model(input_ids, bbox=bbox, image=image, token_type_ids=token_type_ids)
@@ -288,12 +213,11 @@ class LayoutLMv2ModelTester:
         self.parent.assertEqual(result.pooler_output.shape, (self.batch_size, self.hidden_size))
 
     def create_and_check_for_sequence_classification(
-            self, config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
+        self, config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
     ):
         config.num_labels = self.num_labels
         model = LayoutLMv2ForSequenceClassification(config)
-
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             bbox=bbox,
@@ -305,11 +229,11 @@ class LayoutLMv2ModelTester:
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
     def create_and_check_for_token_classification(
-            self, config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
+        self, config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
     ):
         config.num_labels = self.num_labels
         model = LayoutLMv2ForTokenClassification(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             bbox=bbox,
@@ -321,10 +245,10 @@ class LayoutLMv2ModelTester:
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.num_labels))
 
     def create_and_check_for_question_answering(
-            self, config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
+        self, config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
     ):
         model = LayoutLMv2ForQuestionAnswering(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             bbox=bbox,
@@ -362,6 +286,7 @@ class LayoutLMv2ModelTester:
 @require_mindspore
 class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
     test_pruning = False
+    test_torchscript = True
     test_mismatched_shapes = False
 
     all_model_classes = (
@@ -371,9 +296,13 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
             LayoutLMv2ForTokenClassification,
             LayoutLMv2ForQuestionAnswering,
         )
+        if is_mindspore_available()
+        else ()
     )
     pipeline_model_mapping = (
         {"document-question-answering": LayoutLMv2ForQuestionAnswering, "feature-extraction": LayoutLMv2Model}
+        if is_mindspore_available()
+        else {}
     )
 
     def setUp(self):
@@ -411,8 +340,8 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
 
         # LayoutLMv2 has a different expected sequence length
         expected_seq_len = (
-                self.model_tester.seq_length
-                + self.model_tester.image_feature_pool_shape[0] * self.model_tester.image_feature_pool_shape[1]
+            self.model_tester.seq_length
+            + self.model_tester.image_feature_pool_shape[0] * self.model_tester.image_feature_pool_shape[1]
         )
 
         for model_class in self.all_model_classes:
@@ -420,10 +349,9 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
             inputs_dict["output_hidden_states"] = False
             config.return_dict = True
             model = model_class(config)
-
-            model.set_train(False)
-
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.attentions
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -431,9 +359,9 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
             del inputs_dict["output_attentions"]
             config.output_attentions = True
             model = model_class(config)
-            model.set_train(False)
-
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.attentions
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -447,9 +375,9 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
             inputs_dict["output_attentions"] = True
             inputs_dict["output_hidden_states"] = True
             model = model_class(config)
-            model.set_train(False)
-
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             if hasattr(self.model_tester, "num_hidden_states_types"):
                 added_hidden_states = self.model_tester.num_hidden_states_types
@@ -468,10 +396,10 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
     def test_hidden_states_output(self):
         def check_hidden_states_output(inputs_dict, config, model_class):
             model = model_class(config)
+            model.eval()
 
-            model.set_train(False)
-
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             hidden_states = outputs.hidden_states
 
@@ -482,8 +410,8 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
 
             # LayoutLMv2 has a different expected sequence length
             expected_seq_len = (
-                    self.model_tester.seq_length
-                    + self.model_tester.image_feature_pool_shape[0] * self.model_tester.image_feature_pool_shape[1]
+                self.model_tester.seq_length
+                + self.model_tester.image_feature_pool_shape[0] * self.model_tester.image_feature_pool_shape[1]
             )
 
             self.assertListEqual(
@@ -503,11 +431,15 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
 
             check_hidden_states_output(inputs_dict, config, model_class)
 
+    @unittest.skip(reason="We cannot configure detectron2 to output a smaller backbone")
+    def test_model_is_small(self):
+        pass
+
     @slow
     def test_model_from_pretrained(self):
-        for model_name in LAYOUTLMV2_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = LayoutLMv2Model.from_pretrained(model_name)
-            self.assertIsNotNone(model)
+        model_name = "microsoft/layoutlmv2-base-uncased"
+        model = LayoutLMv2Model.from_pretrained(model_name)
+        self.assertIsNotNone(model)
 
     def test_initialization(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -515,7 +447,7 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            for name, param in model.parameters_dict().items():
+            for name, param in model.named_parameters():
                 if "backbone" in name or "visual_segment_embedding" in name:
                     continue
 
@@ -565,7 +497,7 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
 
             model_name = model_class.__name__
             batched_input_prepared = self._prepare_for_class(batched_input, model_class)
-            model = model_class(config).set_train(False)
+            model = model_class(config).eval()
             batch_size = self.model_tester.batch_size
 
             single_row_input = {}
@@ -577,8 +509,9 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
                     # layoutlmv2uses ImageList intead of pixel values (needs for torchscript)
                     single_row_input[key] = value.tensor[:single_batch_shape]
 
-            model_batched_output = model(**batched_input_prepared)
-            model_row_output = model(**single_row_input)
+            with no_grad():
+                model_batched_output = model(**batched_input_prepared)
+                model_row_output = model(**single_row_input)
 
             for key in model_batched_output:
                 recursive_check(model_batched_output[key], model_row_output[key], model_name, key)
@@ -587,35 +520,15 @@ class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
 def prepare_layoutlmv2_batch_inputs():
     # Here we prepare a batch of 2 sequences to test a LayoutLMv2 forward pass on:
     # fmt: off
-    input_ids = mindspore.Tensor([[101, 1019, 1014, 1016, 1037, 12849, 4747, 1004, 14246, 2278, 5439, 4524, 5002, 2930,
-                                   2193, 2930, 4341, 3208, 1005, 1055, 2171, 2848, 11300, 3531, 102],
-                                  [101, 4070, 4034, 7020, 1024, 3058, 1015, 1013, 2861, 1013, 6070, 19274, 2772, 6205,
-                                   27814, 16147, 16147, 4343, 2047, 10283, 10969, 14389, 1012, 2338,
-                                   102]])  # noqa: E231
-    bbox = mindspore.Tensor([[[0, 0, 0, 0], [423, 237, 440, 251], [427, 272, 441, 287], [419, 115, 437, 129],
-                              [961, 885, 992, 912], [256, 38, 330, 58], [256, 38, 330, 58], [336, 42, 353, 57],
-                              [360, 39, 401, 56], [360, 39, 401, 56], [411, 39, 471, 59], [479, 41, 528, 59],
-                              [533, 39, 630, 60], [67, 113, 134, 131], [141, 115, 209, 132], [68, 149, 133, 166],
-                              [141, 149, 187, 164], [195, 148, 287, 165], [195, 148, 287, 165], [195, 148, 287, 165],
-                              [295, 148, 349, 165], [441, 149, 492, 166], [497, 149, 546, 164], [64, 201, 125, 218],
-                              [1000, 1000, 1000, 1000]],
-                             [[0, 0, 0, 0], [662, 150, 754, 166], [665, 199, 742, 211], [519, 213, 554, 228],
-                              [519, 213, 554, 228], [134, 433, 187, 454], [130, 467, 204, 480], [130, 467, 204, 480],
-                              [130, 467, 204, 480], [130, 467, 204, 480], [130, 467, 204, 480], [314, 469, 376, 482],
-                              [504, 684, 582, 706], [941, 825, 973, 900], [941, 825, 973, 900], [941, 825, 973, 900],
-                              [941, 825, 973, 900], [610, 749, 652, 765], [130, 659, 168, 672], [176, 657, 237, 672],
-                              [238, 657, 312, 672], [443, 653, 628, 672], [443, 653, 628, 672], [716, 301, 825, 317],
-                              [1000, 1000, 1000, 1000]]])  # noqa: E231
-    image = ImageList(ops.randn((2, 3, 224, 224)), image_sizes=[(224, 224), (224, 224)]).tensor  # noqa: E231
-    attention_mask = mindspore.Tensor([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                                       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                                        1], ])  # noqa: E231
-    token_type_ids = mindspore.Tensor([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                        0]])  # noqa: E231
+    input_ids = mindspore.tensor([[101,1019,1014,1016,1037,12849,4747,1004,14246,2278,5439,4524,5002,2930,2193,2930,4341,3208,1005,1055,2171,2848,11300,3531,102],[101,4070,4034,7020,1024,3058,1015,1013,2861,1013,6070,19274,2772,6205,27814,16147,16147,4343,2047,10283,10969,14389,1012,2338,102]])  # noqa: E231
+    bbox = mindspore.tensor([[[0,0,0,0],[423,237,440,251],[427,272,441,287],[419,115,437,129],[961,885,992,912],[256,38,330,58],[256,38,330,58],[336,42,353,57],[360,39,401,56],[360,39,401,56],[411,39,471,59],[479,41,528,59],[533,39,630,60],[67,113,134,131],[141,115,209,132],[68,149,133,166],[141,149,187,164],[195,148,287,165],[195,148,287,165],[195,148,287,165],[295,148,349,165],[441,149,492,166],[497,149,546,164],[64,201,125,218],[1000,1000,1000,1000]],[[0,0,0,0],[662,150,754,166],[665,199,742,211],[519,213,554,228],[519,213,554,228],[134,433,187,454],[130,467,204,480],[130,467,204,480],[130,467,204,480],[130,467,204,480],[130,467,204,480],[314,469,376,482],[504,684,582,706],[941,825,973,900],[941,825,973,900],[941,825,973,900],[941,825,973,900],[610,749,652,765],[130,659,168,672],[176,657,237,672],[238,657,312,672],[443,653,628,672],[443,653,628,672],[716,301,825,317],[1000,1000,1000,1000]]])  # noqa: E231
+    image = ImageList(ops.randn((2,3,224,224)), image_sizes=[(224,224), (224,224)])  # noqa: E231
+    attention_mask = mindspore.tensor([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],])  # noqa: E231
+    token_type_ids = mindspore.tensor([[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]])  # noqa: E231
     # fmt: on
 
     return input_ids, bbox, image, attention_mask, token_type_ids
+
 
 @require_mindspore
 class LayoutLMv2ModelIntegrationTest(unittest.TestCase):
@@ -639,12 +552,20 @@ class LayoutLMv2ModelIntegrationTest(unittest.TestCase):
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
         )
-        print(outputs)
-        expected_slice = mindspore.Tensor(
+
+        # verify the sequence output
+        expected_shape = (
+                2,
+                input_ids.shape[1]
+                + model.config.image_feature_pool_shape[0] * model.config.image_feature_pool_shape[1],
+                model.config.hidden_size,
+            )
+        self.assertEqual(outputs.last_hidden_state.shape, expected_shape)
+
+        expected_slice = mindspore.tensor(
             [[-0.1087, 0.0727, -0.3075], [0.0799, -0.0427, -0.0751], [-0.0367, 0.0480, -0.1358]]
         )
-        self.assertTrue(
-            np.allclose(outputs.last_hidden_state[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(outputs.last_hidden_state[0, :3, :3], expected_slice, atol=1e-3))
 
         # verify the pooled output
         expected_shape = (2, model.config.hidden_size)

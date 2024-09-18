@@ -30,7 +30,7 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import nn, ops
+    from mindnlp.core import nn, ops, optim
 
     from mindnlp.transformers import (
         Data2VecAudioForAudioFrameClassification,
@@ -290,11 +290,11 @@ class Data2VecAudioModelTester:
         def forward_fn(input_values, labels):
             loss = model(input_values, labels=labels).loss
             return loss
-        optimizer = nn.Adam(model.trainable_params(), learning_rate=0.001)
-        grad_fn = ops.value_and_grad(forward_fn, None, model.trainable_params())
+        optimizer = optim.Adam(model.trainable_params(), lr=0.001)
+        grad_fn = mindspore.value_and_grad(forward_fn, None, model.trainable_params())
         loss,grads = grad_fn(input_values,labels)
         #loss.backward()
-        optimizer(grads)
+        optimizer.step(grads)
         #loss.backward()
 
     def check_seq_classifier_training(self, config, input_values, *args):
@@ -320,11 +320,11 @@ class Data2VecAudioModelTester:
         def forward_fn(input_values, labels):
             loss = model(input_values, labels=labels).loss
             return loss
-        optimizer = nn.Adam(model.trainable_params(), learning_rate=0.001)
-        grad_fn = ops.value_and_grad(forward_fn, None, model.trainable_params())
+        optimizer = optim.Adam(model.trainable_params(), lr=0.001)
+        grad_fn = mindspore.value_and_grad(forward_fn, None, model.trainable_params())
         loss,grads = grad_fn(input_values,labels)
         #loss.backward()
-        optimizer(grads)
+        optimizer.step(grads)
         #loss.backward()
     
     def check_xvector_training(self, config, input_values, *args):

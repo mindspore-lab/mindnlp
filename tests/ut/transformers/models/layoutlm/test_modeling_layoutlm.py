@@ -13,18 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import unittest
-import numpy as np
 
-from mindnlp.transformers import LayoutLMConfig
-from mindnlp.utils.testing_utils import require_mindspore, slow, is_mindspore_available
+from mindnlp.transformers import LayoutLMConfig, is_mindspore_available
+from mindnlp.utils.testing_utils import require_mindspore, slow
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, ids_tensor
+# from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         LayoutLMForMaskedLM,
@@ -143,7 +143,7 @@ class LayoutLMModelTester:
         self, config, input_ids, bbox, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = LayoutLMModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, bbox, attention_mask=input_mask, token_type_ids=token_type_ids)
         result = model(input_ids, bbox, token_type_ids=token_type_ids)
         result = model(input_ids, bbox)
@@ -154,7 +154,7 @@ class LayoutLMModelTester:
         self, config, input_ids, bbox, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = LayoutLMForMaskedLM(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, bbox, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
@@ -163,7 +163,7 @@ class LayoutLMModelTester:
     ):
         config.num_labels = self.num_labels
         model = LayoutLMForSequenceClassification(config)
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids, bbox, attention_mask=input_mask, token_type_ids=token_type_ids, labels=sequence_labels
         )
@@ -174,7 +174,7 @@ class LayoutLMModelTester:
     ):
         config.num_labels = self.num_labels
         model = LayoutLMForTokenClassification(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, bbox, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.num_labels))
 
@@ -182,7 +182,7 @@ class LayoutLMModelTester:
         self, config, input_ids, bbox, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = LayoutLMForQuestionAnswering(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             bbox=bbox,
@@ -219,6 +219,7 @@ class LayoutLMModelTester:
 class LayoutLMModelTest(ModelTesterMixin, unittest.TestCase):
     all_model_classes = (
         (
+            LayoutLMModel,
             LayoutLMForMaskedLM,
             LayoutLMForSequenceClassification,
             LayoutLMForTokenClassification,
@@ -311,7 +312,7 @@ def prepare_layoutlm_batch_inputs():
 class LayoutLMModelIntegrationTest(unittest.TestCase):
     @slow
     def test_forward_pass_no_head(self):
-        model = LayoutLMForMaskedLM.from_pretrained("microsoft/layoutlm-base-uncased", from_pt=True).layoutlm
+        model = LayoutLMModel.from_pretrained("microsoft/layoutlm-base-uncased")
 
         input_ids, attention_mask, bbox, token_type_ids, labels = prepare_layoutlm_batch_inputs()
 
@@ -323,19 +324,17 @@ class LayoutLMModelIntegrationTest(unittest.TestCase):
             [[0.1785, -0.1947, -0.0425], [-0.3254, -0.2807, 0.2553], [-0.5391, -0.3322, 0.3364]],
         )
 
-        print(outputs.last_hidden_state[0, :3, :3].asnumpy(), expected_slice.asnumpy())
-        self.assertTrue(np.allclose(outputs.last_hidden_state[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(outputs.last_hidden_state[0, :3, :3], expected_slice, atol=1e-3))
 
         # test the pooled output on [1, :3]
         expected_slice = mindspore.tensor([-0.6580, -0.0214, 0.8552])
 
-        self.assertTrue(np.allclose(outputs.pooler_output[1, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
+        self.assertTrue(ops.allclose(outputs.pooler_output[1, :3], expected_slice, atol=1e-3))
 
     @slow
     def test_forward_pass_sequence_classification(self):
         # initialize model with randomly initialized sequence classification head
-        model = LayoutLMForSequenceClassification.from_pretrained("microsoft/layoutlm-base-uncased", num_labels=2, from_pt=True)
-
+        model = LayoutLMForSequenceClassification.from_pretrained("microsoft/layoutlm-base-uncased", num_labels=2)
         input_ids, attention_mask, bbox, token_type_ids, _ = prepare_layoutlm_batch_inputs()
 
         # forward pass
@@ -354,14 +353,13 @@ class LayoutLMModelIntegrationTest(unittest.TestCase):
 
         # test the shape of the logits
         logits = outputs.logits
-        expected_shape = ((2, 2))
+        expected_shape = (2, 2)
         self.assertEqual(logits.shape, expected_shape)
 
     @slow
     def test_forward_pass_token_classification(self):
         # initialize model with randomly initialized token classification head
-        model = LayoutLMForTokenClassification.from_pretrained("microsoft/layoutlm-base-uncased", num_labels=13, from_pt=True)
-
+        model = LayoutLMForTokenClassification.from_pretrained("microsoft/layoutlm-base-uncased", num_labels=13)
         input_ids, attention_mask, bbox, token_type_ids, labels = prepare_layoutlm_batch_inputs()
 
         # forward pass
@@ -370,20 +368,20 @@ class LayoutLMModelIntegrationTest(unittest.TestCase):
         )
 
         # test the loss calculation to be around 2.65
-        # expected_loss = torch.tensor(2.65, device=torch_device)
+        # expected_loss = mindspore.tensor(2.65)
 
         # The loss is currently somewhat random and can vary between 0.1-0.3 atol.
-        # self.assertTrue(torch.allclose(outputs.loss, expected_loss, atol=0.1))
+        # self.assertTrue(ops.allclose(outputs.loss, expected_loss, atol=0.1))
 
         # test the shape of the logits
         logits = outputs.logits
-        expected_shape = ((2, 25, 13))
+        expected_shape = (2, 25, 13)
         self.assertEqual(logits.shape, expected_shape)
 
     @slow
     def test_forward_pass_question_answering(self):
         # initialize model with randomly initialized token classification head
-        model = LayoutLMForQuestionAnswering.from_pretrained("microsoft/layoutlm-base-uncased", from_pt=True)
+        model = LayoutLMForQuestionAnswering.from_pretrained("microsoft/layoutlm-base-uncased")
 
         input_ids, attention_mask, bbox, token_type_ids, labels = prepare_layoutlm_batch_inputs()
 
@@ -391,6 +389,6 @@ class LayoutLMModelIntegrationTest(unittest.TestCase):
         outputs = model(input_ids=input_ids, bbox=bbox, attention_mask=attention_mask, token_type_ids=token_type_ids)
 
         # test the shape of the logits
-        expected_shape = ((2, 25))
+        expected_shape = (2, 25)
         self.assertEqual(outputs.start_logits.shape, expected_shape)
         self.assertEqual(outputs.end_logits.shape, expected_shape)

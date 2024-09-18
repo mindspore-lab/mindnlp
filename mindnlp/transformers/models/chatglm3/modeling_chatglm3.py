@@ -263,6 +263,9 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
 
+        kwargs_has_attention_mask = model_kwargs.get("attention_mask", None) is not None
+        self._prepare_special_tokens(generation_config, kwargs_has_attention_mask)
+
         logits_processor = self._get_logits_processor(
             generation_config=generation_config,
             input_ids_seq_length=input_ids_seq_length,
@@ -302,7 +305,7 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
                 next_tokens = ops.argmax(probs, dim=-1)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            input_ids = ops.cat([input_ids, next_tokens[:, None].to(mindspore.int64)], axis=-1)
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
             )

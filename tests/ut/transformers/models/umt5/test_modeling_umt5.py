@@ -600,7 +600,7 @@ class Umt5IntegrationTest(unittest.TestCase):
             "The <extra_id_0> walks in <extra_id_1>, seats",
             "A <extra_id_0> walks into a bar and orders a <extra_id_1> with <extra_id_2> pinch of <extra_id_3>.",
         ]
-        input_ids = tokenizer(input_text, return_tensors="pt", padding=True).input_ids
+        input_ids = tokenizer(input_text, return_tensors="ms", padding=True).input_ids
         # fmt: off
         EXPECTED_IDS = mindspore.tensor(
             [

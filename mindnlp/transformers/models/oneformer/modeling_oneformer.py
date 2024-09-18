@@ -2891,7 +2891,7 @@ class OneFormerModel(OneFormerPreTrainedModel):
         >>> # load processor for preprocessing the inputs
         >>> processor = OneFormerProcessor.from_pretrained("shi-labs/oneformer_ade20k_swin_tiny")
         >>> model = OneFormerModel.from_pretrained("shi-labs/oneformer_ade20k_swin_tiny")
-        >>> inputs = processor(image, ["semantic"], return_tensors="pt")
+        >>> inputs = processor(image, ["semantic"], return_tensors="ms")
 
         >>> with no_grad():
         ...     outputs = model(**inputs)
@@ -3080,7 +3080,7 @@ class OneFormerForUniversalSegmentation(OneFormerPreTrainedModel):
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
         >>> # Semantic Segmentation
-        >>> inputs = processor(image, ["semantic"], return_tensors="pt")
+        >>> inputs = processor(image, ["semantic"], return_tensors="ms")
 
         >>> with no_grad():
         ...     outputs = model(**inputs)
@@ -3097,7 +3097,7 @@ class OneFormerForUniversalSegmentation(OneFormerPreTrainedModel):
         '👉 Semantic Predictions Shape: [512, 683]'
 
         >>> # Instance Segmentation
-        >>> inputs = processor(image, ["instance"], return_tensors="pt")
+        >>> inputs = processor(image, ["instance"], return_tensors="ms")
 
         >>> with no_grad():
         ...     outputs = model(**inputs)
@@ -3114,7 +3114,7 @@ class OneFormerForUniversalSegmentation(OneFormerPreTrainedModel):
         '👉 Instance Predictions Shape: [512, 683]'
 
         >>> # Panoptic Segmentation
-        >>> inputs = processor(image, ["panoptic"], return_tensors="pt")
+        >>> inputs = processor(image, ["panoptic"], return_tensors="ms")
 
         >>> with no_grad():
         ...     outputs = model(**inputs)

@@ -691,7 +691,7 @@ class YolosForObjectDetection(YolosPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("hustvl/yolos-tiny")
         >>> model = AutoModelForObjectDetection.from_pretrained("hustvl/yolos-tiny")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> # convert outputs (bounding boxes and class logits) to Pascal VOC format (xmin, ymin, xmax, ymax)

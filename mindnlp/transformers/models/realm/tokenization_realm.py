@@ -211,7 +211,7 @@ class RealmTokenizer(PreTrainedTokenizer):
         >>> text = [["Hello world!", "Nice to meet you!"], ["The cute cat.", "The adorable dog."]]
 
         >>> tokenizer = RealmTokenizer.from_pretrained("google/realm-cc-news-pretrained-encoder")
-        >>> tokenized_text = tokenizer.batch_encode_candidates(text, max_length=10, return_tensors="pt")
+        >>> tokenized_text = tokenizer.batch_encode_candidates(text, max_length=10, return_tensors="ms")
         ```"""
 
         # Always using a fixed sequence length to encode in order to stack candidates into a batch.

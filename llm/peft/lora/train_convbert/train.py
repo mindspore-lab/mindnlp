@@ -8,9 +8,6 @@ from mindnlp.transformers import (
     AutoModelForQuestionAnswering,
 )
 
-mindspore.set_context(device_target="CPU")
-
-
 def main(args):
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
     model = AutoModelForQuestionAnswering.from_pretrained(

@@ -24,7 +24,6 @@ from mindspore.common.initializer import initializer, Normal
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
-# from ...integrations.deepspeed import is_deepspeed_zero3_enabled
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
 from ...modeling_outputs import BaseModelOutput, CausalLMOutput
 from ...modeling_utils import PreTrainedModel
@@ -47,9 +46,6 @@ _EXPECTED_OUTPUT_SHAPE = [1, 195, 1536]
 _CTC_EXPECTED_OUTPUT = '"Mr. Quilter is the apostle of the middle classes, and we\'re glad to welcome his gospel."'
 _CTC_EXPECTED_LOSS = 1885.65
 
-
-def is_deepspeed_zero3_enabled():
-    return False
 
 class MCTCTConv1dSubsampler(nn.Module):
     """
@@ -594,7 +590,6 @@ class MCTCTEncoder(MCTCTPreTrainedModel):
                     f"but it is for {head_mask.shape[0]}."
                 )
 
-        deepspeed_zero3_is_enabled = is_deepspeed_zero3_enabled()
         for idx, encoder_layer in enumerate(self.layers):
             if output_hidden_states:
                 encoder_states = encoder_states + (hidden_states,)
@@ -603,7 +598,7 @@ class MCTCTEncoder(MCTCTPreTrainedModel):
             dropout_probability = ops.rand([])
 
             skip_the_layer = self.training and (dropout_probability < self.config.layerdrop)
-            if not skip_the_layer or deepspeed_zero3_is_enabled:
+            if not skip_the_layer:
                 # under deepspeed zero3 all gpus must run in sync
                 if self.gradient_checkpointing and self.training:
                     layer_outputs = self._gradient_checkpointing_func(

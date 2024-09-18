@@ -338,7 +338,7 @@ def get_default_model_and_revision(
            Dictionary representing the given task, that should contain default models
 
         framework (`str`, None)
-           "pt", "tf" or None, representing a specific framework if it was specified, or None if we don't know yet.
+           "ms" or None, representing a specific framework if it was specified, or None if we don't know yet.
 
         task_options (`Any`, None)
            Any further value required by the task to get fully specified, for instance (SRC, TGT) languages for

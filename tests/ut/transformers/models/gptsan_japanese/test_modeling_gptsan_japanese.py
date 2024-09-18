@@ -190,6 +190,7 @@ class GPTSanJapaneseTest(ModelTesterMixin, unittest.TestCase):
         pass
 
 
+@slow
 @require_mindspore
 class GPTSanJapaneseForConditionalGenerationTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (GPTSanJapaneseForConditionalGeneration,) if is_mindspore_available() else ()

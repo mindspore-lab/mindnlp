@@ -12,17 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the MindSpore SeamlessM4T model. """
-
+"""Testing suite for the MindSpore SeamlessM4T model."""
 
 import copy
 import tempfile
 import unittest
-import numpy as np
+
 from mindnlp.transformers import SeamlessM4TConfig
-from mindnlp.utils.testing_utils import is_flaky, require_mindspore, slow
-from mindnlp.engine.utils import set_seed
-from mindnlp.utils import cached_property, is_mindspore_available
+from mindnlp.utils import is_mindspore_available
+from mindnlp.utils.testing_utils import require_mindspore, slow
+from mindnlp.engine import set_seed
+from mindnlp.utils import cached_property
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
@@ -33,11 +33,12 @@ from ...test_modeling_common import (
     ids_tensor,
     random_attention_mask,
 )
+# from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops, no_grad
 
     from mindnlp.transformers import (
         SeamlessM4TForSpeechToSpeech,
@@ -46,11 +47,8 @@ if is_mindspore_available():
         SeamlessM4TForTextToText,
         SeamlessM4TModel,
     )
-    from mindnlp.transformers.models.seamless_m4t.modeling_seamless_m4t import (
-        SEAMLESS_M4T_PRETRAINED_MODEL_ARCHIVE_LIST,
-    )
-
     from mindnlp.transformers import SeamlessM4TProcessor
+
 
 class SeamlessM4TModelTester:
     def __init__(
@@ -234,8 +232,7 @@ class SeamlessM4TModelTester:
 
     def create_and_check_model(self, config, input_ids, decoder_input_ids, input_mask, labels):
         model = SeamlessM4TModel(config=config)
-
-        model.set_train(False)
+        model.eval()
         if self.input_modality == "text":
             result = model(input_ids=input_ids, attention_mask=input_mask, decoder_input_ids=decoder_input_ids)
             result = model(input_ids=input_ids, decoder_input_ids=decoder_input_ids)
@@ -274,8 +271,7 @@ class SeamlessM4TModelTester:
     ):
         config.is_decoder = True
         model = SeamlessM4TModel(config=config)
-
-        model.set_train(False)
+        model.eval()
 
         # make sure no pad token in decoder_input_ids
         decoder_input_ids = ops.clamp(decoder_input_ids, config.pad_token_id + 1)
@@ -291,8 +287,8 @@ class SeamlessM4TModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([decoder_input_ids, next_tokens], axis=-1)
-        next_attention_mask = ops.cat([input_mask, next_mask], axis=-1)
+        next_input_ids = ops.cat([decoder_input_ids, next_tokens], dim=-1)
+        next_attention_mask = ops.cat([input_mask, next_mask], dim=-1)
 
         output_from_no_past = model(
             input_ids,
@@ -317,7 +313,7 @@ class SeamlessM4TModelTester:
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -368,9 +364,6 @@ class SeamlessM4TModelWithSpeechInputTest(ModelTesterMixin, unittest.TestCase):
         self.model_tester = SeamlessM4TModelTester(self, input_modality="speech")
         self.config_tester = ConfigTester(self, config_class=SeamlessM4TConfig)
 
-    def test_training(self):
-        pass
-
     def test_config(self):
         self.config_tester.run_common_tests()
 
@@ -380,9 +373,9 @@ class SeamlessM4TModelWithSpeechInputTest(ModelTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        for model_name in SEAMLESS_M4T_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = SeamlessM4TModel.from_pretrained(model_name)
-            self.assertIsNotNone(model)
+        model_name = "facebook/hf-seamless-m4t-medium"
+        model = SeamlessM4TModel.from_pretrained(model_name)
+        self.assertIsNotNone(model)
 
     def _get_input_ids_and_config(self, batch_size=2):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -415,12 +408,14 @@ class SeamlessM4TModelWithSpeechInputTest(ModelTesterMixin, unittest.TestCase):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
         )
-        encoder_outputs["last_hidden_state"] = encoder_outputs.last_hidden_state.repeat_interleave(
+        encoder_outputs["last_hidden_state"] = ops.repeat_interleave(encoder_outputs.last_hidden_state, 
             num_interleave, dim=0
         )
+        generation_config = copy.deepcopy(model.generation_config)
+        model._prepare_special_tokens(generation_config)
         input_ids = (
             ops.zeros(input_ids.shape[:2], dtype=mindspore.int64)
-            + model._get_decoder_start_token_id()
+            + generation_config.decoder_start_token_id
         )
         attention_mask = None
         return encoder_outputs, input_ids, attention_mask
@@ -431,7 +426,7 @@ class SeamlessM4TModelWithSpeechInputTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            for name, param in model.parameters_and_names():
+            for name, param in model.named_parameters():
                 uniform_init_parms = [
                     "conv.weight",
                     "masked_spec_embed",
@@ -465,6 +460,10 @@ class SeamlessM4TModelWithSpeechInputTest(ModelTesterMixin, unittest.TestCase):
 
     @unittest.skip(reason="SeamlessM4TSpeechEncoder doesn't have an embedding layer")
     def test_inputs_embeds(self):
+        pass
+
+    @unittest.skip(reason="SeamlessM4TSpeechEncoder doesn't have an embedding layer")
+    def test_inputs_embeds_matches_input_ids(self):
         pass
 
     @unittest.skip(
@@ -505,6 +504,12 @@ class SeamlessM4TModelWithSpeechInputTest(ModelTesterMixin, unittest.TestCase):
     def test_training_gradient_checkpointing_use_reentrant_false(self):
         pass
 
+    @unittest.skip(
+        reason="This architecure has tied weights by default and there is no way to remove it, check: https://github.com/huggingface/transformers/pull/31771#issuecomment-2210915245"
+    )
+    def test_load_save_without_tied_weights(self):
+        pass
+
     def test_attention_outputs(self):
         # expected length is subsampled so need to change a bit this test
         if not self.has_attentions:
@@ -521,14 +526,13 @@ class SeamlessM4TModelWithSpeechInputTest(ModelTesterMixin, unittest.TestCase):
         # no more chunk_length test
 
         for model_class in self.all_model_classes:
-            print(model_class)
             inputs_dict["output_attentions"] = True
             inputs_dict["output_hidden_states"] = False
             config.return_dict = True
             model = model_class(config)
-    
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.encoder_attentions if config.is_encoder_decoder else outputs.attentions
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -536,9 +540,9 @@ class SeamlessM4TModelWithSpeechInputTest(ModelTesterMixin, unittest.TestCase):
             del inputs_dict["output_attentions"]
             config.output_attentions = True
             model = model_class(config)
-    
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.encoder_attentions if config.is_encoder_decoder else outputs.attentions
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -589,9 +593,9 @@ class SeamlessM4TModelWithSpeechInputTest(ModelTesterMixin, unittest.TestCase):
             inputs_dict["output_attentions"] = True
             inputs_dict["output_hidden_states"] = True
             model = model_class(config)
-    
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             if hasattr(self.model_tester, "num_hidden_states_types"):
                 added_hidden_states = self.model_tester.num_hidden_states_types
@@ -636,7 +640,6 @@ class SeamlessM4TModelWithTextInputTest(
     pipeline_model_mapping = (
         {
             "automatic-speech-recognition": SeamlessM4TForSpeechToText,
-            "conversational": SeamlessM4TForTextToText,
             "feature-extraction": SeamlessM4TModel,
             "summarization": SeamlessM4TForTextToText,
             "text-to-audio": SeamlessM4TForTextToSpeech,
@@ -660,9 +663,9 @@ class SeamlessM4TModelWithTextInputTest(
 
     @slow
     def test_model_from_pretrained(self):
-        for model_name in SEAMLESS_M4T_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = SeamlessM4TModel.from_pretrained(model_name)
-            self.assertIsNotNone(model)
+        model_name = "facebook/hf-seamless-m4t-medium"
+        model = SeamlessM4TModel.from_pretrained(model_name)
+        self.assertIsNotNone(model)
 
     def test_initialization(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -670,7 +673,7 @@ class SeamlessM4TModelWithTextInputTest(
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            for name, param in model.parameters_and_names():
+            for name, param in model.named_parameters():
                 uniform_init_parms = [
                     "conv.weight",
                     "masked_spec_embed",
@@ -742,6 +745,18 @@ class SeamlessM4TModelWithTextInputTest(
         reason="This architecure seem to not compute gradients properly when using GC, check: https://github.com/huggingface/transformers/pull/27124"
     )
     def test_training_gradient_checkpointing_use_reentrant_false(self):
+        pass
+
+    @unittest.skip(
+        reason="In training model, the first encoder layer is sometimes skipped. Training is not supported yet, so the test is ignored."
+    )
+    def test_retain_grad_hidden_states_attentions(self):
+        pass
+
+    @unittest.skip(
+        reason="This architecure has tied weights by default and there is no way to remove it, check: https://github.com/huggingface/transformers/pull/31771#issuecomment-2210915245"
+    )
+    def test_load_save_without_tied_weights(self):
         pass
 
 
@@ -830,25 +845,24 @@ class SeamlessM4TGenerationTest(unittest.TestCase):
         model = SeamlessM4TModel(config=config)
         self.update_generation(model)
         model.save_pretrained(self.tmpdirname)
-
-        model.set_train(False)
+        model.eval()
 
         output_original_text = self.factory_generation_speech_test(model, input_text)
         output_original_speech = self.factory_generation_speech_test(model, input_speech)
 
-        state_dict = model.parameters_dict()
+        state_dict = model.state_dict()
 
         text_model = SeamlessM4TForTextToSpeech.from_pretrained(self.tmpdirname)
         self.update_generation(text_model)
-        text_model.set_train(False)
+        text_model.eval()
 
         output_text = self.factory_generation_speech_test(model, input_text)
 
         speech_model = SeamlessM4TForSpeechToSpeech.from_pretrained(self.tmpdirname)
         self.update_generation(speech_model)
-        speech_model.set_train(False)
+        speech_model.eval()
 
-        for name, tensor in speech_model.parameters_dict().items():
+        for name, tensor in speech_model.state_dict().items():
             right_tensor = state_dict.get(name)
             self.assertEqual(tensor.tolist(), right_tensor.tolist(), f"Tensor {name}")
 
@@ -879,8 +893,7 @@ class SeamlessM4TGenerationTest(unittest.TestCase):
         model = SeamlessM4TModel(config=config)
         self.update_generation(model)
         model.save_pretrained(self.tmpdirname)
-
-        model.set_train(False)
+        model.eval()
 
         output_original_text = self.factory_generation_speech_test(model, input_text)
         output_original_speech = self.factory_generation_speech_test(model, input_speech)
@@ -889,13 +902,13 @@ class SeamlessM4TGenerationTest(unittest.TestCase):
         input_speech.pop("generate_speech")
         input_text.pop("generate_speech")
 
-        state_dict = model.parameters_dict()
+        state_dict = model.state_dict()
 
         text_model = SeamlessM4TForTextToText.from_pretrained(self.tmpdirname)
         self.update_generation(text_model)
-        text_model.set_train(False)
+        text_model.eval()
 
-        for name, tensor in text_model.parameters_dict().items():
+        for name, tensor in text_model.state_dict().items():
             right_tensor = state_dict.get(name)
             self.assertEqual(tensor.tolist(), right_tensor.tolist())
 
@@ -903,12 +916,12 @@ class SeamlessM4TGenerationTest(unittest.TestCase):
 
         speech_model = SeamlessM4TForSpeechToText.from_pretrained(self.tmpdirname)
 
-        for name, tensor in speech_model.parameters_dict().items():
+        for name, tensor in speech_model.state_dict().items():
             right_tensor = state_dict.get(name)
             self.assertEqual(tensor.tolist(), right_tensor.tolist(), f"Tensor {name}")
 
         self.update_generation(speech_model)
-        speech_model.set_train(False)
+        speech_model.eval()
 
         output_speech = self.factory_generation_speech_test(speech_model, input_speech)
 
@@ -932,8 +945,7 @@ class SeamlessM4TGenerationTest(unittest.TestCase):
         for model_class in [SeamlessM4TForSpeechToSpeech, SeamlessM4TForSpeechToText, SeamlessM4TModel]:
             model = model_class(config=config)
             self.update_generation(model)
-    
-            model.set_train(False)
+            model.eval()
 
             output = model.generate(**input_speech)
             output = output[0] if isinstance(output, tuple) else output
@@ -943,8 +955,7 @@ class SeamlessM4TGenerationTest(unittest.TestCase):
         for model_class in [SeamlessM4TForTextToSpeech, SeamlessM4TForTextToText, SeamlessM4TModel]:
             model = model_class(config=config)
             self.update_generation(model)
-    
-            model.set_train(False)
+            model.eval()
 
             output = model.generate(**input_text)
 
@@ -972,7 +983,6 @@ class SeamlessM4TModelIntegrationTest(unittest.TestCase):
 
         input_ids = mindspore.tensor([[256057, 152, 248116, 354, 159, 7356, 248075, 3]])  # fmt: skip
 
-
         attention_mask = ops.ones_like(input_ids)
 
         inputs = {
@@ -994,13 +1004,14 @@ class SeamlessM4TModelIntegrationTest(unittest.TestCase):
     def factory_test_task(self, class1, class2, inputs, class1_kwargs, class2_kwargs):
         model1 = class1.from_pretrained(self.repo_id)
         model2 = class2.from_pretrained(self.repo_id)
+
         set_seed(0)
         output_1 = model1.generate(**inputs, **class1_kwargs)
         set_seed(0)
         output_2 = model2.generate(**inputs, **class2_kwargs)
 
         for key in output_1:
-            if isinstance(output_1[key], ops.Tensor):
+            if isinstance(output_1[key], mindspore.Tensor):
                 if len(output_1[key].shape) == 0:
                     self.assertEqual(output_1[key].item(), output_2[key].item())
                 else:
@@ -1058,12 +1069,12 @@ class SeamlessM4TModelIntegrationTest(unittest.TestCase):
         self.assertListEqual(expected_text_tokens, output.sequences.squeeze().tolist())
         self.assertListEqual(expected_unit_tokens[:10], output.unit_sequences.squeeze().tolist()[:10])
 
-        print(output.waveform.squeeze().tolist()[50:60])
         self.assertListAlmostEqual(expected_wav_slice, output.waveform.squeeze().tolist()[50:60])
 
     @slow
     def test_to_rus_speech(self):
         model = SeamlessM4TModel.from_pretrained(self.repo_id)
+
         # test audio - tgt lang: rus
 
         expected_text_tokens = [3, 256147, 1197, 73565, 3413, 537, 233331, 248075, 3]  # fmt: skip

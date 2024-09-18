@@ -698,9 +698,9 @@ def neftune_post_forward_hook(module, input, output):
             The output tensor of the model (i.e. the embeddings).
     """
     if module.training:
-        dims = mindspore.tensor(output.shape[1] * output.shape[2], mindspore.float32)
-        mag_norm = module.neftune_noise_alpha / ops.sqrt(dims)
-        output = output + ops.uniform(output.shape, -mag_norm, mag_norm, dtype=output.dtype)
+        dims = output.shape[1] * output.shape[2]
+        mag_norm = module.neftune_noise_alpha / np.sqrt(dims)
+        output = output + mindspore.Tensor(np.random.uniform(-mag_norm, mag_norm, output.shape), dtype=output.dtype)
     return output
 
 def mismatch_dataset_col_names(map_fn_args, col_names):

@@ -7,7 +7,7 @@ import mindspore
 from mindnlp.core import nn, ops
 import mindnlp.core.nn.functional as F
 from mindnlp.core.nn import CrossEntropyLoss, LayerNorm, MSELoss, BCEWithLogitsLoss
-from mindnlp.configs import USE_PYBOOST
+from mindnlp.configs import use_pyboost
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
@@ -139,7 +139,7 @@ class RMSNorm(nn.Module):
         self.eps = eps
 
     def forward(self, hidden_states: mindspore.Tensor):
-        if not self.training and USE_PYBOOST:
+        if not self.training and use_pyboost():
             return F.rms_norm(hidden_states, self.weight, self.eps)
         input_dtype = hidden_states.dtype
         variance = ops.mean(hidden_states.to(mindspore.float32).pow(2), -1, keepdim=True)
@@ -662,12 +662,12 @@ class ChatGLM4PreTrainedModel(PreTrainedModel):
         if not past_length and padding_mask is not None:
             full_attention_mask -= padding_mask.unsqueeze(-1) - 1
         full_attention_mask = (full_attention_mask < 0.5).bool()
-        full_attention_mask.unsqueeze_(1)
+        full_attention_mask = full_attention_mask.unsqueeze(1)
         return full_attention_mask
 
     def get_position_ids(self, input_ids):
         batch_size, seq_length = input_ids.shape
-        position_ids = ops.arange(seq_length, dtype=mindspore.int64).unsqueeze(0).repeat(batch_size, 1)
+        position_ids = ops.arange(seq_length, dtype=mindspore.int64).unsqueeze(0).tile((batch_size, 1))
         return position_ids
 
 class Embedding(nn.Module):

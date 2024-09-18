@@ -1,12 +1,12 @@
 """fft"""
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
-from mindnlp.configs import USE_PYBOOST
+from mindnlp.configs import use_pyboost
 from .array import narrow
 from ._inner import pad
 
 def rfft(input, n=None, dim=-1, norm="backward"):
-    if USE_PYBOOST:
+    if use_pyboost():
         return ops.rfft(input, n, dim, norm)
     if input.shape[dim] < n:
         pad_inf = (0, n - input.shape[dim])
@@ -18,7 +18,7 @@ def rfft(input, n=None, dim=-1, norm="backward"):
     return _rfft(input)
 
 def irfft(input, n=None, dim=-1, norm="backward"):
-    if USE_PYBOOST:
+    if use_pyboost():
         return ops.irfft(input, n, dim, norm)
     if input.shape[dim] < n:
         pad_inf = (0, n - input.shape[dim])

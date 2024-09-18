@@ -548,7 +548,7 @@ class InstructBlipModelIntegrationTest(unittest.TestCase):
     #     url = "https://raw.githubusercontent.com/salesforce/LAVIS/main/docs/_static/Confusing-Pictures.jpg"
     #     image = Image.open(requests.get(url, stream=True).raw).convert("RGB")
     #     prompt = "What is unusual about this image?"
-    #     inputs = processor(images=image, text=prompt, return_tensors="pt").to(mindspore.float16)
+    #     inputs = processor(images=image, text=prompt, return_tensors="ms").to(mindspore.float16)
 
     #     # verify logits
     #     with no_grad():
@@ -583,7 +583,7 @@ class InstructBlipModelIntegrationTest(unittest.TestCase):
         url = "https://raw.githubusercontent.com/salesforce/LAVIS/main/docs/_static/Confusing-Pictures.jpg"
         image = Image.open(requests.get(url, stream=True).raw).convert("RGB")
         prompt = "What is unusual about this image?"
-        inputs = processor(images=image, text=prompt, return_tensors="pt")
+        inputs = processor(images=image, text=prompt, return_tensors="ms")
 
         for k, v in inputs.items():
             if ops.is_floating_point(v):
@@ -623,7 +623,7 @@ class InstructBlipModelIntegrationTest(unittest.TestCase):
 
         image = prepare_img()
         prompt = "What's in the image?"
-        inputs = processor(images=image, text=prompt, return_tensors="pt")
+        inputs = processor(images=image, text=prompt, return_tensors="ms")
 
         predictions = model.generate(**inputs, interpolate_pos_encoding=True)
         generated_text = processor.batch_decode(predictions, skip_special_tokens=True)[0].strip()
@@ -647,7 +647,7 @@ class InstructBlipModelIntegrationTest(unittest.TestCase):
         # Make sure we will go the legacy path by setting these args to None
         processor.num_query_tokens = None
         model.config.image_token_index = None
-        inputs = processor(images=image, text=prompt, return_tensors="pt").to(dtype=mindspore.float16)
+        inputs = processor(images=image, text=prompt, return_tensors="ms").to(dtype=mindspore.float16)
 
         predictions = model.generate(**inputs, do_sample=False, max_new_tokens=15)
         generated_text = processor.batch_decode(predictions, skip_special_tokens=True)[0].strip()
@@ -659,7 +659,7 @@ class InstructBlipModelIntegrationTest(unittest.TestCase):
         model.resize_token_embeddings(processor.tokenizer.vocab_size, pad_to_multiple_of=64)
 
         # Generate again with new inputs
-        inputs = processor(images=image, text=prompt, return_tensors="pt").to(dtype=mindspore.float16)
+        inputs = processor(images=image, text=prompt, return_tensors="ms").to(dtype=mindspore.float16)
         predictions_expanded = model.generate(**inputs, do_sample=False, max_new_tokens=15)
         generated_text_expanded = processor.batch_decode(predictions_expanded, skip_special_tokens=True)[0].strip()
 

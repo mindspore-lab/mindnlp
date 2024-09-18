@@ -12,14 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the  MindSpore model."""
+"""Testing suite for the MindSpore VisualBERT model."""
 
 import copy
 import unittest
-import numpy as np
 
-from mindnlp.transformers import VisualBertConfig
-from mindnlp.utils.testing_utils import require_mindspore, slow, is_mindspore_available
+from mindnlp.transformers import VisualBertConfig, is_mindspore_available
+from mindnlp.utils.testing_utils import require_mindspore, slow
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
@@ -28,7 +27,8 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops, no_grad
+
     from mindnlp.transformers import (
         VisualBertForMultipleChoice,
         VisualBertForPreTraining,
@@ -125,7 +125,7 @@ class VisualBertModelTester:
         visual_attention_mask = None
         if self.use_visual_attention_mask:
             visual_attention_mask = ops.ones(
-                (self.batch_size, self.visual_seq_length), dtype=mindspore.int64,
+                (self.batch_size, self.visual_seq_length), dtype=mindspore.int64
             )
 
         token_type_ids = None
@@ -235,7 +235,7 @@ class VisualBertModelTester:
                 ids_tensor([self.batch_size, self.seq_length], self.visual_seq_length),
                 ops.ones(self.batch_size, self.visual_seq_length, dtype=mindspore.int64) * -1,
             ),
-            axis=-1,
+            dim=-1,
         )
         flickr_labels = None
         if self.use_labels:
@@ -250,7 +250,7 @@ class VisualBertModelTester:
 
     def create_and_check_model(self, config, input_dict):
         model = VisualBertModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(**input_dict)
         self.parent.assertEqual(
             result.last_hidden_state.shape,
@@ -259,7 +259,7 @@ class VisualBertModelTester:
 
     def create_and_check_for_pretraining(self, config, input_dict):
         model = VisualBertForPreTraining(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(**input_dict)
         self.parent.assertEqual(
             result.prediction_logits.shape,
@@ -268,25 +268,25 @@ class VisualBertModelTester:
 
     def create_and_check_for_vqa(self, config, input_dict):
         model = VisualBertForQuestionAnswering(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(**input_dict)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
     def create_and_check_for_multiple_choice(self, config, input_dict):
         model = VisualBertForMultipleChoice(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(**input_dict)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_choices))
 
     def create_and_check_for_nlvr(self, config, input_dict):
         model = VisualBertForVisualReasoning(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(**input_dict)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
     def create_and_check_for_flickr(self, config, input_dict):
         model = VisualBertForRegionToPhraseAlignment(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(**input_dict)
         self.parent.assertEqual(
             result.logits.shape, (self.batch_size, self.seq_length + self.visual_seq_length, self.visual_seq_length)
@@ -375,7 +375,7 @@ class VisualBertModelTest(ModelTesterMixin, unittest.TestCase):
 
             elif model_class == VisualBertForVisualReasoning:
                 inputs_dict["labels"] = ops.zeros(
-                    (self.model_tester.batch_size), dtype=mindspore.float32
+                    (self.model_tester.batch_size), dtype=mindspore.int64
                 )
 
         return inputs_dict
@@ -404,8 +404,9 @@ class VisualBertModelTest(ModelTesterMixin, unittest.TestCase):
             inputs_dict["output_hidden_states"] = False
             config.return_dict = True
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.encoder_attentions if config.is_encoder_decoder else outputs.attentions
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -413,8 +414,9 @@ class VisualBertModelTest(ModelTesterMixin, unittest.TestCase):
             del inputs_dict["output_attentions"]
             config.output_attentions = True
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.encoder_attentions if config.is_encoder_decoder else outputs.attentions
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -434,8 +436,9 @@ class VisualBertModelTest(ModelTesterMixin, unittest.TestCase):
             inputs_dict["output_attentions"] = True
             inputs_dict["output_hidden_states"] = True
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             if hasattr(self.model_tester, "num_hidden_states_types"):
                 added_hidden_states = self.model_tester.num_hidden_states_types
@@ -462,9 +465,10 @@ class VisualBertModelTest(ModelTesterMixin, unittest.TestCase):
     def test_hidden_states_output(self):
         def check_hidden_states_output(inputs_dict, config, model_class):
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             hidden_states = outputs.encoder_hidden_states if config.is_encoder_decoder else outputs.hidden_states
 
@@ -561,126 +565,130 @@ class VisualBertModelIntegrationTest(unittest.TestCase):
     def test_inference_vqa_coco_pre(self):
         model = VisualBertForPreTraining.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
 
-        input_ids = mindspore.Tensor([1, 2, 3, 4, 5, 6], dtype=mindspore.int64).reshape(1, -1)
-        token_type_ids = mindspore.Tensor([0, 0, 0, 1, 1, 1], dtype=mindspore.int64).reshape(1, -1)
-        visual_embeds = ops.ones((1, 10, 2048), dtype=mindspore.float32) * 0.5
-        visual_token_type_ids = ops.ones((1, 10), dtype=mindspore.int64)
-        attention_mask = mindspore.Tensor([1] * 6).reshape(1, -1)
-        visual_attention_mask = mindspore.Tensor([1] * 10).reshape(1, -1)
+        input_ids = mindspore.tensor([1, 2, 3, 4, 5, 6], dtype=mindspore.int64).reshape(1, -1)
+        token_type_ids = mindspore.tensor([0, 0, 0, 1, 1, 1], dtype=mindspore.int64).reshape(1, -1)
+        visual_embeds = ops.ones(size=(1, 10, 2048), dtype=mindspore.float32) * 0.5
+        visual_token_type_ids = ops.ones(size=(1, 10), dtype=mindspore.int64)
+        attention_mask = mindspore.tensor([1] * 6).reshape(1, -1)
+        visual_attention_mask = mindspore.tensor([1] * 10).reshape(1, -1)
 
-        output = model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
-            visual_embeds=visual_embeds,
-            visual_attention_mask=visual_attention_mask,
-            visual_token_type_ids=visual_token_type_ids,
-        )
+        with no_grad():
+            output = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                token_type_ids=token_type_ids,
+                visual_embeds=visual_embeds,
+                visual_attention_mask=visual_attention_mask,
+                visual_token_type_ids=visual_token_type_ids,
+            )
 
         vocab_size = 30522
 
         expected_shape = (1, 16, vocab_size)
         self.assertEqual(output.prediction_logits.shape, expected_shape)
 
-        expected_slice = mindspore.Tensor(
+        expected_slice = mindspore.tensor(
             [[[-5.1858, -5.1903, -4.9142], [-6.2214, -5.9238, -5.8381], [-6.3027, -5.9939, -5.9297]]]
         )
 
-        self.assertTrue(np.allclose(output.prediction_logits[:, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(output.prediction_logits[:, :3, :3], expected_slice, atol=1e-4))
 
         expected_shape_2 = (1, 2)
         self.assertEqual(output.seq_relationship_logits.shape, expected_shape_2)
 
-        expected_slice_2 = mindspore.Tensor([[0.7393, 0.1754]])
+        expected_slice_2 = mindspore.tensor([[0.7393, 0.1754]])
 
-        self.assertTrue(np.allclose(output.seq_relationship_logits.asnumpy(), expected_slice_2.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(output.seq_relationship_logits, expected_slice_2, atol=1e-4))
 
     @slow
     def test_inference_vqa(self):
         model = VisualBertForQuestionAnswering.from_pretrained("uclanlp/visualbert-vqa")
 
-        input_ids = mindspore.Tensor([1, 2, 3, 4, 5, 6], dtype=mindspore.int64).reshape(1, -1)
-        token_type_ids = mindspore.Tensor([0, 0, 0, 1, 1, 1], dtype=mindspore.int64).reshape(1, -1)
-        visual_embeds = ops.ones((1, 10, 2048), dtype=mindspore.float32) * 0.5
-        visual_token_type_ids = ops.ones((1, 10), dtype=mindspore.int64)
-        attention_mask = mindspore.Tensor([1] * 6).reshape(1, -1)
-        visual_attention_mask = mindspore.Tensor([1] * 10).reshape(1, -1)
+        input_ids = mindspore.tensor([1, 2, 3, 4, 5, 6], dtype=mindspore.int64).reshape(1, -1)
+        token_type_ids = mindspore.tensor([0, 0, 0, 1, 1, 1], dtype=mindspore.int64).reshape(1, -1)
+        visual_embeds = ops.ones(size=(1, 10, 2048), dtype=mindspore.float32) * 0.5
+        visual_token_type_ids = ops.ones(size=(1, 10), dtype=mindspore.int64)
+        attention_mask = mindspore.tensor([1] * 6).reshape(1, -1)
+        visual_attention_mask = mindspore.tensor([1] * 10).reshape(1, -1)
 
-        output = model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
-            visual_embeds=visual_embeds,
-            visual_attention_mask=visual_attention_mask,
-            visual_token_type_ids=visual_token_type_ids,
-        )
+        with no_grad():
+            output = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                token_type_ids=token_type_ids,
+                visual_embeds=visual_embeds,
+                visual_attention_mask=visual_attention_mask,
+                visual_token_type_ids=visual_token_type_ids,
+            )
 
         # vocab_size = 30522
 
         expected_shape = (1, 3129)
         self.assertEqual(output.logits.shape, expected_shape)
 
-        expected_slice = mindspore.Tensor(
+        expected_slice = mindspore.tensor(
             [[-8.9898, 3.0803, -1.8016, 2.4542, -8.3420, -2.0224, -3.3124, -4.4139, -3.1491, -3.8997]]
         )
 
-        self.assertTrue(np.allclose(output.logits[:, :10].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(output.logits[:, :10], expected_slice, atol=1e-4))
 
     @slow
     def test_inference_nlvr(self):
         model = VisualBertForVisualReasoning.from_pretrained("uclanlp/visualbert-nlvr2")
 
-        input_ids = mindspore.Tensor([1, 2, 3, 4, 5, 6], dtype=mindspore.int64).reshape(1, -1)
-        token_type_ids = mindspore.Tensor([0, 0, 0, 1, 1, 1], dtype=mindspore.int64).reshape(1, -1)
-        visual_embeds = ops.ones((1, 10, 1024), dtype=mindspore.float32) * 0.5
-        visual_token_type_ids = ops.ones((1, 10), dtype=mindspore.int64)
-        attention_mask = mindspore.Tensor([1] * 6).reshape(1, -1)
-        visual_attention_mask = mindspore.Tensor([1] * 10).reshape(1, -1)
+        input_ids = mindspore.tensor([1, 2, 3, 4, 5, 6], dtype=mindspore.int64).reshape(1, -1)
+        token_type_ids = mindspore.tensor([0, 0, 0, 1, 1, 1], dtype=mindspore.int64).reshape(1, -1)
+        visual_embeds = ops.ones(size=(1, 10, 1024), dtype=mindspore.float32) * 0.5
+        visual_token_type_ids = ops.ones(size=(1, 10), dtype=mindspore.int64)
+        attention_mask = mindspore.tensor([1] * 6).reshape(1, -1)
+        visual_attention_mask = mindspore.tensor([1] * 10).reshape(1, -1)
 
-        output = model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
-            visual_embeds=visual_embeds,
-            visual_attention_mask=visual_attention_mask,
-            visual_token_type_ids=visual_token_type_ids,
-        )
+        with no_grad():
+            output = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                token_type_ids=token_type_ids,
+                visual_embeds=visual_embeds,
+                visual_attention_mask=visual_attention_mask,
+                visual_token_type_ids=visual_token_type_ids,
+            )
 
         # vocab_size = 30522
 
         expected_shape = (1, 2)
         self.assertEqual(output.logits.shape, expected_shape)
 
-        expected_slice = mindspore.Tensor([[-1.1436, 0.8900]])
+        expected_slice = mindspore.tensor([[-1.1436, 0.8900]])
 
-        self.assertTrue(np.allclose(output.logits.asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(output.logits, expected_slice, atol=1e-4))
 
     @slow
     def test_inference_vcr(self):
         model = VisualBertForMultipleChoice.from_pretrained("uclanlp/visualbert-vcr")
 
-        input_ids = mindspore.Tensor([[[1, 2, 3, 4, 5, 6] for i in range(4)]], dtype=mindspore.int64)
+        input_ids = mindspore.tensor([[[1, 2, 3, 4, 5, 6] for i in range(4)]], dtype=mindspore.int64)
         attention_mask = ops.ones_like(input_ids)
         token_type_ids = ops.ones_like(input_ids)
 
-        visual_embeds = ops.ones((1, 4, 10, 512), dtype=mindspore.float32) * 0.5
-        visual_token_type_ids = ops.ones((1, 4, 10), dtype=mindspore.int64)
+        visual_embeds = ops.ones(size=(1, 4, 10, 512), dtype=mindspore.float32) * 0.5
+        visual_token_type_ids = ops.ones(size=(1, 4, 10), dtype=mindspore.int64)
         visual_attention_mask = ops.ones_like(visual_token_type_ids)
 
-        output = model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
-            visual_embeds=visual_embeds,
-            visual_attention_mask=visual_attention_mask,
-            visual_token_type_ids=visual_token_type_ids,
-        )
+        with no_grad():
+            output = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                token_type_ids=token_type_ids,
+                visual_embeds=visual_embeds,
+                visual_attention_mask=visual_attention_mask,
+                visual_token_type_ids=visual_token_type_ids,
+            )
 
         # vocab_size = 30522
 
         expected_shape = (1, 4)
         self.assertEqual(output.logits.shape, expected_shape)
 
-        expected_slice = mindspore.Tensor([[-7.7697, -7.7697, -7.7697, -7.7697]])
+        expected_slice = mindspore.tensor([[-7.7697, -7.7697, -7.7697, -7.7697]])
 
-        self.assertTrue(np.allclose(output.logits.asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(output.logits, expected_slice, atol=1e-4))

@@ -73,6 +73,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("convnext", "ConvNextModel"),
         ("convnextv2", "ConvNextV2Model"),
         ("cpmant", "CpmAntModel"),
+        ("cpmbee", "CpmBeeModel"),
         ("ctrl", "CTRLModel"),
         ("cvt", "CvtModel"),
         ("data2vec-audio", "Data2VecAudioModel"),

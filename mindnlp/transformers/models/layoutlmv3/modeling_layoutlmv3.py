@@ -628,10 +628,10 @@ class LayoutLMv3Model(LayoutLMv3PreTrainedModel):
         Create the bounding boxes for the visual (patch) tokens.
         """
         visual_bbox_x = ops.div(
-            ops.arange(0, max_len * (image_size[1] + 1), max_len), image_size[1], rounding_mode="trunc"
+            ops.arange(0, max_len * (image_size[1] + 1), max_len, dtype=mindspore.float32), image_size[1], rounding_mode="trunc"
         )
         visual_bbox_y = ops.div(
-            ops.arange(0, max_len * (image_size[0] + 1), max_len), image_size[0], rounding_mode="trunc"
+            ops.arange(0, max_len * (image_size[0] + 1), max_len, dtype=mindspore.float32), image_size[0], rounding_mode="trunc"
         )
         visual_bbox = ops.stack(
             [
@@ -644,7 +644,7 @@ class LayoutLMv3Model(LayoutLMv3PreTrainedModel):
         ).view(-1, 4)
 
         cls_token_box = mindspore.tensor([[0 + 1, 0 + 1, max_len - 1, max_len - 1]])
-        self.visual_bbox = ops.cat([cls_token_box, visual_bbox], dim=0)
+        self.visual_bbox = ops.cat([cls_token_box, visual_bbox.astype(cls_token_box.dtype)], dim=0)
 
     def calculate_visual_bbox(self, dtype, batch_size):
         visual_bbox = self.visual_bbox.tile((batch_size, 1, 1))
@@ -700,7 +700,7 @@ class LayoutLMv3Model(LayoutLMv3PreTrainedModel):
         >>> words = example["tokens"]
         >>> boxes = example["bboxes"]
 
-        >>> encoding = processor(image, words, boxes=boxes, return_tensors="pt")
+        >>> encoding = processor(image, words, boxes=boxes, return_tensors="ms")
 
         >>> outputs = model(**encoding)
         >>> last_hidden_states = outputs.last_hidden_state
@@ -901,7 +901,7 @@ class LayoutLMv3ForTokenClassification(LayoutLMv3PreTrainedModel):
         >>> boxes = example["bboxes"]
         >>> word_labels = example["ner_tags"]
 
-        >>> encoding = processor(image, words, boxes=boxes, word_labels=word_labels, return_tensors="pt")
+        >>> encoding = processor(image, words, boxes=boxes, word_labels=word_labels, return_tensors="ms")
 
         >>> outputs = model(**encoding)
         >>> loss = outputs.loss
@@ -1005,7 +1005,7 @@ class LayoutLMv3ForQuestionAnswering(LayoutLMv3PreTrainedModel):
         >>> words = example["tokens"]
         >>> boxes = example["bboxes"]
 
-        >>> encoding = processor(image, question, words, boxes=boxes, return_tensors="pt")
+        >>> encoding = processor(image, question, words, boxes=boxes, return_tensors="ms")
         >>> start_positions = mindspore.tensor([1])
         >>> end_positions = mindspore.tensor([3])
 
@@ -1112,7 +1112,7 @@ class LayoutLMv3ForSequenceClassification(LayoutLMv3PreTrainedModel):
         >>> words = example["tokens"]
         >>> boxes = example["bboxes"]
 
-        >>> encoding = processor(image, words, boxes=boxes, return_tensors="pt")
+        >>> encoding = processor(image, words, boxes=boxes, return_tensors="ms")
         >>> sequence_label = mindspore.tensor([1])
 
         >>> outputs = model(**encoding, labels=sequence_label)

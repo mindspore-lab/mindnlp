@@ -1304,12 +1304,8 @@ class MLukeTokenizer(PreTrainedTokenizer):
                 first_element = required_input[index][0]
         # At this state, if `first_element` is still a list/tuple, it's an empty one so there is nothing to do.
         if not isinstance(first_element, (int, list, tuple)):
-            # if is_tf_tensor(first_element):
-            #     return_tensors = "tf" if return_tensors is None else return_tensors
-            # elif is_torch_tensor(first_element):
-            #     return_tensors = "pt" if return_tensors is None else return_tensors
             if isinstance(first_element, mindspore.Tensor):
-                return_tensors = "np" if return_tensors is None else return_tensors
+                return_tensors = "ms" if return_tensors is None else return_tensors
             elif isinstance(first_element, np.ndarray):
                 return_tensors = "np" if return_tensors is None else return_tensors
             else:

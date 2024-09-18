@@ -537,7 +537,7 @@ class ViTMSNModel(ViTMSNPreTrainedModel):
 
         >>> image_processor = AutoImageProcessor.from_pretrained("facebook/vit-msn-small")
         >>> model = ViTMSNModel.from_pretrained("facebook/vit-msn-small")
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> with torch.no_grad():
         ...     outputs = model(**inputs)
         >>> last_hidden_states = outputs.last_hidden_state
@@ -627,7 +627,7 @@ class ViTMSNForImageClassification(ViTMSNPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("facebook/vit-msn-small")
         >>> model = ViTMSNForImageClassification.from_pretrained("facebook/vit-msn-small")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> with torch.no_grad():
         ...     logits = model(**inputs).logits
         >>> # model predicts one of the 1000 ImageNet classes

@@ -17,22 +17,20 @@
 import unittest
 from unittest.util import safe_repr
 
-import numpy as np
-
 from mindnlp.transformers import AutoTokenizer, RwkvConfig
 from mindnlp.utils.testing_utils import require_mindspore, slow, is_mindspore_available
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
+# from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops, no_grad
 
     from mindnlp.transformers import (
-        RWKV_PRETRAINED_MODEL_ARCHIVE_LIST,
         RwkvForCausalLM,
         RwkvModel,
     )
@@ -193,8 +191,7 @@ class RwkvModelTester:
     def create_and_check_rwkv_model(self, config, input_ids, input_mask, head_mask, token_type_ids, *args):
         config.output_hidden_states = True
         model = RwkvModel(config=config)
-
-        model.set_train(False)
+        model.eval()
 
         result = model(input_ids)
 
@@ -203,8 +200,7 @@ class RwkvModelTester:
 
     def create_and_check_causl_lm(self, config, input_ids, input_mask, head_mask, token_type_ids, *args):
         model = RwkvForCausalLM(config)
-
-        model.set_train(False)
+        model.eval()
 
         result = model(input_ids, labels=input_ids)
         self.parent.assertEqual(result.loss.shape, ())
@@ -212,8 +208,7 @@ class RwkvModelTester:
 
     def create_and_check_state_equivalency(self, config, input_ids, input_mask, head_mask, token_type_ids, *args):
         model = RwkvModel(config=config)
-
-        model.set_train(False)
+        model.eval()
 
         outputs = model(input_ids)
         output_whole = outputs.last_hidden_state
@@ -225,13 +220,12 @@ class RwkvModelTester:
         outputs = model(input_ids[:, 2:], state=outputs.state)
         output_two = outputs.last_hidden_state
 
-        self.parent.assertTrue(np.allclose(ops.cat([output_one, output_two], axis=1).asnumpy(), output_whole.asnumpy(), atol=1e-5))
+        self.parent.assertTrue(ops.allclose(ops.cat([output_one, output_two], dim=1), output_whole, atol=1e-5))
 
     def create_and_check_forward_and_backwards(
         self, config, input_ids, input_mask, head_mask, token_type_ids, *args, gradient_checkpointing=False
     ):
         model = RwkvForCausalLM(config)
-
         if gradient_checkpointing:
             model.gradient_checkpointing_enable()
 
@@ -266,7 +260,7 @@ class RwkvModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     pipeline_model_mapping = (
         {"feature-extraction": RwkvModel, "text-generation": RwkvForCausalLM} if is_mindspore_available() else {}
     )
-    # all_generative_model_classes = (RwkvForCausalLM,) if is_mindspore_available() else ()
+    all_generative_model_classes = (RwkvForCausalLM,) if is_mindspore_available() else ()
     fx_compatible = False
     test_missing_keys = False
     test_model_parallel = False
@@ -321,7 +315,7 @@ class RwkvModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config=config)
-            for name, param in model.parameters_and_names():
+            for name, param in model.named_parameters():
                 if "time_decay" in name:
                     if param.requires_grad:
                         self.assertTrue(param.data.max().item() == 3.0)
@@ -329,7 +323,7 @@ class RwkvModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
                 elif "time_first" in name:
                     if param.requires_grad:
                         # check if it's a ones like
-                        self.assertTrue(np.allclose(param.asnumpy(), ops.ones_like(param).asnumpy(), atol=1e-5, rtol=1e-5))
+                        self.assertTrue(ops.allclose(param.data, ops.ones_like(param.data), atol=1e-5, rtol=1e-5))
                 elif any(x in name for x in ["time_mix_key", "time_mix_receptance"]):
                     if param.requires_grad:
                         self.assertInterval(
@@ -360,12 +354,12 @@ class RwkvModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             inputs_dict["output_hidden_states"] = False
             config.return_dict = True
             model = model_class(config)
-    
-            model.set_train(False)
+            model.eval()
 
             inputs = self._prepare_for_class(inputs_dict, model_class)
             batch_size = inputs["input_ids"].shape[0]
-            outputs = model(**inputs)
+            with no_grad():
+                outputs = model(**inputs)
             attentions = outputs.attentions
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -373,12 +367,12 @@ class RwkvModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             del inputs_dict["output_attentions"]
             config.output_attentions = True
             model = model_class(config)
-    
-            model.set_train(False)
+            model.eval()
 
             inputs = self._prepare_for_class(inputs_dict, model_class)
             batch_size = inputs["input_ids"].shape[0]
-            outputs = model(**inputs)
+            with no_grad():
+                outputs = model(**inputs)
             attentions = outputs.attentions
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -392,12 +386,12 @@ class RwkvModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             inputs_dict["output_attentions"] = True
             inputs_dict["output_hidden_states"] = True
             model = model_class(config)
-    
-            model.set_train(False)
+            model.eval()
 
             inputs = self._prepare_for_class(inputs_dict, model_class)
             batch_size = inputs["input_ids"].shape[0]
-            outputs = model(**inputs)
+            with no_grad():
+                outputs = model(**inputs)
 
             added_hidden_states = 1
             self.assertEqual(out_len + added_hidden_states, len(outputs))
@@ -412,9 +406,55 @@ class RwkvModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        for model_name in RWKV_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = RwkvModel.from_pretrained(model_name)
-            self.assertIsNotNone(model)
+        model_name = "RWKV/rwkv-4-169m-pile"
+        model = RwkvModel.from_pretrained(model_name)
+        self.assertIsNotNone(model)
+
+    def test_beam_sample_generate_dict_output(self):
+        # This model has a custom attention output shape AND config flags, let's skip those checks
+        old_has_attentions = self.has_attentions
+        self.has_attentions = False
+        super().test_beam_sample_generate_dict_output()
+        self.has_attentions = old_has_attentions
+
+    def test_beam_search_generate_dict_output(self):
+        # This model has a custom attention output shape AND config flags, let's skip those checks
+        old_has_attentions = self.has_attentions
+        self.has_attentions = False
+        super().test_beam_search_generate_dict_output()
+        self.has_attentions = old_has_attentions
+
+    def test_constrained_beam_search_generate_dict_output(self):
+        # This model has a custom attention output shape AND config flags, let's skip those checks
+        old_has_attentions = self.has_attentions
+        self.has_attentions = False
+        super().test_constrained_beam_search_generate_dict_output()
+        self.has_attentions = old_has_attentions
+
+    def test_greedy_generate_dict_outputs(self):
+        # This model has a custom attention output shape AND config flags, let's skip those checks
+        old_has_attentions = self.has_attentions
+        self.has_attentions = False
+        super().test_greedy_generate_dict_outputs()
+        self.has_attentions = old_has_attentions
+
+    def test_group_beam_search_generate_dict_output(self):
+        # This model has a custom attention output shape AND config flags, let's skip those checks
+        old_has_attentions = self.has_attentions
+        self.has_attentions = False
+        super().test_group_beam_search_generate_dict_output()
+        self.has_attentions = old_has_attentions
+
+    def test_sample_generate_dict_output(self):
+        # This model has a custom attention output shape AND config flags, let's skip those checks
+        old_has_attentions = self.has_attentions
+        self.has_attentions = False
+        super().test_sample_generate_dict_output()
+        self.has_attentions = old_has_attentions
+
+    @unittest.skip("This model doesn't support padding")
+    def test_left_padding_compatibility(self):
+        pass
 
 
 @slow
@@ -431,18 +471,15 @@ class RWKVIntegrationTests(unittest.TestCase):
         output = model.generate(input_ids, max_new_tokens=10)
         output_sentence = self.tokenizer.decode(output[0].tolist())
 
-        print(output_sentence)
-
         self.assertEqual(output_sentence, expected_output)
 
-    def test_simple_generate_fp16(self):
+    def test_simple_generate_bf16(self):
         expected_output = "Hello my name is Jasmine and I am a newbie to the"
 
         input_ids = self.tokenizer("Hello my name is", return_tensors="ms").input_ids
-        model = RwkvForCausalLM.from_pretrained(self.model_id, ms_dtype=mindspore.float16)
+        model = RwkvForCausalLM.from_pretrained(self.model_id, ms_dtype=mindspore.bfloat16)
 
         output = model.generate(input_ids, max_new_tokens=10)
         output_sentence = self.tokenizer.decode(output[0].tolist())
 
         self.assertEqual(output_sentence, expected_output)
-    

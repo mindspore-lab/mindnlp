@@ -351,7 +351,7 @@ class UperNetForSemanticSegmentation(UperNetPreTrainedModel):
         ... )
         >>> image = Image.open(filepath).convert("RGB")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
 
         >>> outputs = model(**inputs)
 

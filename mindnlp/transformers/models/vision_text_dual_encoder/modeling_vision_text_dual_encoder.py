@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================
-"""PyTorch VisionTextDualEncoder model."""
+"""MindSpore VisionTextDualEncoder model."""
 
 from typing import Optional, Tuple, Union
 
@@ -117,7 +117,7 @@ class VisionTextDualEncoderModel(PreTrainedModel):
             >>> model = VisionTextDualEncoderModel.from_pretrained("clip-italian/clip-italian")
             >>> tokenizer = AutoTokenizer.from_pretrained("clip-italian/clip-italian")
             ...
-            >>> inputs = tokenizer(["una foto di un gatto", "una foto di un cane"], padding=True, return_tensors="pt")
+            >>> inputs = tokenizer(["una foto di un gatto", "una foto di un cane"], padding=True, return_tensors="ms")
             >>> text_features = model.get_text_features(**inputs)
             ```
         """
@@ -161,7 +161,7 @@ class VisionTextDualEncoderModel(PreTrainedModel):
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
-            >>> inputs = image_processor(images=image, return_tensors="pt")
+            >>> inputs = image_processor(images=image, return_tensors="ms")
             ...
             >>> image_features = model.get_image_features(**inputs)
             ```
@@ -219,7 +219,7 @@ class VisionTextDualEncoderModel(PreTrainedModel):
             ... ]
             >>> images = [Image.open(requests.get(url, stream=True).raw) for url in urls]
             >>> inputs = processor(
-            ...     text=["a photo of a cat", "a photo of a dog"], images=images, return_tensors="pt", padding=True
+            ...     text=["a photo of a cat", "a photo of a dog"], images=images, return_tensors="ms", padding=True
             ... )
             >>> outputs = model(
             ...     input_ids=inputs.input_ids,
@@ -265,13 +265,13 @@ class VisionTextDualEncoderModel(PreTrainedModel):
         text_embeds = self.text_projection(text_embeds)
 
         # normalized features
-        image_embeds = image_embeds / ops.norm(image_embeds, dim=-1, keepdim=True)
-        text_embeds = text_embeds / ops.norm(text_embeds, dim=-1, keepdim=True)
+        image_embeds = image_embeds / ops.norm(image_embeds, p=2, dim=-1, keepdim=True)
+        text_embeds = text_embeds / ops.norm(text_embeds, p=2, dim=-1, keepdim=True)
 
         # cosine similarity as logits
         logit_scale = self.logit_scale.exp()
         logits_per_text = ops.matmul(text_embeds, image_embeds.t()) * logit_scale
-        logits_per_image = ops.t(logits_per_text)
+        logits_per_image = logits_per_text.T
 
         loss = None
         if return_loss:

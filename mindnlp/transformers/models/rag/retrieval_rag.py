@@ -574,7 +574,7 @@ class RagRetriever:
                 The prefix used by the generator's tokenizer.
             n_docs (`int`, *optional*):
                 The number of docs retrieved per query.
-            return_tensors (`str` or [`~utils.TensorType`], *optional*, defaults to "pt"):
+            return_tensors (`str` or [`~utils.TensorType`], *optional*, defaults to "ms"):
                 If set, will return tensors instead of list of python integers. Acceptable values are:
 
                 - `'tf'`: Return TensorFlow `tf.constant` objects.

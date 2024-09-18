@@ -19,9 +19,8 @@ import numpy as np
 import mindspore
 from ddt import ddt, data
 from mindspore import Tensor
-from mindnlp.modules import CMRC2018Loss
-from mindnlp import ms_jit
-from ....common import MindNLPTestCase
+from mindnlp.core.modules import CMRC2018Loss
+from .....common import MindNLPTestCase
 
 @ddt
 class TestCMRC2018Loss(MindNLPTestCase):
@@ -54,7 +53,7 @@ class TestCMRC2018Loss(MindNLPTestCase):
             loss = cmrc_loss(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
             return loss
 
-        @ms_jit
+        @mindspore.jit
         def forward_jit(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d):
             loss = cmrc_loss(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
             return loss

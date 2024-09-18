@@ -553,3 +553,14 @@ class Qwen2MoeIntegrationTest(unittest.TestCase):
 
         del model
         gc.collect()
+
+    @slow
+    def test_model_a2_7b_generation_time(self):
+        EXPECTED_TEXT_COMPLETION = """To be or not to be, that is the question. This is the question that has been asked by many people over the"""
+        prompt = "To be or not to"
+        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", use_fast=False, mirror='modelscope')
+        model = Qwen2MoeForCausalLM.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", mirror='modelscope')
+        input_ids = tokenizer.encode(prompt, return_tensors="ms")
+
+        # greedy generation outputs
+        generated_ids = model.generate(input_ids, max_new_tokens=10, do_sample=False)

@@ -689,7 +689,7 @@ class CLIPTextModel(CLIPPreTrainedModel):
         >>> model = CLIPTextModel.from_pretrained("openai/clip-vit-base-patch32")
         >>> tokenizer = AutoTokenizer.from_pretrained("openai/clip-vit-base-patch32")
 
-        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
 
         >>> outputs = model(**inputs)
         >>> last_hidden_state = outputs.last_hidden_state
@@ -800,7 +800,7 @@ class CLIPVisionModel(CLIPPreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
 
         >>> outputs = model(**inputs)
         >>> last_hidden_state = outputs.last_hidden_state
@@ -877,7 +877,7 @@ class CLIPModel(CLIPPreTrainedModel):
         >>> model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
         >>> tokenizer = AutoTokenizer.from_pretrained("openai/clip-vit-base-patch32")
 
-        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
         >>> text_features = model.get_text_features(**inputs)
         ```"""
         # Use CLIP model's config for some fields (if specified) instead of those of vision & text components.
@@ -926,7 +926,7 @@ class CLIPModel(CLIPPreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
 
         >>> image_features = model.get_image_features(**inputs)
         ```"""
@@ -977,7 +977,7 @@ class CLIPModel(CLIPPreTrainedModel):
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
         >>> inputs = processor(
-        ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
+        ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="ms", padding=True
         ... )
 
         >>> outputs = model(**inputs)
@@ -1083,7 +1083,7 @@ class CLIPTextModelWithProjection(CLIPPreTrainedModel):
         >>> model = CLIPTextModelWithProjection.from_pretrained("openai/clip-vit-base-patch32")
         >>> tokenizer = AutoTokenizer.from_pretrained("openai/clip-vit-base-patch32")
 
-        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
 
         >>> outputs = model(**inputs)
         >>> text_embeds = outputs.text_embeds
@@ -1156,7 +1156,7 @@ class CLIPVisionModelWithProjection(CLIPPreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
 
         >>> outputs = model(**inputs)
         >>> image_embeds = outputs.image_embeds

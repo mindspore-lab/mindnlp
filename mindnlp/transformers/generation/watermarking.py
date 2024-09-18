@@ -100,7 +100,7 @@ class WatermarkDetector:
     >>> tok.pad_token_id = tok.eos_token_id
     >>> tok.padding_side = "left"
 
-    >>> inputs = tok(["This is the beginning of a long story", "Alice and Bob are"], padding=True, return_tensors="pt")
+    >>> inputs = tok(["This is the beginning of a long story", "Alice and Bob are"], padding=True, return_tensors="ms")
     >>> input_len = inputs["input_ids"].shape[-1]
 
     >>> # first generate text with watermark and without

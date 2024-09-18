@@ -834,7 +834,6 @@ class GenerationTesterMixin:
                 output_generate, input_ids, model.config, num_return_sequences=beam_kwargs["num_beams"]
             )
 
-    # TODO: @gante
     @is_flaky()
     def test_constrained_beam_search_generate(self):
         for model_class in self.all_generative_model_classes:

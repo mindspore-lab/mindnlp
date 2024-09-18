@@ -29,8 +29,9 @@ from ..wav2vec2.test_modeling_wav2vec2 import Wav2Vec2ModelTester
 import numpy as np
 import mindspore
 import mindspore.common.dtype as mstype
-from mindspore import ops, Tensor
+from mindspore import Tensor
 
+from mindnlp.core import ops
 from mindnlp.transformers import (
     BertLMHeadModel,
     SpeechEncoderDecoderConfig,

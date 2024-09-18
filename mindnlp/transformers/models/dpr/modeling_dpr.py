@@ -338,7 +338,7 @@ class DPRContextEncoder(DPRPretrainedContextEncoder):
 
         >>> tokenizer = DPRContextEncoderTokenizer.from_pretrained("facebook/dpr-ctx_encoder-single-nq-base")
         >>> model = DPRContextEncoder.from_pretrained("facebook/dpr-ctx_encoder-single-nq-base")
-        >>> input_ids = tokenizer("Hello, is my dog cute ?", return_tensors="pt")["input_ids"]
+        >>> input_ids = tokenizer("Hello, is my dog cute ?", return_tensors="ms")["input_ids"]
         >>> embeddings = model(input_ids).pooler_output
         ```"""
 
@@ -412,7 +412,7 @@ class DPRQuestionEncoder(DPRPretrainedQuestionEncoder):
 
         >>> tokenizer = DPRQuestionEncoderTokenizer.from_pretrained("facebook/dpr-question_encoder-single-nq-base")
         >>> model = DPRQuestionEncoder.from_pretrained("facebook/dpr-question_encoder-single-nq-base")
-        >>> input_ids = tokenizer("Hello, is my dog cute ?", return_tensors="pt")["input_ids"]
+        >>> input_ids = tokenizer("Hello, is my dog cute ?", return_tensors="ms")["input_ids"]
         >>> embeddings = model(input_ids).pooler_output
         ```
         """
@@ -489,7 +489,7 @@ class DPRReader(DPRPretrainedReader):
         ...     questions=["What is love ?"],
         ...     titles=["Haddaway"],
         ...     texts=["'What Is Love' is a song recorded by the artist Haddaway"],
-        ...     return_tensors="pt",
+        ...     return_tensors="ms",
         ... )
         >>> outputs = model(**encoded_inputs)
         >>> start_logits = outputs.start_logits

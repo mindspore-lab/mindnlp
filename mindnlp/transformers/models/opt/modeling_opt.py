@@ -969,7 +969,7 @@ class OPTForCausalLM(OPTPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
         ...
         >>> prompt = "Hey, are you conscious? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
+        >>> inputs = tokenizer(prompt, return_tensors="ms")
         ...
         >>> # Generate
         >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
@@ -1194,7 +1194,7 @@ class OPTForCausalLM(OPTPreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
             ...
             >>> prompt = "Hey, are you conscious? Can you talk to me?"
-            >>> inputs = tokenizer(prompt, return_tensors="pt")
+            >>> inputs = tokenizer(prompt, return_tensors="ms")
             ...
             >>> # Generate
             >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
@@ -1575,7 +1575,7 @@ class OPTForQuestionAnswering(OPTPreTrainedModel):
             ...
             >>> question, text = "Who was Jim Henson?", "Jim Henson was a nice puppet"
             ...
-            >>> inputs = tokenizer(question, text, return_tensors="pt")
+            >>> inputs = tokenizer(question, text, return_tensors="ms")
             >>> with torch.no_grad():
             ...     outputs = model(**inputs)
             ...

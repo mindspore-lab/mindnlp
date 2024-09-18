@@ -155,7 +155,7 @@ class IdeficsImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
         # they both do the same
 
         # image_inputs = self.image_processor_tester.prepare_image_inputs(equal_resolution=False)
-        # image_processor = self.image_processing_class(**self.image_processor_dict, return_tensors="pt")
+        # image_processor = self.image_processing_class(**self.image_processor_dict, return_tensors="ms")
         #
         # print(image_inputs)
         #
@@ -184,8 +184,8 @@ class IdeficsImageProcessingTest(ImageProcessingTestMixin, unittest.TestCase):
         #     ]
         # )
         #
-        # pixel_values_transform_implied = image_processor(image_inputs, transform=None, return_tensors="pt")
-        # pixel_values_transform_supplied = image_processor(image_inputs, transform=transform, return_tensors="pt")
+        # pixel_values_transform_implied = image_processor(image_inputs, transform=None, return_tensors="ms")
+        # pixel_values_transform_supplied = image_processor(image_inputs, transform=transform, return_tensors="ms")
         #
         # torch.testing.assert_close(pixel_values_transform_implied, pixel_values_transform_supplied, rtol=0.0, atol=0.0)
 

@@ -454,12 +454,12 @@ class DeformableDetrSinePositionEmbedding(nn.Module):
 
         pos_x = x_embed[:, :, :, None] / dim_t
         pos_y = y_embed[:, :, :, None] / dim_t
-        pos_x = ops.stack(
+        pos_x = ops.flatten(ops.stack(
             (pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), dim=4
-        ).flatten(start_dim=3)
-        pos_y = ops.stack(
+        ), start_dim=3)
+        pos_y = ops.flatten(ops.stack(
             (pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), dim=4
-        ).flatten(start_dim=3)
+        ), start_dim=3)
         pos = ops.cat((pos_y, pos_x), dim=3).permute(0, 3, 1, 2)
         return pos
 
@@ -536,9 +536,9 @@ def multi_scale_deformable_attention(
         # batch_size, num_queries, num_heads, num_points, 2
         # -> batch_size, num_heads, num_queries, num_points, 2
         # -> batch_size*num_heads, num_queries, num_points, 2
-        sampling_grid_l_ = ops.transpose(
+        sampling_grid_l_ = ops.flatten(ops.transpose(
             sampling_grids[:, :, :, level_id], 1, 2
-        ).flatten(start_dim=0, end_dim=1)
+        ), start_dim=0, end_dim=1)
 
         # batch_size*num_heads, hidden_dim, num_queries, num_points
         sampling_value_l_ = F.grid_sample(
@@ -557,7 +557,7 @@ def multi_scale_deformable_attention(
     )
     output = (
         (
-            ops.stack(sampling_value_list, dim=-2).flatten(start_dim=-2)
+            ops.flatten(ops.stack(sampling_value_list, dim=-2), start_dim=-2)
             * attention_weights
         )
         .sum(-1)
@@ -1200,6 +1200,7 @@ class DeformableDetrEncoder(DeformableDetrPreTrainedModel):
         """
         reference_points_list = []
         for level, (height, width) in enumerate(spatial_shapes):
+            height, width = height.item(), width.item()
             ref_y, ref_x = meshgrid(
                 ops.linspace(0.5, height - 0.5, height, dtype=valid_ratios.dtype),
                 ops.linspace(0.5, width - 0.5, width, dtype=valid_ratios.dtype),
@@ -1637,9 +1638,9 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
         # batch_size, num_queries, 4, 128
         pos = proposals[:, :, :, None] / dim_t
         # batch_size, num_queries, 4, 64, 2 -> batch_size, num_queries, 512
-        pos = ops.stack(
+        pos = ops.flatten(ops.stack(
             (pos[:, :, :, 0::2].sin(), pos[:, :, :, 1::2].cos()), dim=4
-        ).flatten(start_dim=2)
+        ), start_dim=2)
         return pos
 
     def gen_encoder_output_proposals(self, enc_output, padding_mask, spatial_shapes):
@@ -1686,9 +1687,9 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
             proposals.append(proposal)
             _cur += height * width
         output_proposals = ops.cat(proposals, 1)
-        output_proposals_valid = (
-            (output_proposals > 0.01) & (output_proposals < 0.99)
-        ).all(-1, keep_dims=True)
+        output_proposals_valid = ops.all(
+            ((output_proposals > 0.01).int() & (output_proposals < 0.99).int()).bool(), -1, keepdim=True
+        )
         output_proposals = ops.log(
             output_proposals / (1 - output_proposals)
         )  # inverse sigmoid
@@ -1734,7 +1735,7 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("SenseTime/deformable-detr")
         >>> model = DeformableDetrModel.from_pretrained("SenseTime/deformable-detr")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
 
         >>> outputs = model(**inputs)
 
@@ -1807,9 +1808,9 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
             batch_size, num_channels, height, width = source.shape
             spatial_shape = (height, width)
             spatial_shapes.append(spatial_shape)
-            source = ops.transpose(source.flatten(start_dim=2), 1, 2)
-            mask = mask.flatten(start_dim=1)
-            pos_embed = ops.transpose(pos_embed.flatten(start_dim=2), 1, 2)
+            source = ops.transpose(ops.flatten(source, start_dim=2), 1, 2)
+            mask = ops.flatten(mask, start_dim=1)
+            pos_embed = ops.transpose(ops.flatten(pos_embed, start_dim=2), 1, 2)
             lvl_pos_embed = pos_embed + self.level_embed[level].view(1, 1, -1)
             lvl_pos_embed_flatten.append(lvl_pos_embed)
             source_flatten.append(source)
@@ -1819,7 +1820,7 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
         lvl_pos_embed_flatten = ops.cat(lvl_pos_embed_flatten, 1)
         spatial_shapes = mindspore.Tensor(spatial_shapes, dtype=mindspore.int64)
         level_start_index = ops.cat(
-            (spatial_shapes.new_zeros((1,)), spatial_shapes.prod(1).cumsum(0)[:-1])
+            (ops.zeros((1,), dtype=mindspore.int32), spatial_shapes.prod(1).int().cumsum(0)[:-1])
         )
         valid_ratios = ops.stack(
             [self.get_valid_ratio(m, dtype=source_flatten.dtype) for m in masks], 1
@@ -2035,7 +2036,7 @@ class DeformableDetrForObjectDetection(DeformableDetrPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("SenseTime/deformable-detr")
         >>> model = DeformableDetrForObjectDetection.from_pretrained("SenseTime/deformable-detr")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> # convert outputs (bounding boxes and class logits) to Pascal VOC format (xmin, ymin, xmax, ymax)
@@ -2200,7 +2201,7 @@ def dice_loss(inputs, targets, num_boxes):
                  class).
     """
     inputs = inputs.sigmoid()
-    inputs = inputs.flatten(start_dim=1)
+    inputs = ops.flatten(inputs, start_dim=1)
     numerator = 2 * (inputs * targets).sum(1)
     denominator = inputs.sum(-1) + targets.sum(-1)
     loss = 1 - (numerator + 1) / (denominator + 1)
@@ -2290,8 +2291,9 @@ class DeformableDetrLoss(nn.Module):
             source_logits.shape[2] + 1,
             dtype=source_logits.dtype,
         )
+        target_classes = target_classes.unsqueeze(-1)
         target_classes_onehot = ops.scatter(
-            target_classes_onehot, 2, target_classes.unsqueeze(-1), 1.0
+            target_classes_onehot, 2, target_classes, ops.ones_like(target_classes, dtype=target_classes_onehot.dtype)
         )
         target_classes_onehot = target_classes_onehot[:, :, :-1]
         loss_ce = (
@@ -2516,9 +2518,9 @@ class DeformableDetrHungarianMatcher(nn.Module):
 
         # We flatten to compute the cost matrices in a batch
         out_prob = (
-            outputs["logits"].flatten(start_dim=0, end_dim=1).sigmoid()
+            ops.flatten(outputs["logits"], start_dim=0, end_dim=1).sigmoid()
         )  # [batch_size * num_queries, num_classes]
-        out_bbox = outputs["pred_boxes"].flatten(
+        out_bbox = ops.flatten(outputs["pred_boxes"],
             start_dim=0, end_dim=1
         )  # [batch_size * num_queries, 4]
 
@@ -2553,7 +2555,7 @@ class DeformableDetrHungarianMatcher(nn.Module):
 
         sizes = [len(v["boxes"]) for v in targets]
         indices = [
-            linear_sum_assignment(c[i])
+            linear_sum_assignment(c[i].asnumpy())
             for i, c in enumerate(cost_matrix.split(sizes, -1))
         ]
         return [

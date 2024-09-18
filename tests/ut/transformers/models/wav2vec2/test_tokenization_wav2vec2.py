@@ -659,7 +659,7 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
         #        ds_iter = iter(ds)
         #        sample = next(ds_iter)
         #
-        #        input_values = feature_extractor(sample["audio"]["array"], return_tensors="pt").input_values
+        #        input_values = feature_extractor(sample["audio"]["array"], return_tensors="ms").input_values
         #        logits = model(input_values).logits
         #        pred_ids = F.argmax(logits, axis=-1).cpu().tolist()
         # ```

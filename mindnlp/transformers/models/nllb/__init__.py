@@ -12,47 +12,11 @@
 """
 NLLB init
 """
-from typing import TYPE_CHECKING
 
-from ....utils import (
-    OptionalDependencyNotAvailable,
-    is_sentencepiece_available,
-    is_tokenizers_available,
-)
+from . import tokenization_nllb, tokenization_nllb_fast
+from .tokenization_nllb import *
+from .tokenization_nllb_fast import *
 
-
-_import_structure = {}
-
-try:
-    if not is_sentencepiece_available():
-        raise OptionalDependencyNotAvailable()
-except OptionalDependencyNotAvailable:
-    pass
-else:
-    _import_structure["tokenization_nllb"] = ["NllbTokenizer"]
-
-try:
-    if not is_tokenizers_available():
-        raise OptionalDependencyNotAvailable()
-except OptionalDependencyNotAvailable:
-    pass
-else:
-    _import_structure["tokenization_nllb_fast"] = ["NllbTokenizerFast"]
-
-
-if TYPE_CHECKING:
-    try:
-        if not is_sentencepiece_available():
-            raise OptionalDependencyNotAvailable()
-    except OptionalDependencyNotAvailable:
-        pass
-    else:
-        from .tokenization_nllb import NllbTokenizer
-
-    try:
-        if not is_tokenizers_available():
-            raise OptionalDependencyNotAvailable()
-    except OptionalDependencyNotAvailable:
-        pass
-    else:
-        from .tokenization_nllb_fast import NllbTokenizerFast
+__all__ = []
+__all__.extend(tokenization_nllb.__all__)
+__all__.extend(tokenization_nllb_fast.__all__)

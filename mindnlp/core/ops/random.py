@@ -2,7 +2,7 @@
 import mindspore
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
-from mindnlp.configs import USE_PYBOOST, DEVICE_TARGET, GENERATOR_SEED
+from mindnlp.configs import use_pyboost, DEVICE_TARGET, GENERATOR_SEED
 from .other import cumsum, searchsorted
 from .comparison import topk
 from .pointwise import div, log
@@ -10,12 +10,10 @@ from ..utils import get_default_dtype
 
 # bernoulli
 def bernoulli(input, p=0.5):
-    if DEVICE_TARGET == 'Ascend':
-        random_numbers = rand(*input.shape, dtype=input.dtype)
-        samples = random_numbers < p
-        samples = samples.int()
-        return samples
-    return ops.bernoulli(input, p)
+    random_numbers = rand(*input.shape, dtype=mindspore.float32)
+    samples = random_numbers < p
+    samples = samples.int()
+    return samples
 
 # multinomial
 def multinomial(input, num_samples, replacement=False):
@@ -43,7 +41,7 @@ def multinomial(input, num_samples, replacement=False):
 
 # normal
 def normal(mean=0.0, std=1.0, size=None):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.normal(mean, std, size)
     return ops.normal(size, mean, std)
 
@@ -58,13 +56,13 @@ def rand(*size, dtype=None):
         size = size[0]
     if dtype is None:
         dtype = get_default_dtype()
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.rand(*size, dtype=dtype)
     return ops.rand(*size, dtype=dtype)
 
 # rand_like
 def rand_like(input, *, dtype=None):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.rand_like(input, dtype=dtype)
     return ops.rand_like(input, dtype=dtype)
 

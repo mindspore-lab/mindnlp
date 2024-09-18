@@ -503,7 +503,7 @@ class Pix2StructVisionModel(Pix2StructPreTrainedModel):
         >>> url = "https://www.ilankelman.org/stopsigns/australia.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> with no_grad():
         ...     outputs = model(**inputs)
 
@@ -1093,7 +1093,7 @@ class Pix2StructTextModel(Pix2StructPreTrainedModel):
         >>> processor = AutoProcessor.from_pretrained("google/pix2struct-textcaps-base")
         >>> model = Pix2StructTextModel.from_pretrained("google/pix2struct-textcaps-base")
 
-        >>> inputs = processor(text="Hello, my dog is cute", return_tensors="pt")
+        >>> inputs = processor(text="Hello, my dog is cute", return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> loss = outputs.loss
         ```
@@ -1238,7 +1238,6 @@ class Pix2StructTextModel(Pix2StructPreTrainedModel):
         loss = None
         if labels is not None:
             loss_fct = nn.CrossEntropyLoss(ignore_index=-100, reduction="mean")
-
             loss = loss_fct(logits.view(-1, logits.shape[-1]), labels.view(-1))
 
         if not return_dict:
@@ -1342,7 +1341,7 @@ class Pix2StructForConditionalGeneration(Pix2StructPreTrainedModel):
         >>> url = "https://www.ilankelman.org/stopsigns/australia.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
 
         >>> # autoregressive generation
         >>> generated_ids = model.generate(**inputs, max_new_tokens=50)
@@ -1352,7 +1351,7 @@ class Pix2StructForConditionalGeneration(Pix2StructPreTrainedModel):
 
         >>> # conditional generation
         >>> text = "A picture of"
-        >>> inputs = processor(text=text, images=image, return_tensors="pt", add_special_tokens=False)
+        >>> inputs = processor(text=text, images=image, return_tensors="ms", add_special_tokens=False)
 
         >>> generated_ids = model.generate(**inputs, max_new_tokens=50)
         >>> generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
@@ -1374,8 +1373,8 @@ class Pix2StructForConditionalGeneration(Pix2StructPreTrainedModel):
         >>> image = Image.open(requests.get(url, stream=True).raw)
         >>> text = "A stop sign is on the street corner."
 
-        >>> inputs = processor(images=image, return_tensors="pt")
-        >>> labels = processor(text=text, return_tensors="pt").input_ids
+        >>> inputs = processor(images=image, return_tensors="ms")
+        >>> labels = processor(text=text, return_tensors="ms").input_ids
 
         >>> # forward pass
         >>> outputs = model(**inputs, labels=labels)

@@ -712,7 +712,7 @@ class GemmaForCausalLM(GemmaPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("google/gemma-7b")
 
         >>> prompt = "What is your favorite condiment?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
+        >>> inputs = tokenizer(prompt, return_tensors="ms")
 
         >>> # Generate
         >>> generate_ids = model.generate(inputs.input_ids, max_length=30)

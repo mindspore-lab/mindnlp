@@ -16,7 +16,6 @@ import numpy as np
 
 from mindnlp.utils.testing_utils import TestCasePlus, require_mindspore, require_vision
 from mindnlp.utils import is_mindspore_available, is_vision_available
-from mindnlp.core import ops
 
 if is_mindspore_available():
     import mindspore

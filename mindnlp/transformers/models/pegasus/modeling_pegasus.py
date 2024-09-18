@@ -1362,8 +1362,8 @@ class PegasusModel(PegasusPreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained("google/pegasus-large")
             >>> model = PegasusModel.from_pretrained("google/pegasus-large")
             ...
-            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
-            >>> decoder_inputs = tokenizer("Studies show that", return_tensors="pt")
+            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="ms")
+            >>> decoder_inputs = tokenizer("Studies show that", return_tensors="ms")
             >>> outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_inputs.input_ids)
             ...
             >>> last_hidden_states = outputs.last_hidden_state
@@ -2163,7 +2163,7 @@ class PegasusForCausalLM(PegasusPreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained("google/pegasus-large")
             >>> model = PegasusForCausalLM.from_pretrained("google/pegasus-large", add_cross_attention=False)
             >>> assert model.config.is_decoder, f"{model.__class__} has to be configured as a decoder."
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> logits = outputs.logits

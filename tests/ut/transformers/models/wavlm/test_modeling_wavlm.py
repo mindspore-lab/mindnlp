@@ -38,7 +38,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         Wav2Vec2FeatureExtractor,
@@ -210,10 +210,10 @@ class WavLMModelTester:
             attention_mask[i, input_lengths[i] :] = 0
 
         model.config.ctc_loss_reduction = "sum"
-        sum_loss = model(input_values, attention_mask=attention_mask, labels=labels).loss[0].item()
+        sum_loss = model(input_values, attention_mask=attention_mask, labels=labels).loss.item()
 
         model.config.ctc_loss_reduction = "mean"
-        mean_loss = model(input_values, attention_mask=attention_mask, labels=labels).loss[0].item()
+        mean_loss = model(input_values, attention_mask=attention_mask, labels=labels).loss.item()
 
         self.parent.assertTrue(isinstance(sum_loss, float))
         self.parent.assertTrue(isinstance(mean_loss, float))
@@ -267,7 +267,7 @@ class WavLMModelTester:
                 # one shorter than logit lengths to prevent -inf
                 labels[i, max_length_labels[i] - 1 :] = -100
 
-        loss = model(input_values, labels=labels).loss[0]
+        loss = model(input_values, labels=labels).loss
         self.parent.assertFalse(ops.isinf(loss).item())
 
 
@@ -441,8 +441,7 @@ class WavLMModelTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            for param in model.get_parameters():
-                name=param.name
+            for name, param in model.named_parameters():
                 uniform_init_parms = [
                     "conv.weight",
                     "conv.parametrizations.weight",
@@ -462,12 +461,12 @@ class WavLMModelTest(ModelTesterMixin, unittest.TestCase):
                 if param.requires_grad:
                     if any(x in name for x in uniform_init_parms):
                         self.assertTrue(
-                            -1.0 <= ((param.data.mean() * 1e9).round() / 1e9).item() <= 1.0,
+                            -1.0 <= ((param.mean() * 1e9).round() / 1e9).item() <= 1.0,
                             msg=f"Parameter {name} of model {model_class} seems not properly initialized",
                         )
                     else:
                         self.assertIn(
-                            ((param.data.mean() * 1e9).round() / 1e9).item(),
+                            ((param.mean() * 1e9).round() / 1e9).item(),
                             [0.0, 1.0],
                             msg=f"Parameter {name} of model {model_class} seems not properly initialized",
                         )
@@ -475,17 +474,17 @@ class WavLMModelTest(ModelTesterMixin, unittest.TestCase):
     # overwrite from test_modeling_common
     def _mock_init_weights(self, module):
         if hasattr(module, "weight") and module.weight is not None:
-            module.weight.data.fill_(3)
+            module.weight.fill_(3)
         if hasattr(module, "weight_g") and module.weight_g is not None:
-            module.weight_g.data.fill_(3)
+            module.weight_g.fill_(3)
         if hasattr(module, "weight_v") and module.weight_v is not None:
-            module.weight_v.data.fill_(3)
+            module.weight_v.fill_(3)
         if hasattr(module, "bias") and module.bias is not None:
-            module.bias.data.fill_(3)
+            module.bias.fill_(3)
         if hasattr(module, "codevectors") and module.codevectors is not None:
-            module.codevectors.data.fill_(3)
+            module.codevectors.fill_(3)
         if hasattr(module, "masked_spec_embed") and module.masked_spec_embed is not None:
-            module.masked_spec_embed.data.fill_(3)
+            module.masked_spec_embed.fill_(3)
 
     @unittest.skip(reason="Feed forward chunking is not implemented for WavLM")
     def test_feed_forward_chunking(self):

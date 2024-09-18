@@ -893,7 +893,7 @@ class ElectraForPreTraining(ElectraPreTrainedModel):
         >>> fake_sentence = "The quick brown fox fake over the lazy dog"
 
         >>> fake_tokens = tokenizer.tokenize(fake_sentence, add_special_tokens=True)
-        >>> fake_inputs = tokenizer.encode(fake_sentence, return_tensors="pt")
+        >>> fake_inputs = tokenizer.encode(fake_sentence, return_tensors="ms")
         >>> discriminator_outputs = discriminator(fake_inputs)
         >>> predictions = ops.round((ops.sign(discriminator_outputs[0]) + 1) / 2)
 
@@ -1328,7 +1328,7 @@ class ElectraForCausalLM(ElectraPreTrainedModel):
         >>> config.is_decoder = True
         >>> model = ElectraForCausalLM.from_pretrained("google/electra-base-generator", config=config)
 
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> prediction_logits = outputs.logits

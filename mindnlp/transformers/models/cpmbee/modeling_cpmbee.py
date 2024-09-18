@@ -1132,7 +1132,6 @@ class CpmBeePreTrainedModel(PreTrainedModel):
     """
     config_class = CpmBeeConfig
     base_model_prefix = "cpmbee"
-    supports_gradient_checkpointing = True
 
     def _init_weights(self, cell):
         """Initialize the weights"""

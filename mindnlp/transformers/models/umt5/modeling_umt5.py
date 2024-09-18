@@ -769,8 +769,8 @@ class UMT5Model(UMT5PreTrainedModel):
     >>> tokenizer = AutoTokenizer.from_pretrained("google/umt5-small")
     >>> noisy_text = "UN Offizier sagt, dass weiter <extra_id_0> werden muss in Syrien."
     >>> label = "<extra_id_0> verhandelt"
-    >>> inputs = tokenizer(inputs, return_tensors="pt")
-    >>> labels = tokenizer(label=label, return_tensors="pt")
+    >>> inputs = tokenizer(inputs, return_tensors="ms")
+    >>> labels = tokenizer(label=label, return_tensors="ms")
 
     >>> outputs = model(input_ids=inputs["input_ids"], decoder_input_ids=labels["input_ids"])
     >>> hidden_states = outputs.last_hidden_state
@@ -862,9 +862,9 @@ class UMT5Model(UMT5PreTrainedModel):
         >>> model = UMT5Model.from_pretrained("google/umt5-small")
 
         >>> input_ids = tokenizer(
-        ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
+        ...     "Studies have been shown that owning a dog is good for you", return_tensors="ms"
         ... ).input_ids  # Batch size 1
-        >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="pt").input_ids  # Batch size 1
+        >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="ms").input_ids  # Batch size 1
 
         >>> # preprocess: Prepend decoder_input_ids with start token which is pad token for UMT5Model.
         >>> # This is not needed for torch's UMT5ForConditionalGeneration as it does this internally using labels arg.
@@ -939,7 +939,7 @@ class UMT5ForConditionalGeneration(UMT5PreTrainedModel):
     >>> tokenizer = AutoTokenizer.from_pretrained("google/umt5-small")
     >>> article = "UN Offizier sagt, dass weiter verhandelt werden muss in Syrien."
     >>> summary = "Weiter Verhandlung in Syrien."
-    >>> inputs = tokenizer(article, text_target=summary, return_tensors="pt")
+    >>> inputs = tokenizer(article, text_target=summary, return_tensors="ms")
 
     >>> outputs = model(**inputs)
     >>> loss = outputs.loss
@@ -1039,14 +1039,14 @@ class UMT5ForConditionalGeneration(UMT5PreTrainedModel):
         >>> model = UMT5ForConditionalGeneration.from_pretrained("google/umt5-small")
 
         >>> # training
-        >>> input_ids = tokenizer("The <extra_id_0> walks in <extra_id_1> park", return_tensors="pt").input_ids
-        >>> labels = tokenizer("<extra_id_0> cute dog <extra_id_1> the <extra_id_2>", return_tensors="pt").input_ids
+        >>> input_ids = tokenizer("The <extra_id_0> walks in <extra_id_1> park", return_tensors="ms").input_ids
+        >>> labels = tokenizer("<extra_id_0> cute dog <extra_id_1> the <extra_id_2>", return_tensors="ms").input_ids
         >>> outputs = model(input_ids=input_ids, labels=labels)
         >>> loss = outputs.loss
         >>> logits = outputs.logits
 
         >>> # inference
-        >>> input_ids = tokenizer("Studies have shown that <extra_id_0> good for you", return_tensors="pt").input_ids
+        >>> input_ids = tokenizer("Studies have shown that <extra_id_0> good for you", return_tensors="ms").input_ids
         >>> outputs = model.generate(input_ids)
         >>> tokenizer.decode(outputs[0], skip_special_tokens=True)
         ```"""
@@ -1187,7 +1187,7 @@ class UMT5EncoderModel(UMT5PreTrainedModel):
     >>> model = UMT5EncoderModel.from_pretrained("google/umt5-small")
     >>> tokenizer = AutoTokenizer.from_pretrained("google/umt5-small")
     >>> article = "UN Offizier sagt, dass weiter verhandelt werden muss in Syrien."
-    >>> input_ids = tokenizer(article, return_tensors="pt").input_ids
+    >>> input_ids = tokenizer(article, return_tensors="ms").input_ids
     >>> outputs = model(input_ids)
     >>> hidden_state = outputs.last_hidden_state
     ```"""
@@ -1257,7 +1257,7 @@ class UMT5EncoderModel(UMT5PreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("google/umt5-small")
         >>> model = UMT5EncoderModel.from_pretrained("google/umt5-small")
         >>> input_ids = tokenizer(
-        ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
+        ...     "Studies have been shown that owning a dog is good for you", return_tensors="ms"
         ... ).input_ids  # Batch size 1
         >>> outputs = model(input_ids=input_ids)
         >>> last_hidden_states = outputs.last_hidden_state

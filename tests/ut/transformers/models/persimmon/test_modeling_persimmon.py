@@ -506,7 +506,7 @@ class PersimmonModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
     #     EXPECTED_TEXT_COMPLETION = """human: Simply put, the theory of relativity states that?\n\nadept: The theory of relativity states that the laws of physics are the same for all observers, regardless of their relative motion."""
     #     prompt = "human: Simply put, the theory of relativity states that?\n\nadept:"
     #     tokenizer = AutoTokenizer.from_pretrained("adept/persimmon-8b-chat", use_fast=False)
-    #     input_ids = tokenizer.encode(prompt, return_tensors="pt")
+    #     input_ids = tokenizer.encode(prompt, return_tensors="ms")
     #     model = PersimmonForCausalLM.from_pretrained(
     #         "adept/persimmon-8b-chat", load_in_8bit=True, device_map={"": 0}, torch_dtype=mindspore.float16
     #     )

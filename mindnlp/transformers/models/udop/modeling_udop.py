@@ -1432,7 +1432,7 @@ class UdopModel(UdopPreTrainedModel):
         >>> image = example["image"]
         >>> words = example["tokens"]
         >>> boxes = example["bboxes"]
-        >>> inputs = processor(image, words, boxes=boxes, return_tensors="pt")
+        >>> inputs = processor(image, words, boxes=boxes, return_tensors="ms")
 
         >>> decoder_input_ids = mindspore.tensor([[model.config.decoder_start_token_id]])
 
@@ -1606,7 +1606,7 @@ class UdopForConditionalGeneration(UdopPreTrainedModel):
         >>> # one can use the various task prefixes (prompts) used during pre-training
         >>> # e.g. the task prefix for DocVQA is "Question answering. "
         >>> question = "Question answering. What is the date on the form?"
-        >>> encoding = processor(image, question, words, boxes=boxes, return_tensors="pt")
+        >>> encoding = processor(image, question, words, boxes=boxes, return_tensors="ms")
 
         >>> # autoregressive generation
         >>> predicted_ids = model.generate(**encoding)
@@ -1824,7 +1824,7 @@ class UdopEncoderModel(UdopPreTrainedModel):
         >>> image = example["image"]
         >>> words = example["tokens"]
         >>> boxes = example["bboxes"]
-        >>> encoding = processor(image, words, boxes=boxes, return_tensors="pt")
+        >>> encoding = processor(image, words, boxes=boxes, return_tensors="ms")
 
         >>> outputs = model(**encoding)
         >>> last_hidden_states = outputs.last_hidden_state

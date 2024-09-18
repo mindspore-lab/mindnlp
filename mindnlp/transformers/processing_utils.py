@@ -162,6 +162,7 @@ class ProcessorMixin:
         local_files_only: bool = False,
         token: Optional[Union[str, bool]] = None,
         revision: str = "main",
+        mirror: str = "huggingface",
         **kwargs,
     ):
         r"""
@@ -197,6 +198,7 @@ class ProcessorMixin:
         kwargs["force_download"] = force_download
         kwargs["local_files_only"] = local_files_only
         kwargs["revision"] = revision
+        kwargs['mirror'] = mirror
 
         use_auth_token = kwargs.pop("use_auth_token", None)
         if use_auth_token is not None:

@@ -814,7 +814,7 @@ class LongT5LocalAttention(nn.Module):
 
         def unshape(states):
             """reshape"""
-            return states.contiguous().view(batch_size, -1, self.inner_dim)
+            return states.view(batch_size, -1, self.inner_dim)
 
         # get query/key/value states -> (batch_size, seq_length, n_heads, dim_per_head)
         query_states = shape(self.q(hidden_states))
@@ -1068,7 +1068,7 @@ class LongT5TransientGlobalAttention(nn.Module):
 
         def unshape(states):
             """reshape"""
-            return states.contiguous().view(batch_size, -1, self.inner_dim)
+            return states.view(batch_size, -1, self.inner_dim)
 
         # Prepare components for transient-global attention
         # Obtain block_ids and global_segment_ids

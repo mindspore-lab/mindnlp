@@ -52,7 +52,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("convnext", "ConvNextImageProcessor"),
         # ("convnextv2", "ConvNextImageProcessor"),
         ("cvt", "ConvNextImageProcessor"),
-        # ("data2vec-vision", "BeitImageProcessor"),
+        ("data2vec-vision", ("BeitImageProcessor",)),
         # ("deformable_detr", "DeformableDetrImageProcessor"),
         ("deit", "DeiTImageProcessor"),
         # ("depth_anything", "DPTImageProcessor"),
@@ -119,7 +119,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("vit_hybrid", "ViTHybridImageProcessor"),
         # ("vit_mae", "ViTImageProcessor"),
         # ("vit_msn", "ViTImageProcessor"),
-        # ("vitmatte", "VitMatteImageProcessor"),
+        ("vitmatte", "VitMatteImageProcessor"),
         ("xclip", "CLIPImageProcessor"),
         # ("yolos", "YolosImageProcessor"),
     ]

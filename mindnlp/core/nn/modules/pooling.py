@@ -1,10 +1,8 @@
 """pooling"""
 # pylint: disable=unused-import
 from typing import Optional
-import mindspore
 from mindspore import ops, Tensor
 
-from mindnlp.configs import USE_PYBOOST
 from .module import Module
 from ._utils import _single
 from ..common_types import (_size_any_t, _size_1_t, _size_2_t, _size_3_t,
@@ -159,13 +157,7 @@ class MaxPool2d(_MaxPoolNd):
     dilation: _size_2_t
 
     def forward(self, input: Tensor):
-        if USE_PYBOOST:
-            return mindspore.mint.nn.functional.max_pool2d(
-                input, self.kernel_size, self.stride,
-                self.padding, self.dilation, ceil_mode=self.ceil_mode,
-                return_indices=self.return_indices
-            )
-        return ops.max_pool2d(input, self.kernel_size, self.stride,
+        return F.max_pool2d(input, self.kernel_size, self.stride,
                             self.padding, self.dilation, ceil_mode=self.ceil_mode,
                             return_indices=self.return_indices)
 

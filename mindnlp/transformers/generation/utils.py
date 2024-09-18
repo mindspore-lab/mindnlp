@@ -13,18 +13,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=not-callable
+# pylint: disable=not-callable, no-name-in-module
 """generation mixin"""
 import copy
 import inspect
 import warnings
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
+from mindspore._c_expression import _framework_profiler_step_start
+from mindspore._c_expression import _framework_profiler_step_end
+
+from mindnlp.configs import ON_ORANGE_PI
 from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import functional as F
+from ...utils.testing_utils import parse_flag_from_env
 
 from ..cache_utils import (
     Cache,
@@ -156,6 +162,7 @@ class GenerateDecoderOnlyOutput(ModelOutput):
     attentions: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     hidden_states: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     past_key_values: Optional[Tuple[Tuple[Tuple[mindspore.Tensor]]]] = None
+    average_infer_time: Optional[float] = None
 
 
 @dataclass
@@ -208,6 +215,7 @@ class GenerateEncoderDecoderOutput(ModelOutput):
     cross_attentions: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     decoder_hidden_states: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     past_key_values: Optional[Tuple[Tuple[Tuple[mindspore.Tensor]]]] = None
+    average_infer_time: Optional[float] = None
 
 
 @dataclass
@@ -1642,6 +1650,7 @@ class GenerationMixin:
                     - [`~generation.GenerateEncoderDecoderOutput`],
                     - [`~generation.GenerateBeamEncoderDecoderOutput`]
         """
+        _run_profiler = parse_flag_from_env('MS_ENABLE_RUNTIME_PROFILER', False)
         # 1. Handle `generation_config` and kwargs that might update it, and validate the `.generate()` call
         self._validate_model_class()
         tokenizer = kwargs.pop("tokenizer", None)  # Pull this out first, we only use it for stopping criteria
@@ -1850,6 +1859,11 @@ class GenerationMixin:
         prepared_stopping_criteria = self._get_stopping_criteria(
             generation_config=generation_config, stopping_criteria=stopping_criteria, tokenizer=tokenizer, **kwargs
         )
+
+        if _run_profiler:
+            _framework_profiler_step_start()
+            logger.warning('Enabling the profiler will generate larger files. Please set `max_length` or `max_new_tokens` to a smaller value (recommended less than 10)')
+
         # 10. go into different generation modes
         if generation_mode == GenerationMode.ASSISTED_GENERATION:
             if generation_config.num_return_sequences > 1:
@@ -2106,6 +2120,9 @@ class GenerationMixin:
                 synced_gpus=synced_gpus,
                 **model_kwargs,
             )
+
+        if _run_profiler:
+            _framework_profiler_step_end()
 
         # Convert to legacy cache if needed
         if use_dynamic_cache_by_default and generation_config.return_legacy_cache:
@@ -2678,22 +2695,35 @@ class GenerationMixin:
             # prepare for the next step: (1) next token_id; (2) past_key_values; (3) last_hidden_states for computing
             # the degeneration penalty; (4) logits for selecting next top-k candidates; (5) selected tokens scores
             # (model confidence minus degeneration penalty); (6) decoder hidden_states
-            next_tokens = top_k_ids[tuple(range(len(top_k_ids))), selected_idx]
+            if ON_ORANGE_PI:
+                next_tokens = ops.getitem(top_k_ids, (tuple(range(len(top_k_ids))), selected_idx))
+            else:
+                next_tokens = top_k_ids[tuple(range(len(top_k_ids))), selected_idx]
             next_hidden = ops.stack(ops.split(ops.squeeze(next_hidden, dim=1), top_k))
-            next_hidden = next_hidden[tuple(range(batch_size)), selected_idx, :]
+            if ON_ORANGE_PI:
+                next_hidden = ops.getitem(next_hidden, (tuple(range(batch_size)), selected_idx, slice(None, None, None)))
+            else:
+                next_hidden = next_hidden[tuple(range(batch_size)), selected_idx, :]
             last_hidden_states = ops.cat([last_hidden_states, next_hidden.unsqueeze(1)], dim=1)
 
             next_decoder_hidden_states = ()
             for layer in full_hidden_states:
-                layer = ops.stack(ops.split(layer, top_k))[tuple(range(batch_size)), selected_idx, :]
+                if ON_ORANGE_PI:
+                    layer = ops.getitem(ops.stack(ops.split(layer, top_k)), (tuple(range(batch_size)), selected_idx, slice(None, None, None)))
+                else:
+                    layer = ops.stack(ops.split(layer, top_k))[tuple(range(batch_size)), selected_idx, :]
                 next_decoder_hidden_states += (layer,)
 
             # generate past_key_values cache of only the selected token
             if sequential:
-                next_model_input = self.prepare_inputs_for_generation(
-                    top_k_ids[:, selected_idx].view(-1, 1), **model_kwargs
-                )
-
+                if ON_ORANGE_PI:
+                    next_model_input = self.prepare_inputs_for_generation(
+                        ops.getitem(top_k_ids, (slice(None, None, None), selected_idx)).view(-1, 1), **model_kwargs
+                    )
+                else:
+                    next_model_input = self.prepare_inputs_for_generation(
+                        top_k_ids[:, selected_idx].view(-1, 1), **model_kwargs
+                    )
                 selected_outputs = self(
                     **next_model_input,
                     return_dict=True,
@@ -2716,12 +2746,18 @@ class GenerationMixin:
                         items = []
                         # item is either the key or the value matrix
                         for item in layer:
-                            items.append(item[augmented_idx, ...])
+                            if ON_ORANGE_PI:
+                                items.append(ops.getitem(item, (augmented_idx, slice(None, None, None))))
+                            else:
+                                items.append(item[augmented_idx, ...])
                         new_key_values.append(tuple(items))
 
                     next_past_key_values = tuple(new_key_values)
 
-            logit_for_next_step = ops.stack(ops.split(logits, top_k))[tuple(range(batch_size)), selected_idx, :]
+            if ON_ORANGE_PI:
+                logit_for_next_step = ops.getitem(ops.stack(ops.split(logits, top_k)), (tuple(range(batch_size)), selected_idx, slice(None, None, None)))
+            else:
+                logit_for_next_step = ops.stack(ops.split(logits, top_k))[tuple(range(batch_size)), selected_idx, :]
 
             # Rebuilds the relevant parts of the model output for the selected token, for use in the next iteration
             if self.config.is_encoder_decoder:
@@ -2729,10 +2765,16 @@ class GenerationMixin:
                 next_step_decoder_attentions = ()
                 if output_attentions:
                     for layer in outputs.cross_attentions:
-                        layer = ops.stack(ops.split(layer, top_k, dim=0))[tuple(range(batch_size)), selected_idx, ...]
+                        if ON_ORANGE_PI:
+                            layer = ops.getitem(ops.stack(ops.split(layer, top_k, dim=0)), (tuple(range(batch_size)), selected_idx, Ellipsis))
+                        else:
+                            layer = ops.stack(ops.split(layer, top_k, dim=0))[tuple(range(batch_size)), selected_idx, ...]
                         next_step_cross_attentions += (layer,)
                     for layer in outputs.decoder_attentions:
-                        layer = ops.stack(ops.split(layer, top_k, dim=0))[tuple(range(batch_size)), selected_idx, ...]
+                        if ON_ORANGE_PI:
+                            layer = ops.getitem(ops.stack(ops.split(layer, top_k, dim=0)), (tuple(range(batch_size)), selected_idx, Ellipsis))
+                        else:
+                            layer = ops.stack(ops.split(layer, top_k, dim=0))[tuple(range(batch_size)), selected_idx, ...]
                         next_step_decoder_attentions += (layer,)
                 outputs = Seq2SeqLMOutput(
                     past_key_values=next_past_key_values,
@@ -2744,7 +2786,10 @@ class GenerationMixin:
                 next_step_attentions = ()
                 if output_attentions:
                     for layer in outputs.attentions:
-                        layer = ops.stack(ops.split(layer, top_k, dim=0))[tuple(range(batch_size)), selected_idx, ...]
+                        if ON_ORANGE_PI:
+                            layer = ops.getitem(ops.stack(ops.split(layer, top_k, dim=0)), (tuple(range(batch_size)), selected_idx, Ellipsis))
+                        else:
+                            layer = ops.stack(ops.split(layer, top_k, dim=0))[tuple(range(batch_size)), selected_idx, ...]
                         next_step_attentions += (layer,)
                 outputs = CausalLMOutputWithPast(
                     past_key_values=next_past_key_values,
@@ -2827,7 +2872,7 @@ class GenerationMixin:
         generation_config: GenerationConfig,
         synced_gpus: bool,
         streamer: Optional["BaseStreamer"],
-        logits_warper: Optional[LogitsProcessorList],
+        logits_warper: Optional[LogitsProcessorList] = None,
         **model_kwargs,
     ) -> Union[GenerateNonBeamOutput, mindspore.Tensor]:
         r"""
@@ -2902,9 +2947,14 @@ class GenerationMixin:
         unfinished_sequences = ops.ones(batch_size, dtype=mindspore.int64)
         model_kwargs = self._get_initial_cache_position(input_ids, model_kwargs)
 
+        time_record = []
+        _record_time = parse_flag_from_env('INFERENCE_TIME_RECORD', False)
+
         while self._has_unfinished_sequences(
             this_peer_finished, synced_gpus, cur_len=cur_len, max_length=max_length
         ):
+            if _record_time:
+                infer_start = time.time()
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
@@ -2971,9 +3021,19 @@ class GenerationMixin:
             this_peer_finished = unfinished_sequences.max() == 0
             cur_len += 1
 
+            if _record_time:
+                infer_stop = time.time()
+                time_record.append(infer_stop - infer_start)
             # This is needed to properly delete outputs.logits which may be very large for first iteration
             # Otherwise a reference to outputs is kept which keeps the logits alive in the next iteration
             del outputs
+
+        average_infer_time = None
+        if time_record:
+            time_record.pop(0)
+            average_infer_time = sum(time_record) / len(time_record)
+            print(f'average inference time is: {average_infer_time}')
+            print(f'inference time record: {time_record}')
 
         if streamer is not None:
             streamer.end()
@@ -2990,6 +3050,7 @@ class GenerationMixin:
                     cross_attentions=cross_attentions,
                     decoder_hidden_states=decoder_hidden_states,
                     past_key_values=model_kwargs.get("past_key_values"),
+                    average_infer_time=average_infer_time
                 )
             else:
                 return GenerateDecoderOnlyOutput(
@@ -2999,6 +3060,7 @@ class GenerationMixin:
                     attentions=decoder_attentions,
                     hidden_states=decoder_hidden_states,
                     past_key_values=model_kwargs.get("past_key_values"),
+                    average_infer_time=average_infer_time
                 )
         else:
             return input_ids
@@ -3130,7 +3192,13 @@ class GenerationMixin:
 
         decoder_prompt_len = input_ids.shape[-1]  # record the prompt length of decoder
 
+
+        time_record = []
+        _record_time = parse_flag_from_env('INFERENCE_TIME_RECORD', False)
+
         while self._has_unfinished_sequences(this_peer_finished, synced_gpus):
+            if _record_time:
+                infer_start = time.time()
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
             # prepare variable output controls (note: some models won't accept all output controls)
@@ -3217,9 +3285,14 @@ class GenerationMixin:
             if do_sample:
                 probs = nn.functional.softmax(next_token_scores, dim=-1)
                 next_tokens = ops.multinomial(probs, num_samples=n_tokens_to_keep)
-                next_token_scores = ops.gather(next_token_scores, -1, next_tokens)
-                next_token_scores, _indices = ops.sort(next_token_scores, descending=True, dim=1)
-                next_tokens = ops.gather(next_tokens, -1, _indices)
+                if ON_ORANGE_PI:
+                    next_token_scores = ops.tf_gather(next_token_scores, next_tokens, 1, 1)
+                    next_token_scores, _indices = ops.topk(next_token_scores, next_token_scores.shape[1], dim=1)
+                    next_tokens = ops.tf_gather(next_tokens, _indices, 1, 1)
+                else:
+                    next_token_scores = ops.gather(next_token_scores, -1, next_tokens)
+                    next_token_scores, _indices = ops.sort(next_token_scores, descending=True, dim=1)
+                    next_tokens = ops.gather(next_tokens, -1, _indices)
             else:
                 next_token_scores, next_tokens = ops.topk(
                     next_token_scores, n_tokens_to_keep, dim=1, largest=True, sorted=True
@@ -3267,7 +3340,10 @@ class GenerationMixin:
             beam_next_tokens = beam_outputs["next_beam_tokens"]
             beam_idx = beam_outputs["next_beam_indices"]
 
-            input_ids = ops.cat([input_ids[beam_idx, :], beam_next_tokens.long().unsqueeze(-1)], dim=-1)
+            if ON_ORANGE_PI:
+                input_ids = ops.cat([ops.getitem(input_ids, (beam_idx, slice(None, None, None))), beam_next_tokens.long().unsqueeze(-1)], dim=-1)
+            else:
+                input_ids = ops.cat([input_ids[beam_idx, :], beam_next_tokens.long().unsqueeze(-1)], dim=-1)
 
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs,
@@ -3294,6 +3370,17 @@ class GenerationMixin:
 
             if beam_scorer.is_done or all(stopping_criteria(input_ids, scores)):
                 this_peer_finished = True
+
+            if _record_time:
+                infer_stop = time.time()
+                time_record.append(infer_stop - infer_start)
+
+        average_infer_time = None
+        if time_record:
+            time_record.pop(0)
+            average_infer_time = sum(time_record) / len(time_record)
+            print(f'average inference time is: {average_infer_time}')
+            print(f'inference time record: {time_record}')
 
         sequence_outputs = beam_scorer.finalize(
             input_ids,
@@ -3473,8 +3560,10 @@ class GenerationMixin:
 
                 # select outputs of beams of current group only
                 # No need to clone() the logits here as they will not retain outputs.logits at the end of the loop
-                next_token_logits = outputs.logits[batch_group_indices, -1, :]
-
+                if ON_ORANGE_PI:
+                    next_token_logits = ops.getitem(outputs.logits, (batch_group_indices, -1, slice(None, None, None)))
+                else:
+                    next_token_logits = outputs.logits[batch_group_indices, -1, :]
                 next_token_scores = nn.functional.log_softmax(
                     next_token_logits, dim=-1
                 )  # (batch_size * group_size, vocab_size)
@@ -3487,7 +3576,10 @@ class GenerationMixin:
                 next_token_scores = next_token_scores.expand_as(next_token_scores_processed)
 
                 if output_scores:
-                    processed_score[batch_group_indices] = next_token_scores_processed
+                    if ON_ORANGE_PI:
+                        ops.setitem(processed_score, (batch_group_indices,), next_token_scores_processed.to(processed_score.dtype))
+                    else:
+                        processed_score[batch_group_indices] = next_token_scores_processed
 
                 # reshape for beam search
                 next_token_scores = next_token_scores.view(batch_size, group_size * vocab_size)
@@ -3514,7 +3606,10 @@ class GenerationMixin:
                     group_index=beam_group_idx,
                     decoder_prompt_len=decoder_prompt_len,
                 )
-                beam_scores[batch_group_indices] = beam_outputs["next_beam_scores"]
+                if ON_ORANGE_PI:
+                    ops.setitem(beam_scores, (batch_group_indices,), beam_outputs["next_beam_scores"])
+                else:
+                    beam_scores[batch_group_indices] = beam_outputs["next_beam_scores"]
                 beam_next_tokens = beam_outputs["next_beam_tokens"]
                 beam_idx = beam_outputs["next_beam_indices"]
 
@@ -3523,17 +3618,34 @@ class GenerationMixin:
                         beam_indices[beam_group_idx][beam_idx[i]] + (beam_idx[i],) for i in range(len(beam_indices[0]))
                     )
 
-                input_ids[batch_group_indices] = group_input_ids[beam_idx]
-                group_input_ids = ops.cat([group_input_ids[beam_idx, :], beam_next_tokens.long().unsqueeze(-1)], dim=-1)
-                current_tokens[batch_group_indices] = group_input_ids[:, -1]
+                if ON_ORANGE_PI:
+                    ops.setitem(input_ids, (batch_group_indices,), group_input_ids[beam_idx])
 
-                # (beam_idx // group_size) -> batch_idx
-                # (beam_idx % group_size) -> offset of idx inside the group
-                reordering_indices[batch_group_indices] = (
-                    num_beams * ops.div(beam_idx, group_size, rounding_mode="floor")
-                    + group_start_idx
-                    + (beam_idx % group_size)
-                )
+                    group_input_ids = ops.cat([ops.getitem(group_input_ids, (beam_idx, slice(None, None, None))), beam_next_tokens.long().unsqueeze(-1)], dim=-1)
+                    ops.setitem(current_tokens, (batch_group_indices,), group_input_ids[:, -1])
+
+                    # (beam_idx // group_size) -> batch_idx
+                    # (beam_idx % group_size) -> offset of idx inside the group
+                    ops.setitem(
+                        reordering_indices,
+                        (batch_group_indices,),
+                        num_beams * ops.div(beam_idx, group_size, rounding_mode="floor")
+                        + group_start_idx
+                        + (beam_idx % group_size)
+                    )
+                else:
+                    input_ids[batch_group_indices] = group_input_ids[beam_idx]
+
+                    group_input_ids = ops.cat([group_input_ids[beam_idx, :], beam_next_tokens.long().unsqueeze(-1)], dim=-1)
+                    current_tokens[batch_group_indices] = group_input_ids[:, -1]
+
+                    # (beam_idx // group_size) -> batch_idx
+                    # (beam_idx % group_size) -> offset of idx inside the group
+                    reordering_indices[batch_group_indices] = (
+                        num_beams * ops.div(beam_idx, group_size, rounding_mode="floor")
+                        + group_start_idx
+                        + (beam_idx % group_size)
+                    )
 
             # Store scores, attentions and hidden_states when required
             if return_dict_in_generate:
@@ -3794,7 +3906,11 @@ class GenerationMixin:
             beam_next_tokens = beam_outputs["next_beam_tokens"]
             beam_idx = beam_outputs["next_beam_indices"]
 
-            input_ids = ops.cat([input_ids[beam_idx, :], beam_next_tokens.long().unsqueeze(-1)], dim=-1)
+            if ON_ORANGE_PI:
+                input_ids = ops.cat([ops.getitem(input_ids, (beam_idx, slice(None, None, None))), beam_next_tokens.long().unsqueeze(-1)], dim=-1)
+            else:
+                input_ids = ops.cat([input_ids[beam_idx, :], beam_next_tokens.long().unsqueeze(-1)], dim=-1)
+
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs,
                 model_kwargs,
@@ -4028,7 +4144,7 @@ class GenerationMixin:
                 if 0 in candidate_new_tokens.shape:
                     n_matches = 0
                 else:
-                    n_matches = (ops.cumsum((~(candidate_new_tokens == selected_tokens[:, :-1])), dim=-1) < 1).sum()
+                    n_matches = (ops.cumsum((~(candidate_new_tokens == selected_tokens[:, :-1])), dim=-1) < 1).sum().item()
                 # Ensure we don't generate beyond max_len or an EOS token
                 if is_done_candidate and n_matches == candidate_length:
                     n_matches -= 1
@@ -4162,17 +4278,25 @@ def _speculative_sampling(
     # Gets the probabilities from the logits. q_i and p_i denote the assistant and model probabilities of the tokens
     # selected by the assistant, respectively.
     q = ops.softmax(candidate_logits, dim=-1)
-    q_i = q[:, ops.arange(candidate_length), new_candidate_input_ids].squeeze()
-    p = ops.softmax(new_logits, dim=-1)
-    p_i = p[:, ops.arange(candidate_length), new_candidate_input_ids].squeeze()
-    probability_ratio = p_i / q_i
+    if ON_ORANGE_PI:
+        index = (slice(None, None, None), ops.arange(candidate_length), new_candidate_input_ids.to(mindspore.int32))
+        q_i = ops.getitem(q, index).squeeze()
+    else:
+        q_i = q[:, ops.arange(candidate_length), new_candidate_input_ids].squeeze()
 
+    p = ops.softmax(new_logits, dim=-1)
+    if ON_ORANGE_PI:
+        p_i = ops.getitem(p, index).squeeze()
+
+    else:
+        p_i = p[:, ops.arange(candidate_length), new_candidate_input_ids].squeeze()
+    probability_ratio = p_i / q_i
     # When probability_ratio > 1 (i.e. q_i(x) < p_i(x), or "assistant probability of the candidate token is smaller
     # than the model probability for the same token"), keep the token. Otherwise reject with p = 1 - probability_ratio
     # (= keep with p = probability_ratio). Keep all the tokens until the first rejection
     r_i = ops.rand_like(probability_ratio)
     is_accepted = r_i <= probability_ratio
-    n_matches = (ops.cumsum((~is_accepted), dim=-1) < 1).sum()  # this is `n` in algorithm 1
+    n_matches = (ops.cumsum((~is_accepted), dim=-1) < 1).sum().item()  # this is `n` in algorithm 1
 
     # Ensure we don't generate beyond max_len or an EOS token (not in algorithm 1, but needed for correct behavior)
     if is_done_candidate and n_matches == candidate_length:
@@ -4422,8 +4546,12 @@ def _relative_top_filter(
     probs_thresh = probs_max + np.log(relative_top)
     probs_thresh = ops.minimum(min_thresh, probs_thresh)
     probs_thresh = probs_thresh.unsqueeze(-1)
-    baseline_scores_normalized[scores_normalized < probs_thresh] = base_filter_value
-    scores_normalized[scores_normalized < probs_thresh] = filter_value
+    if ON_ORANGE_PI:
+        baseline_scores_normalized = ops.where(scores_normalized < probs_thresh, base_filter_value, baseline_scores_normalized)
+        scores_normalized = ops.where(scores_normalized < probs_thresh, filter_value, scores_normalized)
+    else:
+        baseline_scores_normalized[scores_normalized < probs_thresh] = base_filter_value
+        scores_normalized[scores_normalized < probs_thresh] = filter_value
     return scores_normalized, baseline_scores_normalized
 
 

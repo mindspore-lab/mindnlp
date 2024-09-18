@@ -2,7 +2,7 @@
 import mindspore
 
 from mindspore import ops
-from mindnlp.configs import USE_PYBOOST
+from mindnlp.configs import use_pyboost, ON_ORANGE_PI
 
 # addbmm
 def addbmm(input, batch1, batch2, *, beta=1, alpha=1):
@@ -24,7 +24,10 @@ def baddbmm(input, batch1, batch2, *, beta=1, alpha=1):
 
 # bmm
 def bmm(input, other):
-    if USE_PYBOOST:
+    if ON_ORANGE_PI:
+        input = input.to(mindspore.float16)
+        other = input.to(mindspore.float16)
+    if use_pyboost():
         return mindspore.mint.bmm(input, other)
     return ops.bmm(input, other)
 
@@ -64,7 +67,10 @@ def dot(input, other):
 
 # matmul
 def matmul(input, other):
-    if USE_PYBOOST:
+    if ON_ORANGE_PI:
+        input = input.to(mindspore.float16)
+        other = other.to(mindspore.float16)
+    if use_pyboost():
         return mindspore.mint.matmul(input, other)
     return ops.matmul(input, other)
 

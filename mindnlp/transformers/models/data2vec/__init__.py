@@ -21,6 +21,9 @@ from .modeling_data2vec_audio import *
 from . import configuration_data2vec_text, modeling_data2vec_text
 from .configuration_data2vec_text import *
 from .modeling_data2vec_text import *
+from . import configuration_data2vec_vision, modeling_data2vec_vision
+from .configuration_data2vec_vision import *
+from .modeling_data2vec_vision import *
 
 __all__ = []
 
@@ -28,3 +31,5 @@ __all__.extend(configuration_data2vec_audio.__all__)
 __all__.extend(modeling_data2vec_audio.__all__)
 __all__.extend(configuration_data2vec_text.__all__)
 __all__.extend(modeling_data2vec_text.__all__)
+__all__.extend(configuration_data2vec_vision.__all__)
+__all__.extend(modeling_data2vec_vision.__all__)

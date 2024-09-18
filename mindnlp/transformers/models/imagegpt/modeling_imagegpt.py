@@ -472,7 +472,7 @@ class ImageGPTModel(ImageGPTPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("openai/imagegpt-small")
         >>> model = ImageGPTModel.from_pretrained("openai/imagegpt-small")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> last_hidden_states = outputs.last_hidden_state
         ```"""
@@ -880,7 +880,7 @@ class ImageGPTForImageClassification(ImageGPTPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("openai/imagegpt-small")
         >>> model = ImageGPTForImageClassification.from_pretrained("openai/imagegpt-small")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> logits = outputs.logits
         ```"""

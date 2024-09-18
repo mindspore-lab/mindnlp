@@ -133,6 +133,7 @@ class TestForward:
             denominator = math.log(sum(math.exp(s) for s in all_scores))
             manual_llh += numerator - denominator
 
+        print(llh, manual_llh)
         assert_close(llh, manual_llh)
         llh.backward()  # ensure gradients can be computed
 

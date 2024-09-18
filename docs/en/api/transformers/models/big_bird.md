@@ -1,5 +1,4 @@
 :::mindnlp.transformers.models.big_bird.configuration_big_bird.BigBirdConfig
-:::mindnlp.transformers.models.big_bird.modeling_big_bird.BIG_BIRD_PRETRAINED_MODEL_ARCHIVE_LIST
 :::mindnlp.transformers.models.big_bird.modeling_big_bird.BigBirdForCausalLM
 :::mindnlp.transformers.models.big_bird.modeling_big_bird.BigBirdForMaskedLM
 :::mindnlp.transformers.models.big_bird.modeling_big_bird.BigBirdForMultipleChoice

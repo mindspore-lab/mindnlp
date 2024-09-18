@@ -243,3 +243,17 @@ def meshgrid(
     Reference: https://pytorch.org/docs/1.13/generated/torch.meshgrid.html
     """
     return ops.meshgrid(*tensors, indexing=indexing)
+
+def isin_friendly(elements: mindspore.Tensor, test_elements: mindspore.Tensor) -> mindspore.Tensor:
+    """
+    Same as `ops.isin` without flags, but MPS-friendly.
+
+    Args:
+        elements (`mindspore.Tensor`): Input elements
+        test_elements (`mindspore.Tensor`): The elements to check against.
+
+    Returns:
+        `mindspore.Tensor`: A boolean tensor of the same shape as `elements` that is True for `elements` in `test_elements`
+        and False otherwise
+    """
+    return elements.tile((test_elements.shape[0], 1)).eq(test_elements.unsqueeze(1)).sum(0).bool().squeeze()

@@ -1058,7 +1058,7 @@ class FlavaModel(FlavaPreTrainedModel):
         >>> processor = AutoProcessor.from_pretrained("{0}")
 
         >>> inputs = processor(
-        ...     text=["a photo of a cat", "a photo of a dog"], max_length=77, padding="max_length", return_tensors="pt"
+        ...     text=["a photo of a cat", "a photo of a dog"], max_length=77, padding="max_length", return_tensors="ms"
         ... )
         >>> text_features = model.get_text_features(**inputs)
         ```""".format(_CHECKPOINT_FOR_DOC)
@@ -1106,7 +1106,7 @@ class FlavaModel(FlavaPreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
 
         >>> image_features = model.get_image_features(**inputs)
         ```""".format(_CHECKPOINT_FOR_DOC)
@@ -1156,7 +1156,7 @@ class FlavaModel(FlavaPreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = processor(text=["a photo of a cat"], images=image, return_tensors="pt", padding=True)
+        >>> inputs = processor(text=["a photo of a cat"], images=image, return_tensors="ms", padding=True)
 
         >>> outputs = model(**inputs)
 
@@ -1374,7 +1374,7 @@ class FlavaImageCodebook(FlavaPreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = image_processor([image], return_codebook_pixels=True, return_tensors="pt")
+        >>> inputs = image_processor([image], return_codebook_pixels=True, return_tensors="ms")
         >>> inputs = dict(pixel_values=inputs.codebook_pixel_values)
 
         >>> outputs = model.get_codebook_indices(**inputs)
@@ -1407,7 +1407,7 @@ class FlavaImageCodebook(FlavaPreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = image_processor([image], return_codebook_pixels=True, return_tensors="pt")
+        >>> inputs = image_processor([image], return_codebook_pixels=True, return_tensors="ms")
         >>> inputs = dict(pixel_values=inputs.codebook_pixel_values)
 
         >>> outputs = model(**inputs)
@@ -1581,7 +1581,7 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
         ...     return_codebook_pixels=True,
         ...     padding=True,
         ...     max_length=77,
-        ...     return_tensors="pt",
+        ...     return_tensors="ms",
         ... )
 
 

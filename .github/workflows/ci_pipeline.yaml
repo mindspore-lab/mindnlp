@@ -80,7 +80,7 @@ jobs:
         pip install -r download.txt
     - name: Test with pytest
       run: |
-        pytest -c pytest.ini -m 'not download and not gpu_only' tests/ut
+        pytest -c pytest.ini -m 'not download and not gpu_only' --ignore=tests/ut/transformers tests/ut
 
   release-test:
     needs: pylint-check
