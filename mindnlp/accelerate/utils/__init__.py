@@ -35,6 +35,11 @@ from .modeling import (
     # shard_checkpoint,
 )
 
+from .mindformers import (
+    MindFormersDummyDataLoader,
+    MindFormersDummyScheduler
+)
+
 if is_mindformers_available():
     from .mindformers import (
         MindFormersEngine,

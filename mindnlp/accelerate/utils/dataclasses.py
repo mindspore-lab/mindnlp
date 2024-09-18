@@ -1,6 +1,7 @@
 import enum
 import os
 import functools
+
 from .environment import str_to_bool
 from dataclasses import dataclass, field
 
@@ -45,11 +46,6 @@ class MindFormersPlugin:
         if self.sequence_parallelism is None:
             self.sequence_parallelism = str_to_bool(os.environ.get(prefix + "SEQUENCE_PARALLELISM", "False")) == 1
 
-        if self.pp_degree > 1 or self.use_distributed_optimizer:
-            self.DDP_impl = "local"
-        else:
-            self.DDP_impl = "torch"
-
         if self.consumed_samples is not None:
             if len(self.consumed_samples) == 1:
                 self.consumed_samples.extend([0, 0])
@@ -83,24 +79,50 @@ class MindFormersPlugin:
         if self.other_mindformers_args is not None:
             self.mindformers_default_args.update(self.other_mindformers_args)
 
-        def set_training_args(self, micro_batch_size, dp_degree):
-            return
-        
-        def set_optimizer_type(self, optimizer):
-            return
+    def set_training_args(self, micro_batch_size, dp_degree):
+        return
 
-        def set_scheduler_args(self, scheduler):
-            return
+    def set_optimizer_type(self, optimizer):
+        return
 
-MODEL_CONFIGS_TO_MEGATRON_PARSERS = {}
+    def set_scheduler_args(self, scheduler):
+        return
 
-def add_model_config_to_megatron_parser(model_type: str):
+    def set_model_type(self, model_type: str):
+        self.mindformers_default_args["model_type"] = model_type
+
+    def create_mindformers_config(self):
+        # TODO: create
+        config_path = ""
+        self.mindformers_default_args["config_path"] = config_path
+
+    @property
+    def model_type(self):
+        if "model_type" in self.mindformers_default_args:
+            return self.mindformers_default_args["model_type"]
+        else:
+            return ""
+
+    @property
+    def config_path(self):
+        if "config_path" in self.mindformers_default_args:
+            return self.mindformers_default_args["config_path"]
+        else:
+            return ""
+
+MODEL_CONFIGS_TO_MINDFORMERS_PARSERS = {}
+
+def add_model_config_to_mindformers_parser(model_type: str):
     def add_model_config_parser_helper(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
 
-        MODEL_CONFIGS_TO_MEGATRON_PARSERS[model_type] = func
+        MODEL_CONFIGS_TO_MINDFORMERS_PARSERS[model_type] = func
         return wrapper
 
     return add_model_config_parser_helper
+
+@add_model_config_to_mindformers_parser("llama")
+def parse_llama_config(mindformers_plugin, model, batch_data):
+    pass

@@ -1,7 +1,12 @@
+import os
+from functools import partial
+
+import mindspore
 from contextlib import contextmanager
 from typing import Callable, Any
+
 from .utils import (
-    DistributedType
+    DistributedType, is_mindformers_available
 )
 
 SharedDict = dict
@@ -29,7 +34,12 @@ class PartialState:
 
     def __init__(self, cpu: bool = False, **kwargs):
         self.__dict__ = self._shared_state
-    
+        self._prepare_backend()
+
+        if self.backend == "hccl":
+            self.num_processes = mindspore.communication.get_group_size()
+            self.process_index = mindspore.communication.get_rank()
+
     def __repr__(self) -> str:
         return (
             f"Distributed environment: {self.distributed_type}{('  Backend: ' + self.backend) if self.backend else ''}\n"
@@ -40,12 +50,12 @@ class PartialState:
     
     @staticmethod
     def _reset_state():
-        "Resets `_shared_state`, is used internally and should not be called"
+        """Resets `_shared_state`, is used internally and should not be called"""
         PartialState._shared_state.clear()
 
     @property
     def initialized(self) -> bool:
-        "Returns whether the `PartialState` has been initialized"
+        """Returns whether the `PartialState` has been initialized"""
         return self._shared_state != {}
 
     @property
@@ -57,22 +67,22 @@ class PartialState:
 
     @property
     def is_last_process(self) -> bool:
-        "Returns whether the current process is the last one"
+        """Returns whether the current process is the last one"""
         return self.process_index == self.num_processes - 1
 
     @property
     def is_main_process(self) -> bool:
-        "Returns whether the current process is the main process"
+        """Returns whether the current process is the main process"""
         return (
             self.process_index == 0 if self.distributed_type != DistributedType.MINDFORMERS else self.is_last_process
         )
 
     @property
     def is_local_main_process(self) -> bool:
-        "Returns whether the current process is the main process on the local node"
+        """Returns whether the current process is the main process on the local node"""
         return (
             self.local_process_index == 0
-            if self.distributed_type != DistributedType.MEGATRON_LM
+            if self.distributed_type != DistributedType.MINDFORMERS
             else self.is_last_process
         )
 
@@ -315,6 +325,13 @@ class PartialState:
     def print(self, *args, **kwargs):
         if self.is_local_main_process:
             print(*args, **kwargs)
+
+    def _prepare_backend(self):
+        # now mindformers only
+        if is_mindformers_available():
+            self.backend = "hccl"
+            self.distributed_type = DistributedType.MINDFORMERS
+
     
 class AcceleratorState:
     
@@ -323,8 +340,11 @@ class AcceleratorState:
         "mindformers_plugin"
     ]
 
-    def __init__(self):
+    def __init__(self, mindformers_plugin=None):
         self.__dict__ = self._shared_state
+        if os.environ.get("ACCELERATE_USE_MINDFORMERS", "false") == "true":
+            self.distributed_type = DistributedType.MINDFORMERS
+            self.mindformers_plugin = mindformers_plugin
 
     def __repr__(self):
         return PartialState().__repr__()
@@ -336,7 +356,7 @@ class AcceleratorState:
     
     @staticmethod
     def _reset_state(reset_partial_state: bool = False):
-        "Resets `_shared_state`, is used internally and should not be called"
+        """Resets `_shared_state`, is used internally and should not be called"""
         AcceleratorState._shared_state.clear()
         if reset_partial_state:
             PartialState._reset_state()
@@ -350,17 +370,17 @@ class AcceleratorState:
 
     @property
     def is_last_process(self) -> bool:
-        "Returns whether the current process is the last one"
+        """Returns whether the current process is the last one"""
         return PartialState().is_last_process
 
     @property
     def is_main_process(self) -> bool:
-        "Returns whether the current process is the main process"
+        """Returns whether the current process is the main process"""
         return PartialState().is_main_process
 
     @property
     def is_local_main_process(self) -> bool:
-        "Returns whether the current process is the main process on the local node"
+        """Returns whether the current process is the main process on the local node"""
         return PartialState().is_local_main_process
 
     def wait_for_everyone(self):

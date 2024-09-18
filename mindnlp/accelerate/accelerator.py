@@ -1,5 +1,8 @@
 import os
 import mindspore
+from mindspore import nn
+from mindspore.communication import init
+from typing import Optional
 from mindspore.experimental.optim.lr_scheduler import LRScheduler
 from .state import AcceleratorState
 from .utils import (
@@ -33,7 +36,7 @@ class Accelerator:
 
     def __init__(
         self,
-        mindformers_plugin: MindFormersPlugin | None = None,
+        mindformers_plugin: Optional[MindFormersPlugin] = None,
     ):
         # init mindformers_plugin from env variables
         if mindformers_plugin is None:
@@ -47,7 +50,10 @@ class Accelerator:
         if mindformers_plugin:
             if not is_mindformers_available():
                 raise ImportError("MindFormers is not installed. Please install it")
-            
+            # The distributed backend required to initialize the communication service.
+            # Should be placed before Tensor and Parameter are created.
+            init()
+
         # Internal references to the training objects
         self._optimizers = []
         self._models = []
@@ -133,7 +139,7 @@ class Accelerator:
         # initialize mindformers
         mindformers_initialize(self, args_defaults=mindformers_plugin.mindformers_defualt_args)
 
-        (model, optimizer, scheduler) = mindformers_prepare_model_optimizer_scheduler(self)
+        (model, optimizer) = mindformers_prepare_model_optimizer_scheduler(self)
         self.wait_for_everyone()
 
         counter = 0
