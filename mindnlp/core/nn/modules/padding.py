@@ -1,12 +1,11 @@
 """padding"""
 from typing import Sequence, Tuple
-import mindspore
-from mindspore import ops, Tensor
+from mindspore import Tensor
 
-from mindnlp.configs import USE_PYBOOST
 from .module import Module
 from ._utils import _pair, _quadruple, _ntuple
 from ..common_types import _size_2_t, _size_4_t, _size_6_t
+from .. import functional as F
 
 class _ConstantPadNd(Module):
     __constants__ = ['padding', 'value']
@@ -18,9 +17,7 @@ class _ConstantPadNd(Module):
         self.value = value
 
     def forward(self, input: Tensor) -> Tensor:
-        if USE_PYBOOST:
-            return mindspore.mint.nn.functional.pad(input, self.padding, 'constant', self.value)
-        return ops.pad(input, self.padding, 'constant', self.value)
+        return F.pad(input, self.padding, 'constant', self.value)
 
     def extra_repr(self) -> str:
         return f'padding={self.padding}, value={self.value}'
