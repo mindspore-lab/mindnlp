@@ -1,5 +1,7 @@
 """Module"""
 import warnings
+import weakref
+import functools
 from typing import Dict, Optional, Callable, Set, overload, TypeVar, Any, Iterator, Tuple, Union, \
     Mapping, List
 import itertools
@@ -10,9 +12,9 @@ from mindspore import Tensor, Parameter
 from mindspore.common._stub_tensor import StubTensor
 from mindspore.common.dtype import Float
 
+from mindnlp.configs import ON_ORANGE_PI, set_pyboost
 from ...utils import hooks
 from ...utils.hooks import RemovableHandle
-
 
 T = TypeVar('T', bound='Module')
 
@@ -49,6 +51,41 @@ _global_forward_pre_hooks: Dict[int, Callable] = OrderedDict()
 _global_forward_hooks: Dict[int, Callable] = OrderedDict()
 _global_forward_hooks_always_called: Dict[int, bool] = OrderedDict()
 
+
+class _WrappedHook:
+    def __init__(self, hook: Callable, module: Optional["Module"] = None):
+        self.hook: Callable = hook
+        functools.update_wrapper(self, hook)
+
+        self.with_module: bool = False
+
+        if module is not None:
+            self.module: weakref.ReferenceType[Module] = weakref.ref(module)
+            self.with_module = True
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        if self.with_module:
+            module = self.module()
+            if module is None:
+                raise RuntimeError("You are trying to call the hook of a dead Module!")
+            return self.hook(module, *args, **kwargs)
+        return self.hook(*args, **kwargs)
+
+    def __getstate__(self) -> Dict:
+        result = {"hook": self.hook, "with_module": self.with_module}
+        if self.with_module:
+            result["module"] = self.module()
+
+        return result
+
+    def __setstate__(self, state: Dict):
+        self.hook = state["hook"]
+        self.with_module = state["with_module"]
+
+        if self.with_module:
+            if state["module"] is None:
+                raise RuntimeError("You are trying to revive the hook of a dead Module!")
+            self.module = weakref.ref(state["module"])
 
 class Module:
     r"""Base class for all neural network modules.
@@ -1159,6 +1196,8 @@ class Module:
         Returns:
             Module: self
         """
+        if ON_ORANGE_PI:
+            set_pyboost(not mode)
         self.training = mode
         for module in self.children():
             module.train(mode)
@@ -1365,6 +1404,56 @@ class Module:
             if hook_result is not None:
                 destination = hook_result
         return destination
+
+    def _register_load_state_dict_pre_hook(self, hook, with_module=False):
+        r"""Register a pre-hook for the :meth:`~torch.nn.Module.load_state_dict` method.
+
+        These hooks will be called with arguments: `state_dict`, `prefix`,
+        `local_metadata`, `strict`, `missing_keys`, `unexpected_keys`,
+        `error_msgs`, before loading `state_dict` into `self`. These arguments
+        are exactly the same as those of `_load_from_state_dict`.
+
+        If ``with_module`` is ``True``, then the first argument to the hook is
+        an instance of the module.
+
+        Arguments:
+            hook (Callable): Callable hook that will be invoked before
+                loading the state dict.
+            with_module (bool, optional): Whether or not to pass the module
+                instance to the hook as the first parameter.
+        """
+        handle = hooks.RemovableHandle(self._load_state_dict_pre_hooks)
+        self._load_state_dict_pre_hooks[handle.id] = _WrappedHook(hook, self if with_module else None)
+        return handle
+
+    def register_load_state_dict_post_hook(self, hook):
+        r"""Register a post hook to be run after module's ``load_state_dict`` is called.
+
+        It should have the following signature::
+            hook(module, incompatible_keys) -> None
+
+        The ``module`` argument is the current module that this hook is registered
+        on, and the ``incompatible_keys`` argument is a ``NamedTuple`` consisting
+        of attributes ``missing_keys`` and ``unexpected_keys``. ``missing_keys``
+        is a ``list`` of ``str`` containing the missing keys and
+        ``unexpected_keys`` is a ``list`` of ``str`` containing the unexpected keys.
+
+        The given incompatible_keys can be modified inplace if needed.
+
+        Note that the checks performed when calling :func:`load_state_dict` with
+        ``strict=True`` are affected by modifications the hook makes to
+        ``missing_keys`` or ``unexpected_keys``, as expected. Additions to either
+        set of keys will result in an error being thrown when ``strict=True``, and
+        clearing out both missing and unexpected keys will avoid an error.
+
+        Returns:
+            :class:`torch.utils.hooks.RemovableHandle`:
+                a handle that can be used to remove the added hook by calling
+                ``handle.remove()``
+        """
+        handle = hooks.RemovableHandle(self._load_state_dict_post_hooks)
+        self._load_state_dict_post_hooks[handle.id] = hook
+        return handle
 
     def parameters_dict(self, recurse=True):
         param_dict = OrderedDict()

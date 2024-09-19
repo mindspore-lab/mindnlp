@@ -12,25 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the PyTorch MegatronBERT model. """
-
+"""Testing suite for the MindSpore MegatronBERT model."""
 
 import math
 import os
 import unittest
 
-from mindnlp.utils import is_mindspore_available
-from mindnlp.transformers import MegatronBertConfig
+from mindnlp.transformers import MegatronBertConfig, is_mindspore_available
 from mindnlp.transformers.models.auto import get_values
-from mindnlp.utils.testing_utils import require_mindspore, slow
+from mindnlp.utils.testing_utils import require_sentencepiece, require_tokenizers, require_mindspore, slow
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask
+# from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import nn, ops, no_grad
 
     from mindnlp.transformers import (
         MODEL_FOR_PRETRAINING_MAPPING,
@@ -141,8 +140,7 @@ class MegatronBertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = MegatronBertModel(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids)
         result = model(input_ids, token_type_ids=token_type_ids)
         result = model(input_ids)
@@ -154,8 +152,7 @@ class MegatronBertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = MegatronBertForMaskedLM(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
@@ -163,8 +160,7 @@ class MegatronBertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = MegatronBertForCausalLM(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
 
@@ -172,8 +168,7 @@ class MegatronBertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = MegatronBertForNextSentencePrediction(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -186,8 +181,7 @@ class MegatronBertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = MegatronBertForPreTraining(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -202,8 +196,7 @@ class MegatronBertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         model = MegatronBertForQuestionAnswering(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(
             input_ids,
             attention_mask=input_mask,
@@ -219,8 +212,7 @@ class MegatronBertModelTester:
     ):
         config.num_labels = self.num_labels
         model = MegatronBertForSequenceClassification(config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=sequence_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
@@ -229,8 +221,7 @@ class MegatronBertModelTester:
     ):
         config.num_labels = self.num_labels
         model = MegatronBertForTokenClassification(config=config)
-
-        model.set_train(False)
+        model.eval()
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.num_labels))
 
@@ -239,8 +230,7 @@ class MegatronBertModelTester:
     ):
         config.num_choices = self.num_choices
         model = MegatronBertForMultipleChoice(config=config)
-
-        model.set_train(False)
+        model.eval()
         multiple_choice_inputs_ids = input_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
         multiple_choice_token_type_ids = token_type_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
         multiple_choice_input_mask = input_mask.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
@@ -271,6 +261,7 @@ class MegatronBertModelTester:
 class MegatronBertModelTest(ModelTesterMixin, unittest.TestCase):
     all_model_classes = (
         (
+            MegatronBertModel,
             MegatronBertForMaskedLM,
             MegatronBertForCausalLM,
             MegatronBertForMultipleChoice,
@@ -307,9 +298,11 @@ class MegatronBertModelTest(ModelTesterMixin, unittest.TestCase):
         if return_labels:
             if model_class in get_values(MODEL_FOR_PRETRAINING_MAPPING):
                 inputs_dict["labels"] = ops.zeros(
-                    (self.model_tester.batch_size, self.model_tester.seq_length), dtype=mindspore.int64)
+                    (self.model_tester.batch_size, self.model_tester.seq_length), dtype=mindspore.int64
+                )
                 inputs_dict["next_sentence_label"] = ops.zeros(
-                    self.model_tester.batch_size, dtype=mindspore.int64)
+                    self.model_tester.batch_size, dtype=mindspore.int64
+                )
         return inputs_dict
 
     def setUp(self):
@@ -355,7 +348,7 @@ class MegatronBertModelTest(ModelTesterMixin, unittest.TestCase):
 def _long_tensor(tok_lst):
     return mindspore.tensor(
         tok_lst,
-        dtype=mindspore.int64
+        dtype=mindspore.int64,
     )
 
 
@@ -363,18 +356,20 @@ TOLERANCE = 1e-4
 
 
 @require_mindspore
+@require_sentencepiece
+@require_tokenizers
 class MegatronBertModelIntegrationTests(unittest.TestCase):
     @slow
-    @unittest.skip("Model is not available.")
+    @unittest.skip(reason="Model is not available.")
     def test_inference_no_head(self):
         directory = "nvidia/megatron-bert-uncased-345m"
         if "MYDIR" in os.environ:
             directory = os.path.join(os.environ["MYDIR"], directory)
         model = MegatronBertModel.from_pretrained(directory)
-
         model.half()
         input_ids = _long_tensor([[101, 7110, 1005, 1056, 2023, 11333, 17413, 1029, 102]])
-        output = model(input_ids)[0]
+        with no_grad():
+            output = model(input_ids)[0]
         expected_shape = (1, 9, 1024)
         self.assertEqual(output.shape, expected_shape)
 

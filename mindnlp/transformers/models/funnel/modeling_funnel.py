@@ -947,7 +947,7 @@ class FunnelForPreTraining(FunnelPreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained("funnel-transformer/small")
             >>> model = FunnelForPreTraining.from_pretrained("funnel-transformer/small")
             ...
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> logits = model(**inputs).logits
             ```
         """

@@ -718,7 +718,7 @@ class SegGptModel(SegGptPreTrainedModel):
         >>> model = SegGptModel.from_pretrained(checkpoint)
         >>> image_processor = SegGptImageProcessor.from_pretrained(checkpoint)
 
-        >>> inputs = image_processor(images=image_input, prompt_images=image_prompt, prompt_masks=mask_prompt, return_tensors="pt")
+        >>> inputs = image_processor(images=image_input, prompt_images=image_prompt, prompt_masks=mask_prompt, return_tensors="ms")
 
         >>> outputs = model(**inputs)
         >>> list(outputs.last_hidden_state.shape)
@@ -892,7 +892,7 @@ class SegGptForImageSegmentation(SegGptPreTrainedModel):
         >>> model = SegGptForImageSegmentation.from_pretrained(checkpoint)
         >>> image_processor = SegGptImageProcessor.from_pretrained(checkpoint)
 
-        >>> inputs = image_processor(images=image_input, prompt_images=image_prompt, prompt_masks=mask_prompt, return_tensors="pt")
+        >>> inputs = image_processor(images=image_input, prompt_images=image_prompt, prompt_masks=mask_prompt, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> result = image_processor.post_process_semantic_segmentation(outputs, target_sizes=[image_input.size[::-1]])[0]
         >>> print(list(result.shape))

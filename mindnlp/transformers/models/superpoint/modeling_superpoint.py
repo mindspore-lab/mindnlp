@@ -399,7 +399,7 @@ class SuperPointForKeypointDetection(SuperPointPreTrainedModel):
         >>> processor = AutoImageProcessor.from_pretrained("magic-leap-community/superpoint")
         >>> model = SuperPointForKeypointDetection.from_pretrained("magic-leap-community/superpoint")
 
-        >>> inputs = processor(image, return_tensors="pt")
+        >>> inputs = processor(image, return_tensors="ms")
         >>> outputs = model(**inputs)
         ```"""
         loss = None

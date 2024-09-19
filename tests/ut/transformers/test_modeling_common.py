@@ -81,7 +81,7 @@ from mindnlp.utils.testing_utils import (
     require_mindspore,
     slow,
 )
-from mindnlp.configs import CONFIG_NAME, GENERATION_CONFIG_NAME, SAFE_WEIGHTS_NAME
+from mindnlp.configs import CONFIG_NAME, GENERATION_CONFIG_NAME, SAFE_WEIGHTS_NAME, ON_ORANGE_PI
 from mindnlp.utils.generic import ContextManagers, ModelOutput
 
 
@@ -214,12 +214,13 @@ class ModelTesterMixin:
             elif model_class.__name__ in get_values(MODEL_FOR_SEMANTIC_SEGMENTATION_MAPPING_NAMES):
                 batch_size, num_channels, height, width = inputs_dict["pixel_values"].shape
                 inputs_dict["labels"] = ops.zeros(
-                    [self.model_tester.batch_size, height, width]
+                    (self.model_tester.batch_size, height, width)
                 ).long()
 
         return inputs_dict
 
     def test_save_load(self):
+        set_seed(123)
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def check_save_load(out1, out2):
@@ -1752,7 +1753,10 @@ class ModelTesterMixin:
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def set_nan_tensor_to_zero(t):
-            t[t != t] = 0
+            if ON_ORANGE_PI:
+                t = ops.where(t != t, 0, t)
+            else:
+                t[t != t] = 0
             return t
 
         def check_equivalence(model, tuple_inputs, dict_inputs, additional_kwargs={}):
@@ -1934,7 +1938,8 @@ class ModelTesterMixin:
                 # some models infer position ids/attn mask differently when input ids
                 # by check if pad_token let's make sure no padding is in input ids
                 not_pad_token_id = pad_token_id + 1 if max(0, pad_token_id - 1) == 0 else pad_token_id - 1
-                input_ids[input_ids == pad_token_id] = not_pad_token_id
+                input_ids = ops.where(input_ids == pad_token_id, not_pad_token_id, input_ids)
+                # input_ids[input_ids == pad_token_id] = not_pad_token_id
                 del inputs["input_ids"]
                 inputs_embeds = wte(input_ids)
                 with no_grad():
@@ -1943,8 +1948,10 @@ class ModelTesterMixin:
             else:
                 encoder_input_ids = inputs["input_ids"]
                 decoder_input_ids = inputs.get("decoder_input_ids", encoder_input_ids)
-                encoder_input_ids[encoder_input_ids == pad_token_id] = max(0, pad_token_id + 1)
-                decoder_input_ids[decoder_input_ids == pad_token_id] = max(0, pad_token_id + 1)
+                # encoder_input_ids[encoder_input_ids == pad_token_id] = max(0, pad_token_id + 1)
+                # decoder_input_ids[decoder_input_ids == pad_token_id] = max(0, pad_token_id + 1)
+                encoder_input_ids = ops.where(encoder_input_ids == pad_token_id, max(0, pad_token_id + 1), encoder_input_ids)
+                decoder_input_ids = ops.where(decoder_input_ids == pad_token_id, max(0, pad_token_id + 1), decoder_input_ids)
                 del inputs["input_ids"]
                 inputs.pop("decoder_input_ids", None)
                 inputs_embeds = wte(encoder_input_ids)

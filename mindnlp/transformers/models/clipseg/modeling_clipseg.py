@@ -172,7 +172,7 @@ class CLIPSegVisionEmbeddings(nn.Module):
             1, self.config.hidden_size, num_patches_one_direction, num_patches_one_direction
         )
         b = (
-            ops.interpolate(a, new_size, mode="bicubic", align_corners=False)
+            nn.functional.interpolate(a, new_size, mode="bicubic", align_corners=False)
             .squeeze(0)
             .view(self.config.hidden_size, new_size[0] * new_size[1])
             .T
@@ -699,7 +699,7 @@ class CLIPSegTextModel(CLIPSegPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("CIDAS/clipseg-rd64-refined")
         >>> model = CLIPSegTextModel.from_pretrained("CIDAS/clipseg-rd64-refined")
 
-        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
 
         >>> outputs = model(**inputs)
         >>> last_hidden_state = outputs.last_hidden_state
@@ -808,7 +808,7 @@ class CLIPSegVisionModel(CLIPSegPreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
 
         >>> outputs = model(**inputs)
         >>> last_hidden_state = outputs.last_hidden_state
@@ -879,7 +879,7 @@ class CLIPSegModel(CLIPSegPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("CIDAS/clipseg-rd64-refined")
         >>> model = CLIPSegModel.from_pretrained("CIDAS/clipseg-rd64-refined")
 
-        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
         >>> text_features = model.get_text_features(**inputs)
         ```"""
         # Use CLIPSEG model's config for some fields (if specified) instead of those of vision & text components.
@@ -927,7 +927,7 @@ class CLIPSegModel(CLIPSegPreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
 
         >>> image_features = model.get_image_features(**inputs)
         ```"""
@@ -977,7 +977,7 @@ class CLIPSegModel(CLIPSegPreTrainedModel):
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
         >>> inputs = processor(
-        ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
+        ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="ms", padding=True
         ... )
 
         >>> outputs = model(**inputs)
@@ -1276,7 +1276,7 @@ class CLIPSegForImageSegmentation(CLIPSegPreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
         >>> texts = ["a cat", "a remote", "a blanket"]
-        >>> inputs = processor(text=texts, images=[image] * len(texts), padding=True, return_tensors="pt")
+        >>> inputs = processor(text=texts, images=[image] * len(texts), padding=True, return_tensors="ms")
 
         >>> outputs = model(**inputs)
 

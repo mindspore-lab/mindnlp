@@ -1137,7 +1137,7 @@ class Data2VecTextForCausalLM(Data2VecTextPreTrainedModel):
             >>> config.is_decoder = True
             >>> model = Data2VecTextForCausalLM.from_pretrained("facebook/data2vec-text-base", config=config)
             ...
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> prediction_logits = outputs.logits

@@ -6,7 +6,7 @@ from mindspore import ops
 from mindspore.common.initializer import initializer
 from mindspore.ops._primitive_cache import _get_cache_prim
 
-from mindnlp.configs import USE_PYBOOST
+from mindnlp.configs import use_pyboost
 from .reduction import any
 from .comparison import eq
 
@@ -33,7 +33,7 @@ def broadcast_tensors(*tensors):
 
 # broadcast_to
 def broadcast_to(input, shape):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.broadcast_to(input, shape)
     return ops.broadcast_to(input, shape)
 
@@ -92,7 +92,7 @@ def clone(input):
 
 # cumsum
 def cumsum(input, dim, dtype=None):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.cumsum(input, dim, dtype)
     if input.dtype == mindspore.bool_:
         input = input.to(mindspore.int32)
@@ -544,7 +544,7 @@ def flatten(input, start_dim=1, end_dim=-1):
 
 # flip
 def flip(input, dims):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.flip(input, dims)
     return ops.flip(input, dims)
 
@@ -606,7 +606,7 @@ def roll(input, shifts, dims=None):
 
 # searchsorted
 def searchsorted(sorted_sequence, values, *, out_int32=False, right=False, side=None, sorter=None):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.searchsorted(sorted_sequence, values, out_int32=out_int32, right=right, side=side, sorter=sorter)
     return ops.searchsorted(sorted_sequence, values, out_int32=out_int32, right=right)
 

@@ -331,7 +331,7 @@ class TimesformerModelIntegrationTest(unittest.TestCase):
 
         image_processor = self.default_image_processor
         video = prepare_video()
-        inputs = image_processor(video[:8], return_tensors="pt")
+        inputs = image_processor(video[:8], return_tensors="ms")
 
         # forward pass
         with no_grad():

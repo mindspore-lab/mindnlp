@@ -769,7 +769,7 @@ class DeformableDetrModelIntegrationTests(unittest.TestCase):
 
         image_processor = self.default_image_processor
         image = prepare_img()
-        encoding = image_processor(images=image, return_tensors="pt")
+        encoding = image_processor(images=image, return_tensors="ms")
         pixel_values = encoding["pixel_values"]
         pixel_mask = encoding["pixel_mask"]
 
@@ -823,7 +823,7 @@ class DeformableDetrModelIntegrationTests(unittest.TestCase):
 
         image_processor = self.default_image_processor
         image = prepare_img()
-        encoding = image_processor(images=image, return_tensors="pt")
+        encoding = image_processor(images=image, return_tensors="ms")
         pixel_values = encoding["pixel_values"]
         pixel_mask = encoding["pixel_mask"]
 
@@ -861,7 +861,7 @@ class DeformableDetrModelIntegrationTests(unittest.TestCase):
     def test_inference_object_detection_head_equivalence_cpu_gpu(self):
         image_processor = self.default_image_processor
         image = prepare_img()
-        encoding = image_processor(images=image, return_tensors="pt")
+        encoding = image_processor(images=image, return_tensors="ms")
         pixel_values = encoding["pixel_values"]
         pixel_mask = encoding["pixel_mask"]
 

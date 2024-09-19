@@ -180,7 +180,7 @@ class FuyuForCausalLM(FuyuPreTrainedModel):
         >>> image = Image.open(requests.get(url, stream=True).raw)
         >>> prompt = "Generate a coco-style caption.\n"
 
-        >>> inputs = processor(text=prompt, images=image, return_tensors="pt")
+        >>> inputs = processor(text=prompt, images=image, return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> generated_ids = model.generate(**inputs, max_new_tokens=7)

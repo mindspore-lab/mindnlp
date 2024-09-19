@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import mindspore
 
 from mindnlp.core import nn, ops
+from mindnlp.configs import ON_ORANGE_PI
 from .configuration_utils import PretrainedConfig
 from ..utils import logging
 
@@ -446,8 +447,12 @@ class DynamicCache(Cache):
     def batch_select_indices(self, indices: mindspore.Tensor):
         """Only keep the `indices` in the batch dimension of the cache. Used in contrastive search."""
         for layer_idx in range(len(self)):
-            self.key_cache[layer_idx] = self.key_cache[layer_idx][indices, ...]
-            self.value_cache[layer_idx] = self.value_cache[layer_idx][indices, ...]
+            if ON_ORANGE_PI:
+                self.key_cache[layer_idx] = ops.getitem(self.key_cache[layer_idx], (indices, Ellipsis))
+                self.value_cache[layer_idx] = ops.getitem(self.value_cache[layer_idx], (indices, Ellipsis))
+            else:
+                self.key_cache[layer_idx] = self.key_cache[layer_idx][indices, ...]
+                self.value_cache[layer_idx] = self.value_cache[layer_idx][indices, ...]
 
 
 class QuantizedCache(DynamicCache):
@@ -1245,10 +1250,10 @@ class MambaCache:
     def update_conv_state(
         self, layer_idx: int, new_conv_state: mindspore.Tensor, cache_position: mindspore.Tensor
     ) -> mindspore.Tensor:
-        conv_state = self.conv_states[layer_idx]
+        conv_state = self.conv_states[layer_idx].copy()
         cache_position = cache_position.clamp(0, self.conv_kernel_size - 1)
 
-        conv_state = conv_state.roll(shifts=-1, dims=-1)
+        conv_state = ops.roll(conv_state, shifts=-1, dims=-1)
         conv_state[:, :, cache_position] = new_conv_state
         self.conv_states[layer_idx][:] = 0
         self.conv_states[layer_idx] += conv_state
