@@ -155,7 +155,10 @@ def select(input, dim, index):
 # scatter
 def scatter(input, dim, index, src):
     if use_pyboost():
-        return mindspore.ops.auto_generate.gen_ops_prim.scatter_op(input, dim, index, src, 0)
+        try:
+            return mindspore.mint.scatter(input, dim, index, src)
+        except:
+            return mindspore.ops.auto_generate.gen_ops_prim.scatter_op(input, dim, index, src, 0)
     if not isinstance(src, mindspore.Tensor):
         src = ops.full(index.shape, src, dtype=input.dtype)
     return ops.tensor_scatter_elements(input, index, src, dim)
