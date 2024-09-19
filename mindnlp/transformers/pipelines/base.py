@@ -32,7 +32,7 @@ import mindspore
 from mindspore import ops
 from mindspore.dataset import Dataset
 
-from mindnlp.utils import (
+from ...utils import (
     ModelOutput,
     is_mindspore_available,
     logging,
