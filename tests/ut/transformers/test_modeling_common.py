@@ -81,7 +81,7 @@ from mindnlp.utils.testing_utils import (
     require_mindspore,
     slow,
 )
-from mindnlp.configs import CONFIG_NAME, GENERATION_CONFIG_NAME, SAFE_WEIGHTS_NAME
+from mindnlp.configs import CONFIG_NAME, GENERATION_CONFIG_NAME, SAFE_WEIGHTS_NAME, ON_ORANGE_PI
 from mindnlp.utils.generic import ContextManagers, ModelOutput
 
 
@@ -1753,8 +1753,10 @@ class ModelTesterMixin:
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def set_nan_tensor_to_zero(t):
-            # t[t != t] = 0
-            t = ops.where(t != t, 0, t)
+            if ON_ORANGE_PI:
+                t = ops.where(t != t, 0, t)
+            else:
+                t[t != t] = 0
             return t
 
         def check_equivalence(model, tuple_inputs, dict_inputs, additional_kwargs={}):
