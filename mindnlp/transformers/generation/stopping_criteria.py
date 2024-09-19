@@ -25,6 +25,7 @@ import mindspore
 from mindnlp.core import ops
 from mindnlp.core.nn import functional as F
 
+from ..ms_utils import isin_friendly
 from ..tokenization_utils_base import PreTrainedTokenizerBase
 from ...utils import logging
 
@@ -470,7 +471,7 @@ class EosTokenCriteria(StoppingCriteria):
         self.eos_token_id = eos_token_id
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor, **kwargs) -> mindspore.Tensor:
-        is_done = ops.isin(input_ids[:, -1], self.eos_token_id)
+        is_done = isin_friendly(input_ids[:, -1], self.eos_token_id)
         return is_done
 
 
