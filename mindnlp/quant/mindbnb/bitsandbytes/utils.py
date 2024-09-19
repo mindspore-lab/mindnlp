@@ -104,7 +104,7 @@ class OutlierTracer:
 def find_outlier_dims(weight, reduction_dim=0, zscore=4.0, topk=None, rdm=False):
     if rdm:
         return ops.randint(
-            0, weight.shape[1], size=(topk,), device=weight.device
+            0, weight.shape[1], size=(topk,)
         ).long()
 
     m = weight.mean(reduction_dim)
