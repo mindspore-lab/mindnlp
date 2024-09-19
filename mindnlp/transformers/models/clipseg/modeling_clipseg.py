@@ -172,7 +172,7 @@ class CLIPSegVisionEmbeddings(nn.Module):
             1, self.config.hidden_size, num_patches_one_direction, num_patches_one_direction
         )
         b = (
-            ops.interpolate(a, new_size, mode="bicubic", align_corners=False)
+            nn.functional.interpolate(a, new_size, mode="bicubic", align_corners=False)
             .squeeze(0)
             .view(self.config.hidden_size, new_size[0] * new_size[1])
             .T
