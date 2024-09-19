@@ -38,7 +38,7 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ....utils import logging
-from ....configs import SUPPORT_VIEW, use_pyboost
+from ....configs import SUPPORT_VIEW, use_pyboost, ON_ORANGE_PI
 from .configuration_qwen2 import Qwen2Config
 
 
@@ -119,7 +119,7 @@ class Qwen2RMSNorm(nn.Module):
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
-        if not self.training and use_pyboost():
+        if not self.training and use_pyboost() and not ON_ORANGE_PI:
             return F.rms_norm(hidden_states, self.weight, self.variance_epsilon)
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
@@ -910,7 +910,12 @@ class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
             else:
                 sequence_lengths = -1
 
-        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
+        if ON_ORANGE_PI:
+            if isinstance(sequence_lengths, mindspore.Tensor):
+                sequence_lengths = sequence_lengths.to(mindspore.int32)
+            pooled_logits = ops.getitem(logits, (ops.arange(batch_size), sequence_lengths))
+        else:
+            pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
 
         loss = None
         if labels is not None:
