@@ -1,10 +1,28 @@
+# Copyright 2024 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+"""
+    replace modules
+"""
+# pylint: disable=E0611, E0401
 import logging
 import mindspore
-from mindnlp.core import nn
-from mindnlp.core.nn import Conv1d
 
 from bitsandbytes.nn.modules import Int8Params
 import bitsandbytes as bnb
+
+from mindnlp.core import nn
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +47,9 @@ def _replace_with_bnb_linear(
         current_key_name.append(name)
 
         if (
-            isinstance(module, nn.Linear) or isinstance(module, nn.Conv1d)
-        ) and name not in modules_to_not_convert:
+            isinstance(module, (nn.Conv1d, nn.Linear))
+            and name not in modules_to_not_convert
+        ):
             # Check if the current key is not in the `modules_to_not_convert`
             current_key_name_str = ".".join(current_key_name)
             if not any(
@@ -44,8 +63,12 @@ def _replace_with_bnb_linear(
                     in_features = module.in_features
                     out_features = module.out_features
 
-                weight = model._modules[name].weight.clone() 
-                bias = model._modules[name].bias.clone() if model._modules[name].bias is not None else None
+                weight = model._modules[name].weight.clone()
+                bias = (
+                    model._modules[name].bias.clone()
+                    if model._modules[name].bias is not None
+                    else None
+                )
 
                 # Replace with MindSpore equivalent or custom module
                 model._modules[name] = bnb.nn.Linear8bitLt(
@@ -54,10 +77,12 @@ def _replace_with_bnb_linear(
                     has_fp16_weights=llm_int8_has_fp16_weight,
                     threshold=llm_int8_threshold,
                 )
-                
-                model._modules[name].weight = Int8Params(weight.data, 
-                                                         requires_grad=llm_int8_has_fp16_weight, 
-                                                         has_fp16_weights=llm_int8_has_fp16_weight)
+
+                model._modules[name].weight = Int8Params(
+                    weight.data,
+                    requires_grad=llm_int8_has_fp16_weight,
+                    has_fp16_weights=llm_int8_has_fp16_weight,
+                )
                 if bias is not None:
                     model._modules[name].bias = mindspore.Parameter(bias)
 

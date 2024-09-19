@@ -1,3 +1,20 @@
+# Copyright 2024 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+'''
+    utils
+'''
 import json
 import shlex
 import subprocess
@@ -33,8 +50,8 @@ def outlier_hook(module, input):
             # (1) zscore test of std of hidden dimension
             outlier_idx = find_outlier_dims(merged, reduction_dim=1, zscore=3)
             # (2) magnitude > 6 test
-            dims = (ops.abs(input[0]) > 6).sum(dim=list(range(len(input[0].shape) - 1)))
-            outlier_idx2 = ops.where(dims > 0)[0]
+            dims = (ops.abs([0]) > 6).sum(dim=list(range(len(input[0].shape) - 1)))
+            outlier_idx2 = ops.nonzero(dims > 0)[0]
             outlier_idx = ops.cat([outlier_idx, outlier_idx2]).unique()
             tracer.hvalue2outlier_idx[hvalue] = outlier_idx
     else:
@@ -86,7 +103,9 @@ class OutlierTracer:
 
 def find_outlier_dims(weight, reduction_dim=0, zscore=4.0, topk=None, rdm=False):
     if rdm:
-        return ops.randint(0, weight.shape[1], size=(topk,), device=weight.device).long()
+        return ops.randint(
+            0, weight.shape[1], size=(topk,), device=weight.device
+        ).long()
 
     m = weight.mean(reduction_dim)
     mm = m.mean()
@@ -102,14 +121,16 @@ def find_outlier_dims(weight, reduction_dim=0, zscore=4.0, topk=None, rdm=False)
     if topk is not None:
         val, idx = ops.topk(std.abs(), k=topk, dim=0)
     else:
-        idx = ops.where(zstd > zscore)[0]
+        idx = ops.nonzero(zstd > zscore)[0]
 
     return idx
 
 
 def execute_and_return(command_string: str) -> Tuple[str, str]:
     def _decode(subprocess_err_out_tuple):
-        return tuple(to_decode.decode("UTF-8").strip() for to_decode in subprocess_err_out_tuple)
+        return tuple(
+            to_decode.decode("UTF-8").strip() for to_decode in subprocess_err_out_tuple
+        )
 
     def execute_and_return_decoded_std_streams(command_string):
         return _decode(
@@ -134,7 +155,13 @@ def replace_linear(
 
     for name, module in model.named_children():
         if len(list(module.children())) > 0:
-            replace_linear(module, linear_replacement, skip_modules, copy_weights, post_processing_function)
+            replace_linear(
+                module,
+                linear_replacement,
+                skip_modules,
+                copy_weights,
+                post_processing_function,
+            )
 
         if isinstance(module, nn.Linear) and name not in skip_modules:
             old_module = model._modules[name]
@@ -170,5 +197,12 @@ def unpack_tensor_to_dict(tensor_data):
     return unpacked_dict
 
 
-LINEAR_8BIT_WEIGHTS_FORMAT_MAPPING = {"row": 0, "col32": 1, "col_turing": 2, "col_ampere": 3}
-INVERSE_LINEAR_8BIT_WEIGHTS_FORMAT_MAPPING = {val: name for (name, val) in LINEAR_8BIT_WEIGHTS_FORMAT_MAPPING.items()}
+LINEAR_8BIT_WEIGHTS_FORMAT_MAPPING = {
+    "row": 0,
+    "col32": 1,
+    "col_turing": 2,
+    "col_ampere": 3,
+}
+INVERSE_LINEAR_8BIT_WEIGHTS_FORMAT_MAPPING = {
+    val: name for (name, val) in LINEAR_8BIT_WEIGHTS_FORMAT_MAPPING.items()
+}

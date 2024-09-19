@@ -1,20 +1,28 @@
+# Copyright 2024 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+'''
+    custom ops
+'''
+# pylint: disable=E0401
 import mindspore
 from mindspore import ops
-from mindspore.ops import custom_info_register, CustomRegOp, DataType
+
+# from mindspore.ops import custom_info_register, CustomRegOp, DataType
 
 from bitsandbytes.lib import lib_path
 
-# Custom ops infomation register
-# cget_col_row_stats_info = (
-#     CustomRegOp()
-#     .attr(name="cget_col_row_stats",)
-#     .input(0, "input", DataType.F32_Default)
-#     .output(0, "output", DataType.F32_Default)
-#     .dtype_format(DataType.F32_Default, DataType.F32_Default)
-#     .dtype_format(DataType.F32_Default, DataType.F32_Default)
-#     .target("GPU")
-#     .get_op_info()
-# )
 
 cget_col_row_stats = ops.Custom(
     f"{lib_path}:custom_cget_col_row_stats",

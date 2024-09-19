@@ -1,28 +1,38 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
-# This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+'''
+    mindbnb modules
+'''
+# pylint: disable=E0611, E0401, W1113
 import copy
-from typing import Any, Dict, Optional, TypeVar, Union, overload
-import warnings
-import numpy as np
+from typing import TypeVar
 
 import mindspore
-from mindspore import Tensor, ops, context
 
-from mindnlp.core import nn
 from mindspore._c_expression import (
     Tensor as CTensor,
 )  # pylint: disable=no-name-in-module, import-error
 
 import bitsandbytes as bnb
 from bitsandbytes.autograd._functions import get_tile_inds, undo_layout
-from bitsandbytes.functional import QuantState
 from bitsandbytes.utils import (
     INVERSE_LINEAR_8BIT_WEIGHTS_FORMAT_MAPPING,
     LINEAR_8BIT_WEIGHTS_FORMAT_MAPPING,
-    OutlierTracer,
 )
+
+from mindnlp.core import nn
 
 
 def empty(*size, dtype=None):
@@ -276,9 +286,8 @@ class Linear8bitLt(nn.Linear):
         for key, param in self.parameters_dict().items():
             if param is None:
                 continue
-            else:
-                if key == "weight":
-                    self.cuda(self.weight)
+            if key == "weight":
+                self.cuda(self.weight)
         return self
 
     def cuda(self, param):

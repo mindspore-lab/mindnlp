@@ -1,3 +1,17 @@
+# Copyright 2024 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
 """
 extract factors the build is dependent on:
 [X] compute capability
@@ -15,7 +29,7 @@ evaluation:
         - determine capabilities
         - based on that set the default path
 """
-
+# pylint: disable=E0401
 import logging
 import os
 from pathlib import Path
@@ -23,7 +37,10 @@ import ctypes as ct
 
 from mindspore import context
 
-from bitsandbytes.consts import DYNAMIC_LIBRARY_SUFFIX, PACKAGE_DIR
+from bitsandbytes.consts import (
+    DYNAMIC_LIBRARY_SUFFIX,
+    PACKAGE_DIR,
+)
 from bitsandbytes.cuda_specs import CUDASpecs, get_cuda_specs
 
 logger = logging.getLogger(__name__)
@@ -88,7 +105,9 @@ def get_native_library_path():
         if cuda_binary_path.exists():
             binary_path = cuda_binary_path
         else:
-            logger.warning("Could not find the bitsandbytes CUDA binary at %r", cuda_binary_path)
+            logger.warning(
+                "Could not find the bitsandbytes CUDA binary at %r", cuda_binary_path
+            )
     logger.debug(f"Loading bitsandbytes native library from: {binary_path}")
     dll = ct.cdll.LoadLibrary(str(binary_path))
 
@@ -101,29 +120,6 @@ def get_native_library_path():
     )
     return binary_path
 
-
-# def get_native_library() -> BNBNativeLibrary:
-#     binary_path = PACKAGE_DIR / f"libbitsandbytes_cpu{DYNAMIC_LIBRARY_SUFFIX}"
-#     cuda_specs = get_cuda_specs()
-#     if cuda_specs:
-#         cuda_binary_path = get_cuda_bnb_library_path(cuda_specs)
-#         if cuda_binary_path.exists():
-#             binary_path = cuda_binary_path
-#         else:
-#             logger.warning(
-#                 "Could not find the bitsandbytes CUDA binary at %r", cuda_binary_path
-#             )
-#     logger.debug(f"Loading bitsandbytes native library from: {binary_path}")
-#     dll = ct.cdll.LoadLibrary(str(binary_path))
-
-#     if hasattr(dll, "get_context"):  # only a CUDA-built library exposes this
-#         return CudaBNBNativeLibrary(dll)
-
-#     logger.warning(
-#         "The installed version of bitsandbytes was compiled without GPU support. "
-#         "8-bit optimizers, 8-bit multiplication, and GPU quantization are unavailable.",
-#     )
-#     return BNBNativeLibrary(dll)
 
 try:
     lib_path = get_native_library_path()

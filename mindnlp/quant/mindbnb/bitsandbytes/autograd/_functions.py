@@ -1,14 +1,28 @@
+# Copyright 2024 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+"""
+    _functions
+"""
+# pylint: disable=E0401, E0611
 from dataclasses import dataclass
 from functools import reduce  # Required in Python 3
 import operator
 from typing import Callable, Optional, Tuple
 import warnings
-from warnings import warn
 import mindspore
-from mindspore import ops, Tensor, nn, context
-import subprocess
-import numpy as np
-import time
+from mindspore import ops, Tensor, nn
 import bitsandbytes.functional as F
 from mindspore._c_expression import (
     Tensor as CTensor,
@@ -20,6 +34,7 @@ def empty(*size, dtype=None):
         size = size[0]
     out = CTensor(dtype, size)
     return mindspore.Tensor(out)
+
 
 # math.prod not compatible with python < 3.8
 def prod(iterable):
@@ -154,91 +169,6 @@ class MatMul8bit:
 
         return output
 
-    # @staticmethod
-    # def backward(ctx, grad_output):
-    #     A, B = ctx.saved_tensors
-    #     quant_type = ctx.quant_type
-    #     precision = ctx.precision
-    #     grad_A = grad_B = None
-
-    #     if B.requires_grad:
-    #         if len(A.shape) == 3:
-    #             dims = [0, 1]
-    #             # bsi -> ibs
-    #             permute_dim = [0, 2, 1]
-    #         else:
-    #             dims = [0]
-    #             # bs -> sb
-    #             permute_dim = [1, 0]
-
-    #         if precision[1] != 8:
-    #             grad_B = ops.matmul(A.permute(permute_dim), grad_output)
-    #         else:
-    #             if len(B.shape) == 2 and len(A.shape) == 3:
-    #                 grad_output = grad_output.contiguous()
-    #                 if not grad_output.is_contiguous():
-    #                     grad_output.contiguous()
-    #                 qgrad_output, S1 = F.vectorwise_quant(
-    #                     grad_output.view(-1, grad_output.shape[2]),
-    #                     dim=0,
-    #                     quant_type=quant_type,
-    #                 )
-    #                 if not A.is_contiguous():
-    #                     A = A.contiguous()
-    #                 qA, S2 = F.vectorwise_quant(A.view(-1, A.shape[2]), dim=0, quant_type=quant_type)
-    #                 igrad_B = F.igemm(qA.t(), qgrad_output)
-    #                 grad_B = F.vectorwise_mm_dequant(igrad_B, S2.t(), S1, grad_output.dtype, quant_type)
-    #             else:
-    #                 qgrad_output, S1 = F.vectorwise_quant(grad_output, dim=dims, quant_type=quant_type)
-    #                 qA, S2 = F.vectorwise_quant(A, dim=dims, quant_type=quant_type)
-    #                 igrad_B = F.igemm(qA.permute(permute_dim), qgrad_output)
-    #                 grad_B = F.vectorwise_mm_dequant(
-    #                     igrad_B,
-    #                     S2.permute(permute_dim),
-    #                     S1,
-    #                     grad_output.dtype,
-    #                     quant_type,
-    #                 )
-
-    #     if A.requires_grad:
-    #         if len(grad_output.shape) == 3:
-    #             dims = [2]
-    #         else:
-    #             dims = [1]
-
-    #         if len(B.shape) == 3:
-    #             # bio -> boi
-    #             permute_dim = [0, 2, 1]
-    #             dim_B = dims
-    #         else:
-    #             # io -> oi
-    #             permute_dim = [1, 0]
-    #             dim_B = [1]
-
-    #         if precision[2] != 8:
-    #             grad_A = ops.matmul(grad_output, B.permute(permute_dim))
-    #         else:
-    #             qgrad_output, S1 = F.vectorwise_quant(grad_output, dim=dims, quant_type=quant_type)
-    #             qB, S3 = F.vectorwise_quant(B, dim=dim_B, quant_type=quant_type)
-    #             igrad_A = F.igemm(qgrad_output, qB.permute(permute_dim))
-    #             grad_A = F.vectorwise_mm_dequant(
-    #                 igrad_A,
-    #                 S1,
-    #                 S3.permute(permute_dim),
-    #                 grad_output.dtype,
-    #                 quant_type,
-    #             )
-
-    #     return grad_A, grad_B, None, None, None
-
-
-# mm_cublas = MatMul8bit.apply
-# bmm_cublas = MatMul8bit.apply
-# matmul_cublas = MatMul8bit.apply
-
-
-import mindspore.context as context
-
 
 def supports_igemmlt() -> bool:
     """检查当前设备是否支持优化的 int8 内核"""
@@ -266,9 +196,9 @@ def _get_tile_size(format):
 
 
 def get_tile_inds(format, device):
-    transform = lambda x: F.transform(x, from_order="row", to_order=format)[0].to(
-        x.device
-    )
+    def transform(x):
+        return F.transform(x, from_order="row", to_order=format)[0].to(x.device)
+
     return get_inverse_transform_indices(transform, _get_tile_size(format))
 
 
@@ -327,7 +257,6 @@ class MatMul8bitLt(nn.Cell):
         self.needs_input_grad = [False, False, False, False, False]
 
     def construct(self, A, B, out=None, bias=None, state=MatmulLtState):
-        # time_1 = time.time()
         using_igemmlt = supports_igemmlt() and not state.force_no_igemmlt
         # default of pymindspore behavior if inputs are empty
         self.is_empty = False
@@ -356,7 +285,6 @@ class MatMul8bitLt(nn.Cell):
             warnings.warn(
                 f"MatMul8bitLt: inputs will be cast from {A.dtype} to float16 during quantization"
             )
-        # time_2 = time.time()
         # 1. Quantize A
         if len(A.shape) == 3:
             A = A.reshape(-1, A.shape[-1])
@@ -382,10 +310,9 @@ class MatMul8bitLt(nn.Cell):
             if not state.has_fp16_weights and state.CxB is None and using_igemmlt:
                 state.CxB, state.SB = F.transform(state.CB, to_order=formatB)
             subA = None
-        # time_3 = time.time()
         # 2. Quantize B
         if state.has_fp16_weights:
-            has_grad = True if (getattr(B, "grad", None) is not None) else False
+            has_grad = getattr(B, "grad", None) is not None
             if (state.is_training and not has_grad) or state.CxB is None:
                 state.reset_grads()
                 (
@@ -429,7 +356,6 @@ class MatMul8bitLt(nn.Cell):
             output_shape = (input_shape[0], input_shape[1], shapeB[0])
         else:
             output_shape = (input_shape[0], shapeB[0])
-        # time_4 = time.time()
         # 3. Matmul
         if using_igemmlt:
             C32A, SA = F.transform(CA, "col32")
@@ -440,7 +366,7 @@ class MatMul8bitLt(nn.Cell):
                 output = output.to(A.dtype)
             else:  # apply bias separately
                 output = F.mm_dequant(out32, Sout32, SCA, state.SCB, bias=None)
-                output = output.to(A.dtype) + bias 
+                output = output.to(A.dtype) + bias
 
         else:
             A_wo_outliers = A.copy()
@@ -452,11 +378,9 @@ class MatMul8bitLt(nn.Cell):
             output = output * scb
             if bias is not None:
                 output = output + bias
-        # time_5 = time.time()
         # 4. Mixed-precision decomposition matmul
         if coo_tensorA is not None and subA is not None:
             output += ops.matmul(subA, state.subB)
-        # time_6 = time.time()
         # 5. Save state
         self.state = state
 
@@ -476,17 +400,12 @@ class MatMul8bitLt(nn.Cell):
             self.tensor_states = (None, None)
 
         clone_func = clone if len(output_shape) == 3 else lambda x: x
-        # time_7 = time.time()
-        # print("prev time: ", time_2 - time_1)
-        # print("1. Quantize A: ", time_3 - time_2)
-        # print("2. Quantize B: ", time_4 - time_3)
-        # print("3. Matmul: ", time_5 - time_4)
-        # print("4. Mixed-precision decomposition matmul: ", time_6 - time_5)
-        # print("5. Save state: ", time_7 - time_6)
 
         return clone_func(output.view(output_shape))
 
+
 matmul8bitlt = MatMul8bitLt()
+
 
 def matmul(
     A: mindspore.Tensor,
@@ -501,4 +420,3 @@ def matmul(
         state.threshold = threshold
     # return MatMul8bitLt(A, B, out, bias, state)
     return matmul8bitlt(A, B, out, bias, state)
-
