@@ -48,18 +48,18 @@ if TYPE_CHECKING:
     from .modeling_value_head import AutoModelForSeq2SeqLMWithValueHead
     from .utils import setup_chat_format, SUPPORTED_ARCHITECTURES
 
-    try:
-        if not is_diffusers_available():
-            raise OptionalDependencyNotAvailable()
-    except OptionalDependencyNotAvailable:
-        pass
-    else:
-        from .modeling_sd_base import (
-            DDPOPipelineOutput,
-            DDPOSchedulerOutput,
-            DDPOStableDiffusionPipeline,
-            DefaultDDPOStableDiffusionPipeline,
-        )
+    # try:
+    #     if not is_diffusers_available():
+    #         raise OptionalDependencyNotAvailable()
+    # except OptionalDependencyNotAvailable:
+    #     pass
+    # else:
+    #     from .modeling_sd_base import (
+    #         DDPOPipelineOutput,
+    #         DDPOSchedulerOutput,
+    #         DDPOStableDiffusionPipeline,
+    #         DefaultDDPOStableDiffusionPipeline,
+    #     )
 else:
     import sys
 

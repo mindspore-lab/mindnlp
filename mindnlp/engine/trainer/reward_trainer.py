@@ -13,19 +13,10 @@ See the License for the specific language governing permissions and
 limitations under the License.'''
 
 # pylint: disable=C,R
-# pylint: disable=line-too-long
-# pylint: disable=too-many-instance-attributes
-# pylint: disable=missing-class-docstring
-# pylint: disable=unused-argument
-# pylint: disable=too-many-arguments
-# pylint: disable=no-else-return
-# pylint: disable=too-many-locals
-# pylint: disable=too-many-branches
-# pylint: disable=too-many-statements
-# pylint: disable=unused-import
 
 import inspect
 import warnings
+import wandb
 from collections import defaultdict
 from dataclasses import FrozenInstanceError, replace
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -353,7 +344,5 @@ class RewardTrainer(Trainer):
 
         print_rich_table(df[:num_print_samples])
         if "wandb" in self.args.report_to:
-            import wandb
-
             if wandb.run is not None:
                 wandb.log({"completions": wandb.Table(dataframe=df)})

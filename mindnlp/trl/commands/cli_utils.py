@@ -61,7 +61,6 @@ def init_zero_verbose():
     """
     Perform zero verbose init - use this method on top of the CLI modules to make
     """
-    import logging
     import warnings
 
     from rich.logging import RichHandler

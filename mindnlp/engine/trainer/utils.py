@@ -18,12 +18,12 @@ import random
 import warnings
 # from collections import deque
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Tuple
 
 import mindspore.numpy as np
 import pandas as pd
 import mindspore as ms
-from mindnlp.core import ops,nn
+from mindnlp.core import ops,nn,no_grad
 # from accelerate import Accelerator
 # from accelerate.state import AcceleratorState, PartialState
 # from accelerate.utils import is_deepspeed_available
@@ -1215,27 +1215,27 @@ class OnpolicyRuntimeConfig:
 #     return model
 
 
-# def truncate_response(stop_token_id: int, pad_token_id: int, responses: torch.Tensor):
-#     """
-#     Truncates the responses at the first occurrence of the stop token, filling the rest with pad tokens.
+def truncate_response(stop_token_id: int, pad_token_id: int, responses: torch.Tensor):
+    """
+    Truncates the responses at the first occurrence of the stop token, filling the rest with pad tokens.
 
-#     Args:
-#         stop_token_id (`int`):
-#             The token ID representing the stop token where truncation occurs.
-#         pad_token_id (`int`):
-#             The token ID representing the pad token used to fill the truncated responses.
-#         responses (`torch.Tensor`):
-#             The tensor containing the responses to be truncated.
+    Args:
+        stop_token_id (`int`):
+            The token ID representing the stop token where truncation occurs.
+        pad_token_id (`int`):
+            The token ID representing the pad token used to fill the truncated responses.
+        responses (`torch.Tensor`):
+            The tensor containing the responses to be truncated.
 
-#     Returns:
-#         `torch.Tensor`:
-#             The truncated responses tensor with pad tokens filled after the stop token.
-#     """
-#     trunc_idxs = first_true_indices(responses == stop_token_id).unsqueeze(-1)
-#     new_size = [1] * (len(responses.size()) - 1) + [responses.shape[1]]
-#     idxs = torch.arange(responses.shape[1], device=responses.device).view(*new_size)
-#     postprocessed_responses = torch.masked_fill(responses, idxs > trunc_idxs, pad_token_id)
-#     return postprocessed_responses
+    Returns:
+        `torch.Tensor`:
+            The truncated responses tensor with pad tokens filled after the stop token.
+    """
+    trunc_idxs = first_true_indices(responses == stop_token_id).unsqueeze(-1)
+    new_size = [1] * (len(responses.shape) - 1) + [responses.shape[1]]
+    idxs = ops.arange(responses.shape[1]).view(*new_size)
+    postprocessed_responses = ops.masked_fill(responses, idxs > trunc_idxs, pad_token_id)
+    return postprocessed_responses
 
 
 # def generate(
@@ -1277,4 +1277,207 @@ class OnpolicyRuntimeConfig:
 #     return torch.cat((queries, output.sequences[:, context_length:]), dim=1), logits
 
 
+def add_bos_token_if_needed(
+    bos_token_id: Optional[int],
+    prompt_len_input_ids: int,
+    prompt_tokens: Dict[str, List[int]],
+    chosen_prompt_len_input_ids: int,
+    chosen_tokens: Dict[str, List[int]],
+    rejected_prompt_len_input_ids: int,
+    rejected_tokens: Dict[str, List[int]],
+):
+    if bos_token_id is not None:
+        if prompt_len_input_ids == 0 or bos_token_id != prompt_tokens["prompt_input_ids"][0]:
+            prompt_tokens["prompt_input_ids"] = [bos_token_id] + prompt_tokens["prompt_input_ids"]
+            prompt_tokens["prompt_attention_mask"] = [1] + prompt_tokens["prompt_attention_mask"]
+        if chosen_prompt_len_input_ids == 0 or bos_token_id != chosen_tokens["prompt_input_ids"][0]:
+            chosen_tokens["prompt_input_ids"] = [bos_token_id] + chosen_tokens["prompt_input_ids"]
+            chosen_tokens["prompt_attention_mask"] = [1] + chosen_tokens["prompt_attention_mask"]
+        if rejected_prompt_len_input_ids == 0 or bos_token_id != rejected_tokens["prompt_input_ids"][0]:
+            rejected_tokens["prompt_input_ids"] = [bos_token_id] + rejected_tokens["prompt_input_ids"]
+            rejected_tokens["prompt_attention_mask"] = [1] + rejected_tokens["prompt_attention_mask"]
+    return prompt_tokens, chosen_tokens, rejected_tokens
 
+
+def add_eos_token_if_needed(
+    eos_token_id: int, chosen_tokens: Dict[str, List[int]], rejected_tokens: Dict[str, List[int]]
+):
+    if len(chosen_tokens["input_ids"]) == 0 or eos_token_id != chosen_tokens["input_ids"][-1]:
+        chosen_tokens["input_ids"].append(eos_token_id)
+        chosen_tokens["attention_mask"].append(1)
+    if len(rejected_tokens["input_ids"]) == 0 or eos_token_id != rejected_tokens["input_ids"][-1]:
+        rejected_tokens["input_ids"].append(eos_token_id)
+        rejected_tokens["attention_mask"].append(1)
+    return chosen_tokens, rejected_tokens
+
+@dataclass
+class OnlineTrainerState(TrainerState):
+    episode: int = 0
+    
+@no_grad()
+def batch_generation(
+    model: nn.Module,
+    queries: ms.Tensor,
+    local_rollout_forward_batch_size: int,
+    pad_token_id: int,
+    generation_config,
+):
+    query_responses = []
+    logitss = []
+    for i in range(0, queries.shape[0], local_rollout_forward_batch_size):
+        query = queries[i : i + local_rollout_forward_batch_size]
+        query_response, logits = generate(
+            model,
+            query,
+            pad_token_id,
+            generation_config,
+        )
+        query_responses.append(query_response)
+        logitss.append(logits)
+    return ops.cat(query_responses, 0), ops.cat(logitss, 0)
+
+def generate(
+    lm_backbone: nn.Module, queries: ms.Tensor, pad_token_id: int, generation_config
+) -> Tuple[ms.Tensor, ms.Tensor]:
+    """
+    Generates sequences from the language model backbone in a way that does not affect padding tokens.
+
+    Args:
+        lm_backbone (`torch.nn.Module`):
+            The language model backbone used for generation.
+        queries (`torch.Tensor`):
+            The tensor containing the input queries.
+        pad_token_id (`int`):
+            The token ID representing the pad token.
+        generation_config (`GenerationConfig`):
+            The configuration for the generation process.
+
+    Returns:
+        tuple:
+            - `generated_sequences` (`torch.Tensor`):
+                The concatenated tensor of input queries and generated sequences.
+            - `logits` (`torch.Tensor`):
+                The logits output from the generation process.
+    """
+    context_length = queries.shape[1]
+    attention_mask = queries != pad_token_id
+    input_ids = ops.masked_fill(queries, ~attention_mask, 0)
+    output = lm_backbone.generate(
+        input_ids=input_ids,
+        attention_mask=attention_mask,
+        # position_ids=attention_mask.cumsum(1) - attention_mask.long(), # not needed: already adjusted in generations
+        # https://github.com/huggingface/transformers/blob/ac33aeeeee2a7a89b89c93c2962e6feb90daef0a/src/transformers/models/gpt2/modeling_gpt2.py#L1227-L1250
+        generation_config=generation_config,
+        return_dict_in_generate=True,
+        output_scores=True,
+    )
+    logits = ops.stack(output.scores, 1)
+    return ops.cat((queries, output.sequences[:, context_length:]), dim=1), logits
+
+def exact_div(a, b, custom_error_message=""):
+    q = a // b
+    if a != q * b:
+        raise ValueError(f"{custom_error_message}, inexact division: {a} / {b} = {a / b}")
+    return q
+
+def first_true_indices(bools: ms.Tensor, dtype=ms.int64):
+    """
+    Takes an N-dimensional bool tensor and returns an (N-1)-dimensional tensor of integers giving
+    the position of the first True in each "row".
+
+    Returns the length of the rows (bools.size(-1)) if no element is True in a given row.
+
+    Args:
+        bools (`torch.Tensor`):
+            An N-dimensional boolean tensor.
+        dtype (`torch.dtype`, optional):
+            The desired data type of the output tensor. Defaults to `torch.long`.
+
+    Returns:
+        `torch.Tensor`:
+            An (N-1)-dimensional tensor of integers indicating the position of the first True
+            in each row. If no True value is found in a row, returns the length of the row.
+    """
+    row_len = bools.shape[-1]
+    zero_or_index = row_len * (~bools).type(dtype) + ops.arange(row_len, dtype=dtype)
+    return ops.min(zero_or_index, dim=-1).values
+
+def forward(
+    model: nn.Module,
+    query_responses: ms.Tensor,
+    pad_token_id: int,
+) -> nn.Module:
+    """
+    Performs a forward pass through the model with the given query responses and pad token ID.
+
+    Args:
+        model (`torch.nn.Module`):
+            The model to perform the forward pass.
+        query_responses (`torch.Tensor`):
+            The tensor containing the query responses.
+        pad_token_id (`int`):
+            The token ID representing the pad token.
+
+    Returns:
+        `torch.nn.Module`:
+            The output of the model, including hidden states.
+    """
+    attention_mask = query_responses != pad_token_id
+    position_ids = attention_mask.cumsum(1) - attention_mask.long()
+    input_ids = ops.masked_fill(query_responses, ~attention_mask, 0)
+    return model(
+        input_ids=input_ids,
+        attention_mask=attention_mask,
+        position_ids=position_ids,
+        return_dict=True,
+        output_hidden_states=True,
+    )
+
+def get_reward(
+    model: nn.Module, query_responses: ms.Tensor, pad_token_id: int, context_length: int
+) -> Tuple[ms.Tensor, ms.Tensor, ms.Tensor]:
+    """
+    Computes the reward logits and the rewards for a given model and query responses.
+
+    Args:
+        model (`torch.nn.Module`):
+            The model used to compute the reward logits.
+        query_responses (`torch.Tensor`):
+            The tensor containing the query responses.
+        pad_token_id (`int`):
+            The token ID representing the pad token.
+        context_length (`int`):
+            The length of the context in the query responses.
+
+    Returns:
+        tuple:
+            - `reward_logits` (`torch.Tensor`):
+                The logits for the reward model.
+            - `final_rewards` (`torch.Tensor`):
+                The final rewards for each query response.
+            - `sequence_lengths` (`torch.Tensor`):
+                The lengths of the sequences in the query responses.
+    """
+    attention_mask = query_responses != pad_token_id
+    position_ids = attention_mask.cumsum(1) - attention_mask.long()  # exclusive cumsum
+    lm_backbone = getattr(model, model.base_model_prefix)
+    input_ids = ops.masked_fill(query_responses, ~attention_mask, 0)
+    output = lm_backbone(
+        input_ids=input_ids,
+        attention_mask=attention_mask,
+        position_ids=position_ids,
+        return_dict=True,
+        output_hidden_states=True,
+        use_cache=False,  # otherwise mistral-based RM would error out
+    )
+    reward_logits = model.score(output.hidden_states[-1])
+    sequence_lengths = first_true_indices(query_responses[:, context_length:] == pad_token_id) - 1 + context_length
+    # https://github.com/huggingface/transformers/blob/dc68a39c8111217683bf49a4912d0c9018bab33d/src/transformers/models/gpt2/modeling_gpt2.py#L1454
+    return (
+        reward_logits,
+        reward_logits[
+            ops.arange(reward_logits.size(0)),
+            sequence_lengths,
+        ].squeeze(-1),
+        sequence_lengths,
+    )

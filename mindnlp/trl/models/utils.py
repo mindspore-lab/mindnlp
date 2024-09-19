@@ -193,3 +193,5 @@ def add_hooks(model: "DeepSpeedEngine") -> None:
 #             add_hooks(model)
 #     else:
 #         yield unwrapped_model
+    
+#     yield unwrapped_model
