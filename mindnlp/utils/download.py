@@ -407,6 +407,7 @@ def cached_file(
     _raise_exceptions_for_gated_repo: bool = True,
     _raise_exceptions_for_missing_entries: bool = True,
     _raise_exceptions_for_connection_errors: bool = True,
+    _commit_hash: str = None,
 ):
     """
     Tries to locate a file in a local folder and repo, downloads and cache it if necessary.

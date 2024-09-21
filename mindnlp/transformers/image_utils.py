@@ -56,6 +56,18 @@ ImageInput = Union[
 ]  # noqa
 
 
+VideoInput = Union[
+    List["PIL.Image.Image"],
+    "np.ndarray",
+    "mindspore.Tensor",
+    List["np.ndarray"],
+    List["mindspore.Tensor"],
+    List[List["PIL.Image.Image"]],
+    List[List["np.ndarrray"]],
+    List[List["mindspore.Tensor"]],
+]  # noqa
+
+
 class ChannelDimension(ExplicitEnum):
 
     """

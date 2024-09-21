@@ -67,7 +67,7 @@ def get_npus_free_memory():
         row1 = [i for i in row1 if i not in ('|', '/')]
         row2 = lines[i + 1].split()
         row2 = [i for i in row2 if i not in ('|', '/')]
-        table_data.append((row1[0], (int(row2[-1]) - int(row2[-2]) // 1000)))
+        table_data.append((row1[0], (int(row2[-1]) - int(row2[-2].replace('/', '')) // 1000)))
         i += 3
 
     return table_data
