@@ -1,30 +1,40 @@
 import functools
 
-from mindformers import LlamaConfig
-from mindnlp.core import nn
+from mindspore import nn, Tensor
 
+from llm.finetune.t5.t5_fintune import forward
 from ..optimizer import AcceleratedOptimizer
 from ..scheduler import AcceleratedScheduler
 from .imports import is_mindformers_available
 from ...utils import logging
 
 if is_mindformers_available():
+    from mindformers import LlamaConfig
     from mindformers.experimental.model import LlamaForCausalLM
-    from mindformers.experimental.distri_cores.config import init_configs_from_yaml
-    from mindformers.experimental.distri_cores.create_comm import initialize_model_parallel
+    from mindformers.experimental.distri_cores.config import init_configs_from_dict
     from mindformers.experimental.distri_cores.training import get_model, TrainOneStepCell
-    from mindformers.experimental.distri_cores import (
-        get_optimizer,
-    )
+    from mindformers.experimental.distri_cores.create_comm import initialize_model_parallel
+    from mindformers.experimental.distri_cores import get_optimizer
 
 logger = logging.get_logger(__name__)
 
+_GLOBAL_CONFIG_DICT: dict
+
 def prepare_model_optimizer_scheduler(accelerator):
+    """
+    Prepare mindformers model and optimizer
+
+    Args:
+        accelerator: accelerator
+
+    Returns: model, optimizer
+
+    """
     accelerator.print("Preparing model, optimizer...")
 
     # load mindformers config
-    _CONFIG_PATH = accelerator.state.mindformers_plugin.config_path
-    all_config = init_configs_from_yaml(_CONFIG_PATH)
+    _CONFIG_DICT = accelerator.state.mindformers_plugin.config_dict
+    all_config = init_configs_from_dict(_CONFIG_DICT)
     parallel_config = all_config.parallel_config
     optimizer_config = all_config.optimizer_config
 
@@ -38,16 +48,26 @@ def prepare_model_optimizer_scheduler(accelerator):
 
 
 def prepare_data_loader(accelerator, dataloader):
+    """
+    Prepare dataloader in mindformers
+
+    Args:
+        accelerator: accelerator
+        dataloader: original dataloader
+
+    Returns: dataloader
+
+    """
     accelerator.print("Preparing data loader...")
 
-def prepare_config(accelerator, args_default=None):
-    """
-    Prepare the configuration of mindformers. Create config yaml locally.
-    """
-    accelerator.print("Preparing config...")
+    all_config = init_configs_from_dict(_GLOBAL_CONFIG_DICT)
+    dataset_config = all_config.dataset_config
 
-    if args_default is None:
-        args_default = {}
+    # calculate global batch size
+    global_batch_size = dataset_config.batch_size * dataset_config.micro_batch_num
+    batch_dataloader = dataloader.batch(global_batch_size)
+
+    return batch_dataloader
 
 
 
@@ -81,35 +101,73 @@ class MindFormersDummyDataLoader:
 class MindFormersDummyScheduler:
     ...
 
-# intialize mindformers setup
-def initialize(accelerator, extra_args_provider=None, args_defaults=None):
+
+def initialize(accelerator, args_defaults=None):
+    """
+    Intialize mindformers setup
+
+    Args:
+        accelerator: accelerator
+        args_defaults: args mindformers needed
+
+    """
     if args_defaults is None:
         args_defaults = {}
     accelerator.print("Initializing MindFormers...")
 
-    initialize_model_parallel()
+    global _GLOBAL_CONFIG_DICT
+    if _GLOBAL_CONFIG_DICT is None:
+        _GLOBAL_CONFIG_DICT = args_defaults
+
+    all_config = init_configs_from_dict(_GLOBAL_CONFIG_DICT)
+    parallel_config = all_config.parallel_config
+
+    initialize_model_parallel(
+        tensor_model_parallel_size=parallel_config.tensor_parallel,
+        pipeline_model_parallel_size=parallel_config.pipeline_stage,
+        virtual_pipeline_model_parallel_size=parallel_config.virtual_pipeline_model_parallel_size,
+        context_parallel=parallel_config.context_parallel,
+        expert_model_parallel_size=parallel_config.expert_parallel
+    )
 
 
-class MindFormersEngine(nn.Module):
+class MindFormersEngine(nn.Cell):
+    """
+    MindFormers model wrapper
 
-    def __init__(self, accelerator, model, optimizer, scheduler):
+    Args:
+        accelerator (:class:`~accelerate.Accelerator`): The accelerator object to use.
+        model: MindFormers model
+        optimizer: MindFormers optimizer
+    """
+
+    def __init__(self, accelerator, model, optimizer):
         super().__init__()
         self.moddel = model
         self.optimizer = optimizer
 
-        _CONFIG_PATH = accelerator.state.mindformers_plugin.config_path
-        all_config = init_configs_from_yaml(_CONFIG_PATH)
+        _CONFIG_DICT = accelerator.state.mindformers_plugin.config_dict
+        all_config = init_configs_from_dict(_CONFIG_DICT)
         training_config = all_config.training_config
         model_config = all_config.model_config
 
         self.train_one_step = TrainOneStepCell(model, optimizer, training_config, model_config)
 
-    def forward(self, **batch_data):
+    def construct(self, tuple_data):
         if self.model.training:
-            loss, is_finite, loss_scale, learning_rate = self.train_one_step_cell(**batch_data)
+            self.train_one_step.set_train(True)
+            set_input_data = [
+                Tensor(shape=(None,) * len(input_data.shape), dtype=input_data.dtype) for input_data in tuple_data
+            ]
+            self.train_one_step_cell.set_inputs(*set_input_data)
+            self.train_one_step.set_inputs()
+            loss, is_finite, loss_scale, learning_rate = self.train_one_step_cell(**tuple_data)
             return loss
         else:
-            raise RuntimeError("Eval mode is not implemented")
+            self.train_one_step.set_train(False)
+            self.train_one_step.forward_backward_func(forward_only=True, **tuple_data)
+
+            self.train_one_step.set_train(False)
 
 
 MODEL_PROVIDER_FUNC = {}

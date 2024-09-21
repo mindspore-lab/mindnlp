@@ -340,8 +340,12 @@ class AcceleratorState:
         "mindformers_plugin"
     ]
 
-    def __init__(self, mindformers_plugin=None):
+    def __init__(self, cpu: bool, mindformers_plugin=None, **kwargs):
         self.__dict__ = self._shared_state
+        if PartialState._shared_state == {}:
+            PartialState(cpu, **kwargs)
+        self.__dict__.update(PartialState._shared_state)
+
         if os.environ.get("ACCELERATE_USE_MINDFORMERS", "false") == "true":
             self.distributed_type = DistributedType.MINDFORMERS
             self.mindformers_plugin = mindformers_plugin
