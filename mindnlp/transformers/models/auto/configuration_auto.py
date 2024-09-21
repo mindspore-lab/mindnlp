@@ -80,6 +80,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("deberta-v2", "DebertaV2Config"),
         ("deepseek_v2", "DeepseekV2Config"),
         ("detr", "DetrConfig"),
+        ("depth_anything", "DepthAnythingConfig"),
         ("deta", "DetaConfig"),
         ("dinov2", "Dinov2Config"),
         ("distilbert", "DistilBertConfig"),
@@ -234,7 +235,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
 
 CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
     [
-        # Add archive maps here)
+        # Add archive maps here
         ("albert", "ALBERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("align", "ALIGN_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("altclip", "ALTCLIP_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -516,6 +517,8 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("deformable_detr", "Deformable DETR"),
         ("deepseek_v2", "Deepseek_v2"),
         ("deit", "DeiT"),
+        ("depth_anything", "Depth Anything"),
+        ("depth_anything_v2", "Depth Anything V2"),
         ("deplot", "DePlot"),
         ("deta", "DETA"),
         ("detr", "DETR"),
