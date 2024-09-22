@@ -21,12 +21,12 @@ if is_mindformers_available():
         mindformers_initialize,
         mindformers_prepare_data_loader,
         mindformers_prepare_model_optimizer_scheduler
-)
-
+    )
 
 from ..utils import logging
 
 logger = logging.get_logger(__name__)
+
 
 class Accelerator:
     """
@@ -38,8 +38,8 @@ class Accelerator:
     """
 
     def __init__(
-        self,
-        mindformers_plugin: Optional[MindFormersPlugin] = None,
+            self,
+            mindformers_plugin: Optional[MindFormersPlugin] = None,
     ):
         # init mindformers_plugin from env variables
         if mindformers_plugin is None:
@@ -65,7 +65,6 @@ class Accelerator:
         self._dataloaders = []
         self._custom_objects = []
 
-
     @property
     def use_distributed(self):
         return self.state.use_distributed
@@ -73,7 +72,7 @@ class Accelerator:
     @property
     def distributed_type(self):
         return self.state.distributed_type
-    
+
     @property
     def num_processes(self):
         return self.state.num_processes
@@ -109,7 +108,7 @@ class Accelerator:
             result = self._prepare_mindformers(*args)
 
         return result
-    
+
     def _prepare_mindformers(self, *args):
         mindformers_plugin = self.state.mindformers_plugin
 
@@ -166,7 +165,7 @@ class Accelerator:
                 result[i] = optimizer
             elif isinstance(result[i], mindspore.nn.learning_rate_schedule.LearningRateSchedule):
                 result[i] = scheduler
-        
+
         if model is not None:
             self._models.append(model)
             if len(self._models) > 1:
@@ -176,7 +175,7 @@ class Accelerator:
         if optimizer is not None:
             self._optimizers.append(optimizer)
 
-    def backward(self, loss, **kwargs):   
+    def backward(self, loss, **kwargs):
         pass
 
     @contextmanager
@@ -239,4 +238,3 @@ class Accelerator:
         ```
         """
         self.state.print(*args, **kwargs)
-

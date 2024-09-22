@@ -1,8 +1,8 @@
 from mindspore.nn.optim.optimizer import Optimizer
 from .state import AcceleratorState
 
+
 class AcceleratedOptimizer(Optimizer):
-    
     def __init__(self, optimizer):
         super().__init__(learning_rate=optimizer.learning_rate, parameters=optimizer.parameters)
         self.optimizer = optimizer
@@ -13,4 +13,3 @@ class AcceleratedOptimizer(Optimizer):
 
     def zero_grad(self):
         ...
-

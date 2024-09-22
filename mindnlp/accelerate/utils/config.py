@@ -1,6 +1,7 @@
 from typing import Union, Optional
 from dataclasses import dataclass
 
+
 @dataclass
 class MindformersTrainningConfig:
     seed: int = None
@@ -25,6 +26,7 @@ class MindformersTrainningConfig:
     bucket_size: Optional[int] = None
     check_for_nan_in_grad: bool = False
 
+
 @dataclass
 class MindForemrsOptimizerConfig:
     optimizer_type: str = "AdamWeightDecay"
@@ -33,6 +35,7 @@ class MindForemrsOptimizerConfig:
     weight_decay: float = 0.0
     weight_decay_kwargs: dict = None
     zero_config: dict = None
+
 
 @dataclass
 class MindFormersModelParallelConfig:
@@ -49,12 +52,14 @@ class MindFormersModelParallelConfig:
     standalone_embedding_stage: bool = False
     overlap_p2p_comm: bool = False
 
+
 @dataclass
 class MindFormersDatasetConfig:
     dataset_dir: str = "./dataset"
     shuffle: bool = False
     batch_size: int = 1
     micro_batch_num: int = 1
+
 
 @dataclass
 class MindFormersTransformerConfig:

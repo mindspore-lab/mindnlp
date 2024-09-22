@@ -12,12 +12,13 @@ from .utils import (
 
 SharedDict = dict
 
+
 # Lambda function that does nothing
 def do_nothing(*args, **kwargs):
     return None
 
-class PartialState:
 
+class PartialState:
     _shared_state = SharedDict()
     _know_attrs = [
         "_cpu",
@@ -47,7 +48,7 @@ class PartialState:
             f"Num processes: {self.num_processes}\n"
             f"Process index: {self.process_index}\n"
         )
-    
+
     @staticmethod
     def _reset_state():
         """Resets `_shared_state`, is used internally and should not be called"""
@@ -119,14 +120,14 @@ class PartialState:
         ```
         """
         if self.distributed_type in (
-            DistributedType.MINDFORMERS,
+                DistributedType.MINDFORMERS,
         ):
             barrier()
 
     def _goes_first(self, is_main: bool):
         if not is_main:
             self.wait_for_everyone()
-        
+
         yield
 
         if is_main:
@@ -203,7 +204,7 @@ class PartialState:
         if self.is_main_process or not self.use_distributed:
             return function
         return do_nothing
-    
+
     def on_local_main_process(self, function: Callable[..., Any] = None):
         """
         Decorator that only runs the decorated function on the local main process.
@@ -234,7 +235,7 @@ class PartialState:
         if self.is_local_main_process or not self.use_distributed:
             return function
         return do_nothing
-    
+
     def on_last_process(self, function: Callable[..., Any]):
         """
         Decorator that only runs the decorated function on the last process.
@@ -262,7 +263,7 @@ class PartialState:
         if self.is_last_process or not self.use_distributed:
             return function
         return do_nothing
-    
+
     def on_process(self, function: Callable[..., Any] = None, process_index: int = None):
         """
         Decorator that only runs the decorated function on the process with the given index.
@@ -352,7 +353,6 @@ class PartialState:
 
 
 class AcceleratorState:
-    
     _shared_state = SharedDict()
     _know_attrs = PartialState._know_attrs + [
         "mindformers_plugin"
@@ -372,12 +372,11 @@ class AcceleratorState:
 
     def __repr__(self):
         return PartialState().__repr__()
-    
+
     @property
     def initialized(self) -> bool:
         return self._shared_state != PartialState._shared_state
 
-    
     @staticmethod
     def _reset_state(reset_partial_state: bool = False):
         """Resets `_shared_state`, is used internally and should not be called"""
@@ -446,4 +445,3 @@ class AcceleratorState:
 
     def print(self, *args, **kwargs):
         PartialState().print(*args, **kwargs)
-    

@@ -18,6 +18,7 @@ logger = logging.get_logger(__name__)
 
 _GLOBAL_CONFIG_DICT: dict
 
+
 def prepare_model_optimizer_scheduler(accelerator):
     """
     Prepare mindformers model and optimizer
@@ -69,7 +70,6 @@ def prepare_data_loader(accelerator, dataloader):
     return batch_dataloader
 
 
-
 # optimizer utilities
 class MindFormersOptimizerWrapper(AcceleratedOptimizer):
 
@@ -90,7 +90,6 @@ class MindFormersSchedulerWrapper(AcceleratedScheduler):
 
     def step(self, *args, **kwargs):
         return  # `model(**batch)` is doing that automatically. Therefore, it's implementation is not needed
-
 
 
 class MindFormersDummyDataLoader:
@@ -171,6 +170,7 @@ class MindFormersEngine(nn.Cell):
 
 MODEL_PROVIDER_FUNC = {}
 
+
 def add_model_provider_func(model_type: str):
     def add_model_provier_func_parser_helper(func):
         @functools.wraps(func)
@@ -182,11 +182,12 @@ def add_model_provider_func(model_type: str):
 
     return add_model_provier_func_parser_helper
 
+
 @add_model_provider_func("llama")
 def provider_llama(config, pre_process=True, post_process=True):
-
     # load model config, then create model in mindformers
     def model_provider(inner_pre_process=pre_process, inner_post_process=post_process):
         model = LlamaForCausalLM(config=config, pre_process=pre_process, post_process=post_process)
         return model
+
     return model_provider

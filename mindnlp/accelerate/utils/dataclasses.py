@@ -1,6 +1,7 @@
 import enum
 import functools
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
+
 from mindnlp.accelerate.utils.config import (
     MindformersTrainningConfig,
     MindFormersModelParallelConfig,
