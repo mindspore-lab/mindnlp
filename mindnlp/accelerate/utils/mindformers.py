@@ -74,9 +74,9 @@ def prepare_data_loader(accelerator, dataloader):
 
 # optimizer utilities
 class MindFormersOptimizerWrapper(AcceleratedOptimizer):
-
-    def __init__(self, optimizer):
-        super().__init__(optimizer)
+    #
+    # def __init__(self, optimizer):
+    #     super().__init__(optimizer)
 
     def zero_grad(self, set_to_none=None):
         pass  # `model(**batch)` is doing that automatically. Therefore, it's implementation is not needed
@@ -87,8 +87,8 @@ class MindFormersOptimizerWrapper(AcceleratedOptimizer):
 
 class MindFormersSchedulerWrapper(AcceleratedScheduler):
 
-    def __init__(self, scheduler, optimizers):
-        super().__init__(scheduler, optimizers)
+    # def __init__(self, scheduler, optimizers):
+    #     super().__init__(scheduler, optimizers)
 
     def step(self, *args, **kwargs):
         return  # `model(**batch)` is doing that automatically. Therefore, it's implementation is not needed
