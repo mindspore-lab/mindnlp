@@ -1,4 +1,4 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,10 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-""" MindSpore Moss model."""
-# from typing import Optional, Tuple, Union
-#
-# from .moss_configuration import MossConfig
+"""
+Qwen vl Model.
+"""
+from . import configuration_qwen2_vl, modeling_qwen2_vl, image_processing_qwen2_vl, processing_qwen2_vl
+from .configuration_qwen2_vl import *
+from .modeling_qwen2_vl import *
+from .image_processing_qwen2_vl import *
+from .processing_qwen2_vl import *
 
-_CHECKPOINT_FOR_DOC = "fnlp/moss-moon-003-base"
-_CONFIG_FOR_DOC = "MossConfig"
+__all__ = []
+__all__.extend(configuration_qwen2_vl.__all__)
+__all__.extend(modeling_qwen2_vl.__all__)
+__all__.extend(image_processing_qwen2_vl.__all__)
+__all__.extend(processing_qwen2_vl.__all__)

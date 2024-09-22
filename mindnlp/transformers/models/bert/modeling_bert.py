@@ -195,8 +195,8 @@ class BertSelfAttention(nn.Module):
         elif past_key_value is not None:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
-            key_layer = ops.cat([past_key_value[0], key_layer], dim=2)
-            value_layer = ops.cat([past_key_value[1], value_layer], dim=2)
+            key_layer = ops.cat([past_key_value[0], key_layer.to(past_key_value[0].dtype)], dim=2)
+            value_layer = ops.cat([past_key_value[1], value_layer.to(past_key_value[1].dtype)], dim=2)
         else:
             key_layer = self.transpose_for_scores(self.key(hidden_states))
             value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -928,7 +928,7 @@ class BertForPreTraining(BertPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
         >>> model = BertForPreTraining.from_pretrained("google-bert/bert-base-uncased")
 
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> prediction_logits = outputs.prediction_logits
@@ -1260,7 +1260,7 @@ class BertForNextSentencePrediction(BertPreTrainedModel):
 
         >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
         >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
-        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
+        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="ms")
 
         >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
         >>> logits = outputs.logits

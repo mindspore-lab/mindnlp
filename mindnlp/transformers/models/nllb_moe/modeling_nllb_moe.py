@@ -1580,9 +1580,9 @@ class NllbMoeModel(NllbMoePreTrainedModel):
         >>> model = SwitchTransformersModel.from_pretrained("hf-internal-testing/random-nllb-moe-2-experts")
 
         >>> input_ids = tokenizer(
-        ...     "Studies have been shown that owning a dog is good for you", return_tensors="pt"
+        ...     "Studies have been shown that owning a dog is good for you", return_tensors="ms"
         ... ).input_ids  # Batch size 1
-        >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="pt").input_ids  # Batch size 1
+        >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="ms").input_ids  # Batch size 1
 
         >>> # preprocess: Prepend decoder_input_ids with start token which is pad token for NllbMoeModel
         >>> decoder_input_ids = model._shift_right(decoder_input_ids)

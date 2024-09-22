@@ -157,7 +157,7 @@ class VisionEncoderDecoderModel(PreTrainedModel):
 
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> img = Image.open(requests.get(url, stream=True).raw)
-        >>> pixel_values = image_processor(images=img, return_tensors="pt").pixel_values  # Batch size 1
+        >>> pixel_values = image_processor(images=img, return_tensors="ms").pixel_values  # Batch size 1
 
         >>> output_ids = model.generate(
         ...     pixel_values, max_length=16, num_beams=4, return_dict_in_generate=True
@@ -369,9 +369,9 @@ class VisionEncoderDecoderModel(PreTrainedModel):
         >>> model.config.pad_token_id = processor.tokenizer.pad_token_id
         >>> model.config.vocab_size = model.config.decoder.vocab_size
 
-        >>> pixel_values = processor(image, return_tensors="pt").pixel_values
+        >>> pixel_values = processor(image, return_tensors="ms").pixel_values
         >>> text = "hello world"
-        >>> labels = processor.tokenizer(text, return_tensors="pt").input_ids
+        >>> labels = processor.tokenizer(text, return_tensors="ms").input_ids
         >>> outputs = model(pixel_values=pixel_values, labels=labels)
         >>> loss = outputs.loss
 

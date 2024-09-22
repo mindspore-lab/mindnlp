@@ -52,7 +52,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("convnext", "ConvNextImageProcessor"),
         # ("convnextv2", "ConvNextImageProcessor"),
         ("cvt", "ConvNextImageProcessor"),
-        # ("data2vec-vision", "BeitImageProcessor"),
+        ("data2vec-vision", ("BeitImageProcessor",)),
         # ("deformable_detr", "DeformableDetrImageProcessor"),
         ("deit", "DeiTImageProcessor"),
         ("depth_anything", "DPTImageProcessor"),

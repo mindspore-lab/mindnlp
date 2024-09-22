@@ -656,7 +656,7 @@ class ConstrainedBeamSearchScorer(BeamScorer):
                         track_new["new_seqs"].append(advance_seq)
                         track_new["new_indices"].append(sidx + seq_idx)  # idx -> global idx across all the batches
                         track_new["new_tokens"].append(advance_token)
-                        track_new["new_scores"].append(this_batch_token_scores[seq_idx].take(advance_token))
+                        track_new["new_scores"].append(ops.take(this_batch_token_scores[seq_idx], advance_token))
                         track_new["new_states"].append(new_state)
             elif push_progress:
                 # Basically, `sent_beam_indices` often chooses very little among `input_ids` the generated sequences that

@@ -120,7 +120,7 @@ class Gemma2IntegrationTest(unittest.TestCase):
         )
 
         tokenizer = AutoTokenizer.from_pretrained(model_id)
-        inputs = tokenizer(self.input_text, return_tensors="pt", padding=True)
+        inputs = tokenizer(self.input_text, return_tensors="ms", padding=True)
 
         output = model.generate(**inputs, max_new_tokens=20, do_sample=False)
         output_text = tokenizer.batch_decode(output, skip_special_tokens=False)
@@ -139,7 +139,7 @@ class Gemma2IntegrationTest(unittest.TestCase):
         )
 
         tokenizer = AutoTokenizer.from_pretrained(model_id)
-        inputs = tokenizer(self.input_text, return_tensors="pt", padding=True)
+        inputs = tokenizer(self.input_text, return_tensors="ms", padding=True)
         output = model.generate(**inputs, max_new_tokens=20, do_sample=False)
         output_text = tokenizer.batch_decode(output, skip_special_tokens=False)
 

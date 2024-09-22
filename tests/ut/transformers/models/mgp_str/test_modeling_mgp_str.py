@@ -224,7 +224,7 @@ class MgpstrModelTest(ModelTesterMixin, unittest.TestCase):
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
             for name, param in model.parameters_and_names():
-                if isinstance(param, (nn.Dense, nn.Conv2d, nn.LayerNorm)):
+                if isinstance(param, (nn.Linear, nn.Conv2d, nn.LayerNorm)):
                     if param.requires_grad:
                         self.assertIn(
                             ((param.data.mean() * 1e9).round() / 1e9).item(),

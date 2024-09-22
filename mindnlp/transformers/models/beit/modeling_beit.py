@@ -1469,7 +1469,7 @@ class BeitForMaskedImageModeling(BeitPreTrainedModel):
             >>> model = BeitForMaskedImageModeling.from_pretrained("microsoft/beit-base-patch16-224-pt22k")
             ... 
             >>> num_patches = (model.config.image_size // model.config.patch_size) ** 2
-            >>> pixel_values = image_processor(images=image, return_tensors="pt").pixel_values
+            >>> pixel_values = image_processor(images=image, return_tensors="ms").pixel_values
             >>> # create random boolean mask of shape (batch_size, num_patches)
             >>> bool_masked_pos = torch.randint(low=0, high=2, size=(1, num_patches)).bool()
             ... 
@@ -2183,7 +2183,7 @@ class BeitForSemanticSegmentation(BeitPreTrainedModel):
             >>> image_processor = AutoImageProcessor.from_pretrained("microsoft/beit-base-finetuned-ade-640-640")
             >>> model = BeitForSemanticSegmentation.from_pretrained("microsoft/beit-base-finetuned-ade-640-640")
             ...
-            >>> inputs = image_processor(images=image, return_tensors="pt")
+            >>> inputs = image_processor(images=image, return_tensors="ms")
             >>> outputs = model(**inputs)
             >>> # logits are of shape (batch_size, num_labels, height, width)
             >>> logits = outputs.logits
@@ -2273,7 +2273,7 @@ class BeitBackbone(BeitPreTrainedModel, BackboneMixin):
         ...     "microsoft/beit-base-patch16-224", out_features=["stage1", "stage2", "stage3", "stage4"]
         ... )
         ...
-        >>> inputs = processor(image, return_tensors="pt")
+        >>> inputs = processor(image, return_tensors="ms")
         ...
         >>> outputs = model(**inputs)
         >>> feature_maps = outputs.feature_maps
@@ -2401,7 +2401,7 @@ class BeitBackbone(BeitPreTrainedModel, BackboneMixin):
             ...     "microsoft/beit-base-patch16-224", out_features=["stage1", "stage2", "stage3", "stage4"]
             ... )
             ...
-            >>> inputs = processor(image, return_tensors="pt")
+            >>> inputs = processor(image, return_tensors="ms")
             ...
             >>> outputs = model(**inputs)
             >>> feature_maps = outputs.feature_maps

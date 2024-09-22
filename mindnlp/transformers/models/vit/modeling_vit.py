@@ -643,7 +643,7 @@ class ViTForMaskedImageModeling(ViTPreTrainedModel):
         >>> model = ViTForMaskedImageModeling.from_pretrained("google/vit-base-patch16-224-in21k")
 
         >>> num_patches = (model.config.image_size // model.config.patch_size) ** 2
-        >>> pixel_values = image_processor(images=image, return_tensors="pt").pixel_values
+        >>> pixel_values = image_processor(images=image, return_tensors="ms").pixel_values
         >>> # create random boolean mask of shape (batch_size, num_patches)
         >>> bool_masked_pos = ops.randint(low=0, high=2, size=(1, num_patches)).bool()
 

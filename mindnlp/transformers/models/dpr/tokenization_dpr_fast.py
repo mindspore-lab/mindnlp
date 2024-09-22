@@ -155,7 +155,7 @@ class CustomDPRReaderTokenizerMixin:
         ...     questions=["What is love ?"],
         ...     titles=["Haddaway"],
         ...     texts=["'What Is Love' is a song recorded by the artist Haddaway"],
-        ...     return_tensors="pt",
+        ...     return_tensors="ms",
         ... )
         >>> outputs = model(**encoded_inputs)
         >>> predicted_spans = tokenizer.decode_best_spans(encoded_inputs, outputs)

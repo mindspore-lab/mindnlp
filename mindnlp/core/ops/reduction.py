@@ -2,11 +2,11 @@
 import mindspore
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
-from mindnlp.configs import USE_PYBOOST, DEVICE_TARGET
+from mindnlp.configs import use_pyboost, DEVICE_TARGET
 
 # argmax
 def argmax(input, dim=None, keepdim=False):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.argmax(input, dim, keepdim)
     return ops.argmax(input, dim, keepdim)
 
@@ -30,19 +30,19 @@ def aminmax(input, *, dim=None, keepdim=False):
 
 # all
 def all(input, dim=None, keepdim=False, *, dtype=None):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.all(input, dim, keepdim)
     return ops.all(input, dim, keepdim)
 
 # any
 def any(input, dim=None, keepdim=False):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.any(input, dim, keepdim)
     return ops.any(input, dim, keepdim)
 
 # max
 def max(input, dim=None, keepdim=False):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.max(input, dim, keepdim)
     out = ops.max(input, dim, keepdim)
     if dim is None:
@@ -51,7 +51,7 @@ def max(input, dim=None, keepdim=False):
 
 # min
 def min(input, dim=None, keepdim=False):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.min(input, dim, keepdim)
     out = ops.min(input, dim, keepdim)
     if dim is None:
@@ -66,7 +66,7 @@ def logsumexp(input, dim, keepdim=False):
 
 # mean
 def mean(input, dim=None, keepdim=False, *, dtype=None):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.mean(input, dim, keepdim, dtype=dtype)
     out = ops.mean(input, dim, keepdim)
     if dtype is not None:
@@ -97,7 +97,7 @@ def nansum(input, dim=None, keepdim=False, *, dtype=None):
 
 # prod
 def prod(input, dim=None, keepdim=False, *, dtype=None):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.prod(input, dim, keepdim, dtype=dtype)
     return ops.prod(input, dim, keepdim).to(dtype)
 
@@ -129,13 +129,13 @@ def std_mean(input, dim=None, *, correction=1, keepdim=False):
 
 # sum
 def sum(input, dim=None, keepdim=False, *, dtype=None):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.sum(input, dim, keepdim, dtype=dtype)
     return ops.sum(input, dim, keepdim, dtype=dtype)
 
 # unique
 def unique(input, sorted=True, return_inverse=False, return_counts=False, dim=None):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.unique(input, sorted, return_inverse, return_counts, dim)
 
     out, inverse = ops.unique(input)

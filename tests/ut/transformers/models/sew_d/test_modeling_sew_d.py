@@ -476,7 +476,7 @@ class SEWDModelIntegrationTest(unittest.TestCase):
 
         input_speech = self._load_datasamples(2)
 
-        inputs = processor(input_speech, return_tensors="pt", padding=True)
+        inputs = processor(input_speech, return_tensors="ms", padding=True)
 
         input_values = inputs.input_values
 
@@ -528,7 +528,7 @@ class SEWDModelIntegrationTest(unittest.TestCase):
 
         input_speech = self._load_datasamples(2)
 
-        inputs = processor(input_speech, return_tensors="pt", padding=True)
+        inputs = processor(input_speech, return_tensors="ms", padding=True)
 
         input_values = inputs.input_values
 
