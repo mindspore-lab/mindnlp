@@ -10,10 +10,10 @@ from ...utils import logging
 
 if is_mindformers_available():
     from mindformers.experimental.model import LlamaForCausalLM
-    from mindformers.experimental.distri_cores.config import init_configs_from_dict
-    from mindformers.experimental.distri_cores.training import get_model, TrainOneStepCell
-    from mindformers.experimental.distri_cores.create_comm import initialize_model_parallel
-    from mindformers.experimental.distri_cores import get_optimizer
+    from mindformers.experimental.parallel_core.pynative.config import init_configs_from_dict
+    from mindformers.experimental.parallel_core.pynative.training import get_model, TrainOneStepCell
+    from mindformers.experimental.parallel_core.pynative.parallel_state import initialize_model_parallel
+    from mindformers.experimental.parallel_core.pynative import get_optimizer
 
 logger = logging.get_logger(__name__)
 
