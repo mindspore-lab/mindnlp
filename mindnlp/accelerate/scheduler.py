@@ -12,4 +12,3 @@ class AcceleratedScheduler:
         """
         Performs a step of the scheduler.
         """
-        pass

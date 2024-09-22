@@ -1,5 +1,4 @@
 """accelerate"""
-from ..utils import logging
 import os
 from contextlib import contextmanager
 from typing import Optional
@@ -15,6 +14,7 @@ from .utils import (
     is_mindformers_available,
     wait_for_everyone
 )
+from ..utils import logging
 
 if is_mindformers_available():
     from .utils import (
@@ -157,7 +157,7 @@ class Accelerator:
         if optimizer is not None:
             optimizer = MindFormersOptimizerWrapper(optimizer)
         if scheduler is not None:
-            scheduler = MindFormersSchedulerWrapper(scheduler)
+            scheduler = MindFormersSchedulerWrapper(scheduler, optimizer)
 
         for i in range(len(result)):
             if isinstance(result[i], nn.Cell):
@@ -175,6 +175,8 @@ class Accelerator:
                 )
         if optimizer is not None:
             self._optimizers.append(optimizer)
+
+        return tuple(result)
 
     def backward(self, loss, **kwargs):
         pass

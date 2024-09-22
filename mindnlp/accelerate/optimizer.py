@@ -19,4 +19,4 @@ class AcceleratedOptimizer(Optimizer):
         """
         Clears the gradients of all optimized tensors.
         """
-        pass
+        self.optimizer.zero_grad()
