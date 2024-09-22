@@ -65,6 +65,7 @@ class Accelerator:
         self._dataloaders = []
         self._custom_objects = []
 
+
     @property
     def use_distributed(self):
         return self.state.use_distributed
