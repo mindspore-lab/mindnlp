@@ -9,7 +9,5 @@ def is_mindformers_available():
     Returns:
         bool: True if MindFormers library is available, False otherwise.
     """
-    _, _mindformers_available = _is_package_available(
-        "mindformers", return_version=True
-    )
+    _mindformers_available = _is_package_available("mindformers")
     return _mindformers_available
