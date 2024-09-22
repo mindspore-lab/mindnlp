@@ -1,7 +1,8 @@
 import os
 from functools import partial
 
-import mindspore
+from mindspore import communication
+from mindspore.communication.comm_func import barrier
 from contextlib import contextmanager
 from typing import Callable, Any
 
@@ -32,20 +33,19 @@ class PartialState:
         "process_index",
     ]
 
-    def __init__(self, cpu: bool = False, **kwargs):
+    def __init__(self, **kwargs):
         self.__dict__ = self._shared_state
         self._prepare_backend()
 
         if self.backend == "hccl":
-            self.num_processes = mindspore.communication.get_group_size()
-            self.process_index = mindspore.communication.get_rank()
+            self.num_processes = communication.get_group_size()
+            self.process_index = communication.get_rank()
 
     def __repr__(self) -> str:
         return (
             f"Distributed environment: {self.distributed_type}{('  Backend: ' + self.backend) if self.backend else ''}\n"
             f"Num processes: {self.num_processes}\n"
             f"Process index: {self.process_index}\n"
-            f"Local process index: {self.local_process_index}\n"
         )
     
     @staticmethod
@@ -76,6 +76,16 @@ class PartialState:
         return (
             self.process_index == 0 if self.distributed_type != DistributedType.MINDFORMERS else self.is_last_process
         )
+
+    @property
+    def num_processes(self):
+        """Returns num process"""
+        return self.num_processes
+
+    @property
+    def process_index(self):
+        """Returns process index"""
+        return self.process_index
 
     @property
     def is_local_main_process(self) -> bool:
@@ -111,7 +121,7 @@ class PartialState:
         if self.distributed_type in (
             DistributedType.MINDFORMERS,
         ):
-            pass # TODO
+            barrier()
 
     def _goes_first(self, is_main: bool):
         if not is_main:
@@ -332,7 +342,15 @@ class PartialState:
             self.backend = "hccl"
             self.distributed_type = DistributedType.MINDFORMERS
 
-    
+    @num_processes.setter
+    def num_processes(self, value):
+        self._num_processes = value
+
+    @process_index.setter
+    def process_index(self, value):
+        self._process_index = value
+
+
 class AcceleratorState:
     
     _shared_state = SharedDict()
@@ -340,15 +358,17 @@ class AcceleratorState:
         "mindformers_plugin"
     ]
 
-    def __init__(self, cpu: bool, mindformers_plugin=None, **kwargs):
+    def __init__(self, mindformers_plugin=None, **kwargs):
         self.__dict__ = self._shared_state
         if PartialState._shared_state == {}:
-            PartialState(cpu, **kwargs)
+            PartialState(**kwargs)
         self.__dict__.update(PartialState._shared_state)
 
         if os.environ.get("ACCELERATE_USE_MINDFORMERS", "false") == "true":
             self.distributed_type = DistributedType.MINDFORMERS
             self.mindformers_plugin = mindformers_plugin
+
+        PartialState._shared_state["distributed_type"] = self.distributed_type
 
     def __repr__(self):
         return PartialState().__repr__()
@@ -387,7 +407,21 @@ class AcceleratorState:
         """Returns whether the current process is the main process on the local node"""
         return PartialState().is_local_main_process
 
+    @property
+    def num_processes(self):
+        """Returns num process"""
+        return PartialState().num_processes
+
+    @property
+    def process_index(self):
+        """Returns process index"""
+        return PartialState().process_index
+
     def wait_for_everyone(self):
+        """
+        Will stop the execution of the current process until every other process has reached that point (so this does
+        nothing when the script is only run in one process). Useful to do before saving a model.
+        """
         PartialState().wait_for_everyone()
 
     @contextmanager

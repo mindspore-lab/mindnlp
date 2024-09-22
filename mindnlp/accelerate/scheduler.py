@@ -8,3 +8,6 @@ class AcceleratedScheduler:
         self.optimizers = optimizers if isinstance(optimizers, (list, tuple)) else [optimizers]
         self.split_batches = split_batches
         self.step_with_optimizer = step_with_optimizer
+
+    def step(self):
+        ...

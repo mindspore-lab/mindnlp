@@ -1,6 +1,7 @@
 import os
+from contextlib import contextmanager
+
 import mindspore
-from mindspore import nn
 from mindspore.communication import init
 from typing import Optional
 
@@ -15,8 +16,6 @@ from .utils import (
 if is_mindformers_available():
     from .utils import (
         MindFormersEngine,
-        MindFormersDummyDataLoader,
-        MindFormersDummyScheduler,
         MindFormersOptimizerWrapper,
         MindFormersSchedulerWrapper,
         mindformers_initialize,
@@ -31,7 +30,11 @@ logger = logging.get_logger(__name__)
 
 class Accelerator:
     """
-    xx
+    Creates an instance of an accelerator for distributed training (on Ascend)
+
+    Args:
+        mindformers_plugin (`MindFormersPlugin`, *optional*):
+            This argument is optional and can be configured directly using *accelerate config*
     """
 
     def __init__(
@@ -45,17 +48,15 @@ class Accelerator:
             )
         else:
             os.environ["ACCELERATE_USE_MINDFORMERS"] = "true"
-        self.state = AcceleratorState(
-            cpu=False
-        )
+        self.state = AcceleratorState(mindformers_plugin=mindformers_plugin)
 
         if mindformers_plugin:
             if not is_mindformers_available():
                 raise ImportError("MindFormers is not installed. Please install it")
             # The distributed backend required to initialize the communication service.
             # Should be placed before Tensor and Parameter are created.
-            init()
             mindspore.set_context(mode=mindspore.PYNATIVE_MODE, device_target="Ascend")
+            init()
 
         # Internal references to the training objects
         self._optimizers = []
@@ -76,6 +77,15 @@ class Accelerator:
     def num_processes(self):
         return self.state.num_processes
 
+    @property
+    def process_index(self):
+        return self.state.process_index
+
+    @property
+    def is_main_process(self):
+        """True for one process only."""
+        return self.state.is_main_process
+
     def prepare(self, *args):
         """
         Prepare all objects passed in `args` for  distributed training. Then return them in the same order.
@@ -86,6 +96,7 @@ class Accelerator:
                 - `mindspore.dataset.GeneratorDataset`: MindSpore Dataloader
                 - `mindspore.nn.Cell`: MindSpore Module
                 - `mindspore.nn.optim.Optimizer`: MindSpore Optimizer
+                - `mindspore.nn.learning_rate_schedule.LearningRateSchedule`: MindSpore Scheduler
 
         Returns: Prepared objects in the same order.
 
@@ -103,6 +114,7 @@ class Accelerator:
 
         model = None
         optimizer = None
+        scheduler = None
         batch_data = None
         for obj in args:
             if isinstance(obj, mindspore.dataset.GeneratorDataset) and batch_data is None:
@@ -111,18 +123,22 @@ class Accelerator:
                 model = obj
             elif isinstance(obj, mindspore.nn.optim.Optimizer):
                 optimizer = obj
+            elif isinstance(obj, mindspore.nn.learning_rate_schedule.LearningRateSchedule):
+                scheduler = obj
 
+        # Config is not correct now
         if model is not None:
             mindformers_plugin.set_model_args(model, batch_data)
         if optimizer is not None:
             mindformers_plugin.set_optimizer_args(optimizer)
-        mindformers_plugin.set_paralle_args()
+        if scheduler is not None:
+            mindformers_plugin.set_paralle_args(scheduler)
         mindformers_plugin.set_training_args()
 
         # initialize mindformers
         mindformers_initialize(self, args_defaults=mindformers_plugin.mindformers_defualt_args)
 
-        (model, optimizer) = mindformers_prepare_model_optimizer_scheduler(self)
+        (model, optimizer, scheduler) = mindformers_prepare_model_optimizer_scheduler(self)
         self.wait_for_everyone()
 
         counter = 0
@@ -139,12 +155,16 @@ class Accelerator:
             model = MindFormersEngine(self, model, optimizer)
         if optimizer is not None:
             optimizer = MindFormersOptimizerWrapper(optimizer)
+        if scheduler is not None:
+            scheduler = MindFormersSchedulerWrapper(scheduler)
 
         for i in range(len(result)):
             if isinstance(result[i], mindspore.nn.Cell):
                 result[i] = model
             elif isinstance(result[i], mindspore.nn.Optimizer):
                 result[i] = optimizer
+            elif isinstance(result[i], mindspore.nn.learning_rate_schedule.LearningRateSchedule):
+                result[i] = scheduler
         
         if model is not None:
             self._models.append(model)
@@ -157,6 +177,28 @@ class Accelerator:
 
     def backward(self, loss, **kwargs):   
         pass
+
+    @contextmanager
+    def main_process_first(self):
+        """
+        Lets the main process go first inside a with block.
+
+        The other processes will enter the with block after the main process exits.
+
+        Example:
+
+        ```python
+        >>> from accelerate import Accelerator
+
+        >>> accelerator = Accelerator()
+        >>> with accelerator.main_process_first():
+        ...     # This will be printed first by process 0 then in a seemingly
+        ...     # random order by the other processes.
+        ...     print(f"This will be printed by process {accelerator.process_index}")
+        ```
+        """
+        with self.state.main_process_first():
+            yield
 
     def wait_for_everyone(self):
         """

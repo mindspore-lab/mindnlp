@@ -2,14 +2,12 @@ import functools
 
 from mindspore import nn, Tensor
 
-from llm.finetune.t5.t5_fintune import forward
 from ..optimizer import AcceleratedOptimizer
 from ..scheduler import AcceleratedScheduler
 from .imports import is_mindformers_available
 from ...utils import logging
 
 if is_mindformers_available():
-    from mindformers import LlamaConfig
     from mindformers.experimental.model import LlamaForCausalLM
     from mindformers.experimental.distri_cores.config import init_configs_from_dict
     from mindformers.experimental.distri_cores.training import get_model, TrainOneStepCell
@@ -35,12 +33,13 @@ def prepare_model_optimizer_scheduler(accelerator):
     # load mindformers config
     _CONFIG_DICT = accelerator.state.mindformers_plugin.config_dict
     all_config = init_configs_from_dict(_CONFIG_DICT)
+    model_config = all_config.model_config
     parallel_config = all_config.parallel_config
     optimizer_config = all_config.optimizer_config
 
     # get model and optimizer
     model_type = accelerator.state.mindformers_plugin.model_type
-    model_provider_func = MODEL_PROVIDER_FUNC[model_type]
+    model_provider_func = MODEL_PROVIDER_FUNC[model_type](model_config, True, True)
     model = get_model(model_provider_func, parallel_config)
     optimizer = get_optimizer(optimizer_config, model.trainable_params(), model)
 
@@ -184,10 +183,10 @@ def add_model_provider_func(model_type: str):
     return add_model_provier_func_parser_helper
 
 @add_model_provider_func("llama")
-def provider_llama(pre_process=True, post_process=True):
+def provider_llama(config, pre_process=True, post_process=True):
 
     # load model config, then create model in mindformers
-    # TODO: how to get model config
-    config: LlamaConfig = LlamaConfig()
-    model = LlamaForCausalLM(config=config, pre_process=pre_process, post_process=post_process)
-    return model
+    def model_provider(inner_pre_process=pre_process, inner_post_process=post_process):
+        model = LlamaForCausalLM(config=config, pre_process=pre_process, post_process=post_process)
+        return model
+    return model_provider

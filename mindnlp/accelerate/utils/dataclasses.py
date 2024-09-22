@@ -1,12 +1,10 @@
 import enum
-import os
 import functools
 from dataclasses import dataclass, field, asdict
 from mindnlp.accelerate.utils.config import (
     MindformersTrainningConfig,
     MindFormersModelParallelConfig,
     MindForemrsOptimizerConfig,
-    MindFormersDatasetConfig,
     MindFormersTransformerConfig
 )
 
@@ -49,9 +47,9 @@ class MindFormersPlugin:
         parallel_config = MindFormersModelParallelConfig()
         self.mindformers_default_args["parallel_config"] = asdict(parallel_config)
 
-    def set_model_args(self):
-        model_config = MindFormersTransformerConfig()
-        self.mindformers_default_args["model_config"] = asdict(model_config)
+    def set_model_args(self, model, batch_data):
+        model_config_type = model.config.model_type.lower()
+        MODEL_CONFIGS_TO_MINDFORMERS_PARSERS[model_config_type](self, model, batch_data)
 
     @property
     def config_dict(self):
