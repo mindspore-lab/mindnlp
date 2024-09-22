@@ -1,3 +1,4 @@
+"""acclerate config"""
 from typing import Union, Optional
 from dataclasses import dataclass
 

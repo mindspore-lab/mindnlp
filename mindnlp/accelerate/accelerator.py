@@ -1,9 +1,12 @@
+"""accelerate"""
+from ..utils import logging
 import os
 from contextlib import contextmanager
+from typing import Optional
 
 import mindspore
+from mindspore import nn
 from mindspore.communication import init
-from typing import Optional
 
 from .state import AcceleratorState
 from .utils import (
@@ -22,8 +25,6 @@ if is_mindformers_available():
         mindformers_prepare_data_loader,
         mindformers_prepare_model_optimizer_scheduler
     )
-
-from ..utils import logging
 
 logger = logging.get_logger(__name__)
 
@@ -159,11 +160,11 @@ class Accelerator:
             scheduler = MindFormersSchedulerWrapper(scheduler)
 
         for i in range(len(result)):
-            if isinstance(result[i], mindspore.nn.Cell):
+            if isinstance(result[i], nn.Cell):
                 result[i] = model
-            elif isinstance(result[i], mindspore.nn.Optimizer):
+            elif isinstance(result[i], nn.Optimizer):
                 result[i] = optimizer
-            elif isinstance(result[i], mindspore.nn.learning_rate_schedule.LearningRateSchedule):
+            elif isinstance(result[i], nn.learning_rate_schedule.LearningRateSchedule):
                 result[i] = scheduler
 
         if model is not None:

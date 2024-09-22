@@ -35,6 +35,10 @@ from .modeling import (
     # shard_checkpoint,
 )
 
+from .other import (
+    wait_for_everyone
+)
+
 from .mindformers import (
     MindFormersDummyDataLoader,
     MindFormersDummyScheduler
@@ -49,7 +53,3 @@ if is_mindformers_available():
         prepare_data_loader as mindformers_prepare_data_loader,
         prepare_model_optimizer_scheduler as mindformers_prepare_model_optimizer_scheduler
     )
-
-from .other import(
-    wait_for_everyone
-)

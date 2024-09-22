@@ -1,3 +1,4 @@
+"""accelerate mindformers core."""
 import functools
 
 from mindspore import nn, Tensor
@@ -43,8 +44,9 @@ def prepare_model_optimizer_scheduler(accelerator):
     model_provider_func = MODEL_PROVIDER_FUNC[model_type](model_config, True, True)
     model = get_model(model_provider_func, parallel_config)
     optimizer = get_optimizer(optimizer_config, model.trainable_params(), model)
+    scheduler = None
 
-    return model, optimizer
+    return model, optimizer, scheduler
 
 
 def prepare_data_loader(accelerator, dataloader):

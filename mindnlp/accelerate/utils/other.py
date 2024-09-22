@@ -1,3 +1,4 @@
+"""accelerate utilities."""
 from ..state import PartialState
 
 

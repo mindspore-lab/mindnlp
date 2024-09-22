@@ -1,3 +1,6 @@
+"""accelerate scheduler."""
+
+
 class AcceleratedScheduler:
     def __init__(self, scheduler, optimizers, step_with_optimizer: bool = True, split_batches: bool = False):
         self.scheduler = scheduler
@@ -6,4 +9,7 @@ class AcceleratedScheduler:
         self.step_with_optimizer = step_with_optimizer
 
     def step(self):
-        ...
+        """
+        Performs a step of the scheduler.
+        """
+        pass

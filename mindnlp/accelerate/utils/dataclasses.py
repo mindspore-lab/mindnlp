@@ -1,3 +1,4 @@
+"""accelerate dataclasses"""
 import enum
 import functools
 from dataclasses import dataclass, asdict
@@ -19,6 +20,7 @@ class DistributedType(str, enum.Enum):
     """
 
     MINDFORMERS = "MINDFORMERS"
+    NO = "NO"
 
 
 @dataclass
@@ -55,7 +57,7 @@ class MindFormersPlugin:
     @property
     def config_dict(self):
         return self.mindformers_default_args
-    
+
     @property
     def model_type(self):
         model_type = "llama"
@@ -63,6 +65,7 @@ class MindFormersPlugin:
 
 
 MODEL_CONFIGS_TO_MINDFORMERS_PARSERS = {}
+
 
 def add_model_config_to_mindformers_parser(model_type: str):
     def add_model_config_parser_helper(func):
@@ -74,6 +77,7 @@ def add_model_config_to_mindformers_parser(model_type: str):
         return wrapper
 
     return add_model_config_parser_helper
+
 
 @add_model_config_to_mindformers_parser("llama")
 def parse_llama_config(mindformers_plugin, model, batch_data):

@@ -1,3 +1,4 @@
+"""accelerate optimizer"""
 from mindspore.nn.optim.optimizer import Optimizer
 from .state import AcceleratorState
 
@@ -9,7 +10,13 @@ class AcceleratedOptimizer(Optimizer):
         self.accelerator_state = AcceleratorState()
 
     def step(self):
-        ...
+        """
+        Performs a single optimization step.
+        """
+        self.optimizer.step()
 
     def zero_grad(self):
-        ...
+        """
+        Clears the gradients of all optimized tensors.
+        """
+        pass

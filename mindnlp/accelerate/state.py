@@ -1,10 +1,10 @@
+"""accelerate state"""
 import os
 from functools import partial
-
-from mindspore import communication
-from mindspore.communication.comm_func import barrier
 from contextlib import contextmanager
 from typing import Callable, Any
+from mindspore import communication
+from mindspore.communication.comm_func import barrier
 
 from .utils import (
     DistributedType, is_mindformers_available
@@ -57,7 +57,7 @@ class PartialState:
     @property
     def initialized(self) -> bool:
         """Returns whether the `PartialState` has been initialized"""
-        return self._shared_state != {}
+        return self._shared_state
 
     @property
     def use_distributed(self):
@@ -360,7 +360,7 @@ class AcceleratorState:
 
     def __init__(self, mindformers_plugin=None, **kwargs):
         self.__dict__ = self._shared_state
-        if PartialState._shared_state == {}:
+        if PartialState._shared_state:
             PartialState(**kwargs)
         self.__dict__.update(PartialState._shared_state)
 

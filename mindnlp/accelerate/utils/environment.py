@@ -1,3 +1,5 @@
+"""accelerate environment utilities."""
+
 
 def str_to_bool(value) -> int:
     """
