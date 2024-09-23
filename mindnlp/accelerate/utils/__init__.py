@@ -1,4 +1,14 @@
 """accelerate utils"""
+from .dataclasses import (
+    DistributedType,
+    MindFormersPlugin
+)
+from .environment import (
+    str_to_bool
+)
+from .imports import (
+    is_mindformers_available
+)
 from .modeling import (
     # calculate_maximum_sizes,
     # check_device_map,
@@ -24,3 +34,22 @@ from .modeling import (
     # set_module_tensor_to_device,
     # shard_checkpoint,
 )
+
+from .other import (
+    wait_for_everyone
+)
+
+from .mindformers import (
+    MindFormersDummyDataLoader,
+    MindFormersDummyScheduler
+)
+
+if is_mindformers_available():
+    from .mindformers import (
+        MindFormersEngine,
+        MindFormersOptimizerWrapper,
+        MindFormersSchedulerWrapper,
+        initialize as mindformers_initialize,
+        prepare_data_loader as mindformers_prepare_data_loader,
+        prepare_model_optimizer_scheduler as mindformers_prepare_model_optimizer_scheduler
+    )
