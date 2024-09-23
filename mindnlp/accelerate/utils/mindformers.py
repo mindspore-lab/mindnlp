@@ -11,7 +11,7 @@ from ...utils import logging
 if is_mindformers_available():
     from mindformers.experimental.model import LlamaForCausalLM  # pylint: disable=import-error
     from mindformers.experimental.parallel_core.pynative.config import init_configs_from_dict  # pylint: disable=import-error
-    from mindformers.experimental.parallel_core.pynative.training import \get_model, TrainOneStepCell  # pylint: disable=import-error
+    from mindformers.experimental.parallel_core.pynative.training import get_model, TrainOneStepCell  # pylint: disable=import-error
     from mindformers.experimental.parallel_core.pynative.parallel_state import initialize_model_parallel  # pylint: disable=import-error
     from mindformers.experimental.parallel_core.pynative import get_optimizer  # pylint: disable=import-error
 
