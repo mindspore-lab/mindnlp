@@ -1687,37 +1687,37 @@ class LongT5PreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
         factor = self.config.initializer_factor  # Used for testing weights initialization
         if isinstance(cell, LongT5LayerNorm):
-            cell.weight.set_data(initializer(Constant(factor * 1.0), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Constant(factor * 1.0), cell.weight.shape, cell.weight.dtype))
         elif isinstance(cell, (LongT5Model, LongT5ForConditionalGeneration, LongT5EncoderModel)):
             # Mesh TensorFlow embeddings initialization
             # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L1624
-            cell.shared.weight.set_data(initializer(Normal(factor * 1.0),
+            cell.shared.weight.assign_value(initializer(Normal(factor * 1.0),
                                                     cell.shared.weight.shape, cell.shared.weight.dtype))
         elif isinstance(cell, LongT5DenseActDense):
             # Mesh TensorFlow FF initialization
             # See https://github.com/tensorflow/mesh/blob/master/mesh_tensorflow/transformer/transformer_layers.py#L56
             # and https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L89
-            cell.wi.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
+            cell.wi.weight.assign_value(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
                                                 cell.wi.weight.shape, cell.wi.weight.dtype))
             if hasattr(cell.wi, "bias") and cell.wi.bias is not None:
-                cell.wi.bias.set_data(initializer('zeros', cell.wi.bias.shape, cell.wi.bias.dtype))
-            cell.wo.weight.set_data(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)),
+                cell.wi.bias.assign_value(initializer('zeros', cell.wi.bias.shape, cell.wi.bias.dtype))
+            cell.wo.weight.assign_value(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)),
                                                 cell.wo.weight.shape, cell.wo.weight.dtype))
             if hasattr(cell.wo, "bias") and cell.wo.bias is not None:
-                cell.wo.bias.set_data(initializer('zeros', cell.wo.bias.shape, cell.wo.bias.dtype))
+                cell.wo.bias.assign_value(initializer('zeros', cell.wo.bias.shape, cell.wo.bias.dtype))
         elif isinstance(cell, LongT5DenseGatedActDense):
-            cell.wi_0.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
+            cell.wi_0.weight.assign_value(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
                                                   cell.wi_0.weight.shape, cell.wi_0.weight.dtype))
             if hasattr(cell.wi_0, "bias") and cell.wi_0.bias is not None:
-                cell.wi_0.bias.set_data(initializer('zeros', cell.wi_0.bias.shape, cell.wi_0.bias.dtype))
-            cell.wi_1.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
+                cell.wi_0.bias.assign_value(initializer('zeros', cell.wi_0.bias.shape, cell.wi_0.bias.dtype))
+            cell.wi_1.weight.assign_value(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
                                                   cell.wi_1.weight.shape, cell.wi_1.weight.dtype))
             if hasattr(cell.wi_1, "bias") and cell.wi_1.bias is not None:
-                cell.wi_1.bias.set_data(initializer('zeros', cell.wi_1.bias.shape, cell.wi_1.bias.dtype))
-            cell.wo.weight.set_data(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)),
+                cell.wi_1.bias.assign_value(initializer('zeros', cell.wi_1.bias.shape, cell.wi_1.bias.dtype))
+            cell.wo.weight.assign_value(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)),
                                                 cell.wo.weight.shape, cell.wo.weight.dtype))
             if hasattr(cell.wo, "bias") and cell.wo.bias is not None:
-                cell.wo.bias.set_data(initializer('zeros', cell.wo.bias.shape, cell.wo.bias.dtype))
+                cell.wo.bias.assign_value(initializer('zeros', cell.wo.bias.shape, cell.wo.bias.dtype))
 
         elif isinstance(cell, (LongT5Attention, LongT5LocalAttention, LongT5TransientGlobalAttention)):
             # Mesh TensorFlow attention initialization to avoid scaling before softmax
@@ -1726,19 +1726,19 @@ class LongT5PreTrainedModel(PreTrainedModel):
             key_value_proj_dim = self.config.d_kv
             n_heads = self.config.num_heads
 
-            cell.q.weight.set_data(initializer(Normal(factor * ((d_model * key_value_proj_dim) ** -0.5)),
+            cell.q.weight.assign_value(initializer(Normal(factor * ((d_model * key_value_proj_dim) ** -0.5)),
                                                cell.q.weight.shape, cell.q.weight.dtype))
-            cell.k.weight.set_data(initializer(Normal(factor * (d_model ** -0.5)),
+            cell.k.weight.assign_value(initializer(Normal(factor * (d_model ** -0.5)),
                                                cell.k.weight.shape, cell.k.weight.dtype))
-            cell.v.weight.set_data(initializer(Normal(factor * (d_model ** -0.5)),
+            cell.v.weight.assign_value(initializer(Normal(factor * (d_model ** -0.5)),
                                                cell.v.weight.shape, cell.v.weight.dtype))
-            cell.o.weight.set_data(initializer(Normal(factor * ((n_heads * key_value_proj_dim) ** -0.5)),
+            cell.o.weight.assign_value(initializer(Normal(factor * ((n_heads * key_value_proj_dim) ** -0.5)),
                                                cell.o.weight.shape, cell.o.weight.dtype))
             if cell.has_relative_attention_bias:
-                cell.relative_attention_bias.weight.set_data(initializer(Normal(factor * (d_model**-0.5)),
+                cell.relative_attention_bias.weight.assign_value(initializer(Normal(factor * (d_model**-0.5)),
                                                     cell.relative_attention_bias.weight.shape, cell.relative_attention_bias.weight.dtype))
                 if isinstance(cell, LongT5TransientGlobalAttention):
-                    cell.global_relative_attention_bias.weight.set_data(initializer(Normal(factor * (d_model ** -0.5)),
+                    cell.global_relative_attention_bias.weight.assign_value(initializer(Normal(factor * (d_model ** -0.5)),
                                                                              cell.global_relative_attention_bias.weight.shape,
                                                                              cell.global_relative_attention_bias.weight.dtype))
 

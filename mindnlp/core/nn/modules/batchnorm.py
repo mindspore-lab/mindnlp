@@ -1,7 +1,8 @@
 """batch norm"""
 from typing import Optional
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
+from ..parameter import Parameter
 
 from .module import Module
 from .. import init
@@ -37,8 +38,8 @@ class _NormBase(Module):
         self.momentum = momentum
         self.affine = affine
         self.track_running_stats = track_running_stats
-        self.weight = Parameter(ops.empty(num_features, **factory_kwargs), 'weight', affine)
-        self.bias = Parameter(ops.empty(num_features, **factory_kwargs), 'bias', affine)
+        self.weight = Parameter(ops.empty(num_features, **factory_kwargs), affine)
+        self.bias = Parameter(ops.empty(num_features, **factory_kwargs), affine)
         if self.track_running_stats:
             self.register_buffer('running_mean', ops.zeros(num_features,))
             self.register_buffer('running_var', ops.ones(num_features,))

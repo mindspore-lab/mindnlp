@@ -1058,7 +1058,7 @@ def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
         pad_mode = padding
         pad = (0,) * 4
 
-    _conv2d = _get_cache_prim(ops.Conv2D)(out_channel=weight.shape[1] * groups,
+    _conv2d = _get_cache_prim(ops.Conv2D)(out_channel=weight.shape[0] * groups,
                                         kernel_size=(1, weight.shape[-1]),
                                         mode=1,
                                         pad_mode=pad_mode,

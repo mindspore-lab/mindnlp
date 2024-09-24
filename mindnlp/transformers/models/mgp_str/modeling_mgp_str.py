@@ -326,7 +326,7 @@ class MgpstrA3Module(nn.Module):
             [config.hidden_size], eps=config.layer_norm_eps
         )
         if self.token_norm.bias is None:
-            self.token_norm.bias.set_data(
+            self.token_norm.bias.assign_value(
                 initializer(
                     "zeros", self.token_norm.bias.shape, self.token_norm.bias.dtype
                 )
@@ -361,14 +361,14 @@ class MgpstrA3Module(nn.Module):
     def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
         if isinstance(module, MgpstrEmbeddings):
-            module.pos_embed.set_data(
+            module.pos_embed.assign_value(
                 initializer(
                     TruncatedNormal(sigma=self.config.initializer_range, mean=0.0),
                     module.pos_embed.shape,
                     module.pos_embed.dtype,
                 )
             )
-            module.cls_token.set_data(
+            module.cls_token.assign_value(
                 initializer(
                     TruncatedNormal(sigma=self.config.initializer_range, mean=0.0),
                     module.cls_token.shape,
@@ -376,7 +376,7 @@ class MgpstrA3Module(nn.Module):
                 )
             )
         elif isinstance(module, (nn.Linear, nn.Conv2d)):
-            module.weight.set_data(
+            module.weight.assign_value(
                 initializer(
                     TruncatedNormal(sigma=self.config.initializer_range, mean=0.0),
                     module.weight.shape,
@@ -384,7 +384,7 @@ class MgpstrA3Module(nn.Module):
                 )
             )
             if module.bias is not None:
-                module.bias.set_data(
+                module.bias.assign_value(
                     initializer(
                         "zeros",
                         module.bias.shape,
@@ -392,14 +392,14 @@ class MgpstrA3Module(nn.Module):
                     )
                 )
         elif isinstance(module, nn.LayerNorm):
-            module.weight.set_data(
+            module.weight.assign_value(
                 initializer(
                     "zeros",
                     module.bias.shape,
                     module.bias.dtype,
                 )
             )
-            module.weight.set_data(
+            module.weight.assign_value(
                 initializer("ones", module.weight.shape, module.weight.dtype)
             )
 
@@ -431,14 +431,14 @@ class MgpstrPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
         if isinstance(module, MgpstrEmbeddings):
-            module.pos_embed.set_data(
+            module.pos_embed.assign_value(
                 initializer(
                     TruncatedNormal(sigma=self.config.initializer_range, mean=0.0),
                     module.pos_embed.shape,
                     module.pos_embed.dtype,
                 )
             )
-            module.cls_token.set_data(
+            module.cls_token.assign_value(
                 initializer(
                     TruncatedNormal(sigma=self.config.initializer_range, mean=0.0),
                     module.cls_token.shape,
@@ -446,7 +446,7 @@ class MgpstrPreTrainedModel(PreTrainedModel):
                 )
             )
         elif isinstance(module, (nn.Linear, nn.Conv2d)):
-            module.weight.set_data(
+            module.weight.assign_value(
                 initializer(
                     TruncatedNormal(sigma=self.config.initializer_range, mean=0.0),
                     module.weight.shape,
@@ -454,7 +454,7 @@ class MgpstrPreTrainedModel(PreTrainedModel):
                 )
             )
             if module.bias is not None:
-                module.bias.set_data(
+                module.bias.assign_value(
                     initializer(
                         "zeros",
                         module.bias.shape,
@@ -462,14 +462,14 @@ class MgpstrPreTrainedModel(PreTrainedModel):
                     )
                 )
         elif isinstance(module, nn.LayerNorm):
-            module.weight.set_data(
+            module.weight.assign_value(
                 initializer(
                     "zeros",
                     module.bias.shape,
                     module.bias.dtype,
                 )
             )
-            module.weight.set_data(
+            module.weight.assign_value(
                 initializer("ones", module.weight.shape, module.weight.dtype)
             )
 

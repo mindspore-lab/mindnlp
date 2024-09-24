@@ -100,10 +100,10 @@ def prune_conv1d_layer(layer, index, dim=1):
     new_size[dim] = len(index)
     new_layer = Conv1D(new_size[1], new_size[0])
     new_layer.weight.requires_grad = False
-    new_layer.weight.set_data(gama_l)
+    new_layer.weight.assign_value(gama_l)
     new_layer.weight.requires_grad = True
     new_layer.bias.requires_grad = False
-    new_layer.bias.set_data(beta_l)
+    new_layer.bias.assign_value(beta_l)
     new_layer.bias.requires_grad = True
     return new_layer
 
@@ -154,11 +154,11 @@ def prune_linear_layer(layer, index, dim=0):
     new_size[dim] = len(index)
     new_layer = nn.Linear(new_size[1], new_size[0], bias=layer.bias is not None)
     new_layer.weight.requires_grad = False
-    new_layer.weight.set_data(W)
+    new_layer.weight.assign_value(W)
     new_layer.weight.requires_grad = True
     if layer.bias is not None:
         new_layer.bias.requires_grad = False
-        new_layer.bias.set_data(b)
+        new_layer.bias.assign_value(b)
         new_layer.bias.requires_grad = True
     return new_layer
 

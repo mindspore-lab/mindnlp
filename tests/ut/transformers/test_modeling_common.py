@@ -114,7 +114,7 @@ def _mock_init_weights(self, module):
     for name, param in module.named_parameters(recurse=False):
         # Use the first letter of the name to get a value and go from a <> -13 to z <> 12
         value = ord(name[0].lower()) - 110
-        param.set_data(ops.full(param.shape, value, dtype=param.dtype))
+        param.assign_value(ops.full(param.shape, value, dtype=param.dtype))
 
 
 def _mock_all_init_weights(self):
@@ -739,6 +739,7 @@ class ModelTesterMixin:
                 if hasattr(self, "zero_init_hidden_state") and "decoder_hidden_states" in key:
                     model_batched_output[key] = model_batched_output[key][1:]
                     model_row_output[key] = model_row_output[key][1:]
+
                 recursive_check(model_batched_output[key], model_row_output[key], model_name, key)
 
     def check_training_gradient_checkpointing(self, gradient_checkpointing_kwargs=None):

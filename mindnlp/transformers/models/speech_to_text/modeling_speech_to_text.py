@@ -533,10 +533,10 @@ class Speech2TextPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         std = self.config.init_std
         if isinstance(cell, (nn.Linear, nn.Conv1d)):
-            cell.weight.set_data(initializer(Normal(std),
+            cell.weight.assign_value(initializer(Normal(std),
                                              cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, std, cell.weight.shape)
             if cell.padding_idx:

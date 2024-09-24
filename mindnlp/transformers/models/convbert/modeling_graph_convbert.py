@@ -148,7 +148,7 @@ class ConvBertPreTrainedModel(PreTrainedModel):
                 )
             )
             # if cell.padding_idx is not None:
-            #     cell.weight.data[cell.padding_idx].set_data(
+            #     cell.weight.data[cell.padding_idx].assign_value(
             #         initializer('zeros',
             #                     cell.weight.data[cell.padding_idx].shape,
             #                     cell.weight.data[cell.padding_idx].dtype)
