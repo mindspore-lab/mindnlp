@@ -16,7 +16,7 @@ limitations under the License.'''
 
 # import inspect
 import warnings
-import wandb
+# import wandb
 from collections import defaultdict
 from dataclasses import FrozenInstanceError, replace
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -28,7 +28,7 @@ import mindspore as ms
 from mindspore.dataset import Dataset
 # from transformers import DataCollator, PreTrainedModel, PreTrainedTokenizerBase, Trainer, TrainingArguments
 #pylint: disable=import-error
-#pylint: disable=no-name-in-module
+# pylint: disable = no-name-in-module
 from ...trl.data.data_collator import DataCollator
 from mindnlp.transformers import (
     PreTrainedModel,
@@ -345,6 +345,6 @@ class RewardTrainer(Trainer):
         #             wandb.log({"completions": wandb.Table(dataframe=df)})
 
         print_rich_table(df[:num_print_samples])
-        if "wandb" in self.args.report_to:
-            if wandb.run is not None:
-                wandb.log({"completions": wandb.Table(dataframe=df)})
+        # if "wandb" in self.args.report_to:
+        #     if wandb.run is not None:
+        #         wandb.log({"completions": wandb.Table(dataframe=df)})

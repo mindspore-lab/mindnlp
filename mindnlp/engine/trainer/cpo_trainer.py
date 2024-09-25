@@ -37,7 +37,7 @@ from mindnlp.transformers import (
 )
 from mindnlp.engine import Trainer
 #pylint: disable=import-error
-#pylint: disable=no-name-in-module
+# pylint: disable = no-name-in-module
 from ...trl.data.data_collator import DataCollator
 # from transformers.trainer_callback import TrainerCallback
 # from transformers.trainer_utils import EvalLoopOutput
