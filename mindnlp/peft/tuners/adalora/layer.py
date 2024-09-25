@@ -160,17 +160,17 @@ parameters include:
 operation.
         """
         if adapter_name in self.lora_A.keys():
-            self.lora_E[adapter_name].set_data(initializer(
+            self.lora_E[adapter_name].assign_value(initializer(
                 Normal(sigma=0.02, mean=0.0),
                 self.lora_E[adapter_name].shape,
                 self.lora_E[adapter_name].dtype
             ))
-            self.lora_A[adapter_name].set_data(initializer(
+            self.lora_A[adapter_name].assign_value(initializer(
                 Normal(sigma=0.02, mean=0.0),
                 self.lora_A[adapter_name].shape,
                 self.lora_A[adapter_name].dtype
             ))
-            self.lora_B[adapter_name].set_data(initializer(
+            self.lora_B[adapter_name].assign_value(initializer(
                 Normal(sigma=0.02, mean=0.0),
                 self.lora_B[adapter_name].shape,
                 self.lora_B[adapter_name].dtype

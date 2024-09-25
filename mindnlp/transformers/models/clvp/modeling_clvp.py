@@ -738,13 +738,13 @@ class ClvpPreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
         factor = self.config.initializer_factor
         if isinstance(cell, nn.Embedding):
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=factor * 0.02),
+            cell.weight.assign_value(initializer(Normal(mean=0.0, sigma=factor * 0.02),
                                              cell.weight.shape, cell.weight.dtype))
         elif isinstance(cell, (nn.Linear, Conv1D, nn.Conv1d)):
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=factor * 0.02),
+            cell.weight.assign_value(initializer(Normal(mean=0.0, sigma=factor * 0.02),
                                              cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(
+                cell.bias.assign_value(
                     initializer(
                         "zeros",
                         cell.bias.shape,
@@ -756,33 +756,33 @@ class ClvpPreTrainedModel(PreTrainedModel):
             in_proj_std = (cell.config.hidden_size**-0.5) * \
                 ((2 * cell.config.num_hidden_layers) ** -0.5) * factor
             fc_std = (2 * cell.config.hidden_size) ** -0.5 * factor
-            (cell.fc1.proj.weight if getattr(cell.fc1, "proj") else cell.fc1.weight).set_data(initializer(Normal(fc_std), (cell.fc1.proj.weight if getattr(cell.fc1, "proj") else cell.fc1.weight).shape,
+            (cell.fc1.proj.weight if getattr(cell.fc1, "proj") else cell.fc1.weight).assign_value(initializer(Normal(fc_std), (cell.fc1.proj.weight if getattr(cell.fc1, "proj") else cell.fc1.weight).shape,
                                                                                                           (cell.fc1.proj.weight if getattr(cell.fc1, "proj") else cell.fc1.weight).dtype))
-            cell.fc2.weight.set_data(initializer(Normal(in_proj_std),
+            cell.fc2.weight.assign_value(initializer(Normal(in_proj_std),
                                                  cell.fc2.weight.shape, cell.fc2.weight.dtype))
         elif isinstance(cell, ClvpEncoder):
             config = self.config.text_config if hasattr(
                 self.config, "text_config") else self.config
             factor = config.initializer_factor
-            cell.projection.weight.set_data(initializer(Normal(factor * (config.hidden_size**-0.5)),
+            cell.projection.weight.assign_value(initializer(Normal(factor * (config.hidden_size**-0.5)),
                                                         cell.projection.weight.shape, cell.projection.weight.dtype))
         elif isinstance(cell, ClvpConditioningEncoder):
-            cell.mel_conv.weight.set_data(initializer(Normal(factor),
+            cell.mel_conv.weight.assign_value(initializer(Normal(factor),
                                                       cell.mel_conv.weight.shape, cell.mel_conv.weight.dtype))
-            cell.mel_conv.bias.set_data(initializer(
+            cell.mel_conv.bias.assign_value(initializer(
                 'zeros', cell.mel_conv.bias.shape, cell.mel_conv.bias.dtype))
         elif isinstance(cell, ClvpForCausalLM):
             for name, p in cell.parameters_and_names():
                 if name == "c_proj.weight":
-                    p.set_data(initializer(Normal
+                    p.assign_value(initializer(Normal
                                            (self.config.initializer_range /
                                             math.sqrt(2 * self.config.num_hidden_layers)),
                                            p.shape, p.dtype)
                                )
         if isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer(
+            cell.weight.assign_value(initializer(
                 'ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer(
+            cell.bias.assign_value(initializer(
                 'zeros', cell.bias.shape, cell.bias.dtype))
 
 

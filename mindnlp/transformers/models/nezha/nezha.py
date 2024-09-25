@@ -1167,20 +1167,20 @@ class NezhaPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """Initialize the weights"""
         if isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+            cell.weight.assign_value(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = initializer(Normal(self.config.initializer_range),
                                                  cell.weight.shape,
                                                  cell.weight.dtype)
             if cell.padding_idx is not None:
                 weight[cell.padding_idx] = 0
-            cell.weight.set_data(weight)
+            cell.weight.assign_value(weight)
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
     # TODO
     def get_input_embeddings(self):

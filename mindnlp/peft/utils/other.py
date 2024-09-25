@@ -312,10 +312,6 @@ def _set_trainable(model, adapter_name):
                 if isinstance(parent, nn.Sequential):
                     parent.cell_list = list(parent._cells.values())
 
-    for n, p in model.parameters_and_names():
-        if n != p.name:
-            p.name = n
-
 
 def _freeze_adapter(model, adapter_name):
     """

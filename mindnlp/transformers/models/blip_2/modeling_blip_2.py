@@ -479,23 +479,23 @@ class Blip2PreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
         factor = self.config.initializer_range
         if isinstance(cell, (nn.Conv2d, nn.Linear, nn.Embedding)):
-            cell.weight.set_data(initializer(Normal(factor), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(factor), cell.weight.shape, cell.weight.dtype))
             if hasattr(cell, "bias") and cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
         if isinstance(cell, Blip2VisionEmbeddings):
             if hasattr(self.config, "vision_config"):
                 factor = self.config.vision_config.initializer_range
 
-            cell.position_embedding.set_data(initializer(TruncatedNormal(factor), cell.position_embedding.shape, cell.position_embedding.dtype))
-            cell.class_embedding.set_data(initializer(TruncatedNormal(factor), cell.class_embedding.shape, cell.class_embedding.dtype))
+            cell.position_embedding.assign_value(initializer(TruncatedNormal(factor), cell.position_embedding.shape, cell.position_embedding.dtype))
+            cell.class_embedding.assign_value(initializer(TruncatedNormal(factor), cell.class_embedding.shape, cell.class_embedding.dtype))
 
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
         elif isinstance(cell, nn.Linear) and cell.bias is not None:
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
 # Copied from transformers.models.blip.modeling_blip.BlipEncoder with Blip->Blip2

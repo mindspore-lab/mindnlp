@@ -449,7 +449,7 @@ class MSMambaPreTrainedModel(PreTrainedModel):
             if self.config.time_step_init_scheme == "constant":
                 cell.dt_proj.weight[:] = dt_init_std
             elif self.config.time_step_init_scheme == "random":
-                cell.dt_proj.weight.set_data(initializer(Uniform(dt_init_std), cell.dt_proj.weight.shape, cell.dt_proj.weight.dtype))
+                cell.dt_proj.weight.assign_value(initializer(Uniform(dt_init_std), cell.dt_proj.weight.shape, cell.dt_proj.weight.dtype))
 
             dt = ops.exp(
                 ops.rand(self.config.intermediate_size)
@@ -466,7 +466,7 @@ class MSMambaPreTrainedModel(PreTrainedModel):
                 if not getattr(cell.bias, "_no_reinit", False):
                     cell.bias[:] = 0
         elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
 
         if self.config.rescale_prenorm_residual:
             # Reinitialize selected weights subject to the OpenAI GPT-2 Paper Scheme:
@@ -481,7 +481,7 @@ class MSMambaPreTrainedModel(PreTrainedModel):
                     # Following MindSpore init, except scale by 1/sqrt(2 * n_layer)
                     # We need to reinit p since this code could be called multiple times
                     # Having just p *= scale would repeatedly scale it down
-                    p.set_data(initializer(HeUniform(math.sqrt(5)), p.shape, p.dtype) / math.sqrt(self.config.num_layers))
+                    p.assign_value(initializer(HeUniform(math.sqrt(5)), p.shape, p.dtype) / math.sqrt(self.config.num_layers))
 
     def __call__(self, *args, **kwargs):
 

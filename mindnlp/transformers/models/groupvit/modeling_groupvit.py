@@ -756,40 +756,40 @@ class GroupViTPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(init_range),
+            cell.weight.assign_value(initializer(Normal(init_range),
                                     cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
         factor = self.config.initializer_factor
         if isinstance(cell, GroupViTTextEmbeddings):
-            cell.token_embedding.weight.set_data(initializer(Normal(factor * 0.02),
+            cell.token_embedding.weight.assign_value(initializer(Normal(factor * 0.02),
                                                  cell.token_embedding.weight.shape, cell.token_embedding.weight.dtype))
-            cell.position_embedding.weight.set_data(initializer(Normal(factor * 0.02),
+            cell.position_embedding.weight.assign_value(initializer(Normal(factor * 0.02),
                                         cell.position_embedding.weight.shape, cell.position_embedding.weight.dtype))
         elif isinstance(cell, GroupViTAttention):
             factor = self.config.initializer_factor
             in_proj_std = (cell.embed_dim**-0.5) * ((2 * cell.config.num_hidden_layers) ** -0.5) * factor
             out_proj_std = (cell.embed_dim**-0.5) * factor
-            cell.q_proj.weight.set_data(initializer(Normal(in_proj_std),
+            cell.q_proj.weight.assign_value(initializer(Normal(in_proj_std),
                                         cell.q_proj.weight.shape, cell.q_proj.weight.dtype))
-            cell.k_proj.weight.set_data(initializer(Normal(in_proj_std),
+            cell.k_proj.weight.assign_value(initializer(Normal(in_proj_std),
                                         cell.k_proj.weight.shape, cell.k_proj.weight.dtype))
-            cell.v_proj.weight.set_data(initializer(Normal(in_proj_std),
+            cell.v_proj.weight.assign_value(initializer(Normal(in_proj_std),
                                         cell.v_proj.weight.shape, cell.v_proj.weight.dtype))
-            cell.out_proj.weight.set_data(initializer(Normal(out_proj_std),
+            cell.out_proj.weight.assign_value(initializer(Normal(out_proj_std),
                                         cell.out_proj.weight.shape, cell.out_proj.weight.dtype))
 
         elif isinstance(cell, GroupViTMLP):
             factor = self.config.initializer_factor
             in_proj_std = (cell.config.hidden_size**-0.5) * ((2 * cell.config.num_hidden_layers) ** -0.5) * factor
             fc_std = (2 * cell.config.hidden_size) ** -0.5 * factor
-            cell.fc1.weight.set_data(initializer(Normal(fc_std),
+            cell.fc1.weight.assign_value(initializer(Normal(fc_std),
                                     cell.fc1.weight.shape, cell.fc1.weight.dtype))
-            cell.fc2.weight.set_data(initializer(Normal(in_proj_std),
+            cell.fc2.weight.assign_value(initializer(Normal(in_proj_std),
                                     cell.fc2.weight.shape, cell.fc2.weight.dtype))
 
 class GroupViTVisionEncoder(nn.Module):

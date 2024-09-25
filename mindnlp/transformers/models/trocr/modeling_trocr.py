@@ -450,15 +450,15 @@ class TrOCRPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         std = self.config.init_std
         if isinstance(module, (nn.Linear, nn.Conv1d)):
-            module.weight.set_data(initializer(
+            module.weight.assign_value(initializer(
                 Normal(sigma=std, mean=0.0), module.weight.shape, module.weight.dtype))
             if module.bias is not None:
-                module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))
+                module.bias.assign_value(initializer('zeros', module.bias.shape, module.bias.dtype))
         elif isinstance(module, nn.Embedding):
             emb_weight = np.random.normal(0, std, module.weight.shape)
             if module.padding_idx is not None:
                 emb_weight[module.padding_idx] = 0
-            module.weight.set_data(mindspore.Tensor(emb_weight, module.weight.dtype))
+            module.weight.assign_value(mindspore.Tensor(emb_weight, module.weight.dtype))
 
 
 class TrOCRDecoder(TrOCRPreTrainedModel):

@@ -14,7 +14,7 @@
 # ============================================================================
 r"""Weight Normalization from https://arxiv.org/abs/1602.07868."""
 from typing import Any, TypeVar
-from mindspore import Parameter
+from ..parameter import Parameter
 from ..modules import Module
 from ... import ops
 

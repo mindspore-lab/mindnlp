@@ -15,3 +15,4 @@
 """mindnlp nn"""
 from . import utils, functional, init
 from .modules import *
+from .parameter import Parameter

@@ -812,21 +812,21 @@ class DetrPreTrainedModel(PreTrainedModel):
         xavier_std = self.config.init_xavier_std
 
         if isinstance(cell, DetrMHAttentionMap):
-            cell.k_linear.bias.set_data(initializer('zeros', cell.k_linear.bias.shape, cell.k_linear.bias.dtype))
-            cell.q_linear.bias.set_data(initializer('zeros', cell.q_linear.bias.shape, cell.q_linear.bias.dtype))
-            cell.k_linear.weight.set_data(initializer(XavierUniform(xavier_std), cell.k_linear.weight.shape, cell.k_linear.weight.dtype))
-            cell.q_linear.weight.set_data(initializer(XavierUniform(xavier_std), cell.q_linear.weight.shape, cell.q_linear.weight.dtype))
+            cell.k_linear.bias.assign_value(initializer('zeros', cell.k_linear.bias.shape, cell.k_linear.bias.dtype))
+            cell.q_linear.bias.assign_value(initializer('zeros', cell.q_linear.bias.shape, cell.q_linear.bias.dtype))
+            cell.k_linear.weight.assign_value(initializer(XavierUniform(xavier_std), cell.k_linear.weight.shape, cell.k_linear.weight.dtype))
+            cell.q_linear.weight.assign_value(initializer(XavierUniform(xavier_std), cell.q_linear.weight.shape, cell.q_linear.weight.dtype))
         elif isinstance(cell, DetrLearnedPositionEmbedding):
-            cell.row_embeddings.weight.set_data(initializer(Uniform(), cell.row_embeddings.weight.shape, cell.row_embeddings.weight.dtype))
-            cell.column_embeddings.weight.set_data(initializer(Uniform(), cell.column_embeddings.weight.shape, cell.column_embeddings.weight.dtype))
+            cell.row_embeddings.weight.assign_value(initializer(Uniform(), cell.row_embeddings.weight.shape, cell.row_embeddings.weight.dtype))
+            cell.column_embeddings.weight.assign_value(initializer(Uniform(), cell.column_embeddings.weight.shape, cell.column_embeddings.weight.dtype))
         if isinstance(cell, (nn.Linear, nn.Conv2d, nn.BatchNorm2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(sigma=std), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(sigma=std), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(initializer(Normal(sigma=std), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(sigma=std), cell.weight.shape, cell.weight.dtype))
             if cell.padding_idx is not None:
                 cell.weight[cell.padding_idx] = 0.0
 
@@ -1704,8 +1704,8 @@ class DetrMaskHeadSmallConv(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                m.weight.set_data(Parameter(initializer(HeUniform(), m.weight.shape, m.weight.dtype)))
-                m.bias.set_data(Parameter(initializer('zeros', m.bias.shape, m.bias.dtype)))
+                m.weight.assign_value(Parameter(initializer(HeUniform(), m.weight.shape, m.weight.dtype)))
+                m.bias.assign_value(Parameter(initializer('zeros', m.bias.shape, m.bias.dtype)))
 
     def forward(self, x: Tensor, bbox_mask: Tensor, fpns: List[Tensor]):
         # here we concatenate x, the projected feature map, of shape (batch_size, d_model, heigth/32, width/32) with

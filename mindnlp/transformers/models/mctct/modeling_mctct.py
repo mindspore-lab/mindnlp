@@ -434,28 +434,28 @@ class MCTCTPreTrainedModel(PreTrainedModel):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             # cell.weight.data.normal_(mean=0.0, std=std)
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
+            cell.weight.assign_value(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
+            cell.weight.assign_value(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.padding_idx is not None:
                 cell.weight[cell.padding_idx] = 0
         elif isinstance(cell, nn.LayerNorm):
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
         elif isinstance(cell, MCTCTLayerNorm):
-            cell.singleton_weight.set_data(initializer('ones', cell.singleton_weight.shape, cell.singleton_weight.dtype))
+            cell.singleton_weight.assign_value(initializer('ones', cell.singleton_weight.shape, cell.singleton_weight.dtype))
             # cell.singleton_bias.data.zero_()
-            cell.singleton_bias.set_data(initializer('zeros', cell.singleton_bias.shape, cell.singleton_bias.dtype))
+            cell.singleton_bias.assign_value(initializer('zeros', cell.singleton_bias.shape, cell.singleton_bias.dtype))
         if isinstance(cell, (nn.Linear, nn.Conv1d)):
             # cell.weight.data.normal_(mean=0.0, std=std)
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
+            cell.weight.assign_value(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
     def _get_feat_extract_output_lengths(self, input_lengths: ms.Tensor):
         """

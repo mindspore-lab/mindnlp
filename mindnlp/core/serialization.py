@@ -1370,6 +1370,7 @@ def safe_load_file(filename):
         for k, v in safeview:
             dtype = _NP_TYPES[v["dtype"]]
             arr = np.frombuffer(v["data"], dtype=dtype).reshape(v["shape"])
+
             if (not SUPPORT_BF16 and dtype != bfloat16) or SUPPORT_BF16:
                 result[k] = Tensor.from_numpy(arr)
             else:
