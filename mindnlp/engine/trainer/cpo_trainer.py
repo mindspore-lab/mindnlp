@@ -36,6 +36,7 @@ from mindnlp.transformers import (
     PreTrainedTokenizerBase,
 )
 from mindnlp.engine import Trainer
+#pylint: disable=import-error
 from ...trl.data.data_collator import DataCollator
 # from transformers.trainer_callback import TrainerCallback
 # from transformers.trainer_utils import EvalLoopOutput
@@ -51,7 +52,7 @@ from .utils import (
     # peft_module_casting_to_bf16,
     trl_sanitze_kwargs_for_tagging,
 )
-import wandb
+# import wandb
 
 # if is_peft_available():
 #     from peft import PeftModel, get_peft_model, prepare_model_for_kbit_training

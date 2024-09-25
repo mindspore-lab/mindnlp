@@ -12,9 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable=C,R
-
-
+# pylint: disable=C,R,W
 import dataclasses
 import inspect
 import warnings
@@ -46,7 +44,8 @@ from mindnlp.transformers import (
 )
 from mindnlp.engine import Trainer
 from mindnlp.peft import PeftConfig, PeftModel, get_peft_model
-
+#pylint: disable=import-error
+#pylint: disable=no-name-in-module
 from ...trl.data.data_collator import DataCollator, DataCollatorForLanguageModeling
 # from mindnlp.transformers.modeling_utils import unwrap_model
 # from mindnlp.transformers.trainer_callback import TrainerCallback

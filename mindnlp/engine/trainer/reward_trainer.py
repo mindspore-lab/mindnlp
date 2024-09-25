@@ -12,9 +12,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable=C,R
+# pylint: disable=C,R,W
 
-import inspect
+# import inspect
 import warnings
 import wandb
 from collections import defaultdict
@@ -27,6 +27,7 @@ import mindspore as ms
 # from accelerate.utils import gather_object
 from mindspore.dataset import Dataset
 # from transformers import DataCollator, PreTrainedModel, PreTrainedTokenizerBase, Trainer, TrainingArguments
+#pylint: disable=import-error
 from ...trl.data.data_collator import DataCollator
 from mindnlp.transformers import (
     PreTrainedModel,

@@ -12,8 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable=C,R
-
+# pylint: disable=C,R,W
 import random
 import warnings
 # from collections import deque
@@ -43,6 +42,8 @@ from rich.table import Table
 from mindnlp.transformers import (
     PreTrainedTokenizerBase,
 )
+#pylint: disable=import-error
+#pylint: disable=no-name-in-module
 from ...trl.data.data_collator import DataCollatorForLanguageModeling
 from mindnlp.engine import TrainerCallback
 from mindnlp.engine import has_length
@@ -1215,7 +1216,7 @@ class OnpolicyRuntimeConfig:
 #     return model
 
 
-def truncate_response(stop_token_id: int, pad_token_id: int, responses: torch.Tensor):
+def truncate_response(stop_token_id: int, pad_token_id: int, responses: ms.Tensor):
     """
     Truncates the responses at the first occurrence of the stop token, filling the rest with pad tokens.
 
@@ -1311,7 +1312,8 @@ def add_eos_token_if_needed(
     return chosen_tokens, rejected_tokens
 
 @dataclass
-class OnlineTrainerState(TrainerState):
+# class OnlineTrainerState(TrainerState):
+class OnlineTrainerState():
     episode: int = 0
     
 @no_grad()
