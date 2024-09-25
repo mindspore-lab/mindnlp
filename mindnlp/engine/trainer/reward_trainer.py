@@ -28,6 +28,7 @@ import mindspore as ms
 from mindspore.dataset import Dataset
 # from transformers import DataCollator, PreTrainedModel, PreTrainedTokenizerBase, Trainer, TrainingArguments
 #pylint: disable=import-error
+#pylint: disable=no-name-in-module
 from ...trl.data.data_collator import DataCollator
 from mindnlp.transformers import (
     PreTrainedModel,
