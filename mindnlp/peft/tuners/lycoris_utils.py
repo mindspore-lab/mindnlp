@@ -340,7 +340,7 @@ class LycorisTuner(BaseTuner):
                 )
             elif isinstance(target, ModulesToSaveWrapper):
                 # save any additional trainable modules part of `modules_to_save`
-                new_module = target.cells_to_save[target.active_adapter]
+                new_module = target.modules_to_save[target.active_adapter]
                 if hasattr(new_module, "base_layer"):
                     # check if the module is itself a tuner layer
                     if merge:

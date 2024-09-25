@@ -103,7 +103,7 @@ class PeftModel(nn.Module):
         super().__init__()
         self.base_model = model
         self.config = getattr(self.base_model, "config", {"model_type": "custom"})
-        self.cells_to_save = None
+        self.modules_to_save = None
         self.peft_config: Dict[str, PeftConfig] = {}
         self.active_adapter = adapter_name
         self.peft_type = peft_config.peft_type
@@ -429,11 +429,11 @@ class PeftModel(nn.Module):
 
     def set_additional_trainable_cells(self, peft_config, adapter_name):
         """set additional trainable cells"""
-        if getattr(peft_config, "cells_to_save", None) is not None:
-            if self.cells_to_save is None:
-                self.cells_to_save = set(peft_config.cells_to_save)
+        if getattr(peft_config, "modules_to_save", None) is not None:
+            if self.modules_to_save is None:
+                self.modules_to_save = set(peft_config.modules_to_save)
             else:
-                self.cells_to_save.update(peft_config.cells_to_save)
+                self.modules_to_save.update(peft_config.modules_to_save)
             _set_trainable(self, adapter_name)
 
     @property
@@ -468,13 +468,13 @@ class PeftModelForSequenceClassification(PeftModel):
             None.
         """
         super().__init__(model, peft_config, adapter_name)
-        if self.cells_to_save is None:
-            self.cells_to_save = {"classifier", "score"}
+        if self.modules_to_save is None:
+            self.modules_to_save = {"classifier", "score"}
         else:
-            self.cells_to_save.update({"classifier", "score"})
+            self.modules_to_save.update({"classifier", "score"})
 
         for name, _ in self.base_model.cells_and_names():
-            if any(cell_name in name for cell_name in self.cells_to_save):
+            if any(cell_name in name for cell_name in self.modules_to_save):
                 self.cls_layer_name = name
                 break
 
@@ -950,13 +950,13 @@ class PeftModelForTokenClassification(PeftModel):
             N/A
         """
         super().__init__(model, peft_config, adapter_name)
-        if self.cells_to_save is None:
-            self.cells_to_save = {"classifier", "score"}
+        if self.modules_to_save is None:
+            self.modules_to_save = {"classifier", "score"}
         else:
-            self.cells_to_save.update({"classifier", "score"})
+            self.modules_to_save.update({"classifier", "score"})
 
         for name, _ in self.base_model.cells_and_names():
-            if any(cell_name in name for cell_name in self.cells_to_save):
+            if any(cell_name in name for cell_name in self.modules_to_save):
                 self.cls_layer_name = name
                 break
 
