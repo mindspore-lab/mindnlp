@@ -75,7 +75,7 @@ original module for reference. The class includes methods for enabling and disab
         """
         super().__init__()
         self.original_cell = cell_to_save
-        self.cells_to_save = nn.ModuleDict({})
+        self.modules_to_save = nn.ModuleDict({})
         self._active_adapter = adapter_name
         self._disable_adapters = False
         self.update(adapter_name)
@@ -89,7 +89,7 @@ original module for reference. The class includes methods for enabling and disab
         forbidden_classes = (nn.ModuleDict, nn.ModuleList, mindspore.ParameterTuple, ParameterDict)
         if isinstance(self.original_cell, forbidden_classes):
             cls_name = self.original_cell.__class__.__name__
-            raise TypeError(f"cells_to_save cannot be applied to cells of type {cls_name}")
+            raise TypeError(f"modules_to_save cannot be applied to cells of type {cls_name}")
 
     @property
     def disable_adapters(self) -> bool:
@@ -141,9 +141,9 @@ original module for reference. The class includes methods for enabling and disab
         Raises:
             - None: This method does not raise any exceptions.
         """
-        if self.active_adapter not in self.cells_to_save:
+        if self.active_adapter not in self.modules_to_save:
             return self.original_cell.weight
-        return self.cells_to_save[self.active_adapter].weight
+        return self.modules_to_save[self.active_adapter].weight
 
     def update(self, adapter_name):
         r"""
@@ -157,7 +157,7 @@ original module for reference. The class includes methods for enabling and disab
             None. This method does not return any value.
         
         Raises:
-            - AttributeError: If the 'cells_to_save' attribute does not contain the specified 'adapter_name'.
+            - AttributeError: If the 'modules_to_save' attribute does not contain the specified 'adapter_name'.
             - RuntimeError: If an error occurs during the update process.
             - ValueError: If the 'adapter_name' parameter is not a string.
         """
@@ -166,17 +166,17 @@ original module for reference. The class includes methods for enabling and disab
             num_params = param.numel()
 
         with context_manager:
-            self.cells_to_save.update(nn.ModuleDict({adapter_name: copy.deepcopy(self.original_cell)}))
+            self.modules_to_save.update(nn.ModuleDict({adapter_name: copy.deepcopy(self.original_cell)}))
 
-        if hasattr(self.cells_to_save[adapter_name], "_hf_hook"):
-            old_hook = self.cells_to_save[adapter_name]._hf_hook
+        if hasattr(self.modules_to_save[adapter_name], "_hf_hook"):
+            old_hook = self.modules_to_save[adapter_name]._hf_hook
             new_hook = self._create_new_hook(old_hook)
-            # remove_hook_from_cell(self.cells_to_save[adapter_name])
-            # add_hook_to_cell(self.cells_to_save[adapter_name], new_hook)
+            # remove_hook_from_cell(self.modules_to_save[adapter_name])
+            # add_hook_to_cell(self.modules_to_save[adapter_name], new_hook)
 
         self.original_cell.requires_grad_(False)
         if adapter_name == self.active_adapter:
-            self.cells_to_save[adapter_name].requires_grad_(True)
+            self.modules_to_save[adapter_name].requires_grad_(True)
 
     # def _create_new_hook(self, old_hook):
     #     r"""
@@ -205,9 +205,9 @@ original module for reference. The class includes methods for enabling and disab
         Raises:
             - N/A
         """
-        if self.disable_adapters or (self.active_adapter not in self.cells_to_save):
+        if self.disable_adapters or (self.active_adapter not in self.modules_to_save):
             return self.original_cell(*args, **kwargs)
-        return self.cells_to_save[self.active_adapter](*args, **kwargs)
+        return self.modules_to_save[self.active_adapter](*args, **kwargs)
 
     def enable_adapters(self, enabled: bool):
         """Toggle the enabling and disabling of adapters
@@ -223,11 +223,11 @@ original module for reference. The class includes methods for enabling and disab
 
         if enabled:
             self.original_cell.requires_grad_(False)
-            self.cells_to_save[self.active_adapter].requires_grad_(True)
+            self.modules_to_save[self.active_adapter].requires_grad_(True)
             self._disable_adapters = False
         else:
             self.original_cell.requires_grad_(True)
-            self.cells_to_save.requires_grad_(False)
+            self.modules_to_save.requires_grad_(False)
             self._disable_adapters = True
 
     def set_adapter(self, adapter_name: str):
@@ -245,11 +245,11 @@ original module for reference. The class includes methods for enabling and disab
         Args:
             adapter_name (str): The name of the adapter to set as active
         """
-        if adapter_name not in self.cells_to_save:
-            raise ValueError(f"Adapter {adapter_name} not found in {self.cells_to_save.keys()}")
+        if adapter_name not in self.modules_to_save:
+            raise ValueError(f"Adapter {adapter_name} not found in {self.modules_to_save.keys()}")
 
-        self.cells_to_save[self.active_adapter].requires_grad_(False)
-        self.cells_to_save[adapter_name].requires_grad_(True)
+        self.modules_to_save[self.active_adapter].requires_grad_(False)
+        self.modules_to_save[adapter_name].requires_grad_(True)
         self._active_adapter = adapter_name
 
 
@@ -293,7 +293,7 @@ def _set_trainable(model, adapter_name):
     """
     key_list = [key for key, _ in model.cells_and_names()]  # named_cells cells_and_names
     for key in key_list:
-        target_cell_found = any(key.endswith(target_key) for target_key in model.cells_to_save)
+        target_cell_found = any(key.endswith(target_key) for target_key in model.modules_to_save)
         if target_cell_found:
             parent, target, target_name = _get_subcells(model, key)
 

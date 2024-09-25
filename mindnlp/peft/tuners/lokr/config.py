@@ -38,7 +38,7 @@ class LoKrConfig(PeftConfig):
         decompose_factor (`int`):Kronecker product decomposition factor.
 
         bias (`str`): Bias type for Lora. Can be 'none', 'all' or 'lora_only'
-        cells_to_save (`List[str]`):
+        modules_to_save (`List[str]`):
             List of cells apart from LoRA layers to be set as trainable
             and saved in the final checkpoint.
         init_weights (`bool`):
@@ -92,7 +92,7 @@ class LoKrConfig(PeftConfig):
         default="none",
         metadata={"help": "Bias type for Lora. Can be 'none', 'all' or 'lora_only'"},
     )
-    cells_to_save: Optional[List[str]] = field(
+    modules_to_save: Optional[List[str]] = field(
         default=None,
         metadata={
             "help": "List of cells apart from LoRA layers to be set as trainable and saved in the final checkpoint. "
