@@ -1055,8 +1055,9 @@ def modify_model_for_pp_infer(model: nn.Module, device_map, no_split_module_clas
                 new_layer = DecoderLayerIdentity(submodule.self_attn.layer_idx, submodule.self_attn.config)
                 replace_submodule(model, scope_name, new_layer)
             else:
-                new_layer = nn.Identity()
-                replace_submodule(model, scope_name, new_layer)
+                # new_layer = nn.Identity()
+                # replace_submodule(model, scope_name, new_layer)
+                pass
 
     if current_device < last_device:
         current_last_layer = model.get_submodule(reversed_device_map[current_device][-1])
@@ -1076,6 +1077,19 @@ def modify_model_for_pp_infer(model: nn.Module, device_map, no_split_module_clas
     model_last_layer.src = last_device
 
     return model
+
+def find_usefull_files(shared_files, shared_meta, model_params):
+    files_path = '/'.join(shared_files[0].split('/')[:-1])
+    usefull_files = set()
+    loaded_keys = []
+    for param_name, file_name in shared_meta['weight_map'].items():
+        if param_name in model_params:
+            usefull_files.add(file_name)
+            loaded_keys.append(param_name)
+
+    usefull_files = [files_path + '/' + file for file in usefull_files]
+
+    return usefull_files, loaded_keys
 
 
 def replace_submodule(model, submodule_path, new_module):
@@ -1133,6 +1147,7 @@ class DecoderLayerIdentity(nn.Module):
 
         output = output + (None,)
         return output
+
 
 class EmbeddingIndentity(nn.Module):
     def __init__(self, num_embeddings: int, embedding_dim: int, dtype=None):
