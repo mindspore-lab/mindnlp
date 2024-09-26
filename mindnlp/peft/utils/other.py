@@ -291,7 +291,7 @@ def _set_trainable(model, adapter_name):
     """
     set trainable
     """
-    key_list = [key for key, _ in model.cells_and_names()]  # named_cells cells_and_names
+    key_list = [key for key, _ in model.cells_and_names()]  # named_modules cells_and_names
     for key in key_list:
         target_cell_found = any(key.endswith(target_key) for target_key in model.modules_to_save)
         if target_cell_found:
@@ -310,7 +310,7 @@ def _set_trainable(model, adapter_name):
                 # self.cell_list is not set correctly if __setattr__'s value type is Sequential.
                 # Thus we set it apparently here. This line may be removed later.
                 if isinstance(parent, nn.Sequential):
-                    parent.cell_list = list(parent._cells.values())
+                    parent.cell_list = list(parent._modules.values())
 
 
 def _freeze_adapter(model, adapter_name):
