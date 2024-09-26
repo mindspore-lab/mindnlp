@@ -18,10 +18,10 @@ import math
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask

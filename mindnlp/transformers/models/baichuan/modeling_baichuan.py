@@ -26,13 +26,14 @@ from threading import Thread
 
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 from mindspore import dtype as mstype
 from mindnlp.utils import logging
 
 from mindnlp.configs import use_pyboost
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from .configuration_baichuan import BaiChuanConfig
 from ...generation.utils import GenerationConfig

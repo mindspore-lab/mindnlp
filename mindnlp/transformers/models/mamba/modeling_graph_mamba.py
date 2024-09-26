@@ -20,10 +20,10 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from addict import Dict as ADDict
 
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, Uniform, HeUniform
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
@@ -287,12 +287,12 @@ class MSMambaCache:
         ssm_state_size = config.state_size
         conv_kernel_size = config.conv_kernel
 
-        self.conv_states = Parameter(ops.zeros(config.num_hidden_layers, batch_size, intermediate_size, conv_kernel_size, dtype=dtype), name='conv_states')
+        self.conv_states = Parameter(ops.zeros(config.num_hidden_layers, batch_size, intermediate_size, conv_kernel_size, dtype=dtype))
         # {
         #     i: ops.zeros(batch_size, intermediate_size, conv_kernel_size, dtype=dtype)
         #     for i in range(config.num_hidden_layers)
         # }
-        self.ssm_states = Parameter(ops.zeros(config.num_hidden_layers, batch_size, intermediate_size, ssm_state_size, dtype=dtype), name='ssm_states')
+        self.ssm_states = Parameter(ops.zeros(config.num_hidden_layers, batch_size, intermediate_size, ssm_state_size, dtype=dtype))
         # {
         #     i: ops.zeros(batch_size, intermediate_size, ssm_state_size, dtype=dtype)
         #     for i in range(config.num_hidden_layers)

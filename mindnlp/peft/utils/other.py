@@ -18,10 +18,11 @@ from contextlib import nullcontext
 from typing import Optional, List
 
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import ParameterDict
 
 def _get_batch_size(input_ids: Optional[Tensor], inputs_embeds: Optional[Tensor]) -> int:

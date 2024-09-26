@@ -15,9 +15,9 @@
 """
 Graphormer utils
 """
-from mindspore import Parameter
 from mindspore.common.initializer import (
     initializer, Initializer, Zero, Normal, Constant, XavierUniform)
+from mindnlp.core.nn import Parameter
 
 
 def initializer_decorator(generator: Initializer):

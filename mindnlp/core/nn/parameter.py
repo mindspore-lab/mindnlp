@@ -1,5 +1,6 @@
 """new Parameter"""
 import uuid
+import copy
 from mindspore import Tensor
 from mindspore._c_expression import ParamInfo # pylint: disable=no-name-in-module
 
@@ -14,3 +15,6 @@ class Parameter(Tensor):
     @property
     def data(self):
         return self
+
+    def clone(self):
+        return copy.deepcopy(self)

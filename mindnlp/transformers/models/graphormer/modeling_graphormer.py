@@ -23,10 +23,11 @@ from typing import Iterable, Iterator, List, Optional, Tuple, Union
 import numpy as np
 import mindspore
 
-from mindspore import Parameter, Tensor
+from mindspore import Tensor
 from mindspore.common.initializer import Uniform
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from ...activations import ACT2FN
 from ...modeling_outputs import (
