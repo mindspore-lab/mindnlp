@@ -17,13 +17,13 @@ import math
 import warnings
 
 import mindspore
-from mindspore import Parameter
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.operations._rl_inner_ops import CudnnGRU
 from mindspore.ops import DynamicGRUV2, DynamicRNN, ReverseV2, ReverseSequence
 from mindspore.ops import LSTM as LSTMOP
 from mindspore.nn.layer.rnn_cells import _rnn_relu_cell, _rnn_tanh_cell, _gru_cell, _lstm_cell
 
+from ..parameter import Parameter
 from .module import Module
 from .dropout import Dropout
 from ... import ops

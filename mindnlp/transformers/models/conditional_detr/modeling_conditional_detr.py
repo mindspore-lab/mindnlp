@@ -18,9 +18,10 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal, Uniform, XavierUniform, HeUniform
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 
 from ...activations import ACT2FN
@@ -1088,29 +1089,29 @@ class ConditionalDetrPreTrainedModel(PreTrainedModel):
         xavier_std = self.config.init_xavier_std
 
         if isinstance(cell, ConditionalDetrMHAttentionMap):
-            cell.k_linear.bias.set_data(initializer(
+            cell.k_linear.bias.assign_value(initializer(
                 'zeros', cell.k_linear.bias.shape, cell.k_linear.bias.dtype))
-            cell.q_linear.bias.set_data(initializer(
+            cell.q_linear.bias.assign_value(initializer(
                 'zeros', cell.q_linear.bias.shape, cell.q_linear.bias.dtype))
-            cell.k_linear.weight.set_data(initializer(XavierUniform(
+            cell.k_linear.weight.assign_value(initializer(XavierUniform(
                 xavier_std), cell.k_linear.weight.shape, cell.k_linear.weight.dtype))
-            cell.q_linear.weight.set_data(initializer(XavierUniform(
+            cell.q_linear.weight.assign_value(initializer(XavierUniform(
                 xavier_std), cell.q_linear.weight.shape, cell.q_linear.weight.dtype))
         elif isinstance(cell, ConditionalDetrLearnedPositionEmbedding):
-            cell.row_embeddings.weight.set_data(initializer(
+            cell.row_embeddings.weight.assign_value(initializer(
                 Uniform(), cell.row_embeddings.weight.shape, cell.row_embeddings.weight.dtype))
-            cell.column_embeddings.weight.set_data(initializer(Uniform(
+            cell.column_embeddings.weight.assign_value(initializer(Uniform(
             ), cell.column_embeddings.weight.shape, cell.column_embeddings.weight.dtype))
         if isinstance(cell, (nn.Linear, nn.Conv2d, nn.BatchNorm2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(
+            cell.weight.assign_value(initializer(
                 Normal(sigma=std), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer(
+                cell.bias.assign_value(initializer(
                     'zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(initializer(
+            cell.weight.assign_value(initializer(
                 Normal(sigma=std), cell.weight.shape, cell.weight.dtype))
             if cell.padding_idx is not None:
                 cell.weight[cell.padding_idx] = 0.0
@@ -2079,9 +2080,9 @@ class ConditionalDetrMaskHeadSmallConv(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                m.weight.set_data(Parameter(initializer(
+                m.weight.assign_value(Parameter(initializer(
                     HeUniform(), m.weight.shape, m.weight.dtype)))
-                m.bias.set_data(Parameter(initializer(
+                m.bias.assign_value(Parameter(initializer(
                     'zeros', m.bias.shape, m.bias.dtype)))
 
     def forward(self, x: Tensor, bbox_mask: Tensor, fpns: List[Tensor]):

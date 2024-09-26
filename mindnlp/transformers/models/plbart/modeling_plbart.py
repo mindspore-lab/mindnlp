@@ -497,7 +497,7 @@ class PLBartPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         std = self.config.init_std
         if isinstance(module, nn.Linear):
-            module.weight.set_data(
+            module.weight.assign_value(
                 initializer(
                     Normal(mean=0.0,sigma=std),
                     module.weight.shape,
@@ -505,7 +505,7 @@ class PLBartPreTrainedModel(PreTrainedModel):
                 )
             )
             if module.bias is not None:
-                module.bias.set_data(
+                module.bias.assign_value(
                 initializer(
                     "zeros",
                     module.bias.shape,
@@ -513,7 +513,7 @@ class PLBartPreTrainedModel(PreTrainedModel):
                 )
                 )
         elif isinstance(module, nn.Embedding):
-            module.weight.set_data(
+            module.weight.assign_value(
                 initializer(
                     Normal(mean=0.0,sigma=std),
                     module.weight.shape,

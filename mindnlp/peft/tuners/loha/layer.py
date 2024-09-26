@@ -189,33 +189,33 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
         # FedPara paper proposes to perform He initialization, let's stick with it
         # It is enough to initialize only single matrix with zeros to make adapter do nothing after initialization
         if adapter_name in self.hada_w1_a.keys():
-            self.hada_w1_a[adapter_name].set_data(
+            self.hada_w1_a[adapter_name].assign_value(
                 initializer(
                     HeUniform(math.sqrt(5)), shape=self.hada_w1_a[adapter_name].shape
                 )
             )
-            self.hada_w1_b[adapter_name].set_data(
+            self.hada_w1_b[adapter_name].assign_value(
                 initializer(
                     HeUniform(math.sqrt(5)), shape=self.hada_w1_b[adapter_name].shape
                 )
             )
-            self.hada_w2_a[adapter_name].set_data(
+            self.hada_w2_a[adapter_name].assign_value(
                 initializer(
                     HeUniform(math.sqrt(5)), shape=self.hada_w2_a[adapter_name].shape
                 )
             )
-            self.hada_w2_b[adapter_name].set_data(
+            self.hada_w2_b[adapter_name].assign_value(
                 initializer(
                     HeUniform(math.sqrt(5)), shape=self.hada_w2_b[adapter_name].shape
                 )
             )
         if adapter_name in self.hada_t1.keys():
-            self.hada_t1[adapter_name].set_data(
+            self.hada_t1[adapter_name].assign_value(
                 initializer(
                     HeUniform(math.sqrt(5)), shape=self.hada_t1[adapter_name].shape
                 )
             )
-            self.hada_t2[adapter_name].set_data(
+            self.hada_t2[adapter_name].assign_value(
                 initializer(
                     HeUniform(math.sqrt(5)), shape=self.hada_t2[adapter_name].shape
                 )
@@ -247,33 +247,33 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
         # FedPara paper proposes to perform He initialization, let's stick with it
         # It is enough to initialize only single matrix with zeros to make adapter do nothing after initialization
         if adapter_name in self.hada_w1_a.keys():
-            self.hada_w1_a[adapter_name].set_data(
+            self.hada_w1_a[adapter_name].assign_value(
                 initializer(
                     HeUniform(math.sqrt(5)), shape=self.hada_w1_a[adapter_name].shape
                 )
             )
-            self.hada_w1_b[adapter_name].set_data(
+            self.hada_w1_b[adapter_name].assign_value(
                 initializer(
                     HeUniform(math.sqrt(5)), shape=self.hada_w1_b[adapter_name].shape
                 )
             )
-            self.hada_w2_a[adapter_name].set_data(
+            self.hada_w2_a[adapter_name].assign_value(
                 initializer(
                     HeUniform(math.sqrt(5)), shape=self.hada_w2_a[adapter_name].shape
                 )
             )
-            self.hada_w2_b[adapter_name].set_data(
+            self.hada_w2_b[adapter_name].assign_value(
                 initializer(
                     HeUniform(math.sqrt(5)), shape=self.hada_w2_b[adapter_name].shape
                 )
             )
         if adapter_name in self.hada_t1.keys():
-            self.hada_t1[adapter_name].set_data(
+            self.hada_t1[adapter_name].assign_value(
                 initializer(
                     HeUniform(math.sqrt(5)), shape=self.hada_t1[adapter_name].shape
                 )
             )
-            self.hada_t2[adapter_name].set_data(
+            self.hada_t2[adapter_name].assign_value(
                 initializer(
                     HeUniform(math.sqrt(5)), shape=self.hada_t2[adapter_name].shape
                 )

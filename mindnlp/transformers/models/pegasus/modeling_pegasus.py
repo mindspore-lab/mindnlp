@@ -101,7 +101,7 @@ class PegasusSinusoidalPositionalEmbedding(nn.Embedding):
         sentinel = dim // 2 if dim % 2 == 0 else (dim // 2) + 1
         out_np[:, 0:sentinel] = np.sin(position_enc[:, 0::2])
         out_np[:, sentinel:] = np.cos(position_enc[:, 1::2])
-        out.set_data(Tensor(out_np, out.dtype))
+        out.assign_value(Tensor(out_np, out.dtype))
         return out
 
     def forward(self, input_ids_shape, past_key_values_length: int = 0) -> mindspore.Tensor:
@@ -629,9 +629,9 @@ class PegasusPreTrainedModel(PreTrainedModel):
         '''
         std = self.config.init_std
         if isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(sigma=std, mean=0.0), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(sigma=std, mean=0.0), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer("zeros", cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, PegasusSinusoidalPositionalEmbedding):
             pass
         elif isinstance(cell, nn.Embedding):
@@ -639,7 +639,7 @@ class PegasusPreTrainedModel(PreTrainedModel):
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
 
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
 
 class PegasusEncoder(PegasusPreTrainedModel):
     """

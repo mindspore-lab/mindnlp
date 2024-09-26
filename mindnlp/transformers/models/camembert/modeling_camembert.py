@@ -594,7 +594,7 @@ class CamembertPreTrainedModel(PreTrainedModel):
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
 
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
             ops.initialize(cell.weight, 'ones')
             ops.initialize(cell.bias, 'zeros')

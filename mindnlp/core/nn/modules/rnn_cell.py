@@ -16,7 +16,7 @@
 import math
 
 import mindspore
-from mindspore import Parameter
+from ..parameter import Parameter
 from .module import Module
 from .. import init
 from .. import functional as F

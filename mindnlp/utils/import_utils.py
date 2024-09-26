@@ -95,6 +95,7 @@ _sudachipy_available, _sudachipy_version = _is_package_available("sudachipy", re
 _librosa_available = _is_package_available("librosa")
 _scipy_available = _is_package_available("scipy")
 _sacremoses_available = _is_package_available("sacremoses")
+_kenlm_available = _is_package_available("kenlm")
 
 _pretty_midi_available = importlib.util.find_spec("pretty_midi") is not None
 try:
@@ -162,6 +163,10 @@ def get_sudachi_version():
         None
     '''
     return _sudachipy_version
+
+
+def is_kenlm_available():
+    return _kenlm_available
 
 
 def is_bs4_available():

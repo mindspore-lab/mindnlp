@@ -676,7 +676,7 @@ class Data2VecTextPreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
         if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
-            cell.weight.set_data(
+            cell.weight.assign_value(
                 initializer(
                     Normal(self.config.initializer_range),
                     cell.weight.shape,
@@ -684,11 +684,11 @@ class Data2VecTextPreTrainedModel(PreTrainedModel):
                 )
             )
             if cell.bias is not None:
-                cell.bias.set_data(
+                cell.bias.assign_value(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
         elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(
+            cell.weight.assign_value(
                 initializer(
                     Normal(self.config.initializer_range),
                     cell.weight.shape,
@@ -699,11 +699,11 @@ class Data2VecTextPreTrainedModel(PreTrainedModel):
                 cell.weight.data[cell.padding_idx] = 0
         elif isinstance(cell, nn.LayerNorm):
             if hasattr(cell, "bias") and cell.bias is not None:
-                cell.bias.set_data(
+                cell.bias.assign_value(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
             if hasattr(cell, "weight") and cell.weight is not None:
-                cell.weight.set_data(
+                cell.weight.assign_value(
                     initializer("ones", cell.weight.shape, cell.weight.dtype)
                 )
 

@@ -890,7 +890,7 @@ class SEWPreTrainedModel(PreTrainedModel):
         """Initialize the weights."""
         if isinstance(cell, SEWPositionalConvEmbedding):
             # 使用正态分布初始化权重
-            cell.conv.weight.set_data(
+            cell.conv.weight.assign_value(
                 initializer(
                     Normal(
                         mean=0,
@@ -903,12 +903,12 @@ class SEWPreTrainedModel(PreTrainedModel):
                     cell.conv.weight.dtype,
                 )
             )
-            cell.conv.bias.set_data(
+            cell.conv.bias.assign_value(
                 initializer("zeros", cell.conv.bias.shape, cell.conv.bias.dtype)
             )
         elif isinstance(cell, nn.Linear):
             # 使用正态分布初始化权重
-            cell.weight.set_data(
+            cell.weight.assign_value(
                 initializer(
                     Normal(0.0, self.config.initializer_range),
                     cell.weight.shape,
@@ -916,18 +916,18 @@ class SEWPreTrainedModel(PreTrainedModel):
                 )
             )
         elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
-            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(
+            cell.bias.assign_value(initializer("zeros", cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(
                 initializer("ones", cell.weight.shape, cell.weight.dtype)
             )
         elif isinstance(cell, nn.Conv1d):
             # 使用kaiming正态分布初始化权重
-            cell.weight.set_data(
+            cell.weight.assign_value(
                 initializer("he_normal", cell.weight.shape, cell.weight.dtype)
             )
 
         if isinstance(cell, (nn.Linear, nn.Conv1d)) and cell.bias is not None:
-            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
+            cell.bias.assign_value(initializer("zeros", cell.bias.shape, cell.bias.dtype))
 
     def _get_feat_extract_output_lengths(
         self, input_lengths: Union[mindspore.Tensor, int]

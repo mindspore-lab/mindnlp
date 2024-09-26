@@ -83,7 +83,7 @@ class LNTuningModel(BaseTuner):
         except AttributeError:
             return getattr(self.model, name)
 
-    # TODO: here need to handle the cells_to_save rather than the target_modules
+    # TODO: here need to handle the modules_to_save rather than the target_modules
     @staticmethod
     def _prepare_adapter_config(
         peft_config: PeftConfig, model_config: dict

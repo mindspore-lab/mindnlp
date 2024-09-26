@@ -81,7 +81,7 @@ from mindnlp.utils.testing_utils import (
     require_mindspore,
     slow,
 )
-from mindnlp.configs import CONFIG_NAME, GENERATION_CONFIG_NAME, SAFE_WEIGHTS_NAME
+from mindnlp.configs import CONFIG_NAME, GENERATION_CONFIG_NAME, SAFE_WEIGHTS_NAME, ON_ORANGE_PI
 from mindnlp.utils.generic import ContextManagers, ModelOutput
 
 
@@ -114,7 +114,7 @@ def _mock_init_weights(self, module):
     for name, param in module.named_parameters(recurse=False):
         # Use the first letter of the name to get a value and go from a <> -13 to z <> 12
         value = ord(name[0].lower()) - 110
-        param.set_data(ops.full(param.shape, value, dtype=param.dtype))
+        param.assign_value(ops.full(param.shape, value, dtype=param.dtype))
 
 
 def _mock_all_init_weights(self):
@@ -739,6 +739,7 @@ class ModelTesterMixin:
                 if hasattr(self, "zero_init_hidden_state") and "decoder_hidden_states" in key:
                     model_batched_output[key] = model_batched_output[key][1:]
                     model_row_output[key] = model_row_output[key][1:]
+
                 recursive_check(model_batched_output[key], model_row_output[key], model_name, key)
 
     def check_training_gradient_checkpointing(self, gradient_checkpointing_kwargs=None):
@@ -1753,8 +1754,10 @@ class ModelTesterMixin:
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def set_nan_tensor_to_zero(t):
-            # t[t != t] = 0
-            t = ops.where(t != t, 0, t)
+            if ON_ORANGE_PI:
+                t = ops.where(t != t, 0, t)
+            else:
+                t[t != t] = 0
             return t
 
         def check_equivalence(model, tuple_inputs, dict_inputs, additional_kwargs={}):

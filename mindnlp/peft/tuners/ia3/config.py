@@ -42,7 +42,7 @@ class IA3Config(PeftConfig):
         fan_in_fan_out (`bool`):
             Set this to True if the layer to replace stores weight like (fan_in, fan_out). For example, gpt-2 uses
             `Conv1D` which stores weights like (fan_in, fan_out) and hence this should be set to `True`.
-        cells_to_save (`Optional[List[str]]`):
+        modules_to_save (`Optional[List[str]]`):
             List of cells apart from (IA)³ layers to be set as trainable and saved in the final checkpoint.
         init_ia3_weights (`bool`):
             Whether to initialize the vectors in the (IA)³ layers, defaults to `True`. Setting this to `False` is
@@ -71,7 +71,7 @@ class IA3Config(PeftConfig):
         default=False,
         metadata={"help": "Set this to True if the layer to replace stores weight like (fan_in, fan_out)"},
     )
-    cells_to_save: Optional[List[str]] = field(
+    modules_to_save: Optional[List[str]] = field(
         default=None,
         metadata={
             "help": "List of cells apart from (IA)^3 layers to be set as trainable and saved in the final checkpoint. "

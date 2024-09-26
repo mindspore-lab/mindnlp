@@ -15,7 +15,7 @@
 import math
 
 import mindspore
-from mindspore import Parameter
+from mindnlp.core.nn import Parameter
 from mindnlp.core import nn
 from .config import PromptTuningInit
 

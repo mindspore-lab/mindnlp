@@ -300,10 +300,10 @@ class GPTSanJapaneseAttention(nn.Module):
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
         # Convert weights to Float32
-        self.k_proj.weight.set_data(self.k_proj.weight.astype(mindspore.float32))
-        self.v_proj.weight.set_data(self.v_proj.weight.astype(mindspore.float32))
-        self.q_proj.weight.set_data(self.q_proj.weight.astype(mindspore.float32))
-        self.out_proj.weight.set_data(self.out_proj.weight.astype(mindspore.float32))
+        self.k_proj.weight.assign_value(self.k_proj.weight.astype(mindspore.float32))
+        self.v_proj.weight.assign_value(self.v_proj.weight.astype(mindspore.float32))
+        self.q_proj.weight.assign_value(self.q_proj.weight.astype(mindspore.float32))
+        self.out_proj.weight.assign_value(self.out_proj.weight.astype(mindspore.float32))
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(0, 2, 1, 3)
@@ -569,7 +569,7 @@ class GPTSanJapanesePreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
         factor = self.config.initializer_factor  # Used for testing weights initialization
         if isinstance(module, nn.LayerNorm):
-            module.weight.set_data(initializer(Constant(factor * 1.0), module.weight.shape, module.weight.dtype))
+            module.weight.assign_value(initializer(Constant(factor * 1.0), module.weight.shape, module.weight.dtype))
             nn.init.zeros_(module.weight)
         elif isinstance(module, nn.Linear):
             nn.init.normal_(module.weight,mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
@@ -580,14 +580,14 @@ class GPTSanJapanesePreTrainedModel(PreTrainedModel):
         elif isinstance(module, GPTSanJapaneseModel):
             # Mesh TensorFlow embeddings initialization
             # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L1624
-            module.embed_tokens.weight.set_data(
+            module.embed_tokens.weight.assign_value(
                 initializer(Normal(0.0,factor * 1.0),
                             module.embed_tokens.weight.shape, module.embed_tokens.weight.dtype))
-            module.position_embeddings.weight.set_data(
+            module.position_embeddings.weight.assign_value(
                 initializer(Normal(0.0,factor * 1.0),
                             module.position_embeddings.weight.shape, module.position_embeddings.weight.dtype))
             if hasattr(module, "extra_position_embeddings") and module.extra_position_embeddings is not None:
-                module.extra_position_embeddings.weight.data.set_data(initializer(Normal(0.0,factor * 1.0), \
+                module.extra_position_embeddings.weight.data.assign_value(initializer(Normal(0.0,factor * 1.0), \
                                                     module.extra_position_embeddings.weight.data.shape, \
                                                     module.extra_position_embeddings.weight.data.dtype))
         elif isinstance(module, (GPTSanJapaneseModel, GPTSanJapaneseForConditionalGeneration)):
@@ -596,33 +596,33 @@ class GPTSanJapanesePreTrainedModel(PreTrainedModel):
             nn.init.normal_(module.final_logits_bias,mean=0.0, std=factor * 1.0)
 
             if hasattr(module, "lm_head") and not self.config.tie_word_embeddings:
-                module.lm_head.weight.data.set_data(initializer(Normal(0.0,factor * 1.0), \
+                module.lm_head.weight.data.assign_value(initializer(Normal(0.0,factor * 1.0), \
                                                     module.lm_head.weight.data.shape, \
                                                     module.lm_head.weight.data.dtype))
         elif isinstance(module, GPTSanJapaneseDenseActDense):
             # Mesh TensorFlow FF initialization
             # See https://github.com/tensorflow/mesh/blob/master/mesh_tensorflow/transformer/transformer_layers.py#L56
             # and https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L89
-            module.wi.weight.set_data(initializer(Normal(0.0,factor * ((self.config.d_model) ** -0.5)),
+            module.wi.weight.assign_value(initializer(Normal(0.0,factor * ((self.config.d_model) ** -0.5)),
                                                 module.wi.weight.shape, module.wi.weight.dtype))
             if hasattr(module.wi, "bias") and module.wi.bias is not None:
-                module.wi.bias.set_data(initializer('zeros', module.wi.bias.shape, module.wi.bias.dtype))
-            module.wo.weight.set_data(initializer(Normal(0.0,factor * ((self.config.d_ff) ** -0.5)),
+                module.wi.bias.assign_value(initializer('zeros', module.wi.bias.shape, module.wi.bias.dtype))
+            module.wo.weight.assign_value(initializer(Normal(0.0,factor * ((self.config.d_ff) ** -0.5)),
                                                 module.wo.weight.shape, module.wo.weight.dtype))
             if hasattr(module.wo, "bias") and module.wo.bias is not None:
-                module.wo.bias.set_data(initializer('zeros', module.wo.bias.shape, module.wo.bias.dtype))
+                module.wo.bias.assign_value(initializer('zeros', module.wo.bias.shape, module.wo.bias.dtype))
         elif isinstance(module, GPTSanJapaneseAttention):
             # Multi-headed attention
             d_model = self.config.d_model
             key_value_proj_dim = self.config.d_model
             n_heads = self.config.num_heads
-            module.k_proj.weight.set_data(initializer(Normal(0.0,factor * ((d_model * key_value_proj_dim) ** -0.5)),
+            module.k_proj.weight.assign_value(initializer(Normal(0.0,factor * ((d_model * key_value_proj_dim) ** -0.5)),
                                                module.k_proj.weight.shape, module.k_proj.weight.dtype))
-            module.v_proj.weight.set_data(initializer(Normal(0.0,factor * ((d_model * key_value_proj_dim) ** -0.5)),
+            module.v_proj.weight.assign_value(initializer(Normal(0.0,factor * ((d_model * key_value_proj_dim) ** -0.5)),
                                                module.v_proj.weight.shape, module.v_proj.weight.dtype))
-            module.q_proj.weight.set_data(initializer(Normal(0.0,factor * ((d_model * key_value_proj_dim) ** -0.5)),
+            module.q_proj.weight.assign_value(initializer(Normal(0.0,factor * ((d_model * key_value_proj_dim) ** -0.5)),
                                                module.q_proj.weight.shape, module.q_proj.weight.dtype))
-            module.out_proj.weight.set_data(initializer(Normal(0.0,factor * ((n_heads * key_value_proj_dim) ** -0.5)),
+            module.out_proj.weight.assign_value(initializer(Normal(0.0,factor * ((n_heads * key_value_proj_dim) ** -0.5)),
                                                module.out_proj.weight.shape, module.out_proj.weight.dtype))
         elif isinstance(module, GPTSanJapaneseSparseMLP):
             # Mesh TensorFlow attention initialization to avoid scaling before softmax
@@ -630,19 +630,19 @@ class GPTSanJapanesePreTrainedModel(PreTrainedModel):
             d_model = self.config.d_model
             key_value_proj_dim = self.config.d_model
             n_heads = self.config.num_heads
-            module.router.classifier.weight.data.set_data(initializer(Normal(0.0,factor * 1.0), \
+            module.router.classifier.weight.data.assign_value(initializer(Normal(0.0,factor * 1.0), \
                                                               module.router.classifier.weight.data.shape, \
                                                               module.router.classifier.weight.data.dtype))
             for idx in range(self.config.num_experts):
-                module.experts[f"expert_{idx}"].wi.weight.set_data(initializer(Normal(0.0,factor * (d_model**-0.5)), \
+                module.experts[f"expert_{idx}"].wi.weight.assign_value(initializer(Normal(0.0,factor * (d_model**-0.5)), \
                                                               module.experts[f"expert_{idx}"].wi.weight.data.shape, \
                                                               module.experts[f"expert_{idx}"].wi.weight.data.dtype))
-                module.experts[f"expert_{idx}"].wo.weight.set_data(initializer(Normal(0.0,factor * (d_model**-0.5)), \
+                module.experts[f"expert_{idx}"].wo.weight.assign_value(initializer(Normal(0.0,factor * (d_model**-0.5)), \
                                                               module.experts[f"expert_{idx}"].wo.weight.data.shape, \
                                                               module.experts[f"expert_{idx}"].wo.weight.data.dtype))
        # Ensure `last_project` bias is initialized to zero
         if hasattr(module, 'last_project') and hasattr(module.last_project, 'bias') and module.last_project.bias is not None:
-            module.last_project.bias.set_data(initializer('zeros', module.last_project.bias.shape, module.last_project.bias.dtype))
+            module.last_project.bias.assign_value(initializer('zeros', module.last_project.bias.shape, module.last_project.bias.dtype))
     # Copied from transformers.models.t5.modeling_t5.T5PreTrainedModel._shift_right
     def _shift_right(self, input_ids):
         decoder_start_token_id = self.config.decoder_start_token_id

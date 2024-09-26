@@ -16,10 +16,11 @@
 import warnings
 from typing import Any, List, Optional
 
-from mindspore import Tensor, Parameter, get_grad
+from mindspore import Tensor, get_grad
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import ParameterDict, ModuleDict
 from mindnlp.peft.utils import transpose
 from mindnlp.transformers.ms_utils import Conv1D
@@ -160,17 +161,17 @@ parameters include:
 operation.
         """
         if adapter_name in self.lora_A.keys():
-            self.lora_E[adapter_name].set_data(initializer(
+            self.lora_E[adapter_name].assign_value(initializer(
                 Normal(sigma=0.02, mean=0.0),
                 self.lora_E[adapter_name].shape,
                 self.lora_E[adapter_name].dtype
             ))
-            self.lora_A[adapter_name].set_data(initializer(
+            self.lora_A[adapter_name].assign_value(initializer(
                 Normal(sigma=0.02, mean=0.0),
                 self.lora_A[adapter_name].shape,
                 self.lora_A[adapter_name].dtype
             ))
-            self.lora_B[adapter_name].set_data(initializer(
+            self.lora_B[adapter_name].assign_value(initializer(
                 Normal(sigma=0.02, mean=0.0),
                 self.lora_B[adapter_name].shape,
                 self.lora_B[adapter_name].dtype

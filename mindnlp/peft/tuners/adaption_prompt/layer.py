@@ -15,7 +15,8 @@
 import math
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
+from mindnlp.core.nn import Parameter
 from mindnlp.core import nn, ops
 from .config import TRANSFORMERS_MODEL_CONFIG
 
@@ -40,11 +41,12 @@ class AdaptedAttention(nn.Module):
         # 正确的初始化和使用 Normal 初始化器
         normal_values = np.random.normal(loc=0.0, scale=1.0, size=(adapter_len, self.model.hidden_size)).astype(
             np.float32)
-        self.adaption_prompt = Parameter(Tensor(normal_values, dtype=mindspore.float32), name="adaption_prompt")
+        self.adaption_prompt = Parameter(Tensor(normal_values, dtype=mindspore.float32))
 
         # 使用零初始化器初始化门控参数
         zero_values = np.zeros((1,), dtype=np.float32)
-        self.adaption_gate = Parameter(Tensor(zero_values, dtype=mindspore.float32), name="adaption_gate")
+        self.adaption_gate = Parameter(Tensor(zero_values, dtype=mindspore.float32))
+
     def forward(self, **kwargs):
         """
         Forward pass for the adapter which wraps the original LlamaAttention cell.

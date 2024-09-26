@@ -414,17 +414,17 @@ class XLMPreTrainedModel(PreTrainedModel):
                 if cell.padding_idx:
                     weight[cell.padding_idx] = 0
 
-                cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+                cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.Linear):
             if self.config is not None and self.config.init_std is not None:
-                cell.weight.set_data(initializer(Normal(self.config.init_std),
+                cell.weight.assign_value(initializer(Normal(self.config.init_std),
                                                         cell.weight.shape, cell.weight.dtype))
                 if cell.bias is not None:
-                    cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                    cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
         if isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 @dataclass
 class XLMForQuestionAnsweringOutput(ModelOutput):

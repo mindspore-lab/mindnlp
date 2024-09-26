@@ -20,10 +20,10 @@ from collections import UserDict
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...generation.beam_search import BeamHypotheses, BeamSearchScorer
@@ -1137,19 +1137,19 @@ class CpmBeePreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
         std = self.config.init_std
         if isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         # still needed
         elif isinstance(cell, CpmBeeEmbeddingExt):
-            cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, CpmBeeLayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
         elif isinstance(cell, CpmBeeBucketPositionBias):
-            cell.relative_attention_bias.set_data(initializer(
+            cell.relative_attention_bias.assign_value(initializer(
                 Normal(std), cell.relative_attention_bias.shape, cell.relative_attention_bias.dtype))
 
 

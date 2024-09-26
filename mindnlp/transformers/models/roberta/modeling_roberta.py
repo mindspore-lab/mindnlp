@@ -18,10 +18,10 @@ import math
 from typing import Optional, Tuple, Union, List
 
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from .configuration_roberta import RobertaConfig
@@ -1884,7 +1884,7 @@ class RobertaLMHead(nn.Module):
         )
 
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
-        self.bias = Parameter(initializer("zeros", config.vocab_size), "bias")
+        self.bias = Parameter(initializer("zeros", config.vocab_size))
         self.decoder.bias = self.bias
 
     def forward(self, features):

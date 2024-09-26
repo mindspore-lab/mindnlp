@@ -32,7 +32,7 @@ class PolyConfig(PeftConfig):
     Args:
         r (`int`): Attention dimension of each Lora in Poly.
         target_modules (`Union[List[str],str]`): The names of the cells to apply Poly to.
-        cells_to_save (`List[str]`): List of cells apart from Poly layers to be set as trainable
+        modules_to_save (`List[str]`): List of cells apart from Poly layers to be set as trainable
             and saved in the final checkpoint.
         init_weights (bool): Whether to perform initialization of Poly weights.
         poly_type (`Literal["poly"]`): The variant of the Poly cell to use. Currently, only "poly"
@@ -51,7 +51,7 @@ class PolyConfig(PeftConfig):
             "For example, ['q', 'v'] or '.*decoder.*(SelfAttention|EncDecAttention).*(q|v)$' "
         },
     )
-    cells_to_save: Optional[List[str]] = field(
+    modules_to_save: Optional[List[str]] = field(
         default=None,
         metadata={
             "help": "List of cells apart from Poly layers to be set as trainable and saved in the final checkpoint. "

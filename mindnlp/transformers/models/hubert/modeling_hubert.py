@@ -850,7 +850,7 @@ class HubertPreTrainedModel(PreTrainedModel):
             nn.init.zeros_(module.bias)
             nn.init.ones_(module.weight)
         elif isinstance(module, nn.Conv1d):
-            nn.init.kaiming_normal_(module.weight.data)
+            nn.init.kaiming_normal_(module.weight)
         if isinstance(module, (nn.Linear, nn.Conv1d)) and module.bias is not None:
             nn.init.zeros_(module.bias)
 

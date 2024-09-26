@@ -427,7 +427,7 @@ class FNetPreTrainedModel(PreTrainedModel):
         if isinstance(module, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.set_data(
+            module.weight.assign_value(
                 initializer(
                     Normal(sigma=self.config.initializer_range, mean=0.0),
                     module.weight.shape,
@@ -436,11 +436,11 @@ class FNetPreTrainedModel(PreTrainedModel):
             )
             # NOTE: Original code uses same initialization as weights for biases as well.
             if module.bias is not None:
-                module.bias.set_data(
+                module.bias.assign_value(
                     initializer("zeros", module.bias.shape, module.bias.dtype)
                 )
         elif isinstance(module, nn.Embedding):
-            module.weight.set_data(
+            module.weight.assign_value(
                 initializer(
                     Normal(sigma=self.config.initializer_range, mean=0.0),
                     module.weight.shape,

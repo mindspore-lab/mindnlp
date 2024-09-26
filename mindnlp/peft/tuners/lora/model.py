@@ -624,8 +624,8 @@ class LoraModel(BaseTuner):
             #             target.merge(safe_merge=safe_merge, adapter_names=adapter_names)
             #         self._replace_cell(parent, target_name, target.get_base_layer(), target)
             #     elif isinstance(target, ModulesToSaveWrapper):
-            #         # save any additional trainable cells part of `cells_to_save`
-            #         new_cell = target.cells_to_save[target.active_adapter]
+            #         # save any additional trainable cells part of `modules_to_save`
+            #         new_cell = target.modules_to_save[target.active_adapter]
             #         if hasattr(new_cell, "base_layer"):
             #             # check if the cell is itself a tuner layer
             #             if merge:
@@ -646,18 +646,18 @@ class LoraModel(BaseTuner):
             if adapter not in list(self.peft_config.keys()):
                 raise ValueError(f"Adapter {adapter} does not exist")
 
-        # If more than one of the adapters targets the same cell with cells_to_save, raise an error, as these
+        # If more than one of the adapters targets the same cell with modules_to_save, raise an error, as these
         # cells cannot be merged. First, find the ModulesToSaveWrapper instances in the model, then check if they
         # have cells for the adapters to be merged.
-        cells_to_save_wrappers = [cell for cell in self.cells() if isinstance(cell, ModulesToSaveWrapper)]
+        modules_to_save_wrappers = [cell for cell in self.cells() if isinstance(cell, ModulesToSaveWrapper)]
         problematic_wrappers = [
             wrapper
-            for wrapper in cells_to_save_wrappers
-            if sum(adapter in wrapper.cells_to_save for adapter in adapters) > 1
+            for wrapper in modules_to_save_wrappers
+            if sum(adapter in wrapper.modules_to_save for adapter in adapters) > 1
         ]
         if problematic_wrappers:
             raise ValueError(
-                "Cannot add weighted adapters if they target the same cell with cells_to_save, but found "
+                "Cannot add weighted adapters if they target the same cell with modules_to_save, but found "
                 f"{len(problematic_wrappers)} such instance(s)."
             )
 

@@ -15,10 +15,10 @@
 
 """roberta model, base on bert."""
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from .configuration_roberta import RobertaConfig
 from ..bert.modeling_bert import BertModel, BertPreTrainedModel

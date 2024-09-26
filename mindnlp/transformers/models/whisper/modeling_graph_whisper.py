@@ -23,9 +23,10 @@ import sys
 import numpy as np
 import mindspore as ms
 
-from mindspore import nn, ops
-from mindspore import Tensor, Parameter, load_param_into_net
+from mindspore import Tensor
+from mindspore import nn, ops, load_param_into_net
 from mindspore.ops.primitive import constexpr
+from mindnlp.core.nn import Parameter
 from mindnlp.core.serialization import load
 
 INF = 1. * 1e9

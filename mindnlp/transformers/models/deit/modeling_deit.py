@@ -20,10 +20,10 @@ from dataclasses import dataclass
 from typing import Optional, Set, Tuple, Union
 
 import mindspore as ms
-from mindspore import Parameter
 from mindspore.common.initializer import TruncatedNormal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -63,12 +63,12 @@ class DeiTEmbeddings(nn.Module):
     def __init__(self, config: DeiTConfig, use_mask_token: bool = False) -> None:
         super().__init__()
 
-        self.cls_token = Parameter(ops.zeros((1, 1, config.hidden_size)), name="cls_token")
-        self.distillation_token = Parameter(ops.zeros((1, 1, config.hidden_size)), name="distillation_token")
-        self.mask_token = Parameter(ops.zeros((1, 1, config.hidden_size)), name="mask_token")
+        self.cls_token = Parameter(ops.zeros((1, 1, config.hidden_size)))
+        self.distillation_token = Parameter(ops.zeros((1, 1, config.hidden_size)))
+        self.mask_token = Parameter(ops.zeros((1, 1, config.hidden_size)))
         self.patch_embeddings = DeiTPatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
-        self.position_embeddings = Parameter(ops.zeros((1, num_patches + 2, config.hidden_size)), name="position_embeddings")
+        self.position_embeddings = Parameter(ops.zeros((1, num_patches + 2, config.hidden_size)))
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.patch_size = config.patch_size
 

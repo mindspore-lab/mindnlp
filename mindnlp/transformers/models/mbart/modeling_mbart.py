@@ -600,17 +600,17 @@ class MBartPreTrainedModel(PreTrainedModel):
         """
         std = self.config.init_std
         if isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(self.config.init_std),
+            cell.weight.assign_value(initializer(Normal(self.config.init_std),
                                                cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros',
+                cell.bias.assign_value(initializer('zeros',
                                                cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, std, cell.weight.shape)
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
 
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
 
     @property
     def dummy_inputs(self):

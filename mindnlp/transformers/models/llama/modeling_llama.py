@@ -291,9 +291,9 @@ class LlamaMLP(nn.Module):
     def forward(self, x):
         if self.config.pretraining_tp > 1:
             slice = self.intermediate_size // self.config.pretraining_tp
-            gate_proj_slices = self.gate_proj.weight.split(slice, dim=0)
-            up_proj_slices = self.up_proj.weight.split(slice, dim=0)
-            down_proj_slices = self.down_proj.weight.split(slice, dim=1)
+            gate_proj_slices = ops.split(self.gate_proj.weight, slice, dim=0)
+            up_proj_slices = ops.split(self.up_proj.weight, slice, dim=0)
+            down_proj_slices = ops.split(self.down_proj.weight, slice, dim=1)
 
             gate_proj = ops.cat(
                 [F.linear(x, gate_proj_slices[i]) for i in range(self.config.pretraining_tp)], dim=-1
@@ -378,11 +378,12 @@ class LlamaAttention(nn.Module):
 
         if self.config.pretraining_tp > 1:
             key_value_slicing = (self.num_key_value_heads * self.head_dim) // self.config.pretraining_tp
-            query_slices = self.q_proj.weight.split(
+            query_slices = ops.split(
+                self.q_proj.weight,
                 (self.num_heads * self.head_dim) // self.config.pretraining_tp, dim=0
             )
-            key_slices = self.k_proj.weight.split(key_value_slicing, dim=0)
-            value_slices = self.v_proj.weight.split(key_value_slicing, dim=0)
+            key_slices = ops.split(self.k_proj.weight, key_value_slicing, dim=0)
+            value_slices = ops.split(self.v_proj.weight, key_value_slicing, dim=0)
 
             query_states = [F.linear(hidden_states, query_slices[i]) for i in range(self.config.pretraining_tp)]
             query_states = ops.cat(query_states, dim=-1)
@@ -445,8 +446,8 @@ class LlamaAttention(nn.Module):
         attn_output = attn_output.reshape(bsz, q_len, -1)
 
         if self.config.pretraining_tp > 1:
-            attn_output = attn_output.split(self.hidden_size // self.config.pretraining_tp, dim=2)
-            o_proj_slices = self.o_proj.weight.split(self.hidden_size // self.config.pretraining_tp, dim=1)
+            attn_output = ops.split(attn_output, self.hidden_size // self.config.pretraining_tp, dim=2)
+            o_proj_slices = ops.split(self.o_proj.weight, self.hidden_size // self.config.pretraining_tp, dim=1)
             attn_output = sum(F.linear(attn_output[i], o_proj_slices[i]) for i in range(self.config.pretraining_tp))
         else:
             attn_output = self.o_proj(attn_output)

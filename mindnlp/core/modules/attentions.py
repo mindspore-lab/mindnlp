@@ -17,7 +17,7 @@ import math
 from typing import Optional
 
 import mindspore
-from mindspore import Parameter
+from mindnlp.core.nn import Parameter
 from mindnlp.core import nn, ops
 from .utils import masked_softmax, tiny_value_of_dtype, get_combined_dim,  combine_tensors_and_multiply
 

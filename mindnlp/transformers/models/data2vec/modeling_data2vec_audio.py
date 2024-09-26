@@ -676,29 +676,29 @@ class Data2VecAudioPreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
         if isinstance(cell, Data2VecAudioFeatureProjection):
             k = math.sqrt(1 / cell.projection.in_features)
-            cell.projection.weight.set_data(initializer(Uniform(scale=k), cell.projection.weight.shape, cell.projection.weight.dtype))
-            cell.projection.bias.set_data(initializer(Uniform(scale=k), cell.projection.bias.shape, cell.projection.bias.dtype))
+            cell.projection.weight.assign_value(initializer(Uniform(scale=k), cell.projection.weight.shape, cell.projection.weight.dtype))
+            cell.projection.bias.assign_value(initializer(Uniform(scale=k), cell.projection.bias.shape, cell.projection.bias.dtype))
         elif isinstance(cell, Data2VecAudioPositionalConvLayer):
-            cell.conv.bias.set_data(initializer(0, cell.conv.bias.shape, cell.conv.bias.dtype))
+            cell.conv.bias.assign_value(initializer(0, cell.conv.bias.shape, cell.conv.bias.dtype))
         elif isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
 
             if hasattr(cell, "bias") and cell.bias is not None:
-                cell.bias.set_data(
+                cell.bias.assign_value(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
             if hasattr(cell, "weight") and cell.weight is not None:
-                cell.weight.set_data(
+                cell.weight.assign_value(
                     initializer("ones", cell.weight.shape, cell.weight.dtype)
                 )
         elif isinstance(cell, nn.Conv1d):
-            cell.weight.set_data(initializer(HeNormal(), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(HeNormal(), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
                 k = math.sqrt(cell.groups / (cell.in_channels * cell.kernel_size[0]))
-                cell.bias.set_data(initializer(Uniform(scale=k), cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer(Uniform(scale=k), cell.bias.shape, cell.bias.dtype))
 
     # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2PreTrainedModel._get_feat_extract_output_lengths with
     def _get_feat_extract_output_lengths(
