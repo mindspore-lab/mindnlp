@@ -20,10 +20,10 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import TruncatedNormal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from ...modeling_outputs import ImageClassifierOutputWithNoAttention, ModelOutput
 from ...modeling_utils import PreTrainedModel

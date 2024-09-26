@@ -19,7 +19,7 @@ import warnings
 from typing import Any, Optional, Union
 
 import mindspore
-from mindspore import Parameter
+from mindnlp.core.nn import Parameter
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import ParameterDict, functional as F
 from ....transformers.ms_utils import Conv1D

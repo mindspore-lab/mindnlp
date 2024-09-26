@@ -20,10 +20,11 @@ from typing import Dict, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import Parameter, Tensor
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...generation.logits_process import (
@@ -718,7 +719,7 @@ class BarkCausalModel(BarkPreTrainedModel):
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]

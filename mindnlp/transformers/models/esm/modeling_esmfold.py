@@ -22,10 +22,10 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, XavierUniform, HeNormal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.utils import (
     ContextManagers,
     is_scipy_available,

@@ -22,10 +22,11 @@
 import warnings
 from typing import Any, List, Optional
 
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer,  Constant
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.transformers.ms_utils import Conv1D
 from mindnlp.peft.utils import transpose
 from mindnlp.core.nn import  ParameterDict

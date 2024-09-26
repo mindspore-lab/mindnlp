@@ -18,9 +18,9 @@ import math
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import Normal
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 
 from ...activations import ACT2FN, get_activation

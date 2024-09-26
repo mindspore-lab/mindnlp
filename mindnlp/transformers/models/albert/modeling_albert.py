@@ -22,10 +22,11 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import Parameter, Tensor
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
@@ -1189,7 +1190,7 @@ class AlbertMLMHead(nn.Module):
         super().__init__()
 
         self.LayerNorm = nn.LayerNorm([config.embedding_size], eps=config.layer_norm_eps)
-        self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
+        self.bias = Parameter(ops.zeros(config.vocab_size))
         self.dense = nn.Linear(config.hidden_size, config.embedding_size)
         self.decoder = nn.Linear(config.embedding_size, config.vocab_size)
         self.activation = ACT2FN[config.hidden_act]

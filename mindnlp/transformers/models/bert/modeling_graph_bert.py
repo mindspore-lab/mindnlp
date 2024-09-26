@@ -14,10 +14,11 @@
 # ============================================================================
 
 """MindNLP bert model"""
+from mindspore import Tensor
 import mindspore.common.dtype as mstype
-from mindspore import Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from .configuration_bert import BertConfig
 from ...activations import ACT2FN

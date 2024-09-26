@@ -24,7 +24,7 @@ from typing import Optional, Tuple
 from dataclasses import dataclass
 
 import mindspore
-from mindspore import Parameter, Tensor
+from mindnlp.core.nn import Parameter, Tensor
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss

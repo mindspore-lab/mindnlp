@@ -13,7 +13,7 @@
 # limitations under the License.
 """multitask prompt tuning model"""
 import mindspore
-from mindspore import Parameter
+from mindnlp.core.nn import Parameter
 from mindnlp.core import ops
 
 from ..prompt_tuning import PromptEmbedding

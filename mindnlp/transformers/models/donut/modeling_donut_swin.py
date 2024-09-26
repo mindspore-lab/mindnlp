@@ -23,10 +23,10 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, meshgrid, prune_linear_layer

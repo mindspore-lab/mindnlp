@@ -19,10 +19,11 @@ from typing import Optional, Tuple
 import math
 import mindspore
 import numpy as np
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.utils import logging
 from .configuration_gpt2 import GPT2Config
 from ...activations import ACT2FN

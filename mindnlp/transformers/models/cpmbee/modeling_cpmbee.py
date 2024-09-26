@@ -20,10 +20,10 @@ from collections import UserDict
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...generation.beam_search import BeamHypotheses, BeamSearchScorer

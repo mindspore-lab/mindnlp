@@ -21,10 +21,11 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal, XavierUniform
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import requires_backends, is_scipy_available
 from ...activations import ACT2FN
