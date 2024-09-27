@@ -1647,11 +1647,11 @@ class InfNanRemoveLogitsProcessor(LogitsProcessor):
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         # set all nan values to 0.0
-        scores_processed = ops.where(scores != scores, 0.0, scores) # pylint: disable=comparison-with-itself
+        scores_processed = ops.where(ops.isnan(scores), 0.0, scores) # pylint: disable=comparison-with-itself
 
         # set all +/-inf values to max/min possible value
-        scores_processed = ops.where(scores == float("inf"), float(ops.finfo(scores.dtype).max), scores_processed)
-        scores_processed = ops.where(scores == -float("inf"), float(ops.finfo(scores.dtype).min), scores_processed)
+        scores_processed = ops.where((ops.isinf(scores).int() & (scores > 0).int()).bool(), float(ops.finfo(scores.dtype).max), scores_processed)
+        scores_processed = ops.where((ops.isinf(scores).int() & (scores < 0).int()).bool(), float(ops.finfo(scores.dtype).min), scores_processed)
 
         return scores_processed
 

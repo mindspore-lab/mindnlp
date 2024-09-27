@@ -81,6 +81,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("mask2former", "Mask2FormerImageProcessor"),
         ("maskformer", "MaskFormerImageProcessor"),
         # ("mgp-str", "ViTImageProcessor"),
+        ("mllama", ("MllamaImageProcessor",)),
         # ("mobilenet_v1", "MobileNetV1ImageProcessor"),
         # ("mobilenet_v2", "MobileNetV2ImageProcessor"),
         ("mobilevit", "MobileViTImageProcessor"),

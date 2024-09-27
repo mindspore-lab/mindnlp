@@ -414,7 +414,7 @@ class GenerationConfig:
                 self.cache_config = cache_config_class()
             elif isinstance(self.cache_config, dict):
                 self.cache_config = cache_config_class.from_dict(self.cache_config)
-        self.return_legacy_cache = kwargs.pop("return_legacy_cache", True)
+        self.return_legacy_cache = kwargs.pop("return_legacy_cache", None)
 
         # Prompt lookup decoding
         self.prompt_lookup_num_tokens = kwargs.pop("prompt_lookup_num_tokens", None)
