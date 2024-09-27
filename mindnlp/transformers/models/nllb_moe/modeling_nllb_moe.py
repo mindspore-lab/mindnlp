@@ -546,13 +546,13 @@ class NllbMoeSparseMLP(nn.Module):
             token_indices = router_mask[:, idx]
             combining_weights = router_probs[token_indices, idx]
             expert_output = expert(masked_hidden_states[idx, token_indices])
+            if expert_output.shape[0] == 0:
+                continue
             if self.moe_token_dropout > 0:
                 if self.training:
                     expert_output = self.token_dropout(expert_output)
                 else:
                     expert_output *= 1 - self.moe_token_dropout
-            if expert_output.shape[0] == 0:
-                continue
             masked_hidden_states[idx, token_indices] = ops.einsum(
                 "b,be->be", combining_weights, expert_output
             )
