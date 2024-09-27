@@ -19,7 +19,7 @@ import warnings
 from typing import Any, Optional, Union
 
 import mindspore
-from mindspore import Parameter
+from mindnlp.core.nn import Parameter
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import ParameterDict, functional as F
 from ....transformers.ms_utils import Conv1D
@@ -200,7 +200,7 @@ scaling the layer's parameters, as well as performing mixed batch forward operat
                 # the layer is already completely initialized, this is an update
                 if ops.is_floating_point(weight) or ops.is_complex(weight):
                     for param in self.parameters():
-                        param.set_data(param.astype(weight.dtype))
+                        param.assign_value(param.astype(weight.dtype))
                 break
 
         if use_dora:

@@ -72,7 +72,7 @@ from ..utils import (
 from ..utils.download import convert_file_size_to_int, get_checkpoint_shard_files
 
 from ..accelerate import infer_auto_device_map
-from ..accelerate.utils import get_balanced_memory, get_max_memory, check_tied_parameters_on_same_device, modify_model_for_pp_infer
+from ..accelerate.utils import get_balanced_memory, get_max_memory, check_tied_parameters_on_same_device, modify_model_for_pp_infer, find_usefull_files
 
 PARAM_RENAME_WARNING = "A parameter name that contains `{}` will be renamed internally to `{}`. Please use a different name to suppress this warning."
 
@@ -2984,6 +2984,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
         # replace unnessasery modules to nn.Identity and insert send/recv for pipeline inference.
         if device_map is not None and group_size != 1:
             model = modify_model_for_pp_infer(model, device_map, model._no_split_modules)
+            resolved_archive_file, loaded_state_dict_keys = find_usefull_files(resolved_archive_file, sharded_metadata, model.state_dict().keys())
 
         if from_pt:
             # restore default dtype

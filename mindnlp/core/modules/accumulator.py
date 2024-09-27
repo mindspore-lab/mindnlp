@@ -16,7 +16,8 @@
 
 import mindspore
 from mindspore import jit_class
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
+from mindnlp.core.nn import Parameter
 from mindnlp.core import ops
 
 @jit_class

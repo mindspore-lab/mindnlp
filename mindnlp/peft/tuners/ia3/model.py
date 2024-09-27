@@ -498,8 +498,8 @@ class IA3Model(BaseTuner):
                     target.merge(safe_merge=safe_merge, adapter_names=adapter_names)
                 self._replace_cell(parent, target_name, target.get_base_layer(), target)
             elif isinstance(target, ModulesToSaveWrapper):
-                # save any additional trainable cells part of `cells_to_save`
-                new_cell = target.cells_to_save[target.active_adapter]
+                # save any additional trainable cells part of `modules_to_save`
+                new_cell = target.modules_to_save[target.active_adapter]
                 if hasattr(new_cell, "base_layer"):
                     # check if the cell is itself a tuner layer
                     if merge:

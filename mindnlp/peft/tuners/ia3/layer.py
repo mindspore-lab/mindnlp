@@ -22,10 +22,11 @@
 import warnings
 from typing import Any, List, Optional
 
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer,  Constant
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.transformers.ms_utils import Conv1D
 from mindnlp.peft.utils import transpose
 from mindnlp.core.nn import  ParameterDict
@@ -145,7 +146,7 @@ in the ia3_l dictionary. If the adapter_name is not found in the dictionary, no 
         """
         if adapter_name in self.ia3_l.keys():
             # initialize learned vector with torch.ones
-            self.ia3_l[adapter_name].set_data(initializer(
+            self.ia3_l[adapter_name].assign_value(initializer(
                 Constant(1.0),
                 self.ia3_l[adapter_name].shape,
                 self.ia3_l[adapter_name].dtype

@@ -14,10 +14,11 @@
 # ============================================================================
 
 """MindNLP bert model"""
+from mindspore import Tensor
 import mindspore.common.dtype as mstype
-from mindspore import Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from .configuration_bert import BertConfig
 from ...activations import ACT2FN
@@ -1054,7 +1055,7 @@ class MSBertPreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(
+            cell.weight.assign_value(
                 initializer(
                     Normal(self.config.initializer_range),
                     cell.weight.shape,
@@ -1062,7 +1063,7 @@ class MSBertPreTrainedModel(PreTrainedModel):
                 )
             )
             if cell.bias is not None:
-                cell.bias.set_data(
+                cell.bias.assign_value(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
         elif isinstance(cell, nn.Embedding):
@@ -1073,10 +1074,10 @@ class MSBertPreTrainedModel(PreTrainedModel):
             )
             if cell.padding_idx is not None:
                 weight[cell.padding_idx] = 0
-            cell.weight.set_data(weight)
+            cell.weight.assign_value(weight)
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer("ones", cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer("ones", cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer("zeros", cell.bias.shape, cell.bias.dtype))
 
 
 class MSBertModel(MSBertPreTrainedModel):

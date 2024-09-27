@@ -688,7 +688,7 @@ class LiltPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """Initialize the weights"""
         if isinstance(cell, nn.Linear):
-            cell.weight.set_data(
+            cell.weight.assign_value(
                 initializer(
                     Normal(0.0, self.config.initializer_range),
                     cell.weight.shape,
@@ -696,7 +696,7 @@ class LiltPreTrainedModel(PreTrainedModel):
                 )
             )
             if cell.bias is not None:
-                cell.bias.set_data(
+                cell.bias.assign_value(
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
         elif isinstance(cell, nn.Embedding):
@@ -706,10 +706,10 @@ class LiltPreTrainedModel(PreTrainedModel):
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0.0
 
-            cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
+            cell.weight.assign_value(mindspore.Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(
+            cell.bias.assign_value(initializer("zeros", cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(
                 initializer("ones", cell.weight.shape, cell.weight.dtype)
             )
 

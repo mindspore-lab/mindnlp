@@ -21,10 +21,11 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal, XavierUniform
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import requires_backends, is_scipy_available
 from ...activations import ACT2FN
@@ -2075,11 +2076,11 @@ class Mask2FormerPreTrainedModel(PreTrainedModel):
             if cell.input_projections is not None:
                 for input_projection in cell.input_projections:
                     if not isinstance(input_projection, nn.Sequential):
-                        input_projection.weight.set_data(initializer(XavierUniform(xavier_std), input_projection.weight.shape, input_projection.weight.dtype))
-                        input_projection.bias.set_data(initializer('zeros', input_projection.bias.shape, input_projection.bias.dtype))
+                        input_projection.weight.assign_value(initializer(XavierUniform(xavier_std), input_projection.weight.shape, input_projection.weight.dtype))
+                        input_projection.bias.assign_value(initializer('zeros', input_projection.bias.shape, input_projection.bias.dtype))
 
         elif isinstance(cell, Mask2FormerPixelDecoderEncoderMultiscaleDeformableAttention):
-            cell.sampling_offsets.weight.set_data(initializer('zeros', cell.sampling_offsets.weight.shape, cell.sampling_offsets.weight.dtype))
+            cell.sampling_offsets.weight.assign_value(initializer('zeros', cell.sampling_offsets.weight.shape, cell.sampling_offsets.weight.dtype))
             thetas = ops.arange(cell.n_heads, dtype=mindspore.int64).float() * (2.0 * math.pi / cell.n_heads)
             grid_init = ops.stack([thetas.cos(), thetas.sin()], -1)
             grid_init = (
@@ -2091,49 +2092,49 @@ class Mask2FormerPreTrainedModel(PreTrainedModel):
                 grid_init[:, :, i, :] *= i + 1
             cell.sampling_offsets.bias = Parameter(grid_init.view(-1))
 
-            cell.attention_weights.weight.set_data(initializer('zeros', cell.attention_weights.weight.shape, cell.attention_weights.weight.dtype))
-            cell.attention_weights.bias.set_data(initializer('zeros', cell.attention_weights.bias.shape, cell.attention_weights.bias.dtype))
-            cell.value_proj.weight.set_data(initializer(XavierUniform(), cell.value_proj.weight.shape, cell.value_proj.weight.dtype))
-            cell.value_proj.bias.set_data(initializer('zeros', cell.value_proj.bias.shape, cell.value_proj.bias.dtype))
-            cell.output_proj.weight.set_data(initializer(XavierUniform(), cell.output_proj.weight.shape, cell.output_proj.weight.dtype))
-            cell.output_proj.bias.set_data(initializer('zeros', cell.output_proj.bias.shape, cell.output_proj.bias.dtype))
+            cell.attention_weights.weight.assign_value(initializer('zeros', cell.attention_weights.weight.shape, cell.attention_weights.weight.dtype))
+            cell.attention_weights.bias.assign_value(initializer('zeros', cell.attention_weights.bias.shape, cell.attention_weights.bias.dtype))
+            cell.value_proj.weight.assign_value(initializer(XavierUniform(), cell.value_proj.weight.shape, cell.value_proj.weight.dtype))
+            cell.value_proj.bias.assign_value(initializer('zeros', cell.value_proj.bias.shape, cell.value_proj.bias.dtype))
+            cell.output_proj.weight.assign_value(initializer(XavierUniform(), cell.output_proj.weight.shape, cell.output_proj.weight.dtype))
+            cell.output_proj.bias.assign_value(initializer('zeros', cell.output_proj.bias.shape, cell.output_proj.bias.dtype))
 
         elif isinstance(cell, Mask2FormerMaskedAttentionDecoderLayer):
             for _, p in cell.parameters_and_names():
                 if p.dim() > 1:
-                    p.set_data(initializer(XavierUniform(xavier_std), p.shape, p.dtype))
+                    p.assign_value(initializer(XavierUniform(xavier_std), p.shape, p.dtype))
 
         elif isinstance(cell, Mask2FormerPixelLevelModule):
             for name, subcell in cell.cells_and_names():
                 if isinstance(subcell, (nn.Conv2d, nn.Linear)):
-                    subcell.weight.set_data(initializer(Normal(mean=0.0, sigma=std), subcell.weight.shape, subcell.weight.dtype))
+                    subcell.weight.assign_value(initializer(Normal(mean=0.0, sigma=std), subcell.weight.shape, subcell.weight.dtype))
                     if subcell.bias is not None:
-                        subcell.bias.set_data(initializer('zeros', subcell.bias.shape, subcell.bias.dtype))
+                        subcell.bias.assign_value(initializer('zeros', subcell.bias.shape, subcell.bias.dtype))
 
         elif isinstance(cell, Mask2FormerPixelDecoder):
             for _, p in cell.parameters_and_names():
                 if p.dim() > 1:
-                    p.set_data(initializer(XavierUniform(), p.shape, p.dtype))
-            cell.level_embed.set_data(initializer(Normal(sigma=0), cell.level_embed.shape, cell.level_embed.dtype))
+                    p.assign_value(initializer(XavierUniform(), p.shape, p.dtype))
+            cell.level_embed.assign_value(initializer(Normal(sigma=0), cell.level_embed.shape, cell.level_embed.dtype))
 
         elif isinstance(cell, Mask2FormerPixelDecoderEncoderOnly):
             for _, p in cell.parameters_and_names():
                 if p.dim() > 1:
-                    p.set_data(initializer(XavierUniform(), p.shape, p.dtype))
+                    p.assign_value(initializer(XavierUniform(), p.shape, p.dtype))
 
         elif isinstance(cell, (nn.Linear, nn.Conv2d, nn.BatchNorm2d)):
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=std), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(mean=0.0, sigma=std), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
         elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=std), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(mean=0.0, sigma=std), cell.weight.shape, cell.weight.dtype))
             if cell.padding_idx is not None:
                 cell.weight.data[cell.padding_idx] = 0
 
         if hasattr(cell, "reference_points"):
-            cell.reference_points.weight.set_data(initializer(XavierUniform(1.0), cell.reference_points.weight.shape, cell.reference_points.weight.dtype))
-            cell.reference_points.set_data(initializer('zeros', cell.reference_points.shape, cell.reference_points.dtype))
+            cell.reference_points.weight.assign_value(initializer(XavierUniform(1.0), cell.reference_points.weight.shape, cell.reference_points.weight.dtype))
+            cell.reference_points.assign_value(initializer('zeros', cell.reference_points.shape, cell.reference_points.dtype))
 
 
 class Mask2FormerModel(Mask2FormerPreTrainedModel):

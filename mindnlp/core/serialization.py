@@ -35,13 +35,14 @@ from dataclasses import dataclass
 
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.train.serialization import _exec_save, _parse_ckpt_proto, tensor_to_np_type, tensor_to_ms_type
 
 import safetensors
 import safetensors.numpy
 from safetensors import deserialize
 
+from mindnlp.core.nn import Parameter
 from mindnlp.configs import SUPPORT_BF16
 from .nn import Module
 from ..utils import logging
@@ -1370,6 +1371,7 @@ def safe_load_file(filename):
         for k, v in safeview:
             dtype = _NP_TYPES[v["dtype"]]
             arr = np.frombuffer(v["data"], dtype=dtype).reshape(v["shape"])
+
             if (not SUPPORT_BF16 and dtype != bfloat16) or SUPPORT_BF16:
                 result[k] = Tensor.from_numpy(arr)
             else:

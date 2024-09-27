@@ -18,12 +18,15 @@ MindNLP library.
 """
 import os
 import platform
+from packaging import version
+
 if os.environ.get('HF_ENDPOINT', None) is None:
     os.environ["HF_ENDPOINT"] = 'https://hf-mirror.com'
 os.environ["MS_DEV_FORCE_ACL"] = '1'
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 DEVICE_TARGET = os.environ.get('DEVICE_TARGET', None)
 
+import mindspore
 from mindspore import context
 from mindspore._c_expression import MSContext # pylint: disable=no-name-in-module, import-error
 
@@ -32,7 +35,7 @@ if DEVICE_TARGET is not None and DEVICE_TARGET in ('CPU', 'GPU', 'Ascend'):
 
 if platform.system().lower() == 'linux':
     SOC = MSContext.get_instance().get_ascend_soc_version()
-    if '910' in SOC:
+    if '910' in SOC and version.parse(mindspore.__version__) < version.parse('2.4.0'):
         os.environ["MS_ALLOC_CONF"] = 'enable_vmm:True,vmm_align_size:2MB'
 
     if SOC in ('ascend910', 'ascend310b'):

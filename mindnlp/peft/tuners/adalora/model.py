@@ -14,7 +14,8 @@
 # ============================================================================
 "Adalora Model"
 import warnings
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
+from mindnlp.core.nn import Parameter
 
 from mindnlp.core import nn, ops
 from mindnlp.transformers.ms_utils import Conv1D

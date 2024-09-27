@@ -729,7 +729,7 @@ class QDQBertPreTrainedModel(PreTrainedModel):
         if isinstance(module, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.set_data(
+            module.weight.assign_value(
                 initializer(
                     Normal(sigma=self.config.initializer_range, mean=0.0),
                     module.weight.shape,
@@ -737,11 +737,11 @@ class QDQBertPreTrainedModel(PreTrainedModel):
                 )
             )
             if module.bias is not None:
-                module.bias.set_data(
+                module.bias.assign_value(
                     initializer("zeros", module.bias.shape, module.bias.dtype)
                 )
         elif isinstance(module, nn.Embedding):
-            module.weight.set_data(
+            module.weight.assign_value(
                 initializer(
                     Normal(sigma=self.config.initializer_range, mean=0.0),
                     module.weight.shape,
@@ -755,10 +755,10 @@ class QDQBertPreTrainedModel(PreTrainedModel):
                     module.weight.dtype,
                 )
         elif isinstance(module, nn.LayerNorm):
-            module.bias.set_data(
+            module.bias.assign_value(
                 initializer("zeros", module.bias.shape, module.bias.dtype)
             )
-            module.weight.set_data(
+            module.weight.assign_value(
                 initializer("ones", module.weight.shape, module.weight.dtype)
             )
 

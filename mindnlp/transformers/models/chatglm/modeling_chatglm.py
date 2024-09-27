@@ -21,7 +21,7 @@ import re
 from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 
 import mindspore
-from mindspore import Parameter
+from mindnlp.core.nn import Parameter
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F

@@ -10,7 +10,6 @@ from mindspore.ops.function.random_func import _get_seed, _set_prim_op_user_data
 from mindspore.ops.operations import nn_ops
 
 from mindnlp.configs import DEVICE_TARGET, ON_ORANGE_PI, use_pyboost
-from .modules._utils import _pair
 
 def gelu(input, approximate='none'):
     if use_pyboost():
@@ -132,22 +131,7 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
     - numpy array: The result of the average pooling operation.
     """
     if use_pyboost():
-        if stride is None:
-            stride = kernel_size
-
-        if isinstance(padding, int):
-            pad_height, pad_width = padding, padding
-        else:
-            pad_height, pad_width = padding
-
-        # Add padding to the input array
-        if pad_height > 0 or pad_width > 0:
-            input = pad(input, (pad_width, pad_width, pad_height, pad_height), mode='constant')
-
-        pad_mode = "SAME" if ceil_mode else "VALID"
-        _avgpool2d = _get_cache_prim(ops.AvgPool)(kernel_size=_pair(kernel_size), strides=_pair(stride), pad_mode=pad_mode)
-        output = _avgpool2d(input)
-        return output
+        return mindspore.ops.function.nn_func.avg_pool2d_ext(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
     return ops.avg_pool2d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
@@ -1058,7 +1042,7 @@ def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
         pad_mode = padding
         pad = (0,) * 4
 
-    _conv2d = _get_cache_prim(ops.Conv2D)(out_channel=weight.shape[1] * groups,
+    _conv2d = _get_cache_prim(ops.Conv2D)(out_channel=weight.shape[0] * groups,
                                         kernel_size=(1, weight.shape[-1]),
                                         mode=1,
                                         pad_mode=pad_mode,
