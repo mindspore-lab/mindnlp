@@ -204,6 +204,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("udop", "UdopConfig"),
         ("upernet", "UPerNetConfig"),
         ("umt5", "UMT5Config"),
+        ("unispeech", "UniSpeechConfig"),
         ("unispeech-sat", "UniSpeechSatConfig"),
         ("univnet", "UnivNetConfig"),
         ("videomae", "VideoMAEConfig"),
