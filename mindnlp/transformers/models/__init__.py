@@ -225,6 +225,7 @@ from . import (
     umt5,
     unispeech_sat,
     univnet,
+    unispeech,
     videomae,
     vipllava,
     vision_encoder_decoder,
@@ -462,6 +463,7 @@ from .tvlt import *
 from .udop import *
 from .upernet import *
 from .unispeech_sat import *
+from .unispeech import *
 from .univnet import *
 from .videomae import *
 from .vilt import *
@@ -703,6 +705,7 @@ __all__.extend(udop.__all__)
 __all__.extend(upernet.__all__)
 __all__.extend(unispeech_sat.__all__)
 __all__.extend(univnet.__all__)
+__all__.extend(unispeech.__all__)
 __all__.extend(videomae.__all__)
 __all__.extend(vilt.__all__)
 __all__.extend(vipllava.__all__)
