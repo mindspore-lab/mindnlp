@@ -38,8 +38,9 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
+
     mindspore.set_context(pynative_synchronize=True)
-    from mindnlp.core import nn, ops
+    from mindnlp.core import ops, no_grad
 
     from mindnlp.transformers import (
         UniSpeechForCTC,
@@ -239,9 +240,6 @@ class UniSpeechModelTester:
 
         input_values = input_values[:3]
 
-        # input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
-        # max_length_labels = model._get_feat_extract_output_lengths(mindspore.tensor(input_lengths))
-        # labels = ids_tensor((input_values.shape[0], max(max_length_labels) - 2), model.config.vocab_size)
         input_lengths = [input_values.shape[-1] // i for i in [4, 2, 1]]
         max_length_labels = model._get_feat_extract_output_lengths(mindspore.tensor(input_lengths))
         labels = ids_tensor((input_values.shape[0], int(max(max_length_labels) - 2)), model.config.vocab_size)
@@ -391,9 +389,6 @@ class UniSpeechRobustModelTest(ModelTesterMixin, unittest.TestCase):
 
         input_values = inputs_dict["input_values"]
 
-        # input_lengths = mindspore.tensor(
-        #     [input_values.shape[1] for _ in range(input_values.shape[0])], dtype=mindspore.int64
-        # )
         input_lengths = mindspore.tensor(
             [input_values.shape[1] for _ in range(input_values.shape[0])], dtype=mindspore.int64
         )
@@ -405,20 +400,6 @@ class UniSpeechRobustModelTest(ModelTesterMixin, unittest.TestCase):
         inputs_dict["labels"] = labels
 
         outputs = model(**inputs_dict)
-
-        output = outputs[0]
-
-        # Encoder-/Decoder-only models
-        hidden_states = outputs.hidden_states[0]
-        attentions = outputs.attentions[0]
-        #
-        # hidden_states.retain_grad()
-        # attentions.retain_grad()
-        #
-        # output.flatten()[0].backward(retain_graph=True)
-        #
-        # self.assertIsNotNone(hidden_states.grad)
-        # self.assertIsNotNone(attentions.grad)
 
     def test_initialization(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -468,13 +449,15 @@ class UniSpeechRobustModelTest(ModelTesterMixin, unittest.TestCase):
         if hasattr(module, "masked_spec_embed") and module.masked_spec_embed is not None:
             module.masked_spec_embed.data.fill_(3)
 
+    @slow
     def test_mask_feature_prob_ctc(self):
         model = UniSpeechForCTC.from_pretrained(
-            "hf-internal-testing/tiny-random-unispeech", mask_feature_prob=0.2, mask_feature_length=2,ignore_mismatched_sizes=True
+            "hf-internal-testing/tiny-random-unispeech", mask_feature_prob=0.2, mask_feature_length=2,
+            ignore_mismatched_sizes=True
         )
         # model.to().train()
         processor = Wav2Vec2Processor.from_pretrained(
-            "hf-internal-testing/tiny-random-unispeech", return_attention_mask=True,ignore_mismatched_sizes=True
+            "hf-internal-testing/tiny-random-unispeech", return_attention_mask=True, ignore_mismatched_sizes=True
         )
 
         batch_duration_in_seconds = [1, 3, 2, 6]
@@ -491,14 +474,16 @@ class UniSpeechRobustModelTest(ModelTesterMixin, unittest.TestCase):
 
         self.assertEqual(logits.shape, (4, 1498, 32))
 
+    @slow
     def test_mask_time_prob_ctc(self):
         model = UniSpeechForCTC.from_pretrained(
-            "hf-internal-testing/tiny-random-unispeech", mask_time_prob=0.2, mask_time_length=2,ignore_mismatched_sizes=True
+            "hf-internal-testing/tiny-random-unispeech", mask_time_prob=0.2, mask_time_length=2,
+            ignore_mismatched_sizes=True
         )
         # model.to().train()
         model.set_train()
         processor = Wav2Vec2Processor.from_pretrained(
-            "hf-internal-testing/tiny-random-unispeech", return_attention_mask=True,ignore_mismatched_sizes=True
+            "hf-internal-testing/tiny-random-unispeech", return_attention_mask=True, ignore_mismatched_sizes=True
         )
 
         batch_duration_in_seconds = [1, 3, 2, 6]
@@ -515,6 +500,7 @@ class UniSpeechRobustModelTest(ModelTesterMixin, unittest.TestCase):
 
         self.assertEqual(logits.shape, (4, 1498, 32))
 
+    @slow
     def test_mask_time_feature_prob_ctc_single_batch(self):
         model = UniSpeechForCTC.from_pretrained(
             "hf-internal-testing/tiny-random-unispeech",
@@ -524,7 +510,6 @@ class UniSpeechRobustModelTest(ModelTesterMixin, unittest.TestCase):
             mask_feature_length=2,
             ignore_mismatched_sizes=True
         )
-        # model.to().train()
         model.set_train()
         processor = Wav2Vec2Processor.from_pretrained(
             "hf-internal-testing/tiny-random-unispeech", return_attention_mask=True, ignore_mismatched_sizes=True
@@ -550,7 +535,7 @@ class UniSpeechRobustModelTest(ModelTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        model = UniSpeechModel.from_pretrained("microsoft/unispeech-large-1500h-cv",ignore_mismatched_sizes=True)
+        model = UniSpeechModel.from_pretrained("microsoft/unispeech-large-1500h-cv", ignore_mismatched_sizes=True)
         self.assertIsNotNone(model)
 
 
@@ -569,22 +554,24 @@ class UniSpeechModelIntegrationTest(unittest.TestCase):
 
     def _load_superb(self, task, num_samples):
         ds = load_dataset("anton-l/superb_dummy", task, split="test", trust_remote_code=True)
-
         return ds[:num_samples]
 
+    @slow
     def test_inference_pretraining(self):
-        model = UniSpeechForPreTraining.from_pretrained("microsoft/unispeech-large-1500h-cv",ignore_mismatched_sizes=True)
-        feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained("facebook/wav2vec2-large-xlsr-53",ignore_mismatched_sizes=True)
+        model = UniSpeechForPreTraining.from_pretrained("microsoft/unispeech-large-1500h-cv",
+                                                        ignore_mismatched_sizes=True)
+        feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained("facebook/wav2vec2-large-xlsr-53",
+                                                                     ignore_mismatched_sizes=True)
         input_speech = self._load_datasamples(2)
 
         inputs_dict = feature_extractor(input_speech, return_tensors="ms", padding=True)
 
-        # with mindspore._no_grad():
-        set_seed(0)
-        outputs = model(
-            inputs_dict.input_values,
-            attention_mask=inputs_dict.attention_mask,
-        )
+        with no_grad():
+            set_seed(0)
+            outputs = model(
+                inputs_dict.input_values,
+                attention_mask=inputs_dict.attention_mask,
+            )
 
         # compute cosine similarity
         cosine_sim = F.cosine_similarity(outputs.projected_states, outputs.projected_quantized_states, dim=-1)
