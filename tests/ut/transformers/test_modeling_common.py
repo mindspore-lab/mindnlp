@@ -169,7 +169,7 @@ class ModelTesterMixin:
                 i // s // ms for i, s, ms in zip(config.image_size, config.patch_stride, config.masked_unit_size)
             ]
             num_windows = math.prod(mask_spatial_shape)
-            set_seed(0)
+            set_seed(123)
             inputs_dict["noise"] = ops.rand(self.model_tester.batch_size, num_windows)
 
         if return_labels:
