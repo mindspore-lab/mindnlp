@@ -20,7 +20,7 @@ import time
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindnlp.core import nn, optim
+from mindnlp.core import optim
 from mindnlp.transformers import LongformerConfig, LongformerForSequenceClassification
 
 def test_train_longformer_pynative():

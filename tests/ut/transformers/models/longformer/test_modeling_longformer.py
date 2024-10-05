@@ -39,7 +39,6 @@ if is_mindspore_available():
         LongformerSelfAttention,
     )
 
-mindspore.set_context(pynative_synchronize=True)
 
 class LongformerModelTester:
     def __init__(

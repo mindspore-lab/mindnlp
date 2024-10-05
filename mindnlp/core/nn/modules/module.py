@@ -761,6 +761,7 @@ class Module:
                                 input_param.requires_grad = param.requires_grad
                         setattr(self, name, input_param)
                     else:
+                        param.data_sync(True)
                         dtype = param.dtype
                         param.assign_value(input_param)
                         param.set_dtype(dtype)

@@ -39,6 +39,7 @@ def zeros(*size, dtype=None):
         size = size[0]
     if use_pyboost():
         return mindspore.mint.zeros(size, dtype=dtype)
+    size = tuple(size)
     return _zeros(size, dtype)
 
 # zeros_like
