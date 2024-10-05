@@ -759,6 +759,7 @@ class Module:
                                 input_param = Parameter(input_param, requires_grad=param.requires_grad)
                             else:
                                 input_param.requires_grad = param.requires_grad
+
                         setattr(self, name, input_param)
                     else:
                         param.data_sync(True)
@@ -768,8 +769,8 @@ class Module:
                 except Exception as ex:
                     action = "copying"
                     error_msgs.append(f'While {action} the parameter named "{key}", '
-                                      f'whose dimensions in the model are {param.size()} and '
-                                      f'whose dimensions in the checkpoint are {input_param.size()}, '
+                                      f'whose dimensions in the model are {param.shape} and '
+                                      f'whose dimensions in the checkpoint are {input_param.shape}, '
                                       f'an exception occurred : {ex.args}.'
                                       )
             elif strict:
