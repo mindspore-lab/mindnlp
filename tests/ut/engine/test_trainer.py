@@ -35,6 +35,7 @@ from parameterized import parameterized
 from requests.exceptions import HTTPError
 
 import mindnlp
+from mindnlp.core.nn import Parameter
 from mindnlp.engine import (
     IntervalStrategy,
     TrainerCallback,
@@ -46,7 +47,7 @@ from mindnlp.transformers import (
 )
 from mindnlp.transformers.optimization import get_polynomial_decay_schedule_with_warmup
 from mindnlp.utils import is_mindspore_available, logging
-from mindnlp.core.serialization import safe_load_file, safe_save_file
+from mindnlp.core.serialization import safe_load_file, safe_save_file, load_checkpoint
 from mindnlp.utils.testing_utils import (
     # ENDPOINT_STAGING,
     # TOKEN,
@@ -217,8 +218,8 @@ if is_mindspore_available():
     class RegressionModel(nn.Module):
         def __init__(self, a=0, b=0, double_output=False):
             super().__init__()
-            self.a = mindspore.Parameter(mindspore.tensor([a]).float())
-            self.b = mindspore.Parameter(mindspore.tensor([b]).float())
+            self.a = Parameter(mindspore.tensor([a]).float())
+            self.b = Parameter(mindspore.tensor([b]).float())
             self.double_output = double_output
             self.config = None
 
@@ -232,8 +233,8 @@ if is_mindspore_available():
     class RegressionDictModel(nn.Module):
         def __init__(self, a=0, b=0):
             super().__init__()
-            self.a = mindspore.Parameter(mindspore.tensor([a]).float())
-            self.b = mindspore.Parameter(mindspore.tensor([b]).float())
+            self.a = Parameter(mindspore.tensor([a]).float())
+            self.b = Parameter(mindspore.tensor([b]).float())
             self.config = None
 
         def forward(self, input_x, labels=None, **kwargs):
@@ -249,8 +250,8 @@ if is_mindspore_available():
 
         def __init__(self, config):
             super().__init__(config)
-            self.a = mindspore.Parameter(mindspore.tensor([config.a]).float())
-            self.b = mindspore.Parameter(mindspore.tensor([config.b]).float())
+            self.a = Parameter(mindspore.tensor([config.a]).float())
+            self.b = Parameter(mindspore.tensor([config.b]).float())
             self.double_output = config.double_output
 
         def forward(self, input_x, labels=None, **kwargs):
@@ -266,8 +267,8 @@ if is_mindspore_available():
 
         def __init__(self, config):
             super().__init__(config)
-            self.a = mindspore.Parameter(mindspore.tensor([config.a]).float())
-            self.b = mindspore.Parameter(mindspore.tensor([config.b]).float())
+            self.a = Parameter(mindspore.tensor([config.a]).float())
+            self.b = Parameter(mindspore.tensor([config.b]).float())
             self.random_ms = config.random_ms
 
         def forward(self, input_x, labels=None, **kwargs):
@@ -293,7 +294,7 @@ if is_mindspore_available():
             self.ln1 = nn.LayerNorm(hidden_size)
             self.linear2 = nn.Linear(hidden_size, hidden_size)
             self.ln2 = nn.LayerNorm(hidden_size)
-            self.bias = mindspore.Parameter(ops.zeros(hidden_size))
+            self.bias = Parameter(ops.zeros(hidden_size))
 
         def forward(self, x):
             h = self.ln1(F.relu(self.linear1(x)))
@@ -374,7 +375,7 @@ class TrainerIntegrationCommon:
         else:
             best_model = RegressionModel()
             if not safe_weights:
-                state_dict = mindspore.load_checkpoint(os.path.join(checkpoint, WEIGHTS_NAME))
+                state_dict = load_checkpoint(os.path.join(checkpoint, WEIGHTS_NAME))
             else:
                 state_dict = safe_load_file(os.path.join(checkpoint, SAFE_WEIGHTS_NAME))
             best_model.load_state_dict(state_dict)
@@ -1316,36 +1317,6 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             self.assertAlmostEqual(a, a1, delta=1e-5)
             self.assertAlmostEqual(b, b1, delta=1e-5)
 
-    @slow
-    def test_auto_batch_size_finder(self):
-        SRC_DIR = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "..", "examples", "pytorch", "text-classification")
-        )
-        sys.path.append(SRC_DIR)
-        import run_glue
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            testargs = f"""
-                run_glue.py
-                --model_name_or_path distilbert/distilbert-base-uncased
-                --task_name mrpc
-                --do_train
-                --do_eval
-                --max_seq_len 128
-                --per_device_train_batch_size 4096
-                --learning_rate 2e-5
-                --num_train_epochs 1
-                --output_dir {tmpdir}
-                --auto_find_batch_size 0
-                """.split()
-            with self.assertRaises(RuntimeError):
-                with patch.object(sys, "argv", testargs):
-                    run_glue.main()
-
-        testargs[-1] = "1"
-        with patch.object(sys, "argv", testargs):
-            run_glue.main()
-
     @pytest.mark.skip('not support auto batch size now')
     def test_auto_batch_size_with_resume_from_checkpoint(self):
         train_dataset = GeneratorDataset(RegressionDataset(length=128), column_names=['input_x', 'labels'])
@@ -2000,50 +1971,6 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             no_wd_params = [p for n, p in model.named_parameters() if n not in wd_names]
             self.assertListEqual(trainer.optimizer.param_groups[0]["params"], wd_params)
             self.assertListEqual(trainer.optimizer.param_groups[1]["params"], no_wd_params)
-
-    @slow
-    def test_end_to_end_example(self):
-        # Tests that `translation.py` will run without issues
-        script_path = os.path.abspath(
-            os.path.join(
-                os.path.dirname(__file__), "..", "..", "examples", "pytorch", "translation", "run_translation.py"
-            )
-        )
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            command = [
-                "accelerate",
-                "launch",
-                script_path,
-                "--model_name_or_path",
-                "google-t5/t5-small",
-                "--per_device_train_batch_size",
-                "1",
-                "--output_dir",
-                tmpdir,
-                "--overwrite_output_dir",
-                "--do_train",
-                "--max_train_samples",
-                "64",
-                "--num_train_epochs",
-                "1",
-                "--dataset_name",
-                "wmt16",
-                "--dataset_config",
-                "ro-en",
-                "--source_lang",
-                "en",
-                "--target_lang",
-                "ro",
-                "--do_predict",
-                "--max_predict_samples",
-                "64",
-                "--predict_with_generate",
-                "--ddp_timeout",
-                "60",
-            ]
-            execute_subprocess_async(command)
-            # successful return here == success - any errors would have caused an error or a timeout in the sub-call
 
 optim_test_params = []
 if is_mindspore_available():

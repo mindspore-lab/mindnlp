@@ -302,10 +302,14 @@ class DynamicCache(Cache):
     `[batch_size, num_heads, seq_len, head_dim]`.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, num_hidden_layers: Optional[int] = None) -> None:
         super().__init__()
-        self.key_cache: List[mindspore.Tensor] = []
-        self.value_cache: List[mindspore.Tensor] = []
+        if num_hidden_layers is None:
+            self.key_cache: List[mindspore.Tensor] = []
+            self.value_cache: List[mindspore.Tensor] = []
+        else:
+            self.key_cache: List[mindspore.Tensor] = [[] for _ in range(num_hidden_layers)]
+            self.value_cache: List[mindspore.Tensor] = [[] for _ in range(num_hidden_layers)]
         self._seen_tokens = 0  # Used in `generate` to keep tally of how many tokens the cache has seen
 
     def __getitem__(self, layer_idx: int) -> List[Tuple[mindspore.Tensor]]:
@@ -364,6 +368,11 @@ class DynamicCache(Cache):
         if len(self.key_cache) <= layer_idx:
             self.key_cache.append(key_states)
             self.value_cache.append(value_states)
+        # content on layer cache can be a tensor and checking not tensor causes errors
+        # so we explicitly check for the empty list
+        elif self.key_cache[layer_idx] == []:
+            self.key_cache[layer_idx] = key_states
+            self.value_cache[layer_idx] = value_states
         else:
             self.key_cache[layer_idx] = ops.cat([self.key_cache[layer_idx], key_states], dim=-2)
             self.value_cache[layer_idx] = ops.cat([self.value_cache[layer_idx], value_states], dim=-2)
@@ -373,7 +382,7 @@ class DynamicCache(Cache):
     def get_seq_length(self, layer_idx: Optional[int] = 0) -> int:
         """Returns the sequence length of the cached states. A layer index can be optionally passed."""
         # TODO: deprecate this function in favor of `cache_position`
-        if len(self.key_cache) <= layer_idx:
+        if len(self.key_cache) <= layer_idx or (len(self.key_cache) > layer_idx and self.key_cache[layer_idx] == []):
             return 0
         return self.key_cache[layer_idx].shape[-2]
 

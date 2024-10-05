@@ -883,7 +883,8 @@ class LongformerSelfAttention(nn.Module):
             chunk_size = list(hidden_states.shape)
             chunk_size[1] = chunk_size[1] * 2 - 1
 
-            chunk_stride = list(hidden_states.stride())
+            chunk_stride = list(hidden_states.strides)
+            chunk_stride = [i // 4 for i in chunk_stride]
             chunk_stride[1] = chunk_stride[1] // 2
             return ops.as_strided(hidden_states, size=chunk_size, stride=chunk_stride)
 
@@ -1040,7 +1041,8 @@ class LongformerSelfAttention(nn.Module):
 
         # chunk padded_value into chunks of size 3 window overlap and an overlap of size window overlap
         chunked_value_size = (batch_size * num_heads, chunks_count + 1, 3 * window_overlap, head_dim)
-        chunked_value_stride = padded_value.stride()
+        chunked_value_stride = padded_value.strides
+        chunked_value_stride = [i // 4 for i in chunked_value_stride]
         chunked_value_stride = (
             chunked_value_stride[0],
             window_overlap * chunked_value_stride[1],
@@ -2050,7 +2052,7 @@ class LongformerLMHead(nn.Module):
         self.layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
-        self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
+        self.bias = Parameter(ops.zeros(config.vocab_size))
         self.decoder.bias = self.bias
 
     def forward(self, features, **kwargs):

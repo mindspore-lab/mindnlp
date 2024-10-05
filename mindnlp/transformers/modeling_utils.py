@@ -1628,7 +1628,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
         # This ensures correct functionality when a Custom Embedding class is passed as input.
         # The input and output embedding types remain consistent. (c.f. https://github.com/huggingface/transformers/pull/31979)
 
-        old_embeddings.weight = new_embeddings.weight
+        old_embeddings.weight.assign_value(new_embeddings.weight)
         old_embeddings.num_embeddings = new_embeddings.weight.shape[0]
         if old_embeddings.padding_idx is not None and (new_num_tokens - 1) < old_embeddings.padding_idx:
             old_embeddings.padding_idx = None

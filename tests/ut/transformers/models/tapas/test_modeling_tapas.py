@@ -60,6 +60,7 @@ if is_mindspore_available():
         reduce_sum,
     )
 
+mindspore.set_context(pynative_synchronize=True)
 class TapasModelTester:
     """You can also import this e.g from .test_modeling_tapas import TapasModelTester"""
 
@@ -850,7 +851,6 @@ class TapasModelIntegrationTest(unittest.TestCase):
                     -10007.0977,
                 ]
             ],
-            device=torch_device,
         )
 
         self.assertTrue(ops.allclose(logits, expected_tensor, atol=0.02))

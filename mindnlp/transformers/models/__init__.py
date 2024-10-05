@@ -49,6 +49,11 @@ from . import (
     byt5,
     camembert,
     canine,
+    chatglm,
+    chatglm2,
+    chatglm3,
+    chatglm4,
+    chinese_clip,
     clap,
     clip,
     clipseg,
@@ -90,10 +95,6 @@ from . import (
     ernie_m,
     falcon,
     fastspeech2_conformer,
-    chatglm,
-    chatglm2,
-    chatglm3,
-    chatglm4,
     flava,
     flaubert,
     florence2,
@@ -152,6 +153,7 @@ from . import (
     mobilevit,
     mpnet,
     mpt,
+    mllama,
     mluke,
     mt5,
     musicgen,
@@ -285,7 +287,11 @@ from .bros import *
 from .byt5 import *
 from .camembert import *
 from .canine import *
+from .chatglm import *
+from .chatglm2 import *
+from .chatglm3 import *
 from .chatglm4 import *
+from .chinese_clip import *
 from .clap import *
 from .clip import *
 from .clipseg import *
@@ -325,9 +331,6 @@ from .encodec import *
 from .esm import *
 from .ernie import *
 from .ernie_m import *
-from .chatglm import *
-from .chatglm2 import *
-from .chatglm3 import *
 from .falcon import *
 from .flava import *
 from .flaubert import *
@@ -387,6 +390,7 @@ from .mobilenet_v1 import *
 from .mobilenet_v2 import *
 from .mobilevit import *
 from .mpnet import *
+from .mllama import *
 from .mluke import *
 from .mpt import *
 from .mt5 import *
@@ -521,6 +525,11 @@ __all__.extend(bros.__all__)
 __all__.extend(byt5.__all__)
 __all__.extend(camembert.__all__)
 __all__.extend(canine.__all__)
+__all__.extend(chatglm.__all__)
+__all__.extend(chatglm2.__all__)
+__all__.extend(chatglm3.__all__)
+__all__.extend(chatglm4.__all__)
+__all__.extend(chinese_clip.__all__)
 __all__.extend(clap.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(clipseg.__all__)
@@ -560,8 +569,6 @@ __all__.extend(encodec.__all__)
 __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
 __all__.extend(esm.__all__)
-__all__.extend(chatglm.__all__)
-__all__.extend(chatglm4.__all__)
 __all__.extend(falcon.__all__)
 __all__.extend(flava.__all__)
 __all__.extend(flaubert.__all__)
@@ -571,8 +578,6 @@ __all__.extend(focalnet.__all__)
 __all__.extend(funnel.__all__)
 __all__.extend(fsmt.__all__)
 __all__.extend(fastspeech2_conformer.__all__)
-__all__.extend(chatglm2.__all__)
-__all__.extend(chatglm3.__all__)
 __all__.extend(openai.__all__)
 __all__.extend(gptj.__all__)
 __all__.extend(gemma.__all__)
@@ -618,6 +623,7 @@ __all__.extend(mgp_str.__all__)
 __all__.extend(minicpm.__all__)
 __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
+__all__.extend(mllama.__all__)
 __all__.extend(mluke.__all__)
 __all__.extend(mobilebert.__all__)
 __all__.extend(mobilenet_v1.__all__)
