@@ -1165,6 +1165,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         model_wrapped_after = trainer.model
         self.assertIs(model_wrapped_before, model_wrapped_after, "should be not wrapped twice")
 
+    @pytest.mark.skipif(sys.platform == 'darwin', reason="MacOS cannot get same loss after resume.")
     def test_can_resume_training(self):
         # This test will fail for more than 2 GPUs since the batch size will get bigger and with the number of
         # save_steps, the checkpoint will resume training at epoch 2 or more (so the data seen by the model

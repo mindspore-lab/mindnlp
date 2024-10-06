@@ -471,8 +471,8 @@ class ViTPreTrainedModel(PreTrainedModel):
         if isinstance(module, (nn.Linear, nn.Conv2d)):
             # Upcast the input in `fp32` and cast it back to desired `dtype` to avoid
             # `trunc_normal_cpu` not implemented in `half` issues
-            module.weight = nn.init.trunc_normal_(
-                module.weight.to(mindspore.float32), mean=0.0, std=self.config.initializer_range
+            nn.init.trunc_normal_(
+                module.weight, mean=0.0, std=self.config.initializer_range
             ).to(module.weight.dtype)
             if module.bias is not None:
                 nn.init.zeros_(module.bias)
@@ -480,14 +480,14 @@ class ViTPreTrainedModel(PreTrainedModel):
             nn.init.zeros_(module.bias)
             nn.init.ones_(module.weight)
         elif isinstance(module, ViTEmbeddings):
-            module.position_embeddings = nn.init.trunc_normal_(
-                module.position_embeddings.to(mindspore.float32),
+            nn.init.trunc_normal_(
+                module.position_embeddings,
                 mean=0.0,
                 std=self.config.initializer_range,
             ).to(module.position_embeddings.dtype)
 
-            module.cls_token = nn.init.trunc_normal_(
-                module.cls_token.to(mindspore.float32),
+            nn.init.trunc_normal_(
+                module.cls_token,
                 mean=0.0,
                 std=self.config.initializer_range,
             ).to(module.cls_token.dtype)

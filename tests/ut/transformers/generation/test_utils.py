@@ -341,7 +341,7 @@ class GenerationTesterMixin:
         return_dict_in_generate=False,
         use_cache=True,
     ):
-        set_seed(0)
+        set_seed(123)
         logits_processor_kwargs = self._get_logits_processor_kwargs(do_sample=True, config=model.config)
         model_kwargs = {"attention_mask": attention_mask} if attention_mask is not None else {}
         output_generate = model.generate(
@@ -702,7 +702,7 @@ class GenerationTesterMixin:
     def test_beam_sample_generate(self):
         for model_class in self.all_generative_model_classes:
             config, input_ids, attention_mask, inputs_dict = self._get_input_ids_and_config()
-
+            print(input_ids.shape, 'input_ids')
             model = model_class(config).eval()
             beam_kwargs = self._get_beam_kwargs()
             output_generate = self._beam_sample_generate(
