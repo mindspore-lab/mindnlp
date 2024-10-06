@@ -1421,7 +1421,7 @@ class RagTokenForGeneration(RagPreTrainedModel):
                 logits_processor=pre_processor,
                 stopping_criteria=prepared_stopping_criteria,
                 generation_config=generation_config,
-                synced_gpus=False,
+                synced_devices=False,
                 streamer=None,
                 logits_warper=None,
                 **model_kwargs,
@@ -1443,7 +1443,7 @@ class RagTokenForGeneration(RagPreTrainedModel):
                 logits_processor=pre_processor,
                 stopping_criteria=prepared_stopping_criteria,
                 generation_config=generation_config,
-                synced_gpus=False,
+                synced_devices=False,
                 logits_warper=None,
                 **model_kwargs,
             )

@@ -281,7 +281,7 @@ class WhisperGenerationMixin:
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
         prefix_allowed_tokens_fn: Optional[Callable[[int, mindspore.Tensor], List[int]]] = None,
-        synced_gpus: bool = False,
+        synced_devices: bool = False,
         return_timestamps: Optional[bool] = None,
         task: Optional[str] = None,
         language: Optional[Union[str, List[str]]] = None,
@@ -344,7 +344,7 @@ class WhisperGenerationMixin:
                 on the batch ID `batch_id` and the previously generated tokens `inputs_ids`. This argument is useful
                 for constrained generation conditioned on the prefix, as described in [Autoregressive Entity
                 Retrieval](https://arxiv.org/abs/2010.00904).
-            synced_gpus (`bool`, *optional*, defaults to `False`):
+            synced_devices (`bool`, *optional*, defaults to `False`):
                 Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
             return_timestamps (`bool`, *optional*):
                 Whether to return the timestamps with the text. This enables the `WhisperTimestampsLogitsProcessor`.
@@ -674,7 +674,7 @@ class WhisperGenerationMixin:
                 logits_processor=logits_processor,
                 stopping_criteria=stopping_criteria,
                 prefix_allowed_tokens_fn=prefix_allowed_tokens_fn,
-                synced_gpus=synced_gpus,
+                synced_devices=synced_devices,
                 return_token_timestamps=return_token_timestamps,
                 do_condition_on_prev_tokens=do_condition_on_prev_tokens,
                 is_shortform=is_shortform,
@@ -777,7 +777,7 @@ class WhisperGenerationMixin:
         logits_processor,
         stopping_criteria,
         prefix_allowed_tokens_fn,
-        synced_gpus,
+        synced_devices,
         return_token_timestamps,
         do_condition_on_prev_tokens,
         is_shortform,
@@ -827,7 +827,7 @@ class WhisperGenerationMixin:
                 logits_processor=logits_processor,
                 stopping_criteria=stopping_criteria,
                 prefix_allowed_tokens_fn=prefix_allowed_tokens_fn,
-                synced_gpus=synced_gpus,
+                synced_devices=synced_devices,
                 decoder_input_ids=decoder_input_ids,
                 **generate_kwargs,
             )
