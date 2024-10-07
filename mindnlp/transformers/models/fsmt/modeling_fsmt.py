@@ -33,7 +33,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import mindspore
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -1215,7 +1215,7 @@ class SinusoidalPositionalEmbedding(nn.Embedding):
         #     weight = weight.to(dtype=self.weight.dtype)
         #     self.weight = mindspore.Parameter(weight)
         weight = weight.to(dtype=self.weight.dtype)
-        self.weight = mindspore.Parameter(weight)
+        self.weight = Parameter(weight)
         # self.weight.detach_()
         self.weight.requires_grad = False
 
