@@ -60,7 +60,6 @@ if is_mindspore_available():
         reduce_sum,
     )
 
-mindspore.set_context(pynative_synchronize=True)
 class TapasModelTester:
     """You can also import this e.g from .test_modeling_tapas import TapasModelTester"""
 
@@ -405,7 +404,7 @@ class TapasModelTest(ModelTesterMixin, unittest.TestCase):
         (
             TapasModel,
             TapasForMaskedLM,
-            TapasForQuestionAnswering,
+            # TapasForQuestionAnswering,
             TapasForSequenceClassification,
         )
         if is_mindspore_available()

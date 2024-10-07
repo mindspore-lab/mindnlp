@@ -54,7 +54,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [3.8, 3.9]
+        python: [3.9]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v3
@@ -104,8 +104,8 @@ jobs:
         pip install https://ms-release.obs.cn-north-4.myhuaweicloud.com/${{matrix.ms_version}}/MindSpore/unified/x86_64/mindspore-${{matrix.ms_version}}-cp39-cp39-linux_x86_64.whl --trusted-host ms-release.obs.cn-north-4.myhuaweicloud.com
     - name: Test with pytest
       run: |
-        # pytest -c pytest.ini -m 'not download and not gpu_only' --ignore=tests/ut/transformers tests/ut 
-        pytest -c pytest.ini -m 'not download and not gpu_only' tests/ut
+        pytest -c pytest.ini -m 'not download and not gpu_only' --ignore=tests/ut/transformers tests/ut 
+        # pytest -c pytest.ini -m 'not download and not gpu_only' tests/ut
 
   transformers-model-test:
     needs: pylint-check

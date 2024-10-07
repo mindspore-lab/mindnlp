@@ -12,20 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=unused-argument
-""" Testing suite for the Mindspore Wav2Vec2 feature extractor. """
+
 
 import itertools
 import random
 import unittest
 
 import numpy as np
-import mindspore as ms
 
-from mindnlp.transformers import WAV_2_VEC_2_PRETRAINED_MODEL_ARCHIVE_LIST, Wav2Vec2Config, Wav2Vec2FeatureExtractor
+from mindnlp.transformers import Wav2Vec2Config, Wav2Vec2FeatureExtractor
 from mindnlp.utils.testing_utils import require_mindspore, slow
+
+from ...test_sequence_feature_extraction_common import SequenceFeatureExtractionTestMixin
 
 
 global_rng = random.Random()
@@ -38,7 +36,7 @@ def floats_list(shape, scale=1.0, rng=None, name=None):
         rng = global_rng
 
     values = []
-    for _ in range(shape[0]):
+    for batch_idx in range(shape[0]):
         values.append([])
         for _ in range(shape[1]):
             values[-1].append(rng.random() * scale)
@@ -59,7 +57,6 @@ class Wav2Vec2FeatureExtractionTester(unittest.TestCase):
         return_attention_mask=True,
         do_normalize=True,
     ):
-        super().__init__()
         self.parent = parent
         self.batch_size = batch_size
         self.min_seq_length = min_seq_length
@@ -99,7 +96,7 @@ class Wav2Vec2FeatureExtractionTester(unittest.TestCase):
         return speech_inputs
 
 
-class Wav2Vec2FeatureExtractionTest(unittest.TestCase):
+class Wav2Vec2FeatureExtractionTest(SequenceFeatureExtractionTestMixin, unittest.TestCase):
     feature_extraction_class = Wav2Vec2FeatureExtractor
 
     def setUp(self):
@@ -209,6 +206,8 @@ class Wav2Vec2FeatureExtractionTest(unittest.TestCase):
 
     @require_mindspore
     def test_double_precision_pad(self):
+        import mindspore
+
         feature_extractor = self.feature_extraction_class(**self.feat_extract_tester.prepare_feat_extract_dict())
         np_speech_inputs = np.random.rand(100).astype(np.float64)
         py_speech_inputs = np_speech_inputs.tolist()
@@ -217,7 +216,7 @@ class Wav2Vec2FeatureExtractionTest(unittest.TestCase):
             np_processed = feature_extractor.pad([{"input_values": inputs}], return_tensors="np")
             self.assertTrue(np_processed.input_values.dtype == np.float32)
             pt_processed = feature_extractor.pad([{"input_values": inputs}], return_tensors="ms")
-            self.assertTrue(pt_processed.input_values.dtype == ms.float32)
+            self.assertTrue(pt_processed.input_values.dtype == mindspore.float32)
 
     @slow
     @require_mindspore
@@ -225,10 +224,10 @@ class Wav2Vec2FeatureExtractionTest(unittest.TestCase):
         # this test makes sure that models that are using
         # group norm don't have their feature extractor return the
         # attention_mask
-        for model_id in WAV_2_VEC_2_PRETRAINED_MODEL_ARCHIVE_LIST:
-            config = Wav2Vec2Config.from_pretrained(model_id)
-            feat_extract = Wav2Vec2FeatureExtractor.from_pretrained(model_id)
+        model_id = "facebook/wav2vec2-base-960h"
+        config = Wav2Vec2Config.from_pretrained(model_id)
+        feat_extract = Wav2Vec2FeatureExtractor.from_pretrained(model_id)
 
-            # only "layer" feature extraction norm should make use of
-            # attention_mask
-            self.assertEqual(feat_extract.return_attention_mask, config.feat_extract_norm == "layer")
+        # only "layer" feature extraction norm should make use of
+        # attention_mask
+        self.assertEqual(feat_extract.return_attention_mask, config.feat_extract_norm == "layer")

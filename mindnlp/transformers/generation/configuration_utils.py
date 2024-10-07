@@ -704,7 +704,7 @@ class GenerationConfig:
             "logits_processor",
             "stopping_criteria",
             "prefix_allowed_tokens_fn",
-            "synced_gpus",
+            "synced_devices",
             "assistant_model",
             "streamer",
             "negative_prompt_ids",
