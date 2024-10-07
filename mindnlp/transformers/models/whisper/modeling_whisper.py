@@ -933,7 +933,6 @@ class WhisperDecoder(WhisperPreTrainedModel):
             cache_position = ops.arange(
                 past_key_values_length, past_key_values_length + input_shape[1]
             )
-
         if position_ids is None:
             position_ids = cache_position.unsqueeze(0)
 
@@ -1410,6 +1409,7 @@ class WhisperForConditionalGeneration(WhisperGenerationMixin, WhisperPreTrainedM
             decoder_position_ids = (decoder_attention_mask.cumsum(-1) - 1).clamp(min=0)
 
         past_length = 0
+
         if past_key_values is not None:
             if isinstance(past_key_values, EncoderDecoderCache):
                 past_length = cache_position[0] if cache_position is not None else past_key_values.get_seq_length()
