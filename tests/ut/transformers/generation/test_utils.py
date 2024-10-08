@@ -702,7 +702,6 @@ class GenerationTesterMixin:
     def test_beam_sample_generate(self):
         for model_class in self.all_generative_model_classes:
             config, input_ids, attention_mask, inputs_dict = self._get_input_ids_and_config()
-            print(input_ids.shape, 'input_ids')
             model = model_class(config).eval()
             beam_kwargs = self._get_beam_kwargs()
             output_generate = self._beam_sample_generate(
