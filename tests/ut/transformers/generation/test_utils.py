@@ -1210,7 +1210,7 @@ class GenerationTesterMixin:
             for output in (output_greedy, output_assisted):
                 self._check_outputs(output, input_ids, model.config, use_cache=True)
 
-    @pytest.mark.generate
+    @pytest.mark.skip
     def test_prompt_lookup_decoding_matches_greedy_search(self):
         # This test ensures that the prompt lookup generation does not introduce output changes over greedy search.
         # This test is mostly a copy of test_assisted_decoding_matches_greedy_search

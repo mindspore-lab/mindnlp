@@ -23,7 +23,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import mindspore
 
 from mindnlp.core import get_default_dtype, nn, ops, no_grad
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import (
     ModelOutput,
     is_scipy_available,
@@ -623,7 +623,7 @@ class DeformableDetrMultiscaleDeformableAttention(nn.Module):
             grid_init[:, :, i, :] *= i + 1
 
         with no_grad():
-            self.sampling_offsets.bias = mindspore.Parameter(grid_init.view(-1))
+            self.sampling_offsets.bias = Parameter(grid_init.view(-1))
         nn.init.zeros_(self.attention_weights.weight)
         nn.init.zeros_(self.attention_weights.bias)
         nn.init.xavier_uniform_(self.value_proj.weight)
@@ -1583,7 +1583,7 @@ class DeformableDetrModel(DeformableDetrPreTrainedModel):
         self.encoder = DeformableDetrEncoder(config)
         self.decoder = DeformableDetrDecoder(config)
 
-        self.level_embed = mindspore.Parameter(
+        self.level_embed = Parameter(
             ops.zeros(config.num_feature_levels, config.d_model)
         )
 
@@ -1957,7 +1957,7 @@ class DeformableDetrForObjectDetection(DeformableDetrPreTrainedModel):
 
         prior_prob = 0.01
         bias_value = -math.log((1 - prior_prob) / prior_prob)
-        self.class_embed.bias = mindspore.Parameter(
+        self.class_embed.bias = Parameter(
             ops.ones(config.num_labels) * bias_value
         )
         nn.init.zeros_(self.bbox_embed.layers[-1].weight)
