@@ -21,10 +21,9 @@ import numpy as np
 import mindspore
 from mindspore import Tensor
 import mindspore.common.dtype as mstype
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -115,7 +114,7 @@ class Speech2TextSinusoidalPositionalEmbedding(nn.Module):
             # in forward put the weights on the correct dtype and device of the param
             emb_weights = emb_weights.to(dtype=self.weights.dtype)
 
-        self.weights = mindspore.Parameter(emb_weights)
+        self.weights = Parameter(emb_weights)
         self.weights.requires_grad = False
         # self.weights.detach_()
 
@@ -530,17 +529,16 @@ class Speech2TextPreTrainedModel(PreTrainedModel):
     main_input_name = "input_features"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         std = self.config.init_std
-        if isinstance(cell, (nn.Linear, nn.Conv1d)):
-            cell.weight.assign_value(initializer(Normal(std),
-                                             cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, std, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
+        if isinstance(module, (nn.Linear, nn.Conv1d)):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
 
     def _get_feat_extract_output_lengths(self, input_lengths: mindspore.Tensor):
         """

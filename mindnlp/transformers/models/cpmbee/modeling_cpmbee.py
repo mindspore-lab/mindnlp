@@ -63,7 +63,7 @@ class CpmBeeLinear(nn.Linear):
     Attributes:
         dim_in (int): The input dimension of the linear layer.
         dim_out (int): The output dimension of the linear layer.
-        weight (mindspore.Parameter): The weight parameter of the linear layer.
+        weight (Parameter): The weight parameter of the linear layer.
     
     Methods:
         __init__(self, dim_in, dim_out, dtype):
@@ -767,7 +767,7 @@ class CpmBeeBucketPositionBias(nn.Module):
         num_buckets (int): The number of position bias buckets.
         num_segment_bucket (int): The number of segment buckets used for position bias.
         max_distance (int): The maximum distance for position bias calculation.
-        relative_attention_bias (mindspore.Parameter): The learnable parameter used for relative attention bias calculation.
+        relative_attention_bias (Parameter): The learnable parameter used for relative attention bias calculation.
 
     Methods:
         __init__:
