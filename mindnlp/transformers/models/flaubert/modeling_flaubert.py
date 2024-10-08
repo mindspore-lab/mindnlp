@@ -55,7 +55,6 @@ _CONFIG_FOR_DOC = "FlaubertConfig"
 
 # Copied from transformers.models.xlm.modeling_xlm.create_sinusoidal_embeddings
 def create_sinusoidal_embeddings(n_pos, dim, out):
-    print(type(out))
     position_enc = np.array([[pos / np.power(10000, 2 * (j // 2) / dim) for j in range(dim)] for pos in range(n_pos)])
     out[:, 0::2] = mindspore.Tensor(np.sin(position_enc[:, 0::2]))
     out[:, 1::2] = mindspore.Tensor(np.cos(position_enc[:, 1::2]))

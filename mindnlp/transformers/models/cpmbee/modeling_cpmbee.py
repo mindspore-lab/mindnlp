@@ -2541,7 +2541,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         output_scores: Optional[bool] = None,
         return_dict_in_generate: Optional[bool] = None,
-        synced_gpus: bool = False,
+        synced_devices: bool = False,
         **model_kwargs,
     ) -> List:
         """
@@ -2724,7 +2724,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
             cur_len += 1
 
             if beam_scorer.is_done or cur_len == max_length + 1:
-                if not synced_gpus:
+                if not synced_devices:
                     break
 
         sequence_outputs = beam_scorer.finalize()
@@ -2739,7 +2739,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
         prefix_allowed_tokens_fn: Optional[Callable[[int, mindspore.Tensor], List[int]]] = None,
-        synced_gpus: Optional[bool] = None,
+        synced_devices: Optional[bool] = None,
         streamer: Optional["BaseStreamer"] = None,
         **kwargs,
     ) -> List:
@@ -2908,7 +2908,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
             vocab_size=kwargs.get("vocab_size", None),
             output_scores=generation_config.output_scores,
             return_dict_in_generate=generation_config.return_dict_in_generate,
-            synced_gpus=synced_gpus,
+            synced_devices=synced_devices,
             **model_kwargs,
         )
 

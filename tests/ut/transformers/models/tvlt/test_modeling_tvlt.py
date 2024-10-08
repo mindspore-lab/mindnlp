@@ -566,6 +566,7 @@ class TvltModelIntegrationTest(unittest.TestCase):
 
         # verify the logits
         expected_last_hidden_state_slice = mindspore.tensor([[-0.0186, -0.0691], [0.0242, -0.0398]])
+        print(outputs.last_hidden_state[:, :2, :2].numpy())
         self.assertTrue(
             np.allclose(outputs.last_hidden_state[:, :2, :2].numpy(), expected_last_hidden_state_slice.numpy(), atol=1e-4)
         )

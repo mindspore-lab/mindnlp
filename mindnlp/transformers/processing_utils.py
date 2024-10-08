@@ -21,8 +21,11 @@ import copy
 import inspect
 import json
 import os
+import sys
+import typing
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, TypedDict, Union
+import typing_extensions
 
 import numpy as np
 from mindnlp import transformers
@@ -68,6 +71,10 @@ AUTO_TO_BASE_CLASS_MAPPING = {
     "AutoImageProcessor": "ImageProcessingMixin",
 }
 
+if sys.version_info >= (3, 11):
+    Unpack = typing.Unpack
+else:
+    Unpack = typing_extensions.Unpack
 
 class TextKwargs(TypedDict, total=False):
     """

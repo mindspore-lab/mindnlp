@@ -963,7 +963,7 @@ class MusicgenForCausalLM(MusicgenPreTrainedModel):
         generation_config: Optional[GenerationConfig] = None,
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
-        synced_gpus: Optional[bool] = None,
+        synced_devices: Optional[bool] = None,
         streamer: Optional["BaseStreamer"] = None,
         **kwargs,
     ):
@@ -1003,7 +1003,7 @@ class MusicgenForCausalLM(MusicgenPreTrainedModel):
                 Custom stopping criteria that complement the default stopping criteria built from arguments and a
                 generation config. If a stopping criteria is passed that is already created with the arguments or a
                 generation config an error is thrown. This feature is intended for advanced users.
-            synced_gpus (`bool`, *optional*, defaults to `False`):
+            synced_devices (`bool`, *optional*, defaults to `False`):
                 Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
             streamer (`BaseStreamer`, *optional*):
                 Streamer object that will be used to stream the generated sequences. Generated tokens are passed
@@ -1132,7 +1132,7 @@ class MusicgenForCausalLM(MusicgenPreTrainedModel):
                 logits_warper=prepared_logits_warper,
                 stopping_criteria=stopping_criteria,
                 generation_config=generation_config,
-                synced_gpus=synced_gpus,
+                synced_devices=synced_devices,
                 streamer=streamer,
                 **model_kwargs,
             )
@@ -1965,7 +1965,7 @@ class MusicgenForConditionalGeneration(PreTrainedModel):
         generation_config: Optional[GenerationConfig] = None,
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
-        synced_gpus: Optional[bool] = None,
+        synced_devices: Optional[bool] = None,
         streamer: Optional["BaseStreamer"] = None,
         **kwargs,
     ):
@@ -2005,7 +2005,7 @@ class MusicgenForConditionalGeneration(PreTrainedModel):
                 Custom stopping criteria that complement the default stopping criteria built from arguments and a
                 generation config. If a stopping criteria is passed that is already created with the arguments or a
                 generation config an error is thrown. This feature is intended for advanced users.
-            synced_gpus (`bool`, *optional*, defaults to `False`):
+            synced_devices (`bool`, *optional*, defaults to `False`):
                 Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
             streamer (`BaseStreamer`, *optional*):
                 Streamer object that will be used to stream the generated sequences. Generated tokens are passed
@@ -2159,7 +2159,7 @@ class MusicgenForConditionalGeneration(PreTrainedModel):
                 logits_warper=prepared_logits_warper,
                 stopping_criteria=stopping_criteria,
                 generation_config=generation_config,
-                synced_gpus=synced_gpus,
+                synced_devices=synced_devices,
                 streamer=streamer,
                 **model_kwargs,
             )

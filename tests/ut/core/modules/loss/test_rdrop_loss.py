@@ -71,6 +71,7 @@ class TestRDropLoss(MindNLPTestCase):
 
 
         if jit:
+            r_drop_loss.jit()
             loss = forward_jit(temp_p, temp_q)
         else:
             loss = forward(temp_p, temp_q)

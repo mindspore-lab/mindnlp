@@ -19,7 +19,8 @@
 import time
 import numpy as np
 import mindspore
-from mindspore import nn, Tensor
+from mindspore import Tensor
+from mindnlp.core import optim
 from mindnlp.transformers import LongformerConfig, LongformerForSequenceClassification
 
 def test_train_longformer_pynative():
@@ -33,13 +34,13 @@ def test_train_longformer_pynative():
     config = LongformerConfig(attention_window=[8, 8], num_hidden_layers=2, max_position_embeddings=seq_len+1, vocab_size=30, num_layers=2,
                               num_labels=3, pad_token_id=0)
     model = LongformerForSequenceClassification(config)
-    optimizer = nn.AdamWeightDecay(model.trainable_params(), lr)
+    optimizer = optim.AdamW(model.trainable_params(), lr)
 
     def forward_fn(input_ids, labels):
         outputs = model(input_ids, labels=labels)
         return outputs[0]
 
-    grad_fn = mindspore.value_and_grad(forward_fn, None, optimizer.parameters)
+    grad_fn = mindspore.value_and_grad(forward_fn, None, model.trainable_params())
 
     for _ in range(epochs):
         s = time.time()
@@ -49,4 +50,4 @@ def test_train_longformer_pynative():
             loss, grads = grad_fn(input_ids, labels)
             t = time.time()
             print(f"loss: {loss}, cost time: {(t - s) / (i + 1):.3f} s/step")
-            optimizer(grads)
+            optimizer.step(grads)

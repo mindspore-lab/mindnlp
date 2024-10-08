@@ -1366,7 +1366,7 @@ class GenerationMixin:
                         " https://huggingface.co/docs/transformers/generation_strategies#default-text-generation-configuration )"
                     )
                     self.generation_config = new_generation_config
-            using_model_generation_config = True
+
             generation_config = self.generation_config
             using_model_generation_config = True
 

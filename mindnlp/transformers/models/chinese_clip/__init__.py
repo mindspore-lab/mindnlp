@@ -1,4 +1,4 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,8 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""core module"""
-from . import optim, ops, nn, distributions
-from .utils import get_default_dtype, set_default_dtype, manual_seed
-from .autograd import no_grad, enable_grad
-from .serialization import *
+"""
+Chinese CLIP Model
+"""
+from . import configuration_chinese_clip, image_processing_chinese_clip, modeling_chinese_clip, processing_chinese_clip
+
+from .configuration_chinese_clip import *
+from .image_processing_chinese_clip import *
+from .modeling_chinese_clip import *
+from .processing_chinese_clip import *
+
+__all__ = []
+__all__.extend(configuration_chinese_clip.__all__)
+__all__.extend(image_processing_chinese_clip.__all__)
+__all__.extend(modeling_chinese_clip.__all__)
+__all__.extend(processing_chinese_clip.__all__)

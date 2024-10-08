@@ -1075,7 +1075,7 @@ class Qwen2VLForConditionalGeneration(Qwen2VLPreTrainedModel):
                         ed_video = input_tokens.index(video_token_id, st)
                     else:
                         ed_video = len(input_tokens) + 1
-                    print(ed_image, ed_video)
+
                     if ed_image < ed_video:
                         t, h, w = (
                             image_grid_thw[image_index][0],
@@ -1301,7 +1301,6 @@ class Qwen2VLForConditionalGeneration(Qwen2VLPreTrainedModel):
         # If we have cache: let's slice `input_ids` through `cache_position`, to keep only the unprocessed tokens
         # Exception 1: when passing input_embeds, input_ids may be missing entries
         # Exception 2: some generation methods do special slicing of input_ids, so we don't need to do it here
-        print('video_grid_thw', video_grid_thw)
         if past_key_values is not None:
             if inputs_embeds is not None:  # Exception 1
                 if 0 not in input_ids.shape:
