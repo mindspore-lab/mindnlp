@@ -1195,6 +1195,10 @@ class Module:
             module.jit(mode)
         return self
 
+    @property
+    def skip_syntax(self):
+        return self.__ms_class__
+
     def train(self, mode=True):
         """Sets the module in training mode.
 
