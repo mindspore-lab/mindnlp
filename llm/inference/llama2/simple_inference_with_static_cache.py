@@ -8,7 +8,7 @@ prompts = [
     "My favorite all time favorite condiment is ketchup.",
 ]
 
-NUM_TOKENS_TO_GENERATE = 3
+NUM_TOKENS_TO_GENERATE = 40
 
 model_id = 'shakechen/llama-2-7b-hf'
 tokenizer = LlamaTokenizer.from_pretrained(model_id, mirror='modelscope', pad_token="</s>", padding_side="right")
@@ -52,7 +52,6 @@ with no_grad():
         print(t - s)
         generated_ids[:, cache_position] = next_token.int()
         cache_position += 1
-        print(next_token)
 
 text = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
 print(text)
