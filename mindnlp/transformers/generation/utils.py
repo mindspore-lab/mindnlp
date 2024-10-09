@@ -3286,7 +3286,6 @@ class GenerationMixin:
             if _record_time:
                 infer_start = time.time()
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
-
             # prepare variable output controls (note: some models won't accept all output controls)
             model_inputs.update({"output_attentions": output_attentions} if output_attentions else {})
             model_inputs.update({"output_hidden_states": output_hidden_states} if output_hidden_states else {})
