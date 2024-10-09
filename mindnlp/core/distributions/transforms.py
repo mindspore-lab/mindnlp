@@ -1,17 +1,15 @@
 """transforms"""
 # pylint: disable=invalid-overridden-method
 # mypy: allow-untyped-defs
-import math
-import mindspore
-import numbers
-from mindnlp.core import ops
-
 import functools
 import math
 import numbers
 import operator
 import weakref
 from typing import List
+
+import mindspore
+from mindnlp.core import ops
 
 from .. import ops
 from ..nn import functional as F
@@ -796,17 +794,14 @@ class AffineTransform(Transform):
     def log_abs_det_jacobian(self, x, y):
         print(f"scale: {self.scale}, type: {type(self.scale)}")
         print(f"x shape: {x.shape}, y shape: {y.shape}")
-        
         shape = x.shape
         scale = self.scale
         if isinstance(scale, numbers.Real):
             result = ops.full_like(x, math.log(abs(scale)))
         else:
             result = ops.abs(scale).log()
-        
         if not isinstance(result, mindspore.Tensor):
             result = ops.full_like(x, result)
-        
         if self.event_dim:
             result_size = result.shape[: -self.event_dim] + (-1,)
             result = result.view(result_size).sum(-1)
