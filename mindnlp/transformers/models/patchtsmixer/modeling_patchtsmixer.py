@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore
+mindspore.set_context(pynative_synchronize=True)
 from mindnlp.core import nn, ops
 from mindnlp.core.distributions import Distribution
 from mindnlp.transformers.modeling_utils import PreTrainedModel
@@ -1682,6 +1683,15 @@ class PatchTSMixerForPrediction(PatchTSMixerPreTrainedModel):
 
         # tensor [batch_size x prediction_length x num_input_channels]
         y_hat = self.head(model_output.last_hidden_state)
+        
+        if isinstance(y_hat, tuple):
+            y_hat_mean, y_hat_scale = y_hat[0], y_hat[1]
+        elif isinstance(y_hat, mindspore.Tensor):
+            # 如果 y_hat 是单个张量,我们可能需要根据具体情况决定如何处理
+            y_hat_mean = y_hat
+            y_hat_scale = None  # 或者使用其他合适的默认值
+        else:
+            raise ValueError(f"Unexpected type for y_hat: {type(y_hat)}")
 
         loss_val = None
         if self.prediction_channel_indices is not None:
