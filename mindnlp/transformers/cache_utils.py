@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import mindspore
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.configs import ON_ORANGE_PI
 from .configuration_utils import PretrainedConfig
 from ..utils import logging
@@ -755,8 +756,8 @@ class StaticCache(Cache):
         cache_shape = (max_batch_size, self.num_key_value_heads, self.max_cache_len, self.head_dim)
         for idx in range(config.num_hidden_layers):
             # Note: `torch.export()`` requires mutations to be registered as buffers.
-            self.register_buffer(f"key_cache_{idx}", ops.zeros(cache_shape, dtype=dtype))
-            self.register_buffer(f"value_cache_{idx}", ops.zeros(cache_shape, dtype=dtype))
+            self.register_buffer(f"key_cache_{idx}", Parameter(ops.zeros(cache_shape, dtype=dtype)))
+            self.register_buffer(f"value_cache_{idx}", Parameter(ops.zeros(cache_shape, dtype=dtype)))
             key_cache = getattr(self, f"key_cache_{idx}")
             value_cache = getattr(self, f"value_cache_{idx}")
             # Note: `mark_static_address` is used to tag the cache as an fixed data pointer, preventing cuda graph

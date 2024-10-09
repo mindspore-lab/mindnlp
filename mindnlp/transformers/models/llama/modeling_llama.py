@@ -616,10 +616,11 @@ class LlamaModel(LlamaPreTrainedModel):
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        if (input_ids is None) ^ (inputs_embeds is not None):
-            raise ValueError(
-                "You cannot specify both input_ids and inputs_embeds at the same time, and must specify either one"
-            )
+        if not self.skip_syntax:
+            if (input_ids is None) ^ (inputs_embeds is not None):
+                raise ValueError(
+                    "You cannot specify both input_ids and inputs_embeds at the same time, and must specify either one"
+                )
 
         if self.gradient_checkpointing and self.training and use_cache:
             logger.warning_once(
@@ -662,7 +663,7 @@ class LlamaModel(LlamaPreTrainedModel):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
 
-        for decoder_layer in self.layers:
+        for decoder_layer in self.layers._modules.values():
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 

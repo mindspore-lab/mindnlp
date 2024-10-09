@@ -308,3 +308,7 @@ class GPTNeoXModelJapaneseTest(ModelTesterMixin, unittest.TestCase):
             )
             predicted_outputs += generated_string
         self.assertListEqual(predicted_outputs, EXPECTED_OUTPUTS)
+
+    @unittest.skip("GPTNeoXJapanese applies bias to attention scores")
+    def test_custom_4d_attention_mask(self):
+        pass
