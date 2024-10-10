@@ -812,10 +812,13 @@ class StaticCache(Cache):
             # # The operator 'aten::index_copy.out' is not currently implemented for the MPS device.
             # k_out[:, :, cache_position] = key_states
             # v_out[:, :, cache_position] = value_states
-
-            # use index_add for mindspore since tensor slice is too slow and no implementation of index_copy
-            k_out = ops.index_add(k_out, 2, cache_position.int(), key_states)
-            v_out = ops.index_add(v_out, 2, cache_position.int(), value_states)
+            if ON_ORANGE_PI:
+                k_out = ops.inplace_index_add(k_out, 2, cache_position.int(), key_states)
+                v_out = ops.inplace_index_add(v_out, 2, cache_position.int(), value_states)
+            else:
+                # use index_add for mindspore since tensor slice is too slow and no implementation of index_copy
+                k_out = ops.index_add(k_out, 2, cache_position.int(), key_states)
+                v_out = ops.index_add(v_out, 2, cache_position.int(), value_states)
 
         return k_out, v_out
 
