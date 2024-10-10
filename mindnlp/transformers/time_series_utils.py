@@ -174,7 +174,15 @@ class StudentTOutput(DistributionOutput):
     def domain_map(cls, df: mindspore.Tensor, loc: mindspore.Tensor, scale: mindspore.Tensor):
         scale = cls.squareplus(scale).clamp(float(ops.finfo(scale.dtype).eps))
         df = 2.0 + cls.squareplus(df)
-        return df.squeeze(-1), loc.squeeze(-1), scale.squeeze(-1)
+
+        if df.shape[-1] == 1:
+            df = df.squeeze(-1)
+        if loc.shape[-1] == 1:
+            loc = loc.squeeze(-1)
+        if scale.shape[-1] == 1:
+            scale = scale.squeeze(-1)
+
+        return df, loc, scale
 
 
 class NormalOutput(DistributionOutput):
@@ -187,8 +195,13 @@ class NormalOutput(DistributionOutput):
 
     @classmethod
     def domain_map(cls, loc: mindspore.Tensor, scale: mindspore.Tensor):
-        scale = cls.squareplus(scale).clamp_min(ops.finfo(scale.dtype).eps)
-        return loc.squeeze(-1), scale.squeeze(-1)
+        scale = cls.squareplus(scale).clamp(float(ops.finfo(scale.dtype).eps))
+        if loc.shape[-1] == 1:
+            loc = loc.squeeze(-1)
+        if scale.shape[-1] == 1:
+            scale = scale.squeeze(-1)
+
+        return loc, scale
 
 
 class NegativeBinomialOutput(DistributionOutput):

@@ -8,6 +8,9 @@ import operator
 import weakref
 from typing import List
 
+import mindspore
+from mindnlp.core import ops
+
 from .. import ops
 from ..nn import functional as F
 from . import constraints
@@ -708,6 +711,8 @@ class AbsTransform(Transform):
         return y
 
 
+
+
 class AffineTransform(Transform):
     r"""
     Transform via the pointwise affine mapping :math:`y = \text{loc} + \text{scale} \times x`.
@@ -724,7 +729,7 @@ class AffineTransform(Transform):
     def __init__(self, loc, scale, event_dim=0, cache_size=0):
         super().__init__(cache_size=cache_size)
         self.loc = loc
-        self.scale = scale
+        self.scale = mindspore.Tensor(scale) if isinstance(scale, (int, float)) else scale
         self._event_dim = event_dim
 
     @property
@@ -787,14 +792,18 @@ class AffineTransform(Transform):
         return (y - self.loc) / self.scale
 
     def log_abs_det_jacobian(self, x, y):
+        print(f"scale: {self.scale}, type: {type(self.scale)}")
+        print(f"x shape: {x.shape}, y shape: {y.shape}")
         shape = x.shape
         scale = self.scale
         if isinstance(scale, numbers.Real):
             result = ops.full_like(x, math.log(abs(scale)))
         else:
             result = ops.abs(scale).log()
+        if not isinstance(result, mindspore.Tensor):
+            result = ops.full_like(x, result)
         if self.event_dim:
-            result_size = result.size()[: -self.event_dim] + (-1,)
+            result_size = result.shape[: -self.event_dim] + (-1,)
             result = result.view(result_size).sum(-1)
             shape = shape[: -self.event_dim]
         return result.expand(shape)
