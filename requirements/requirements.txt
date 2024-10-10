@@ -32,4 +32,5 @@ bs4
 tiktoken
 faiss_cpu
 phonemizer
+rich
 git+https://github.com/lvyufeng/einops

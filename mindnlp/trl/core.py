@@ -13,6 +13,7 @@
 # limitations under the License.
 """
 
+# pylint: disable=C,R
 
 from typing import Dict, List, Optional, Tuple, Union
 from collections.abc import Mapping
@@ -20,7 +21,7 @@ from collections.abc import Mapping
 import numpy as np
 import mindspore as ms
 
-from mindspore import ops
+from mindnlp.core import ops
 from mindspore import Tensor
 
 #与huggingface.transformers同路程
@@ -189,16 +190,14 @@ def masked_whiten(values: Tensor, mask: Tensor, shift_mean: bool = True) -> Tens
 def average_torch_dicts(list_of_dicts: List[Dict]) -> Dict:
     """Average values of a list of dicts with torch tensors."""
     average_dict = {}
-    stack = ops.Stack()
-    rmean = ops.ReduceMean()
     for key in list_of_dicts[0].keys():
-        average_dict[key] = rmean(stack([d[key] for d in list_of_dicts]), axis=0)
+        average_dict[key] = ops.std_mean(ops.stack([d[key] for d in list_of_dicts]), dim=0)
     return average_dict
 
 def entropy_from_logits(logits: Tensor) -> Tensor:
     """Calculate entropy from logits."""
-    pd = ops.Softmax(axis=-1)(logits)
-    entropy = ops.logsumexp(logits, -1) - ops.ReduceSum()(pd * logits, -1)
+    pd = ops.softmax(logits,dim=-1)
+    entropy = ops.logsumexp(logits, -1) - ops.sum(pd * logits, -1)
     return entropy
 
 def clip_by_value(x: Tensor, tensor_min: float, tensor_max: float) -> Tensor:
@@ -257,12 +256,12 @@ def randn_tensor(
     if isinstance(generator, list):
         shape = (1,) + shape[1:]
         latents = [
-            ops.standard_normal(shape, seed=generator[i])
+            ops.randn(shape)
             for i in range(batch_size)
         ]
-        latents = ops.concat(latents, axis=0)
+        latents = ops.concat(latents, dim=0)
     else:
-        latents = ops.standard_normal(shape, seed=generator)
+        latents = ops.randn(shape)
 
     return latents
 
