@@ -449,7 +449,6 @@ class UniSpeechRobustModelTest(ModelTesterMixin, unittest.TestCase):
         if hasattr(module, "masked_spec_embed") and module.masked_spec_embed is not None:
             module.masked_spec_embed.data.fill_(3)
 
-    @slow
     def test_mask_feature_prob_ctc(self):
         model = UniSpeechForCTC.from_pretrained(
             "hf-internal-testing/tiny-random-unispeech", mask_feature_prob=0.2, mask_feature_length=2,
@@ -474,7 +473,6 @@ class UniSpeechRobustModelTest(ModelTesterMixin, unittest.TestCase):
 
         self.assertEqual(logits.shape, (4, 1498, 32))
 
-    @slow
     def test_mask_time_prob_ctc(self):
         model = UniSpeechForCTC.from_pretrained(
             "hf-internal-testing/tiny-random-unispeech", mask_time_prob=0.2, mask_time_length=2,
@@ -500,7 +498,6 @@ class UniSpeechRobustModelTest(ModelTesterMixin, unittest.TestCase):
 
         self.assertEqual(logits.shape, (4, 1498, 32))
 
-    @slow
     def test_mask_time_feature_prob_ctc_single_batch(self):
         model = UniSpeechForCTC.from_pretrained(
             "hf-internal-testing/tiny-random-unispeech",
