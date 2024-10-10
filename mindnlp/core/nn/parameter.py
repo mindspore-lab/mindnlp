@@ -12,6 +12,10 @@ class Parameter(Tensor):
         self.param_info.requires_grad = requires_grad
         self.requires_grad = requires_grad
 
+    def __deepcopy__(self, memodict):
+        new_obj = Parameter(self)
+        return new_obj
+
     @property
     def data(self):
         return self

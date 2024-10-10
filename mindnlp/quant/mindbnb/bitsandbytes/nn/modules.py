@@ -33,6 +33,7 @@ from bitsandbytes.utils import (
 )
 
 from mindnlp.core import nn
+from mindnlp.core.nn import Parameter
 
 
 def empty(*size, dtype=None):
@@ -45,7 +46,7 @@ def empty(*size, dtype=None):
 T = TypeVar("T", bound="mindspore.nn.Module")
 
 
-class Int8Params(mindspore.Parameter):
+class Int8Params(Parameter):
 
     def __new__(
         cls,
@@ -314,7 +315,7 @@ class Linear8bitLt(nn.Linear):
 
         # weights are cast automatically as Int8Params, but the bias has to be cast manually
         if self.bias is not None and self.bias.dtype != x.dtype:
-            self.bias = mindspore.Parameter(
+            self.bias = Parameter(
                 self.bias.astype(x.dtype), requires_grad=self.bias.requires_grad
             )
 

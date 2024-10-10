@@ -911,7 +911,7 @@ class JambaModel(JambaPreTrainedModel):
             causal_mask = causal_mask.copy()  # copy to contiguous memory for in-place edit
             if attention_mask.ndim == 2:
                 mask_length = attention_mask.shape[-1]
-                padding_mask = causal_mask[..., :mask_length].eq(0.0) * attention_mask[:, None, None, :].eq(0.0)
+                padding_mask = (causal_mask[..., :mask_length].eq(0.0).int() * attention_mask[:, None, None, :].eq(0.0).int()).bool()
                 causal_mask[..., :mask_length] = causal_mask[..., :mask_length].masked_fill(padding_mask, min_dtype)
 
         return causal_mask

@@ -12,14 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch GPT-J model."""
+"""MindSpore GPT-J model."""
 
 from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
@@ -348,26 +347,22 @@ class GPTJPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["GPTJBlock"]
     _skip_keys_device_placement = "past_key_values"
-    _supports_flash_attn_2 = True
 
-    # def __init__(self, *inputs, **kwargs):
-    #     super().__init__(*inputs, **kwargs)
-
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights."""
-        if isinstance(cell, (nn.Linear,)):
-            cell.weight.assign_value(initializer(Normal(self.config.initializer_range),
-                                             cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        if isinstance(module, (nn.Linear,)):
+            # Slightly different from Mesh Transformer JAX which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
 
 
 GPTJ_START_DOCSTRING = r"""

@@ -22,10 +22,9 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -87,7 +86,7 @@ class PegasusSinusoidalPositionalEmbedding(nn.Embedding):
         self.weight = self._init_weight(self.weight)
 
     @staticmethod
-    def _init_weight(out: mindspore.Parameter) -> mindspore.Parameter:
+    def _init_weight(out: Parameter) -> Parameter:
         """
         Identical to the XLM create_sinusoidal_embeddings except features are not interleaved. The cos features are in
         the 2nd half of the vector. [dim // 2:]
@@ -613,33 +612,19 @@ class PegasusPreTrainedModel(PreTrainedModel):
     base_model_prefix = "model"
     supports_gradient_checkpointing = False
 
-    def _init_weights(self, cell):
-        '''
-        _init_weights method initializes the weights of the provided cell based on the specified configuration.
-
-        Args:
-            self (PegasusPreTrainedModel): The instance of the PegasusPreTrainedModel class.
-            cell (nn.Module): The cell for which the weights are to be initialized.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If the cell type is not recognized or supported.
-        '''
+    def _init_weights(self, module):
         std = self.config.init_std
-        if isinstance(cell, nn.Linear):
-            cell.weight.assign_value(initializer(Normal(sigma=std, mean=0.0), cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.assign_value(initializer("zeros", cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, PegasusSinusoidalPositionalEmbedding):
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, PegasusSinusoidalPositionalEmbedding):
             pass
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
 
-            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
 
 class PegasusEncoder(PegasusPreTrainedModel):
     """

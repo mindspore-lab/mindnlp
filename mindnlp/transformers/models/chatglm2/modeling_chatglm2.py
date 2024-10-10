@@ -356,7 +356,7 @@ class RMSNorm(nn.Module):
     The RMSNorm class has the following attributes:
 
     Attributes:
-        weight (mindspore.Parameter): A trainable parameter representing the weight matrix used for scaling the normalized hidden states.
+        weight (Parameter): A trainable parameter representing the weight matrix used for scaling the normalized hidden states.
         eps (float): A small value added to the denominator to avoid division by zero.
 
     Methods:
@@ -372,7 +372,7 @@ class RMSNorm(nn.Module):
         >>> class RMSNorm(nn.Module):
         >>>     def __init__(self, normalized_shape, eps=1e-05, dtype=None, **kwargs):
         >>>         super().__init__()
-        >>>         self.weight = mindspore.Parameter(ops.zeros(normalized_shape, dtype=dtype))
+        >>>         self.weight = Parameter(ops.zeros(normalized_shape, dtype=dtype))
         >>>         self.eps = eps
         ...
         >>>     def forward(self, hidden_states: mindspore.Tensor):

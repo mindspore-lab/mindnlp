@@ -87,7 +87,7 @@ original module for reference. The class includes methods for enabling and disab
         # Try to anticipate some cells that users could try to target that would not work.
         # Note: It's not possible to check hasattr(cell, "forward"), since that returns True for ModuleDict and
         # ModuleList, even though their forward methods cannot be called
-        forbidden_classes = (nn.ModuleDict, nn.ModuleList, mindspore.ParameterTuple, ParameterDict)
+        forbidden_classes = (nn.ModuleDict, nn.ModuleList, ParameterDict)
         if isinstance(self.original_cell, forbidden_classes):
             cls_name = self.original_cell.__class__.__name__
             raise TypeError(f"modules_to_save cannot be applied to cells of type {cls_name}")

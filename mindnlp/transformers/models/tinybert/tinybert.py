@@ -21,6 +21,7 @@ import os
 from typing import Union
 import mindspore
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from .tinybert_config import TinyBertConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
@@ -633,7 +634,7 @@ class TinyBertLMPredictionHead(nn.Module):
                                 bert_model_embedding_weights.shape[0],
                                 bias=False)
         self.decoder.weight = bert_model_embedding_weights
-        self.bias = mindspore.Parameter(ops.zeros(
+        self.bias = Parameter(ops.zeros(
             bert_model_embedding_weights.shape[0]))
 
     def forward(self, hidden_states):

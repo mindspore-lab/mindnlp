@@ -32,7 +32,7 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor,
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         AutoTokenizer,
@@ -209,7 +209,7 @@ class GPTJModelTester:
 
     def create_and_check_gptj_model_past(self, config, input_ids, input_mask, head_mask, token_type_ids, *args):
         model = GPTJModel(config=config)
-        model.set_train(False)
+        model.eval()
 
         # first forward pass
         outputs = model(input_ids, token_type_ids=token_type_ids, use_cache=True)
@@ -226,8 +226,8 @@ class GPTJModelTester:
         next_token_types = ids_tensor([self.batch_size, 1], self.type_vocab_size)
 
         # append to next input_ids and token_type_ids
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_token_type_ids = ops.cat([token_type_ids, next_token_types], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_token_type_ids = ops.cat([token_type_ids, next_token_types], dim=-1)
 
         output_from_no_past = model(next_input_ids, token_type_ids=next_token_type_ids)["last_hidden_state"]
         output_from_past = model(next_tokens, token_type_ids=next_token_types, past_key_values=past)[
@@ -236,18 +236,17 @@ class GPTJModelTester:
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = ops.stop_gradient(output_from_no_past[:, -1, random_slice_idx])
-        output_from_past_slice = ops.stop_gradient(output_from_past[:, 0, random_slice_idx])
+        output_from_no_past_slice = output_from_no_past[:, -1, random_slice_idx]
+        output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_gptj_model_attention_mask_past(
         self, config, input_ids, input_mask, head_mask, token_type_ids, *args
     ):
         model = GPTJModel(config=config)
-        
-        model.set_train(False)
+        model.eval()
 
         # create attention mask
         attn_mask = ops.ones(input_ids.shape, dtype=mindspore.int64)
@@ -266,10 +265,10 @@ class GPTJModelTester:
         input_ids[:, -random_seq_idx_to_change] = random_other_next_tokens
 
         # append to next input_ids and attn_mask
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         attn_mask = ops.cat(
             [attn_mask, ops.ones((attn_mask.shape[0], 1), dtype=mindspore.int64)],
-            axis=1,
+            dim=1,
         )
 
         # get two different outputs
@@ -278,19 +277,17 @@ class GPTJModelTester:
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = ops.stop_gradient(output_from_no_past[:, -1, random_slice_idx])
-        output_from_past_slice = ops.stop_gradient(output_from_past[:, 0, random_slice_idx])
-
+        output_from_no_past_slice = output_from_no_past[:, -1, random_slice_idx]
+        output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_gptj_model_past_large_inputs(
         self, config, input_ids, input_mask, head_mask, token_type_ids, *args
     ):
         model = GPTJModel(config=config)
-        
-        model.set_train(False)
+        model.eval()
 
         # first forward pass
         outputs = model(input_ids, token_type_ids=token_type_ids, attention_mask=input_mask, use_cache=True)
@@ -303,9 +300,9 @@ class GPTJModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and token_type_ids
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_token_type_ids = ops.cat([token_type_ids, next_token_types], axis=-1)
-        next_attention_mask = ops.cat([input_mask, next_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_token_type_ids = ops.cat([token_type_ids, next_token_types], dim=-1)
+        next_attention_mask = ops.cat([input_mask, next_mask], dim=-1)
 
         output_from_no_past = model(
             next_input_ids, token_type_ids=next_token_type_ids, attention_mask=next_attention_mask
@@ -317,11 +314,11 @@ class GPTJModelTester:
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = ops.stop_gradient(output_from_no_past[:, -3:, random_slice_idx])
-        output_from_past_slice = ops.stop_gradient(output_from_past[:, :, random_slice_idx])
+        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx]
+        output_from_past_slice = output_from_past[:, :, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_lm_head_model(self, config, input_ids, input_mask, head_mask, token_type_ids, *args):
         model = GPTJForCausalLM(config)
@@ -477,7 +474,7 @@ class GPTJModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
                 input_ids.new_full((input_ids.shape[0], input_ids.shape[1] - 1), 0),
                 input_ids.new_full((input_ids.shape[0], 1), 500),
             ],
-            axis=-1,
+            dim=-1,
         )
 
         outputs = model.generate(

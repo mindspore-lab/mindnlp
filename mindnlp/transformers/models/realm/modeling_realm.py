@@ -22,7 +22,7 @@ import mindspore
 import numpy as np
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -1485,11 +1485,8 @@ class RealmForOpenQA(RealmPreTrainedModel):
         super().__init__(config)
         self.embedder = RealmEmbedder(config)
         self.reader = RealmReader(config)
-        # self.block_emb=ops.zeros(()).new_empty(
-        #         size=(config.num_block_records, config.retriever_proj_size),
-        #         dtype=mindspore.float32,
-        #     )
-        self.block_emb=mindspore.Parameter(ops.zeros(
+
+        self.block_emb = Parameter(ops.zeros(
                 (config.num_block_records, config.retriever_proj_size),
                 dtype=mindspore.float32,
             ))

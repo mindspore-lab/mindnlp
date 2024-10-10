@@ -6,14 +6,11 @@ try:
 except:
     from typing_extensions import Literal
 import math
-import numpy as np
 import mindspore
-from mindspore import Tensor
-from mindspore.common.initializer import initializer, Normal
 from mindspore.dataset import transforms, vision
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from ...modeling_utils import PreTrainedModel
 from ...tokenization_utils import PreTrainedTokenizer
 from ...activations import ACT2FN
@@ -69,7 +66,7 @@ class RMSNorm(nn.Module):
     This class inherits from the nn.Module class in the MindSpore library.
     
     Attributes:
-        weight (mindspore.Parameter): The weight parameter used for the normalization.
+        weight (Parameter): The weight parameter used for the normalization.
         variance_epsilon (float): A small value added to the variance to avoid division by zero.
     
     Methods:
@@ -113,7 +110,7 @@ class RMSNorm(nn.Module):
             TypeError: If the eps is not a float.
         """
         super().__init__()
-        self.weight = mindspore.Parameter(ops.ones(hidden_size))
+        self.weight = Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
@@ -899,36 +896,16 @@ class CogVLMPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["CogVLMDecoderLayer", "TransformerLayer"]
     _skip_keys_device_placement = "past_key_values"
 
-    def _init_weights(self, cell):
-        """
-        Initialize the weights and biases for a given neural network cell.
-
-        Args:
-            self (CogVLMPreTrainedModel): The instance of the CogVLMPreTrainedModel class.
-            cell: The neural network cell for which the weights and biases are to be initialized.
-                It can be of type nn.Linear or nn.Embedding.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If the provided cell is not of type nn.Linear or nn.Embedding.
-            TypeError: If the cell's weight or bias data cannot be set due to incompatible shapes or data types.
-            IndexError: If the padding index for the cell's weight is out of range.
-        """
-        if isinstance(cell, nn.Linear):
-            # Slightly different from the TF version which uses truncated_normal for initialization
-            # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.assign_value(initializer(Normal(mean=0,sigma=self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-
-            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
+    def _init_weights(self, module):
+        std = self.config.initializer_range
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
 
 
 def is_empty(images_list: Optional[List[List[mindspore.Tensor]]]):

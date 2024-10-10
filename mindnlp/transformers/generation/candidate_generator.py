@@ -427,6 +427,6 @@ def _prepare_token_type_ids(model_kwargs: Dict[str, Any], new_length: int) -> Di
     if type_length_diff < 0:
         token_type_ids = token_type_ids[:, :type_length_diff]
     elif type_length_diff > 0:
-        token_type_copies = final_token_type.repeat(1, type_length_diff)
+        token_type_copies = ops.tile(final_token_type, (1, type_length_diff))
         model_kwargs["token_type_ids"] = ops.cat([model_kwargs["token_type_ids"], token_type_copies], dim=-1)
     return model_kwargs

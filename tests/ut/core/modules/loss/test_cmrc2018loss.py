@@ -59,6 +59,7 @@ class TestCMRC2018Loss(MindNLPTestCase):
             return loss
 
         if jit:
+            cmrc_loss.jit()
             loss = forward_jit(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
         else:
             loss = forward(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)

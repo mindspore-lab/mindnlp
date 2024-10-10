@@ -2831,7 +2831,7 @@ class SeamlessM4Tv2ForTextToText(SeamlessM4Tv2PreTrainedModel):
         logits_processor=None,
         stopping_criteria=None,
         prefix_allowed_tokens_fn=None,
-        synced_gpus=False,
+        synced_devices=False,
         **kwargs,
     ):
         """
@@ -2880,7 +2880,7 @@ class SeamlessM4Tv2ForTextToText(SeamlessM4Tv2PreTrainedModel):
                 on the batch ID `batch_id` and the previously generated tokens `inputs_ids`. This argument is useful
                 for constrained generation conditioned on the prefix, as described in [Autoregressive Entity
                 Retrieval](https://arxiv.org/abs/2010.00904).
-            synced_gpus (`bool`, *optional*, defaults to `False`):
+            synced_devices (`bool`, *optional*, defaults to `False`):
                 Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
             kwargs (`Dict[str, Any]`, *optional*):
                 Ad hoc parametrization of `generate_config` and/or additional model-specific kwargs that will be
@@ -2928,7 +2928,7 @@ class SeamlessM4Tv2ForTextToText(SeamlessM4Tv2PreTrainedModel):
             logits_processor,
             stopping_criteria,
             prefix_allowed_tokens_fn,
-            synced_gpus,
+            synced_devices,
             decoder_input_ids=text_decoder_input_ids,
             **kwargs,
         )
@@ -3122,7 +3122,7 @@ class SeamlessM4Tv2ForSpeechToText(SeamlessM4Tv2PreTrainedModel):
         logits_processor=None,
         stopping_criteria=None,
         prefix_allowed_tokens_fn=None,
-        synced_gpus=False,
+        synced_devices=False,
         **kwargs,
     ):
         """
@@ -3168,7 +3168,7 @@ class SeamlessM4Tv2ForSpeechToText(SeamlessM4Tv2PreTrainedModel):
                 on the batch ID `batch_id` and the previously generated tokens `inputs_ids`. This argument is useful
                 for constrained generation conditioned on the prefix, as described in [Autoregressive Entity
                 Retrieval](https://arxiv.org/abs/2010.00904).
-            synced_gpus (`bool`, *optional*, defaults to `False`):
+            synced_devices (`bool`, *optional*, defaults to `False`):
                 Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
             kwargs (`Dict[str, Any]`, *optional*):
                 Ad hoc parametrization of `generate_config` and/or additional model-specific kwargs that will be
@@ -3221,7 +3221,7 @@ class SeamlessM4Tv2ForSpeechToText(SeamlessM4Tv2PreTrainedModel):
             logits_processor,
             stopping_criteria,
             prefix_allowed_tokens_fn,
-            synced_gpus,
+            synced_devices,
             decoder_input_ids=text_decoder_input_ids,
             **kwargs,
         )

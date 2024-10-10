@@ -17,12 +17,12 @@
 """
 # pylint: disable=E0611, E0401
 import logging
-import mindspore
 
 from bitsandbytes.nn.modules import Int8Params
 import bitsandbytes as bnb
 
 from mindnlp.core import nn
+from mindnlp.core.nn import Parameter
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +84,7 @@ def _replace_with_bnb_linear(
                     has_fp16_weights=llm_int8_has_fp16_weight,
                 )
                 if bias is not None:
-                    model._modules[name].bias = mindspore.Parameter(bias)
+                    model._modules[name].bias = Parameter(bias)
 
                 model._modules[name].quant()
                 has_been_replaced = True

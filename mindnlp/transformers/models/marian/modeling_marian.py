@@ -21,10 +21,9 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
@@ -68,7 +67,7 @@ class MarianSinusoidalPositionalEmbedding(nn.Embedding):
         self.weight = self._init_weight(self.weight)
 
     @staticmethod
-    def _init_weight(out: mindspore.Parameter) -> mindspore.Parameter:
+    def _init_weight(out: Parameter) -> Parameter:
         """
         Identical to the XLM create_sinusoidal_embeddings except features are not interleaved. The cos features are in
         the 2nd half of the vector. [dim // 2:]
@@ -456,19 +455,18 @@ class MarianPreTrainedModel(PreTrainedModel):
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, cell: Union[nn.Linear, nn.Embedding, MarianSinusoidalPositionalEmbedding]):
+    def _init_weights(self, module: Union[nn.Linear, nn.Embedding, MarianSinusoidalPositionalEmbedding]):
         std = self.config.init_std
-        if isinstance(cell, nn.Linear):
-            cell.weight.assign_value(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, MarianSinusoidalPositionalEmbedding):
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, MarianSinusoidalPositionalEmbedding):
             pass
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, std, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
 
     @property
     def dummy_inputs(self):
@@ -1097,7 +1095,7 @@ class MarianMTModel(MarianPreTrainedModel):
         self.model = MarianModel(config)
 
         target_vocab_size = config.vocab_size if config.share_encoder_decoder_embeddings else config.decoder_vocab_size
-        self.final_logits_bias=mindspore.Parameter(ops.zeros((1, target_vocab_size)),requires_grad=False)
+        self.final_logits_bias = Parameter(ops.zeros((1, target_vocab_size)), requires_grad=False)
         self.lm_head = nn.Linear(config.d_model, target_vocab_size, bias=False)
 
         # Initialize weights and apply final processing
@@ -1176,7 +1174,7 @@ class MarianMTModel(MarianPreTrainedModel):
         else:
             extra_bias = ops.zeros((1, new_num_tokens - old_num_tokens))
             new_bias = ops.cat([self.final_logits_bias, extra_bias], dim=1)
-        self.final_logits_bias=mindspore.Parameter(new_bias)
+        self.final_logits_bias = Parameter(new_bias)
     def get_output_embeddings(self):
         return self.lm_head
 

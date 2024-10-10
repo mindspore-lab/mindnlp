@@ -114,6 +114,7 @@ class ModelOutput(OrderedDict):
 
     </Tip>
     """
+
     def __post_init__(self):
         """Perform post-initialization actions for the ModelOutput class.
         

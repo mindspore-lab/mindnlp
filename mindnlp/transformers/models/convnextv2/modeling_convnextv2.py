@@ -90,8 +90,8 @@ class ConvNextV2GRN(nn.Module):
 
     def __init__(self, dim: int):
         super().__init__()
-        self.weight = Parameter(ops.zeros(1, 1, 1, dim), 'weight')
-        self.bias = Parameter(ops.zeros(1, 1, 1, dim), 'bias')
+        self.weight = Parameter(ops.zeros(1, 1, 1, dim))
+        self.bias = Parameter(ops.zeros(1, 1, 1, dim))
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         # Compute and normalize global spatial feature maps

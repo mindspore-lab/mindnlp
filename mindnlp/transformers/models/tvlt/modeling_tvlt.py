@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch TVLT model."""
+"""MindSpore TVLT model."""
 
 import collections.abc
 import math
@@ -23,7 +23,7 @@ from typing import Optional, Tuple, Union
 import mindspore
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import Parameter, functional as F
 from mindnlp.utils import ModelOutput,logging
 
 from ...activations import ACT2FN
@@ -207,9 +207,9 @@ class TvltPixelEmbeddings(nn.Module):
         self.patch_embeddings = TvltPixelPatchEmbeddings(config)
         self.num_patches_per_image = self.patch_embeddings.num_patches_per_image
 
-        self.type_embed_v = mindspore.Parameter(ops.zeros(1, 1, config.hidden_size))
-        self.temporal_embed = mindspore.Parameter(ops.zeros(1, config.num_frames, config.hidden_size))
-        self.pos_embed_v = mindspore.Parameter(ops.zeros(1, self.num_patches_per_image, config.hidden_size))
+        self.type_embed_v = Parameter(ops.zeros(1, 1, config.hidden_size))
+        self.temporal_embed = Parameter(ops.zeros(1, config.num_frames, config.hidden_size))
+        self.pos_embed_v = Parameter(ops.zeros(1, self.num_patches_per_image, config.hidden_size))
 
         self.config = config
 
@@ -235,10 +235,10 @@ class TvltAudioEmbeddings(nn.Module):
         self.patch_embeddings = TvltAudioPatchEmbeddings(config)
         self.num_patches = self.patch_embeddings.num_patches
 
-        self.type_embed_a = mindspore.Parameter(ops.zeros(1, 1, config.hidden_size))
+        self.type_embed_a = Parameter(ops.zeros(1, 1, config.hidden_size))
         self.num_freq_patches = config.frequency_length // config.audio_patch_size[1]
-        self.pos_embed_a = mindspore.Parameter(ops.zeros(1, self.num_patches // self.num_freq_patches, config.hidden_size))
-        self.freq_embed = mindspore.Parameter(ops.zeros(1, self.num_freq_patches, config.hidden_size))
+        self.pos_embed_a = Parameter(ops.zeros(1, self.num_patches // self.num_freq_patches, config.hidden_size))
+        self.freq_embed = Parameter(ops.zeros(1, self.num_freq_patches, config.hidden_size))
 
         self.num_freq_patches = config.frequency_length // config.audio_patch_size[1]
         self.config = config
@@ -606,7 +606,7 @@ class TvltModel(TvltPreTrainedModel):
         self.audio_embeddings = TvltAudioEmbeddings(config)
         self.encoder = TvltEncoder(config)
 
-        self.cls_embedding = mindspore.Parameter(ops.zeros(1, 1, config.hidden_size))
+        self.cls_embedding = Parameter(ops.zeros(1, 1, config.hidden_size))
 
         if config.use_mean_pooling:
             self.layernorm = None
@@ -837,8 +837,8 @@ class TvltForPreTraining(TvltPreTrainedModel):
         if self.task_mae:
             self.encoder_to_decoder = nn.Linear(config.hidden_size, config.decoder_hidden_size, bias=True)
 
-            self.pixel_mask_token = mindspore.Parameter(ops.zeros(1, 1, config.decoder_hidden_size))
-            self.audio_mask_token = mindspore.Parameter(ops.zeros(1, 1, config.decoder_hidden_size))
+            self.pixel_mask_token = Parameter(ops.zeros(1, 1, config.decoder_hidden_size))
+            self.audio_mask_token = Parameter(ops.zeros(1, 1, config.decoder_hidden_size))
 
             self.decoder = TvltDecoder(config)
 
@@ -846,17 +846,17 @@ class TvltForPreTraining(TvltPreTrainedModel):
 
             num_frames = config.num_frames
             num_patches_per_image = self.tvlt.pixel_embeddings.num_patches_per_image
-            self.decoder_pixel_pos_embed = mindspore.Parameter(ops.zeros(1, num_patches_per_image, decoder_hidden_size))
-            self.decoder_temporal_embed = mindspore.Parameter(ops.zeros(1, config.num_frames, decoder_hidden_size))
-            self.decoder_pixel_type_embed = mindspore.Parameter(ops.zeros(1, 1, decoder_hidden_size))
+            self.decoder_pixel_pos_embed = Parameter(ops.zeros(1, num_patches_per_image, decoder_hidden_size))
+            self.decoder_temporal_embed = Parameter(ops.zeros(1, config.num_frames, decoder_hidden_size))
+            self.decoder_pixel_type_embed = Parameter(ops.zeros(1, 1, decoder_hidden_size))
 
             num_audio_patches = self.tvlt.audio_embeddings.num_patches
             num_freq_patches = config.frequency_length // config.audio_patch_size[1]
-            self.decoder_audio_pos_embed = mindspore.Parameter(
+            self.decoder_audio_pos_embed = Parameter(
                 ops.zeros(1, num_audio_patches // num_freq_patches, decoder_hidden_size)
             )
-            self.decoder_freq_embed = mindspore.Parameter(ops.zeros(1, num_freq_patches, decoder_hidden_size))
-            self.decoder_audio_type_embed = mindspore.Parameter(ops.zeros(1, 1, decoder_hidden_size))
+            self.decoder_freq_embed = Parameter(ops.zeros(1, num_freq_patches, decoder_hidden_size))
+            self.decoder_audio_type_embed = Parameter(ops.zeros(1, 1, decoder_hidden_size))
 
             pixel_mae_output_dim = self.config.image_patch_size[0] ** 2 * self.config.num_image_channels
             self.pixel_mae_head = TvltMAEHead(config, pixel_mae_output_dim)

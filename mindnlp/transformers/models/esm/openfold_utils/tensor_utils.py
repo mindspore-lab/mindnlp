@@ -366,7 +366,6 @@ def tree_map(fn, tree, leaf_type):
     elif isinstance(tree, leaf_type):
         return fn(tree)
     else:
-        print(type(tree))
         raise ValueError("Not supported")
 
 

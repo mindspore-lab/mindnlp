@@ -17,10 +17,7 @@
 import math
 from typing import List, Optional, Tuple, Union
 
-import numpy as np
 import mindspore
-from mindspore import Tensor
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import Parameter
@@ -620,24 +617,21 @@ class XLMRobertaXLPreTrainedModel(PreTrainedModel):
     base_model_prefix = "roberta"
 
     # Copied from transformers.models.bert.modeling_bert.BertPreTrainedModel._init_weights
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, nn.Linear):
+        if isinstance(module, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.assign_value(initializer(Normal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-
-            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
 
 class XLMRobertaXLModel(XLMRobertaXLPreTrainedModel):
     """
@@ -1166,7 +1160,7 @@ class XLMRobertaXLLMHead(nn.Module):
         self.layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
-        self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
+        self.bias = Parameter(ops.zeros(config.vocab_size))
         self.decoder.bias = self.bias
 
     def forward(self, features, **kwargs):

@@ -1215,7 +1215,7 @@ class ErnieLMPredictionHead(nn.Module):
         # an output-only bias for each token.
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
-        self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
+        self.bias = Parameter(ops.zeros(config.vocab_size))
 
         # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
         self.decoder.bias = self.bias
