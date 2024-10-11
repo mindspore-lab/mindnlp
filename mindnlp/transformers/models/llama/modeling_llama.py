@@ -84,7 +84,7 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
         causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
         # causal_mask = causal_mask[None, None, :, :].broadcast_to((batch_size, 1, -1, -1))
         # speed up by unsqueeze
-        causal_mask = causal_mask.view(1, 1, *causal_mask.shape).broadcast_to((batch_size, 1, -1, -1))
+        causal_mask = ops.broadcast_to(causal_mask.view(1, 1, *causal_mask.shape), (batch_size, 1, -1, -1))
         if attention_mask is not None:
             if SUPPORT_VIEW:
                 causal_mask = causal_mask.contiguous()  # copy to contiguous memory for in-place edit
@@ -202,7 +202,7 @@ class LlamaRotaryEmbedding(nn.Module):
             self._dynamic_frequency_update(position_ids)
 
         # Core RoPE block
-        inv_freq_expanded = self.inv_freq.view(1, -1, 1).float().broadcast_to((position_ids.shape[0], -1, 1))
+        inv_freq_expanded = ops.broadcast_to(self.inv_freq.view(1, -1, 1).float(), (position_ids.shape[0], -1, 1))
         position_ids_expanded = ops.unsqueeze(position_ids, 1).float()
         # Force float32 (see https://github.com/huggingface/transformers/pull/29285)
         freqs = ops.transpose(ops.matmul(inv_freq_expanded.float(), position_ids_expanded.float()), 1, 2)
@@ -320,7 +320,7 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     if n_rep == 1:
         return hidden_states
     # hidden_states = hidden_states[:, :, None, :, :].broadcast_to((batch, num_key_value_heads, n_rep, slen, head_dim))
-    hidden_states = ops.unsqueeze(hidden_states, 2).broadcast_to((batch, num_key_value_heads, n_rep, slen, head_dim))
+    hidden_states = ops.broadcast_to(ops.unsqueeze(hidden_states, 2), (batch, num_key_value_heads, n_rep, slen, head_dim))
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
@@ -616,10 +616,11 @@ class LlamaModel(LlamaPreTrainedModel):
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        if (input_ids is None) ^ (inputs_embeds is not None):
-            raise ValueError(
-                "You cannot specify both input_ids and inputs_embeds at the same time, and must specify either one"
-            )
+        if not self.skip_syntax:
+            if (input_ids is None) ^ (inputs_embeds is not None):
+                raise ValueError(
+                    "You cannot specify both input_ids and inputs_embeds at the same time, and must specify either one"
+                )
 
         if self.gradient_checkpointing and self.training and use_cache:
             logger.warning_once(
@@ -662,7 +663,7 @@ class LlamaModel(LlamaPreTrainedModel):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
 
-        for decoder_layer in self.layers:
+        for decoder_layer in self.layers._modules.values():
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
