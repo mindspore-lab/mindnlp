@@ -219,7 +219,7 @@ class BgeM3Model(XLMRobertaPreTrainedModel):
             valid_ids = input_ids[i][valid]
 
             # Get unique token
-            unique_ids, inverse_indices = mindspore.ops.unique(valid_ids)
+            unique_ids, inverse_indices = ops.unique(valid_ids, return_inverse=True)
 
             # Get max weight for each token
             for i in range(unique_ids.shape[0]):
