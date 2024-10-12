@@ -42,6 +42,16 @@ logger = logging.get_logger(__name__)
 _CHECKPOINT_FOR_DOC = "allenai/led-base-16384"
 _CONFIG_FOR_DOC = "LEDConfig"
 
+def scalar_div(input, other, *, rounding_mode="trunc"):
+    """scalar div since ops.div do not support scalar"""
+    if rounding_mode == 'trunc':
+        res = input // other
+        if res < 0:
+            res = res + 1
+        return res
+    if rounding_mode == 'floor':
+        return input // other
+    return input / other
 
 def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_start_token_id: int):
     """
@@ -366,7 +376,7 @@ class LEDEncoderSelfAttention(nn.Module):
             # non-overlapping chunks of size = 2w
             hidden_states = hidden_states.view(
                 hidden_states.shape[0],
-                ops.div(hidden_states.shape[1], (window_overlap * 2), rounding_mode="trunc").item(),
+                scalar_div(hidden_states.shape[1], (window_overlap * 2), rounding_mode="trunc"),
                 window_overlap * 2,
                 hidden_states.shape[2],
             )
@@ -388,7 +398,7 @@ class LEDEncoderSelfAttention(nn.Module):
 
         chunk_size = [
             hidden_states.shape[0],
-            ops.div(hidden_states.shape[1], window_overlap, rounding_mode="trunc") - 1,
+            scalar_div(hidden_states.shape[1], window_overlap, rounding_mode="trunc") - 1,
             window_overlap * 2,
             hidden_states.shape[2],
         ]
@@ -428,7 +438,7 @@ class LEDEncoderSelfAttention(nn.Module):
         ), f"Sequence length should be multiple of {window_overlap * 2}. Given {seq_len}"
         assert query.shape == key.shape
 
-        chunks_count = ops.div(seq_len, window_overlap, rounding_mode="trunc").item() - 1
+        chunks_count = scalar_div(seq_len, window_overlap, rounding_mode="trunc") - 1
 
         # group batch_size and num_heads dimensions into one, then chunk seq_len into chunks of size window_overlap * 2
         query = query.swapaxes(1, 2).reshape(batch_size * num_heads, seq_len, head_dim)
@@ -494,12 +504,12 @@ class LEDEncoderSelfAttention(nn.Module):
         assert seq_len % (window_overlap * 2) == 0
         assert attn_probs.shape[:3] == value.shape[:3]
         assert attn_probs.shape[3] == 2 * window_overlap + 1
-        chunks_count = ops.div(seq_len, window_overlap, rounding_mode="trunc") - 1
+        chunks_count = scalar_div(seq_len, window_overlap, rounding_mode="trunc") - 1
         # group batch_size and num_heads dimensions into one, then chunk seq_len into chunks of size 2 window overlap
 
         chunked_attn_probs = attn_probs.swapaxes(1, 2).reshape(
             batch_size * num_heads,
-            ops.div(seq_len, window_overlap, rounding_mode="trunc").item(),
+            scalar_div(seq_len, window_overlap, rounding_mode="trunc"),
             window_overlap,
             2 * window_overlap + 1,
         )
@@ -536,7 +546,7 @@ class LEDEncoderSelfAttention(nn.Module):
         max_num_global_attn_indices = num_global_attn_indices.max().item()
 
         # indices of global attn
-        is_index_global_attn_nonzero = is_index_global_attn.nonzero(as_tuple=True)
+        is_index_global_attn_nonzero = ops.nonzero(is_index_global_attn, as_tuple=True)
 
         # helper variable
         is_local_index_global_attn = ops.arange(
@@ -544,10 +554,10 @@ class LEDEncoderSelfAttention(nn.Module):
         ) < num_global_attn_indices.unsqueeze(dim=-1)
 
         # location of the non-padding values within global attention indices
-        is_local_index_global_attn_nonzero = is_local_index_global_attn.nonzero(as_tuple=True)
+        is_local_index_global_attn_nonzero = ops.nonzero(is_local_index_global_attn, as_tuple=True)
 
         # location of the padding values within global attention indices
-        is_local_index_no_global_attn_nonzero = (is_local_index_global_attn == 0).nonzero(as_tuple=True)
+        is_local_index_no_global_attn_nonzero = ops.nonzero((is_local_index_global_attn == 0), as_tuple=True)
         return (
             max_num_global_attn_indices,
             is_index_global_attn_nonzero,
