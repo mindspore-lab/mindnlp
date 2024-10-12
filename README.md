@@ -23,8 +23,8 @@
 
 * 🔥 **Latest Features**
 
-  * 🤗 Hugging *huggingface* ecosystem, we use **datasets** lib as default dataset loader to support
-  mounts of useful datasets.
+  * 🤗*Huggingface* ecosystem, we use **datasets** lib as default dataset loader to support
+  loads of useful datasets.
   * 📝 MindNLP supports NLP tasks such as *language model*, *machine translation*, *question answering*, *sentiment analysis*, *sequence labeling*, *summarization*, etc. You can access them through [examples](./examples/).
   * 🚀 MindNLP currently supports industry-leading Large Language Models (LLMs), including **Llama**, **GLM**, **RWKV**, etc. For support related to large language models, including ***pre-training***, ***fine-tuning***, and **inference** demo examples, you can find them in the ["llm" directory](./llm/).
   * 🤗 Pretrained models support ***huggingface transformers-like apis***, including **60+** models like **[BERT](./mindnlp/transformers/models/bert)**, **[Roberta](./mindnlp/transformers/models/roberta)**, **[GPT2](./mindnlp/transformers/models/gpt2)**, **[T5](./mindnlp/transformers/models/t5)**, etc.
@@ -109,7 +109,7 @@ and develop their own new semantic segmentation methods.
 
 ### Citation
 
-If you find this project useful in your research, please consider citing:
+If you find this project helpful in your research, please consider citing:
 
 ```latex
 @misc{mindnlp2022,
