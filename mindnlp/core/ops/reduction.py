@@ -129,6 +129,8 @@ def std_mean(input, dim=None, *, correction=1, keepdim=False):
 
 # sum
 def sum(input, dim=None, keepdim=False, *, dtype=None):
+    if 0 in input.shape:
+        return mindspore.tensor(0, dtype=dtype)
     if use_pyboost():
         return mindspore.mint.sum(input, dim, keepdim, dtype=dtype)
     return ops.sum(input, dim, keepdim, dtype=dtype)
