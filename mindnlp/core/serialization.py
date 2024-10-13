@@ -793,8 +793,11 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
         array = array.astype(np.float16)
 
     if stride is not None and len(stride) > 1 and stride[0] == 1:
-        stride = tuple((s * 4 for s in stride))
-        array = np.lib.stride_tricks.as_strided(array, size, stride)
+        # stride = tuple((s * 4 for s in stride))
+        # # stride = tuple((s * 4 if s != 1 else s for s in stride))
+        # array = np.lib.stride_tricks.as_strided(array, size, stride)
+        order = "F"
+        array = array.reshape(size, order=order)
     else:
         order = "C"
         array = array.reshape(size, order=order)
