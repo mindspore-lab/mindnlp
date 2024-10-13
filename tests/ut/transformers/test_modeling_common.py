@@ -800,6 +800,8 @@ class ModelTesterMixin:
                 return model(**inputs).loss
             
             grad_fn = mindspore.value_and_grad(forward, None, tuple(model.parameters()))
+            loss = forward(**inputs)
+            print(loss)
             loss, grads = grad_fn(**inputs)
 
     @unittest.skip

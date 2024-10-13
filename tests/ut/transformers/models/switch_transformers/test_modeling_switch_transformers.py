@@ -35,6 +35,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 if is_mindspore_available():
     import mindspore
     from mindnlp.core import ops, nn
+    from mindnlp.core.nn import Parameter
 
     from mindnlp.transformers import (
         AutoTokenizer,
@@ -968,7 +969,7 @@ class SwitchTransformerRouterTest(unittest.TestCase):
 
         model = SwitchTransformersTop1Router(self.config)
 
-        model.classifier.weight = mindspore.Parameter(
+        model.classifier.weight = Parameter(
             mindspore.Tensor(
                 [
                     [0.02008116, 0.00620062],
