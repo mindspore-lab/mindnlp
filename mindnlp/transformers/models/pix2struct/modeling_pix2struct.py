@@ -414,8 +414,8 @@ class Pix2StructPreTrainedModel(PreTrainedModel):
         elif isinstance(module, (nn.Linear, nn.Conv2d)):
             # Upcast the input in `fp32` and cast it back to desired `dtype` to avoid
             # `trunc_normal_cpu` not implemented in `half` issues
-            module.weight = nn.init.trunc_normal_(
-                module.weight.to(mindspore.float32), mean=0.0, std=self.config.initializer_range
+            nn.init.trunc_normal_(
+                module.weight, mean=0.0, std=self.config.initializer_range
             )
             if module.bias is not None:
                 nn.init.zeros_(module.bias)

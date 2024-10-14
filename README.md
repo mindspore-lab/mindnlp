@@ -23,17 +23,21 @@
 
 * 🔥 **Latest Features**
 
-  * 🤗 Hugging *huggingface* ecosystem, we use **datasets** lib as default dataset loader to support
-  mounts of useful datasets.
-  * 📝 MindNLP supports NLP tasks such as *language model*, *machine translation*, *question answering*, *sentiment analysis*, *sequence labeling*, *summarization*, etc. You can access them through [examples](./examples/).
-  * 🚀 MindNLP currently supports industry-leading Large Language Models (LLMs), including **Llama**, **GLM**, **RWKV**, etc. For support related to large language models, including ***pre-training***, ***fine-tuning***, and **inference** demo examples, you can find them in the ["llm" directory](./llm/).
-  * 🤗 Pretrained models support ***huggingface transformers-like apis***, including **60+** models like **[BERT](./mindnlp/transformers/models/bert)**, **[Roberta](./mindnlp/transformers/models/roberta)**, **[GPT2](./mindnlp/transformers/models/gpt2)**, **[T5](./mindnlp/transformers/models/t5)**, etc.
+  * 🤗 **250+** Pretrained models support ***huggingface transformers-like apis***.
     You can use them easily by following code snippet:
     ```python
     from mindnlp.transformers import AutoModel
 
     model = AutoModel.from_pretrained('bert-base-cased')
     ```
+  * **Full Platform Support**: Comprehensive support for `Ascend 910 series`, `Ascend 310B (Orange Pi)`, `GPU`, and `CPU`. (Note: Currently the only AI development kit available on Orange Pi.)
+  * **Distributed Parallel Inference**: Multi-device, multi-process parallel inference support for models exceeding 10B parameters.
+  * **Quantization Algorithm Support**: SmoothQuant available for Orange Pi; bitsandbytes-like int8 quantization supported on GPU.
+  * **Sentence Transformer Support**: Enables efficient RAG (Retrieval-Augmented Generation) development.
+  * **Dynamic Graph Performance Optimization**: Achieves PyTorch+GPU-level inference speeds for dynamic graphs on Ascend hardware (tested Llama performance at **85ms/token**).
+  * **True Static and Dynamic Graph Unification**: One-line switching to graph mode with `mindspore.jit`, fully compatible with ***Hugging Face code style*** for both ease of use and rapid performance improvement. Tested Llama performance on Ascend hardware reaches 2x dynamic graph speed (**45ms/token**), consistent with other MindSpore static graph-based suites.
+  * **Extensive LLM Application Updates**: Includes `Text information extraction`, `Chatbots`, `Speech recognition`, `ChatPDF`, `Music generation`, `Code generation`, `Voice clone`, etc. With increased model support, even more exciting applications await development!
+
 
 ### Installation
 
@@ -68,6 +72,8 @@ bash scripts/build_and_reinstall.sh
 | master          | daily build       | >=3.7.5, <=3.9           |
 | 0.1.1           | >=1.8.1, <=2.0.0  | >=3.7.5, <=3.9           |
 | 0.2.x           | >=2.1.0           | >=3.8, <=3.9             |
+| 0.3.x           | >=2.1.0, <=2.3.1  | >=3.8, <=3.9             |
+| 0.4.x           | >=2.2.x           | >=3.9, <=3.11            |
 
 ### Introduction
 

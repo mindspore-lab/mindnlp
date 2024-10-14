@@ -368,11 +368,7 @@ class MCTCTModelTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            parameters = model.get_parameters()
-            for parameter in parameters:
-            # for name, param in model.get_parameters():
-                name = parameter.name
-                param = parameter.data
+            for name, param in model.named_parameters():
                 uniform_init_parms = [
                     "conv.weight",
                     "masked_spec_embed",
@@ -519,12 +515,7 @@ class MCTCTRobustModelTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            # for name, param in model.get_parameters():
-            parameters = model.get_parameters()
-            for parameter in parameters:
-                name = parameter.name
-                param = parameter.data
-
+            for name, param in model.named_parameters():
                 uniform_init_parms = [
                     "conv.weight",
                     "masked_spec_embed",
