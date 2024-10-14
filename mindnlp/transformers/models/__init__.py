@@ -224,6 +224,7 @@ from . import (
     udop,
     upernet,
     umt5,
+    unispeech,
     unispeech_sat,
     univnet,
     videomae,
@@ -463,6 +464,7 @@ from .trocr import *
 from .tvlt import *
 from .udop import *
 from .upernet import *
+from .unispeech import *
 from .unispeech_sat import *
 from .univnet import *
 from .videomae import *
@@ -704,6 +706,7 @@ __all__.extend(trocr.__all__)
 __all__.extend(tvlt.__all__)
 __all__.extend(udop.__all__)
 __all__.extend(upernet.__all__)
+__all__.extend(unispeech.__all__)
 __all__.extend(unispeech_sat.__all__)
 __all__.extend(univnet.__all__)
 __all__.extend(videomae.__all__)
