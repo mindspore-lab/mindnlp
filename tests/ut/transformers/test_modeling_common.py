@@ -1065,7 +1065,7 @@ class ModelTesterMixin:
             with tempfile.TemporaryDirectory() as temp_dir_name:
                 model.save_pretrained(temp_dir_name)
                 model = model_class.from_pretrained(temp_dir_name)
-    
+
             with no_grad():
                 outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs[-1]
@@ -2566,7 +2566,7 @@ class ModelTesterMixin:
     #             )
 
     #             model = model_class.from_pretrained(tmpdirname, ms_dtype=torch.bfloat16)
-    # 
+    #
     #             dummy_input = inputs_dict[model.main_input_name][:1]
     #             if dummy_input.dtype in [mindspore.float32, mindspore.float16]:
     #                 dummy_input = dummy_input.to(torch.bfloat16)
