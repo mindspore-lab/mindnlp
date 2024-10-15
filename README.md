@@ -43,7 +43,7 @@
 
 #### Install from Pypi
 
-You can install the official version of MindNLP which uploaded to pypi.
+You can install the official version of MindNLP which is uploaded to pypi.
 
 ```bash
 pip install mindnlp
@@ -85,7 +85,7 @@ The master branch works with **MindSpore master**.
 
 - **Comprehensive data processing**: Several classical NLP datasets are packaged into friendly module for easy use, such as Multi30k, SQuAD, CoNLL, etc.
 - **Friendly NLP model toolset**: MindNLP provides various configurable components. It is friendly to customize models using MindNLP.
-- **Easy-to-use engine**: MindNLP simplified complicated training process in MindSpore. It supports Trainer and Evaluator interfaces to train and evaluate models easily.
+- **Easy-to-use engine**: MindNLP simplified the complicated training process in MindSpore. It supports Trainer and Evaluator interfaces to train and evaluate models easily.
 
 
 ### Supported models
@@ -108,9 +108,9 @@ The dynamic version is still under development, if you find any issue or have an
 
 ### Acknowledgement
 
-MindSpore is an open source project that welcome any contribution and feedback.  
+MindSpore is an open source project that welcomes any contribution and feedback.  
 We wish that the toolbox and benchmark could serve the growing research  
-community by providing a flexible as well as standardized toolkit to reimplement existing methods  
+community by providing a flexible as well as standardized toolkit to re-implement existing methods  
 and develop their own new semantic segmentation methods.
 
 ### Citation
