@@ -102,16 +102,16 @@ class Speech2TextConfig(PretrainedConfig):
 
     Example:
         ```python
-        >>> from transformers import Speech2TextConfig, Speech2TextModel
-        ...
-        >>> # Initializing a Speech2Text s2t_transformer_s style configuration
-        >>> configuration = Speech2TextConfig()
-        ...
-        >>> # Initializing a model (with random weights) from the s2t_transformer_s style configuration
-        >>> model = Speech2TextModel(configuration)
-        ...
-        >>> # Accessing the model configuration
-        >>> configuration = model.config
+        # >>> from transformers import Speech2TextConfig, Speech2TextModel
+        # ...
+        # >>> # Initializing a Speech2Text s2t_transformer_s style configuration
+        # >>> configuration = Speech2TextConfig()
+        # ...
+        # >>> # Initializing a model (with random weights) from the s2t_transformer_s style configuration
+        # >>> model = Speech2TextModel(configuration)
+        # ...
+        # >>> # Accessing the model configuration
+        # >>> configuration = model.config
         ```
     """
 

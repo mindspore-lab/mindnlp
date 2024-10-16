@@ -49,6 +49,7 @@ def manual_expand(tensor, shape):
 # broadcast_to
 def broadcast_to(input, shape):
     if ON_ORANGE_PI and not use_pyboost():
+        # return input.expand(mindspore.tensor(shape))
         return manual_expand(input, shape)
     if use_pyboost():
         return mindspore.mint.broadcast_to(input, shape)

@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch Musicgen model."""
+"""Testing suite for the MindSpore Musicgen model."""
 
 import copy
 import inspect
@@ -278,12 +278,19 @@ class MusicgenDecoderTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
         input_ids = inputs_dict["input_ids"]
 
+        _ = inputs_dict.pop("attention_mask", None)
+        inputs_dict = {
+            k: v[:batch_size, ...]
+            for k, v in inputs_dict.items()
+            if "head_mask" not in k and isinstance(v, mindspore.Tensor)
+        }
+
         # take max batch_size
         sequence_length = input_ids.shape[-1]
         input_ids = input_ids[: batch_size * config.num_codebooks, :]
 
         attention_mask = ops.ones((batch_size, sequence_length), dtype=mindspore.int64)
-        return config, input_ids, attention_mask
+        return config, input_ids, attention_mask, inputs_dict
 
     @staticmethod
     def _get_logits_processor_and_warper_kwargs(
@@ -297,7 +304,7 @@ class MusicgenDecoderTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
 
     def test_greedy_generate_stereo_outputs(self):
         for model_class in self.greedy_sample_model_classes:
-            config, input_ids, attention_mask = self._get_input_ids_and_config()
+            config, input_ids, attention_mask, inputs_dict = self._get_input_ids_and_config()
             config.audio_channels = 2
             model = model_class(config).eval()
             output_generate = self._greedy_generate(
@@ -308,12 +315,12 @@ class MusicgenDecoderTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
                 output_hidden_states=True,
                 output_attentions=True,
                 return_dict_in_generate=True,
+                inputs_dict={},
             )
 
             self.assertIsInstance(output_generate, GenerateDecoderOnlyOutput)
 
             self.assertNotIn(config.pad_token_id, output_generate)
-
 
 
 def prepare_musicgen_inputs_dict(

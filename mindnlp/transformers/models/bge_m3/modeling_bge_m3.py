@@ -20,7 +20,8 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
+from mindnlp.core import ops, nn
 
 from ...modeling_outputs import BaseModelOutputWithPoolingAndCrossAttentions, ModelOutput
 from ..xlm_roberta import (
@@ -133,7 +134,7 @@ class BgeM3Model(XLMRobertaPreTrainedModel):
         Raises:
             None
         """
-        token_weights = ops.relu(self.sparse_linear(hidden_state))
+        token_weights = F.relu(self.sparse_linear(hidden_state))
         if not return_embedding:
             return token_weights
 
@@ -204,7 +205,10 @@ class BgeM3Model(XLMRobertaPreTrainedModel):
         # Get valid matrix
         valid_indices = ~mindspore.numpy.isin(input_ids, unused_tokens)
         # w>0
-        valid_indices = (valid_indices & (token_weights > 0)).bool()
+        valid_indices = valid_indices.astype(mindspore.int32)  # 转换为整数类型
+        token_weights_bool = (token_weights > 0).astype(mindspore.int32)
+        valid_indices = (valid_indices & token_weights_bool)
+        valid_indices = valid_indices.astype(mindspore.bool_)
         valid_indices = (valid_indices & mask).bool()
 
         for i, valid in enumerate(valid_indices):
@@ -215,7 +219,7 @@ class BgeM3Model(XLMRobertaPreTrainedModel):
             valid_ids = input_ids[i][valid]
 
             # Get unique token
-            unique_ids, inverse_indices = ops.unique(valid_ids)
+            unique_ids, inverse_indices = ops.unique(valid_ids, return_inverse=True)
 
             # Get max weight for each token
             for i in range(unique_ids.shape[0]):

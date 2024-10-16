@@ -140,9 +140,8 @@ class DPTViTHybridEmbeddings(nn.Module):
 
         self.projection = nn.Conv2d(feature_dim, hidden_size, kernel_size=1)
 
-        self.cls_token = Parameter(ops.zeros((1, 1, config.hidden_size)), 'cls_token')
-        self.position_embeddings = Parameter(ops.zeros((1, num_patches + 1, config.hidden_size)),
-                                                       'position_embeddings')
+        self.cls_token = Parameter(ops.zeros((1, 1, config.hidden_size)))
+        self.position_embeddings = Parameter(ops.zeros((1, num_patches + 1, config.hidden_size)))
 
     def _resize_pos_embed(self, posemb, grid_size_height, grid_size_width, start_index=1):
         posemb_tok = posemb[:, :start_index]
@@ -211,11 +210,10 @@ class DPTViTEmbeddings(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        self.cls_token = Parameter(ops.zeros((1, 1, config.hidden_size)), 'cls_token')
+        self.cls_token = Parameter(ops.zeros((1, 1, config.hidden_size)))
         self.patch_embeddings = DPTViTPatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
-        self.position_embeddings = Parameter(ops.zeros((1, num_patches + 1, config.hidden_size)),
-                                                       'position_embeddings')
+        self.position_embeddings = Parameter(ops.zeros((1, num_patches + 1, config.hidden_size)))
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.config = config
 
