@@ -25,12 +25,11 @@ class no_grad(contextlib.ContextDecorator):
     """
 
     def __enter__(self):
-        if mindspore.get_context("mode") == mindspore.GRAPH_MODE:
-            raise RuntimeError("For no_grad feature, currently only support Pynative mode, but got Graph mode.")
+        self.prev_state = _pynative_executor.enable_grad()
         _pynative_executor.set_enable_grad(False)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        _pynative_executor.set_enable_grad(True)
+        _pynative_executor.set_enable_grad(self.prev_state)
         return False
 
 class enable_grad(contextlib.ContextDecorator):
