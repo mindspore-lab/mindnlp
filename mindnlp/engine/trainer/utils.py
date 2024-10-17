@@ -12,46 +12,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable=C,R,W
+# pylint: disable= "line-too-long"
+# pylint: disable= "ungrouped-imports"
+# pylint: disable= "too-many-instance-attributes"
+# pylint: disable= "missing-function-docstring"
+# pylint: disable= "missing-class-docstring"
+# pylint: disable= "too-many-positional-arguments"
+# pylint: disable= "too-many-branches"
+# pylint: disable= "too-many-nested-blocks"
+# pylint: disable= "keyword-arg-before-vararg"
+# pylint: disable= "too-few-public-methods"
+# pylint: disable= "abstract-method"
+# pylint: disable= "too-many-lines"
+# pylint: disable= "too-many-arguments"
+# pylint: disable= "arguments-differ"
+# pylint: disable= "inconsistent-return-statements"
+# pylint: disable= "implicit-str-concat"
+# pylint: disable= "unused-import"
+# pylint: disable= "undefined-variable"
+
+
 import random
 import warnings
 # from collections import deque
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union, Tuple
-
-import mindspore.numpy as np
-import pandas as pd
-import mindspore as ms
-from mindnlp.core import ops,nn,no_grad
-# from accelerate import Accelerator
-# from accelerate.state import AcceleratorState, PartialState
-# from accelerate.utils import is_deepspeed_available
-from rich.console import Console, Group
-from rich.live import Live
-from rich.panel import Panel
-from rich.progress import Progress
-from rich.table import Table
-# from torch.nn.utils.rnn import pad_sequence
-# from torch.utils.data import IterableDataset
-# from transformers import (
-#     BitsAndBytesConfig,
-#     DataCollatorForLanguageModeling,
-#     PreTrainedModel,
-#     PreTrainedTokenizerBase,
-# )
-from mindnlp.transformers import (
-    PreTrainedTokenizerBase,
-)
-#pylint: disable=import-error
-#pylint: disable=no-name-in-module
-from ...trl.data.data_collator import DataCollatorForLanguageModeling
-from mindnlp.engine import TrainerCallback
-from mindnlp.engine import has_length
-
-from ...trl.core import pad_sequence
-from ...trl.import_utils import is_peft_available
-from ...trl.import_utils import is_unsloth_available
-from ..train_args import ModelConfig
 from typing import (
     Generic,
     Iterable,
@@ -59,6 +44,32 @@ from typing import (
     TypeVar,
 )
 import bisect
+
+from rich.console import Console, Group
+from rich.live import Live
+from rich.panel import Panel
+from rich.progress import Progress
+from rich.table import Table
+import pandas as pd
+import mindspore.numpy as np
+import mindspore as ms
+
+from ...core import ops,nn,no_grad
+# from accelerate import Accelerator
+# from accelerate.state import AcceleratorState, PartialState
+# from accelerate.utils import is_deepspeed_available
+from ...transformers import (
+    PreTrainedTokenizerBase,
+    PreTrainedModel
+)
+from ...trl.extradatatools.data_collator import DataCollatorForLanguageModeling
+from ...engine import TrainerCallback
+from ...engine import has_length
+from ...trl.core import pad_sequence
+# from ...trl.import_utils import is_peft_available
+from ...trl.import_utils import is_unsloth_available
+from ..train_args import ModelConfig
+
 T_co = TypeVar("T_co", covariant=True)
 
 # if is_peft_available():
@@ -772,16 +783,16 @@ def compute_accuracy(eval_pred) -> Dict[str, float]:
 def pad_to_length(tensor: ms.Tensor, length: int, pad_value: Union[int, float], dim: int = -1) -> ms.Tensor:
     if tensor.shape[dim] >= length:
         return tensor
-    else:
-        pad_size = list(tensor.shape)
-        pad_size[dim] = length - tensor.shape[dim]
-        return ops.cat(
-            [
-                tensor,
-                pad_value * ops.ones(*pad_size),
-            ],
-            dim=dim,
-        )
+
+    pad_size = list(tensor.shape)
+    pad_size[dim] = length - tensor.shape[dim]
+    return ops.cat(
+        [
+            tensor,
+            pad_value * ops.ones(*pad_size),
+        ],
+        dim=dim,
+    )
 
 
 def disable_dropout_in_model(model: nn.Module) -> None:
@@ -1315,7 +1326,7 @@ def add_eos_token_if_needed(
 # class OnlineTrainerState(TrainerState):
 class OnlineTrainerState():
     episode: int = 0
-    
+
 @no_grad()
 def batch_generation(
     model: nn.Module,

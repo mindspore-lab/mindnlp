@@ -1,47 +1,61 @@
-# pylint: disable=C, R, W
-# CPO Authors: Haoran Xu, Amr Sharaf, Yunmo Chen, Weiting Tan, Lingfeng Shen, Benjamin Van Durme, Kenton Murray, Young Jin Kim
-# Copyright 2024 The HuggingFace Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+'''CPO Authors: Haoran Xu, Amr Sharaf, Yunmo Chen, Weiting Tan, Lingfeng Shen,
+Benjamin Van Durme, Kenton Murray, Young Jin Kim
+Copyright 2024 The HuggingFace Team. All rights reserved.
 
-import inspect
-import random
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.'''
+
+# pylint: disable= "line-too-long"
+# pylint: disable= "too-many-locals"
+# pylint: disable= "too-many-statements"
+# pylint: disable= "too-many-branches"
+# pylint: disable= "unused-import"
+# pylint: disable= "too-many-arguments"
+# pylint: disable= "unused-argument"
+# pylint: disable= "superfluous-parens"
+# pylint: disable= "too-many-instance-attributes"
+# pylint: disable= "missing-function-docstring"
+# pylint: disable= "wrong-import-order"
+# pylint: disable= "self-assigning-variable"
+# pylint: disable= "use-dict-literal"
+# pylint: disable= "consider-using-generator"
+# pylint: disable= "too-many-positional-arguments"
+
+# import inspect
+# import random
 import warnings
 from collections import defaultdict
 from contextlib import nullcontext
 from functools import wraps
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
 
+# import wandb
 import numpy as np
 import mindspore as ms
-# import torch.amp as amp
-from mindnlp.core import nn, ops, optim, no_grad
-import mindnlp.core.nn.functional as F
-# from accelerate import PartialState
 from datasets import Dataset
-# from torch.utils.data import DataLoader
-from mindnlp.transformers import (
+
+from ...core import nn, ops, optim, no_grad
+from ...core.nn import functional as F
+from ...accelerate.state import PartialState
+from ...transformers import (
     AutoModelForCausalLM,
     PreTrainedModel,
     PreTrainedTokenizerBase,
 )
-from mindnlp.engine import Trainer
-#pylint: disable=import-error
-# pylint: disable = no-name-in-module
-from ...trl.data.data_collator import DataCollator
+from ...engine import Trainer
+
+from ...trl.extradatatools.data_collator import DataCollator
 # from transformers.trainer_callback import TrainerCallback
 # from transformers.trainer_utils import EvalLoopOutput
-# from transformers.utils import is_peft_available, is_torch_fx_proxy
 
 from ..train_args import CPOConfig
 from .utils import (
@@ -53,14 +67,11 @@ from .utils import (
     # peft_module_casting_to_bf16,
     trl_sanitze_kwargs_for_tagging,
 )
-# import wandb
 
 # if is_peft_available():
 #     from peft import PeftModel, get_peft_model, prepare_model_for_kbit_training
 
 
-# if is_wandb_available():
-#     import wandb
 
 
 class CPOTrainer(Trainer):
@@ -85,8 +96,8 @@ class CPOTrainer(Trainer):
             The model initializer to use for training. If None is specified, the default model initializer will be used.
         callbacks (`List[transformers.TrainerCallback]`):
             The callbacks to use for training.
-        optimizers (`Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR]`):
-            The optimizer and scheduler to use for training.
+        optimizers (`Tuple[,]`):
+            The optimizer and scheduler to use ftorchor training.
         preprocess_logits_for_metrics (`Callable[[ms.Tensor, ms.Tensor], ms.Tensor]`):
             The function to use to preprocess the logits before computing the metrics.
         peft_config (`Dict`, defaults to `None`):
@@ -119,16 +130,6 @@ class CPOTrainer(Trainer):
             raise ValueError("You passed model_kwargs to the CPOTrainer. But your model is already instantiated.")
         else:
             model_init_kwargs = args.model_init_kwargs
-            # torch_dtype = model_init_kwargs.get("torch_dtype")
-            # if torch_dtype is not None:
-            #     # Convert to `torch.dtype` if an str is passed
-            #     if isinstance(torch_dtype, str) and torch_dtype != "auto":
-            #         torch_dtype = getattr(torch, torch_dtype)
-            #     if torch_dtype != "auto" and not isinstance(torch_dtype, torch.dtype):
-            #         raise ValueError(
-            #             f"Invalid `torch_dtype` passed to the CPOConfig. Expected a string with either `torch.dtype` or 'auto', but got {torch_dtype}."
-            #         )
-            #     model_init_kwargs["torch_dtype"] = torch_dtype
 
         if isinstance(model, str):
             warnings.warn(
@@ -674,8 +675,7 @@ class CPOTrainer(Trainer):
 
         if average_log_prob:
             return (per_token_logps * loss_mask).sum(-1) / loss_mask.sum(-1)
-        else:
-            return (per_token_logps * loss_mask).sum(-1)
+        return (per_token_logps * loss_mask).sum(-1)
 
     def concatenated_forward(
         self, model: nn.Module, batch: Dict[str, Union[List, ms.Tensor]]

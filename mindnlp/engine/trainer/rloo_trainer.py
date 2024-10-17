@@ -1,17 +1,35 @@
-# pylint: disable=C,R,W, import-error
-# Copyright 2024 The HuggingFace Inc. team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+'''Copyright 2024 The HuggingFace Inc. team. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.'''
+
+# pylint: disable= "line-too-long"
+# pylint: disable= "unused-argument"
+# pylint: disable= "unused-variable"
+# pylint: disable= "unused-import"
+# pylint: disable= "too-many-statements"
+# pylint: disable= "too-many-branches"
+# pylint: disable= "too-many-locals"
+# pylint: disable= "missing-function-docstring"
+# pylint: disable= "attribute-defined-outside-init"
+# pylint: disable= "ungrouped-imports"
+# pylint: disable= "arguments-differ"
+# pylint: disable= "too-many-positional-arguments"
+# pylint: disable= "too-many-arguments"
+# pylint: disable= "super-init-not-called"
+# pylint: disable= "too-many-instance-attributes"
+# pylint: disable= "missing-class-docstring"
+
+
 
 import gc
 import math
@@ -25,28 +43,27 @@ import wandb
 import numpy as np
 import pandas as pd
 import mindspore as ms
-from mindnlp.core import nn, optim, ops, no_grad
-import mindnlp.core.nn.functional as F
+from datasets import Dataset
+# pylint: disable= "import-error"
+import mindspore.dataset.GeneratorDataset as DataLoader
+
 # from accelerate import Accelerator
 # from accelerate.utils import broadcast, gather_object
-from datasets import Dataset
-# from torch.utils.data import DataLoader
-import mindspore.dataset.GeneratorDataset as DataLoader
-from mindnlp.engine import (
+from ...core import nn, optim, ops, no_grad
+from ...core.nn import functional as F
+from ...engine import (
     # DataCollatorWithPadding,
     Trainer,
     TrainerCallback,
     TrainerControl,
 )
-from mindnlp.transformers import (
+from ...transformers import (
     GenerationConfig,
     PreTrainedTokenizer,
 )
-
 # from transformers.integrations import get_reporting_integration_callbacks
-from mindnlp.engine.trainer.base import DEFAULT_CALLBACKS, DEFAULT_PROGRESS_CALLBACK
-from mindnlp.engine import CallbackHandler, PrinterCallback
-
+from ...engine.trainer.base import DEFAULT_CALLBACKS, DEFAULT_PROGRESS_CALLBACK
+from ...engine import CallbackHandler, PrinterCallback
 # from ...trl.models.utils import unwrap_model_for_generation #跟accelerate model有关
 from .utils import (
     OnlineTrainerState,
@@ -434,7 +451,7 @@ class RLOOTrainer(Trainer):
                         pg_loss, loss, pg_clipfrac, prob_dist, entropy, approxkl,
                         mb_advantage, mb_responses, mb_query_responses, mb_logprobs,
                     )
-                    
+
             with no_grad():
                 mean_kl = kl.sum(1).mean()
                 mean_entropy = (-logprobs).sum(1).mean()

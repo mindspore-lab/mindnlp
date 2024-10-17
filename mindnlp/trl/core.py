@@ -13,19 +13,20 @@
 # limitations under the License.
 """
 
-# pylint: disable=C,R
+# pylint: disable = "too-few-public-methods"
 
 from typing import Dict, List, Optional, Tuple, Union
 from collections.abc import Mapping
 
 import numpy as np
 import mindspore as ms
-
-from mindnlp.core import ops
 from mindspore import Tensor
 
+from ..core import ops, nn
+from ..core.nn import functional as F
+
 #与huggingface.transformers同路程
-from mindnlp.transformers.generation import TopKLogitsWarper, TopPLogitsWarper
+from ..transformers.generation import TopKLogitsWarper, TopPLogitsWarper
 
 #暂时只更改import_utils中的这两个函数
 #from import_utils import is_npu_available, is_xpu_available
@@ -187,12 +188,6 @@ def masked_whiten(values: Tensor, mask: Tensor, shift_mean: bool = True) -> Tens
         whitened += mean
     return whitened
 
-def average_torch_dicts(list_of_dicts: List[Dict]) -> Dict:
-    """Average values of a list of dicts with torch tensors."""
-    average_dict = {}
-    for key in list_of_dicts[0].keys():
-        average_dict[key] = ops.std_mean(ops.stack([d[key] for d in list_of_dicts]), dim=0)
-    return average_dict
 
 def entropy_from_logits(logits: Tensor) -> Tensor:
     """Calculate entropy from logits."""
@@ -202,7 +197,7 @@ def entropy_from_logits(logits: Tensor) -> Tensor:
 
 def clip_by_value(x: Tensor, tensor_min: float, tensor_max: float) -> Tensor:
     """
-    Tensor extension to torch.clamp
+    Tensor extension to clamp
     https://github.com/pytorch/pytorch/issues/2793#issuecomment-428784713
     """
     clipped = ops.maximum(
@@ -212,7 +207,7 @@ def clip_by_value(x: Tensor, tensor_min: float, tensor_max: float) -> Tensor:
     return clipped
 
 def stats_to_np(stats_dict: Dict) -> Dict:
-    """Cast all torch.tensors in dict to numpy arrays."""
+    """Cast all tensors in dict to numpy arrays."""
     new_dict = {}
     for k, v in stats_dict.items():
         if isinstance(v, Tensor):
@@ -277,55 +272,19 @@ class LengthSampler:
         return np.random.choice(self.values)
 
 
-
-
-#######################################################
-
-# def respond_to_batch(
-#     model: nn.Module, queries: List[torch.LongTensor],
-# txt_len: int = 20, top_k: int = 0, top_p: float = 1.0
-# ) -> torch.LongTensor:
-#     """Sample text from language model."""
-#     input_ids = queries
-#     for _i in range(txt_len):
-#         # Get Logits
-#         outputs = model(input_ids)
-#         next_token_logits = outputs[0][:, -1, :]
-#         next_token_logits = top_k_top_p_filtering(next_token_logits, top_k=top_k, top_p=top_p)
-#         # Sample
-#         probs = F.softmax(next_token_logits, dim=-1)
-#         next_token = torch.multinomial(probs, num_samples=1).squeeze(1)
-#         input_ids = torch.cat([input_ids, next_token.unsqueeze(-1)], dim=-1)
-#     return input_ids[:, -txt_len:]
-
-
-# class PPODecorators:
-#     optimize_device_cache = False
-
-#     @classmethod
-#     @contextmanager
-#     def empty_device_cache(cls):
-#         yield
-#         if cls.optimize_device_cache:
-#             if is_xpu_available():
-#                 gc.collect()
-#                 torch.xpu.empty_cache()
-#                 gc.collect()
-#             elif is_npu_available():
-#                 gc.collect()
-#                 torch.npu.empty_cache()
-#                 gc.collect()
-#             elif torch.cuda.is_available():
-#                 gc.collect()
-#                 torch.cuda.empty_cache()
-#                 gc.collect(
-
-
-
-
-
-
-
-# Usage example:
-# generator = np.random.default_rng(seed=42)
-# randn_tensor((3, 4), generator=generator, device='GPU', dtype=mindspore.float32)
+def respond_to_batch(
+    model: nn.Module, queries: List[Tensor],
+txt_len: int = 20, top_k: int = 0, top_p: float = 1.0
+) -> Tensor:
+    """Sample text from language model."""
+    input_ids = queries
+    for _i in range(txt_len):
+        # Get Logits
+        outputs = model(input_ids)
+        next_token_logits = outputs[0][:, -1, :]
+        next_token_logits = top_k_top_p_filtering(next_token_logits, top_k=top_k, top_p=top_p)
+        # Sample
+        probs = F.softmax(next_token_logits, dim=-1)
+        next_token = ops.multinomial(probs, num_samples=1).squeeze(1)
+        input_ids = ops.cat([input_ids, next_token.unsqueeze(-1)], dim=-1)
+    return input_ids[:, -txt_len:]

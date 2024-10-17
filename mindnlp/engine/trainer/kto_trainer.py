@@ -1,19 +1,53 @@
-# pylint: disable=C, R, W, E, possibly-used-before-assignment, used-before-assignment
-# KTO Authors: Kawin Ethayarajh, Winnie Xu, Niklas Muennighoff,
-# Dan Jurafsky, and Douwe Kiela
-# Copyright 2024 The HuggingFace Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+'''KTO Authors: Kawin Ethayarajh, Winnie Xu, Niklas Muennighoff,
+Dan Jurafsky, and Douwe Kiela
+Copyright 2024 The HuggingFace Team. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.'''
+
+# pylint: disable= "line-too-long"
+# pylint: disable= "too-many-public-methods"
+# pylint: disable= "attribute-defined-outside-init"
+# pylint: disable= "too-many-positional-arguments"
+# pylint: disable= "too-many-arguments"
+# pylint: disable= "unused-argument"
+# pylint: disable= "unused-variable"
+# pylint: disable= "unused-import"
+# pylint: disable= "too-many-statements"
+# pylint: disable= "too-many-branches"
+# pylint: disable= "invalid-name"
+# pylint: disable= "too-many-lines"
+# pylint: disable= "fixme"
+# pylint: disable= "import-outside-toplevel"
+# pylint: disable= "too-many-instance-attributes"
+# pylint: disable= "ungrouped-imports"
+# pylint: disable= "arguments-renamed"
+# pylint: disable= "missing-function-docstring"
+# pylint: disable= "self-assigning-variable"
+# pylint: disable= "too-many-locals"
+# pylint: disable= "possibly-used-before-assignment"
+# pylint: disable= "missing-function-docstring"
+# pylint: disable= "pointless-string-statement"
+# pylint: disable= "use-dict-literal"
+# pylint: disable= "redefined-builtin"
+# pylint: disable= "unidiomatic-typecheck"
+
+#E,no-member和unexpected-keyword-arg这两项与继承的父类Trainer有关系
+# pylint: disable= "used-before-assignment"
+# pylint: disable= "no-member"
+# pylint: disable= "unexpected-keyword-arg"
+
+
+
 
 import inspect
 import random
@@ -24,25 +58,23 @@ from copy import deepcopy
 from functools import wraps
 from operator import itemgetter
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Optional, Tuple, Union
+import tqdm
+import wandb
 
 import numpy as np
 import mindspore as ms
-# import torch.amp as amp
-from mindnlp.core import nn, ops, optim, no_grad
-import mindnlp.core.nn.functional as F
-# from accelerate import PartialState
-# from accelerate.utils import is_deepspeed_available, tqdm
-import tqdm
 from datasets import Dataset, concatenate_datasets
-# from torch.utils.data import DataLoader, SequentialSampler
+from ...core import nn, ops, optim, no_grad
+from ...core.nn import functional as F
+from ...accelerate.state import PartialState
 
-from mindnlp.transformers import (
+from ...transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     PreTrainedModel,
     PreTrainedTokenizerBase,
 )
-from ...trl.data.data_collator import DataCollator
+from ...trl.extradatatools.data_collator import DataCollator
 from ...engine import Trainer, TrainingArguments
 # from transformers.trainer_callback import TrainerCallback
 # from transformers.trainer_utils import EvalLoopOutput, has_length
@@ -57,7 +89,7 @@ from .utils import (
     # peft_module_casting_to_bf16,
     trl_sanitze_kwargs_for_tagging,
 )
-import wandb
+
 
 
 # if is_peft_available():
@@ -985,8 +1017,8 @@ class KTOTrainer(Trainer):
 
         if average_log_prob:
             return (per_token_logps * loss_mask).sum(-1) / loss_mask.sum(-1)
-        else:
-            return (per_token_logps * loss_mask).sum(-1)
+
+        return (per_token_logps * loss_mask).sum(-1)
 
     def forward(
         self, model: nn.Module, batch: Dict[str, Union[List, ms.Tensor]]
@@ -1064,8 +1096,8 @@ class KTOTrainer(Trainer):
 
         if self.aux_loss_enabled:
             return (chosen_logps, rejected_logps, chosen_logits, rejected_logits, KL_logps, outputs.aux_loss)
-        else:
-            return (chosen_logps, rejected_logps, chosen_logits, rejected_logits, KL_logps)
+
+        return (chosen_logps, rejected_logps, chosen_logits, rejected_logits, KL_logps)
 
     def kto_loss(
         self,

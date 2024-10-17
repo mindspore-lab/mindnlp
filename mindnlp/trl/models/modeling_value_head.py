@@ -12,15 +12,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable=C,R
+
+
+# pylint: disable = "line-too-long"
+# pylint: disable = "arguments-differ"
 
 
 import mindspore as ms
-from mindnlp.core import nn
-from mindnlp.transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM
+from ...core import nn
+from ...transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM
 
 
-# from ..import_utils import is_npu_available, is_xpu_available
 from .modeling_base import PreTrainedModelWrapper
 
 

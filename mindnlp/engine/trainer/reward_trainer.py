@@ -12,7 +12,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable=C,R,W
+# pylint: disable= "line-too-long"
+# pylint: disable= "too-many-arguments"
+# pylint: disable= "too-many-positional-arguments"
+# pylint: disable= "unused-argument"
+# pylint: disable= "unused-import"
+# pylint: disable= "unidiomatic-typecheck"
+# pylint: disable= "chained-comparison"
+
+#需要回溯到Trainer类
+# pylint: disable= "no-member"
 
 # import inspect
 import warnings
@@ -23,31 +32,17 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 import mindspore as ms
-
-# from accelerate.utils import gather_object
 from mindspore.dataset import Dataset
-# from transformers import DataCollator, PreTrainedModel, PreTrainedTokenizerBase, Trainer, TrainingArguments
-#pylint: disable=import-error
-# pylint: disable = no-name-in-module
-from ...trl.data.data_collator import DataCollator
-from mindnlp.transformers import (
+
+from ...trl.extradatatools.data_collator import DataCollator
+from ...transformers import (
     PreTrainedModel,
     PreTrainedTokenizerBase,
 )
-from mindnlp.engine import Trainer, TrainingArguments
-from mindnlp.core import ops, nn, optim
-import mindnlp.core.nn.functional as F
+from ...engine import Trainer, TrainingArguments
+from ...core import ops, nn, optim
+from ...core.nn import functional as F
 
-# from transformers.trainer_callback import TrainerCallback
-# from mindnlp.transformers.trainer_callback import TrainerCallback
-
-# from transformers.trainer_pt_utils import nested_detach 
-# #参考https://www.mindspore.cn/docs/zh-CN/r2.0/note/api_mapping/pytorch_diff/diag.html?highlight=detach， 可以不使用
-
-# from transformers.trainer_utils import EvalPrediction
-# from mindnlp.transformers.trainer_utils import EvalPrediction
-
-from ...trl.import_utils import is_peft_available
 from ..train_args import RewardConfig
 from .utils import RewardDataCollatorWithPadding, compute_accuracy, print_rich_table
 
@@ -246,8 +241,7 @@ class RewardTrainer(Trainer):
                 " if you are using a custom data collator make sure you know what you are doing or"
                 " implement your own compute_loss method."
             )
-        
-        
+
         rewards_chosen = model(
             input_ids=inputs["input_ids_chosen"],
             attention_mask=inputs["attention_mask_chosen"],
@@ -331,7 +325,7 @@ class RewardTrainer(Trainer):
             table["chosen_text"].extend(chosen_text)
             table["rejected_text"].extend(rejected_text)
             table["logits"].extend([[round(inner_item, 4) for inner_item in item] for item in logits.tolist()])
-        
+
             if num_print_samples >= 0 and len(table["chosen_text"]) >= num_print_samples:
                 break
         df = pd.DataFrame(table)

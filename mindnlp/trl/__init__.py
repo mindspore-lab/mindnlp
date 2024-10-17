@@ -2,9 +2,10 @@
     flake8: noqa
 '''
 __version__ = "0.9.5.dev0"
-# pylint: disable=import-error
+
 from typing import TYPE_CHECKING
 from .import_utils import _LazyModule, is_diffusers_available, OptionalDependencyNotAvailable
+
 _import_structure = {
     "core": [
         "set_seed",
@@ -33,29 +34,6 @@ _import_structure = {
         "setup_chat_format",
         "SUPPORTED_ARCHITECTURES",
     ],
-    # "trainer": [
-    #     "DataCollatorForCompletionOnlyLM",
-    #     "DPOConfig",
-    #     "DPOTrainer",
-    #     "CPOConfig",
-    #     "CPOTrainer",
-    #     "AlignPropConfig",
-    #     "AlignPropTrainer",
-    #     "IterativeSFTTrainer",
-    #     "KTOConfig",
-    #     "KTOTrainer",
-    #     "ModelConfig",
-    #     "ORPOConfig",
-    #     "ORPOTrainer",
-    #     "PPOConfig",
-    #     "PPOTrainer",
-    #     "RewardConfig",
-    #     "RewardTrainer",
-    #     "SFTConfig",
-    #     "SFTTrainer",
-    #     "FDivergenceConstants",
-    #     "FDivergenceType",
-    # ],
     "commands": [],
     "commands.cli_utils": ["init_zero_verbose",\
         "SFTScriptArguments", "DPOScriptArguments", "TrlParser"],
@@ -87,15 +65,8 @@ else:
 if TYPE_CHECKING:
     from .core import set_seed
     from .environment import TextEnvironment, TextHistory
-    from .extras import BestOfNSampler
-    from .import_utils import (
-        is_bitsandbytes_available,
-        is_npu_available,
-        is_peft_available,
-        is_pil_available,
-        is_wandb_available,
-        is_xpu_available,
-    )
+    from .extras import *
+    from .import_utils import *
     from .models import (
         AutoModelForCausalLMWithValueHead,
         AutoModelForSeq2SeqLMWithValueHead,
@@ -104,31 +75,6 @@ if TYPE_CHECKING:
         setup_chat_format,
         SUPPORTED_ARCHITECTURES,
     )
-    from .trainer import (
-        DataCollatorForCompletionOnlyLM,
-        DPOConfig,
-        DPOTrainer,
-        CPOConfig,
-        CPOTrainer,
-        AlignPropConfig,
-        AlignPropTrainer,
-        IterativeSFTTrainer,
-        KTOConfig,
-        KTOTrainer,
-        ModelConfig,
-        ORPOConfig,
-        ORPOTrainer,
-        PPOConfig,
-        PPOTrainer,
-        RewardConfig,
-        RewardTrainer,
-        SFTConfig,
-        SFTTrainer,
-        FDivergenceConstants,
-        FDivergenceType,
-    )
-    from ..trainer.utils import get_kbit_device_map,\
-        get_peft_config, get_quantization_config, RichProgressCallback
 
     from .commands.cli_utils import init_zero_verbose, SFTScriptArguments,\
         DPOScriptArguments, TrlParser

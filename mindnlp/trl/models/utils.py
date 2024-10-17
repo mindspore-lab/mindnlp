@@ -20,11 +20,13 @@ Constants:
 
 '''
 
-# from contextlib import contextmanager
-from dataclasses import dataclass
-from typing import Literal, Optional, Tuple
+# pylint: disable = "protected-access"
 
-from mindnlp.transformers import PreTrainedModel, PreTrainedTokenizer
+from contextlib import contextmanager
+from dataclasses import dataclass
+from typing import Literal, Optional, Tuple, Union
+
+from ...transformers import PreTrainedModel, PreTrainedTokenizer
 
 from .modeling_value_head import AutoModelForCausalLMWithValueHead
 from .modeling_value_head import AutoModelForSeq2SeqLMWithValueHead
@@ -173,24 +175,25 @@ def add_hooks(model: "DeepSpeedEngine") -> None:
     optimizer_offload._register_hooks_recursively(optimizer_offload.module)
 
 
-# @contextmanager
-# def unwrap_model_for_generation(
-#     model: Union["DistributedDataParallel", "DeepSpeedEngine"],\
-#         accelerator: "Accelerator", is_peft_model: bool = False
-# ) -> Union["PreTrainedModelWrapper", "DeepSpeedEngine"]:
-#     """Context manager to unwrap a model for generation.
+@contextmanager
+def unwrap_model_for_generation(
+    model: Union["DistributedDataParallel", "DeepSpeedEngine"],\
+        accelerator: "Accelerator", is_peft_model: bool = False
+) -> Union["PreTrainedModelWrapper", "DeepSpeedEngine"]:
+    """Context manager to unwrap a model for generation.
 
-#     For ZeRO-3 models, we gather the weights once to speed up generation.
-#     """
-#     unwrapped_model = accelerator.unwrap_model(model)
-#     if is_peft_model:
-#         unwrapped_model.pretrained_model.disable_adapter()
-#     if accelerator.state.deepspeed_plugin is not None\
-#         and accelerator.state.deepspeed_plugin.zero_stage == 3:
-#         with deepspeed.zero.GatheredParameters(model.parameters()):
-#             remove_hooks(model)
-#             yield model
-#             add_hooks(model)
-#     else:
-#         yield unwrapped_model
-#     yield unwrapped_model
+    For ZeRO-3 models, we gather the weights once to speed up generation.
+    """
+    unwrapped_model = accelerator.unwrap_model(model)
+    if is_peft_model:
+        unwrapped_model.pretrained_model.disable_adapter()
+    # if accelerator.state.deepspeed_plugin is not None\
+    #     and accelerator.state.deepspeed_plugin.zero_stage == 3:
+    #     with deepspeed.zero.GatheredParameters(model.parameters()):
+    #         remove_hooks(model)
+    #         yield model
+    #         add_hooks(model)
+    # else:
+
+    yield unwrapped_model
+    yield unwrapped_model

@@ -2,18 +2,18 @@
 there are dataset_formatting functions in this file.
 '''
 
-# pylint: disable=C,R
+# pylint: disable="line-too-long"
+
 
 import logging
 from typing import Callable, Literal, Optional, Union
 
 from datasets import Dataset, Value
-from mindnlp.transformers import AutoTokenizer
+from ...transformers import AutoTokenizer
 
 from ...engine.trainer.utils import ConstantLengthDataset
 
-# pylint: disable=line-too-long
-# pylint: disable=no-else-return
+
 
 FORMAT_MAPPING = {
     "chatml": [{"content": Value(dtype="string", id=None), "role": Value(dtype="string", id=None)}],
@@ -36,8 +36,7 @@ def conversations_formatting_function(
             for i in range(len(examples[messages_field])):
                 output_texts.append(tokenizer.apply_chat_template(examples[messages_field][i], tokenize=False))
             return output_texts
-        else:
-            return tokenizer.apply_chat_template(examples[messages_field], tokenize=False)
+        return tokenizer.apply_chat_template(examples[messages_field], tokenize=False)
 
     return format_dataset
 
@@ -59,12 +58,12 @@ def instructions_formatting_function(tokenizer: AutoTokenizer):
                 ]
                 output_texts.append(tokenizer.apply_chat_template(converted_sample, tokenize=False))
             return output_texts
-        else:
-            converted_sample = [
-                {"role": "user", "content": examples["prompt"]},
-                {"role": "assistant", "content": examples["completion"]},
-            ]
-            return tokenizer.apply_chat_template(converted_sample, tokenize=False)
+
+        converted_sample = [
+            {"role": "user", "content": examples["prompt"]},
+            {"role": "assistant", "content": examples["completion"]},
+        ]
+        return tokenizer.apply_chat_template(converted_sample, tokenize=False)
 
     return format_dataset
 

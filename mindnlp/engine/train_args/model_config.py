@@ -1,10 +1,13 @@
 '''general model config'''
+
+# pylint: disable= "line-too-long"
+# pylint: disable= "too-many-instance-attributes"
+# pylint: disable= "missing-function-docstring"
+
 from dataclasses import dataclass, field
 from typing import List, Optional
 
 from ...trl.core import flatten_dict
-
-# pylint: disable=C,R
 
 @dataclass
 class ModelConfig:
@@ -20,16 +23,7 @@ class ModelConfig:
         default="main",
         metadata={"help": "The specific model version to use (can be a branch name, tag name or commit id)."},
     )
-    torch_dtype: Optional[str] = field(
-        default=None,
-        metadata={
-            "help": (
-                "Override the default `torch.dtype` and load the model under this dtype. If `auto` is passed, the "
-                "dtype will be automatically derived from the model's weights."
-            ),
-            "choices": ["auto", "bfloat16", "float16", "float32"],
-        },
-    )
+
     trust_remote_code: bool = field(default=False, metadata={"help": "Trust remote code when loading a model."})
     attn_implementation: Optional[str] = field(
         default=None,

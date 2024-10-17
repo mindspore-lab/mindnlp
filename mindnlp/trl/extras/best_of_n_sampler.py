@@ -1,9 +1,27 @@
-# pylint: disable=C,R
+'''Copyright 2024 The HuggingFace Inc. team. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.'''
+
+# pylint: disable = "missing-class-docstring"
+# pylint: disable = "line-too-long"
+# pylint: disable = "too-few-public-methods"
+# pylint: disable = "too-many-arguments"
+# pylint: disable = "too-many-positional-arguments"
 
 from typing import Any, Callable, List, Optional, Union
 
 import mindspore as ms
-from mindnlp.transformers import GenerationConfig, PreTrainedTokenizer, PreTrainedTokenizerFast
+from ...transformers import GenerationConfig, PreTrainedTokenizer, PreTrainedTokenizerFast
 
 from ..core import set_seed
 from ..models import SUPPORTED_ARCHITECTURES, PreTrainedModelWrapper
@@ -30,7 +48,8 @@ class BestOfNSampler:
             tokenizer (`PreTrainedTokenizer` or `PreTrainedTokenizerFast`):
                 Tokenizer associated with the pretrained model
             queries_to_scores (`Callable[[List[str]], List[float]]`):
-                Callable that takes a list of generated texts and returns the associated reward scores
+                Callable that takes a list of generated texts 
+                and returns the associated reward scores
             length_sampler (`Any`):
                 Sampler used to sample the length of the generated text
             sample_size (`int`):
@@ -41,7 +60,8 @@ class BestOfNSampler:
                 Number of candidates to return for each query
             generation_config (`GenerationConfig`, *optional*):
                 Generation config passed to the underlying model's `generate` method.
-                See `GenerationConfig` (https://huggingface.co/docs/transformers/v4.29.1/en/main_classes/text_generation#transformers.GenerationConfig) for more details
+                See `GenerationConfig`
+                (https://huggingface.co/docs/transformers/v4.29.1/en/main_classes/text_generation#transformers.GenerationConfig) for more details
         """
         if seed is not None:
             set_seed(seed)

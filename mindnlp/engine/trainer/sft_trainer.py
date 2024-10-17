@@ -12,58 +12,78 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable=C,R,W
+# pylint: disable= "line-too-long"
+# pylint: disable= "unused-import"
+# pylint: disable= "attribute-defined-outside-init"
+# pylint: disable= "undefined-variable"
+# pylint: disable= "unused-variable"
+# pylint: disable= "unused-argument"
+# pylint: disable= "too-many-positional-arguments"
+# pylint: disable= "too-many-arguments"
+# pylint: disable= "too-many-branches"
+# pylint: disable= "too-many-locals"
+# pylint: disable= "too-many-statements"
+# pylint: disable= "missing-class-docstring"
+# pylint: disable= "inconsistent-return-statements"
+
+
 import dataclasses
 import inspect
 import warnings
 from functools import wraps
-from typing import Callable, Dict, List, Optional, Tuple, Union, NewType, Any
+from typing import Callable, Dict, List, Optional, Tuple, Union, NewType, Any, Iterable
 
-#主要作用在iterable类的判断，可以暂时注释掉
-# import datasets
-
-import mindspore as ms
-from mindnlp.core import nn, optim
-from mindspore.dataset import Dataset, transforms
-#暂只考虑单卡训练
-# from accelerate.state import PartialState
-# from mindspore.dataset.engine import Dataset
-from datasets import IterableDataset
-
-
-#在本文件内实现
+import datasets
+from datasets import Dataset
 # from datasets.arrow_writer import SchemaInferenceError
 # from datasets.builder import DatasetGenerationError
+import mindspore as ms
 
-from huggingface_hub.utils._deprecation import _deprecate_arguments
-from mindnlp.transformers import (
+from ...core import nn, optim
+from ...accelerate.state import PartialState
+from ...transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     PreTrainedModel,
     PreTrainedTokenizerBase,
 )
-from mindnlp.engine import Trainer
-from mindnlp.peft import PeftConfig, PeftModel, get_peft_model
-#pylint: disable=import-error
-#pylint: disable=no-name-in-module
-from ...trl.data.data_collator import DataCollator, DataCollatorForLanguageModeling
-# from mindnlp.transformers.modeling_utils import unwrap_model
-# from mindnlp.transformers.trainer_callback import TrainerCallback
-# from mindnlp.transformers.trainer_utils import EvalPrediction
-
+from ...engine import (
+    Trainer,
+    TrainerCallback,
+    EvalPrediction,
+)
+from ...trl.extradatatools import DataCollator, DataCollatorForLanguageModeling
 from ...trl.extras.dataset_formatting import get_formatting_func_from_dataset
-from ...trl.import_utils import is_peft_available
-from ..train_args import SFTConfig
+from ...trl.import_utils import is_liger_kernel_available
 from .utils import (
     ConstantLengthDataset,
-    # DataCollatorForCompletionOnlyLM,
-    RichProgressCallback,
-    neftune_post_forward_hook,
+    DataCollatorForCompletionOnlyLM,
+    # generate_model_card,
     # peft_module_casting_to_bf16,
-    trl_sanitze_kwargs_for_tagging,
 )
+from ..train_args import SFTConfig
 
 
+
+def _deprecate_arguments(
+    *,
+    version: str,
+    deprecated_args: Iterable[str],
+    custom_message: Optional[str] = None,
+):
+    """Decorator to issue warnings when using deprecated arguments.
+
+    TODO: could be useful to be able to set a custom error message.
+
+    Args:
+        version (`str`):
+            The version when deprecated arguments will result in error.
+        deprecated_args (`List[str]`):
+            List of the arguments to be deprecated.
+        custom_message (`str`, *optional*):
+            Warning message that is raised. If not passed, a default warning message
+            will be created.
+    """
 
 class SchemaInferenceError(ValueError):
     pass
@@ -94,8 +114,8 @@ def unwrap_model(model: nn.Module, recursive: bool = False) -> nn.Module:
     # since there could be multiple levels of wrapping, unwrap recursively
     if hasattr(model, "module"):
         return unwrap_model(model.module)
-    else:
-        return model
+
+    return model
 
 
 class SFTTrainer(Trainer):
@@ -603,8 +623,8 @@ class SFTTrainer(Trainer):
                     raise ValueError(
                         "The `formatting_func` should return a list of processed strings since it can lead to silent bugs."
                     )
-                else:
-                    self._dataset_sanity_checked = True
+
+                self._dataset_sanity_checked = True
 
             # return {"input_ids": outputs["input_ids"], "attention_mask": outputs["attention_mask"]}
             return outputs['input_ids'], outputs['attention_mask']

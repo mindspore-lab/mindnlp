@@ -12,7 +12,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable=C,R
+# pylint: disable= "line-too-long"
+# pylint: disable= "too-many-instance-attributes"
 
 from dataclasses import dataclass, field
 from typing import List, Optional
@@ -49,16 +50,7 @@ class RewardConfig(TrainingArguments):
         default="main",
         metadata={"help": "The specific model version to use (can be a branch name, tag name or commit id)."},
     )
-    torch_dtype: Optional[str] = field(
-        default=None,
-        metadata={
-            "help": (
-                "Override the default `torch.dtype` and load the model under this dtype. If `auto` is passed, the "
-                "dtype will be automatically derived from the model's weights."
-            ),
-            "choices": ["auto", "bfloat16", "float16", "float32"],
-        },
-    )
+
     trust_remote_code: bool = field(default=False, metadata={"help": "Trust remote code when loading a model."})
     attn_implementation: Optional[str] = field(
         default=None,

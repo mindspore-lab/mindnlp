@@ -1,24 +1,25 @@
-# Copyright 2024 The HuggingFace Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+'''Copyright 2024 The HuggingFace Team. All rights reserved.
 
-# pylint: disable=C,R
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.'''
+
+# pylint: disable= "line-too-long"
+# pylint: disable= "too-many-instance-attributes"
+
 from dataclasses import dataclass
 from typing import Dict, Literal, Optional
 
 from mindnlp.engine import TrainingArguments
 
-from ...trl.import_utils import is_sklearn_available
 
 
 @dataclass
@@ -105,7 +106,7 @@ class KTOConfig(TrainingArguments):
     def __post_init__(self):
         super().__post_init__()
 
-        if self.loss_type == "bco" and not is_sklearn_available():
+        if self.loss_type == "bco":
             raise ImportError(
                 "You need to install scikit-learn to use loss_type='bco' "
                 "You can install it with `pip install scikit-learn`."

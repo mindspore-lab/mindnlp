@@ -14,7 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-# pylint: disable=C,R
+# pylint: disable = "too-many-lines"
+# pylint: disable = "protected-access"
+# pylint: disable = "line-too-long"
+# pylint: disable = "missing-function-docstring"
+# pylint: disable = "missing-class-docstring"
+# pylint: disable = "too-few-public-methods"
+# pylint: disable = "too-many-branches"
+# pylint: disable = "too-many-locals"
+# pylint: disable = "too-many-arguments"
+# pylint: disable = "too-many-statements"
+# pylint: disable = "too-many-positional-arguments"
+# pylint: disable = "ungrouped-imports"
+# pylint: disable = "broad-exception-caught"
+# pylint: disable = "too-many-instance-attributes"
+# pylint: disable = ""
 
 import json
 import logging
@@ -22,29 +36,7 @@ import os
 from copy import deepcopy
 from typing import Optional
 
-# import torch
-# import torch.nn as nn
-# from accelerate import PartialState
-# from huggingface_hub import hf_hub_download
-
-# from huggingface_hub.utils import (
-#     EntryNotFoundError,
-#     HFValidationError,
-#     LocalEntryNotFoundError,
-#     RepositoryNotFoundError,
-# )
-# from safetensors.torch import load_file as safe_load_file
-# from transformers import PreTrainedModel
-
-
-
-#from accelerate.state import PartialState
-#管理和控制分布式训练环境下的训练进程
-
 import mindspore as ms
-from mindnlp.core import nn
-
-
 from huggingface_hub import hf_hub_download
 from huggingface_hub.utils import (
     EntryNotFoundError,
@@ -52,11 +44,14 @@ from huggingface_hub.utils import (
     LocalEntryNotFoundError,
     RepositoryNotFoundError,
 )
-# from safetensors.torch import load_file as safe_load_file
-from mindnlp.transformers import PreTrainedModel
-from mindnlp.dataset import load_dataset
 
-from mindnlp.peft import (
+from ...core import nn
+# from ...accelerate.state import PartialState
+from ...core.serialization import safe_load_file
+from ...transformers import PreTrainedModel
+from ...dataset import load_dataset
+
+from ...peft import (
         PeftConfig,
         PeftModel,
         PeftModelForCausalLM,
@@ -330,7 +325,7 @@ class PreTrainedModelWrapper(nn.Module):
         # Add reward modeling adapter if specified
         if not is_peft_model and reward_adapter is not None:
             raise ValueError("reward_adapter can only be used with a PeftModel.")
-        elif is_peft_model and reward_adapter is not None:
+        if is_peft_model and reward_adapter is not None:
             score_module = cls.add_and_load_reward_modeling_adapter(
                 pretrained_model, reward_adapter, reward_adapter_name, token=token
             )
@@ -382,10 +377,10 @@ class PreTrainedModelWrapper(nn.Module):
                     use_safe = True
                 else:
                     use_safe = False
-            #暂不确定loading_func改得对不对，截至目前实现的trainer还没使用到
-            #loading_func = safe_load_file if use_safe else torch.load
 
-            load_kwargs = {} if use_safe else {"map_location": "cpu"}
+            loading_func = safe_load_file
+
+            load_kwargs = {}
 
             if is_resuming_training:
                 if is_sharded:
@@ -398,10 +393,9 @@ class PreTrainedModelWrapper(nn.Module):
                             shard_file,
                             token=token,
                         )
-                        state_dict.update(load_dataset(filename, **load_kwargs)) #此处本应为loading_func
+                        state_dict.update(loading_func(filename, **load_kwargs))
                 else:
-                    state_dict = load_dataset(filename \
-                        if not use_safe else safe_filename, **load_kwargs) #此处本应为loading_func
+                    state_dict = loading_func(filename if not use_safe else safe_filename, **load_kwargs)
 
         else:
             state_dict = pretrained_model_name_or_path.state_dict()
@@ -474,23 +468,23 @@ class PreTrainedModelWrapper(nn.Module):
 
     # @classmethod
     # def _get_current_device(cls):
-        # r"""
-        # Get the current device. For GPU,
-        # we return the local process index using the `accelerate.PartialState`
-        # object to handle corner cases when running scripts
-        # in distributed environments.
+    #     r"""
+    #     Get the current device. For GPU,
+    #     we return the local process index using the `accelerate.PartialState`
+    #     object to handle corner cases when running scripts
+    #     in distributed environments.
 
-        # Returns:
-        #     current_device (`Union[int, str]`):
-        #         The current device.
-        # """
-        # state = PartialState()
-        # if is_xpu_available():
-        #     return f"xpu:{state.local_process_index}"
-        # elif is_npu_available():
-        #     return f"npu:{state.local_process_index}"
-        # else:
-        #     return state.local_process_index if torch.cuda.is_available() else "cpu"
+    #     Returns:
+    #         current_device (`Union[int, str]`):
+    #             The current device.
+    #     """
+    #     state = PartialState()
+    #     if is_xpu_available():
+    #         return f"xpu:{state.local_process_index}"
+    #     elif is_npu_available():
+    #         return f"npu:{state.local_process_index}"
+    #     else:
+    #         return state.local_process_index if torch.cuda.is_available() else "cpu"
 
     @classmethod
     def _split_kwargs(cls, kwargs):
@@ -546,7 +540,7 @@ class PreTrainedModelWrapper(nn.Module):
         pretrained_model.train()
 
         filename = os.path.join(adapter_model_id, "adapter_model.bin")
-        safe_loading = False
+        # safe_loading = False
         if not os.path.exists(filename):
             try:
                 local_filename = hf_hub_download(
@@ -557,7 +551,7 @@ class PreTrainedModelWrapper(nn.Module):
             except Exception:
                 filename = os.path.join(adapter_model_id,
                                         "adapter_model.safetensors")
-                safe_loading = True
+                # safe_loading = True
                 if not os.path.exists(filename):
                     try:
                         local_filename = hf_hub_download(
@@ -575,12 +569,11 @@ class PreTrainedModelWrapper(nn.Module):
         else:
             local_filename = filename
 
-        #暂不确定loading_func改得对不对，截至目前实现的trainer还没使用到
-        #loading_func = safe_load_file if use_safe else torch.load
+        loading_func = safe_load_file
 
-        load_kwargs = {} if safe_loading else {"map_location": "cpu"}
+        load_kwargs = {}
 
-        # adapter_state_dict = loading_func(local_filename, **load_kwargs)
+        adapter_state_dict = loading_func(local_filename, **load_kwargs)
         adapter_state_dict = load_dataset(local_filename, **load_kwargs)
 
         for score_name_candidate in cls.supported_rm_modules:

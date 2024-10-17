@@ -14,15 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-# pylint: disable=C,R
+# pylint: disable = "missing-function-docstring"
+# pylint: disable = "missing-class-docstring"
+# pylint: disable = "abstract-method"
+# pylint: disable = "redefined-builtin"
+# pylint: disable = "arguments-differ"
 
 import os
 import numpy as np
 import mindspore as ms
-from mindnlp.core import nn
 from huggingface_hub import hf_hub_download
-from huggingface_hub.utils import EntryNotFoundError
-from mindnlp.transformers import CLIPModel,normalize,resize
+
+from ...core import nn
+from ...utils import EntryNotFoundError
+from ...transformers import CLIPModel,normalize,resize
 
 
 def vector_norm(x, ord=2, dim=None, keepdim=False):
@@ -30,10 +35,10 @@ def vector_norm(x, ord=2, dim=None, keepdim=False):
         norm = np.linalg.norm(x, ord=ord)
     else:
         norm = np.linalg.norm(x, ord=ord, axis=dim)
-    
+
     if keepdim:
         norm = np.expand_dims(norm, axis=dim)
-    
+
     return norm
 
 class MLP(nn.Module):
@@ -78,7 +83,10 @@ class AestheticScorer(nn.Module):
 
     def __call__(self, images):
         images = resize(self.target_size)(images)
-        images = self.normalize(images, mean=[0.48145466, 0.4578275, 0.40821073], std=[0.26862954, 0.26130258, 0.27577711])
+        images = self.normalize(
+            images,
+            mean=[0.48145466, 0.4578275, 0.40821073],
+            std=[0.26862954, 0.26130258, 0.27577711])
         embed = self.clip.get_image_features(pixel_values=images)
         # normalize embedding
         embed = embed / vector_norm(embed, dim=-1, keepdim=True)
