@@ -14,11 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-# pylint: disable = "missing-function-docstring"
-# pylint: disable = "missing-class-docstring"
-# pylint: disable = "abstract-method"
-# pylint: disable = "redefined-builtin"
-# pylint: disable = "arguments-differ"
+# pylint: disable = missing-function-docstring
+# pylint: disable = missing-class-docstring
+# pylint: disable = abstract-method
+# pylint: disable = redefined-builtin
+# pylint: disable = arguments-differ
 
 import os
 import numpy as np

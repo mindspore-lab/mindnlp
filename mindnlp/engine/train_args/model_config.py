@@ -1,8 +1,8 @@
 '''general model config'''
 
-# pylint: disable= "line-too-long"
-# pylint: disable= "too-many-instance-attributes"
-# pylint: disable= "missing-function-docstring"
+# pylint: disable= line-too-long
+# pylint: disable= too-many-instance-attributes
+# pylint: disable= missing-function-docstring
 
 from dataclasses import dataclass, field
 from typing import List, Optional

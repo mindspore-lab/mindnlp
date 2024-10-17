@@ -13,9 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ============================================================================'''
 
-# pylint: disable= "line-too-long"
-# pylint: disable= "too-many-instance-attributes"
-# pylint: disable= "missing-class-docstring"
+# pylint: disable= line-too-long
+# pylint: disable= too-many-instance-attributes
+# pylint: disable= missing-class-docstring
 
 import os
 from dataclasses import dataclass

@@ -12,16 +12,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable= "line-too-long"
-# pylint: disable= "too-few-public-methods"
-# pylint: disable= "too-many-instance-attributes"
-# pylint: disable= "too-many-arguments"
-# pylint: disable= "too-many-positional-arguments"
-# pylint: disable= "too-many-locals"
-# pylint: disable= "redefined-builtin"
-# pylint: disable= "broad-exception-caught"
-# pylint: disable= "fixme"
-# pylint: disable= "consider-using-enumerate"
+# pylint: disable= line-too-long
+# pylint: disable= too-few-public-methods
+# pylint: disable= too-many-instance-attributes
+# pylint: disable= too-many-arguments
+# pylint: disable= too-many-positional-arguments
+# pylint: disable= too-many-locals
+# pylint: disable= redefined-builtin
+# pylint: disable= broad-exception-caught
+# pylint: disable= fixme
+# pylint: disable= consider-using-enumerate
 
 import re
 import warnings

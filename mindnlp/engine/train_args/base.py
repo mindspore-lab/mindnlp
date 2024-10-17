@@ -16,20 +16,20 @@
 Training arguments for Trainer.
 """
 
-# pylint: disable= "line-too-long"
-# pylint: disable= "too-many-public-methods"
-# pylint: disable= "attribute-defined-outside-init"
-# pylint: disable= "too-many-positional-arguments"
-# pylint: disable= "too-many-arguments"
-# pylint: disable= "unused-argument"
-# pylint: disable= "unused-variable"
-# pylint: disable= "too-many-statements"
-# pylint: disable= "too-many-branches"
-# pylint: disable= "invalid-name"
-# pylint: disable= "too-many-lines"
-# pylint: disable= "fixme"
-# pylint: disable= "import-outside-toplevel"
-# pylint: disable= "too-many-instance-attributes"
+# pylint: disable= line-too-long
+# pylint: disable= too-many-public-methods
+# pylint: disable= attribute-defined-outside-init
+# pylint: disable= too-many-positional-arguments
+# pylint: disable= too-many-arguments
+# pylint: disable= unused-argument
+# pylint: disable= unused-variable
+# pylint: disable= too-many-statements
+# pylint: disable= too-many-branches
+# pylint: disable= invalid-name
+# pylint: disable= too-many-lines
+# pylint: disable= fixme
+# pylint: disable= import-outside-toplevel
+# pylint: disable= too-many-instance-attributes
 
 
 import contextlib

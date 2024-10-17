@@ -14,8 +14,8 @@ limitations under the License.'''
 
 
 
-# pylint: disable = "line-too-long"
-# pylint: disable = "arguments-differ"
+# pylint: disable = line-too-long
+# pylint: disable = arguments-differ
 
 
 import mindspore as ms

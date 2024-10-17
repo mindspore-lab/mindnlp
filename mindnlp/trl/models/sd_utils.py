@@ -16,8 +16,8 @@ File copied from diffusers to avoid import issues and make TRL compatible
 with most of diffusers versions.
 '''
 
-# pylint: disable = "line-too-long"
-# pylint: disable = "pointless-string-statement"
+# pylint: disable = line-too-long
+# pylint: disable = pointless-string-statement
 
 import enum
 

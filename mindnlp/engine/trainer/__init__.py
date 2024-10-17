@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ============================================================================'''
 
-# pylint: disable= "line-too-long"
+# pylint: disable= line-too-long
 
 from typing import TYPE_CHECKING
 from .base import Trainer

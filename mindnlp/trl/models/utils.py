@@ -20,7 +20,7 @@ Constants:
 
 '''
 
-# pylint: disable = "protected-access"
+# pylint: disable = protected-access
 
 from contextlib import contextmanager
 from dataclasses import dataclass

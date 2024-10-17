@@ -12,24 +12,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable= "line-too-long"
-# pylint: disable= "ungrouped-imports"
-# pylint: disable= "too-many-instance-attributes"
-# pylint: disable= "missing-function-docstring"
-# pylint: disable= "missing-class-docstring"
-# pylint: disable= "too-many-positional-arguments"
-# pylint: disable= "too-many-branches"
-# pylint: disable= "too-many-nested-blocks"
-# pylint: disable= "keyword-arg-before-vararg"
-# pylint: disable= "too-few-public-methods"
-# pylint: disable= "abstract-method"
-# pylint: disable= "too-many-lines"
-# pylint: disable= "too-many-arguments"
-# pylint: disable= "arguments-differ"
-# pylint: disable= "inconsistent-return-statements"
-# pylint: disable= "implicit-str-concat"
-# pylint: disable= "unused-import"
-# pylint: disable= "undefined-variable"
+# pylint: disable= line-too-long
+# pylint: disable= ungrouped-imports
+# pylint: disable= too-many-instance-attributes
+# pylint: disable= missing-function-docstring
+# pylint: disable= missing-class-docstring
+# pylint: disable= too-many-positional-arguments
+# pylint: disable= too-many-branches
+# pylint: disable= too-many-nested-blocks
+# pylint: disable= keyword-arg-before-vararg
+# pylint: disable= too-few-public-methods
+# pylint: disable= abstract-method
+# pylint: disable= too-many-lines
+# pylint: disable= too-many-arguments
+# pylint: disable= arguments-differ
+# pylint: disable= inconsistent-return-statements
+# pylint: disable= implicit-str-concat
+# pylint: disable= unused-import
+# pylint: disable= undefined-variable
 
 
 import random

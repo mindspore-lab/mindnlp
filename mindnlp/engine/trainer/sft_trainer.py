@@ -12,19 +12,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable= "line-too-long"
-# pylint: disable= "unused-import"
-# pylint: disable= "attribute-defined-outside-init"
-# pylint: disable= "undefined-variable"
-# pylint: disable= "unused-variable"
-# pylint: disable= "unused-argument"
-# pylint: disable= "too-many-positional-arguments"
-# pylint: disable= "too-many-arguments"
-# pylint: disable= "too-many-branches"
-# pylint: disable= "too-many-locals"
-# pylint: disable= "too-many-statements"
-# pylint: disable= "missing-class-docstring"
-# pylint: disable= "inconsistent-return-statements"
+# pylint: disable= line-too-long
+# pylint: disable= unused-import
+# pylint: disable= attribute-defined-outside-init
+# pylint: disable= undefined-variable
+# pylint: disable= unused-variable
+# pylint: disable= unused-argument
+# pylint: disable= too-many-positional-arguments
+# pylint: disable= too-many-arguments
+# pylint: disable= too-many-branches
+# pylint: disable= too-many-locals
+# pylint: disable= too-many-statements
+# pylint: disable= missing-class-docstring
+# pylint: disable= inconsistent-return-statements
 
 
 import dataclasses

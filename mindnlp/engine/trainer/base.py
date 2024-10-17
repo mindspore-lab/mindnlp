@@ -18,27 +18,27 @@ limitations under the License.
 ============================================================================'''
 
 #pylint检测有3个error错误(no-member)，来自于Trainer类，不是trl的更新部分，所以没有贸然更改
-## pylint: disable= E
+# pylint: disable= no-member
 
-# pylint: disable= "line-too-long"
-# pylint: disable= "fixme"
-# pylint: disable= "too-many-lines"
-# pylint: disable= "missing-function-docstring"
-# pylint: disable= "too-many-locals"
-# pylint: disable= "too-many-public-methods"
-# pylint: disable= "attribute-defined-outside-init"
-# pylint: disable= "too-many-branches"
-# pylint: disable= "too-many-statements"
-# pylint: disable= "too-many-positional-arguments"
-# pylint: disable= "too-many-arguments"
-# pylint: disable= "unused-argument"
-# pylint: disable= "protected-access"
-# pylint: disable= "unused-variable"
-# pylint: disable= "import-outside-toplevel"
-# pylint: disable= "used-before-assignment"
-# pylint: disable= "expression-not-assigned"
-# pylint: disable= "too-many-instance-attributes"
-# pylint: disable= "invalid-name"
+# pylint: disable= line-too-long
+# pylint: disable= fixme
+# pylint: disable= too-many-lines
+# pylint: disable= missing-function-docstring
+# pylint: disable= too-many-locals
+# pylint: disable= too-many-public-methods
+# pylint: disable= attribute-defined-outside-init
+# pylint: disable= too-many-branches
+# pylint: disable= too-many-statements
+# pylint: disable= too-many-positional-arguments
+# pylint: disable= too-many-arguments
+# pylint: disable= unused-argument
+# pylint: disable= protected-access
+# pylint: disable= unused-variable
+# pylint: disable= import-outside-toplevel
+# pylint: disable= used-before-assignment
+# pylint: disable= expression-not-assigned
+# pylint: disable= too-many-instance-attributes
+# pylint: disable= invalid-name
 
 
 import os

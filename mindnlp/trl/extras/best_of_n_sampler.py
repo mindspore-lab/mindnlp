@@ -12,11 +12,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable = "missing-class-docstring"
-# pylint: disable = "line-too-long"
-# pylint: disable = "too-few-public-methods"
-# pylint: disable = "too-many-arguments"
-# pylint: disable = "too-many-positional-arguments"
+# pylint: disable = missing-class-docstring
+# pylint: disable = line-too-long
+# pylint: disable = too-few-public-methods
+# pylint: disable = too-many-arguments
+# pylint: disable = too-many-positional-arguments
 
 from typing import Any, Callable, List, Optional, Union
 

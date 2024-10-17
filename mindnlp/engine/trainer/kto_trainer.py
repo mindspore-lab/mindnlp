@@ -14,37 +14,37 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable= "line-too-long"
-# pylint: disable= "too-many-public-methods"
-# pylint: disable= "attribute-defined-outside-init"
-# pylint: disable= "too-many-positional-arguments"
-# pylint: disable= "too-many-arguments"
-# pylint: disable= "unused-argument"
-# pylint: disable= "unused-variable"
-# pylint: disable= "unused-import"
-# pylint: disable= "too-many-statements"
-# pylint: disable= "too-many-branches"
-# pylint: disable= "invalid-name"
-# pylint: disable= "too-many-lines"
-# pylint: disable= "fixme"
-# pylint: disable= "import-outside-toplevel"
-# pylint: disable= "too-many-instance-attributes"
-# pylint: disable= "ungrouped-imports"
-# pylint: disable= "arguments-renamed"
-# pylint: disable= "missing-function-docstring"
-# pylint: disable= "self-assigning-variable"
-# pylint: disable= "too-many-locals"
-# pylint: disable= "possibly-used-before-assignment"
-# pylint: disable= "missing-function-docstring"
-# pylint: disable= "pointless-string-statement"
-# pylint: disable= "use-dict-literal"
-# pylint: disable= "redefined-builtin"
-# pylint: disable= "unidiomatic-typecheck"
+# pylint: disable= line-too-long
+# pylint: disable= too-many-public-methods
+# pylint: disable= attribute-defined-outside-init
+# pylint: disable= too-many-positional-arguments
+# pylint: disable= too-many-arguments
+# pylint: disable= unused-argument
+# pylint: disable= unused-variable
+# pylint: disable= unused-import
+# pylint: disable= too-many-statements
+# pylint: disable= too-many-branches
+# pylint: disable= invalid-name
+# pylint: disable= too-many-lines
+# pylint: disable= fixme
+# pylint: disable= import-outside-toplevel
+# pylint: disable= too-many-instance-attributes
+# pylint: disable= ungrouped-imports
+# pylint: disable= arguments-renamed
+# pylint: disable= missing-function-docstring
+# pylint: disable= self-assigning-variable
+# pylint: disable= too-many-locals
+# pylint: disable= possibly-used-before-assignment
+# pylint: disable= missing-function-docstring
+# pylint: disable= pointless-string-statement
+# pylint: disable= use-dict-literal
+# pylint: disable= redefined-builtin
+# pylint: disable= unidiomatic-typecheck
 
 #E,no-member和unexpected-keyword-arg这两项与继承的父类Trainer有关系
-# pylint: disable= "used-before-assignment"
-# pylint: disable= "no-member"
-# pylint: disable= "unexpected-keyword-arg"
+# pylint: disable= used-before-assignment
+# pylint: disable= no-member
+# pylint: disable= unexpected-keyword-arg
 
 
 

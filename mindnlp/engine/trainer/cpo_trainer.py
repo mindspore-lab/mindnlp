@@ -14,21 +14,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable= "line-too-long"
-# pylint: disable= "too-many-locals"
-# pylint: disable= "too-many-statements"
-# pylint: disable= "too-many-branches"
-# pylint: disable= "unused-import"
-# pylint: disable= "too-many-arguments"
-# pylint: disable= "unused-argument"
-# pylint: disable= "superfluous-parens"
-# pylint: disable= "too-many-instance-attributes"
-# pylint: disable= "missing-function-docstring"
-# pylint: disable= "wrong-import-order"
-# pylint: disable= "self-assigning-variable"
-# pylint: disable= "use-dict-literal"
-# pylint: disable= "consider-using-generator"
-# pylint: disable= "too-many-positional-arguments"
+# pylint: disable= line-too-long
+# pylint: disable= too-many-locals
+# pylint: disable= too-many-statements
+# pylint: disable= too-many-branches
+# pylint: disable= unused-import
+# pylint: disable= too-many-arguments
+# pylint: disable= unused-argument
+# pylint: disable= superfluous-parens
+# pylint: disable= too-many-instance-attributes
+# pylint: disable= missing-function-docstring
+# pylint: disable= wrong-import-order
+# pylint: disable= self-assigning-variable
+# pylint: disable= use-dict-literal
+# pylint: disable= consider-using-generator
+# pylint: disable= too-many-positional-arguments
 
 # import inspect
 # import random

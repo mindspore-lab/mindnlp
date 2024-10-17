@@ -13,7 +13,7 @@
 # limitations under the License.
 """
 
-# pylint: disable = "too-few-public-methods"
+# pylint: disable = too-few-public-methods
 
 from typing import Dict, List, Optional, Tuple, Union
 from collections.abc import Mapping

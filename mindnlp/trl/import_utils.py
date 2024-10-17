@@ -12,14 +12,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable = "line-too-long"
-# pylint: disable = "missing-function-docstring"
-# pylint: disable = "too-many-arguments"
-# pylint: disable = "too-many-positional-arguments"
-# pylint: disable = "too-many-instance-attributes"
-# pylint: disable = "import-outside-toplevel"
-# pylint: disable = "invalid-name"
-# pylint: disable = "consider-iterating-dictionary"
+# pylint: disable = line-too-long
+# pylint: disable = missing-function-docstring
+# pylint: disable = too-many-arguments
+# pylint: disable = too-many-positional-arguments
+# pylint: disable = too-many-instance-attributes
+# pylint: disable = import-outside-toplevel
+# pylint: disable = invalid-name
+# pylint: disable = consider-iterating-dictionary
 
 import importlib
 import os
