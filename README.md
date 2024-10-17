@@ -18,6 +18,21 @@
     </a>
 </p>
 
+## Table of Contents
+
+- [News 📢](#news-)
+- [Installation](#installation)
+  - [Install from Pypi](#install-from-pypi)
+  - [Daily build](#daily-build)
+  - [Install from source](#install-from-source)
+  - [Version Compatibility](#version-compatibility)
+- [Introduction](#introduction)
+  - [Major Features](#major-features)
+- [Supported models](#supported-models)
+- [License](#license)
+- [Feedbacks and Contact](#feedbacks-and-contact)
+- [Acknowledgement](#acknowledgement)
+- [Citation](#citation)
 
 ### News 📢
 
