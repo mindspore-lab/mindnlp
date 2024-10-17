@@ -33,7 +33,6 @@ limitations under the License.'''
 # pylint: disable= missing-function-docstring
 # pylint: disable= self-assigning-variable
 # pylint: disable= too-many-locals
-# pylint: disable= possibly-used-before-assignment
 # pylint: disable= missing-function-docstring
 # pylint: disable= pointless-string-statement
 # pylint: disable= use-dict-literal
