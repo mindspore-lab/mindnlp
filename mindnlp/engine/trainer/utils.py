@@ -17,7 +17,6 @@ limitations under the License.'''
 # pylint: disable= too-many-instance-attributes
 # pylint: disable= missing-function-docstring
 # pylint: disable= missing-class-docstring
-# pylint: disable= too-many-positional-arguments
 # pylint: disable= too-many-branches
 # pylint: disable= too-many-nested-blocks
 # pylint: disable= keyword-arg-before-vararg

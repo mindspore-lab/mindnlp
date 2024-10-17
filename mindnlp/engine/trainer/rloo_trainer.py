@@ -12,23 +12,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable= "line-too-long"
-# pylint: disable= "unused-argument"
-# pylint: disable= "unused-variable"
-# pylint: disable= "unused-import"
-# pylint: disable= "too-many-statements"
-# pylint: disable= "too-many-branches"
-# pylint: disable= "too-many-locals"
-# pylint: disable= "missing-function-docstring"
-# pylint: disable= "attribute-defined-outside-init"
-# pylint: disable= "ungrouped-imports"
-# pylint: disable= "arguments-differ"
-# pylint: disable= "too-many-positional-arguments"
-# pylint: disable= "too-many-arguments"
-# pylint: disable= "super-init-not-called"
-# pylint: disable= "too-many-instance-attributes"
-# pylint: disable= "missing-class-docstring"
-
+# pylint: disable= line-too-long
+# pylint: disable= unused-argument
+# pylint: disable= unused-variable
+# pylint: disable= unused-import
+# pylint: disable= too-many-statements
+# pylint: disable= too-many-branches
+# pylint: disable= too-many-locals
+# pylint: disable= missing-function-docstring
+# pylint: disable= attribute-defined-outside-init
+# pylint: disable= ungrouped-imports
+# pylint: disable= arguments-differ
+# pylint: disable= too-many-arguments
+# pylint: disable= super-init-not-called
+# pylint: disable= too-many-instance-attributes
+# pylint: disable= missing-class-docstring
 
 
 import gc

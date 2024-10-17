@@ -16,7 +16,6 @@ limitations under the License.'''
 # pylint: disable = line-too-long
 # pylint: disable = too-few-public-methods
 # pylint: disable = too-many-arguments
-# pylint: disable = too-many-positional-arguments
 
 from typing import Any, Callable, List, Optional, Union
 

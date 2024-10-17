@@ -29,7 +29,6 @@ limitations under the License.
 # pylint: disable= attribute-defined-outside-init
 # pylint: disable= too-many-branches
 # pylint: disable= too-many-statements
-# pylint: disable= too-many-positional-arguments
 # pylint: disable= too-many-arguments
 # pylint: disable= unused-argument
 # pylint: disable= protected-access

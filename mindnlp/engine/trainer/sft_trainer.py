@@ -18,7 +18,6 @@ limitations under the License.'''
 # pylint: disable= undefined-variable
 # pylint: disable= unused-variable
 # pylint: disable= unused-argument
-# pylint: disable= too-many-positional-arguments
 # pylint: disable= too-many-arguments
 # pylint: disable= too-many-branches
 # pylint: disable= too-many-locals

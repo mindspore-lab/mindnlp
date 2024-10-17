@@ -24,7 +24,6 @@ limitations under the License.
 # pylint: disable = too-many-locals
 # pylint: disable = too-many-arguments
 # pylint: disable = too-many-statements
-# pylint: disable = too-many-positional-arguments
 # pylint: disable = ungrouped-imports
 # pylint: disable = broad-exception-caught
 # pylint: disable = too-many-instance-attributes
