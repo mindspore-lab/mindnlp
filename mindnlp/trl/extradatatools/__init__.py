@@ -15,7 +15,7 @@ _import_structure = {
                       "DataCollatorForTokenClassification",
                       "DataCollatorForSeq2Seq",
                       "DataCollatorForLanguageModeling",
-                      ]
+                      ],
 }
 
 if TYPE_CHECKING:

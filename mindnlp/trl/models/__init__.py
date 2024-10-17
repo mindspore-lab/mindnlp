@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.'''
 
-# pylint: disable = "line-too-long"
+# pylint: disable = line-too-long
 
 from typing import TYPE_CHECKING
 
@@ -48,13 +48,13 @@ if TYPE_CHECKING:
             raise OptionalDependencyNotAvailable()
     except OptionalDependencyNotAvailable:
         pass
-    else:
-        from .modeling_sd_base import (
-            DDPOPipelineOutput,
-            DDPOSchedulerOutput,
-            DDPOStableDiffusionPipeline,
-            DefaultDDPOStableDiffusionPipeline,
-        )
+    # else:
+    #     from .modeling_sd_base import (
+    #         DDPOPipelineOutput,
+    #         DDPOSchedulerOutput,
+    #         DDPOStableDiffusionPipeline,
+    #         DefaultDDPOStableDiffusionPipeline,
+    #     )
 else:
     import sys
 
