@@ -16,6 +16,21 @@
 Training arguments for Trainer.
 """
 
+# pylint: disable= line-too-long
+# pylint: disable= too-many-public-methods
+# pylint: disable= attribute-defined-outside-init
+# pylint: disable= too-many-arguments
+# pylint: disable= unused-argument
+# pylint: disable= unused-variable
+# pylint: disable= too-many-statements
+# pylint: disable= too-many-branches
+# pylint: disable= invalid-name
+# pylint: disable= too-many-lines
+# pylint: disable= fixme
+# pylint: disable= import-outside-toplevel
+# pylint: disable= too-many-instance-attributes
+
+
 import contextlib
 # import io
 import json
@@ -30,7 +45,7 @@ from typing import Any, Dict, List, Optional, Union
 
 # from huggingface_hub import get_full_repo_name
 # from packaging import version
-
+import mindspore
 from ..utils import (
     EvaluationStrategy,
     # HubStrategy,
@@ -51,8 +66,6 @@ logger = logging.get_logger(__name__)
 log_levels = logging.get_log_levels_dict().copy()
 trainer_log_levels = {"passive": -1, **log_levels}
 
-if is_mindspore_available():
-    import mindspore
 
 
 def default_logdir() -> str:
@@ -1135,7 +1148,7 @@ class TrainingArguments:
 
         if self.warmup_ratio < 0 or self.warmup_ratio > 1:
             raise ValueError("warmup_ratio must lie in range [0,1]")
-        elif self.warmup_ratio > 0 and self.warmup_steps > 0:
+        if self.warmup_ratio > 0 and self.warmup_steps > 0:
             logger.info(
                 "Both warmup_ratio and warmup_steps given, warmup_steps will override any effect of warmup_ratio"
                 " during training"
@@ -1254,8 +1267,8 @@ class TrainingArguments:
         """
         if self.log_on_each_node:
             return self.local_process_index == 0
-        else:
-            return self.process_index == 0
+
+        return self.process_index == 0
 
     @property
     def should_save(self):
@@ -1264,8 +1277,7 @@ class TrainingArguments:
         """
         if self.save_on_each_node:
             return self.local_process_index == 0
-        else:
-            return self.process_index == 0
+        return self.process_index == 0
 
     def get_process_log_level(self):
         """

@@ -1,23 +1,45 @@
-# coding=utf-8
-# Copyright 2020-present the HuggingFace Inc. team.
-# Copyright 2022 Huawei Technologies Co., Ltd
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ============================================================================
-# pylint: disable=expression-not-assigned
-# pylint: disable=assignment-from-no-return
-# pylint: disable=used-before-assignment
+'''coding=utf-8
+Copyright 2020-present the HuggingFace Inc. team.
+Copyright 2022 Huawei Technologies Co., Ltd
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
 """Trainer class, to easily train a 🤗 Transformers from scratch or finetune it on a new task."""
+============================================================================'''
+
+#pylint检测有3个error错误(no-member)，来自于Trainer类，不是trl的更新部分，所以没有贸然更改
+# pylint: disable= no-member
+
+# pylint: disable= line-too-long
+# pylint: disable= fixme
+# pylint: disable= too-many-lines
+# pylint: disable= missing-function-docstring
+# pylint: disable= too-many-locals
+# pylint: disable= too-many-public-methods
+# pylint: disable= attribute-defined-outside-init
+# pylint: disable= too-many-branches
+# pylint: disable= too-many-statements
+# pylint: disable= too-many-arguments
+# pylint: disable= unused-argument
+# pylint: disable= protected-access
+# pylint: disable= unused-variable
+# pylint: disable= import-outside-toplevel
+# pylint: disable= used-before-assignment
+# pylint: disable= expression-not-assigned
+# pylint: disable= too-many-instance-attributes
+# pylint: disable= invalid-name
+
+
 import os
 import re
 import gc
@@ -37,6 +59,7 @@ import numpy as np
 import mindspore
 from mindspore.dataset import Dataset, BatchDataset, PaddedBatchDataset
 
+
 from mindnlp.core import nn, ops, optim
 from ...core.serialization import safe_load_file, safe_save_file, save, save_checkpoint, load, load_checkpoint
 from ...peft import PeftModel
@@ -50,6 +73,7 @@ from ...transformers.configuration_utils import PretrainedConfig
 from ...transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from ...transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES, MODEL_MAPPING_NAMES
 from ...transformers.ms_utils import ALL_LAYERNORM_LAYERS
+
 
 from ..utils import (
     PREFIX_CHECKPOINT_DIR,
@@ -1452,8 +1476,7 @@ indicating whether to prefer safe tensors.
         """
         if hasattr(self.model, "floating_point_ops"):
             return self.model.floating_point_ops(inputs)
-        else:
-            return 0
+        return 0
 
     def _issue_warnings_after_load(self, load_result):
         r"""Issues warnings after loading a checkpoint model.
@@ -2083,7 +2106,7 @@ indicating whether to prefer safe tensors.
         concatenating them to `gathered`
         """
         if tensors is None:
-            return
+            return 0
         return tensors
 
     def prediction_step(
@@ -2233,8 +2256,6 @@ indicating whether to prefer safe tensors.
 def load_sharded_checkpoint(model, folder, strict=True, prefer_safe=True):
     """
     This is the same as
-    [`torch.nn.Module.load_state_dict`](https://pytorch.org/docs/stable/generated/torch.nn.Module.html?highlight=load_state_dict#torch.nn.Module.load_state_dict)
-    but for a sharded checkpoint.
 
     This load is performed efficiently: each checkpoint shard is loaded one by one in RAM and deleted after being
     loaded in the model.
@@ -2312,3 +2333,35 @@ def load_sharded_checkpoint(model, folder, strict=True, prefer_safe=True):
 
     # Return the same thing as PyTorch load_state_dict function.
     return missing_keys, unexpected_keys
+
+#####for trl/trainer
+
+class BaseTrainer():
+    r"""
+    Base class for all trainers - this base class implements the basic functions that we
+    need for a trainer.
+
+    The trainer needs to have the following functions:
+        - step: takes in a batch of data and performs a step of training
+        - loss: takes in a batch of data and returns the loss
+        - compute_rewards: takes in a batch of data and returns the rewards
+        - _build_models_and_tokenizer: builds the models and tokenizer
+        - _build_dataset: builds the dataset
+    Each user is expected to implement their own trainer class that inherits from this base
+    if they want to use a new training algorithm.
+    """
+
+    def __init__(self, config):
+        self.config = config
+
+    def step(self, *args):
+        raise NotImplementedError("Not implemented")
+
+    def loss(self, *args):
+        raise NotImplementedError("Not implemented")
+
+    def compute_rewards(self, *args):
+        raise NotImplementedError("Not implemented")
+
+    def _save_pretrained(self, save_directory):
+        raise NotImplementedError("Not implemented")

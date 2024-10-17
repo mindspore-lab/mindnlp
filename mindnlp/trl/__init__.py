@@ -1,15 +1,105 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ============================================================================
-"""MindNLP Transformer Reinforcement Learning."""
+'''
+    flake8: noqa
+'''
+__version__ = "0.9.5.dev0"
+
+from typing import TYPE_CHECKING
+from .import_utils import _LazyModule, is_diffusers_available, OptionalDependencyNotAvailable
+
+_import_structure = {
+    "core": [
+        "set_seed",
+    ],
+    "environment": [
+        "TextEnvironment",
+        "TextHistory",
+    ],
+    "extras": [
+        "BestOfNSampler",
+    ],
+    "import_utils": [
+        "is_bitsandbytes_available",
+        "is_diffusers_available",
+        "is_npu_available",
+        "is_peft_available",
+        "is_pil_available",
+        "is_wandb_available",
+        "is_xpu_available",
+    ],
+    "models": [
+        "AutoModelForCausalLMWithValueHead",
+        "AutoModelForSeq2SeqLMWithValueHead",
+        "PreTrainedModelWrapper",
+        "create_reference_model",
+        "setup_chat_format",
+        "SUPPORTED_ARCHITECTURES",
+    ],
+    "commands": [],
+    "commands.cli_utils": ["init_zero_verbose",\
+        "SFTScriptArguments", "DPOScriptArguments", "TrlParser"],
+    "trainer.utils": ["get_kbit_device_map", "get_peft_config",\
+        "get_quantization_config", "RichProgressCallback"],
+    "multitask_prompt_tuning": [
+        "MultitaskPromptEmbedding",
+        "MultitaskPromptTuningConfig",
+        "MultitaskPromptTuningInit",
+    ],
+}
+
+try:
+    if not is_diffusers_available():
+        raise OptionalDependencyNotAvailable()
+except OptionalDependencyNotAvailable:
+    pass
+else:
+    _import_structure["models"].extend(
+        [
+            "DDPOPipelineOutput",
+            "DDPOSchedulerOutput",
+            "DDPOStableDiffusionPipeline",
+            "DefaultDDPOStableDiffusionPipeline",
+        ]
+    )
+    _import_structure["trainer"].extend(["DDPOConfig", "DDPOTrainer"])
+
+if TYPE_CHECKING:
+    from .core import set_seed
+    from .environment import TextEnvironment, TextHistory
+    from .extras import *
+    from .import_utils import *
+    from .models import (
+        AutoModelForCausalLMWithValueHead,
+        AutoModelForSeq2SeqLMWithValueHead,
+        PreTrainedModelWrapper,
+        create_reference_model,
+        setup_chat_format,
+        SUPPORTED_ARCHITECTURES,
+    )
+
+    from .commands.cli_utils import init_zero_verbose, SFTScriptArguments,\
+        DPOScriptArguments, TrlParser
+
+    try:
+        if not is_diffusers_available():
+            raise OptionalDependencyNotAvailable()
+    except OptionalDependencyNotAvailable:
+        pass
+    # else:
+    #     from .models import (
+    #         DDPOPipelineOutput,
+    #         DDPOSchedulerOutput,
+    #         DDPOStableDiffusionPipeline,
+    #         DefaultDDPOStableDiffusionPipeline,
+    #     )
+    #     from .trainer import DDPOConfig, DDPOTrainer
+
+else:
+    import sys
+
+    sys.modules[__name__] = _LazyModule(
+        __name__,
+        globals()["__file__"],
+        _import_structure,
+        module_spec=__spec__,
+        extra_objects={"__version__": __version__},
+    )
