@@ -883,7 +883,7 @@ class MllamaPreTrainedModel(PreTrainedModel):
     _supports_cache_class = True
     _supports_static_cache = False
     # _supports_sdpa = True
-    # _supports_quantized_cache = True
+    _supports_quantized_cache = False
 
     def _init_weights(self, module):
         std = self.config.get_text_config().initializer_range
@@ -1515,6 +1515,8 @@ class MllamaForCausalLM(MllamaPreTrainedModel, GenerationMixin):
 
 
 class MllamaForConditionalGeneration(MllamaPreTrainedModel, GenerationMixin):
+    _supports_quantized_cache = False  # quant cache not supported in encoder-decoder setting
+
     def __init__(self, config: MllamaConfig):
         super().__init__(config)
         self.vocab_size = config.text_config.vocab_size

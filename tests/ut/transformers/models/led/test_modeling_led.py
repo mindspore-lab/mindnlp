@@ -18,9 +18,7 @@ import copy
 import tempfile
 import unittest
 
-import numpy as np
-from mindnlp.transformers import LEDConfig
-from mindnlp.utils import is_mindspore_available, cached_property
+from mindnlp.transformers import LEDConfig, is_mindspore_available
 from mindnlp.transformers.models.auto import get_values
 from mindnlp.utils.testing_utils import (
     require_sentencepiece,
@@ -28,6 +26,7 @@ from mindnlp.utils.testing_utils import (
     require_mindspore,
     slow,
 )
+from mindnlp.utils import cached_property
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
@@ -37,7 +36,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import ops
+    from mindnlp.core import ops, no_grad
 
     from mindnlp.transformers import (
         MODEL_FOR_QUESTION_ANSWERING_MAPPING,
@@ -48,7 +47,6 @@ if is_mindspore_available():
         LEDTokenizer,
     )
     from mindnlp.transformers.models.led.modeling_led import LEDDecoder, LEDEncoder
-
 
 def prepare_led_inputs_dict(
     config,
@@ -182,7 +180,7 @@ class LEDModelTester:
         return config, inputs_dict
 
     def create_and_check_decoder_model_past_large_inputs(self, config, inputs_dict):
-        model = LEDModel(config=config).get_decoder().set_train(False)
+        model = LEDModel(config=config).get_decoder().eval()
         input_ids = inputs_dict["input_ids"]
         attention_mask = inputs_dict["attention_mask"]
         head_mask = inputs_dict["head_mask"]
@@ -213,10 +211,10 @@ class LEDModelTester:
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-2))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-2))
 
     def check_encoder_decoder_model_standalone(self, config, inputs_dict):
-        model = LEDModel(config=config).set_train(False)
+        model = LEDModel(config=config).eval()
         outputs = model(**inputs_dict)
 
         encoder_last_hidden_state = outputs.encoder_last_hidden_state
@@ -250,7 +248,7 @@ class LEDModelTester:
         self.parent.assertTrue((last_hidden_state_2 - last_hidden_state).abs().max().item() < 1e-3)
 
     def check_global_attention(self, config, inputs_dict):
-        model = LEDModel(config=config).set_train(False)
+        model = LEDModel(config=config).eval()
         model.config.output_attentions = True
         attention_mask = ids_tensor(inputs_dict["input_ids"].shape, vocab_size=2)
         global_attention_mask = ops.zeros_like(attention_mask)
@@ -338,14 +336,21 @@ class LEDModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs_for_common()
         self.model_tester.check_global_attention(*config_and_inputs)
 
+    def _get_input_ids_and_config(self, batch_size=2):
+        config, input_ids, attention_mask, inputs_dict = GenerationTesterMixin._get_input_ids_and_config(
+            self, batch_size=batch_size
+        )
+        # LED computes attention scores based on mask indices if `is_global`
+        inputs_dict.pop("global_attention_mask")
+        return config, input_ids, attention_mask, inputs_dict
+
     # LEDForSequenceClassification does not support inputs_embeds
     def test_inputs_embeds(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in (LEDModel, LEDForConditionalGeneration, LEDForQuestionAnswering):
             model = model_class(config)
-            model
-            model.set_train(False)
+            model.eval()
 
             inputs = copy.deepcopy(self._prepare_for_class(inputs_dict, model_class))
 
@@ -365,20 +370,21 @@ class LEDModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
                 inputs["inputs_embeds"] = wte(encoder_input_ids)
                 inputs["decoder_inputs_embeds"] = wte(decoder_input_ids)
 
-            model(**inputs)[0]
+            with no_grad():
+                model(**inputs)[0]
 
     @require_mindspore
     def test_generate_fp16(self):
         config, input_dict = self.model_tester.prepare_config_and_inputs()
         input_ids = input_dict["input_ids"]
         attention_mask = input_ids.ne(1)
-        model = LEDForConditionalGeneration(config).set_train(False)
+        model = LEDForConditionalGeneration(config).eval()
         model.half()
         model.generate(input_ids, attention_mask=attention_mask)
         model.generate(num_beams=4, do_sample=True, early_stopping=False, num_return_sequences=3)
 
+    @unittest.skip(reason="Longformer cannot keep gradients in attentions or hidden states")
     def test_retain_grad_hidden_states_attentions(self):
-        # longformer cannot keep gradients in attentions or hidden states
         return
 
     def test_attention_outputs(self):
@@ -394,8 +400,9 @@ class LEDModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             inputs_dict["output_hidden_states"] = False
             config.return_dict = True
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.encoder_attentions
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -403,8 +410,9 @@ class LEDModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             del inputs_dict["output_attentions"]
             config.output_attentions = True
             model = model_class(config)
-            model.set_train(False)
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            model.eval()
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.encoder_attentions
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
 
@@ -470,7 +478,7 @@ def assert_tensors_close(a, b, atol=1e-12, prefix=""):
     if a is None and b is None:
         return True
     try:
-        if np.allclose(a, b, atol=atol):
+        if ops.allclose(a, b, atol=atol):
             return True
         raise
     except Exception:
@@ -514,14 +522,15 @@ class LEDModelIntegrationTests(unittest.TestCase):
         input_ids = _long_tensor([512 * [0, 31414, 232, 328, 740, 1140, 12695, 69]])
         decoder_input_ids = _long_tensor([128 * [0, 31414, 232, 328, 740, 1140, 12695, 69]])
         inputs_dict = prepare_led_inputs_dict(model.config, input_ids, decoder_input_ids)
-        output = model(**inputs_dict).last_hidden_state
+        with no_grad():
+            output = model(**inputs_dict).last_hidden_state
         expected_shape = (1, 1024, 768)
         self.assertEqual(output.shape, expected_shape)
         # change to expected output here
         expected_slice = mindspore.tensor(
             [[2.3050, 2.8279, 0.6531], [-1.8457, -0.1455, -3.5661], [-1.0186, 0.4586, -2.2043]]
         )
-        self.assertTrue(np.allclose(output[:, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=TOLERANCE))
+        self.assertTrue(ops.allclose(output[:, :3, :3], expected_slice, atol=TOLERANCE))
 
     def test_inference_head(self):
         model = LEDForConditionalGeneration.from_pretrained("allenai/led-base-16384")
@@ -530,14 +539,15 @@ class LEDModelIntegrationTests(unittest.TestCase):
         input_ids = _long_tensor([512 * [0, 31414, 232, 328, 740, 1140, 12695, 69]])
         decoder_input_ids = _long_tensor([128 * [0, 31414, 232, 328, 740, 1140, 12695, 69]])
         inputs_dict = prepare_led_inputs_dict(model.config, input_ids, decoder_input_ids)
-        output = model(**inputs_dict, use_cache=False).logits
+        with no_grad():
+            output = model(**inputs_dict, use_cache=False).logits
         expected_shape = (1, 1024, model.config.vocab_size)
         self.assertEqual(output.shape, expected_shape)
         # change to expected output here
         expected_slice = mindspore.tensor(
             [[33.6507, 6.4572, 16.8089], [5.8739, -2.4238, 11.2902], [-3.2139, -4.3149, 4.2783]]
         )
-        self.assertTrue(np.allclose(output[:, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=TOLERANCE))
+        self.assertTrue(ops.allclose(output[:, :3, :3], expected_slice, atol=TOLERANCE))
 
     def test_seq_to_seq_generation(self):
         # this test requires 16GB of RAM
@@ -553,7 +563,7 @@ class LEDModelIntegrationTests(unittest.TestCase):
             max_length=6144,
             padding="max_length",
             truncation=True,
-            return_tensors="ms",
+            return_tensors="pt",
         )
 
         hypotheses_batch = hf.generate(

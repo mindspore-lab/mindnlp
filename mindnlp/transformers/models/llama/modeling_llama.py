@@ -912,7 +912,8 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             position_ids = ops.masked_fill(position_ids, attention_mask == 0, 1)
             if past_key_values:
                 # position_ids = position_ids[:, -input_ids.shape[1] :]
-                position_ids = ops.narrow(position_ids, 1, position_ids.shape[1] - input_ids.shape[1], input_ids.shape[1])
+                if input_ids.shape[1] != 0:
+                    position_ids = ops.narrow(position_ids, 1, position_ids.shape[1] - input_ids.shape[1], input_ids.shape[1])
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
         if inputs_embeds is not None and cache_position[0] == 0:
             model_inputs = {"inputs_embeds": inputs_embeds}
