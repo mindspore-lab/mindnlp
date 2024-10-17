@@ -21,3 +21,12 @@ The answer is 33.
 
 Question: Olivia has $23. She bought five bagels for $3 each. How much money does she have left?
 The answer is 8.
+
+Question: Emily had 18 cupcakes. She baked 12 more. After giving away 7 to her friends, how many cupcakes does she have left?
+The answer is 23.
+
+Question: A farmer had 45 apples. He sold 18 apples and then picked 30 more from his orchard. How many apples does the farmer have now?
+The answer is 57.
+
+Question: Sarah has 10 pencils. She gave 3 pencils to each of her 2 friends. How many pencils does she have now?
+The answer is 4.
