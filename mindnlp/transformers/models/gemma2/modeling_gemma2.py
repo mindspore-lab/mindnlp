@@ -16,7 +16,7 @@
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn,ops
+from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import functional as F
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from ....amp import autocast
@@ -118,7 +118,7 @@ class Gemma2RotaryEmbedding(nn.Module):
         inv_freq = 1.0 / (self.base ** (ops.arange(0, self.dim, 2, dtype=mindspore.int64).float() / self.dim))
         self.register_buffer("inv_freq", tensor=inv_freq, persistent=False)
 
-    @mindspore._no_grad()
+    @no_grad()
     def forward(self, x, position_ids, seq_len=None):
         inv_freq_expanded = self.inv_freq[None, :, None].float().broadcast_to((position_ids.shape[0], -1, 1))
         position_ids_expanded = position_ids[:, None, :].float()

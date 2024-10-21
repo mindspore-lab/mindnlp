@@ -24,7 +24,7 @@ import numpy as np
 import mindspore
 from mindspore import Tensor
 
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import (
     ModelOutput,
@@ -686,7 +686,7 @@ class VideoMAEForPreTraining(VideoMAEPreTrainedModel):
         logits = decoder_outputs.logits
 
         loss = None
-        with mindspore._no_grad():
+        with no_grad():
             # calculate the labels to be predicted
             if self.config.num_channels != 3:
                 # Can't unnormalize with default means/stds

@@ -17,7 +17,7 @@ import math
 from typing import Any, Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, StaticCache
@@ -100,7 +100,7 @@ class DbrxRotaryEmbedding(nn.Module):
         )
         self.register_buffer("inv_freq", tensor=inv_freq, persistent=False)
 
-    @mindspore._no_grad()
+    @no_grad()
     def forward(self, x, position_ids, seq_len=None):
         # x: [bs, num_attention_heads, seq_len, head_size]
         inv_freq_expanded = (
