@@ -23,7 +23,7 @@ import mindspore
 import numpy as np
 
 import mindnlp.core.nn.functional as F
-from mindnlp.core import ops
+from mindnlp.core import ops, no_grad
 from mindnlp.utils import logging
 from .configuration_rag import RagConfig
 from .retrieval_rag import RagRetriever
@@ -731,7 +731,7 @@ class RagSequenceForGeneration(RagPreTrainedModel):
     def question_encoder(self):
         return self.rag.question_encoder
 
-    @mindspore._no_grad()
+    @no_grad()
     def generate(
             self,
             input_ids: Optional[mindspore.Tensor] = None,
@@ -1162,7 +1162,7 @@ class RagTokenForGeneration(RagPreTrainedModel):
             generator_cross_attentions=outputs.generator_cross_attentions,
         )
 
-    @mindspore._no_grad()
+    @no_grad()
     def generate(
             self,
             input_ids: Optional[mindspore.Tensor] = None,

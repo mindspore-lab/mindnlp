@@ -42,7 +42,6 @@ if is_mindspore_available():
         GPTJModel,
     )
 
-mindspore.set_context(pynative_synchronize=True)
 class GPTJModelTester:
     def __init__(
         self,

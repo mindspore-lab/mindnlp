@@ -39,7 +39,6 @@ from ...test_modeling_common import (
 if is_mindspore_available():
     import mindspore
 
-    mindspore.set_context(pynative_synchronize=True)
     from mindnlp.core import ops, no_grad
 
     from mindnlp.transformers import (

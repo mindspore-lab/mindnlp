@@ -43,7 +43,6 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_
 if is_mindspore_available():
     import mindspore
 
-    # mindspore.set_context(pynative_synchronize=True)
     from mindnlp.core import nn, ops
 
     from mindnlp.transformers import Speech2TextForConditionalGeneration, Speech2TextModel, Speech2TextProcessor

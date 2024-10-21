@@ -26,8 +26,6 @@ from ...test_tokenization_common import TokenizerTesterMixin
 SAMPLE_VOCAB = get_tests_dir("fixtures/test_sentencepiece.model")
 
 import sentencepiece as sp
-import mindspore
-mindspore.set_context(pynative_synchronize=True)
 
 FR_CODE = 5
 ES_CODE = 10

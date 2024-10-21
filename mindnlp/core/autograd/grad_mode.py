@@ -13,7 +13,6 @@
 # limitations under the License.
 # ============================================================================
 """core module"""
-import mindspore
 from mindspore.common.api import _pynative_executor
 from mindnlp.core.utils._contextlib import _NoParamDecoratorContextManager
 
@@ -43,9 +42,8 @@ class enable_grad(_NoParamDecoratorContextManager):
     """
 
     def __enter__(self):
-        if mindspore.get_context("mode") == mindspore.GRAPH_MODE:
-            raise RuntimeError("For no_grad feature, currently only support Pynative mode, but got Graph mode.")
+        self.prev_state = _pynative_executor.enable_grad()
         _pynative_executor.set_enable_grad(True)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        _pynative_executor.set_enable_grad(False)
+        _pynative_executor.set_enable_grad(self.prev_state)
