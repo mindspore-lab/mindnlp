@@ -13,16 +13,19 @@
 # limitations under the License.
 # ============================================================================
 """core module"""
-import contextlib
 import mindspore
 from mindspore.common.api import _pynative_executor
+from mindnlp.core.utils._contextlib import _NoParamDecoratorContextManager
 
-class no_grad(contextlib.ContextDecorator):
+class no_grad(_NoParamDecoratorContextManager):
     """
     Context Manager to disable gradient calculation. When enter this context, we will disable calculate
     gradient. When exit this context, we will resume its prev state.
     Currently, it can only use in Pynative mode. It also can be used as decorator.
     """
+    def __init__(self) -> None:
+        super().__init__()
+        self.prev_state = False
 
     def __enter__(self):
         self.prev_state = _pynative_executor.enable_grad()
@@ -30,9 +33,9 @@ class no_grad(contextlib.ContextDecorator):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         _pynative_executor.set_enable_grad(self.prev_state)
-        return False
 
-class enable_grad(contextlib.ContextDecorator):
+
+class enable_grad(_NoParamDecoratorContextManager):
     """
     Context Manager to disable gradient calculation. When enter this context, we will disable calculate
     gradient. When exit this context, we will resume its prev state.
@@ -46,4 +49,3 @@ class enable_grad(contextlib.ContextDecorator):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         _pynative_executor.set_enable_grad(False)
-        return False
