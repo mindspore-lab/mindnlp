@@ -34,7 +34,7 @@
 - [Acknowledgement](#acknowledgement)
 - [Citation](#citation)
 
-### News 📢
+## News 📢
 
 * 🔥 **Latest Features**
 
@@ -54,7 +54,7 @@
   * **Extensive LLM Application Updates**: Includes `Text information extraction`, `Chatbots`, `Speech recognition`, `ChatPDF`, `Music generation`, `Code generation`, `Voice clone`, etc. With increased model support, even more exciting applications await development!
 
 
-### Installation
+## Installation
 
 #### Install from Pypi
 
@@ -90,7 +90,7 @@ bash scripts/build_and_reinstall.sh
 | 0.3.x           | >=2.1.0, <=2.3.1  | >=3.8, <=3.9             |
 | 0.4.x           | >=2.2.x           | >=3.9, <=3.11            |
 
-### Introduction
+## Introduction
 
 MindNLP is an open source NLP library based on MindSpore. It supports a platform for solving natural language processing tasks, containing many common approaches in NLP. It can help researchers and developers to construct and train models more conveniently and rapidly.
 
@@ -103,7 +103,7 @@ The master branch works with **MindSpore master**.
 - **Easy-to-use engine**: MindNLP simplified the complicated training process in MindSpore. It supports Trainer and Evaluator interfaces to train and evaluate models easily.
 
 
-### Supported models
+## Supported models
 
 Since there are too many supported models, please check [here](https://mindnlp.cqu.ai/supported_models)
 
@@ -113,22 +113,22 @@ Since there are too many supported models, please check [here](https://mindnlp.c
 
 <!-- ## Notes -->
 
-### License
+## License
 
 This project is released under the [Apache 2.0 license](LICENSE).
 
-### Feedbacks and Contact
+## Feedbacks and Contact
 
 The dynamic version is still under development, if you find any issue or have an idea on new features, please don't hesitate to contact us via [Github Issues](https://github.com/mindspore-lab/mindnlp/issues).
 
-### Acknowledgement
+## Acknowledgement
 
 MindSpore is an open source project that welcomes any contribution and feedback.  
 We wish that the toolbox and benchmark could serve the growing research  
 community by providing a flexible as well as standardized toolkit to re-implement existing methods  
 and develop their own new semantic segmentation methods.
 
-### Citation
+## Citation
 
 If you find this project useful in your research, please consider citing:
 
