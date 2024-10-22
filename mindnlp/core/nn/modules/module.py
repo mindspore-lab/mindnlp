@@ -572,6 +572,9 @@ class Module:
                         d.discard(name)
 
         params = self.__dict__.get('_parameters')
+
+        if isinstance(value, StubTensor):
+            value = value.stub_sync()
         if isinstance(value, Parameter):
             if params is None:
                 raise AttributeError(
