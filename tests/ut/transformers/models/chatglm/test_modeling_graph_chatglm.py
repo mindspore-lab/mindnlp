@@ -49,11 +49,6 @@ def get_model_and_tokenizer():
 
 @require_mindspore
 class ChatGLMGenerationTest(unittest.TestCase):
-    def setUp(self):
-        mindspore.set_context(mode=mindspore.GRAPH_MODE,
-                              jit_syntax_level=mindspore.LAX)#, save_graphs=True, save_graphs_path="./graph")
-
-    
     def get_generation_kwargs(self):
         pass
 
