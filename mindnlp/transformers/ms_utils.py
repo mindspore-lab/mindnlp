@@ -18,11 +18,10 @@ import inspect
 from typing import Union, Optional, List, Tuple
 
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.core import ops
 
-from mindnlp.core import nn
+from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 
 ALL_LAYERNORM_LAYERS = [nn.LayerNorm]
 
@@ -100,10 +99,10 @@ def prune_conv1d_layer(layer, index, dim=1):
     new_size[dim] = len(index)
     new_layer = Conv1D(new_size[1], new_size[0])
     new_layer.weight.requires_grad = False
-    new_layer.weight.set_data(gama_l)
+    new_layer.weight.assign_value(gama_l)
     new_layer.weight.requires_grad = True
     new_layer.bias.requires_grad = False
-    new_layer.bias.set_data(beta_l)
+    new_layer.bias.assign_value(beta_l)
     new_layer.bias.requires_grad = True
     return new_layer
 
@@ -154,11 +153,11 @@ def prune_linear_layer(layer, index, dim=0):
     new_size[dim] = len(index)
     new_layer = nn.Linear(new_size[1], new_size[0], bias=layer.bias is not None)
     new_layer.weight.requires_grad = False
-    new_layer.weight.set_data(W)
+    new_layer.weight.assign_value(W)
     new_layer.weight.requires_grad = True
     if layer.bias is not None:
         new_layer.bias.requires_grad = False
-        new_layer.bias.set_data(b)
+        new_layer.bias.assign_value(b)
         new_layer.bias.requires_grad = True
     return new_layer
 
@@ -211,7 +210,7 @@ def apply_chunking_to_forward(forward_fn, chunk_size, chunk_axis, *input_tensors
         num_chunks = input_tensors[0].shape[chunk_axis] // chunk_size
 
         # chunk input tensor into tuples
-        input_tensors_chunks = tuple(input_tensor.chunk(num_chunks, axis=chunk_axis) for input_tensor in input_tensors)
+        input_tensors_chunks = tuple(ops.chunk(input_tensor, num_chunks, dim=chunk_axis) for input_tensor in input_tensors)
         # apply forward fn to every tuple
         output_chunks = tuple(forward_fn(*input_tensors_chunk) for input_tensors_chunk in zip(*input_tensors_chunks))
         # concatenate output at same dimension
@@ -243,3 +242,17 @@ def meshgrid(
     Reference: https://pytorch.org/docs/1.13/generated/torch.meshgrid.html
     """
     return ops.meshgrid(*tensors, indexing=indexing)
+
+def isin_friendly(elements: mindspore.Tensor, test_elements: mindspore.Tensor) -> mindspore.Tensor:
+    """
+    Same as `ops.isin` without flags, but MPS-friendly.
+
+    Args:
+        elements (`mindspore.Tensor`): Input elements
+        test_elements (`mindspore.Tensor`): The elements to check against.
+
+    Returns:
+        `mindspore.Tensor`: A boolean tensor of the same shape as `elements` that is True for `elements` in `test_elements`
+        and False otherwise
+    """
+    return elements.tile((test_elements.shape[0], 1)).eq(test_elements.unsqueeze(1)).sum(0).bool().squeeze()

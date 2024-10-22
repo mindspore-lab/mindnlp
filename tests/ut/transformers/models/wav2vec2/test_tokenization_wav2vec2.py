@@ -1,4 +1,3 @@
-
 # coding=utf-8
 # Copyright 2021 The HuggingFace Team. All rights reserved.
 #
@@ -13,12 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=line-too-long
-# pylint: disable=unused-argument
-# pylint: disable=unspecified-encoding
-""" Testing suite for the Mindspore Wav2Vec2 tokenizer. """
+"""Tests for the Wav2Vec2 tokenizer."""
 
 import inspect
 import json
@@ -32,7 +26,6 @@ import numpy as np
 
 from tokenizers import AddedToken
 from mindnlp.transformers import (
-    WAV_2_VEC_2_PRETRAINED_MODEL_ARCHIVE_LIST,
     Wav2Vec2Config,
     Wav2Vec2CTCTokenizer,
     Wav2Vec2Tokenizer,
@@ -53,7 +46,7 @@ def floats_list(shape, scale=1.0, rng=None, name=None):
         rng = global_rng
 
     values = []
-    for _ in range(shape[0]):
+    for batch_idx in range(shape[0]):
         values.append([])
         for _ in range(shape[1]):
             values[-1].append(rng.random() * scale)
@@ -152,8 +145,10 @@ class Wav2Vec2TokenizerTest(unittest.TestCase):
             [24, 22, 5, tokenizer.word_delimiter_token_id, 24, 22, 5, 77, tokenizer.pad_token_id, 34, 34],
         ]
         batch_tokens = tokenizer.batch_decode(sample_ids)
+        batch_tokens_2 = tokenizer.batch_decode(sample_ids, skip_special_tokens=True)
 
-        self.assertEqual(batch_tokens, ["HELLO<unk>!?!?$$$", "BYE BYE<unk>$$$"])
+        self.assertEqual(batch_tokens, ["HELLO<unk>!? !?$$$", "BYE BYE<unk>$$$"])
+        self.assertEqual(batch_tokens_2, ["HELO!? !?", "BYE BYE"])
 
     def test_call(self):
         # Tests that all call wrap to encode_plus and batch_encode_plus
@@ -181,7 +176,7 @@ class Wav2Vec2TokenizerTest(unittest.TestCase):
         for enc_seq_1, enc_seq_2 in zip(encoded_sequences_1, encoded_sequences_2):
             self.assertTrue(np.allclose(enc_seq_1, enc_seq_2, atol=1e-3))
 
-    def test_padding(self, max_length=50):  # pylint: disable=unused-argument
+    def test_padding(self, max_length=50):
         def _input_values_have_equal_length(input_values):
             length = len(input_values[0])
             for input_values_slice in input_values[1:]:
@@ -364,16 +359,17 @@ class Wav2Vec2TokenizerTest(unittest.TestCase):
         # this test makes sure that models that are using
         # group norm don't have their tokenizer return the
         # attention_mask
-        for model_id in WAV_2_VEC_2_PRETRAINED_MODEL_ARCHIVE_LIST:
-            config = Wav2Vec2Config.from_pretrained(model_id)
-            tokenizer = Wav2Vec2Tokenizer.from_pretrained(model_id)
+        model_id = "facebook/wav2vec2-base-960h"
+        config = Wav2Vec2Config.from_pretrained(model_id)
+        tokenizer = Wav2Vec2Tokenizer.from_pretrained(model_id)
 
-            # only "layer" feature extraction norm should make use of
-            # attention_mask
-            self.assertEqual(tokenizer.return_attention_mask, config.feat_extract_norm == "layer")
+        # only "layer" feature extraction norm should make use of
+        # attention_mask
+        self.assertEqual(tokenizer.return_attention_mask, config.feat_extract_norm == "layer")
 
 
 class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
+    from_pretrained_id = "facebook/wav2vec2-base-960h"
     tokenizer_class = Wav2Vec2CTCTokenizer
     test_rust_tokenizer = False
 
@@ -459,18 +455,20 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
 
     def test_tokenizer_decode_added_tokens(self):
         tokenizer = self.tokenizer_class.from_pretrained("facebook/wav2vec2-base-960h")
-        tokenizer.add_tokens(["!", "?"])
+        tokenizer.add_tokens(["!", "?", "<new_tokens>"])
         tokenizer.add_special_tokens({"cls_token": "$$$"})
 
         # fmt: off
         sample_ids = [
-            [11, 5, 15, tokenizer.pad_token_id, 15, 8, 98, 32, 32, 33, tokenizer.word_delimiter_token_id, 32, 32, 33, 34, 34],
-            [24, 22, 5, tokenizer.word_delimiter_token_id, 24, 22, 5, 77, tokenizer.pad_token_id, 34, 34],
+            [11, 5, 15, tokenizer.pad_token_id, 15, 8, 98, 32, 32, 33, tokenizer.word_delimiter_token_id, 32, 32, 33, 34, 34, 35, 35],
+            [24, 22, 5, tokenizer.word_delimiter_token_id, 24, 22, 5, 77, tokenizer.pad_token_id, 34, 34, 35, 35],
         ]
         # fmt: on
         batch_tokens = tokenizer.batch_decode(sample_ids)
+        batch_tokens_2 = tokenizer.batch_decode(sample_ids, skip_special_tokens=True)
 
-        self.assertEqual(batch_tokens, ["HELLO<unk>!?!?$$$", "BYE BYE<unk>$$$"])
+        self.assertEqual(batch_tokens, ["HELLO<unk>!? !?<new_tokens>$$$", "BYE BYE<unk><new_tokens>$$$"])
+        self.assertEqual(batch_tokens_2, ["HELO!? !?<new_tokens>", "BYE BYE<new_tokens>"])
 
     def test_special_characters_in_vocab(self):
         sent = "ʈʰ æ æ̃ ˧ kʰ"
@@ -609,7 +607,7 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
 
             def recursive_check(list_or_dict_1, list_or_dict_2):
                 if isinstance(list_or_dict_1, list):
-                    _ = [recursive_check(l1, l2) for l1, l2 in zip(list_or_dict_1, list_or_dict_2)]
+                    [recursive_check(l1, l2) for l1, l2 in zip(list_or_dict_1, list_or_dict_2)]
                 self.assertEqual(list_or_dict_1, list_or_dict_2)
 
             if "char_offsets" in outputs_batch:
@@ -661,7 +659,7 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
         #
         #        input_values = feature_extractor(sample["audio"]["array"], return_tensors="pt").input_values
         #        logits = model(input_values).logits
-        #        pred_ids = F.argmax(logits, axis=-1).cpu().tolist()
+        #        pred_ids = torch.argmax(logits, axis=-1).cpu().tolist()
         # ```
         # fmt: off
         pred_ids = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 11, 0, 0, 0, 22, 0, 0, 4, 4, 4, 14, 0, 0, 0, 0, 0, 8, 8, 0, 5, 5, 0, 12, 0, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 17, 0, 0, 10, 0, 0, 0, 15, 0, 0, 10, 0, 0, 0, 12, 0, 0, 0, 0, 0, 7, 0, 9, 0, 0, 14, 0, 0, 0, 13, 0, 7, 0, 0, 4, 4, 0, 15, 8, 8, 0, 0, 8, 0, 26, 0, 0, 4, 4, 0, 0, 15, 0, 0, 0, 0, 0, 0, 10, 0, 26, 5, 5, 0, 4, 4, 0, 0, 12, 11, 0, 0, 5, 4, 4, 4, 0, 18, 0, 0, 0, 7, 9, 9, 0, 6, 0, 12, 12, 4, 4, 0, 6, 0, 0, 8, 0, 4, 4, 4, 0, 19, 0, 0, 8, 9, 9, 0, 0, 0, 0, 12, 12, 0, 0, 0, 0, 0, 0, 0, 16, 16, 0, 0, 17, 5, 5, 5, 0, 4, 4, 4, 0, 0, 29, 29, 0, 0, 0, 0, 8, 11, 0, 9, 9, 0, 0, 0, 4, 4, 0, 12, 12, 0, 0, 0, 9, 0, 0, 0, 0, 0, 8, 18, 0, 0, 0, 4, 4, 0, 0, 8, 9, 0, 4, 4, 0, 6, 11, 5, 0, 4, 4, 0, 13, 13, 0, 0, 0, 10, 0, 0, 25, 0, 0, 6, 0, 4, 4, 0, 0, 0, 0, 7, 0, 0, 23, 0, 0, 4, 4, 0, 0, 0, 6, 11, 0, 5, 4, 4, 18, 0, 0, 0, 0, 0, 0, 7, 15, 0, 0, 0, 15, 15, 0, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
@@ -697,7 +695,7 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
         word_time_stamps_end = [round(w * time_offset_wav2vec2_base, 2) for w in word_offsets_end]
 
         # NOTE: you can verify the above results by checking out the dataset viewer
-        # on https://hf-mirror.com/datasets/common_voice/viewer/en/train and
+        # on https://huggingface.co/datasets/common_voice/viewer/en/train and
         # downloading / playing the sample `common_voice_en_100038.mp3`. As
         # you can hear the time-stamps match more or less
 
@@ -708,10 +706,6 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
         self.assertListEqual(expected_word_time_stamps_text, word_offsets_text)
         self.assertListEqual(expected_word_time_stamps_start, word_time_stamps_start)
         self.assertListEqual(expected_word_time_stamps_end, word_time_stamps_end)
-
-    def test_pretrained_model_lists(self):
-        # Wav2Vec2Model has no max model length => no testing
-        pass
 
     # overwrite from test_tokenization_common
     def test_add_tokens_tokenizer(self):
@@ -768,11 +762,11 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
                 self.assertEqual(tokens[0], tokenizer.eos_token_id)
                 self.assertEqual(tokens[-3], tokenizer.pad_token_id)
 
-    @unittest.skip("The tokenizer shouldn't be used to encode input IDs (except for labels), only to decode.")
+    @unittest.skip(reason="The tokenizer shouldn't be used to encode input IDs (except for labels), only to decode.")
     def test_tf_encode_plus_sent_to_model(self):
         pass
 
-    @unittest.skip("The tokenizer shouldn't be used to encode input IDs (except for labels), only to decode.")
+    @unittest.skip(reason="The tokenizer shouldn't be used to encode input IDs (except for labels), only to decode.")
     def test_torch_encode_plus_sent_to_model(self):
         pass
 

@@ -21,8 +21,7 @@ from typing import Any, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore.common.initializer import initializer, Normal
-from mindspore import Parameter
+from mindnlp.core.nn import Parameter
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
@@ -749,48 +748,38 @@ class GroupViTPreTrainedModel(PreTrainedModel):
     base_model_prefix = "groupvit"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
 
         init_range = self.config.initializer_range
-        if isinstance(cell, (nn.Linear, nn.Conv2d)):
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(init_range),
-                                    cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            nn.init.normal_(module.weight.data, mean=0.0, std=init_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
 
         factor = self.config.initializer_factor
-        if isinstance(cell, GroupViTTextEmbeddings):
-            cell.token_embedding.weight.set_data(initializer(Normal(factor * 0.02),
-                                                 cell.token_embedding.weight.shape, cell.token_embedding.weight.dtype))
-            cell.position_embedding.weight.set_data(initializer(Normal(factor * 0.02),
-                                        cell.position_embedding.weight.shape, cell.position_embedding.weight.dtype))
-        elif isinstance(cell, GroupViTAttention):
+        if isinstance(module, GroupViTTextEmbeddings):
+            nn.init.normal_(module.token_embedding.weight.data, mean=0.0, std=factor * 0.02)
+            nn.init.normal_(module.position_embedding.weight.data, mean=0.0, std=factor * 0.02)
+        elif isinstance(module, GroupViTAttention):
             factor = self.config.initializer_factor
-            in_proj_std = (cell.embed_dim**-0.5) * ((2 * cell.config.num_hidden_layers) ** -0.5) * factor
-            out_proj_std = (cell.embed_dim**-0.5) * factor
-            cell.q_proj.weight.set_data(initializer(Normal(in_proj_std),
-                                        cell.q_proj.weight.shape, cell.q_proj.weight.dtype))
-            cell.k_proj.weight.set_data(initializer(Normal(in_proj_std),
-                                        cell.k_proj.weight.shape, cell.k_proj.weight.dtype))
-            cell.v_proj.weight.set_data(initializer(Normal(in_proj_std),
-                                        cell.v_proj.weight.shape, cell.v_proj.weight.dtype))
-            cell.out_proj.weight.set_data(initializer(Normal(out_proj_std),
-                                        cell.out_proj.weight.shape, cell.out_proj.weight.dtype))
-
-        elif isinstance(cell, GroupViTMLP):
+            in_proj_std = (module.embed_dim**-0.5) * ((2 * module.config.num_hidden_layers) ** -0.5) * factor
+            out_proj_std = (module.embed_dim**-0.5) * factor
+            nn.init.normal_(module.q_proj.weight, std=in_proj_std)
+            nn.init.normal_(module.k_proj.weight, std=in_proj_std)
+            nn.init.normal_(module.v_proj.weight, std=in_proj_std)
+            nn.init.normal_(module.out_proj.weight, std=out_proj_std)
+        elif isinstance(module, GroupViTMLP):
             factor = self.config.initializer_factor
-            in_proj_std = (cell.config.hidden_size**-0.5) * ((2 * cell.config.num_hidden_layers) ** -0.5) * factor
-            fc_std = (2 * cell.config.hidden_size) ** -0.5 * factor
-            cell.fc1.weight.set_data(initializer(Normal(fc_std),
-                                    cell.fc1.weight.shape, cell.fc1.weight.dtype))
-            cell.fc2.weight.set_data(initializer(Normal(in_proj_std),
-                                    cell.fc2.weight.shape, cell.fc2.weight.dtype))
+            in_proj_std = (module.config.hidden_size**-0.5) * ((2 * module.config.num_hidden_layers) ** -0.5) * factor
+            fc_std = (2 * module.config.hidden_size) ** -0.5 * factor
+            nn.init.normal_(module.fc1.weight, std=fc_std)
+            nn.init.normal_(module.fc2.weight, std=in_proj_std)
 
 class GroupViTVisionEncoder(nn.Module):
     def __init__(self, config: GroupViTVisionConfig) -> None:
@@ -1079,7 +1068,7 @@ class GroupViTTextModel(GroupViTPreTrainedModel):
             >>> tokenizer = CLIPTokenizer.from_pretrained("nvidia/groupvit-gcc-yfcc")
             >>> model = GroupViTTextModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
             ...
-            >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+            >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
             ...
             >>> outputs = model(**inputs)
             >>> last_hidden_state = outputs.last_hidden_state
@@ -1189,7 +1178,7 @@ class GroupViTVisionModel(GroupViTPreTrainedModel):
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
-            >>> inputs = processor(images=image, return_tensors="pt")
+            >>> inputs = processor(images=image, return_tensors="ms")
             ...
             >>> outputs = model(**inputs)
             >>> last_hidden_state = outputs.last_hidden_state
@@ -1245,7 +1234,7 @@ class GroupViTModel(GroupViTPreTrainedModel):
             nn.ReLU(),
             nn.Linear(self.projection_intermediate_dim, self.projection_dim, bias=True),
         )
-        self.logit_scale = Parameter(mindspore.Tensor([self.config.logit_scale_init_value]))
+        self.logit_scale = Parameter(mindspore.Tensor(self.config.logit_scale_init_value))
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1271,7 +1260,7 @@ class GroupViTModel(GroupViTPreTrainedModel):
             >>> model = GroupViTModel.from_pretrained("nvidia/groupvit-gcc-yfcc")
             >>> tokenizer = CLIPTokenizer.from_pretrained("nvidia/groupvit-gcc-yfcc")
             ...
-            >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+            >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
             >>> text_features = model.get_text_features(**inputs)
             ```
         """
@@ -1320,7 +1309,7 @@ class GroupViTModel(GroupViTPreTrainedModel):
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
-            >>> inputs = processor(images=image, return_tensors="pt")
+            >>> inputs = processor(images=image, return_tensors="ms")
             ...
             >>> image_features = model.get_image_features(**inputs)
             ```
@@ -1373,7 +1362,7 @@ class GroupViTModel(GroupViTPreTrainedModel):
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
             >>> inputs = processor(
-            ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
+            ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="ms", padding=True
             ... )
             ...
             >>> outputs = model(**inputs)

@@ -21,10 +21,11 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
@@ -112,12 +113,12 @@ class YolosEmbeddings(nn.Module):
     def __init__(self, config: YolosConfig) -> None:
         super().__init__()
 
-        self.cls_token = Parameter(ops.zeros(1, 1, config.hidden_size), 'cls_token')
-        self.detection_tokens = Parameter(ops.zeros(1, config.num_detection_tokens, config.hidden_size), 'detection_tokens')
+        self.cls_token = Parameter(ops.zeros(1, 1, config.hidden_size))
+        self.detection_tokens = Parameter(ops.zeros(1, config.num_detection_tokens, config.hidden_size))
         self.patch_embeddings = YolosPatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
         self.position_embeddings = Parameter(
-            ops.zeros(1, num_patches + config.num_detection_tokens + 1, config.hidden_size), 'position_embeddings'
+            ops.zeros(1, num_patches + config.num_detection_tokens + 1, config.hidden_size)
         )
 
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
@@ -452,7 +453,6 @@ class YolosEncoder(nn.Module):
                     seq_length,
                     config.hidden_size,
                 ),
-                'mid_position_embeddings'
             )
             if config.use_mid_position_embeddings
             else None
@@ -529,14 +529,14 @@ class YolosPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
+            cell.weight.assign_value(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
                                              cell.weight.shape,cell.weight.dtype))
 
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
 
 
 class YolosModel(YolosPreTrainedModel):
@@ -691,7 +691,7 @@ class YolosForObjectDetection(YolosPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("hustvl/yolos-tiny")
         >>> model = AutoModelForObjectDetection.from_pretrained("hustvl/yolos-tiny")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> outputs = model(**inputs)
 
         >>> # convert outputs (bounding boxes and class logits) to Pascal VOC format (xmin, ymin, xmax, ymax)
@@ -907,7 +907,7 @@ class YolosLoss(nn.Module):
         target_lengths = Tensor([len(v["class_labels"]) for v in targets])
         # Count the number of predictions that are NOT "no-object" (which is the last class)
         card_pred = (logits.argmax(-1) != logits.shape[-1] - 1).sum(1)
-        card_err = ops.l1_loss(card_pred.float(), target_lengths.float())
+        card_err = F.l1_loss(card_pred.float(), target_lengths.float())
         losses = {"cardinality_error": card_err}
         return losses
 
@@ -924,7 +924,7 @@ class YolosLoss(nn.Module):
         source_boxes = outputs["pred_boxes"][idx]
         target_boxes = ops.cat([t["boxes"][i] for t, (_, i) in zip(targets, indices)], dim=0)
 
-        loss_bbox = ops.l1_loss(source_boxes, target_boxes, reduction="none")
+        loss_bbox = F.l1_loss(source_boxes, target_boxes, reduction="none")
 
         losses = {}
         losses["loss_bbox"] = loss_bbox.sum() / num_boxes
@@ -1052,7 +1052,7 @@ class YolosMLPPredictionHead(nn.Module):
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
-            x = ops.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
+            x = F.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
         return x
 
 

@@ -439,7 +439,7 @@ def center_crop(
     requires_backends(center_crop, ["vision"])
 
     if return_numpy is not None:
-        warnings.warn("return_numpy is deprecated and will be removed in v.4.33", FutureWarning)
+        warnings.warn("return_numpy is deprecated.4.33", FutureWarning)
 
     return_numpy = True if return_numpy is None else return_numpy
 
@@ -794,6 +794,9 @@ def convert_to_rgb(image: ImageInput) -> ImageInput:
     requires_backends(convert_to_rgb, ["vision"])
 
     if not isinstance(image, PIL.Image.Image):
+        return image
+
+    if image.mode == "RGB":
         return image
 
     image = image.convert("RGB")

@@ -1,7 +1,8 @@
 """linear"""
 from typing import Any
 import math
-from mindspore import Parameter, Tensor
+from mindspore import Tensor
+from ..parameter import Parameter
 from .module import Module
 from .. import init
 from .. import functional as F

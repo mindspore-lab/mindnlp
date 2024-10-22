@@ -23,10 +23,11 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...backbone_utils import BackboneMixin
@@ -1118,19 +1119,19 @@ class BeitPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+            cell.weight.assign_value(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
 
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
 class BeitModel(BeitPreTrainedModel):
@@ -1469,7 +1470,7 @@ class BeitForMaskedImageModeling(BeitPreTrainedModel):
             >>> model = BeitForMaskedImageModeling.from_pretrained("microsoft/beit-base-patch16-224-pt22k")
             ... 
             >>> num_patches = (model.config.image_size // model.config.patch_size) ** 2
-            >>> pixel_values = image_processor(images=image, return_tensors="pt").pixel_values
+            >>> pixel_values = image_processor(images=image, return_tensors="ms").pixel_values
             >>> # create random boolean mask of shape (batch_size, num_patches)
             >>> bool_masked_pos = torch.randint(low=0, high=2, size=(1, num_patches)).bool()
             ... 
@@ -2183,7 +2184,7 @@ class BeitForSemanticSegmentation(BeitPreTrainedModel):
             >>> image_processor = AutoImageProcessor.from_pretrained("microsoft/beit-base-finetuned-ade-640-640")
             >>> model = BeitForSemanticSegmentation.from_pretrained("microsoft/beit-base-finetuned-ade-640-640")
             ...
-            >>> inputs = image_processor(images=image, return_tensors="pt")
+            >>> inputs = image_processor(images=image, return_tensors="ms")
             >>> outputs = model(**inputs)
             >>> # logits are of shape (batch_size, num_labels, height, width)
             >>> logits = outputs.logits
@@ -2273,7 +2274,7 @@ class BeitBackbone(BeitPreTrainedModel, BackboneMixin):
         ...     "microsoft/beit-base-patch16-224", out_features=["stage1", "stage2", "stage3", "stage4"]
         ... )
         ...
-        >>> inputs = processor(image, return_tensors="pt")
+        >>> inputs = processor(image, return_tensors="ms")
         ...
         >>> outputs = model(**inputs)
         >>> feature_maps = outputs.feature_maps
@@ -2401,7 +2402,7 @@ class BeitBackbone(BeitPreTrainedModel, BackboneMixin):
             ...     "microsoft/beit-base-patch16-224", out_features=["stage1", "stage2", "stage3", "stage4"]
             ... )
             ...
-            >>> inputs = processor(image, return_tensors="pt")
+            >>> inputs = processor(image, return_tensors="ms")
             ...
             >>> outputs = model(**inputs)
             >>> feature_maps = outputs.feature_maps

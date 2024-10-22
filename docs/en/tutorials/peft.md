@@ -2,7 +2,7 @@
 
 PEFT (Parameter-Efficient Fine-Tuning) is a technique that fine-tunes large pre-trained models with minimal parameter updates to reduce computational costs and preserve generalization. Within PEFT, LoRA ([Low-Rank Adaptation](https://arxiv.org/abs/2106.09685)) uses low-rank matrices to efficiently adapt parts of a neural network with minimal extra parameters. This technique enables you to train large models that would typically be inaccessible on consumer devices.
 
-In this tutorial, we'll explore this technique using MindNLP. As an example, we will use the the mT0 model, which is a mT5 model finetuned on multilingual tasks. You'll learn how to initialize, modify, and train the model, gaining hands-on experience in efficient fine-tuning.
+In this tutorial, we'll explore this technique using MindNLP. As an example, we will use the mT0 model, which is a mT5 model finetuned on multilingual tasks. You'll learn how to initialize, modify, and train the model, gaining hands-on experience in efficient fine-tuning.
 
 ## Load the model and add PEFT adapter
 First, we load the pretrained model by supplying the model name to the model loader `AutoModelForSeq2SeqLM`. Then add a PEFT adapter to the model using `get_peft_model`, which allows the model to maintain much of its pre-trained parameters while efficiently adapting to new tasks with a focused set of trainable parameters.
@@ -302,7 +302,7 @@ model = PeftModel.from_pretrained(model, peft_model_id)
 
 Next, retrieve an entry from the validation dataset, or alternatively create an entry on your own.
 
-We tokenize the `'sentence'` in this entry and use it as inputs into the model. Excute it and be curious about what the model will predict.
+We tokenize the `'sentence'` in this entry and use it as inputs into the model. Execute it and be curious about what the model will predict.
 
 
 ```python

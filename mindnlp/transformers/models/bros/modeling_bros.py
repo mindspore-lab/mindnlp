@@ -20,10 +20,10 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -1566,7 +1566,7 @@ class BrosModel(BrosPreTrainedModel):
         ... 
         >>> model = BrosModel.from_pretrained("jinho8345/bros-base-uncased")
         ... 
-        >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
+        >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="ms")
         >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
         >>> encoding["bbox"] = bbox
         ... 
@@ -1673,7 +1673,7 @@ class BrosModel(BrosPreTrainedModel):
             ...
             >>> model = BrosModel.from_pretrained("jinho8345/bros-base-uncased")
             ...
-            >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
+            >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="ms")
             >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
             >>> encoding["bbox"] = bbox
             ...
@@ -1804,7 +1804,7 @@ class BrosForTokenClassification(BrosPreTrainedModel):
         ...
         >>> model = BrosForTokenClassification.from_pretrained("jinho8345/bros-base-uncased")
         ...
-        >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
+        >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="ms")
         >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
         >>> encoding["bbox"] = bbox
         ...
@@ -1868,7 +1868,7 @@ class BrosForTokenClassification(BrosPreTrainedModel):
             ...
             >>> model = BrosForTokenClassification.from_pretrained("jinho8345/bros-base-uncased")
             ...
-            >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
+            >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="ms")
             >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
             >>> encoding["bbox"] = bbox
             ...
@@ -1939,7 +1939,7 @@ class BrosSpadeEEForTokenClassification(BrosPreTrainedModel):
         >>> processor = BrosProcessor.from_pretrained("jinho8345/bros-base-uncased")
         >>> model = BrosSpadeEEForTokenClassification.from_pretrained("jinho8345/bros-base-uncased")
         ...
-        >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
+        >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="ms")
         >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
         >>> encoding["bbox"] = bbox
         ...
@@ -2025,7 +2025,7 @@ class BrosSpadeEEForTokenClassification(BrosPreTrainedModel):
             ...
             >>> model = BrosSpadeEEForTokenClassification.from_pretrained("jinho8345/bros-base-uncased")
             ...
-            >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
+            >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="ms")
             >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
             >>> encoding["bbox"] = bbox
             ...
@@ -2139,7 +2139,7 @@ class BrosSpadeELForTokenClassification(BrosPreTrainedModel):
         ...
         >>> model = BrosSpadeELForTokenClassification.from_pretrained("jinho8345/bros-base-uncased")
         ...
-        >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
+        >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="ms")
         >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
         >>> encoding["bbox"] = bbox
         ...
@@ -2213,7 +2213,7 @@ class BrosSpadeELForTokenClassification(BrosPreTrainedModel):
             ...
             >>> model = BrosSpadeELForTokenClassification.from_pretrained("jinho8345/bros-base-uncased")
             ...
-            >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="pt")
+            >>> encoding = processor("Hello, my dog is cute", add_special_tokens=False, return_tensors="ms")
             >>> bbox = torch.tensor([[[0, 0, 1, 1]]]).repeat(1, encoding["input_ids"].shape[-1], 1)
             >>> encoding["bbox"] = bbox
             ...

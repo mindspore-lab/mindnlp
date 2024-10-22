@@ -616,7 +616,7 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
             >>> sample = next(dataset_iter)
             ...
             >>> # forward sample through model to get greedily predicted transcription ids
-            >>> input_values = processor(sample["audio"]["array"], return_tensors="pt").input_values
+            >>> input_values = processor(sample["audio"]["array"], return_tensors="ms").input_values
             >>> with torch.no_grad():
             ...     logits = model(input_values).logits[0].cpu().numpy()
             ...
@@ -711,7 +711,7 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
         Wav2Vec2.
         """
         warnings.warn(
-            "`as_target_processor` is deprecated and will be removed in v5 of Transformers. You can process your "
+            "`as_target_processor` is deprecated. You can process your "
             "labels by using the argument `text` of the regular `__call__` method (either in the same call as "
             "your audio inputs, or in a separate call."
         )

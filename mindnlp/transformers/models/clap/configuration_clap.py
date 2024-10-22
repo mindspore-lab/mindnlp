@@ -16,10 +16,9 @@
 
 import os
 from typing import Union
-import warnings
 
-from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
+from ....utils import logging
 
 
 logger = logging.get_logger(__name__)
@@ -137,33 +136,6 @@ class ClapTextConfig(PretrainedConfig):
         self.use_cache = use_cache
         self.projection_hidden_act = projection_hidden_act
         self.projection_dim = projection_dim
-
-    @staticmethod
-    def _set_token_in_kwargs(kwargs, token=None):
-        """Temporary method to deal with `token` and `use_auth_token`.
-
-        This method is to avoid apply the same changes in all model config classes that overwrite `from_pretrained`.
-
-        Need to clean up `use_auth_token` in a follow PR.
-        """
-        # Some model config classes like CLIP define their own `from_pretrained` without the new argument `token` yet.
-        if token is None:
-            token = kwargs.pop("token", None)
-        use_auth_token = kwargs.pop("use_auth_token", None)
-
-        if use_auth_token is not None:
-            warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
-                FutureWarning,
-            )
-            if token is not None:
-                raise ValueError(
-                    "`token` and `use_auth_token` are both specified. Please set only the argument `token`."
-                )
-            token = use_auth_token
-
-        if token is not None:
-            kwargs["token"] = token
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
@@ -335,33 +307,6 @@ class ClapAudioConfig(PretrainedConfig):
         self.initializer_factor = initializer_factor
         self.projection_hidden_act = projection_hidden_act
 
-    @staticmethod
-    def _set_token_in_kwargs(kwargs, token=None):
-        """Temporary method to deal with `token` and `use_auth_token`.
-
-        This method is to avoid apply the same changes in all model config classes that overwrite `from_pretrained`.
-
-        Need to clean up `use_auth_token` in a follow PR.
-        """
-        # Some model config classes like CLIP define their own `from_pretrained` without the new argument `token` yet.
-        if token is None:
-            token = kwargs.pop("token", None)
-        use_auth_token = kwargs.pop("use_auth_token", None)
-
-        if use_auth_token is not None:
-            warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
-                FutureWarning,
-            )
-            if token is not None:
-                raise ValueError(
-                    "`token` and `use_auth_token` are both specified. Please set only the argument `token`."
-                )
-            token = use_auth_token
-
-        if token is not None:
-            kwargs["token"] = token
-
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
         cls._set_token_in_kwargs(kwargs)
@@ -397,9 +342,9 @@ class ClapConfig(PretrainedConfig):
         audio_config (`dict`, *optional*):
             Dictionary of configuration options used to initialize [`ClapAudioConfig`].
         logit_scale_init_value (`float`, *optional*, defaults to 14.29):
-            The inital value of the *logit_scale* paramter. Default is used as per the original CLAP implementation.
+            The initial value of the *logit_scale* parameter. Default is used as per the original CLAP implementation.
         projection_dim (`int`, *optional*, defaults to 512):
-            Dimentionality of text and audio projection layers.
+            Dimensionality of text and audio projection layers.
         projection_hidden_act (`str`, *optional*, defaults to `"relu"`):
             Activation function for the projection layers.
         initializer_factor (`float`, *optional*, defaults to 1.0):
@@ -482,7 +427,7 @@ class ClapConfig(PretrainedConfig):
         return cls(text_config=text_config.to_dict(), audio_config=audio_config.to_dict(), **kwargs)
 
 __all__=[
-        "ClapAudioConfig",
-        "ClapConfig",
-        "ClapTextConfig",
-    ]
+    "ClapAudioConfig",
+    "ClapConfig",
+    "ClapTextConfig",
+]

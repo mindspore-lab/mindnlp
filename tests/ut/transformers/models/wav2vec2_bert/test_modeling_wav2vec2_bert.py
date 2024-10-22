@@ -21,7 +21,6 @@ import unittest
 from datasets import load_dataset
 
 import numpy as np
-from mindspore import ops
 from mindspore import Tensor
 from mindnlp.transformers import Wav2Vec2BertConfig
 from mindnlp.utils.testing_utils import (
@@ -43,6 +42,7 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         AutoFeatureExtractor,
@@ -541,7 +541,7 @@ class Wav2Vec2BertModelTest(ModelTesterMixin, unittest.TestCase):
 
     # Ignore copy
     @unittest.skip(reason="Wav2Vec2Bert has no inputs_embeds")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     # Ignore copy
@@ -779,7 +779,7 @@ class Wav2Vec2BertUtilsTest(unittest.TestCase):
         features = (ops.arange(sequence_length * hidden_size) // hidden_size).view(
             sequence_length, hidden_size
         )  # each value in vector consits of same value
-        features = features[None, :].expand(batch_size, sequence_length, hidden_size)
+        features = features[None, :].broadcast_to((batch_size, sequence_length, hidden_size))
 
         # sample negative indices
         sampled_negative_indices = _sample_negative_indices((batch_size, sequence_length), num_negatives, None)
@@ -814,16 +814,16 @@ class Wav2Vec2BertUtilsTest(unittest.TestCase):
         features = (ops.arange(sequence_length * hidden_size) // hidden_size).view(
             sequence_length, hidden_size
         )  # each value in vector consits of same value
-        features = features[None, :].expand(batch_size, sequence_length, hidden_size)
+        features = features[None, :].broadcast_to((batch_size, sequence_length, hidden_size))
 
         # replace masked feature vectors with -100 to test that those are not sampled
-        features = ops.where(mask[:, :, None].expand(features.shape).bool(), features, -100)
+        features = ops.where(mask[:, :, None].broadcast_to(features.shape).bool(), features, -100)
 
         # sample negative indices
         sampled_negative_indices = _sample_negative_indices(
-            (batch_size, sequence_length), num_negatives, mask
+            (batch_size, sequence_length), num_negatives, mask.asnumpy()
         )
-        sampled_negative_indices = Tensor.from_numpy(sampled_negative_indices)
+        sampled_negative_indices = ops.from_numpy(sampled_negative_indices)
         negatives = features.view(-1, hidden_size)[sampled_negative_indices.long().view(-1)]
         negatives = negatives.view(batch_size, sequence_length, -1, hidden_size).permute(2, 0, 1, 3)
 
@@ -836,12 +836,7 @@ class Wav2Vec2BertUtilsTest(unittest.TestCase):
             self.assertTrue(((negative - features) == 0).sum() == 0.0)
 
         # make sure that full vectors are sampled and not values of vectors => this means that `unique()` yields a single value for `hidden_size` dim
-        #self.assertTrue(negatives.unique(dim=-1).shape, (num_negatives, batch_size, sequence_length, 1))
-        self.assertEqual(negatives.shape[:-1], (num_negatives, batch_size, sequence_length))
-        ref = negatives[:, :, :, 0]
-        for i in range(1, negatives.shape[-1]):
-            x = negatives[:, :, :, i]
-            self.assertTrue(ops.all(ref == x))
+        self.assertTrue(ops.unique(negatives, dim=-1).shape, (num_negatives, batch_size, sequence_length, 1))
 
 @require_mindspore
 @slow

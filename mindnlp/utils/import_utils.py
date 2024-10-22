@@ -71,6 +71,9 @@ def _is_package_available(
     return package_exists
 
 
+_ftfy_available = _is_package_available("ftfy")
+_einops_available = _is_package_available('einops')
+_tiktoken_available = _is_package_available('tiktoken')
 _bs4_available = importlib.util.find_spec("bs4") is not None
 _pytest_available = _is_package_available("pytest")
 _datasets_available = _is_package_available("datasets")
@@ -83,6 +86,7 @@ _modelscope_available = _is_package_available("modelscope")
 _jieba_available = _is_package_available("jieba")
 _pytesseract_available = _is_package_available("pytesseract")
 _g2p_en_available = _is_package_available("g2p_en")
+_phonemizer_available = _is_package_available("phonemizer")
 _mindspore_version, _mindspore_available = _is_package_available(
     "mindspore", return_version=True
 )
@@ -91,6 +95,8 @@ _sudachipy_available, _sudachipy_version = _is_package_available("sudachipy", re
 _librosa_available = _is_package_available("librosa")
 _scipy_available = _is_package_available("scipy")
 _sacremoses_available = _is_package_available("sacremoses")
+_torchaudio_available = _is_package_available("pykaldi")
+_kenlm_available = _is_package_available("kenlm")
 
 _pretty_midi_available = importlib.util.find_spec("pretty_midi") is not None
 try:
@@ -109,11 +115,31 @@ except importlib_metadata.PackageNotFoundError:
 _levenshtein_available = _is_package_available("Levenshtein")
 _nltk_available = _is_package_available("nltk")
 
+
+_faiss_available = importlib.util.find_spec("faiss") is not None
+try:
+    _faiss_version = importlib.metadata.version("faiss")
+    logger.debug(f"Successfully imported faiss version {_faiss_version}")
+except importlib.metadata.PackageNotFoundError:
+    try:
+        _faiss_version = importlib.metadata.version("faiss-cpu")
+        logger.debug(f"Successfully imported faiss version {_faiss_version}")
+    except importlib.metadata.PackageNotFoundError:
+        _faiss_available = False
+
+def is_faiss_available():
+    return _faiss_available
+
 def is_levenshtein_available():
     return _levenshtein_available
 
+
 def is_nltk_available():
     return _nltk_available
+
+
+def is_einops_available():
+    return _einops_available
 
 
 def is_sudachi_available():
@@ -204,6 +230,11 @@ def get_mindspore_version():
         None: This function does not raise any exceptions.
     """
     return _mindspore_version
+
+
+
+def is_ftfy_available():
+    return _ftfy_available
 
 
 def is_datasets_available():
@@ -397,6 +428,14 @@ def is_pytesseract_available():
 
 def is_g2p_en_available():
     return _g2p_en_available
+
+
+def is_tiktoken_available():
+    return _tiktoken_available
+
+
+def is_phonemizer_available():
+    return _phonemizer_available
 
 
 @lru_cache()
@@ -637,11 +676,11 @@ def mindspore_required(func):
         None. The function returns None.
     
     Raises:
-        FutureWarning: If the method `torch_required` is deprecated and will be removed in v4.36. 
+        FutureWarning: If the method `torch_required` is deprecated. 
         ImportError: If the decorated function requires MindSpore but MindSpore is not available.
     """
     warnings.warn(
-        "The method `torch_required` is deprecated and will be removed in v4.36. Use `requires_backends` instead.",
+        "The method `torch_required` is deprecated. Use `requires_backends` instead.",
         FutureWarning,
     )
 
@@ -680,3 +719,11 @@ def direct_transformers_import(path: str, file="__init__.py") -> ModuleType:
 
 def is_soundfile_availble():
     return _soundfile_available
+
+
+def is_speech_available():
+    return _torchaudio_available
+
+
+def is_kenlm_available():
+    return _kenlm_available

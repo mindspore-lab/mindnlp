@@ -45,17 +45,17 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("blip", "BlipImageProcessor"),
         ("blip-2", "BlipImageProcessor"),
         ("bridgetower", "BridgeTowerImageProcessor"),
-        # ("chinese_clip", "ChineseCLIPImageProcessor"),
+        ("chinese_clip", "ChineseCLIPImageProcessor"),
         ("clip", "CLIPImageProcessor"),
         # ("clipseg", "ViTImageProcessor"),
         # ("conditional_detr", "ConditionalDetrImageProcessor"),
         ("convnext", "ConvNextImageProcessor"),
         # ("convnextv2", "ConvNextImageProcessor"),
         ("cvt", "ConvNextImageProcessor"),
-        # ("data2vec-vision", "BeitImageProcessor"),
+        ("data2vec-vision", ("BeitImageProcessor",)),
         # ("deformable_detr", "DeformableDetrImageProcessor"),
         ("deit", "DeiTImageProcessor"),
-        # ("depth_anything", "DPTImageProcessor"),
+        ("depth_anything", "DPTImageProcessor"),
         ("deta", "DetaImageProcessor"),
         ("detr", "DetrImageProcessor"),
         # ("dinat", "ViTImageProcessor"),
@@ -66,11 +66,11 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("efficientnet", "EfficientNetImageProcessor"),
         ("flava", "FlavaImageProcessor"),
         ("focalnet", "BitImageProcessor"),
-        # ("fuyu", "FuyuImageProcessor"),
+        ("fuyu", "FuyuImageProcessor"),
         ("git", "CLIPImageProcessor"),
         # ("glpn", "GLPNImageProcessor"),
         ("groupvit", "CLIPImageProcessor"),
-        # ("idefics", "IdeficsImageProcessor"),
+        ("idefics", ("IdeficsImageProcessor",)),
         ("imagegpt", "ImageGPTImageProcessor"),
         # ("instructblip", "BlipImageProcessor"),
         ("kosmos-2", "CLIPImageProcessor"),
@@ -81,6 +81,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("mask2former", "Mask2FormerImageProcessor"),
         ("maskformer", "MaskFormerImageProcessor"),
         # ("mgp-str", "ViTImageProcessor"),
+        ("mllama", ("MllamaImageProcessor",)),
         # ("mobilenet_v1", "MobileNetV1ImageProcessor"),
         # ("mobilenet_v2", "MobileNetV2ImageProcessor"),
         ("mobilevit", "MobileViTImageProcessor"),
@@ -91,7 +92,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         # ("owlv2", "Owlv2ImageProcessor"),
         ("owlvit", "OwlViTImageProcessor"),
         ("perceiver", "PerceiverImageProcessor"),
-        # ("pix2struct", "Pix2StructImageProcessor"),
+        ("pix2struct", "Pix2StructImageProcessor"),
         ("poolformer", "PoolFormerImageProcessor"),
         # ("pvt", "PvtImageProcessor"),
         # ("pvt_v2", "PvtImageProcessor"),
@@ -107,7 +108,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         # ("swinv2", "ViTImageProcessor"),
         ("table-transformer", "DetrImageProcessor"),
         ("timesformer", "VideoMAEImageProcessor"),
-        # ("tvlt", "TvltImageProcessor"),
+        ("tvlt", "TvltImageProcessor"),
         # ("tvp", "TvpImageProcessor"),
         ("udop", "LayoutLMv3ImageProcessor"),
         # ("upernet", "SegformerImageProcessor"),
@@ -119,7 +120,7 @@ IMAGE_PROCESSOR_MAPPING_NAMES = OrderedDict(
         ("vit_hybrid", "ViTHybridImageProcessor"),
         # ("vit_mae", "ViTImageProcessor"),
         # ("vit_msn", "ViTImageProcessor"),
-        # ("vitmatte", "VitMatteImageProcessor"),
+        ("vitmatte", "VitMatteImageProcessor"),
         ("xclip", "CLIPImageProcessor"),
         # ("yolos", "YolosImageProcessor"),
     ]
@@ -235,7 +236,7 @@ def get_image_processor_config(
     use_auth_token = kwargs.pop("use_auth_token", None)
     if use_auth_token is not None:
         warnings.warn(
-            "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+            "The `use_auth_token` argument is deprecated. Please use `token` instead.",
             FutureWarning,
         )
         if token is not None:
@@ -366,7 +367,7 @@ class AutoImageProcessor:
         use_auth_token = kwargs.pop("use_auth_token", None)
         if use_auth_token is not None:
             warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+                "The `use_auth_token` argument is deprecated. Please use `token` instead.",
                 FutureWarning,
             )
             if kwargs.get("token", None) is not None:

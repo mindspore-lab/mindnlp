@@ -17,7 +17,7 @@
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn
+from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 
@@ -34,7 +34,7 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     """
     Shift input ids one token to the right.
     """
-    shifted_input_ids = input_ids.new_zeros(input_ids.shape)
+    shifted_input_ids = ops.zeros(input_ids.shape, dtype=input_ids.dtype)
     shifted_input_ids[:, 1:] = input_ids[:, :-1].copy()
     if decoder_start_token_id is None:
         raise ValueError("Make sure to set the decoder_start_token_id attribute of the model's configuration.")
@@ -43,7 +43,7 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     if pad_token_id is None:
         raise ValueError("Make sure to set the pad_token_id attribute of the model's configuration.")
     # replace possible -100 values in labels by `pad_token_id`
-    shifted_input_ids.masked_fill_(shifted_input_ids == -100, pad_token_id)
+    shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
 
     return shifted_input_ids
 
@@ -157,7 +157,7 @@ class VisionEncoderDecoderModel(PreTrainedModel):
 
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> img = Image.open(requests.get(url, stream=True).raw)
-        >>> pixel_values = image_processor(images=img, return_tensors="pt").pixel_values  # Batch size 1
+        >>> pixel_values = image_processor(images=img, return_tensors="ms").pixel_values  # Batch size 1
 
         >>> output_ids = model.generate(
         ...     pixel_values, max_length=16, num_beams=4, return_dict_in_generate=True
@@ -182,9 +182,9 @@ class VisionEncoderDecoderModel(PreTrainedModel):
     @classmethod
     def from_encoder_decoder_pretrained(
         cls,
-        *model_args,
         encoder_pretrained_model_name_or_path: str = None,
         decoder_pretrained_model_name_or_path: str = None,
+        *model_args, # pylint: disable=keyword-arg-before-vararg
         **kwargs,
     ) -> PreTrainedModel:
         r"""
@@ -369,9 +369,9 @@ class VisionEncoderDecoderModel(PreTrainedModel):
         >>> model.config.pad_token_id = processor.tokenizer.pad_token_id
         >>> model.config.vocab_size = model.config.decoder.vocab_size
 
-        >>> pixel_values = processor(image, return_tensors="pt").pixel_values
+        >>> pixel_values = processor(image, return_tensors="ms").pixel_values
         >>> text = "hello world"
-        >>> labels = processor.tokenizer(text, return_tensors="pt").input_ids
+        >>> labels = processor.tokenizer(text, return_tensors="ms").input_ids
         >>> outputs = model(pixel_values=pixel_values, labels=labels)
         >>> loss = outputs.loss
 

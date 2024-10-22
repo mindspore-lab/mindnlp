@@ -198,7 +198,8 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
         req = requests.get(url, stream=True, timeout=10, proxies=proxies, headers=headers)
 
         status = req.status_code
-        if status == 404:
+
+        if status in (404, 500):
             raise EntryNotFoundError(f"Can not found url: {url}")
         if status == 401:
             raise GatedRepoError('You should have authorization to access the model.')
@@ -406,6 +407,7 @@ def cached_file(
     _raise_exceptions_for_gated_repo: bool = True,
     _raise_exceptions_for_missing_entries: bool = True,
     _raise_exceptions_for_connection_errors: bool = True,
+    _commit_hash: str = None,
 ):
     """
     Tries to locate a file in a local folder and repo, downloads and cache it if necessary.
@@ -612,7 +614,6 @@ def download(
         return pointer_path
 
     url = build_download_url(repo_id, filename, revision, repo_type=repo_type, mirror=mirror)
-
     token = HF_TOKEN if not token else token
 
     headers = None
@@ -624,10 +625,7 @@ def download(
         headers = {}
     try:
         pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies, headers=headers)
-    except (requests.exceptions.SSLError,
-            requests.exceptions.ProxyError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout):
+    except Exception:
         # Otherwise, our Internet connection is down.
         # etag is None
         raise
@@ -897,6 +895,8 @@ def build_download_url(
 ) -> str:
     """Construct the URL of a file from the given information.
     """
+    if revision is None:
+        revision = 'main'
     if mirror not in MIRROR_MAP:
         raise ValueError('The mirror name not support, please use one of the mirror website below: '
                          '["huggingface", "modelscope", "wisemodel", "gitee", "aifast"]')

@@ -283,8 +283,8 @@ class LycorisTuner(BaseTuner):
 
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
-        if peft_config.target_cells is None:
-            raise ValueError("Please specify `target_cells` in `peft_config`")
+        if peft_config.target_modules is None:
+            raise ValueError("Please specify `target_modules` in `peft_config`")
         return peft_config
 
     def _replace_module(self, parent, child_name, new_module, child):
@@ -340,7 +340,7 @@ class LycorisTuner(BaseTuner):
                 )
             elif isinstance(target, ModulesToSaveWrapper):
                 # save any additional trainable modules part of `modules_to_save`
-                new_module = target.cells_to_save[target.active_adapter]
+                new_module = target.modules_to_save[target.active_adapter]
                 if hasattr(new_module, "base_layer"):
                     # check if the module is itself a tuner layer
                     if merge:

@@ -1525,8 +1525,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         if "clean_up_tokenization_spaces" not in kwargs:
             warnings.warn(
                 "`clean_up_tokenization_spaces` was not set. It will be set to `True` by default. This "
-                "behavior will be depracted in transformers v4.45, and will be then set to `False` by default. "
-                "For more details check this issue: https://github.com/huggingface/transformers/issues/31884",
+                "behavior will be depracted, and will be then set to `False` by default. ",
                 FutureWarning,
             )
 
@@ -2059,7 +2058,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
 
         if use_auth_token is not None:
             warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+                "The `use_auth_token` argument is deprecated. Please use `token` instead.",
                 FutureWarning,
             )
             if token is not None:
@@ -2505,7 +2504,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
 
         if use_auth_token is not None:
             warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+                "The `use_auth_token` argument is deprecated. Please use `token` instead.",
                 FutureWarning,
             )
             if kwargs.get("token", None) is not None:
@@ -2947,6 +2946,13 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         if text is None and text_target is None:
             raise ValueError("You need to specify either `text` or `text_target`.")
         if text is not None:
+            # for mindspore.dataset
+            if isinstance(text, np.ndarray):
+                text = str(text)
+                if isinstance(text_pair, np.ndarray):
+                    text_pair = str(text_pair)
+                elif isinstance(text_pair, list):
+                    text_pair = [str(t) for t in text_pair]
             # The context manager will send the inputs as normal texts and not text_target, but we shouldn't change the
             # input mode in this case.
             if not self._in_target_context_manager:
@@ -4017,7 +4023,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         sequence-to-sequence models that need a slightly different processing for the labels.
         """
         warnings.warn(
-            "`as_target_tokenizer` is deprecated and will be removed in v5 of Transformers. You can tokenize your "
+            "`as_target_tokenizer` is deprecated. You can tokenize your "
             "labels by using the argument `text_target` of the regular `__call__` method (either in the same call as "
             "your input texts if you use the same keyword arguments, or in a separate call."
         )
@@ -4125,7 +4131,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         """
         # docstyle-ignore
         formatted_warning = """
-`prepare_seq2seq_batch` is deprecated and will be removed in version 5 of HuggingFace Transformers. Use the regular
+`prepare_seq2seq_batch` is deprecated. Use the regular
 `__call__` method to prepare your inputs and targets.
 
 Here is a short example:

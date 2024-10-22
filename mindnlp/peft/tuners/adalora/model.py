@@ -14,7 +14,8 @@
 # ============================================================================
 "Adalora Model"
 import warnings
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
+from mindnlp.core.nn import Parameter
 
 from mindnlp.core import nn, ops
 from mindnlp.transformers.ms_utils import Conv1D
@@ -46,7 +47,7 @@ class AdaLoraModel(LoraModel):
 
         >>> from transformers import AutoModelForSeq2SeqLM, LoraConfig >>> from peft import AdaLoraModel, AdaLoraConfig
         >>> config = AdaLoraConfig(
-                peft_type="ADALORA", task_type="SEQ_2_SEQ_LM", r=8, lora_alpha=32, target_cells=["q", "v"],
+                peft_type="ADALORA", task_type="SEQ_2_SEQ_LM", r=8, lora_alpha=32, target_modules=["q", "v"],
                 lora_dropout=0.01,
             )
         >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base") >>> model = AdaLoraModel(model, config, "default")
@@ -330,22 +331,22 @@ class AdaLoraModel(LoraModel):
         This method '_prepare_adapter_config' in the class 'AdaLoraModel' prepares the adapter configuration based on the provided 'peft_config' and 'model_config' parameters.
         
         Args:
-        - peft_config (dict): A dictionary containing the configuration details for the adapter. It should include information about the target cells. If 'target_cells' is not specified, it is inferred based
+        - peft_config (dict): A dictionary containing the configuration details for the adapter. It should include information about the target cells. If 'target_modules' is not specified, it is inferred based
 on the 'model_type' from the 'model_config' parameter.
-        - model_config (dict): A dictionary containing the configuration details specific to the model. It is used to determine the 'model_type' which is then used to infer the 'target_cells' if not explicitly
+        - model_config (dict): A dictionary containing the configuration details specific to the model. It is used to determine the 'model_type' which is then used to infer the 'target_modules' if not explicitly
 provided in 'peft_config'.
         
         Returns:
-        None: This method does not return any value but updates the 'peft_config' parameter with the inferred or provided 'target_cells' based on the 'model_type'.
+        None: This method does not return any value but updates the 'peft_config' parameter with the inferred or provided 'target_modules' based on the 'model_type'.
         
         Raises:
-        - ValueError: Raised if 'target_cells' is not specified in 'peft_config' and the 'model_type' from 'model_config' does not have a corresponding mapping in
+        - ValueError: Raised if 'target_modules' is not specified in 'peft_config' and the 'model_type' from 'model_config' does not have a corresponding mapping in
 TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING.
         """
-        if peft_config.target_cells is None:
+        if peft_config.target_modules is None:
             if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING:
-                raise ValueError("Please specify `target_cells` in `peft_config`")
-            peft_config.target_cells = TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING[
+                raise ValueError("Please specify `target_modules` in `peft_config`")
+            peft_config.target_modules = TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING[
                 model_config["model_type"]
             ]
         return peft_config

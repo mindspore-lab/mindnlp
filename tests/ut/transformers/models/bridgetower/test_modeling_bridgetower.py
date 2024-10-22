@@ -458,13 +458,16 @@ class BridgeTowerModelTest(ModelTesterMixin, unittest.TestCase):
                         )
 
     @unittest.skip(reason="""Bridge Tower does not have input/output embeddings. So this test is not applicable.""")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(reason="""Bridge Tower does not have input/output embeddings. Thus this test is not applicable.""")
     def test_inputs_embeds(self):
         pass
 
+    @unittest.skip(reason="Bridge Tower does not use inputs_embeds")
+    def test_inputs_embeds_matches_input_ids(self):
+        pass
 
 # We will verify our results on an image of cute cats
 def prepare_img():

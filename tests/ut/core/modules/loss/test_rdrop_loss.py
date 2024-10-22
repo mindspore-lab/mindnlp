@@ -20,9 +20,8 @@ import numpy as np
 import mindspore
 from ddt import ddt, data
 from mindspore import Tensor
-from mindnlp.modules import RDropLoss
-from mindnlp import ms_jit
-from ....common import MindNLPTestCase
+from mindnlp.core.modules import RDropLoss
+from .....common import MindNLPTestCase
 
 @ddt
 class TestRDropLoss(MindNLPTestCase):
@@ -58,7 +57,7 @@ class TestRDropLoss(MindNLPTestCase):
         """
         r_drop_loss = RDropLoss()
 
-        @ms_jit
+        @mindspore.jit
         def forward_jit(temp_p, temp_q):
             loss = r_drop_loss(temp_p, temp_q)
             return loss
@@ -72,6 +71,7 @@ class TestRDropLoss(MindNLPTestCase):
 
 
         if jit:
+            r_drop_loss.jit()
             loss = forward_jit(temp_p, temp_q)
         else:
             loss = forward(temp_p, temp_q)

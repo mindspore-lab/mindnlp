@@ -27,7 +27,7 @@ class LoKrConfig(PeftConfig):
 
     Args:
         r (`int`): lokr attention dimension.
-        target_cells (`Union[List[str],str]`): The names of the cells to apply Lora to.
+        target_modules (`Union[List[str],str]`): The names of the cells to apply Lora to.
         lora_alpha (`float`): The alpha parameter for Lokr scaling.
         rank_dropout (`float`):The dropout probability for rank dimension during training.
         cell_dropout (`float`): The dropout probability for LoKR layers.
@@ -38,7 +38,7 @@ class LoKrConfig(PeftConfig):
         decompose_factor (`int`):Kronecker product decomposition factor.
 
         bias (`str`): Bias type for Lora. Can be 'none', 'all' or 'lora_only'
-        cells_to_save (`List[str]`):
+        modules_to_save (`List[str]`):
             List of cells apart from LoRA layers to be set as trainable
             and saved in the final checkpoint.
         init_weights (`bool`):
@@ -59,7 +59,7 @@ class LoKrConfig(PeftConfig):
             specified by `alpha`.
     """
     r: int = field(default=8, metadata={"help": "lokr attention dimension"})
-    target_cells: Optional[Union[List[str], str]] = field(
+    target_modules: Optional[Union[List[str], str]] = field(
         default=None,
         metadata={
             "help": "List of cell names or regex expression of the cell names to replace with Lora."
@@ -92,7 +92,7 @@ class LoKrConfig(PeftConfig):
         default="none",
         metadata={"help": "Bias type for Lora. Can be 'none', 'all' or 'lora_only'"},
     )
-    cells_to_save: Optional[List[str]] = field(
+    modules_to_save: Optional[List[str]] = field(
         default=None,
         metadata={
             "help": "List of cells apart from LoRA layers to be set as trainable and saved in the final checkpoint. "

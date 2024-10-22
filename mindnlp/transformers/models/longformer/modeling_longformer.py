@@ -21,10 +21,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, no_grad
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
@@ -405,7 +406,7 @@ def _get_question_end_index(input_ids, sep_token_id):
     """
     Computes the index of the first occurrence of `sep_token_id`.
     """
-    sep_token_indices = (input_ids == sep_token_id).nonzero()
+    sep_token_indices = ops.nonzero((input_ids == sep_token_id))
     batch_size = input_ids.shape[0]
 
     assert sep_token_indices.shape[1] == 2, "`input_ids` should have two dimensions"
@@ -882,7 +883,8 @@ class LongformerSelfAttention(nn.Module):
             chunk_size = list(hidden_states.shape)
             chunk_size[1] = chunk_size[1] * 2 - 1
 
-            chunk_stride = list(hidden_states.stride())
+            chunk_stride = list(hidden_states.strides)
+            chunk_stride = [i // 4 for i in chunk_stride]
             chunk_stride[1] = chunk_stride[1] // 2
             return ops.as_strided(hidden_states, size=chunk_size, stride=chunk_stride)
 
@@ -1039,7 +1041,8 @@ class LongformerSelfAttention(nn.Module):
 
         # chunk padded_value into chunks of size 3 window overlap and an overlap of size window overlap
         chunked_value_size = (batch_size * num_heads, chunks_count + 1, 3 * window_overlap, head_dim)
-        chunked_value_stride = padded_value.stride()
+        chunked_value_stride = padded_value.strides
+        chunked_value_stride = [i // 4 for i in chunked_value_stride]
         chunked_value_stride = (
             chunked_value_stride[0],
             window_overlap * chunked_value_stride[1],
@@ -1059,19 +1062,20 @@ class LongformerSelfAttention(nn.Module):
         # helper variable
         num_global_attn_indices = is_index_global_attn.long().sum(axis=1)
 
+        with no_grad():
         # max number of global attn indices in batch
-        max_num_global_attn_indices = num_global_attn_indices.max().item()
+            max_num_global_attn_indices = num_global_attn_indices.max().item()
 
         # indices of global attn
-        is_index_global_attn_nonzero = is_index_global_attn.nonzero(as_tuple=True)
+        is_index_global_attn_nonzero = ops.nonzero(is_index_global_attn, as_tuple=True)
         # helper variable
         is_local_index_global_attn = ops.arange(max_num_global_attn_indices) < num_global_attn_indices.unsqueeze(dim=-1)
 
         # location of the non-padding values within global attention indices
-        is_local_index_global_attn_nonzero = is_local_index_global_attn.nonzero(as_tuple=True)
+        is_local_index_global_attn_nonzero = ops.nonzero(is_local_index_global_attn, as_tuple=True)
 
         # location of the padding values within global attention indices
-        is_local_index_no_global_attn_nonzero = (is_local_index_global_attn == 0).nonzero(as_tuple=True)
+        is_local_index_no_global_attn_nonzero = ops.nonzero((is_local_index_global_attn == 0), as_tuple=True)
         return (
             max_num_global_attn_indices,
             is_index_global_attn_nonzero,
@@ -2048,7 +2052,7 @@ class LongformerLMHead(nn.Module):
         self.layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
-        self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
+        self.bias = Parameter(ops.zeros(config.vocab_size))
         self.decoder.bias = self.bias
 
     def forward(self, features, **kwargs):
@@ -2105,19 +2109,19 @@ class LongformerPreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+            cell.weight.assign_value(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
 
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
 class LongformerModel(LongformerPreTrainedModel):
@@ -2528,7 +2532,7 @@ class LongformerForMaskedLM(LongformerPreTrainedModel):
             ...     "My friends are <mask> but they eat too many carbs."
             ...     + " That's why I decide not to eat with them." * 300
             ... )
-            >>> input_ids = tokenizer([TXT], return_tensors="pt")["input_ids"]
+            >>> input_ids = tokenizer([TXT], return_tensors="ms")["input_ids"]
             >>> logits = model(input_ids).logits
             ...
             >>> masked_index = (input_ids[0] == tokenizer.mask_token_id).nonzero().item()
@@ -2841,7 +2845,7 @@ class LongformerForQuestionAnswering(LongformerPreTrainedModel):
             >>> model = LongformerForQuestionAnswering.from_pretrained("allenai/longformer-large-4096-finetuned-triviaqa")
             ...
             >>> question, text = "Who was Jim Henson?", "Jim Henson was a nice puppet"
-            >>> encoding = tokenizer(question, text, return_tensors="pt")
+            >>> encoding = tokenizer(question, text, return_tensors="ms")
             >>> input_ids = encoding["input_ids"]
             ...
             >>> # default is local attention everywhere

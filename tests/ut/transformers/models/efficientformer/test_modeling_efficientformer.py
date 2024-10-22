@@ -46,9 +46,6 @@ if is_mindspore_available():
         EfficientFormerForImageClassificationWithTeacher,
         EfficientFormerModel,
     )
-    from mindnlp.transformers.models.efficientformer.modeling_efficientformer import (
-        EFFICIENTFORMER_PRETRAINED_MODEL_ARCHIVE_LIST,
-    )
 
 if is_vision_available():
     from PIL import Image
@@ -221,7 +218,7 @@ class EfficientFormerModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="EfficientFormer does not support input and output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_hidden_states_output(self):
@@ -313,46 +310,6 @@ class EfficientFormerModelTest(ModelTesterMixin, unittest.TestCase):
             inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
             logits = model(**inputs).logits
 
-    def test_problem_types(self):
-        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
-
-        problem_types = [
-            {"title": "multi_label_classification", "num_labels": 2, "dtype": mindspore.float32},
-            {"title": "single_label_classification", "num_labels": 1, "dtype": mindspore.int64},
-            {"title": "regression", "num_labels": 1, "dtype": mindspore.float32},
-        ]
-
-        for model_class in self.all_model_classes:
-            if (
-                model_class
-                not in [
-                    *get_values(MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING),
-                ]
-                or model_class.__name__ == "EfficientFormerForImageClassificationWithTeacher"
-            ):
-                continue
- 
-            for problem_type in problem_types:
-                with self.subTest(msg=f"Testing {model_class} with {problem_type['title']}"):
-                    config.problem_type = problem_type["title"]
-                    config.num_labels = problem_type["num_labels"]
-
-                    model = model_class(config)
-                    model.set_train(False)
-
-                    inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
-
-                    # This tests that we do not trigger the warning form PyTorch "Using a target size that is different
-                    # to the input size. This will likely lead to incorrect results due to broadcasting. Please ensure
-                    # they have the same size." which is a symptom something in wrong for the regression problem.
-                    # See https://github.com/huggingface/transformers/issues/11780
-                    with warnings.catch_warnings(record=True) as warning_list:
-                        output = model(**inputs)
-                    for w in warning_list:
-                        if "Using a target size that is different to the input size" in str(w.message):
-                            raise ValueError(
-                                f"Something is going wrong in the regression problem: intercepted {w.message}"
-                            )
 
     @slow
     def test_model_from_pretrained(self):

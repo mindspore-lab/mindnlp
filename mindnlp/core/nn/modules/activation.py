@@ -1,7 +1,8 @@
 """activation"""
 from typing import Optional, Tuple
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
+from ..parameter import Parameter
 
 from .module import Module
 from .linear import Linear
@@ -79,6 +80,60 @@ class ReLU(Module):
     def forward(self, input: Tensor) -> Tensor:
         return F.relu(input)
 
+
+class LeakyReLU(Module):
+    r"""Applies the LeakyReLU function element-wise.
+
+    .. math::
+        \text{LeakyReLU}(x) = \max(0, x) + \text{negative\_slope} * \min(0, x)
+
+
+    or
+
+    .. math::
+        \text{LeakyReLU}(x) =
+        \begin{cases}
+        x, & \text{ if } x \geq 0 \\
+        \text{negative\_slope} \times x, & \text{ otherwise }
+        \end{cases}
+
+    Args:
+        negative_slope: Controls the angle of the negative slope (which is used for
+          negative input values). Default: 1e-2
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(*)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(*)`, same shape as the input
+
+    .. image:: ../scripts/activation_images/LeakyReLU.png
+
+    Examples::
+
+        >>> m = nn.LeakyReLU(0.1)
+        >>> input = torch.randn(2)
+        >>> output = m(input)
+    """
+
+    __constants__ = ['inplace', 'negative_slope']
+    inplace: bool
+    negative_slope: float
+
+    def __init__(self, negative_slope: float = 1e-2, inplace: bool = False) -> None:
+        super().__init__()
+        self.negative_slope = negative_slope
+        self.inplace = inplace
+
+    def forward(self, input: Tensor) -> Tensor:
+        return F.leaky_relu(input, self.negative_slope)
+
+    def extra_repr(self) -> str:
+        inplace_str = ', inplace=True' if self.inplace else ''
+        return f'negative_slope={self.negative_slope}{inplace_str}'
+
+
+
 class Tanh(Module):
     def forward(self, input: Tensor) -> Tensor:
         return F.tanh(input)
@@ -142,6 +197,51 @@ class Softmax(Module):
         return f'dim={self.dim}'
 
 
+class LogSoftmax(Module):
+    r"""Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional input Tensor.
+
+    The LogSoftmax formulation can be simplified as:
+
+    .. math::
+        \text{LogSoftmax}(x_{i}) = \log\left(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} \right)
+
+    Shape:
+        - Input: :math:`(*)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(*)`, same shape as the input
+
+    Args:
+        dim (int): A dimension along which LogSoftmax will be computed.
+
+    Returns:
+        a Tensor of the same dimension and shape as the input with
+        values in the range [-inf, 0)
+
+    Examples::
+
+        >>> m = nn.LogSoftmax(dim=1)
+        >>> input = torch.randn(2, 3)
+        >>> output = m(input)
+    """
+
+    __constants__ = ['dim']
+    dim: Optional[int]
+
+    def __init__(self, dim: Optional[int] = None) -> None:
+        super().__init__()
+        self.dim = dim
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        if not hasattr(self, 'dim'):
+            self.dim = None
+
+    def forward(self, input: Tensor) -> Tensor:
+        return F.log_softmax(input, self.dim)
+
+    def extra_repr(self):
+        return f'dim={self.dim}'
+
 class Sigmoid(Module):
     r"""Applies the Sigmoid function element-wise.
 
@@ -183,6 +283,41 @@ class ReLU6(Module):
 class ELU(Module):
     def forward(self, input):
         return F.elu(input)
+
+class GLU(Module):
+    r"""Applies the gated linear unit function.
+
+    :math:`{GLU}(a, b)= a \otimes \sigma(b)` where :math:`a` is the first half
+    of the input matrices and :math:`b` is the second half.
+
+    Args:
+        dim (int): the dimension on which to split the input. Default: -1
+
+    Shape:
+        - Input: :math:`(\ast_1, N, \ast_2)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(\ast_1, M, \ast_2)` where :math:`M=N/2`
+
+    Examples::
+
+        >>> m = nn.GLU()
+        >>> input = torch.randn(4, 2)
+        >>> output = m(input)
+    """
+
+    __constants__ = ['dim']
+    dim: int
+
+    def __init__(self, dim: int = -1) -> None:
+        super().__init__()
+        self.dim = dim
+
+    def forward(self, input: Tensor) -> Tensor:
+        return F.glu(input, self.dim)
+
+    def extra_repr(self) -> str:
+        return f'dim={self.dim}'
+
 
 class Softplus(Module):
     r"""Applies the Softplus function element-wise.
@@ -429,7 +564,7 @@ class MultiheadAttention(Module):
             `batch_first` argument is ignored for unbatched inputs.
         """
 
-        is_batched = query.dim() == 3
+        is_batched = query.ndim == 3
 
         key_padding_mask = F._canonical_mask(
             mask=key_padding_mask,
@@ -452,12 +587,12 @@ class MultiheadAttention(Module):
             # make sure that the transpose op does not affect the "is" property
             if key is value:
                 if query is key:
-                    query = key = value = query.transpose(1, 0)
+                    query = key = value = ops.transpose(query, 1, 0)
                 else:
-                    query, key = (x.transpose(1, 0) for x in (query, key))
+                    query, key = (ops.transpose(x, 1, 0) for x in (query, key))
                     value = key
             else:
-                query, key, value = (x.transpose(1, 0) for x in (query, key, value))
+                query, key, value = (ops.transpose(x, 1, 0) for x in (query, key, value))
 
         if not self._qkv_same_embed_dim:
             attn_output, attn_output_weights = F.multi_head_attention_forward(
@@ -486,7 +621,7 @@ class MultiheadAttention(Module):
                 average_attn_weights=average_attn_weights,
                 is_causal=is_causal)
         if self.batch_first and is_batched:
-            return attn_output.transpose(1, 0), attn_output_weights
+            return ops.transpose(attn_output, 1, 0), attn_output_weights
         else:
             return attn_output, attn_output_weights
 
@@ -518,9 +653,9 @@ class MultiheadAttention(Module):
             mask_type = 2
 
             # Always expands attn_mask to 4D
-            if attn_mask.dim() == 3:
+            if attn_mask.ndim == 3:
                 attn_mask_expanded = attn_mask.view(batch_size, -1, seq_len, seq_len)
-            else:  # attn_mask.dim() == 2:
+            else:  # attn_mask.ndim == 2:
                 attn_mask_expanded = attn_mask.view(1, 1, seq_len, seq_len).expand(batch_size, self.num_heads, -1, -1)
             merged_mask = attn_mask_expanded
 

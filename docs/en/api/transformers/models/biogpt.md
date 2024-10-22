@@ -1,5 +1,4 @@
 :::mindnlp.transformers.models.biogpt.configuration_biogpt.BioGptConfig
-:::mindnlp.transformers.models.biogpt.modeling_biogpt.BIOGPT_PRETRAINED_MODEL_ARCHIVE_LIST
 :::mindnlp.transformers.models.biogpt.modeling_biogpt.BioGptForCausalLM
 :::mindnlp.transformers.models.biogpt.modeling_biogpt.BioGptForTokenClassification
 :::mindnlp.transformers.models.biogpt.modeling_biogpt.BioGptForSequenceClassification

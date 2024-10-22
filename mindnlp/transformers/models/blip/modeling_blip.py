@@ -19,10 +19,10 @@ from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, TruncatedNormal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling
@@ -122,15 +122,15 @@ class BlipForConditionalGenerationModelOutput(ModelOutput):
         
         Raises:
             FutureWarning: This method raises a 'FutureWarning' if the 'decoder_logits' attribute is used.
-                This attribute is deprecated and will be removed in version 5 of Transformers. The 'logits' attribute
+                This attribute is deprecated. The 'logits' attribute
                 should be used instead to retrieve the final output.
 
         Note:
-            The 'decoder_logits' attribute is deprecated and will be removed in version 5 of Transformers.
+            The 'decoder_logits' attribute is deprecated.
             Please use the 'logits' attribute to retrieve the final output instead.
         """
         warnings.warn(
-            "`decoder_logits` attribute is deprecated and will be removed in version 5 of Transformers."
+            "`decoder_logits` attribute is deprecated."
             " Please use the `logits` attribute to retrieve the final output instead.",
             FutureWarning,
         )
@@ -720,23 +720,23 @@ class BlipPreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
         factor = self.config.initializer_range
         if isinstance(cell, (nn.Conv2d, nn.Linear, nn.Embedding)):
-            cell.weight.set_data(initializer(Normal(factor), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(factor), cell.weight.shape, cell.weight.dtype))
             if hasattr(cell, "bias") and cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
         if isinstance(cell, BlipVisionEmbeddings):
             if hasattr(self.config, "vision_config"):
                 factor = self.config.vision_config.initializer_range
 
-            cell.position_embedding.set_data(initializer(TruncatedNormal(factor), cell.position_embedding.shape, cell.position_embedding.dtype))
-            cell.class_embedding.set_data(initializer(TruncatedNormal(factor), cell.class_embedding.shape, cell.class_embedding.dtype))
+            cell.position_embedding.assign_value(initializer(TruncatedNormal(factor), cell.position_embedding.shape, cell.position_embedding.dtype))
+            cell.class_embedding.assign_value(initializer(TruncatedNormal(factor), cell.class_embedding.shape, cell.class_embedding.dtype))
 
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
         elif isinstance(cell, nn.Linear) and cell.bias is not None:
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
 class BlipEncoder(nn.Module):
@@ -958,17 +958,17 @@ class BlipModel(BlipPreTrainedModel):
         >>> from transformers import AutoProcessor, BlipModel
         >>> model = BlipModel.from_pretrained("Salesforce/blip-image-captioning-base")
         >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-        >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+        >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
         >>> text_features = model.get_text_features(**inputs)
         ...
         >>> from PIL import Image
         >>> import requests
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
         >>> image_features = model.get_image_features(**inputs)
         ...
-        >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True)
+        >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="ms", padding=True)
         >>> outputs = model(**inputs)
         >>> logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
         >>> probs = logits_per_image.softmax(dim=1)  # we can take the softmax to get the label probabilities
@@ -1054,7 +1054,7 @@ class BlipModel(BlipPreTrainedModel):
             >>> model = BlipModel.from_pretrained("Salesforce/blip-image-captioning-base")
             >>> processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
             ...
-            >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+            >>> inputs = processor(text=["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
             >>> text_features = model.get_text_features(**inputs)
             ```
         """
@@ -1094,7 +1094,7 @@ class BlipModel(BlipPreTrainedModel):
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
-            >>> inputs = processor(images=image, return_tensors="pt")
+            >>> inputs = processor(images=image, return_tensors="ms")
             ...
             >>> image_features = model.get_image_features(**inputs)
             ```
@@ -1136,7 +1136,7 @@ class BlipModel(BlipPreTrainedModel):
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
             >>> inputs = processor(
-            ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
+            ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="ms", padding=True
             ... )
             ...
             >>> outputs = model(**inputs)
@@ -1234,7 +1234,7 @@ class BlipForConditionalGeneration(BlipPreTrainedModel):
         >>> image = Image.open(requests.get(url, stream=True).raw)
         >>> text = "A picture of"
         ...
-        >>> inputs = processor(images=image, text=text, return_tensors="pt")
+        >>> inputs = processor(images=image, text=text, return_tensors="ms")
         ...
         >>> outputs = model(**inputs)
         ```
@@ -1319,7 +1319,7 @@ class BlipForConditionalGeneration(BlipPreTrainedModel):
             >>> image = Image.open(requests.get(url, stream=True).raw)
             >>> text = "A picture of"
             ...
-            >>> inputs = processor(images=image, text=text, return_tensors="pt")
+            >>> inputs = processor(images=image, text=text, return_tensors="ms")
             ...
             >>> outputs = model(**inputs)
             ```
@@ -1391,7 +1391,7 @@ class BlipForConditionalGeneration(BlipPreTrainedModel):
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
-            >>> inputs = processor(images=image, return_tensors="pt")
+            >>> inputs = processor(images=image, return_tensors="ms")
             ...
             >>> outputs = model.generate(**inputs)
             >>> print(processor.decode(outputs[0], skip_special_tokens=True))
@@ -1536,8 +1536,8 @@ class BlipForQuestionAnswering(BlipPreTrainedModel):
             >>> # training
             >>> text = "How many cats are in the picture?"
             >>> label = "2"
-            >>> inputs = processor(images=image, text=text, return_tensors="pt")
-            >>> labels = processor(text=label, return_tensors="pt").input_ids
+            >>> inputs = processor(images=image, text=text, return_tensors="ms")
+            >>> labels = processor(text=label, return_tensors="ms").input_ids
             ...
             >>> inputs["labels"] = labels
             >>> outputs = model(**inputs)
@@ -1546,7 +1546,7 @@ class BlipForQuestionAnswering(BlipPreTrainedModel):
             ...
             >>> # inference
             >>> text = "How many cats are in the picture?"
-            >>> inputs = processor(images=image, text=text, return_tensors="pt")
+            >>> inputs = processor(images=image, text=text, return_tensors="ms")
             >>> outputs = model.generate(**inputs)
             >>> print(processor.decode(outputs[0], skip_special_tokens=True))
             2
@@ -1650,7 +1650,7 @@ class BlipForQuestionAnswering(BlipPreTrainedModel):
             >>> image = Image.open(requests.get(url, stream=True).raw)
             >>> text = "How many cats are in the picture?"
             ...
-            >>> inputs = processor(images=image, text=text, return_tensors="pt")
+            >>> inputs = processor(images=image, text=text, return_tensors="ms")
             ...
             >>> outputs = model.generate(**inputs)
             >>> print(processor.decode(outputs[0], skip_special_tokens=True))
@@ -1807,7 +1807,7 @@ class BlipForImageTextRetrieval(BlipPreTrainedModel):
             >>> image = Image.open(requests.get(url, stream=True).raw)
             >>> text = "an image of a cat"
             ...
-            >>> inputs = processor(images=image, text=text, return_tensors="pt")
+            >>> inputs = processor(images=image, text=text, return_tensors="ms")
             >>> outputs = model(**inputs)
             ```
         """

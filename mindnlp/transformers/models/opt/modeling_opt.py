@@ -494,15 +494,15 @@ class OPTPreTrainedModel(PreTrainedModel):
         """
         std = self.config.init_std
         if isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, std, cell.weight.shape)
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
 
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
 
 
 class OPTDecoder(OPTPreTrainedModel):
@@ -969,7 +969,7 @@ class OPTForCausalLM(OPTPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
         ...
         >>> prompt = "Hey, are you conscious? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
+        >>> inputs = tokenizer(prompt, return_tensors="ms")
         ...
         >>> # Generate
         >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
@@ -1194,7 +1194,7 @@ class OPTForCausalLM(OPTPreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
             ...
             >>> prompt = "Hey, are you conscious? Can you talk to me?"
-            >>> inputs = tokenizer(prompt, return_tensors="pt")
+            >>> inputs = tokenizer(prompt, return_tensors="ms")
             ...
             >>> # Generate
             >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
@@ -1575,7 +1575,7 @@ class OPTForQuestionAnswering(OPTPreTrainedModel):
             ...
             >>> question, text = "Who was Jim Henson?", "Jim Henson was a nice puppet"
             ...
-            >>> inputs = tokenizer(question, text, return_tensors="pt")
+            >>> inputs = tokenizer(question, text, return_tensors="ms")
             >>> with torch.no_grad():
             ...     outputs = model(**inputs)
             ...

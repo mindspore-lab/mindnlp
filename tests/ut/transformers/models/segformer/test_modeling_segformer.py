@@ -27,7 +27,7 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         SegformerForImageClassification,
@@ -41,6 +41,7 @@ if is_vision_available():
     from PIL import Image
 
     from mindnlp.transformers import SegformerImageProcessor
+
 
 
 class SegformerConfigTester(ConfigTester):
@@ -204,7 +205,7 @@ class SegformerModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip("SegFormer does not have get_input_embeddings method and get_output_embeddings methods")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_attention_outputs(self):

@@ -25,8 +25,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Set, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
-from mindspore.common.initializer import initializer, Normal
+from mindnlp.core.nn import Parameter
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
@@ -141,9 +140,8 @@ class DPTViTHybridEmbeddings(nn.Module):
 
         self.projection = nn.Conv2d(feature_dim, hidden_size, kernel_size=1)
 
-        self.cls_token = Parameter(ops.zeros((1, 1, config.hidden_size)), 'cls_token')
-        self.position_embeddings = Parameter(ops.zeros((1, num_patches + 1, config.hidden_size)),
-                                                       'position_embeddings')
+        self.cls_token = Parameter(ops.zeros((1, 1, config.hidden_size)))
+        self.position_embeddings = Parameter(ops.zeros((1, num_patches + 1, config.hidden_size)))
 
     def _resize_pos_embed(self, posemb, grid_size_height, grid_size_width, start_index=1):
         posemb_tok = posemb[:, :start_index]
@@ -212,11 +210,10 @@ class DPTViTEmbeddings(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        self.cls_token = Parameter(ops.zeros((1, 1, config.hidden_size)), 'cls_token')
+        self.cls_token = Parameter(ops.zeros((1, 1, config.hidden_size)))
         self.patch_embeddings = DPTViTPatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
-        self.position_embeddings = Parameter(ops.zeros((1, num_patches + 1, config.hidden_size)),
-                                                       'position_embeddings')
+        self.position_embeddings = Parameter(ops.zeros((1, num_patches + 1, config.hidden_size)))
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.config = config
 
@@ -813,17 +810,17 @@ class DPTPreTrainedModel(PreTrainedModel):
     main_input_name = "pixel_values"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
+        if isinstance(module, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
-            cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range, mean=0.0), cell.weight.shape,
-                                             cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
 
 
 class DPTModel(DPTPreTrainedModel):

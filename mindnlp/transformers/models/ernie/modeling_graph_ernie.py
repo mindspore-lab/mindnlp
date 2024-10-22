@@ -22,10 +22,11 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 
 from mindnlp.utils import logging
@@ -1507,19 +1508,19 @@ class MSErniePreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+            cell.weight.assign_value(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
 
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
 class MSErnieModel(MSErniePreTrainedModel):
@@ -1843,7 +1844,7 @@ class MSErnieForPreTraining(MSErniePreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
             >>> model = ErnieForPreTraining.from_pretrained("nghuyong/ernie-1.0-base-zh")
             ...
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> prediction_logits = outputs.prediction_logits
@@ -2370,7 +2371,7 @@ class MSErnieForNextSentencePrediction(MSErniePreTrainedModel):
         ...
         >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
         >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
-        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
+        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="ms")
         ...
         >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
         >>> logits = outputs.logits
@@ -2378,7 +2379,7 @@ class MSErnieForNextSentencePrediction(MSErniePreTrainedModel):
         ```
 
     Note:
-        The 'next_sentence_label' argument in the forward method is deprecated and will be removed in a future version.
+        The 'next_sentence_label' argument in the forward method is deprecated.
         Use the 'labels' argument instead.
     """
     # Copied from transformers.models.bert.modeling_bert.BertForNextSentencePrediction.__init__ with Bert->Ernie,bert->ernie
@@ -2441,7 +2442,7 @@ class MSErnieForNextSentencePrediction(MSErniePreTrainedModel):
             ...
             >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
             >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
-            >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
+            >>> encoding = tokenizer(prompt, next_sentence, return_tensors="ms")
             ...
             >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
             >>> logits = outputs.logits

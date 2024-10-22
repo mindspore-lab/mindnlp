@@ -43,7 +43,7 @@ def initializer(init, shape=None, dtype=mindspore.float32):
         >>> import mindspore
         >>> from mindspore import Tensor
         >>> from mindspore.common.initializer import initializer, One
-        >>> from mindspore import Parameter
+        >>> from mindnlp.core.nn import Parameter
         >>> data = Tensor(np.zeros([1, 2, 3]), mindspore.float32)
         >>> w1 = Parameter(initializer(data, [1, 2, 3], mindspore.float32))
         >>> w2 = Parameter(initializer('ones', [1, 2, 3], mindspore.float32))
@@ -100,7 +100,7 @@ class Uniform(Initializer):
     Examples:
         >>> import mindspore
         >>> from mindspore.common.initializer import initializer, Uniform
-        >>> from mindspore import Parameter
+        >>> from mindnlp.core.nn import Parameter
         >>> w1 = Parameter(initializer(Uniform(), [1, 2, 3], mindspore.float32))
         >>> w2 = Parameter(initializer('uniform', [1, 2, 3], mindspore.float32))
     """
@@ -111,7 +111,7 @@ class Uniform(Initializer):
         self.b = b
 
     def _initialize(self, arr):
-        tmp = _init_random_uniform(-self.a, self.b, arr.shape)
+        tmp = _init_random_uniform(self.a, self.b, arr.shape)
         _assignment(arr, tmp)
 
 

@@ -575,17 +575,17 @@ class ResNetPreTrainedModel(PreTrainedModel):
             ValueError: If the module's weight and bias initialization fails.
         """
         if isinstance(module, nn.Conv2d):
-            module.weight.set_data(initializer(HeNormal(), module.weight.shape, module.weight.dtype))
+            module.weight.assign_value(initializer(HeNormal(), module.weight.shape, module.weight.dtype))
             #module.weight.initialize(HeNormal(mode='fan_out', nonlinearity='relu'))
         elif isinstance(module, (nn.BatchNorm2d, nn.GroupNorm)):
-            module.weight.set_data(
+            module.weight.assign_value(
                 initializer(
                     "zeros",
                     module.bias.shape,
                     module.bias.dtype,
                 )
             )
-            module.weight.set_data(
+            module.weight.assign_value(
                 initializer("ones", module.weight.shape, module.weight.dtype)
             )
 

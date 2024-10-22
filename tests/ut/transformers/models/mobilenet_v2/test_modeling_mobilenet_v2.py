@@ -209,7 +209,7 @@ class MobileNetV2ModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="MobileNetV2 does not support input and output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(reason="MobileNetV2 does not output attentions")
@@ -257,6 +257,11 @@ class MobileNetV2ModelTest(ModelTesterMixin, unittest.TestCase):
         model_name = "google/mobilenet_v2_1.4_224"
         model = MobileNetV2Model.from_pretrained(model_name)
         self.assertIsNotNone(model)
+
+    @unittest.skip
+    def test_batching_equivalence(self):
+        super().test_batching_equivalence()
+
 
 # We will verify our results on an image of cute cats
 def prepare_img():

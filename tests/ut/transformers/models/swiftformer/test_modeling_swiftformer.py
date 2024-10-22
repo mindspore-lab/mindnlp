@@ -12,37 +12,35 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch SwiftFormer model."""
+"""Testing suite for the MindSpore SwiftFormer model."""
 
 import copy
 import unittest
-import numpy as np
-from mindnlp.transformers import (
-    PretrainedConfig,
-    SwiftFormerConfig,
-    SwiftFormerModel,
-    SwiftFormerForImageClassification,
-)
+
+from mindnlp.transformers import PretrainedConfig, SwiftFormerConfig
 from mindnlp.utils.testing_utils import (
-    require_vision,
     require_mindspore,
+    require_vision,
     slow,
 )
-from mindnlp.utils.import_utils import is_vision_available
-from mindnlp.utils import is_mindspore_available, cached_property
-import mindspore
-from mindspore import nn
+from mindnlp.utils import cached_property, is_mindspore_available, is_vision_available
+
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
+# from ...test_pipeline_mixin import PipelineTesterMixin
+
+
+if is_mindspore_available():
+    import mindspore
+    from mindnlp.core import nn, ops, no_grad
+
+    from mindnlp.transformers import SwiftFormerForImageClassification, SwiftFormerModel
 
 
 if is_vision_available():
     from PIL import Image
 
     from mindnlp.transformers import ViTImageProcessor
-
-if is_mindspore_available():
-    import mindspore
 
 
 class SwiftFormerModelTester:
@@ -73,9 +71,7 @@ class SwiftFormerModelTester:
         self.embed_dims = embed_dims
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_tensor(
-            [self.batch_size, self.num_channels, self.image_size, self.image_size]
-        )
+        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
 
         labels = None
         if self.use_labels:
@@ -104,25 +100,21 @@ class SwiftFormerModelTester:
 
     def create_and_check_model(self, config, pixel_values, labels):
         model = SwiftFormerModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values)
-        self.parent.assertEqual(
-            result.last_hidden_state.shape, (self.batch_size, self.embed_dims[-1], 7, 7)
-        )
+        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.embed_dims[-1], 7, 7))
 
     def create_and_check_for_image_classification(self, config, pixel_values, labels):
         config.num_labels = self.num_labels
         model = SwiftFormerForImageClassification(config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values, labels=labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
         model = SwiftFormerForImageClassification(config)
-        model.set_train(False)
+        model.eval()
 
-        pixel_values = floats_tensor(
-            [self.batch_size, self.num_channels, self.image_size, self.image_size]
-        )
+        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
         result = model(pixel_values)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
@@ -130,13 +122,6 @@ class SwiftFormerModelTester:
         (config, pixel_values, labels) = self.prepare_config_and_inputs()
         inputs_dict = {"pixel_values": pixel_values}
         return config, inputs_dict
-
-    @slow
-    def test_model_from_pretrained(self):
-        model_name = "MBZUAI/swiftformer-xs"
-        model = SwiftFormerModel.from_pretrained(model_name, from_pt=True)
-        model.set_train(False)
-        self.assertIsNotNone(model)
 
 
 @require_mindspore
@@ -146,11 +131,12 @@ class SwiftFormerModelTest(ModelTesterMixin, unittest.TestCase):
     attention_mask and seq_length.
     """
 
-    all_model_classes = (SwiftFormerModel, SwiftFormerForImageClassification)
-    pipeline_model_mapping = {
-        "image-feature-extraction": SwiftFormerModel,
-        "image-classification": SwiftFormerForImageClassification,
-    }
+    all_model_classes = (SwiftFormerModel, SwiftFormerForImageClassification) if is_mindspore_available() else ()
+    pipeline_model_mapping = (
+        {"image-feature-extraction": SwiftFormerModel, "image-classification": SwiftFormerForImageClassification}
+        if is_mindspore_available()
+        else {}
+    )
 
     fx_compatible = False
     test_pruning = False
@@ -176,13 +162,13 @@ class SwiftFormerModelTest(ModelTesterMixin, unittest.TestCase):
     def test_inputs_embeds(self):
         pass
 
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
 
         for model_class in self.all_model_classes:
             model = model_class(config)
             x = model.get_output_embeddings()
-            self.assertTrue(x is None or isinstance(x, nn.Dense))
+            self.assertTrue(x is None or isinstance(x, nn.Linear))
 
     def test_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -192,6 +178,12 @@ class SwiftFormerModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_for_image_classification(*config_and_inputs)
 
+    @slow
+    def test_model_from_pretrained(self):
+        model_name = "MBZUAI/swiftformer-xs"
+        model = SwiftFormerModel.from_pretrained(model_name)
+        self.assertIsNotNone(model)
+
     @unittest.skip(reason="SwiftFormer does not output attentions")
     def test_attention_outputs(self):
         pass
@@ -199,9 +191,10 @@ class SwiftFormerModelTest(ModelTesterMixin, unittest.TestCase):
     def test_hidden_states_output(self):
         def check_hidden_states_output(inputs_dict, config, model_class):
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
-            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             hidden_states = outputs.hidden_states
 
@@ -237,12 +230,7 @@ class SwiftFormerModelTest(ModelTesterMixin, unittest.TestCase):
         def _config_zero_init(config):
             configs_no_init = copy.deepcopy(config)
             for key in configs_no_init.__dict__.keys():
-                if (
-                    "_range" in key
-                    or "_std" in key
-                    or "initializer_factor" in key
-                    or "layer_scale" in key
-                ):
+                if "_range" in key or "_std" in key or "initializer_factor" in key or "layer_scale" in key:
                     setattr(configs_no_init, key, 1e-10)
                 if isinstance(getattr(configs_no_init, key, None), PretrainedConfig):
                     no_init_subconfig = _config_zero_init(getattr(configs_no_init, key))
@@ -254,10 +242,10 @@ class SwiftFormerModelTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            for name, param in model.parameters_and_names():
+            for name, param in model.named_parameters():
                 if param.requires_grad:
                     self.assertIn(
-                        ((param.data.mean() * 1e9) / 1e9).round().item(),
+                        ((param.mean() * 1e9) / 1e9).round().item(),
                         [0.0, 1.0],
                         msg=f"Parameter {name} of model {model_class} seems not properly initialized",
                     )
@@ -274,31 +262,23 @@ def prepare_img():
 class SwiftFormerModelIntegrationTest(unittest.TestCase):
     @cached_property
     def default_image_processor(self):
-        return (
-            ViTImageProcessor.from_pretrained("MBZUAI/swiftformer-xs")
-            if is_vision_available()
-            else None
-        )
+        return ViTImageProcessor.from_pretrained("MBZUAI/swiftformer-xs") if is_vision_available() else None
 
+    @slow
     def test_inference_image_classification_head(self):
-        model = SwiftFormerForImageClassification.from_pretrained(
-            "MBZUAI/swiftformer-xs"
-        )
-        # image_processor = self.default_image_processor()
-        image_processor = ViTImageProcessor.from_pretrained("MBZUAI/swiftformer-xs")
+        model = SwiftFormerForImageClassification.from_pretrained("MBZUAI/swiftformer-xs")
+
+        image_processor = self.default_image_processor
         image = prepare_img()
         inputs = image_processor(images=image, return_tensors="ms")
 
         # forward pass
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
 
         # verify the logits
         expected_shape = (1, 1000)
         self.assertEqual(outputs.logits.shape, expected_shape)
 
         expected_slice = mindspore.tensor([[-2.1703e00, 2.1107e00, -2.0811e00]])
-        self.assertTrue(
-            np.allclose(
-                outputs.logits[0, :3].asnumpy(), expected_slice.asnumpy(), atol=2e-2
-            )
-        )
+        self.assertTrue(ops.allclose(outputs.logits[0, :3], expected_slice, atol=1e-4))

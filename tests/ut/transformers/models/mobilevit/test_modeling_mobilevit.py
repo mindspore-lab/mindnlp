@@ -1,24 +1,23 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2022 The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================
 """Testing suite for the MindSpore MobileViT model."""
 
 import unittest
-import numpy as np
 
 from mindnlp.transformers import MobileViTConfig
-from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow
+from mindnlp.utils.testing_utils import is_flaky, require_mindspore, require_vision, slow
 from mindnlp.utils import cached_property, is_mindspore_available, is_vision_available
 
 from ...test_configuration_common import ConfigTester
@@ -27,8 +26,8 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 
 
 if is_mindspore_available():
-    import mindspore as ms
-    from mindspore import ops
+    import mindspore
+    from mindnlp.core import ops, no_grad
 
     from mindnlp.transformers import MobileViTForImageClassification, MobileViTForSemanticSegmentation, MobileViTModel
 
@@ -89,15 +88,13 @@ class MobileViTModelTester:
         self.scope = scope
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_tensor(
-            [self.batch_size, self.num_channels, self.image_size, self.image_size])
+        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
 
         labels = None
         pixel_labels = None
         if self.use_labels:
             labels = ids_tensor([self.batch_size], self.num_labels)
-            pixel_labels = ids_tensor(
-                [self.batch_size, self.image_size, self.image_size], self.num_labels)
+            pixel_labels = ids_tensor([self.batch_size, self.image_size, self.image_size], self.num_labels)
 
         config = self.get_config()
 
@@ -122,7 +119,7 @@ class MobileViTModelTester:
 
     def create_and_check_model(self, config, pixel_values, labels, pixel_labels):
         model = MobileViTModel(config=config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values)
         self.parent.assertEqual(
             result.last_hidden_state.shape,
@@ -137,15 +134,14 @@ class MobileViTModelTester:
     def create_and_check_for_image_classification(self, config, pixel_values, labels, pixel_labels):
         config.num_labels = self.num_labels
         model = MobileViTForImageClassification(config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values, labels=labels)
-        self.parent.assertEqual(result.logits.shape,
-                                (self.batch_size, self.num_labels))
+        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
     def create_and_check_for_semantic_segmentation(self, config, pixel_values, labels, pixel_labels):
         config.num_labels = self.num_labels
         model = MobileViTForSemanticSegmentation(config)
-        model.set_train(False)
+        model.eval()
         result = model(pixel_values)
         self.parent.assertEqual(
             result.logits.shape,
@@ -182,7 +178,7 @@ class MobileViTModelTest(ModelTesterMixin, unittest.TestCase):
     """
 
     all_model_classes = (
-        (MobileViTForImageClassification, MobileViTForSemanticSegmentation)
+        (MobileViTModel, MobileViTForImageClassification, MobileViTForSemanticSegmentation)
         if is_mindspore_available()
         else ()
     )
@@ -203,8 +199,7 @@ class MobileViTModelTest(ModelTesterMixin, unittest.TestCase):
 
     def setUp(self):
         self.model_tester = MobileViTModelTester(self)
-        self.config_tester = MobileViTConfigTester(
-            self, config_class=MobileViTConfig, has_text_modality=False)
+        self.config_tester = MobileViTConfigTester(self, config_class=MobileViTConfig, has_text_modality=False)
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -214,7 +209,7 @@ class MobileViTModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="MobileViT does not support input and output embeddings")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(reason="MobileViT does not output attentions")
@@ -228,10 +223,10 @@ class MobileViTModelTest(ModelTesterMixin, unittest.TestCase):
     def test_hidden_states_output(self):
         def check_hidden_states_output(inputs_dict, config, model_class):
             model = model_class(config)
-            model.set_train(False)
+            model.eval()
 
-            outputs = model(
-                **self._prepare_for_class(inputs_dict, model_class))
+            with no_grad():
+                outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
             hidden_states = outputs.hidden_states
 
@@ -244,8 +239,7 @@ class MobileViTModelTest(ModelTesterMixin, unittest.TestCase):
             for i in range(len(hidden_states)):
                 self.assertListEqual(
                     list(hidden_states[i].shape[-2:]),
-                    [self.model_tester.image_size // divisor,
-                        self.model_tester.image_size // divisor],
+                    [self.model_tester.image_size // divisor, self.model_tester.image_size // divisor],
                 )
                 divisor *= 2
 
@@ -265,19 +259,21 @@ class MobileViTModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_for_image_classification(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_for_image_classification(
-            *config_and_inputs)
+        self.model_tester.create_and_check_for_image_classification(*config_and_inputs)
 
     def test_for_semantic_segmentation(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_for_semantic_segmentation(
-            *config_and_inputs)
+        self.model_tester.create_and_check_for_semantic_segmentation(*config_and_inputs)
 
-    # @slow
+    @slow
     def test_model_from_pretrained(self):
         model_name = "apple/mobilevit-small"
         model = MobileViTModel.from_pretrained(model_name)
         self.assertIsNotNone(model)
+
+    @is_flaky(description="is_flaky https://github.com/huggingface/transformers/issues/29516")
+    def test_batching_equivalence(self):
+        super().test_batching_equivalence()
 
 
 # We will verify our results on an image of cute cats
@@ -291,84 +287,75 @@ def prepare_img():
 class MobileViTModelIntegrationTest(unittest.TestCase):
     @cached_property
     def default_image_processor(self):
-        return MobileViTImageProcessor.from_pretrained("apple/mobilevit-xx-small")
+        return MobileViTImageProcessor.from_pretrained("apple/mobilevit-xx-small") if is_vision_available() else None
 
-    # @slow
+    @slow
     def test_inference_image_classification_head(self):
-        model = MobileViTForImageClassification.from_pretrained(
-            "apple/mobilevit-xx-small")
+        model = MobileViTForImageClassification.from_pretrained("apple/mobilevit-xx-small")
 
         image_processor = self.default_image_processor
         image = prepare_img()
         inputs = image_processor(images=image, return_tensors="ms")
 
         # forward pass
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
 
         # verify the logits
         expected_shape = (1, 1000)
         self.assertEqual(outputs.logits.shape, expected_shape)
 
-        expected_slice = ms.Tensor([-1.9364, -1.2327, -0.4653])
+        expected_slice = mindspore.tensor([-1.9364, -1.2327, -0.4653])
 
-        self.assertTrue(np.allclose(
-            outputs.logits[0, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(outputs.logits[0, :3], expected_slice, atol=1e-4))
 
-    # @slow
+    @slow
     def test_inference_semantic_segmentation(self):
-        model = MobileViTForSemanticSegmentation.from_pretrained(
-            "apple/deeplabv3-mobilevit-xx-small")
+        model = MobileViTForSemanticSegmentation.from_pretrained("apple/deeplabv3-mobilevit-xx-small")
 
-        image_processor = MobileViTImageProcessor.from_pretrained(
-            "apple/deeplabv3-mobilevit-xx-small")
+        image_processor = MobileViTImageProcessor.from_pretrained("apple/deeplabv3-mobilevit-xx-small")
 
         image = prepare_img()
         inputs = image_processor(images=image, return_tensors="ms")
 
         # forward pass
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
         logits = outputs.logits
 
         # verify the logits
         expected_shape = (1, 21, 32, 32)
         self.assertEqual(logits.shape, expected_shape)
 
-        expected_slice = ms.Tensor(
+        expected_slice = mindspore.tensor(
             [
-                [[6.9713, 6.9786, 7.2422], [7.2893, 7.2825, 7.4446],
-                    [7.6580, 7.8797, 7.9420]],
-                [[-10.6869, -10.3250, -10.3471], [-10.4228, -9.9868, -9.7132],
-                    [-11.0405, -11.0221, -10.7318]],
-                [[-3.3089, -2.8539, -2.6740], [-3.2706, -2.5621, -2.5108],
-                    [-3.2534, -2.6615, -2.6651]],
-            ]
+                [[6.9713, 6.9786, 7.2422], [7.2893, 7.2825, 7.4446], [7.6580, 7.8797, 7.9420]],
+                [[-10.6869, -10.3250, -10.3471], [-10.4228, -9.9868, -9.7132], [-11.0405, -11.0221, -10.7318]],
+                [[-3.3089, -2.8539, -2.6740], [-3.2706, -2.5621, -2.5108], [-3.2534, -2.6615, -2.6651]],
+            ],
         )
 
-        self.assertTrue(np.allclose(
-            logits[0, :3, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(ops.allclose(logits[0, :3, :3, :3], expected_slice, atol=1e-4))
 
-    # @slow
+    @slow
     def test_post_processing_semantic_segmentation(self):
-        model = MobileViTForSemanticSegmentation.from_pretrained(
-            "apple/deeplabv3-mobilevit-xx-small")
+        model = MobileViTForSemanticSegmentation.from_pretrained("apple/deeplabv3-mobilevit-xx-small")
 
-        image_processor = MobileViTImageProcessor.from_pretrained(
-            "apple/deeplabv3-mobilevit-xx-small")
+        image_processor = MobileViTImageProcessor.from_pretrained("apple/deeplabv3-mobilevit-xx-small")
 
         image = prepare_img()
         inputs = image_processor(images=image, return_tensors="ms")
 
         # forward pass
-        outputs = model(**inputs)
+        with no_grad():
+            outputs = model(**inputs)
 
-        outputs.logits = ops.stop_gradient(outputs.logits)
+        outputs.logits = outputs.logits.detach().cpu()
 
-        segmentation = image_processor.post_process_semantic_segmentation(
-            outputs=outputs, target_sizes=[(50, 60)])
+        segmentation = image_processor.post_process_semantic_segmentation(outputs=outputs, target_sizes=[(50, 60)])
         expected_shape = (50, 60)
         self.assertEqual(segmentation[0].shape, expected_shape)
 
-        segmentation = image_processor.post_process_semantic_segmentation(
-            outputs=outputs)
+        segmentation = image_processor.post_process_semantic_segmentation(outputs=outputs)
         expected_shape = (32, 32)
         self.assertEqual(segmentation[0].shape, expected_shape)

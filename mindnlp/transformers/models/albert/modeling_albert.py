@@ -22,10 +22,11 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import Parameter, Tensor
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
@@ -723,19 +724,19 @@ class AlbertPreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+            cell.weight.assign_value(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
 
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
 @dataclass
@@ -1189,7 +1190,7 @@ class AlbertMLMHead(nn.Module):
         super().__init__()
 
         self.LayerNorm = nn.LayerNorm([config.embedding_size], eps=config.layer_norm_eps)
-        self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
+        self.bias = Parameter(ops.zeros(config.vocab_size))
         self.dense = nn.Linear(config.hidden_size, config.embedding_size)
         self.decoder = nn.Linear(config.embedding_size, config.vocab_size)
         self.activation = ACT2FN[config.hidden_act]
@@ -1428,7 +1429,7 @@ class AlbertForMaskedLM(AlbertPreTrainedModel):
             >>> model = AlbertForMaskedLM.from_pretrained("albert-base-v2")
             ...
             >>> # add mask_token
-            >>> inputs = tokenizer("The capital of [MASK] is Paris.", return_tensors="pt")
+            >>> inputs = tokenizer("The capital of [MASK] is Paris.", return_tensors="ms")
             >>> with torch.no_grad():
             ...     logits = model(**inputs).logits
             ...
@@ -1440,7 +1441,7 @@ class AlbertForMaskedLM(AlbertPreTrainedModel):
             ```
 
             ```python
-            >>> labels = tokenizer("The capital of France is Paris.", return_tensors="pt")["input_ids"]
+            >>> labels = tokenizer("The capital of France is Paris.", return_tensors="ms")["input_ids"]
             >>> labels = torch.where(inputs.input_ids == tokenizer.mask_token_id, labels, -100)
             >>> outputs = model(**inputs, labels=labels)
             >>> round(outputs.loss.item(), 2)

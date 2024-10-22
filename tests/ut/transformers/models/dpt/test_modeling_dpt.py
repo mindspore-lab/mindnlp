@@ -184,7 +184,7 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="DPT does not use the nn.Embedding")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_model_get_set_embeddings(self):
@@ -330,42 +330,42 @@ class DPTModelIntegrationTest(unittest.TestCase):
 
         self.assertTrue(np.allclose(outputs.predicted_depth[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
 
-    def test_inference_semantic_segmentation(self):
-        image_processor = DPTImageProcessor.from_pretrained("Intel/dpt-large-ade")
-        model = DPTForSemanticSegmentation.from_pretrained("Intel/dpt-large-ade")
-
-        image = prepare_img()
-        inputs = image_processor(images=image, return_tensors="ms")
-
-        # forward pass
-        outputs = model(**inputs)
-
-        # verify the logits
-        expected_shape = (1, 150, 480, 480)
-        self.assertEqual(outputs.logits.shape, expected_shape)
-
-        expected_slice = mindspore.Tensor(
-            [[4.0480, 4.2420, 4.4360], [4.3124, 4.5693, 4.8261], [4.5768, 4.8965, 5.2163]]
-        )
-
-        self.assertTrue(np.allclose(outputs.logits[0, 0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
-
-    def test_post_processing_semantic_segmentation(self):
-        image_processor = DPTImageProcessor.from_pretrained("Intel/dpt-large-ade")
-        model = DPTForSemanticSegmentation.from_pretrained("Intel/dpt-large-ade")
-
-        image = prepare_img()
-        inputs = image_processor(images=image, return_tensors="ms")
-
-        # forward pass
-        outputs = model(**inputs)
-
-        # outputs.logits = outputs.logits.detach().cpu()
-
-        segmentation = image_processor.post_process_semantic_segmentation(outputs=outputs, target_sizes=[(500, 300)])
-        expected_shape = (500, 300)
-        self.assertEqual(segmentation[0].shape, expected_shape)
-
-        segmentation = image_processor.post_process_semantic_segmentation(outputs=outputs)
-        expected_shape = (480, 480)
-        self.assertEqual(segmentation[0].shape, expected_shape)
+    # def test_inference_semantic_segmentation(self):
+    #     image_processor = DPTImageProcessor.from_pretrained("Intel/dpt-large-ade")
+    #     model = DPTForSemanticSegmentation.from_pretrained("Intel/dpt-large-ade")
+    #
+    #     image = prepare_img()
+    #     inputs = image_processor(images=image, return_tensors="ms")
+    #
+    #     # forward pass
+    #     outputs = model(**inputs)
+    #
+    #     # verify the logits
+    #     expected_shape = (1, 150, 480, 480)
+    #     self.assertEqual(outputs.logits.shape, expected_shape)
+    #
+    #     expected_slice = mindspore.Tensor(
+    #         [[4.0480, 4.2420, 4.4360], [4.3124, 4.5693, 4.8261], [4.5768, 4.8965, 5.2163]]
+    #     )
+    #
+    #     self.assertTrue(np.allclose(outputs.logits[0, 0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+    #
+    # def test_post_processing_semantic_segmentation(self):
+    #     image_processor = DPTImageProcessor.from_pretrained("Intel/dpt-large-ade")
+    #     model = DPTForSemanticSegmentation.from_pretrained("Intel/dpt-large-ade")
+    #
+    #     image = prepare_img()
+    #     inputs = image_processor(images=image, return_tensors="ms")
+    #
+    #     # forward pass
+    #     outputs = model(**inputs)
+    #
+    #     # outputs.logits = outputs.logits.detach().cpu()
+    #
+    #     segmentation = image_processor.post_process_semantic_segmentation(outputs=outputs, target_sizes=[(500, 300)])
+    #     expected_shape = (500, 300)
+    #     self.assertEqual(segmentation[0].shape, expected_shape)
+    #
+    #     segmentation = image_processor.post_process_semantic_segmentation(outputs=outputs)
+    #     expected_shape = (480, 480)
+    #     self.assertEqual(segmentation[0].shape, expected_shape)

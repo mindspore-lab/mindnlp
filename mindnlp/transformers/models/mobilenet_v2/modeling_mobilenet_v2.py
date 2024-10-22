@@ -267,13 +267,13 @@ class MobileNetV2PreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell: Union[nn.Linear, nn.Conv2d]) -> None:
         """Initialize the weights"""
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
-            cell.weight.set_data(initializer(Normal(mean=0.0,sigma = self.config.initializer_range),
+            cell.weight.assign_value(initializer(Normal(mean=0.0,sigma = self.config.initializer_range),
                                                 cell.weight.shape,cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros',cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros',cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.BatchNorm2d):
-            cell.weight.set_data(initializer('ones',cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros',cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones',cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros',cell.bias.shape, cell.bias.dtype))
 
 
 class MobileNetV2Model(MobileNetV2PreTrainedModel):
@@ -561,7 +561,7 @@ class MobileNetV2ForSemanticSegmentation(MobileNetV2PreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("google/deeplabv3_mobilenet_v2_1.0_513")
         >>> model = MobileNetV2ForSemanticSegmentation.from_pretrained("google/deeplabv3_mobilenet_v2_1.0_513")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
 
         >>> with torch.no_grad():
         ...     outputs = model(**inputs)

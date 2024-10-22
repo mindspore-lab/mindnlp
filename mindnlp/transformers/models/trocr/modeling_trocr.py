@@ -54,7 +54,7 @@ class TrOCRLearnedPositionalEmbedding(nn.Embedding):
         bsz, seq_len = ids.shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
-        ).expand(bsz, -1)
+        ).broadcast_to((bsz, -1))
 
         return super().forward(positions + self.offset)
 
@@ -116,9 +116,8 @@ class TrOCRSinusoidalPositionalEmbedding(nn.Module):
         if self.weights is None or max_pos > self.weights.shape[0]:
             # recompute/expand embeddings if needed
             self.weights = self.get_embedding(max_pos, self.embedding_dim, self.padding_idx)
-        self.weights = self.weights.to(self._float_tensor)
 
-        x = self.weights.index_select(0, position_ids.view(-1)).view(bsz, seq_len, -1).detach()
+        x = self.weights.index_select(0, position_ids.view(-1)).view(bsz, seq_len, -1)
 
         return x
 
@@ -451,15 +450,15 @@ class TrOCRPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         std = self.config.init_std
         if isinstance(module, (nn.Linear, nn.Conv1d)):
-            module.weight.set_data(initializer(
+            module.weight.assign_value(initializer(
                 Normal(sigma=std, mean=0.0), module.weight.shape, module.weight.dtype))
-            if module.bias:
-                module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))
+            if module.bias is not None:
+                module.bias.assign_value(initializer('zeros', module.bias.shape, module.bias.dtype))
         elif isinstance(module, nn.Embedding):
             emb_weight = np.random.normal(0, std, module.weight.shape)
             if module.padding_idx is not None:
                 emb_weight[module.padding_idx] = 0
-            module.weight.set_data(mindspore.Tensor(emb_weight, module.weight.dtype))
+            module.weight.assign_value(mindspore.Tensor(emb_weight, module.weight.dtype))
 
 
 class TrOCRDecoder(TrOCRPreTrainedModel):

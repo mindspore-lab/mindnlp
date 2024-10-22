@@ -20,10 +20,10 @@ from dataclasses import dataclass
 from typing import Optional, Set, Tuple, Union
 
 import mindspore as ms
-from mindspore import Parameter
 from mindspore.common.initializer import TruncatedNormal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -63,12 +63,12 @@ class DeiTEmbeddings(nn.Module):
     def __init__(self, config: DeiTConfig, use_mask_token: bool = False) -> None:
         super().__init__()
 
-        self.cls_token = Parameter(ops.zeros((1, 1, config.hidden_size)), name="cls_token")
-        self.distillation_token = Parameter(ops.zeros((1, 1, config.hidden_size)), name="distillation_token")
-        self.mask_token = Parameter(ops.zeros((1, 1, config.hidden_size)), name="mask_token")
+        self.cls_token = Parameter(ops.zeros((1, 1, config.hidden_size)))
+        self.distillation_token = Parameter(ops.zeros((1, 1, config.hidden_size)))
+        self.mask_token = Parameter(ops.zeros((1, 1, config.hidden_size)))
         self.patch_embeddings = DeiTPatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
-        self.position_embeddings = Parameter(ops.zeros((1, num_patches + 2, config.hidden_size)), name="position_embeddings")
+        self.position_embeddings = Parameter(ops.zeros((1, num_patches + 2, config.hidden_size)))
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.patch_size = config.patch_size
 
@@ -640,7 +640,7 @@ class DeiTForMaskedImageModeling(DeiTPreTrainedModel):
         >>> model = DeiTForMaskedImageModeling.from_pretrained("facebook/deit-base-distilled-patch16-224")
 
         >>> num_patches = (model.config.image_size // model.config.patch_size) ** 2
-        >>> pixel_values = image_processor(images=image, return_tensors="pt").pixel_values
+        >>> pixel_values = image_processor(images=image, return_tensors="ms").pixel_values
         >>> # create random boolean mask of shape (batch_size, num_patches)
         >>> bool_masked_pos = torch.randint(low=0, high=2, size=(1, num_patches)).bool()
 
@@ -744,7 +744,7 @@ class DeiTForImageClassification(DeiTPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("facebook/deit-base-distilled-patch16-224")
         >>> model = DeiTForImageClassification.from_pretrained("facebook/deit-base-distilled-patch16-224")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> outputs = model(**inputs)
         >>> logits = outputs.logits
         >>> # model predicts one of the 1000 ImageNet classes

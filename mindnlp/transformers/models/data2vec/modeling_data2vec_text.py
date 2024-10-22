@@ -18,11 +18,10 @@ import math
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindspore.common.initializer import Normal, initializer
 
 from mindnlp.utils import logging
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 
 from ...activations import ACT2FN, gelu
 from ...modeling_outputs import (
@@ -672,40 +671,23 @@ class Data2VecTextPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["Data2VecTextForTextEmbeddings", "Data2VecTextLayer"]
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, nn.Linear):
+        if isinstance(module, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
-            cell.weight.set_data(
-                initializer(
-                    Normal(self.config.initializer_range),
-                    cell.weight.shape,
-                    cell.weight.dtype,
-                )
-            )
-            if cell.bias is not None:
-                cell.bias.set_data(
-                    initializer("zeros", cell.bias.shape, cell.bias.dtype)
-                )
-        elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(
-                initializer(
-                    Normal(self.config.initializer_range),
-                    cell.weight.shape,
-                    cell.weight.dtype,
-                )
-            )
-            if cell.padding_idx:
-                cell.weight.data[cell.padding_idx] = 0
-        elif isinstance(cell, nn.LayerNorm):
-            if hasattr(cell, "bias") and cell.bias is not None:
-                cell.bias.set_data(
-                    initializer("zeros", cell.bias.shape, cell.bias.dtype)
-                )
-            if hasattr(cell, "weight") and cell.weight is not None:
-                cell.weight.set_data(
-                    initializer("ones", cell.weight.shape, cell.weight.dtype)
-                )
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
+        elif isinstance(module, nn.LayerNorm):
+            if hasattr(module, "bias") and module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+            if hasattr(module, "weight") and module.weight is not None:
+                nn.init.ones_(module.weight.data)
 
     # Copied from mindnlp.transformers.models.clap.modeling_clap.ClapTextModel.forward
     def forward(
@@ -1137,7 +1119,7 @@ class Data2VecTextForCausalLM(Data2VecTextPreTrainedModel):
             >>> config.is_decoder = True
             >>> model = Data2VecTextForCausalLM.from_pretrained("facebook/data2vec-text-base", config=config)
             ...
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> prediction_logits = outputs.logits
@@ -1330,7 +1312,7 @@ class Data2VecTextLMHead(nn.Module):
         )
 
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
-        self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
+        self.bias = Parameter(ops.zeros(config.vocab_size))
         self.decoder.bias = self.bias
 
     def forward(self, features, **kwargs):

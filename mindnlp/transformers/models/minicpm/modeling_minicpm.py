@@ -26,10 +26,11 @@ from typing import List, Optional, Tuple, Union, Dict
 
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...activations import ACT2FN
@@ -630,7 +631,7 @@ class MiniCPMAttention(nn.Module):
         '''
         if "padding_mask" in kwargs:
             warnings.warn(
-                "Passing `padding_mask` is deprecated and will be removed in v4.37. Please make sure use `attention_mask` instead.`"
+                "Passing `padding_mask` is deprecated.37. Please make sure use `attention_mask` instead.`"
             )
 
         bsz, q_len, _ = hidden_states.shape
@@ -820,7 +821,7 @@ class MiniCPMDecoderLayer(nn.Module):
         """
         if "padding_mask" in kwargs:
             warnings.warn(
-                "Passing `padding_mask` is deprecated and will be removed in v4.37. Please make sure use `attention_mask` instead.`"
+                "Passing `padding_mask` is deprecated.37. Please make sure use `attention_mask` instead.`"
             )
 
         residual = hidden_states
@@ -897,15 +898,15 @@ class MiniCPMPreTrainedModel(PreTrainedModel):
         """
         std = self.config.initializer_range
         if isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, std, cell.weight.shape)
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
 
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
 
 
 class MiniCPMModel(MiniCPMPreTrainedModel):
@@ -1149,7 +1150,7 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
         ...
         >>> prompt = "Hey, are you conscious? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
+        >>> inputs = tokenizer(prompt, return_tensors="ms")
         ...
         >>> # Generate
         >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
@@ -1328,7 +1329,7 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
             ...
             >>> prompt = "Hey, are you conscious? Can you talk to me?"
-            >>> inputs = tokenizer(prompt, return_tensors="pt")
+            >>> inputs = tokenizer(prompt, return_tensors="ms")
             ...
             >>> # Generate
             >>> generate_ids = model.generate(inputs.input_ids, max_length=30)

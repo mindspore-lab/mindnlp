@@ -22,10 +22,11 @@
 import warnings
 from typing import Any, List, Optional
 
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer,  Constant
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.transformers.ms_utils import Conv1D
 from mindnlp.peft.utils import transpose
 from mindnlp.core.nn import  ParameterDict
@@ -86,11 +87,11 @@ class IA3Layer(BaseTunerLayer):
         self.is_feedforward = is_feedforward
         base_layer = self.get_base_layer()
         if isinstance(base_layer, nn.Linear):
-            in_features, out_features = base_layer.in_channels, base_layer.out_channels
+            in_features, out_features = base_layer.in_features, base_layer.out_features
         elif isinstance(base_layer, nn.Conv2d):
             in_features, out_features = base_layer.in_channels, base_layer.out_channels
         elif isinstance(base_layer, nn.Embedding):
-            in_features, out_features = base_layer.vocab_size, base_layer.embedding_size
+            in_features, out_features = base_layer.num_embeddings, base_layer.embedding_dim
         elif isinstance(base_layer, Conv1D):
             in_features, out_features = (
                 base_layer.weight.ds_shape if hasattr(base_layer.weight, "ds_shape") else base_layer.weight.shape
@@ -145,7 +146,7 @@ in the ia3_l dictionary. If the adapter_name is not found in the dictionary, no 
         """
         if adapter_name in self.ia3_l.keys():
             # initialize learned vector with torch.ones
-            self.ia3_l[adapter_name].set_data(initializer(
+            self.ia3_l[adapter_name].assign_value(initializer(
                 Constant(1.0),
                 self.ia3_l[adapter_name].shape,
                 self.ia3_l[adapter_name].dtype

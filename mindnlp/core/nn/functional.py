@@ -7,32 +7,34 @@ import mindspore
 from mindspore import ops, Tensor
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.function.random_func import _get_seed, _set_prim_op_user_data
+from mindspore.ops.operations import nn_ops
 
-from mindnlp.configs import USE_PYBOOST
-from .modules._utils import _pair
+from mindnlp.configs import DEVICE_TARGET, ON_ORANGE_PI, use_pyboost
 
 def gelu(input, approximate='none'):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.gelu(input, approximate)
     return ops.gelu(input, approximate)
 
 def relu(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.relu(input)
     return ops.relu(input)
 
 def tanh(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.tanh(input)
     return ops.tanh(input)
 
 def sigmoid(input):
-    if USE_PYBOOST:
+    if use_pyboost() and not ON_ORANGE_PI:
         return mindspore.mint.nn.functional.sigmoid(input)
     return ops.sigmoid(input)
 
 def silu(input):
-    if USE_PYBOOST:
+    if DEVICE_TARGET == 'CPU' or ON_ORANGE_PI:
+        return input * sigmoid(input)
+    if use_pyboost():
         return mindspore.mint.nn.functional.silu(input)
     return ops.silu(input)
 
@@ -43,7 +45,7 @@ def relu6(input):
     return ops.relu6(input)
 
 def elu(input, alpha=1.0):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.elu(input, alpha)
     return ops.elu(input, alpha)
 
@@ -51,12 +53,15 @@ def glu(input, dim=-1):
     return ops.glu(input, dim)
 
 def softplus(input, beta=1, threshold=20):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.softplus(input, beta, threshold)
     return ops.softplus(input, beta, threshold)
 
+def logsigmoid(input):
+    return ops.logsigmoid(input)
+
 def leaky_relu(input, alpha=0.2):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.leaky_relu(input, alpha)
     return ops.leaky_relu(input, alpha)
 
@@ -125,29 +130,16 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
     Returns:
     - numpy array: The result of the average pooling operation.
     """
-    if USE_PYBOOST:
-        if stride is None:
-            stride = kernel_size
-
-        if isinstance(padding, int):
-            pad_height, pad_width = padding, padding
-        else:
-            pad_height, pad_width = padding
-
-        # Add padding to the input array
-        if pad_height > 0 or pad_width > 0:
-            input = pad(input, (pad_width, pad_width, pad_height, pad_height), mode='constant')
-
-        pad_mode = "SAME" if ceil_mode else "VALID"
-        _avgpool2d = _get_cache_prim(ops.AvgPool)(kernel_size=_pair(kernel_size), strides=_pair(stride), pad_mode=pad_mode)
-        output = _avgpool2d(input)
-        return output
+    if use_pyboost():
+        return mindspore.ops.function.nn_func.avg_pool2d_ext(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
     return ops.avg_pool2d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
 def dropout(input, p=0.5, training=True):
-    if USE_PYBOOST:
-        return mindspore.mint.dropout(input, p, training)
+    if not training or p == 0:
+        return input
+    if use_pyboost() and not ON_ORANGE_PI:
+        return mindspore.mint.nn.functional.dropout(input, p, training)
     return ops.dropout(input, p, training)
 
 def dropout2d(input, p=0.5, training=False):
@@ -162,21 +154,52 @@ def drop_and_mask(keep_prob, seed=None):
 
 dense_ = ops.Dense()
 def linear(input, weight, bias=None):
-    if USE_PYBOOST:
-        return mindspore.mint.linear(input, weight, bias)
+    if ON_ORANGE_PI:
+        input = input.to(mindspore.float16)
+        weight = weight.to(mindspore.float16)
+        if bias is not None:
+            bias = bias.to(mindspore.float16)
+            return dense_(input, weight) + bias
+        return dense_(input, weight)
+    if use_pyboost():
+        return mindspore.mint.nn.functional.linear(input, weight, bias)
     return dense_(input, weight, bias)
 
 
 def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean', pos_weight=None):
-    if USE_PYBOOST:
+    if input.shape != target.shape:
+        target = target.unsqueeze(1).expand_as(input).to(input.dtype)
+    if use_pyboost():
         return mindspore.mint.nn.functional.binary_cross_entropy_with_logits(input, target, weight, reduction, pos_weight)
-    return ops.binary_cross_entropy_with_logits(input, target, weight, pos_weight, reduction)
+    return ops.binary_cross_entropy_with_logits(input, target.astype(input.dtype), weight, pos_weight, reduction)
 
-def log_softmax(input, dim=-1):
-    return ops.log_softmax(input, dim)
+def gumbel_softmax(logits: Tensor, tau: float = 1, hard: bool = False, eps: float = 1e-10, dim: int = -1) -> Tensor:
+    if eps != 1e-10:
+        warnings.warn("`eps` parameter is deprecated and has no effect.")
+
+    uniform_samples = _get_cache_prim(ops.UniformReal)()(logits.shape)
+    gumbels = -ops.log(-ops.log(uniform_samples + eps) + eps) # ~Gumbel(0, 1)
+    gumbels = (logits + gumbels) / tau  # ~Gumbel(logits,tau)
+    y_soft = softmax(gumbels, dim)
+
+    if hard:
+        # Straight through.
+        index = y_soft.argmax(dim)
+        y_hard = one_hot(index, logits.shape[dim])
+        ret = ops.stop_gradient(y_hard - y_soft) + y_soft
+    else:
+        # Reparametrization trick.
+        ret = y_soft
+    return ret
+
+def log_softmax(input, dim=-1, dtype=None):
+    out = ops.log_softmax(input, dim)
+    if dtype is not None:
+        out = out.to(dtype)
+    return out
 
 def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0, scale_grad_by_freq=False):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.ops.auto_generate.gen_ops_prim.embedding_op(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq)
     return ops.gather(weight, input, 0)
 
@@ -189,14 +212,116 @@ def apply_rotary_pos_emb(query, key, cos, sin, position_ids, cos_format=0):
     )
 
 def pad(input, pad, mode='constant', value=0.0):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.pad(input, pad, mode, value)
     if mode in ['reflect', 'circular']:
         return ops.pad(input, pad, mode)
     return ops.pad(input, pad, mode, value)
 
+def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
+    return _inner_nll_loss(input, target, weight, ignore_index, reduction, label_smoothing)
+    # if label_smoothing != 0.0 or target.ndim != 1:
+    # if weight is None:
+    #     weight = ops.ones(input.shape[-1], dtype=input.dtype)
+    # _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
+    # return _nll_loss(input, target, weight)[0]
+
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
-    return ops.cross_entropy(input, target, weight, ignore_index, reduction, label_smoothing)
+    input = input.to(mindspore.float32)
+    class_dim = 0 if input.ndim == 1 else 1
+    if target.dtype in [mindspore.float32, mindspore.float16]:
+        return _cross_entropy(input, target, class_dim, weight, reduction, label_smoothing)
+    return nll_loss(log_softmax(input, class_dim), target, weight, ignore_index, reduction, label_smoothing)
+
+
+def _cross_entropy(inputs, target, target_dim, weight=None, reduction='mean', label_smoothing=0.0):
+    """cross entropy inner function"""
+    class_dim = 0 if inputs.ndim == 1 else 1
+    n_classes = inputs.shape[class_dim]
+    inputs = log_softmax(inputs, class_dim)
+    if label_smoothing > 0.0:
+        target = target * (1 - label_smoothing) + label_smoothing / n_classes
+
+    if weight is None:
+        weight = ops.ones_like(inputs)
+    elif inputs.ndim != 1:
+        broadcast_shape = [1 for _ in range(inputs.ndim)]
+        broadcast_shape[1] = weight.shape[0]
+        weight = weight.reshape(broadcast_shape)
+
+    if reduction == 'mean':
+        return -(inputs * target * weight).sum() / (inputs.size / n_classes)
+    if reduction == 'sum':
+        return -(inputs * target * weight).sum()
+    return -(inputs * target * weight).sum(class_dim)
+
+
+def _inner_nll_loss(inputs, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
+    ndim = inputs.ndim
+    if ndim == 2:
+        ret = _nll_loss(inputs, target, -1, weight, ignore_index, reduction, label_smoothing)
+    elif ndim == 4:
+        ret = _nll_loss(inputs, target, 1, weight, ignore_index, reduction, label_smoothing)
+    elif ndim == 1:
+        ret = _nll_loss(inputs, target, 0, weight, ignore_index, reduction, label_smoothing)
+    else:
+        n = inputs.shape[0]
+        c = inputs.shape[1]
+        out_size = (n,) + inputs.shape[2:]
+        inputs = inputs.view((n, c, 1, -1))
+        target = target.view((n, 1, -1))
+        if reduction != 'none':
+            ret = _nll_loss(inputs, target, 1, weight, ignore_index, reduction, label_smoothing)
+        else:
+            ret = _nll_loss(inputs, target, 1, weight, ignore_index, label_smoothing=label_smoothing)
+            ret = ret.view(out_size)
+    return ret
+
+
+def _nll_loss(inputs, target, target_dim=-1, weight=None, ignore_index=None, reduction='none', label_smoothing=0.0):
+    """nll loss inner function"""
+    if target.ndim == inputs.ndim - 1:
+        target = target.expand_dims(target_dim)
+    if ignore_index is not None:
+        non_pad_mask = ops.equal(target, ignore_index)
+        target = target.masked_fill(non_pad_mask, ops.cast(0, target.dtype))
+    else:
+        non_pad_mask = target
+    if weight is not None:
+        loss_weights = ops.gather(weight, target, 0)
+        orig_shape = inputs.shape
+        if inputs.ndim != 2:
+            inputs = inputs.view(orig_shape[:2] + (-1,))
+            weight = weight.view(weight.shape + (1,))
+        weighted_inputs = inputs * weight
+        weighted_inputs = weighted_inputs.view(orig_shape)
+        loss = ops.neg(ops.gather_d(weighted_inputs, target_dim, target))
+        smooth_loss = ops.neg(weighted_inputs.sum(axis=target_dim, keepdims=True))
+    else:
+        loss = ops.neg(ops.gather_d(inputs, target_dim, target))
+        smooth_loss = ops.neg(inputs.sum(axis=target_dim, keepdims=True))
+        loss_weights = ops.ones_like(loss)
+
+    if ignore_index is not None:
+        loss = loss.masked_fill(non_pad_mask, ops.cast(0, loss.dtype))
+        loss_weights = loss_weights.masked_fill(non_pad_mask, ops.cast(0, loss_weights.dtype))
+        smooth_loss = smooth_loss.masked_fill(non_pad_mask, ops.cast(0, smooth_loss.dtype))
+
+    loss = loss.squeeze(target_dim)
+    smooth_loss = smooth_loss.squeeze(target_dim)
+
+    if reduction == 'sum':
+        loss = loss.sum()
+        smooth_loss = smooth_loss.sum()
+    if reduction == 'mean':
+        loss = loss.sum() / loss_weights.sum()
+        smooth_loss = smooth_loss.sum() / loss_weights.sum()
+
+    eps_i = label_smoothing / inputs.shape[target_dim]
+    if label_smoothing != 0:
+        loss = (1. - label_smoothing) * loss + eps_i * smooth_loss
+
+    return loss
 
 def mse_loss(input, target, reduction='mean'):
     return ops.mse_loss(input, target, reduction)
@@ -204,16 +329,39 @@ def mse_loss(input, target, reduction='mean'):
 def l1_loss(input, target, reduction='mean'):
     return ops.l1_loss(input, target, reduction)
 
+def smooth_l1_loss(input, target, beta=1.0, reduction='none'):
+    input = input.to(mindspore.float32)
+    target = target.to(mindspore.float32)
+    return ops.smooth_l1_loss(input, target, beta, reduction)
+
+def kl_div(logits, labels, reduction='mean', log_target=False):
+    if log_target:
+        labels = ops.log(labels)
+    return ops.kl_div(logits, labels, reduction)
+
+def manual_softmax(x, dim=-1):
+    exp_x = ops.exp(x - ops.max(x, axis=dim, keepdims=True)[0])
+    return exp_x / ops.sum(exp_x, dim=dim, keepdim=True)
+
 def softmax(input, dim=-1, *, dtype=None):
-    if USE_PYBOOST:
-        return mindspore.mint.softmax(input, dim, dtype=dtype)
+    if use_pyboost():
+        return mindspore.mint.nn.functional.softmax(input, dim, dtype=dtype)
+    if dtype is not None:
+        input = input.to(dtype)
     if dim is None:
         dim = -1
-    return ops.softmax(input, dim, dtype=dtype)
+    if ON_ORANGE_PI:
+        return manual_softmax(input, dim)
+    softmax_ = _get_cache_prim(ops.Softmax)(dim)
+    return softmax_(input)
 
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
-    if USE_PYBOOST:
-        return mindspore.mint.layer_norm(input, normalized_shape, weight, bias, eps)
+    if weight is None:
+        weight = ops.ones(normalized_shape, dtype=input.dtype)
+    if bias is None:
+        bias = ops.zeros(normalized_shape, dtype=input.dtype)
+    if use_pyboost():
+        return mindspore.mint.nn.functional.layer_norm(input, normalized_shape, weight, bias, eps)
     if weight is not None:
         begin_axis = input.ndim - weight.ndim
     else:
@@ -248,17 +396,6 @@ def normalize(input, p=2.0, dim=1, eps=1e-6):
     return input / ops.norm(input, ord=p, dim=dim, keepdim=True)
 
 def batch_norm(input, running_mean, running_var, weight=None, bias=None, training=False, momentum=0.1, eps=1e-05):
-    if USE_PYBOOST:
-        return mindspore.mint.nn.functional.batch_norm(
-            input,
-            running_mean,
-            running_var,
-            weight,
-            bias,
-            training,
-            momentum,
-            eps
-        )
 
     if running_mean is None:
         running_mean = ops.ones(input.shape[1])
@@ -269,6 +406,17 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None, trainin
     if bias is None:
         bias = ops.zeros(input.shape[1])
 
+    if use_pyboost():
+        return mindspore.mint.nn.functional.batch_norm(
+            input,
+            running_mean,
+            running_var,
+            weight,
+            bias,
+            training,
+            momentum,
+            eps
+        )
     return ops.batch_norm(
         input,
         running_mean,
@@ -288,7 +436,7 @@ def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     return ops.conv2d(input, weight, bias=bias, stride=stride, pad_mode=pad_mode, padding=padding, dilation=dilation, groups=groups)
 
 def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
     return ops.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
 
@@ -314,7 +462,7 @@ def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode
         return output_1d
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.group_norm(input, num_groups, weight, bias, eps)
     input_shape = input.shape
     input = input.reshape(input_shape[0], num_groups, -1)
@@ -422,7 +570,7 @@ def _in_projection_packed(
             # self-attention
             # proj = linear(q, w, b)
             # # reshape to 3, E and not E, 3 is deliberate for better memory coalescing and keeping same order as chunk()
-            # proj = proj.unflatten(-1, (3, E)).unsqueeze(0).swapaxes(0, -2).squeeze(-2).contiguous()
+            # proj = proj.unflatten(-1, (3, E)).unsqueeze(0).swapaxes(0, -2).squeeze(-2)
             # return proj[0], proj[1], proj[2]
             return linear(q, w, b).chunk(3, axis=-1)
         else:
@@ -435,7 +583,7 @@ def _in_projection_packed(
             # q_proj = linear(q, w_q, b_q)
             # kv_proj = linear(k, w_kv, b_kv)
             # # reshape to 2, E and not E, 2 is deliberate for better memory coalescing and keeping same order as chunk()
-            # kv_proj = kv_proj.unflatten(-1, (2, E)).unsqueeze(0).swapaxes(0, -2).squeeze(-2).contiguous()
+            # kv_proj = kv_proj.unflatten(-1, (2, E)).unsqueeze(0).swapaxes(0, -2).squeeze(-2)
             # return (q_proj, kv_proj[0], kv_proj[1])
             return (linear(q, w_q, b_q),) + linear(k, w_kv, b_kv).chunk(2, axis=-1)
     else:
@@ -769,7 +917,7 @@ def multi_head_attention_forward(
         assert key_padding_mask.shape == (bsz, src_len), \
             f"expecting key_padding_mask shape of {(bsz, src_len)}, but got {key_padding_mask.shape}"
         key_padding_mask = key_padding_mask.view(bsz, 1, 1, src_len).   \
-            expand(-1, num_heads, -1, -1).reshape(bsz * num_heads, 1, src_len)
+            broadcast_to((-1, num_heads, -1, -1)).reshape(bsz * num_heads, 1, src_len)
         if attn_mask is None:
             attn_mask = key_padding_mask
         else:
@@ -874,12 +1022,12 @@ def _none_or_dtype(input: Optional[mindspore.Tensor]) -> Optional[int]:
     raise RuntimeError("input to _none_or_dtype() must be None or mindspore.Tensor")
 
 def unfold(input, kernel_size, dilation=1, padding=0, stride=1):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.unfold(input, kernel_size, dilation, padding, stride)
     return ops.unfold(input, kernel_size, dilation, padding, stride)
 
 def fold(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.fold(input, output_size, kernel_size, dilation, padding, stride)
     return ops.fold(input, output_size, kernel_size, dilation, padding, stride)
 
@@ -894,7 +1042,7 @@ def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
         pad_mode = padding
         pad = (0,) * 4
 
-    _conv2d = _get_cache_prim(ops.Conv2D)(out_channel=weight.shape[1] * groups,
+    _conv2d = _get_cache_prim(ops.Conv2D)(out_channel=weight.shape[0] * groups,
                                         kernel_size=(1, weight.shape[-1]),
                                         mode=1,
                                         pad_mode=pad_mode,
@@ -913,10 +1061,23 @@ def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     return output
 
 def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0, reduction='mean', zero_infinity=False):
-    return ops.ctc_loss(log_probs, targets, input_lengths, target_lengths, blank, reduction, zero_infinity)[0]
+    ctc_loss_op = _get_cache_prim(nn_ops.CTCLossV2)(blank=blank, reduction="none", zero_infinity=zero_infinity)
+    loss, _ = ctc_loss_op(log_probs, targets, input_lengths, target_lengths)
+    if zero_infinity:
+        loss = ops.where(ops.isinf(loss), 0., loss)
+    if reduction == 'sum':
+        loss = loss.sum()
+    if reduction == 'mean':
+        input_type = loss.dtype
+        target_length_t = target_lengths.clip(1., None)
+        loss = loss.astype("float32")
+        loss = loss / target_length_t
+        loss = loss.mean()
+        loss = loss.astype(input_type)
+    return loss
 
 def one_hot(tensor, num_classes=-1):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.nn.functional.one_hot(tensor, num_classes)
     return ops.one_hot(tensor, num_classes)
 
@@ -927,12 +1088,18 @@ def pixel_unshuffle(input, downscale_factor):
     return ops.pixel_shuffle(input, downscale_factor)
 
 def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corners=False):
-    if USE_PYBOOST:
-        return mindspore.mint.grid_sample(input, grid, mode, padding_mode, align_corners)
+    if use_pyboost():
+        return mindspore.mint.nn.functional.grid_sample(input, grid, mode, padding_mode, align_corners)
     return ops.grid_sample(input, grid, mode, padding_mode, align_corners)
 
 def cosine_similarity(x1, x2, dim=1, eps=1e-8):
-    return ops.cosine_similarity(x1, x2, dim, eps)
+    if DEVICE_TARGET == 'Ascend':
+        zero_norm_mask = ((x1.sum(dim) == 0).int() & (x2.sum(dim) == 0).int()).bool()
+    else:
+        zero_norm_mask = (x1.sum(dim) == 0) & (x2.sum(dim) == 0)
+
+    cosine_sim = ops.cosine_similarity(x1, x2, dim, eps)
+    return ops.select(zero_norm_mask, ops.ones_like(cosine_sim), cosine_sim)
 
 # def pairwise_distance():
 #     return ops.pairwise_distance

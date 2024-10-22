@@ -27,7 +27,7 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attenti
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops
 
     from mindnlp.transformers import (
         LongformerForMaskedLM,
@@ -38,6 +38,7 @@ if is_mindspore_available():
         LongformerModel,
         LongformerSelfAttention,
     )
+
 
 class LongformerModelTester:
     def __init__(
@@ -566,7 +567,7 @@ class LongformerModelIntegrationTest(unittest.TestCase):
         model = LongformerModel.from_pretrained("patrickvonplaten/longformer-random-tiny")
         model.set_train(False)
         layer = model.encoder.layer[0].attention.self
-        hidden_states = ops.cat([self._get_hidden_states(), self._get_hidden_states() - 0.5], axis=0)
+        hidden_states = ops.cat([self._get_hidden_states(), self._get_hidden_states() - 0.5], dim=0)
         batch_size, seq_length, hidden_size = hidden_states.shape
         attention_mask = ops.zeros((batch_size, seq_length), dtype=mindspore.float32)
 
@@ -615,7 +616,7 @@ class LongformerModelIntegrationTest(unittest.TestCase):
         model = LongformerModel.from_pretrained("patrickvonplaten/longformer-random-tiny")
         model.set_train(False)
         layer = model.encoder.layer[0].attention.self
-        hidden_states = ops.cat([self._get_hidden_states(), self._get_hidden_states() - 0.5], axis=0)
+        hidden_states = ops.cat([self._get_hidden_states(), self._get_hidden_states() - 0.5], dim=0)
         batch_size, seq_length, hidden_size = hidden_states.shape
         attention_mask = ops.zeros((batch_size, seq_length), dtype=mindspore.float32)
 

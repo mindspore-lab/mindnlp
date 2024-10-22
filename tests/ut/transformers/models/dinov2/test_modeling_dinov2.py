@@ -242,7 +242,7 @@ class Dinov2ModelTest(ModelTesterMixin,  unittest.TestCase):
         pass
     
     # override since we have embeddings / LM heads over multiple codebooks
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
         for model_class in self.all_model_classes:
             model = model_class(config)
@@ -288,18 +288,13 @@ def prepare_img():
 
 
 
-
 class Dinov2ModelIntegrationTest(unittest.TestCase):
     @cached_property
     def default_image_processor(self):
         return AutoImageProcessor.from_pretrained("facebook/dinov2-base")
 
-    @unittest.skip(
-        reason="因为mindnlp\transformers\models\dinov2\modeling_dinov2.py:line83用到的ops.interpolate有精度误差（文档：https://www.mindspore.cn/docs/zh-CN/master/note/api_mapping/pytorch_diff/interpolate.html）, check: "
-    )
     @slow
     def test_inference_no_head(self):
-        pass
         model = Dinov2Model.from_pretrained("facebook/dinov2-base")
 
         image_processor = self.default_image_processor

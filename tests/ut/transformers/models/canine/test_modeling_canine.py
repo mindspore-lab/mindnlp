@@ -500,7 +500,7 @@ class CanineModelTest(ModelTesterMixin, unittest.TestCase): # PipelineTesterMixi
         pass
 
     @unittest.skip(reason="CANINE does not have a get_input_embeddings() method.")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip(
@@ -520,6 +520,13 @@ class CanineModelTest(ModelTesterMixin, unittest.TestCase): # PipelineTesterMixi
     )
     def test_training_gradient_checkpointing_use_reentrant_false(self):
         pass
+
+    @unittest.skip(
+        reason="can not run on CPU"
+    )
+    def test_training(self):
+        pass
+
 
     @slow
     def test_model_from_pretrained(self):

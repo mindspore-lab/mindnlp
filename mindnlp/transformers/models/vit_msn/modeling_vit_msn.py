@@ -19,10 +19,10 @@ import math
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import mindspore as ms
-from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, ImageClassifierOutput
@@ -472,14 +472,14 @@ class ViTMSNPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
+            cell.weight.assign_value(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
                                              cell.weight.shape,cell.weight.dtype))
 
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
 
 
 
@@ -537,7 +537,7 @@ class ViTMSNModel(ViTMSNPreTrainedModel):
 
         >>> image_processor = AutoImageProcessor.from_pretrained("facebook/vit-msn-small")
         >>> model = ViTMSNModel.from_pretrained("facebook/vit-msn-small")
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> with torch.no_grad():
         ...     outputs = model(**inputs)
         >>> last_hidden_states = outputs.last_hidden_state
@@ -627,7 +627,7 @@ class ViTMSNForImageClassification(ViTMSNPreTrainedModel):
         >>> image_processor = AutoImageProcessor.from_pretrained("facebook/vit-msn-small")
         >>> model = ViTMSNForImageClassification.from_pretrained("facebook/vit-msn-small")
 
-        >>> inputs = image_processor(images=image, return_tensors="pt")
+        >>> inputs = image_processor(images=image, return_tensors="ms")
         >>> with torch.no_grad():
         ...     logits = model(**inputs).logits
         >>> # model predicts one of the 1000 ImageNet classes

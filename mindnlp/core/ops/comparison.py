@@ -2,7 +2,7 @@
 import numpy as np
 import mindspore
 from mindspore import ops
-from mindnlp.configs import USE_PYBOOST
+from mindnlp.configs import use_pyboost
 
 # allclose
 def allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
@@ -14,7 +14,7 @@ def argsort(input, dim=-1, descending=False, stable=False):
 
 # eq
 def eq(input, other):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.eq(input, other)
     return ops.eq(input, other)
 
@@ -28,7 +28,7 @@ def ge(input, other):
 
 # gt
 def gt(input, other):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.gt(input, other)
     return ops.gt(input, other)
 
@@ -38,13 +38,13 @@ def greater(input, other):
 
 # isclose
 def isclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.isclose(input, other, rtol, atol, equal_nan)
     return mindspore.tensor(np.isclose(input.numpy(), other.numpy(), rtol, atol, equal_nan))
 
 # isfinite
 def isfinite(input):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.isfinite(input)
     return ops.isfinite(input)
 
@@ -57,6 +57,8 @@ def isin(elements, test_elements):
 
 # isinf
 def isinf(input):
+    if input.dtype in (mindspore.int32, mindspore.int64):
+        input = input.to(mindspore.float32)
     return ops.isinf(input)
 
 # isposinf
@@ -65,6 +67,8 @@ def isinf(input):
 
 # isnan
 def isnan(input):
+    if input.dtype in (mindspore.int32, mindspore.int64):
+        input = input.to(mindspore.float32)
     return ops.isnan(input)
 
 # isreal
@@ -73,7 +77,7 @@ def isnan(input):
 
 # le
 def le(input, other):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.le(input, other)
     return ops.le(input, other)
 
@@ -83,7 +87,7 @@ def less_equal(input, other):
 
 # lt
 def lt(input, other):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.lt(input, other)
     return ops.lt(input, other)
 
@@ -93,13 +97,13 @@ def less(input, other):
 
 # maximum
 def maximum(input, other):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.maximum(input, other)
     return ops.maximum(input, other)
 
 # minimum
 def minimum(input, other):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.minimum(input, other)
     return ops.minimum(input, other)
 
@@ -114,7 +118,7 @@ def fmin(input, other):
 
 # ne
 def ne(input, other):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.ne(input, other)
     return ops.ne(input, other)
 
@@ -124,13 +128,13 @@ def not_equal(input, other):
 
 # sort
 def sort(input, *, dim=-1, descending=False, stable=False):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.sort(input, dim=dim, descending=descending, stable=stable)
     return ops.sort(input, dim, descending)
 
 # topk
 def topk(input, k, dim=-1, largest=True, sorted=True):
-    if USE_PYBOOST:
+    if use_pyboost():
         return mindspore.mint.topk(input, k, dim, largest, sorted)
     return ops.topk(input, k, dim, largest, sorted)
 

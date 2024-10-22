@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2024 JetMoE AI and the HuggingFace Inc. team. All rights reserved.
+# Copyright 2024 JetMoe AI and the HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,395 +12,453 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""MindSpore JetMoE model."""
+"""PyTorch JetMoe model."""
 
 import math
-import warnings
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
-from mindspore.common.initializer import initializer, Normal
-
-from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core import nn, ops, no_grad
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindnlp.core.nn import functional as F
+
 from ...activations import ACT2FN
-from ...cache_utils import Cache, DynamicCache
-from...modeling_attn_mask_utils import (
-    _prepare_4d_causal_attention_mask,
-)
+from ...cache_utils import Cache, DynamicCache, StaticCache
+from ...modeling_attn_mask_utils import AttentionMaskConverter
 from ...modeling_outputs import (
-    BaseModelOutputWithPast,
-    CausalLMOutputWithPast,
+    MoeCausalLMOutputWithPast,
+    MoeModelOutputWithPast,
     SequenceClassifierOutputWithPast,
-    dataclass,
 )
 from ...modeling_utils import PreTrainedModel
 from ....utils import logging
-from .configuration_jetmoe import JetMoEConfig
-from .utils import MoE, ParallelExperts
+from .configuration_jetmoe import JetMoeConfig
 
 
 logger = logging.get_logger(__name__)
 
 _CHECKPOINT_FOR_DOC = "jetmoe"
-_CONFIG_FOR_DOC = "JetMoEConfig"
+_CONFIG_FOR_DOC = "JetMoeConfig"
 
 
-@dataclass
-class JetMoEBaseModelOutputWithPast(BaseModelOutputWithPast):
+# Copied from transformers.models.llama.modeling_llama._prepare_4d_causal_attention_mask_with_cache_position
+def _prepare_4d_causal_attention_mask_with_cache_position(
+    attention_mask: mindspore.Tensor,
+    sequence_length: int,
+    target_length: int,
+    dtype: mindspore.dtype,
+    min_dtype: float,
+    cache_position: mindspore.Tensor,
+    batch_size: int,
+):
     """
-    Base class for model's outputs that may also contain a past key/values (to speed up sequential decoding).
+    Creates a causal 4D mask of shape `(batch_size, 1, query_length, key_value_length)` from a 2D mask of shape
+    `(batch_size, key_value_length)`, or if the input `attention_mask` is already 4D, do nothing.
 
     Args:
-        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
-            Sequence of hidden-states at the output of the last layer of the model.
-
-            If `past_key_values` is used only the last hidden-state of the sequences of shape `(batch_size, 1,
-            hidden_size)` is output.
-        past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True`
-            is passed or when `config.use_cache=True`):
-            Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
-            `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and optionally if
-            `config.is_encoder_decoder=True` 2 additional tensors of shape `(batch_size, num_heads,
-            encoder_sequence_length, embed_size_per_head)`.
-
-            Contains pre-computed hidden-states (key and values in the self-attention blocks and optionally if
-            `config.is_encoder_decoder=True` in the cross-attention blocks) that can be used (see `past_key_values`
-            input) to speed up sequential decoding.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed
-            or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
-            one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
-
-            Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed
-            or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
-            sequence_length)`.
-
-            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
-            heads.
+        attention_mask (`mindspore.Tensor`):
+            A 2D attention mask of shape `(batch_size, key_value_length)` or a 4D attention mask of shape `(batch_size, 1, query_length, key_value_length)`.
+        sequence_length (`int`):
+            The sequence length being processed.
+        target_length (`int`):
+            The target length: when generating with static cache, the mask should be as long as the static cache, to account for the 0 padding, the part of the cache that is not filled yet.
+        dtype (`mindspore.dtype`):
+            The dtype to use for the 4D attention mask.
+        min_dtype (`float`):
+            The minimum value representable with the dtype `dtype`.
+        cache_position (`mindspore.Tensor`):
+            Indices depicting the position of the input sequence tokens in the sequence.
+        batch_size (`mindspore.Tensor`):
+            Batch size.
     """
-    last_hidden_state: mindspore.Tensor = None
-    past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
-    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
-    attentions: Optional[Tuple[mindspore.Tensor]] = None
-    aux_loss: Optional[mindspore.Tensor] = None
+    if attention_mask is not None and attention_mask.ndim == 4:
+        # In this case we assume that the mask comes already in inverted form and requires no inversion or slicing.
+        causal_mask = attention_mask
+    else:
+        causal_mask = ops.full((sequence_length, target_length), fill_value=min_dtype, dtype=dtype)
+        if sequence_length != 1:
+            causal_mask = ops.triu(causal_mask, diagonal=1)
+        causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
+        causal_mask = causal_mask[None, None, :, :].broadcast_to((batch_size, 1, -1, -1))
+        if attention_mask is not None:
+            causal_mask = causal_mask.copy()  # copy to contiguous memory for in-place edit
+            mask_length = attention_mask.shape[-1]
+            padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
+            padding_mask = padding_mask == 0
+            causal_mask[:, :, :, :mask_length] = causal_mask[:, :, :, :mask_length].masked_fill(
+                padding_mask, min_dtype
+            )
+
+    return causal_mask
 
 
-@dataclass
-class JetMoECausalLMOutputWithPast(CausalLMOutputWithPast):
-    """
-    Base class for causal language model (or autoregressive) outputs.
+# Copied from transformers.models.mixtral.modeling_mixtral.load_balancing_loss_func
+def load_balancing_loss_func(
+    gate_logits: mindspore.Tensor, num_experts: mindspore.Tensor = None, top_k=2, attention_mask: Optional[mindspore.Tensor] = None
+) -> float:
+    r"""
+    Computes auxiliary load balancing loss as in Switch Transformer - implemented in Pytorch.
+
+    See Switch Transformer (https://arxiv.org/abs/2101.03961) for more details. This function implements the loss
+    function presented in equations (4) - (6) of the paper. It aims at penalizing cases where the routing between
+    experts is too unbalanced.
 
     Args:
-        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
-            Language modeling loss (for next-token prediction).
-        logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
-            Prediction scores of the language modeling head (scores for each vocabulary token before SoftMax).
-        past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed
-            or when `config.use_cache=True`):
-            Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
-            `(batch_size, num_heads, sequence_length, embed_size_per_head)`)
+        gate_logits (Union[`mindspore.Tensor`, Tuple[mindspore.Tensor]):
+            Logits from the `gate`, should be a tuple of model.config.num_hidden_layers tensors of
+            shape [batch_size X sequence_length, num_experts].
+        attention_mask (`mindspore.Tensor`, *optional*):
+            The attention_mask used in forward function
+            shape [batch_size X sequence_length] if not None.
+        num_experts (`int`, *optional*):
+            Number of experts
 
-            Contains pre-computed hidden-states (key and values in the self-attention blocks) that can be used (see
-            `past_key_values` input) to speed up sequential decoding.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed
-            or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
-            one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
-
-            Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed
-            or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
-            sequence_length)`.
-
-            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
-            heads.
-    """
-    loss: Optional[mindspore.Tensor] = None
-    logits: mindspore.Tensor = None
-    past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
-    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
-    attentions: Optional[Tuple[mindspore.Tensor]] = None
-    aux_loss: Optional[mindspore.Tensor] = None
-
-
-@dataclass
-class JetMoESequenceClassifierOutputWithPast(SequenceClassifierOutputWithPast):
-    """
-    Base class for outputs of sentence classification models.
-
-    Args:
-        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
-            Classification (or regression if config.num_labels==1) loss.
-        logits (`mindspore.Tensor` of shape `(batch_size, config.num_labels)`):
-            Classification (or regression if config.num_labels==1) scores (before SoftMax).
-        past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed
-            or when `config.use_cache=True`):
-            Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
-            `(batch_size, num_heads, sequence_length, embed_size_per_head)`)
-
-            Contains pre-computed hidden-states (key and values in the self-attention blocks) that can be used (see
-            `past_key_values` input) to speed up sequential decoding.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed
-            or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
-            one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
-
-            Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed
-            or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
-            sequence_length)`.
-
-            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
-            heads.
-    """
-    loss: Optional[mindspore.Tensor] = None
-    logits: mindspore.Tensor = None
-    past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
-    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
-    attentions: Optional[Tuple[mindspore.Tensor]] = None
-    aux_loss: Optional[mindspore.Tensor] = None
-
-
-# Copied from transformers.models.llama.modeling_llama._get_unpad_data
-def _get_unpad_data(attention_mask):
-    """
-    This function retrieves unpadded data from the input attention_mask.
-    
-    Args:
-        attention_mask (Tensor): A 2D tensor representing the attention mask for the batch.
-            It is used to determine the sequence lengths in the batch.
-    
     Returns:
-        tuple:
-            A tuple containing the following elements:
-
-            - indices (Tensor): 1D tensor containing the indices of non-zero elements in the flattened attention_mask.
-            - cu_seqlens (Tensor): 1D tensor representing the cumulative sum of sequence lengths in the batch.
-            - max_seqlen_in_batch (int): The maximum sequence length in the batch.
-
-    Raises:
-        None
+        The auxiliary loss.
     """
-    seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
-    indices = ops.nonzero(attention_mask.flatten()).flatten()
-    max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
-    return (
-        indices,
-        cu_seqlens,
-        max_seqlen_in_batch,
-    )
+    if gate_logits is None or not isinstance(gate_logits, tuple):
+        return 0
+
+    if isinstance(gate_logits, tuple):
+        concatenated_gate_logits = ops.cat(list(gate_logits), dim=0)
+
+    routing_weights = nn.functional.softmax(concatenated_gate_logits, dim=-1)
+
+    _, selected_experts = ops.topk(routing_weights, top_k, dim=-1)
+
+    expert_mask = nn.functional.one_hot(selected_experts, num_experts)
+
+    if attention_mask is None:
+        # Compute the percentage of tokens routed to each experts
+        tokens_per_expert = ops.mean(expert_mask.float(), dim=0)
+
+        # Compute the average probability of routing to these experts
+        router_prob_per_expert = ops.mean(routing_weights, dim=0)
+    else:
+        batch_size, sequence_length = attention_mask.shape
+        num_hidden_layers = concatenated_gate_logits.shape[0] // (batch_size * sequence_length)
+
+        # Compute the mask that masks all padding tokens as 0 with the same shape of expert_mask
+        expert_attention_mask = (
+            attention_mask[None, :, :, None, None]
+            .broadcast_to((num_hidden_layers, batch_size, sequence_length, top_k, num_experts))
+            .reshape(-1, top_k, num_experts)
+        )
+
+        # Compute the percentage of tokens routed to each experts
+        tokens_per_expert = ops.sum(expert_mask.float() * expert_attention_mask, dim=0) / ops.sum(
+            expert_attention_mask, dim=0
+        )
+
+        # Compute the mask that masks all padding tokens as 0 with the same shape of tokens_per_expert
+        router_per_expert_attention_mask = (
+            attention_mask[None, :, :, None]
+            .broadcast_to((num_hidden_layers, batch_size, sequence_length, num_experts))
+            .reshape(-1, num_experts)
+        )
+
+        # Compute the average probability of routing to these experts
+        router_prob_per_expert = ops.sum(routing_weights * router_per_expert_attention_mask, dim=0) / ops.sum(
+            router_per_expert_attention_mask, dim=0
+        )
+
+    overall_loss = ops.sum(tokens_per_expert * router_prob_per_expert.unsqueeze(0))
+    return overall_loss * num_experts
 
 
-class JetMoERMSNorm(nn.Module):
-
-    """
-    The 'JetMoERMSNorm' class is a custom implementation of the root mean square normalization (RMSNorm) module,
-    specifically designed for the JetMoE model. It inherits from the 'nn.Module' class, which is a base class for
-    all neural network modules in MindSpore.
-
-    This class provides a trainable normalization layer that performs RMS normalization on the input hidden states.
-    The normalization is applied along the last dimension of the input tensor, reducing the variance across
-    that dimension.
-
-    The forwardor '__init__' initializes the 'JetMoERMSNorm' module.
-    It takes two parameters: 'hidden_size' specifies the size of the hidden states, and 'eps' (default value 1e-06)
-    is the epsilon value used for numerical stability in the normalization calculation.
-
-    The 'forward' method is the main functionality of the 'JetMoERMSNorm' module. It performs the RMS normalization
-    on the input 'hidden_states' tensor. The method first converts the input tensor to 'mindspore.float32' to ensure
-    consistent data type for the calculations. It then computes the variance along the last dimension of the tensor
-    using the 'pow' and 'mean' operations. Afterward, the input tensor is multiplied element-wise by the reciprocal
-    square root of the variance plus epsilon, using the 'rsqrt' and 'ops' operations. Finally, the normalized tensor
-    is multiplied element-wise by the weight tensor and converted back to the original input data type.
-
-    Note that the 'JetMoERMSNorm' module is intended to be used as a part of the JetMoE model and can be applied to the
-    hidden states of the model's components.
-
-    Please refer to the MindSpore documentation for more information on the 'nn.Module' class and the 'mindspore.float32'
-    data type.
-    """
-    def __init__(self, hidden_size, eps=1e-6):
+class JetMoeParallelExperts(nn.Module):
+    def __init__(self, num_experts: int, input_size: int, output_size: int) -> None:
         """
-        JetMoERMSNorm module
+        Initialize the JetMoeParallelExperts module.
+        The experts weights are stored in [num_experts, output_size, input_size] format. Such that it's comptible with
+        many MoE libraries, such as [Megablock](https://github.com/databricks/megablocks) and
+        [ScatterMoE](https://github.com/shawntan/scattermoe), as well as the
+        [MoE kernel](https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/layers/fused_moe/fused_moe.py)
+        used in vllm.
+
+        Args:
+            num_experts (int):
+                Number of experts.
+            input_size (int):
+                Size of the input.
+            output_size (int):
+                Size of the output.
         """
         super().__init__()
-        self.weight = Parameter(initializer('ones', (hidden_size,)))
+        self.weight = nn.Parameter(ops.empty(num_experts, output_size, input_size))
+        self.num_experts = num_experts
+        self.input_size = input_size
+        self.output_size = output_size
+
+    def forward(self, inputs, expert_size):
+        """
+        Forward pass of the JetMoeParallelExperts module.
+
+        Args:
+            inputs (Tensor):
+                Input tensor.
+            expert_size:
+                Expert size information.
+
+        Returns:
+            Tensor: Output tensor.
+        """
+        input_list = ops.split(inputs, expert_size, dim=0)
+        output_list = []
+        for i in range(self.num_experts):
+            output_list.append(F.linear(input_list[i], self.weight[i]))
+        results = ops.cat(output_list, dim=0)
+        return results
+
+
+class JetMoeTopKGating(nn.Module):
+    def __init__(self, input_size: int, num_experts: int, top_k: int):
+        """
+        Initialize the top-k gating mechanism.
+
+        Args:
+            input_size (`int`):
+                Size of the input.
+            num_experts (`int`):
+                Number of experts.
+            top_k (`int`):
+                Number of top experts to select.
+        """
+        super().__init__()
+
+        self.num_experts = num_experts
+        self.input_size = input_size
+        self.top_k = top_k
+
+        self.layer = nn.Linear(input_size, num_experts, bias=False)
+
+    def forward(self, hidden_states):
+        # compute the top_k routing decision
+        logits = self.layer(hidden_states).float()  # [batch_size x seq_len, num_experts]
+        top_k_logits, top_k_indices = logits.topk(self.top_k, dim=1)  # [num_tokens, top_k]
+        top_k_gates = ops.softmax(top_k_logits, dim=1).type_as(hidden_states)  # [num_tokens, top_k]
+
+        # compute number of input given to each expert
+        zeros = ops.zeros(
+            [top_k_gates.shape[0], self.num_experts], dtype=top_k_gates.dtype
+        )  # [num_tokens, num_experts]
+        gates = ops.scatter(zeros, 1, top_k_indices, ops.ones(top_k_indices.shape, zeros.dtype))  # [num_tokens, num_experts]
+        expert_size = gates.long().sum(0)  # [num_experts,]
+        expert_size = expert_size.tolist()
+
+        # sort and group input tokens according to expert assignment
+        top_k_experts = top_k_indices.flatten()  # [num_tokens * top_k]
+        _, index_sorted_experts = top_k_experts.sort(0)  # [num_tokens * top_k]
+        batch_index = index_sorted_experts.div(self.top_k, rounding_mode="trunc")  # [num_tokens * top_k]
+
+        # gather the gate values for grouped input tokens
+        top_k_gates = top_k_gates.flatten()  # [num_tokens * top_k]
+        batch_gates = top_k_gates[index_sorted_experts]  # [num_tokens * top_k]
+
+        return index_sorted_experts, batch_index, batch_gates, expert_size, logits
+
+
+class JetMoeMoE(nn.Module):
+    """
+    A Sparsely gated mixture of experts layer with 1-layer Feed-Forward networks as experts.
+
+    Args:
+        config:
+            Configuration object with model hyperparameters.
+    """
+
+    def __init__(self, config: JetMoeConfig):
+        super(JetMoeMoE, self).__init__()
+
+        self.input_size = config.hidden_size
+        self.hidden_size = config.intermediate_size
+        self.activation = ACT2FN[config.activation_function]
+        self.bias = nn.Parameter(ops.empty(self.input_size))
+        self.input_linear = JetMoeParallelExperts(config.num_local_experts, self.input_size, self.hidden_size * 2)
+        self.output_linear = JetMoeParallelExperts(config.num_local_experts, self.hidden_size, self.input_size)
+
+        self.router = JetMoeTopKGating(
+            input_size=self.input_size,
+            num_experts=config.num_local_experts,
+            top_k=config.num_experts_per_tok,
+        )
+
+    def forward(self, layer_input):
+        """
+        Forward pass of the mixture of experts layer.
+
+        Args:
+            layer_input (Tensor):
+                Input tensor.
+
+        Returns:
+            Tensor:
+                Output tensor.
+            Tensor:
+                Router logits.
+        """
+        bsz, length, emb_size = layer_input.shape
+        layer_input = layer_input.reshape(-1, emb_size)
+        _, batch_index, batch_gates, expert_size, router_logits = self.router(layer_input)
+
+        expert_inputs = layer_input[batch_index]
+        hidden_states = self.input_linear(expert_inputs, expert_size)
+        chunked_hidden_states = ops.chunk(hidden_states, 2, dim=-1)
+        hidden_states = self.activation(chunked_hidden_states[0]) * chunked_hidden_states[1]
+        expert_outputs = self.output_linear(hidden_states, expert_size)
+
+        expert_outputs = expert_outputs * batch_gates[:, None]
+
+        zeros = ops.zeros((bsz * length, self.input_size), dtype=expert_outputs.dtype)
+        layer_output = zeros.index_add(0, batch_index, expert_outputs)
+        layer_output = layer_output.view(bsz, length, self.input_size)
+        layer_output = layer_output + self.bias
+        return layer_output, router_logits
+
+
+class JetMoeMoA(nn.Module):
+    """
+    A Sparsely gated mixture of attention layer with pairs of query- and output-projections as experts.
+
+    Args:
+        config:
+            Configuration object with model hyperparameters.
+    """
+
+    def __init__(self, config: JetMoeConfig):
+        super(JetMoeMoA, self).__init__()
+
+        self.num_experts = config.num_local_experts
+        self.input_size = config.hidden_size
+        self.hidden_size = config.kv_channels * config.num_key_value_heads
+        self.top_k = config.num_experts_per_tok
+        self.bias = nn.Parameter(ops.empty(self.input_size))
+
+        self.input_linear = JetMoeParallelExperts(self.num_experts, self.input_size, self.hidden_size)
+        self.output_linear = JetMoeParallelExperts(self.num_experts, self.hidden_size, self.input_size)
+
+        self.router = JetMoeTopKGating(
+            input_size=self.input_size,
+            num_experts=self.num_experts,
+            top_k=self.top_k,
+        )
+
+    def map(self, layer_input):
+        """
+        Map inputs to attention experts according to routing decision and compute query projection inside each experts.
+        """
+
+        # Compute gating topology
+        bsz, length, emb_size = layer_input.shape
+        layer_input = layer_input.reshape(-1, emb_size)  # [bsz * length, emb_size]
+        index_sorted_experts, batch_index, batch_gates, expert_size, router_logits = self.router(layer_input)
+        topo_info = (index_sorted_experts, batch_index, batch_gates, expert_size)
+
+        # Group inputs according to topology and compute query projection
+        expert_inputs = layer_input[batch_index]  # [bsz * length * top_k, emb_size]
+        expert_outputs = self.input_linear(expert_inputs, expert_size)  # [bsz * length * top_k, hidden_size]
+
+        # Ungroup queries back to original order
+        zeros = ops.zeros(
+            (bsz * length * self.top_k, self.hidden_size), dtype=expert_outputs.dtype
+        )
+        layer_output = zeros.index_add(0, index_sorted_experts, expert_outputs)
+        layer_output = layer_output.view(bsz, length, self.top_k, -1)  # [bsz, length, top_k, hidden_size]
+        return layer_output, router_logits, topo_info
+
+    def reduce(self, layer_input, topo_info):
+        """
+        Compute output projection inside each attention experts and merge the outputs of different experts.
+        """
+        bsz, length, k, hidden_size = layer_input.shape
+        layer_input = layer_input.reshape(-1, hidden_size)  # [bsz * length * k, hidden_size]
+        index_sorted_experts, batch_index, batch_gates, expert_size = topo_info
+
+        # Group inputs according to topology and compute output projection
+        expert_inputs = layer_input[index_sorted_experts]  # [bsz * length * top_k, hidden_size]
+        expert_outputs = self.output_linear(expert_inputs, expert_size)  # [bsz * length * top_k, emb_size]
+
+        # Apply gates to attention expert outputs
+        expert_outputs = expert_outputs * batch_gates[:, None]
+
+        # Ungroup and merge outputs to original order
+        zeros = ops.zeros((bsz * length, self.input_size), dtype=expert_outputs.dtype)
+        layer_output = zeros.index_add(0, batch_index, expert_outputs)
+        layer_output = layer_output.view(bsz, length, self.input_size)
+        layer_output = layer_output + self.bias
+        return layer_output
+
+    def forward(self, layer_input):
+        raise NotImplementedError("This module doesn't support call and forward.")
+
+
+# Copied from transformers.models.llama.modeling_llama.LlamaRMSNorm with Llama->JetMoe
+class JetMoeRMSNorm(nn.Module):
+    def __init__(self, hidden_size, eps=1e-6):
+        """
+        JetMoeRMSNorm is equivalent to T5LayerNorm
+        """
+        super().__init__()
+        self.weight = nn.Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
-        """
-        Constructs the JetMoERMSNorm.
-
-        This method takes in a tensor of hidden states and performs normalization using the RMSNorm technique.
-        The normalized tensor is then multiplied by a weight parameter.
-
-        Args:
-            self (JetMoERMSNorm): An instance of the JetMoERMSNorm class.
-            hidden_states (Tensor): A tensor containing the hidden states.
-                The dtype of the tensor should be compatible with the operations performed within the method.
-
-        Returns:
-            None: This method does not return any value.
-                The normalization is performed in-place on the hidden_states tensor.
-
-        Raises:
-            None.
-        """
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
-        variance = hidden_states.pow(2).mean(-1, keep_dims=True)
+        variance = ops.mean(hidden_states.pow(2), -1, keepdim=True)
         hidden_states = hidden_states * ops.rsqrt(variance + self.variance_epsilon)
         return self.weight * hidden_states.to(input_dtype)
 
+    def extra_repr(self):
+        return f"{tuple(self.weight.shape)}, eps={self.variance_epsilon}"
 
-# copied from transformers.models.llama.modeling_llama.LlamaRotaryEmbedding
-class JetMoERotaryEmbedding(nn.Module):
 
-    """
-    The JetMoERotaryEmbedding class represents a rotary position embedding module that can be used in
-    neural network models. It inherits from the nn.Module class and provides functionality for generating rotary
-    position embeddings based on the input sequence length.
-
-    Attributes:
-        dim (int): The dimension of the position embeddings.
-        max_position_embeddings (int): The maximum position embeddings allowed.
-        base (int): The base value used in the calculation of position embeddings.
-        inv_freq (Tensor): The inverse frequency values used in the calculation of position embeddings.
-        max_seq_len_cached (int): The maximum sequence length for which cosine and sine embeddings are cached.
-        cos_cached (Tensor): Cached cosine embeddings for the given sequence length.
-        sin_cached (Tensor): Cached sine embeddings for the given sequence length.
-
-    Methods:
-        _set_cos_sin_cache: Sets the cosine and sine embeddings cache for a given sequence length and data type.
-        forward: Constructs the cosine and sine embeddings for the input sequence, updating the cache if necessary.
-
-    Note:
-        This class is designed to be used as part of neural network models,
-        particularly in scenarios where rotary position embeddings are required.
-    """
+# Copied from transformers.models.gemma.modeling_gemma.GemmaRotaryEmbedding with Gemma->JetMoe
+class JetMoeRotaryEmbedding(nn.Module):
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
-        """
-        Initializes the JetMoERotaryEmbedding object with the specified parameters.
-
-        Args:
-            self: The object itself.
-            dim (int): The dimensionality of the embeddings.
-            max_position_embeddings (int, optional): The maximum number of position embeddings. Defaults to 2048.
-            base (int, optional): The base value used in the calculation. Defaults to 10000.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If the dimensionality 'dim' is not a positive integer.
-            ValueError: If 'max_position_embeddings' is not a positive integer.
-            ValueError: If 'base' is not a positive integer.
-            TypeError: If the data type of 'dim', 'max_position_embeddings', or 'base' is not an integer.
-        """
         super().__init__()
 
         self.dim = dim
         self.max_position_embeddings = max_position_embeddings
         self.base = base
+
         inv_freq = 1.0 / (self.base ** (ops.arange(0, self.dim, 2, dtype=mindspore.int64).float() / self.dim))
-        self.inv_freq = inv_freq
+        self.register_buffer("inv_freq", tensor=inv_freq, persistent=False)
 
-        # Build here to make `torch.jit.trace` work.
-        self._set_cos_sin_cache(
-            seq_len=max_position_embeddings, dtype=get_default_dtype()
-        )
-
-    def _set_cos_sin_cache(self, seq_len, dtype):
-        """
-        Sets the cosine and sine cache for the JetMoERotaryEmbedding class.
-
-        Args:
-            self (JetMoERotaryEmbedding): The instance of the JetMoERotaryEmbedding class.
-            seq_len (int): The length of the sequence for which the cosine and sine cache is being set.
-            dtype (dtype): The data type for the cache, e.g., float32, float64, etc.
-
-        Returns:
-            None.
-
-        Raises:
-            TypeError: If seq_len is not an integer or dtype is not a valid data type.
-            ValueError: If seq_len is less than 1.
-        """
-        self.max_seq_len_cached = seq_len
-        t = ops.arange(self.max_seq_len_cached, dtype=mindspore.int64).type_as(self.inv_freq)
-
-        freqs = ops.outer(t, self.inv_freq)
-        # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), dim=-1)
-        self.cos_cached = emb.cos().to(dtype)
-        self.sin_cached = emb.sin().to(dtype)
-
-    def forward(self, x, seq_len=None):
-        """
-        Construct the JetMoERotaryEmbedding.
-
-        Args:
-            self (JetMoERotaryEmbedding): The instance of the JetMoERotaryEmbedding class.
-            x:
-                The input tensor.
-
-                - Type: Any
-                - Purpose: The input tensor for which the cos and sin cached values need to be forwarded.
-
-                It is expected to be a tensor.
-            seq_len:
-                The length of the sequence for which the cached values need to be forwarded.
-
-                - Type: int
-                - Purpose: Determines the length of the sequence for which the cos and sin cached values
-                need to be forwarded.
-                - Restrictions: Should be a positive integer.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: If seq_len is not a positive integer.
-        """
+    @no_grad()
+    def forward(self, x, position_ids, seq_len=None):
         # x: [bs, num_attention_heads, seq_len, head_size]
-        if seq_len > self.max_seq_len_cached:
-            self._set_cos_sin_cache(seq_len=seq_len, dtype=x.dtype)
+        inv_freq_expanded = self.inv_freq[None, :, None].float().broadcast_to((position_ids.shape[0], -1, 1))
+        position_ids_expanded = position_ids[:, None, :].float()
+        # Force float32 since bfloat16 loses precision on long contexts
+        # See https://github.com/huggingface/transformers/pull/29285
 
-        return (
-            self.cos_cached[:seq_len].to(dtype=x.dtype),
-            self.sin_cached[:seq_len].to(dtype=x.dtype),
-        )
+        freqs = ops.transpose((inv_freq_expanded.float() @ position_ids_expanded.float()), 1, 2)
+        emb = ops.cat((freqs, freqs), dim=-1)
+        cos = emb.cos()
+        sin = emb.sin()
+        return cos.to(dtype=x.dtype), sin.to(dtype=x.dtype)
 
 
 # Copied from transformers.models.llama.modeling_llama.rotate_half
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
-    # x1 = x[..., : x.shape[-1] // 2]
-    # x2 = x[..., x.shape[-1] // 2 :]
-    x1, x2 = x.tensor_split(2, -1)
+    x1 = x[..., : x.shape[-1] // 2]
+    x2 = x[..., x.shape[-1] // 2 :]
     return ops.cat((-x2, x1), dim=-1)
 
 
-# copied from transformers.models.llama.modeling_llama.apply_rotary_pos_emb
-def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=2):
-    """
-    Applies Rotary Position Embedding to the query and key tensors.
+# Copied from transformers.models.llama.modeling_llama.apply_rotary_pos_emb
+def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
+    """Applies Rotary Position Embedding to the query and key tensors.
 
     Args:
         q (`mindspore.Tensor`): The query tensor.
         k (`mindspore.Tensor`): The key tensor.
         cos (`mindspore.Tensor`): The cosine part of the rotary embedding.
         sin (`mindspore.Tensor`): The sine part of the rotary embedding.
-        position_ids (`mindspore.Tensor`):
-            The position indices of the tokens corresponding to the query and key tensors. For example, this can be
-            used to pass offsetted position ids when working with a KV-cache.
+        position_ids (`mindspore.Tensor`, *optional*):
+            Deprecated and unused.
         unsqueeze_dim (`int`, *optional*, defaults to 1):
             The 'unsqueeze_dim' argument specifies the dimension along which to unsqueeze cos[position_ids] and
             sin[position_ids] so that they can be properly broadcasted to the dimensions of q and k. For example, note
@@ -408,27 +466,30 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=2):
             k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes
             cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k. Similarly, if q and k have
             the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
-
     Returns:
         `tuple(mindspore.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
-    cos = cos[position_ids].unsqueeze(unsqueeze_dim)
-    sin = sin[position_ids].unsqueeze(unsqueeze_dim)
+    cos = cos.unsqueeze(unsqueeze_dim)
+    sin = sin.unsqueeze(unsqueeze_dim)
     q_embed = (q * cos) + (rotate_half(q) * sin)
     k_embed = (k * cos) + (rotate_half(k) * sin)
     return q_embed, k_embed
 
 
-class JetMoEAttention(nn.Module):
+class JetMoeAttention(nn.Module):
     """
     Multi-headed attention from 'Attention Is All You Need' paper.
     """
-    def __init__(self, config: JetMoEConfig, layer_idx: Optional[int] = None):
+
+    def __init__(self, config: JetMoeConfig, layer_idx: Optional[int] = None):
         """
-        Initialize the JetMoEAttention module.
+        Initialize the JetMoeAttention module.
 
         Args:
-            config: Configuration object with model hyperparameters.
+            config:
+                Configuration object with model hyperparameters.
+            layer_idx:
+                Index of the layer in the model.
         """
         super().__init__()
         self.config = config
@@ -441,25 +502,18 @@ class JetMoEAttention(nn.Module):
                 "when creating this class."
             )
 
-        self.top_k = config.moe_top_k
-
+        self.top_k = config.num_experts_per_tok
+        self.attention_dropout = config.attention_dropout
         self.kv_projection_size = config.kv_channels * config.num_key_value_heads
         self.num_key_value_heads = config.num_key_value_heads
         self.num_heads = config.num_attention_heads
-        assert self.num_heads == self.num_key_value_heads * config.moe_top_k
-        self.hidden_size_per_attention_head = config.kv_channels
+        self.head_dim = config.kv_channels
 
-        self.experts = MoE(
-            input_size=config.hidden_size,
-            hidden_size=self.kv_projection_size,
-            num_experts=config.moe_num_experts,
-            top_k=config.moe_top_k,
-            glu=False,
-        )
+        self.experts = JetMoeMoA(config)
 
         self.kv_proj = nn.Linear(config.hidden_size, self.kv_projection_size * 2, bias=False)
 
-        self.rotary_emb = JetMoERotaryEmbedding(
+        self.rotary_emb = JetMoeRotaryEmbedding(
             config.kv_channels,
             max_position_embeddings=config.max_position_embeddings,
             base=config.rope_theta,
@@ -473,162 +527,79 @@ class JetMoEAttention(nn.Module):
         past_key_value: Optional[Cache] = None,
         output_attentions: bool = False,
         use_cache: bool = False,
-        **kwargs,
+        cache_position: Optional[mindspore.Tensor] = None,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-        """
-        Constructs the JetMoEAttention.
-
-        Args:
-            self (JetMoEAttention): The object itself.
-            hidden_states (mindspore.Tensor): The input hidden states with shape
-                (batch_size, sequence_length, hidden_size).
-            attention_mask (Optional[mindspore.Tensor], optional): The attention mask tensor with shape
-                (batch_size, 1, sequence_length, key_value_sequence_length). Defaults to None.
-            position_ids (Optional[mindspore.Tensor], optional): The position ids tensor with shape
-                (batch_size, sequence_length). Defaults to None.
-            past_key_value (Optional[Cache], optional): The past key-value cache. Defaults to None.
-            output_attentions (bool, optional): Whether to return the attention weights. Defaults to False.
-            use_cache (bool, optional): Whether to use cache for the key-value pairs. Defaults to False.
-
-        Returns:
-            Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-                A tuple containing the attention output tensor with shape (batch_size, sequence_length, hidden_size),
-                the attention weights tensor (if output_attentions is True), and the updated past key-value cache.
-
-        Raises:
-            ValueError: If the attention weights or mask have invalid shapes.
-            ValueError: If the cache structure has changed and the layer index is not initialized for auto-regressive decoding.
-        """
-        if "padding_mask" in kwargs:
-            warnings.warn(
-                "Passing `padding_mask` is deprecated and will be removed in v4.37. Please make sure use `attention_mask` instead.`"
-            )
         bsz, q_len, _ = hidden_states.shape
 
-        query_states, aux_loss = self.experts.map(hidden_states)
-        key_states, value_states = self.kv_proj(hidden_states).chunk(2, axis=-1)
+        query_states, router_logits, topo_info = self.experts.map(hidden_states)
+        key_states, value_states = ops.chunk(self.kv_proj(hidden_states), 2, dim=-1)
 
-        query_states = query_states.view(bsz, q_len, self.num_heads, self.hidden_size_per_attention_head).swapaxes(
-            1, 2
-        )
-        key_states = key_states.view(
-            bsz, q_len, self.num_key_value_heads, self.hidden_size_per_attention_head
-        ).swapaxes(1, 2)
-        value_states = value_states.view(
-            bsz, q_len, self.num_key_value_heads, self.hidden_size_per_attention_head
-        ).swapaxes(1, 2)
+        query_states = ops.transpose(query_states.view(bsz, q_len, self.num_heads, self.head_dim), 1, 2)
+        key_states = ops.transpose(key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim), 1, 2)
+        value_states = ops.transpose(value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim), 1, 2)
 
-        kv_seq_len = key_states.shape[2]
-        if past_key_value is not None:
-            if self.layer_idx is None:
-                raise ValueError(
-                    f"The cache structure has changed since version v4.36. If you are using {self.__class__.__name__} "
-                    "for auto-regressive decoding with k/v caching, please make sure to initialize the attention class "
-                    "with a layer index."
-                )
-            kv_seq_len += past_key_value.get_usable_length(kv_seq_len, self.layer_idx)
-        cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
-        query_states, key_states = apply_rotary_pos_emb(
-            query_states, key_states, cos, sin, position_ids, unsqueeze_dim=1
-        )
+        cos, sin = self.rotary_emb(value_states, position_ids)
+        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
         if past_key_value is not None:
-            cache_kwargs = {"sin": sin, "cos": cos}  # Specific to RoPE models
+            # sin and cos are specific to RoPE models; cache_position needed for the static cache
+            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
-        # repeat k/v heads if n_kv_heads < n_heads
-        key_states = key_states.repeat(1, self.top_k, 1, 1)
-        value_states = value_states.repeat(1, self.top_k, 1, 1)
+        # repeat k/v heads for top-k attention experts
+        key_states = key_states.tile((1, self.top_k, 1, 1))
+        value_states = value_states.tile((1, self.top_k, 1, 1))
 
-        attn_weights = ops.matmul(query_states, key_states.swapaxes(2, 3)) / math.sqrt(
-            self.hidden_size_per_attention_head
-        )
+        attn_weights = ops.matmul(query_states, ops.transpose(key_states, 2, 3)) / math.sqrt(self.head_dim)
 
-        if attn_weights.shape != (bsz, self.num_heads, q_len, kv_seq_len):
-            raise ValueError(
-                f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"
-                f" {attn_weights.shape}"
-            )
-
-        if attention_mask is not None:
-            if attention_mask.shape != (bsz, 1, q_len, kv_seq_len):
-                raise ValueError(
-                    f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.shape}"
-                )
-
-            attn_weights = attn_weights + attention_mask
+        if attention_mask is not None:  # no matter the length, we just slice it
+            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
+            attn_weights = attn_weights + causal_mask
 
         # upcast attention to fp32
-        attn_weights = ops.softmax(attn_weights, dim=-1, dtype=mindspore.float32).to(query_states.dtype)
-
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=mindspore.float32).to(query_states.dtype)
+        attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
 
-        if attn_output.shape != (bsz, self.num_heads, q_len, self.hidden_size_per_attention_head):
+        if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
             raise ValueError(
-                f"`attn_output` should be of size {(bsz, self.num_heads, q_len, self.hidden_size_per_attention_head)}, but is"
+                f"`attn_output` should be of size {(bsz, self.num_heads, q_len, self.head_dim)}, but is"
                 f" {attn_output.shape}"
             )
 
-        attn_output = attn_output.swapaxes(1, 2)
+        attn_output = ops.transpose(attn_output, 1, 2)
         attn_output = attn_output.reshape(bsz, q_len, self.top_k, self.kv_projection_size)
 
-        attn_output = self.experts.reduce(attn_output)
+        attn_output = self.experts.reduce(attn_output, topo_info)
         attn_output = attn_output.view(bsz, q_len, -1)
 
         if not output_attentions:
             attn_weights = None
 
-        return attn_output, attn_weights, past_key_value, aux_loss
+        return attn_output, attn_weights, past_key_value, router_logits
+
+
 
 JETMOE_ATTENTION_CLASSES = {
-    "eager": JetMoEAttention,
+    "eager": JetMoeAttention,
 }
 
 
-class JetMoEBlock(nn.Module):
-
-    """
-    The 'JetMoEBlock' class represents a module that implements a JetMoE block for a neural network model.
-    This block consists of components such as self-attention mechanism, layer normalization,
-    and a multi-layer perceptron (MLP) with Mixture of Experts (MoE) architecture.
-    The block is designed to be used within a larger neural network model for various natural language processing tasks.
-
-    The class provides methods for initialization and forward pass computation.
-    During initialization, it sets up the necessary components including input layer normalization,
-    self-attention mechanism, post-attention layer normalization, and the MLP with MoE architecture based on the
-    provided configuration.
-
-    The 'forward' method performs the forward pass computation of the JetMoEBlock module.
-    It takes input hidden states, optional position IDs, past key-value states, attention mask,
-    and other optional arguments.
-    The method computes the self-attention output, updates the hidden states, applies the MLP operation,
-    and returns the final outputs.
-    Optional outputs such as attention weights and cached states can also be returned based on the method arguments.
-
-    Overall, the 'JetMoEBlock' class encapsulates the functionality of a JetMoE block within a neural network model,
-    providing the necessary components for attention-based computations and expert-based transformations.
-    """
-    def __init__(self, config: JetMoEConfig, layer_idx: Optional[int] = None):
+class JetMoeBlock(nn.Module):
+    def __init__(self, config: JetMoeConfig, layer_idx: Optional[int] = None):
         """
-        Initialize the JetMoEBlock module.
+        Initialize the JetMoeBlock module.
 
         Args:
-            config: Configuration object with model hyperparameters.
+            config:
+                Configuration object with model hyperparameters.
         """
         super().__init__()
-        self.input_layernorm = JetMoERMSNorm(config.hidden_size)
-        self.self_attention = JETMOE_ATTENTION_CLASSES["eager"](config, layer_idx)
-        self.post_attention_layernorm = JetMoERMSNorm(config.hidden_size)
+        self.input_layernorm = JetMoeRMSNorm(config.hidden_size)
+        self.self_attention = JETMOE_ATTENTION_CLASSES[config._attn_implementation](config, layer_idx)
+        self.post_attention_layernorm = JetMoeRMSNorm(config.hidden_size)
 
-        self.mlp = MoE(
-            input_size=config.hidden_size,
-            hidden_size=config.ffn_hidden_size,
-            num_experts=config.moe_num_experts,
-            activation=ACT2FN[config.activation_function],
-            top_k=config.moe_top_k,
-            bias=config.bias,
-            glu=config.glu,
-        )
+        self.mlp = JetMoeMoE(config)
 
     def forward(
         self,
@@ -637,36 +608,23 @@ class JetMoEBlock(nn.Module):
         past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = False,
+        output_router_logits: Optional[bool] = False,
         use_cache: Optional[bool] = False,
-        **kwargs,
+        cache_position: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple[mindspore.Tensor], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor, ...]]]]:
-        """
-        Forward pass of the JetMoEBlock module.
-
-        Args:
-            hidden_states (Optional[mindspore.Tensor]): Input hidden states.
-            layer_past (Optional[Tuple[mindspore.Tensor]]): Past layer state.
-            attention_mask (Optional[mindspore.Tensor]): Attention mask.
-            head_mask (Optional[mindspore.Tensor]): Head mask.
-            use_cache (Optional[bool]): Whether to use cached states.
-            output_attentions (Optional[bool]): Whether to output attention weights.
-
-        Returns:
-            Union[Tuple[mindspore.Tensor], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor, ...]]]]:
-                Tuple containing outputs or optional attention weights.
-        """
         # Self Attention
-        attn_output, self_attn_weights, present_key_value, att_aux_loss = self.self_attention(
+        attn_output, self_attn_weights, present_key_value, attn_router_logits = self.self_attention(
             hidden_states=self.input_layernorm(hidden_states),
             attention_mask=attention_mask,
             position_ids=position_ids,
             past_key_value=past_key_value,
             output_attentions=output_attentions,
             use_cache=use_cache,
+            cache_position=cache_position,
         )
 
         hidden_states = hidden_states + attn_output
-        x_mlp, mlp_aux_loss = self.mlp(self.post_attention_layernorm(hidden_states))
+        x_mlp, mlp_router_logits = self.mlp(self.post_attention_layernorm(hidden_states))
         hidden_states = hidden_states + x_mlp
 
         outputs = (hidden_states,)
@@ -677,124 +635,79 @@ class JetMoEBlock(nn.Module):
         if use_cache:
             outputs += (present_key_value,)
 
-        outputs += (att_aux_loss + mlp_aux_loss,)
+        if output_router_logits:
+            outputs += attn_router_logits, mlp_router_logits
 
         return outputs
 
 
-class JetMoEPreTrainedModel(PreTrainedModel):
+class JetMoePreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-    config_class = JetMoEConfig
+
+    config_class = JetMoeConfig
     base_model_prefix = "transformer"
     supports_gradient_checkpointing = False
-    _no_split_modules = ["JetMoEBlock"]
-    _skip_keys_device_placement = "past_key_values"
+    _no_split_modules = ["JetMoeBlock"]
+    _skip_keys_device_placement = ["past_key_values"]
+    _supports_flash_attn_2 = True
+    _supports_sdpa = True
     _supports_cache_class = True
-
-    def __init__(self, *inputs, **kwargs):
-        """
-        Initialize the JetMoEPreTrainedModel.
-
-        Args:
-            *inputs: Variable length input arguments.
-            **kwargs: Keyword arguments.
-        """
-        super().__init__(*inputs, **kwargs)
-
-        self.gradient_checkpointing = False
 
     def _init_weights(self, module):
         """Initialize the weights."""
         if isinstance(module, (nn.Linear,)):
             # Slightly different from Mesh Transformer JAX which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.initialize(Normal(self.config.initializer_range))
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
             if module.bias is not None:
-                module.bias.initialize('zeros')
+                nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
-            module.weight.initialize(Normal(self.config.initializer_range))
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
             if module.padding_idx is not None:
                 module.weight[module.padding_idx] = 0
         elif isinstance(module, nn.LayerNorm):
-            module.bias.initialize('zeros')
-            module.weight.initialize('ones')
-        elif isinstance(module, ParallelExperts):
-            module.weight.initialize(Normal(self.config.initializer_range))
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
+        elif isinstance(module, JetMoeParallelExperts):
+            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+        elif isinstance(module, JetMoeMoA):
+            nn.init.zeros_(module.bias)
+        elif isinstance(module, JetMoeMoE):
+            nn.init.zeros_(module.bias)
 
 
-class JetMoEModel(JetMoEPreTrainedModel):
+class JetMoeModel(JetMoePreTrainedModel):
     """
-    Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`JetMoEBlock`]
+    Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`JetMoeBlock`]
 
     Args:
-        config: JetMoEConfig
+        config:
+            JetMoeConfig
     """
-    def __init__(self, config: JetMoEConfig):
-        """
-        Initializes a new instance of the JetMoEModel class.
 
-        Args:
-            self: The object itself.
-            config (JetMoEConfig):
-                The configuration object that contains various settings for the model.
-
-                - 'config' must be an instance of JetMoEConfig.
-                - It specifies the configuration parameters for the model.
-
-        Returns:
-            None
-
-        Raises:
-            None
-        """
+    def __init__(self, config: JetMoeConfig):
         super().__init__(config)
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
-        self.layers = nn.ModuleList([JetMoEBlock(config, layer_idx) for layer_idx in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([JetMoeBlock(config, layer_idx) for layer_idx in range(config.num_hidden_layers)])
         self._attn_implementation = config._attn_implementation
-        self.norm = JetMoERMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.norm = JetMoeRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaModel.get_input_embeddings
     def get_input_embeddings(self):
-        """
-        Method to retrieve the input embeddings from the JetMoEModel.
-
-        Args:
-            self : JetMoEModel
-                The instance of the JetMoEModel class.
-
-        Returns:
-            None
-                Returns the input embeddings represented by embed_tokens.
-
-        Raises:
-            None
-        """
         return self.embed_tokens
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaModel.set_input_embeddings
     def set_input_embeddings(self, value):
-        """
-        Set the input embeddings for the JetMoEModel.
-
-        Args:
-            self (JetMoEModel): The instance of the JetMoEModel class.
-            value (Any): The input embeddings to be set for the model.
-                Should be a tensor or an object that can be assigned to self.embed_tokens.
-
-        Returns:
-            None: This method does not return any value.
-
-        Raises:
-            None
-        """
         self.embed_tokens = value
 
     def forward(
@@ -802,102 +715,65 @@ class JetMoEModel(JetMoEPreTrainedModel):
         input_ids: mindspore.Tensor = None,
         attention_mask: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
-        past_key_values: Optional[List[mindspore.Tensor]] = None,
+        past_key_values: Optional[Union[Cache, List[mindspore.Tensor]]] = None,
         inputs_embeds: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
+        output_router_logits: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, BaseModelOutputWithPast]:
-        """
-        This method forwards the JetMoEModel by processing input data and generating the model output.
-
-        Args:
-            self: The instance of the JetMoEModel class.
-            input_ids (mindspore.Tensor): The input tensor containing token IDs. Default is None.
-            attention_mask (Optional[mindspore.Tensor]): Optional tensor representing the attention mask.
-                Default is None.
-            position_ids (Optional[mindspore.Tensor]): Optional tensor containing position IDs. Default is None.
-            past_key_values (Optional[List[mindspore.Tensor]]): Optional list of tensors representing past key values.
-                Default is None.
-            inputs_embeds (Optional[mindspore.Tensor]): Optional tensor containing input embeddings. Default is None.
-            use_cache (Optional[bool]): Optional flag indicating whether to use cache. Default is None.
-            output_attentions (Optional[bool]): Optional flag indicating whether to output attentions
-                Default is None.
-            output_hidden_states (Optional[bool]): Optional flag indicating whether to output hidden states.
-                Default is None.
-            return_dict (Optional[bool]): Optional flag indicating whether to return a dictionary. Default is None.
-
-        Returns:
-            Union[Tuple, BaseModelOutputWithPast]:
-                The return value is a tuple or an instance of BaseModelOutputWithPast, which contains the model output.
-
-        Raises:
-            ValueError: Raised if both input_ids and inputs_embeds are specified, or if neither is specified,
-                or if incompatible combinations are provided.
-            Warning: Raised if `use_cache=True` is incompatible with gradient checkpointing.
-            ValueError: Raised if attempting to perform batched generation with certain settings
-                that may lead to unexpected behavior.
-        """
+        cache_position: Optional[mindspore.Tensor] = None,
+    ) -> Union[Tuple, MoeModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
+        output_router_logits = (
+            output_router_logits if output_router_logits is not None else self.config.output_router_logits
+        )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        # retrieve input_ids and inputs_embeds
-        if input_ids is not None and inputs_embeds is not None:
-            raise ValueError("You cannot specify both decoder_input_ids and decoder_inputs_embeds at the same time")
-        elif input_ids is not None:
-            batch_size, seq_length = input_ids.shape
-        elif inputs_embeds is not None:
-            batch_size, seq_length, _ = inputs_embeds.shape
-        else:
-            raise ValueError("You have to specify either decoder_input_ids or decoder_inputs_embeds")
-
-        if self.gradient_checkpointing and self.training:
-            if use_cache:
-                logger.warning_once(
-                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
-                )
-                use_cache = False
-
-        past_key_values_length = 0
-
-        if use_cache:
-            use_legacy_cache = not isinstance(past_key_values, Cache)
-            if use_legacy_cache:
-                past_key_values = DynamicCache.from_legacy_cache(past_key_values)
-            past_key_values_length = past_key_values.get_usable_length(seq_length)
-
-        if position_ids is None:
-            position_ids = ops.arange(
-                past_key_values_length, seq_length + past_key_values_length, dtype=mindspore.int64
+        if (input_ids is None) ^ (inputs_embeds is not None):
+            raise ValueError(
+                "You cannot specify both input_ids and inputs_embeds at the same time, and must specify either one"
             )
-            position_ids = position_ids.unsqueeze(0).view(-1, seq_length)
-        else:
-            position_ids = position_ids.view(-1, seq_length).long()
+
+        if self.gradient_checkpointing and self.training and use_cache:
+            logger.warning_once(
+                "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`."
+            )
+            use_cache = False
 
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
 
+        return_legacy_cache = False
+        if (
+            use_cache and not isinstance(past_key_values, Cache) and not self.training
+        ):  # kept for BC (non `Cache` `past_key_values` inputs)
+            return_legacy_cache = True
+            past_key_values = DynamicCache.from_legacy_cache(past_key_values)
+
+        if cache_position is None:
+            past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
+            cache_position = ops.arange(
+                past_seen_tokens, past_seen_tokens + inputs_embeds.shape[1]
+            )
+        if position_ids is None:
+            position_ids = cache_position.unsqueeze(0)
+
         if attention_mask is not None and self._attn_implementation == "flash_attention_2" and use_cache:
+            batch_size = inputs_embeds.shape[0]
             is_padding_right = attention_mask[:, -1].sum().item() != batch_size
             if is_padding_right:
                 raise ValueError(
                     "You are attempting to perform batched generation with padding_side='right'"
-                    " this may lead to unexpected behaviour for Flash Attention version of JetMoE. Make sure to "
+                    " this may lead to unexpected behaviour for Flash Attention version of JetMoe. Make sure to "
                     " call `tokenizer.padding_side  = 'left'` before tokenizing the input. "
                 )
-
-        # 4d mask is passed through the layers
-        attention_mask = _prepare_4d_causal_attention_mask(
-            attention_mask,
-            (batch_size, seq_length),
-            inputs_embeds,
-            past_key_values_length,
+        causal_mask = self._update_causal_mask(
+            attention_mask, inputs_embeds, cache_position, past_key_values, output_attentions
         )
 
         hidden_states = inputs_embeds
@@ -905,39 +781,33 @@ class JetMoEModel(JetMoEPreTrainedModel):
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
+        all_router_logits = () if output_router_logits else None
         next_decoder_cache = None
 
-        aux_loss = 0
         for decoder_layer in self.layers:
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
-            # hidden_states: Optional[mindspore.Tensor],
-            # position_ids: Optional[mindspore.Tensor] = None,
-            # past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
-            # attention_mask: Optional[mindspore.Tensor] = None,
-            # output_attentions: Optional[bool] = False,
-            # use_cache: Optional[bool] = False,
-
             if self.gradient_checkpointing and self.training:
                 layer_outputs = self._gradient_checkpointing_func(
-                    # decoder_layer.__call__,
-                    decoder_layer,
+                    decoder_layer.__call__,
                     hidden_states,
                     position_ids,
                     past_key_values,
-                    attention_mask,
+                    causal_mask,
                     output_attentions,
+                    output_router_logits,
                     use_cache,
                     use_reentrant=False,
                 )
             else:
                 layer_outputs = decoder_layer(
                     hidden_states,
-                    attention_mask=attention_mask,
+                    attention_mask=causal_mask,
                     position_ids=position_ids,
                     past_key_value=past_key_values,
                     output_attentions=output_attentions,
+                    output_router_logits=output_router_logits,
                     use_cache=use_cache,
                 )
 
@@ -949,7 +819,8 @@ class JetMoEModel(JetMoEPreTrainedModel):
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
 
-            aux_loss += layer_outputs[-1]
+            if output_router_logits:
+                all_router_logits += (layer_outputs[-2], layer_outputs[-1])
 
         hidden_states = self.norm(hidden_states)
 
@@ -957,180 +828,109 @@ class JetMoEModel(JetMoEPreTrainedModel):
         if output_hidden_states:
             all_hidden_states += (hidden_states,)
 
-        next_cache = None
-        if use_cache:
-            next_cache = next_decoder_cache.to_legacy_cache() if use_legacy_cache else next_decoder_cache
+        next_cache = next_decoder_cache if use_cache else None
+        if return_legacy_cache:
+            next_cache = next_cache.to_legacy_cache()
 
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
-        return JetMoEBaseModelOutputWithPast(
+        return MoeModelOutputWithPast(
             last_hidden_state=hidden_states,
             past_key_values=next_cache,
             hidden_states=all_hidden_states,
             attentions=all_self_attns,
-            aux_loss=aux_loss,
+            router_logits=all_router_logits,
         )
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaModel._update_causal_mask
+    def _update_causal_mask(
+        self,
+        attention_mask: mindspore.Tensor,
+        input_tensor: mindspore.Tensor,
+        cache_position: mindspore.Tensor,
+        past_key_values: Cache,
+        output_attentions: bool,
+    ):
 
-class JetMoEForCausalLM(JetMoEPreTrainedModel):
 
-    '''
-    The JetMoEForCausalLM class represents a JetMoE model for causal language modeling. 
-    It inherits from the JetMoEPreTrainedModel.
+        # For SDPA, when possible, we will rely on its `is_causal` argument instead of its `attn_mask` argument, in
+        # order to dispatch on Flash Attention 2. This feature is not compatible with static cache, as SDPA will fail
+        # to infer the attention mask.
+        past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
+        using_static_cache = isinstance(past_key_values, StaticCache)
 
-    This class includes methods for initializing the model, getting and setting input and output embeddings, 
-    setting and getting the decoder, forwarding the model, preparing inputs for generation, and reordering cache. 
-    The forward method handles the generation of outputs based on input and model configuration, 
-    while the prepare_inputs_for_generation method prepares inputs for the generation process.
-    Additionally, the _reorder_cache method is a static method for reordering past key values based on beam index.
+        # When output attentions is True, sdpa implementation's forward method calls the eager implementation's forward
+        if self.config._attn_implementation == "sdpa" and not using_static_cache and not output_attentions:
+            if AttentionMaskConverter._ignore_causal_mask_sdpa(
+                attention_mask,
+                inputs_embeds=input_tensor,
+                past_key_values_length=past_seen_tokens,
+                is_training=self.training,
+            ):
+                return None
 
-    The class also includes attributes for model configuration, vocabulary size, auxiliary loss coefficient, LM head, 
-    and tie_word_embeddings.
+        dtype = input_tensor.dtype
+        min_dtype = float(ops.finfo(dtype).min)
+        sequence_length = input_tensor.shape[1]
+        if using_static_cache:
+            target_length = past_key_values.get_max_length()
+        else:
+            target_length = (
+                attention_mask.shape[-1]
+                if isinstance(attention_mask, mindspore.Tensor)
+                else past_seen_tokens + sequence_length + 1
+            )
 
-    The class provides flexibility for customizing and utilizing the JetMoE model for causal language modeling tasks.
-    '''
+        # In case the provided `attention` mask is 2D, we generate a causal mask here (4D).
+        causal_mask = _prepare_4d_causal_attention_mask_with_cache_position(
+            attention_mask,
+            sequence_length=sequence_length,
+            target_length=target_length,
+            dtype=dtype,
+            min_dtype=min_dtype,
+            cache_position=cache_position,
+            batch_size=input_tensor.shape[0],
+        )
+
+        return causal_mask
+
+
+class JetMoeForCausalLM(JetMoePreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
-        """
-        Initializes an instance of JetMoEForCausalLM.
-
-        Args:
-            self: Instance of the JetMoEForCausalLM class.
-            config:
-                An object containing configuration parameters for the model.
-
-                - Type: Any
-                - Purpose: Contains settings and hyperparameters for the model.
-                - Restrictions: None
-
-        Returns:
-            None
-
-        Raises:
-            None.
-        """
         super().__init__(config)
-        self.model = JetMoEModel(config)
+        self.model = JetMoeModel(config)
         self.vocab_size = config.vocab_size
-        self.aux_loss_coef = getattr(config, "aux_loss_coef", 0.01)
+        self.aux_loss_coef = config.aux_loss_coef
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.tie_word_embeddings = config.tie_word_embeddings
 
         # Initialize weights and apply final processing
         self.post_init()
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.get_input_embeddings
     def get_input_embeddings(self):
-        """
-        Method to retrieve the input embeddings from the model.
-
-        Args:
-            self:
-                The instance of the JetMoEForCausalLM class.
-
-                - Type: JetMoEForCausalLM
-                - Purpose: Represents the current instance of the JetMoEForCausalLM class.
-                - Restrictions: None
-
-        Returns:
-            embed_tokens:
-                The input embeddings from the model.
-
-                - Type: None
-                - Purpose: Represents the embedding tokens used as input for the model.
-
-        Raises:
-            None
-        """
         return self.model.embed_tokens
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.set_input_embeddings
     def set_input_embeddings(self, value):
-        """
-        This method sets the input embeddings for the JetMoEForCausalLM model.
-
-        Args:
-            self (JetMoEForCausalLM): The instance of the JetMoEForCausalLM class.
-            value (torch.Tensor): The input embeddings to be set for the model.
-                It should be a tensor of shape (vocab_size, embedding_dim).
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         self.model.embed_tokens = value
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.get_output_embeddings
     def get_output_embeddings(self):
-        """
-        Returns the output embeddings of the JetMoE model for causal language modeling.
-
-        Args:
-            self: An instance of the JetMoEForCausalLM class.
-
-        Returns:
-            The output embeddings of the JetMoE model for causal language modeling.
-
-        Raises:
-            None.
-
-        Note:
-            This method is a part of the JetMoEForCausalLM class and can be used to retrieve
-            the output embeddings of the model.
-            The output embeddings represent the contextualized representations of
-            the input tokens generated by the model.
-        """
         return self.lm_head
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.set_output_embeddings
     def set_output_embeddings(self, new_embeddings):
-        """
-        Set the output embeddings for the JetMoEForCausalLM model.
-
-        Args:
-            self (JetMoEForCausalLM): The instance of the JetMoEForCausalLM model.
-            new_embeddings (Tensor): The new output embeddings to be set for the model.
-                Should be a tensor of shape (vocab_size, hidden_size).
-
-        Returns:
-            None.
-
-        Raises:
-            TypeError: If the new_embeddings parameter is not a valid tensor.
-            ValueError: If the new_embeddings tensor shape does not match the expected (vocab_size, hidden_size) shape.
-        """
         self.lm_head = new_embeddings
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.set_decoder
     def set_decoder(self, decoder):
-        """
-        Sets the decoder for the JetMoEForCausalLM model.
-
-        Args:
-            self (JetMoEForCausalLM): An instance of the JetMoEForCausalLM class.
-            decoder: The decoder to be set for the model.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
         self.model = decoder
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.get_decoder
     def get_decoder(self):
-        """
-        Method to retrieve the decoder model for the JetMoEForCausalLM class.
-
-        Args:
-            self: JetMoEForCausalLM instance.
-                The instance of the JetMoEForCausalLM class.
-
-        Returns:
-            None:
-                The decoder model associated with the JetMoEForCausalLM instance.
-
-        Raises:
-            None.
-        """
         return self.model
 
     def forward(
@@ -1144,8 +944,10 @@ class JetMoEForCausalLM(JetMoEPreTrainedModel):
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
+        output_router_logits: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, CausalLMOutputWithPast]:
+        cache_position: Optional[mindspore.Tensor] = None,
+    ) -> Union[Tuple, MoeCausalLMOutputWithPast]:
         r"""
         Args:
             labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
@@ -1154,8 +956,8 @@ class JetMoEForCausalLM(JetMoEPreTrainedModel):
                 (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
 
         Returns:
-            Union[Tuple, CausalLMOutputWithPast]
         """
+
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1173,6 +975,7 @@ class JetMoEForCausalLM(JetMoEPreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            cache_position=cache_position,
         )
 
         hidden_states = outputs[0]
@@ -1188,236 +991,108 @@ class JetMoEForCausalLM(JetMoEPreTrainedModel):
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Ensure tensors are on the same device
-            loss = F.cross_entropy(shift_logits, shift_labels)
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(shift_logits, shift_labels)
+
+        aux_loss = None
+        if output_router_logits:
+            aux_loss = load_balancing_loss_func(
+                outputs.router_logits if return_dict else outputs[-1],
+                self.num_experts,
+                self.num_experts_per_tok,
+                attention_mask,
+            )
+            if labels is not None:
+                loss += self.aux_loss_coef * aux_loss
 
         if not return_dict:
             output = (logits,) + outputs[1:]
+            if output_router_logits:
+                output = (aux_loss,) + output
             return (loss,) + output if loss is not None else output
 
-        if labels is not None and self.model.training:
-            loss += self.aux_loss_coef * outputs.aux_loss
-
-        return JetMoECausalLMOutputWithPast(
+        return MoeCausalLMOutputWithPast(
             loss=loss,
+            aux_loss=aux_loss,
             logits=logits,
             past_key_values=outputs.past_key_values,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
-            aux_loss=outputs.aux_loss,
+            router_logits=outputs.router_logits,
         )
 
+    # Copied from transformers.models.mixtral.modeling_mixtral.MixtralForCausalLM.prepare_inputs_for_generation
     def prepare_inputs_for_generation(
-        self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
+        self,
+        input_ids,
+        past_key_values=None,
+        attention_mask=None,
+        inputs_embeds=None,
+        cache_position=None,
+        output_router_logits=False,
+        position_ids=None,
+        use_cache=True,
+        **kwargs,
     ):
-        """
-        Prepare inputs for generation.
-
-        Args:
-            self (JetMoEForCausalLM): The instance of the JetMoEForCausalLM class.
-            input_ids (torch.Tensor): The input tensor with token IDs.
-            past_key_values (Union[Cache, Tuple[torch.Tensor]]):
-                The past key values for caching.
-
-                - If Cache instance is provided, information about cache length, past length,
-                and max cache length are extracted.
-                - If Tuple is provided, the past length is determined as the shape of the first
-                dimension of the first element.
-            attention_mask (torch.Tensor): The attention mask tensor to mask certain tokens.
-            inputs_embeds (torch.Tensor): The embeddings tensor for input tokens.
-
-        Returns:
-            model_inputs (Dict[str, Any]): A dictionary containing model inputs for generation.
-              It includes 'inputs_embeds' if inputs_embeds is provided, otherwise 'input_ids'.
-              Additionally, 'position_ids', 'past_key_values', 'use_cache', and 'attention_mask' are included.
-
-        Raises:
-            TypeError: If past_key_values is not of type Cache or Tuple.
-            IndexError: If attention_mask shape is inconsistent with input_ids shape.
-            ValueError: If cache_length + input_ids length exceeds max_cache_length.
-            AttributeError: If position_ids calculation encounters errors.
-            RuntimeError: If there are issues with masked_fill operation.
-        """
-        # Omit tokens covered by past_key_values
+        # If we have cache: let's slice `input_ids` through `cache_position`, to keep only the unprocessed tokens
+        # Exception 1: when passing input_embeds, input_ids may be missing entries
+        # Exception 2: some generation methods do special slicing of input_ids, so we don't need to do it here
         if past_key_values is not None:
-            if isinstance(past_key_values, Cache):
-                cache_length = past_key_values.get_seq_length()
-                past_length = past_key_values.seen_tokens
-                max_cache_length = past_key_values.get_max_length()
-            else:
-                cache_length = past_length = past_key_values[0][0].shape[2]
-                max_cache_length = None
+            if inputs_embeds is not None:  # Exception 1
+                if 0 not in input_ids.shape:
+                    input_ids = input_ids[:, -cache_position.shape[0] :]
+            elif input_ids.shape[1] != cache_position.shape[0]:  # Default case (the "else", a no op, is Exception 2)
+                input_ids = input_ids[:, cache_position]
 
-            # Keep only the unprocessed tokens:
-            # 1 - If the length of the attention_mask exceeds the length of input_ids, then we are in a setting where
-            # some of the inputs are exclusively passed as part of the cache (e.g. when passing input_embeds as
-            # input)
-            if attention_mask is not None and attention_mask.shape[1] > input_ids.shape[1]:
-                input_ids = input_ids[:, -(attention_mask.shape[1] - past_length) :]
-            # 2 - If the past_length is smaller than input_ids', then input_ids holds all input tokens. We can discard
-            # input_ids based on the past_length.
-            elif past_length < input_ids.shape[1]:
-                input_ids = input_ids[:, past_length:]
-            # 3 - Otherwise (past_length >= input_ids.shape[1]), let's assume input_ids only has unprocessed tokens.
-
-            # If we are about to go beyond the maximum cache length, we need to crop the input attention mask.
-            if (
-                max_cache_length is not None
-                and attention_mask is not None
-                and cache_length + input_ids.shape[1] > max_cache_length
-            ):
-                attention_mask = attention_mask[:, -max_cache_length:]
-
-        position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
 
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
-        if inputs_embeds is not None and past_key_values is None:
+        if inputs_embeds is not None and cache_position[0] == 0:
             model_inputs = {"inputs_embeds": inputs_embeds}
         else:
-            model_inputs = {"input_ids": input_ids}
+            model_inputs = {"input_ids": input_ids}  # `contiguous()` needed for compilation use cases
 
         model_inputs.update(
             {
                 "position_ids": position_ids,
+                "cache_position": cache_position,
                 "past_key_values": past_key_values,
-                "use_cache": kwargs.get("use_cache"),
+                "use_cache": use_cache,
                 "attention_mask": attention_mask,
+                "output_router_logits": output_router_logits,
             }
         )
         return model_inputs
 
-    @staticmethod
-    def _reorder_cache(past_key_values, beam_idx):
-        """
-        Reorders the cache for the JetMoEForCausalLM model based on the specified beam index.
 
-        Args:
-            past_key_values (tuple): A tuple containing the past key values for the model's cache.
-            beam_idx (int): The index of the beam to use for reordering the cache.
-                It represents the position of the beam in the cache.
-
-        Returns:
-            None: This method modifies the cache in place.
-
-        Raises:
-            None.
-        """
-        reordered_past = ()
-        for layer_past in past_key_values:
-            reordered_past += (
-                tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),
-            )
-        return reordered_past
-
-
-# Copied from transformers.models.llama.modeling_llama.LlamaForSequenceClassification with Llama->JetMoE, LLAMA->JETMOE
-class JetMoEForSequenceClassification(JetMoEPreTrainedModel):
-
-    """
-    JetMoEForSequenceClassification is a class that represents a sequence classification model based on the JetMoE
-    architecture. It is designed to handle tasks such as sentiment analysis, text classification,
-    and natural language inference.
-
-    This class inherits from the JetMoEPreTrainedModel class, which provides a set of pre-trained parameters
-    and methods for fine-tuning the model on specific downstream tasks.
-
-    The JetMoEForSequenceClassification class provides the following methods:
-
-    - __init__: Initializes the JetMoEForSequenceClassification instance with the given configuration.
-    - get_input_embeddings: Returns the input embeddings used by the model.
-    - set_input_embeddings: Sets the input embeddings of the model to the given value.
-    - forward: Constructs the sequence classification model and computes the output logits.
-    It takes several optional arguments such as input_ids, attention_mask, and labels,
-    and returns a tuple containing the loss, logits, and other outputs.
-
-    The JetMoEForSequenceClassification class follows the configuration provided to initialize the model,
-    including the number of labels for the classification task. It utilizes the JetMoEModel for the main
-    transformer architecture and applies a score layer to compute the logits.
-    The forward method handles the computation of the model's output based on the given inputs and labels,
-    including handling different problem types (regression, single-label classification, or multi-label classification)
-    and computing the loss.
-
-    Note:
-        This docstring does not include the method signatures or any other code for clarity and readability.
-    """
+# Copied from transformers.models.llama.modeling_llama.LlamaForSequenceClassification with Llama->JetMoe, LLAMA->JETMOE
+class JetMoeForSequenceClassification(JetMoePreTrainedModel):
     def __init__(self, config):
-        """
-        Initializes a JetMoEForSequenceClassification instance.
-
-        Args:
-            self: The object instance itself.
-            config (object): An object containing configuration settings for the model.
-                It should include the following attributes:
-
-                - num_labels (int): The number of labels for classification.
-                - hidden_size (int): The size of the hidden layers in the model.
-                This parameter is used to configure the model and its components.
-
-        Returns:
-            None.
-
-        Raises:
-            NotImplementedError: If the method 'post_init()' is not implemented.
-        """
         super().__init__(config)
         self.num_labels = config.num_labels
-        self.model = JetMoEModel(config)
+        self.model = JetMoeModel(config)
         self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
     def get_input_embeddings(self):
-        """
-        This method retrieves the input embeddings from the JetMoEForSequenceClassification model.
-
-        Args:
-            self: An instance of the JetMoEForSequenceClassification class.
-
-        Returns:
-            None: This method returns the input embeddings which are of type 'None'.
-
-        Raises:
-            None
-        """
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
-        """
-        Sets the input embeddings for the JetMoEForSequenceClassification model.
-
-        Args:
-            self (JetMoEForSequenceClassification): The instance of the JetMoEForSequenceClassification class.
-            value: The input embeddings to be set for the model.
-                This should be an object that provides the embedding functionality.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-
-        This method allows you to set the input embeddings for the JetMoEForSequenceClassification model.
-        The input embeddings should be provided as an object that provides the embedding functionality.
-        By setting the input embeddings, you can customize the way the model represents the input data.
-
-        Note:
-            The 'embed_tokens' attribute of the 'model' instance is updated with the provided 'value' to
-            set the input embeddings.
-        """
         self.model.embed_tokens = value
 
     def forward(
         self,
-        input_ids: mindspore.Tensor = None,
+        input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
-        past_key_values: Optional[List[mindspore.Tensor]] = None,
+        past_key_values: Optional[Union[Cache, List[mindspore.Tensor]]] = None,
         inputs_embeds: Optional[mindspore.Tensor] = None,
         labels: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
@@ -1426,11 +1101,10 @@ class JetMoEForSequenceClassification(JetMoEPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        Args:
-            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1478,14 +1152,17 @@ class JetMoEForSequenceClassification(JetMoEPreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = F.mse_loss(pooled_logits, labels)
+                    loss = loss_fct(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = F.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = F.binary_cross_entropy_with_logits(pooled_logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1499,8 +1176,8 @@ class JetMoEForSequenceClassification(JetMoEPreTrainedModel):
         )
 
 __all__ = [
-    "JetMoEForCausalLM",
-    "JetMoEModel",
-    "JetMoEPreTrainedModel",
-    "JetMoEForSequenceClassification",
+    "JetMoeForCausalLM",
+    "JetMoeModel",
+    "JetMoePreTrainedModel",
+    "JetMoeForSequenceClassification",
 ]

@@ -23,10 +23,11 @@ from typing import Iterable, Iterator, List, Optional, Tuple, Union
 import numpy as np
 import mindspore
 
-from mindspore import Parameter, Tensor
+from mindspore import Tensor
 from mindspore.common.initializer import Uniform
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -488,13 +489,13 @@ class GraphormerMultiheadAttention(nn.Module):
         else:
             gain = 1
 
-        self.k_proj.weight.set_data(init_xavier_uniform(self.k_proj.weight, gain))
-        self.v_proj.weight.set_data(init_xavier_uniform(self.v_proj.weight, gain))
-        self.q_proj.weight.set_data(init_xavier_uniform(self.q_proj.weight, gain))
+        self.k_proj.weight.assign_value(init_xavier_uniform(self.k_proj.weight, gain))
+        self.v_proj.weight.assign_value(init_xavier_uniform(self.v_proj.weight, gain))
+        self.q_proj.weight.assign_value(init_xavier_uniform(self.q_proj.weight, gain))
 
-        self.out_proj.weight.set_data(init_xavier_uniform(self.out_proj.weight, gain))
+        self.out_proj.weight.assign_value(init_xavier_uniform(self.out_proj.weight, gain))
         if self.out_proj.bias is not None:
-            self.out_proj.bias.set_data(init_zero(self.out_proj.bias))
+            self.out_proj.bias.assign_value(init_zero(self.out_proj.bias))
 
     def forward(
         self,
@@ -975,21 +976,21 @@ class GraphormerPreTrainedModel(PreTrainedModel):
         Initialize the weights specific to the Graphormer Model.
         """
         if isinstance(module, nn.Linear):
-            module.weight.set_data(init_normal(module.weight, sigma=0.02, mean=0.0))
+            module.weight.assign_value(init_normal(module.weight, sigma=0.02, mean=0.0))
             if module.bias:
-                module.bias.set_data(init_zero(module.bias))
+                module.bias.assign_value(init_zero(module.bias))
         if isinstance(module, nn.Embedding):
             weight = np.random.normal(loc=0.0, scale=0.02, size=module.weight.shape)
             if module.padding_idx:
                 weight[module.padding_idx] = 0
 
-            module.weight.set_data(Tensor(weight, module.weight.dtype))
+            module.weight.assign_value(Tensor(weight, module.weight.dtype))
         if isinstance(module, GraphormerMultiheadAttention):
-            module.q_proj.weight.set_data(init_normal(module.q_proj.weight,
+            module.q_proj.weight.assign_value(init_normal(module.q_proj.weight,
                                                       sigma=0.02, mean=0.0))
-            module.k_proj.weight.set_data(init_normal(module.k_proj.weight,
+            module.k_proj.weight.assign_value(init_normal(module.k_proj.weight,
                                                       sigma=0.02, mean=0.0))
-            module.v_proj.weight.set_data(init_normal(module.v_proj.weight,
+            module.v_proj.weight.assign_value(init_normal(module.v_proj.weight,
                                                       sigma=0.02, mean=0.0))
 
     def _init_weights(
@@ -1001,21 +1002,21 @@ class GraphormerPreTrainedModel(PreTrainedModel):
         """
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # We might be missing part of the Linear init, dependant on the layer num
-            cell.weight.set_data(init_normal(cell.weight, sigma=0.02, mean=0.0))
+            cell.weight.assign_value(init_normal(cell.weight, sigma=0.02, mean=0.0))
             if cell.bias is not None:
-                cell.bias.set_data(init_zero(cell.bias))
+                cell.bias.assign_value(init_zero(cell.bias))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(loc=0.0, scale=0.02, size=cell.weight.shape)
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
 
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, GraphormerMultiheadAttention):
-            cell.q_proj.weight.set_data(init_normal(cell.q_proj.weight,
+            cell.q_proj.weight.assign_value(init_normal(cell.q_proj.weight,
                                                       sigma=0.02, mean=0.0))
-            cell.k_proj.weight.set_data(init_normal(cell.k_proj.weight,
+            cell.k_proj.weight.assign_value(init_normal(cell.k_proj.weight,
                                                       sigma=0.02, mean=0.0))
-            cell.v_proj.weight.set_data(init_normal(cell.v_proj.weight,
+            cell.v_proj.weight.assign_value(init_normal(cell.v_proj.weight,
                                                       sigma=0.02, mean=0.0))
         elif isinstance(cell, GraphormerGraphEncoder):
             if cell.apply_graphormer_init:
@@ -1285,7 +1286,7 @@ class GraphormerForGraphClassification(GraphormerPreTrainedModel):
 
         loss = None
         if labels is not None:
-            mask = 1 - ops.isnan(labels.to(mindspore.float32)) # invert True and False
+            mask = (1 - ops.isnan(labels.to(mindspore.float32))).bool() # invert True and False
 
             if self.num_classes == 1:  # regression
                 loss_fct = MSELoss()

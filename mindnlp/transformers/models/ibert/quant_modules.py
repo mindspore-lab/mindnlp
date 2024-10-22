@@ -20,9 +20,8 @@ import decimal
 
 import numpy as np
 import mindspore
-from mindspore.common.api import _no_grad
 from mindspore.nn import Cell
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, no_grad
 
 from ....utils import logging
 
@@ -135,11 +134,11 @@ class QuantAct(nn.Module):
         self.percentile = False
 
         if not self.per_channel:
-            self.register_buffer("x_min", ops.zeros(1))
-            self.register_buffer("x_max", ops.zeros(1))
+            self.register_buffer("x_min", ops.zeros(1) - 1e-5)
+            self.register_buffer("x_max", ops.zeros(1) + 1e-5)
             self.register_buffer("act_scaling_factor", ops.zeros(1))
-            self.x_min -= 1e-5
-            self.x_max += 1e-5
+            # self.x_min -= 1e-5
+            # self.x_max += 1e-5
         else:
             raise NotImplementedError("per-channel mode is not currently supported for activation.")
 
@@ -373,7 +372,7 @@ class IntSoftmax(nn.Module):
         self.coef[2] /= self.coef[0]
 
     def int_polynomial(self, x_int, scaling_factor):
-        with _no_grad():
+        with no_grad():
             b_int = ops.floor(self.coef[1] / scaling_factor)
             c_int = ops.floor(self.coef[2] / scaling_factor**2)
         z = (x_int + b_int) * x_int + c_int
@@ -381,7 +380,7 @@ class IntSoftmax(nn.Module):
         return z, scaling_factor
 
     def int_exp(self, x_int, scaling_factor):
-        with _no_grad():
+        with no_grad():
             x0_int = ops.floor(self.x0 / scaling_factor)
         x_int = ops.maximum(x_int, self.const * x0_int)
 
@@ -446,7 +445,7 @@ class IntLayerNorm(nn.Module):
         self.activation = QuantAct(self.output_bit, quant_mode=self.quant_mode)
 
     def set_shift(self, y_int):
-        with _no_grad():
+        with no_grad():
             y_sq_int = y_int**2
             var_int = ops.sum(y_sq_int, dim=2, keepdim=True)
             shift = (ops.log2(ops.sqrt(var_int / 2**self.max_bit)).ceil()).max()
@@ -602,8 +601,8 @@ def symmetric_linear_quantization_params(num_bits, saturation_min, saturation_ma
         *saturation_max*.
     """
     # in this part, we do not need any gradient computation,
-    # in order to enforce this, we put _no_grad()
-    with _no_grad():
+    # in order to enforce this, we put no_grad()
+    with no_grad():
         n = 2 ** (num_bits - 1) - 1
 
         if per_channel:

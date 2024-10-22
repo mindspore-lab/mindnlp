@@ -578,16 +578,16 @@ class BlenderbotPreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(std),
+            cell.weight.assign_value(initializer(Normal(std),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, std, cell.weight.shape)
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
 
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
 
     @property
     def dummy_inputs(self):
@@ -1129,8 +1129,8 @@ class BlenderbotModel(BlenderbotPreTrainedModel):
             >>> model = BlenderbotModel.from_pretrained("facebook/blenderbot-400M-distill")
             >>> tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot-400M-distill")
             ...
-            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
-            >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="pt").input_ids  # Batch size 1
+            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="ms")
+            >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="ms").input_ids  # Batch size 1
             >>> outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_input_ids)
             ...
             >>> last_hidden_states = outputs.last_hidden_state
@@ -1258,8 +1258,8 @@ class BlenderbotModel(BlenderbotPreTrainedModel):
             >>> model = BlenderbotModel.from_pretrained("facebook/blenderbot-400M-distill")
             >>> tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot-400M-distill")
             ...
-            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
-            >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="pt").input_ids  # Batch size 1
+            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="ms")
+            >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="ms").input_ids  # Batch size 1
             >>> outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_input_ids)
             ...
             >>> last_hidden_states = outputs.last_hidden_state
@@ -1981,7 +1981,7 @@ class BlenderbotForCausalLM(BlenderbotPreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot-400M-distill")
             >>> model = BlenderbotForCausalLM.from_pretrained("facebook/blenderbot-400M-distill", add_cross_attention=False)
             >>> assert model.config.is_decoder, f"{model.__class__} has to be configured as a decoder."
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> outputs = model(**inputs)
             ...
             >>> logits = outputs.logits

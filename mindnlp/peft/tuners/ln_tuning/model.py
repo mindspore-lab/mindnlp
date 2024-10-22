@@ -83,18 +83,18 @@ class LNTuningModel(BaseTuner):
         except AttributeError:
             return getattr(self.model, name)
 
-    # TODO: here need to handle the cells_to_save rather than the target_cells
+    # TODO: here need to handle the modules_to_save rather than the target_modules
     @staticmethod
     def _prepare_adapter_config(
         peft_config: PeftConfig, model_config: dict
     ) -> PeftConfig:
-        if peft_config.target_cells is None:
+        if peft_config.target_modules is None:
             if (
                 model_config["model_type"]
                 not in TRANSFORMERS_MODELS_TO_LNTUNING_TARGET_MODULES_MAPPING
             ):
-                raise ValueError("Please specify `target_cells` in `peft_config`")
-            peft_config.target_cells = set(
+                raise ValueError("Please specify `target_modules` in `peft_config`")
+            peft_config.target_modules = set(
                 TRANSFORMERS_MODELS_TO_LNTUNING_TARGET_MODULES_MAPPING[
                     model_config["model_type"]
                 ]

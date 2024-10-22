@@ -414,7 +414,7 @@ class GenerationConfig:
                 self.cache_config = cache_config_class()
             elif isinstance(self.cache_config, dict):
                 self.cache_config = cache_config_class.from_dict(self.cache_config)
-        self.return_legacy_cache = kwargs.pop("return_legacy_cache", True)
+        self.return_legacy_cache = kwargs.pop("return_legacy_cache", None)
 
         # Prompt lookup decoding
         self.prompt_lookup_num_tokens = kwargs.pop("prompt_lookup_num_tokens", None)
@@ -704,7 +704,7 @@ class GenerationConfig:
             "logits_processor",
             "stopping_criteria",
             "prefix_allowed_tokens_fn",
-            "synced_gpus",
+            "synced_devices",
             "assistant_model",
             "streamer",
             "negative_prompt_ids",
@@ -769,7 +769,7 @@ class GenerationConfig:
 
         if use_auth_token is not None:
             warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+                "The `use_auth_token` argument is deprecated. Please use `token` instead.",
                 FutureWarning,
             )
             if kwargs.get("token", None) is not None:
@@ -913,7 +913,7 @@ class GenerationConfig:
 
         if use_auth_token is not None:
             warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+                "The `use_auth_token` argument is deprecated. Please use `token` instead.",
                 FutureWarning,
             )
             if token is not None:
@@ -1032,17 +1032,17 @@ class GenerationConfig:
         else:
             return config
 
-    def dict_torch_dtype_to_str(self, d: Dict[str, Any]) -> None:
+    def dict_ms_dtype_to_str(self, d: Dict[str, Any]) -> None:
         """
-        Checks whether the passed dictionary and its nested dicts have a *torch_dtype* key and if it's not None,
+        Checks whether the passed dictionary and its nested dicts have a *ms_dtype* key and if it's not None,
         converts torch.dtype to a string of just the type. For example, `torch.float32` get converted into *"float32"*
         string, which can then be stored in the json format.
         """
-        if d.get("torch_dtype", None) is not None and not isinstance(d["torch_dtype"], str):
-            d["torch_dtype"] = str(d["torch_dtype"]).split(".")[1]
+        if d.get("ms_dtype", None) is not None and not isinstance(d["ms_dtype"], str):
+            d["ms_dtype"] = str(d["ms_dtype"]).split(".")[1]
         for value in d.values():
             if isinstance(value, dict):
-                self.dict_torch_dtype_to_str(value)
+                self.dict_ms_dtype_to_str(value)
 
     def to_diff_dict(self) -> Dict[str, Any]:
         """
@@ -1064,7 +1064,7 @@ class GenerationConfig:
             if key not in default_config_dict or key == "transformers_version" or value != default_config_dict[key]:
                 serializable_config_dict[key] = value
 
-        self.dict_torch_dtype_to_str(serializable_config_dict)
+        self.dict_ms_dtype_to_str(serializable_config_dict)
         return serializable_config_dict
 
     def to_dict(self) -> Dict[str, Any]:
@@ -1082,7 +1082,7 @@ class GenerationConfig:
         if "_original_object_hash" in output:
             del output["_original_object_hash"]
 
-        self.dict_torch_dtype_to_str(output)
+        self.dict_ms_dtype_to_str(output)
         return output
 
     def to_json_string(self, use_diff: bool = True, ignore_metadata: bool = False) -> str:

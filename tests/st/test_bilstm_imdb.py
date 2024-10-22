@@ -21,12 +21,9 @@
 
 import numpy as np
 import mindspore as ms
-from mindspore import nn, ops, Tensor
-from mindnlp.utils import less_min_pynative_first
-if less_min_pynative_first:
-    from mindspore.ops import value_and_grad
-else:
-    from mindspore import value_and_grad
+from mindspore import Tensor
+from mindnlp.core import nn, ops, optim
+from mindspore import value_and_grad
 
 class BiLSTM(nn.Module):
     """bilstm network"""
@@ -40,12 +37,12 @@ class BiLSTM(nn.Module):
                            bidirectional=bidirectional,
                            batch_first=True,
                            dropout=0.5)
-        self.fc = nn.Dense(hidden_dim * 2, output_dim)
+        self.fc = nn.Linear(hidden_dim * 2, output_dim)
 
-    def construct(self, inputs):
+    def forward(self, inputs):
         embedded = self.embedding(inputs)
         _, (hidden, _) = self.rnn(embedded)
-        hidden = ops.concat((hidden[-2, :, :], hidden[-1, :, :]), axis=1)
+        hidden = ops.concat((hidden[-2, :, :], hidden[-1, :, :]), dim=1)
         output = self.fc(hidden)
         return output
 
@@ -63,18 +60,18 @@ def test_bilstm_imdb():
 
     model = BiLSTM(vocab_size, embed_size, hidden_size, output_size, num_layers, bidirectional, pad_idx)
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = nn.Adam(model.trainable_params(), learning_rate=lr)
+    optimizer = optim.Adam(model.trainable_params(), lr=lr)
 
     def forward_fn(data, label):
         logits = model(data)
         loss = loss_fn(logits, label)
         return loss
 
-    grad_fn = value_and_grad(forward_fn, None, optimizer.parameters)
+    grad_fn = value_and_grad(forward_fn, None, model.trainable_params())
 
     def train_step(data, label):
         loss, grads = grad_fn(data, label)
-        optimizer(grads)
+        optimizer.step(grads)
         return loss
 
 

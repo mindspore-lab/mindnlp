@@ -20,10 +20,8 @@ from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
-from mindspore.common.initializer import initializer, Normal
-
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
@@ -172,7 +170,7 @@ class CLIPSegVisionEmbeddings(nn.Module):
             1, self.config.hidden_size, num_patches_one_direction, num_patches_one_direction
         )
         b = (
-            ops.interpolate(a, new_size, mode="bicubic", align_corners=False)
+            nn.functional.interpolate(a, new_size, mode="bicubic", align_corners=False)
             .squeeze(0)
             .view(self.config.hidden_size, new_size[0] * new_size[1])
             .T
@@ -414,60 +412,47 @@ class CLIPSegPreTrainedModel(PreTrainedModel):
     base_model_prefix = "clip"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
         factor = self.config.initializer_factor
-        if isinstance(cell, CLIPSegTextEmbeddings):
-            cell.token_embedding.weight.set_data(initializer(Normal(factor * 0.02),
-                                                 cell.token_embedding.weight.shape, cell.token_embedding.weight.dtype))
-            cell.position_embedding.weight.set_data(initializer(Normal(factor * 0.02),
-                                        cell.position_embedding.weight.shape, cell.position_embedding.weight.dtype))
-        elif isinstance(cell, CLIPSegVisionEmbeddings):
+        if isinstance(module, CLIPSegTextEmbeddings):
+            nn.init.normal_(module.token_embedding.weight.data, mean=0.0, std=factor * 0.02)
+            nn.init.normal_(module.position_embedding.weight.data, mean=0.0, std=factor * 0.02)
+        elif isinstance(module, CLIPSegVisionEmbeddings):
             factor = self.config.initializer_factor
-            cell.class_embedding.set_data(initializer(Normal(cell.embed_dim**-0.5 * factor),
-                                        cell.class_embedding.shape, cell.class_embedding.dtype))
-            cell.patch_embedding.weight.set_data(initializer(Normal(cell.config.initializer_range * factor),
-                                                 cell.patch_embedding.weight.shape, cell.patch_embedding.weight.dtype))
-            cell.position_embedding.weight.set_data(initializer(Normal(cell.config.initializer_range * factor),
-                                                 cell.position_embedding.weight.shape, cell.position_embedding.weight.dtype))
-
-        elif isinstance(cell, CLIPSegAttention):
+            nn.init.normal_(module.class_embedding, mean=0.0, std=module.embed_dim**-0.5 * factor)
+            nn.init.normal_(module.patch_embedding.weight, std=module.config.initializer_range * factor)
+            nn.init.normal_(module.position_embedding.weight, std=module.config.initializer_range * factor)
+        elif isinstance(module, CLIPSegAttention):
             factor = self.config.initializer_factor
-            in_proj_std = (cell.embed_dim**-0.5) * ((2 * cell.config.num_hidden_layers) ** -0.5) * factor
-            out_proj_std = (cell.embed_dim**-0.5) * factor
-
-            cell.q_proj.weight.set_data(initializer(Normal(in_proj_std),
-                                        cell.q_proj.weight.shape, cell.q_proj.weight.dtype))
-            cell.k_proj.weight.set_data(initializer(Normal(in_proj_std),
-                                        cell.k_proj.weight.shape, cell.k_proj.weight.dtype))
-            cell.v_proj.weight.set_data(initializer(Normal(in_proj_std),
-                                        cell.v_proj.weight.shape, cell.v_proj.weight.dtype))
-            cell.out_proj.weight.set_data(initializer(Normal(out_proj_std),
-                                        cell.out_proj.weight.shape, cell.out_proj.weight.dtype))
-
-        elif isinstance(cell, CLIPSegMLP):
+            in_proj_std = (module.embed_dim**-0.5) * ((2 * module.config.num_hidden_layers) ** -0.5) * factor
+            out_proj_std = (module.embed_dim**-0.5) * factor
+            nn.init.normal_(module.q_proj.weight, std=in_proj_std)
+            nn.init.normal_(module.k_proj.weight, std=in_proj_std)
+            nn.init.normal_(module.v_proj.weight, std=in_proj_std)
+            nn.init.normal_(module.out_proj.weight, std=out_proj_std)
+        elif isinstance(module, CLIPSegMLP):
             factor = self.config.initializer_factor
-            in_proj_std = (cell.config.hidden_size**-0.5) * ((2 * cell.config.num_hidden_layers) ** -0.5) * factor
-            fc_std = (2 * cell.config.hidden_size) ** -0.5 * factor
+            in_proj_std = (module.config.hidden_size**-0.5) * ((2 * module.config.num_hidden_layers) ** -0.5) * factor
+            fc_std = (2 * module.config.hidden_size) ** -0.5 * factor
+            nn.init.normal_(module.fc1.weight, std=fc_std)
+            nn.init.normal_(module.fc2.weight, std=in_proj_std)
+        elif isinstance(module, CLIPSegModel):
+            nn.init.normal_(
+                module.text_projection.weight,
+                std=module.text_embed_dim**-0.5 * self.config.initializer_factor,
+            )
+            nn.init.normal_(
+                module.visual_projection.weight,
+                std=module.vision_embed_dim**-0.5 * self.config.initializer_factor,
+            )
 
-            cell.fc1.weight.set_data(initializer(Normal(fc_std),
-                                    cell.fc1.weight.shape, cell.fc1.weight.dtype))
-            cell.fc2.weight.set_data(initializer(Normal(in_proj_std),
-                                    cell.fc2.weight.shape, cell.fc2.weight.dtype))
+        if isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
+        if isinstance(module, nn.Linear) and module.bias is not None:
+            nn.init.zeros_(module.bias.data)
 
-        elif isinstance(cell, CLIPSegModel):
-            cell.text_projection.weight.set_data(initializer(Normal(cell.text_embed_dim**-0.5 * self.config.initializer_factor),
-                                    cell.text_projection.weight.shape, cell.text_projection.weight.dtype))
-
-            cell.visual_projection.weight.set_data(initializer(Normal(cell.vision_embed_dim**-0.5 * self.config.initializer_factor),
-                                    cell.visual_projection.weight.shape, cell.visual_projection.weight.dtype))
-
-        if isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-
-        if isinstance(cell, nn.Linear) and cell.bias is not None:
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 # Copied from transformers.models.clip.modeling_clip.CLIPEncoder with CLIP->CLIPSeg
 class CLIPSegEncoder(nn.Module):
@@ -699,7 +684,7 @@ class CLIPSegTextModel(CLIPSegPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("CIDAS/clipseg-rd64-refined")
         >>> model = CLIPSegTextModel.from_pretrained("CIDAS/clipseg-rd64-refined")
 
-        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
 
         >>> outputs = model(**inputs)
         >>> last_hidden_state = outputs.last_hidden_state
@@ -808,7 +793,7 @@ class CLIPSegVisionModel(CLIPSegPreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
 
         >>> outputs = model(**inputs)
         >>> last_hidden_state = outputs.last_hidden_state
@@ -852,7 +837,7 @@ class CLIPSegModel(CLIPSegPreTrainedModel):
 
         self.visual_projection = nn.Linear(self.vision_embed_dim, self.projection_dim, bias=False)
         self.text_projection = nn.Linear(self.text_embed_dim, self.projection_dim, bias=False)
-        self.logit_scale = mindspore.Parameter(mindspore.Tensor(self.config.logit_scale_init_value))
+        self.logit_scale = Parameter(mindspore.Tensor(self.config.logit_scale_init_value))
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -879,7 +864,7 @@ class CLIPSegModel(CLIPSegPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("CIDAS/clipseg-rd64-refined")
         >>> model = CLIPSegModel.from_pretrained("CIDAS/clipseg-rd64-refined")
 
-        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="pt")
+        >>> inputs = tokenizer(["a photo of a cat", "a photo of a dog"], padding=True, return_tensors="ms")
         >>> text_features = model.get_text_features(**inputs)
         ```"""
         # Use CLIPSEG model's config for some fields (if specified) instead of those of vision & text components.
@@ -927,7 +912,7 @@ class CLIPSegModel(CLIPSegPreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
 
         >>> image_features = model.get_image_features(**inputs)
         ```"""
@@ -977,7 +962,7 @@ class CLIPSegModel(CLIPSegPreTrainedModel):
         >>> image = Image.open(requests.get(url, stream=True).raw)
 
         >>> inputs = processor(
-        ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True
+        ...     text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="ms", padding=True
         ... )
 
         >>> outputs = model(**inputs)
@@ -1276,7 +1261,7 @@ class CLIPSegForImageSegmentation(CLIPSegPreTrainedModel):
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
         >>> texts = ["a cat", "a remote", "a blanket"]
-        >>> inputs = processor(text=texts, images=[image] * len(texts), padding=True, return_tensors="pt")
+        >>> inputs = processor(text=texts, images=[image] * len(texts), padding=True, return_tensors="ms")
 
         >>> outputs = model(**inputs)
 

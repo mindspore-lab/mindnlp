@@ -25,6 +25,11 @@ pytesseract
 gensim
 evaluate
 g2p-en
+nltk==3.8.1
 pycocotools
 Levenshtein
 bs4
+tiktoken
+faiss_cpu
+phonemizer
+git+https://github.com/lvyufeng/einops

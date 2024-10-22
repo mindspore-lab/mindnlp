@@ -25,6 +25,7 @@ import mindspore
 from mindnlp.core import ops
 from mindnlp.core.nn import functional as F
 
+from ..ms_utils import isin_friendly
 from ..tokenization_utils_base import PreTrainedTokenizerBase
 from ...utils import logging
 
@@ -90,7 +91,7 @@ class MaxNewTokensCriteria(StoppingCriteria):
 
     def __init__(self, start_length: int, max_new_tokens: int):
         warnings.warn(
-            "The class `MaxNewTokensCriteria` is deprecated and will be removed in v4.43. "
+            "The class `MaxNewTokensCriteria` is deprecated.43. "
             f"Please use `MaxLengthCriteria(max_length={start_length + max_new_tokens})` "
             "with `max_length = start_length + max_new_tokens` instead.",
             FutureWarning,
@@ -238,7 +239,7 @@ class StopStringCriteria(StoppingCriteria):
 
     >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-2")
     >>> model = AutoModelForCausalLM.from_pretrained("microsoft/phi-2")
-    >>> inputs = tokenizer("The biggest states in the USA by land area:", return_tensors="pt")
+    >>> inputs = tokenizer("The biggest states in the USA by land area:", return_tensors="ms")
 
     >>> gen_out = model.generate(**inputs)
     >>> print(tokenizer.batch_decode(gen_out, skip_special_tokens=True)[0])
@@ -470,7 +471,7 @@ class EosTokenCriteria(StoppingCriteria):
         self.eos_token_id = eos_token_id
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor, **kwargs) -> mindspore.Tensor:
-        is_done = ops.isin(input_ids[:, -1], self.eos_token_id)
+        is_done = isin_friendly(input_ids[:, -1], self.eos_token_id)
         return is_done
 
 
@@ -478,7 +479,7 @@ class StoppingCriteriaList(list):
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor, **kwargs) -> mindspore.Tensor:
         is_done = ops.full((input_ids.shape[0],), False, dtype=mindspore.bool_)
         for criteria in self:
-            is_done = is_done | criteria(input_ids, scores, **kwargs)
+            is_done = (is_done.int() | criteria(input_ids, scores, **kwargs).int()).bool()
         return is_done
 
     @property

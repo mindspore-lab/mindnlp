@@ -23,10 +23,10 @@ import math
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import BackboneOutput, ModelOutput
@@ -652,13 +652,13 @@ class FocalNetPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
+            cell.weight.assign_value(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
                                              cell.weight.shape,cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.bias.set_data(initializer('zero', cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zero', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
 
 
 
@@ -782,7 +782,7 @@ class FocalNetForMaskedImageModeling(FocalNetPreTrainedModel):
         >>> model = FocalNetForMaskedImageModeling(config)
 
         >>> num_patches = (model.config.image_size // model.config.patch_size) ** 2
-        >>> pixel_values = image_processor(images=image, return_tensors="pt").pixel_values
+        >>> pixel_values = image_processor(images=image, return_tensors="ms").pixel_values
         >>> # create random boolean mask of shape (batch_size, num_patches)
         >>> bool_masked_pos = torch.randint(low=0, high=2, size=(1, num_patches)).bool()
 
@@ -819,7 +819,7 @@ class FocalNetForMaskedImageModeling(FocalNetPreTrainedModel):
                 .repeat_interleave(self.config.patch_size, 2)
                 .unsqueeze(1)
             )
-            reconstruction_loss = ops.l1_loss(pixel_values, reforwarded_pixel_values, reduction="none")
+            reconstruction_loss = F.l1_loss(pixel_values, reforwarded_pixel_values, reduction="none")
             masked_im_loss = (reconstruction_loss * mask).sum() / (mask.sum() + 1e-5) / self.config.num_channels
 
         if not return_dict:
@@ -944,7 +944,7 @@ class FocalNetBackbone(FocalNetPreTrainedModel, BackboneMixin):
         >>> processor = AutoImageProcessor.from_pretrained("microsoft/focalnet-tiny-lrf")
         >>> model = AutoBackbone.from_pretrained("microsoft/focalnet-tiny-lrf")
 
-        >>> inputs = processor(image, return_tensors="pt")
+        >>> inputs = processor(image, return_tensors="ms")
         >>> outputs = model(**inputs)
         ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict

@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch KOSMOS-2 model."""
+"""Testing suite for the MindSpore KOSMOS-2 model."""
 
 import copy
 import inspect
@@ -370,9 +370,6 @@ class Kosmos2ModelTest(ModelTesterMixin, unittest.TestCase):
 
     # overwrite from common in order to use `config.text_config.vocab_size` instead of `config.vocab_size`
     def test_tie_model_weights(self):
-        if not self.test_torchscript:
-            self.skipTest(reason="test_torchscript is set to False")
-
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def check_same_values(layer_1, layer_2):

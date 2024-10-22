@@ -18,9 +18,14 @@ Global configs
 import os
 from packaging import version
 import mindspore
+from mindspore._c_expression import MSContext # pylint: disable=no-name-in-module, import-error
 
+SOC = MSContext.get_instance().get_ascend_soc_version()
 DEVICE_TARGET = mindspore.get_context('device_target')
 GENERATOR_SEED = version.parse(mindspore.__version__) >= version.parse('2.3.0')
+SUPPORT_VIEW = GENERATOR_SEED
+SUPPORT_BF16 = GENERATOR_SEED and '910b' in SOC
+ON_ORANGE_PI = '310b' in SOC
 USE_PYBOOST = version.parse(mindspore.__version__) >= version.parse('2.3.0') and DEVICE_TARGET == 'Ascend'
 DEFAULT_DTYPE = mindspore.float32
 
@@ -38,6 +43,7 @@ TOKENIZER_CONFIG_FILE = "tokenizer_config.json"
 FEATURE_EXTRACTOR_NAME = "preprocessor_config.json"
 IMAGE_PROCESSOR_NAME = FEATURE_EXTRACTOR_NAME
 PROCESSOR_NAME = "processor_config.json"
+CHAT_TEMPLATE_NAME = "chat_template.json"
 
 ADAPTER_CONFIG_NAME = "adapter_config.json"
 ADAPTER_WEIGHTS_NAME = "adapter_model.bin"
@@ -48,7 +54,7 @@ DEFAULT_ROOT = os.path.join(os.getcwd(), ".mindnlp")
 MS_URL_BASE = "https://modelscope.cn/api/v1/models/{}/repo?Revision={}&FilePath={}"
 # for huggingface url
 HF_ENDPOINT = os.environ.get('HF_ENDPOINT', 'https://hf-mirror.com')
-HF_URL_BASE = HF_ENDPOINT + '/{}/resolve/{}/{}'
+HF_URL_BASE = HF_ENDPOINT + '/{}/resolve/{}/{}?download=true'
 
 ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
 MINDNLP_CACHE = os.getenv("MINDNLP_CACHE", DEFAULT_ROOT)
@@ -67,3 +73,12 @@ IMAGENET_DEFAULT_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_DEFAULT_STD = [0.229, 0.224, 0.225]
 IMAGENET_STANDARD_MEAN = [0.5, 0.5, 0.5]
 IMAGENET_STANDARD_STD = [0.5, 0.5, 0.5]
+
+def set_pyboost(mode: bool):
+    """set global pyboost"""
+    global USE_PYBOOST
+    USE_PYBOOST = mode
+
+def use_pyboost():
+    """set global pyboost"""
+    return USE_PYBOOST

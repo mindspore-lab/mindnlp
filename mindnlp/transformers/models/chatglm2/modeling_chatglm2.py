@@ -19,10 +19,9 @@ import copy
 import warnings
 from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 import mindspore
-from mindspore import Parameter
-from mindspore.common.api import _no_grad
 
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, no_grad
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...modeling_outputs import (
@@ -169,7 +168,7 @@ class PrefixEncoder(nn.Module):
             # Use a two-layer MLP to encode the prefix
             kv_size = config.num_layers * config.kv_channels * config.multi_query_group_num * 2
             self.embedding = nn.Embedding(config.pre_seq_len, kv_size)
-            self.trans = nn.SequentialCell([
+            self.trans = nn.Sequential([
                 nn.Linear(kv_size, config.hidden_size),
                 nn.Tanh(),
                 nn.Linear(config.hidden_size, kv_size)
@@ -356,7 +355,7 @@ class RMSNorm(nn.Module):
     The RMSNorm class has the following attributes:
 
     Attributes:
-        weight (mindspore.Parameter): A trainable parameter representing the weight matrix used for scaling the normalized hidden states.
+        weight (Parameter): A trainable parameter representing the weight matrix used for scaling the normalized hidden states.
         eps (float): A small value added to the denominator to avoid division by zero.
 
     Methods:
@@ -372,7 +371,7 @@ class RMSNorm(nn.Module):
         >>> class RMSNorm(nn.Module):
         >>>     def __init__(self, normalized_shape, eps=1e-05, dtype=None, **kwargs):
         >>>         super().__init__()
-        >>>         self.weight = mindspore.Parameter(ops.zeros(normalized_shape, dtype=dtype))
+        >>>         self.weight = Parameter(ops.zeros(normalized_shape, dtype=dtype))
         >>>         self.eps = eps
         ...
         >>>     def forward(self, hidden_states: mindspore.Tensor):
@@ -587,7 +586,7 @@ class CoreAttention(nn.Module):
             attention_mask = attention_mask.tril().bool()
             attention_mask = ~attention_mask
         if attention_mask is not None:
-            attention_scores = attention_scores.masked_fill(attention_mask, float("-inf"))
+            attention_scores = attention_scores.masked_fill(attention_mask, float(ops.finfo(attention_scores.dtype).min))
         attention_probs = ops.softmax(attention_scores, dim=-1)
         attention_probs = attention_probs.astype(value_layer.dtype)
 
@@ -757,15 +756,15 @@ class SelfAttention(nn.Module):
 
         if self.multi_query_attention:
             key_layer = key_layer.unsqueeze(-2)
-            key_layer = key_layer.expand(
-                -1, -1, -1, self.num_attention_heads_per_partition // self.num_multi_query_groups_per_partition, -1
+            key_layer = key_layer.broadcast_to(
+                (-1, -1, -1, self.num_attention_heads_per_partition // self.num_multi_query_groups_per_partition, -1)
             )
             key_layer = key_layer.view(
                 key_layer.shape[:2] + (self.num_attention_heads_per_partition, self.hidden_size_per_attention_head)
             )
             value_layer = value_layer.unsqueeze(-2)
-            value_layer = value_layer.expand(
-                -1, -1, -1, self.num_attention_heads_per_partition // self.num_multi_query_groups_per_partition, -1
+            value_layer = value_layer.broadcast_to(
+                (-1, -1, -1, self.num_attention_heads_per_partition // self.num_multi_query_groups_per_partition, -1)
             )
             value_layer = value_layer.view(
                 value_layer.shape[:2] + (self.num_attention_heads_per_partition, self.hidden_size_per_attention_head)
@@ -840,7 +839,7 @@ class MLP(nn.Module):
 
         def swiglu(x):
             x = ops.chunk(x, 2, dim=-1)
-            return ops.silu(x[0]) * x[1]
+            return F.silu(x[0]) * x[1]
 
         self.activation_func = swiglu
 
@@ -1094,6 +1093,9 @@ class GLMTransformer(nn.Module):
             kv_caches = [None for _ in range(self.num_layers)]
         presents = () if use_cache else None
 
+        if isinstance(kv_caches[0], str):
+            kv_caches = kv_caches[1]
+
         all_self_attentions = None
         all_hidden_states = () if output_hidden_states else None
         for index in range(self.num_layers):
@@ -1188,7 +1190,7 @@ class ChatGLM2PreTrainedModel(PreTrainedModel):
 
         """
         batch_size, seq_length = input_ids.shape
-        position_ids = ops.arange(seq_length, dtype=mindspore.int64).unsqueeze(0).repeat(batch_size, 1)
+        position_ids = ops.arange(seq_length, dtype=mindspore.int64).unsqueeze(0).tile((batch_size, 1))
         return position_ids
 
 
@@ -1337,7 +1339,7 @@ class ChatGLM2Model(ChatGLM2PreTrainedModel):
         Raises:
             None.
         """
-        prefix_tokens = self.prefix_tokens.unsqueeze(0).expand(batch_size, -1)
+        prefix_tokens = self.prefix_tokens.unsqueeze(0).broadcast_to((batch_size, -1))
         past_key_values = self.prefix_encoder(prefix_tokens).astype(dtype)
         past_key_values = past_key_values.view(
             batch_size,
@@ -1778,7 +1780,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
             inputs = tokenizer([prompt], return_tensors="ms")
         return inputs
 
-    @_no_grad()
+    @no_grad()
     def chat(self, tokenizer, query: str, history: List[Tuple[str, str]] = None, max_length: int = 8192, num_beams=1,
              do_sample=True, top_p=0.8, temperature=0.8, logits_processor=None, **kwargs):
         """
@@ -1821,7 +1823,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
         history = history + [(query, response)]
         return response, history
 
-    @_no_grad()
+    @no_grad()
     def stream_chat(self, tokenizer, query: str, history: List[Tuple[str, str]] = None, past_key_values=None,
                     max_length: int = 8192, do_sample=True, top_p=0.8, temperature=0.8, logits_processor=None,
                     return_past_key_values=False, **kwargs):
@@ -1883,7 +1885,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
                 else:
                     yield response, new_history
 
-    @_no_grad()
+    @no_grad()
     def stream_generate(
             self,
             input_ids,
@@ -1914,7 +1916,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
 
         Raises:
             UserWarning: If using `max_length`'s default value to control generation length.
-                This behavior is deprecated and will be removed in v5 of Transformers.
+                This behavior is deprecated.
                 It is recommended to use `max_new_tokens` instead.
             UserWarning: If both `max_new_tokens` and `max_length` are set. `max_new_tokens` takes precedence.
             UserWarning: If the input length exceeds `max_length` and may lead to unexpected behavior.
@@ -1964,6 +1966,9 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
         # 2. Set generation parameters if not already defined
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
+
+        kwargs_has_attention_mask = model_kwargs.get("attention_mask", None) is not None
+        self._prepare_special_tokens(generation_config, kwargs_has_attention_mask)
 
         logits_processor = self._get_logits_processor(
             generation_config=generation_config,

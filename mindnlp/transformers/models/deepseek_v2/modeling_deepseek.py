@@ -25,10 +25,9 @@ import numpy as np
 
 import mindspore
 from mindspore import Tensor
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.transformers.activations import ACT2FN
 from mindnlp.transformers.cache_utils import Cache, DynamicCache
 from mindnlp.transformers.modeling_attn_mask_utils import (
@@ -77,7 +76,7 @@ class DeepseekV2RMSNorm(nn.Module):
         DeepseekV2RMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
-        self.weight = mindspore.Parameter(ops.ones(hidden_size), 'weight')
+        self.weight = Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
@@ -373,9 +372,8 @@ class MoEGate(nn.Module):
         # topk selection algorithm
         self.norm_topk_prob = config.norm_topk_prob
         self.gating_dim = config.hidden_size
-        self.weight = mindspore.Parameter(
+        self.weight = Parameter(
             Tensor(np.empty((self.n_routed_experts, self.gating_dim))).astype(mindspore.float32),
-            'weight'
         )
 
     def forward(self, hidden_states):
@@ -656,7 +654,7 @@ class DeepseekV2Attention(nn.Module):
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         if "padding_mask" in kwargs:
             warnings.warn(
-                "Passing `padding_mask` is deprecated and will be removed in v4.37. "
+                "Passing `padding_mask` is deprecated.37. "
                 "Please make sure use `attention_mask` instead.`"
             )
         bsz, q_len, _ = hidden_states.shape
@@ -817,7 +815,7 @@ class DeepseekV2DecoderLayer(nn.Module):
         """
         if "padding_mask" in kwargs:
             warnings.warn(
-                "Passing `padding_mask` is deprecated and will be removed in v4.37. "
+                "Passing `padding_mask` is deprecated.37. "
                 "Please make sure use `attention_mask` instead.`"
             )
         residual = hidden_states
@@ -876,22 +874,18 @@ class DeepseekV2PreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["DeepseekV2DecoderLayer"]
     _skip_keys_device_placement = "past_key_values"
-    _supports_flash_attn_2 = True
     _supports_cache_class = True
 
-    def _init_weights(self, cell):
-        """Initialize the weights"""
-        if isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                             cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            embedding_table = np.random.normal(0.0, self.config.initializer_range, cell.embedding_table)
-            if cell.padding_idx:
-                embedding_table[cell.padding_idx] = 0
-
-            cell.embedding_table.set_data(Tensor(embedding_table, cell.embedding_table.dtype))
+    def _init_weights(self, module):
+        std = self.config.initializer_range
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
 
 
 DeepseekV2_INPUTS_DOCSTRING = r"""

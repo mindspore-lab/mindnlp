@@ -18,13 +18,11 @@ import math
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import Parameter
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
-# from ...integrations.deepspeed import is_deepspeed_zero3_enabled
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
 from ...modeling_outputs import BaseModelOutput, CausalLMOutput
 from ...modeling_utils import PreTrainedModel
@@ -47,9 +45,6 @@ _EXPECTED_OUTPUT_SHAPE = [1, 195, 1536]
 _CTC_EXPECTED_OUTPUT = '"Mr. Quilter is the apostle of the middle classes, and we\'re glad to welcome his gospel."'
 _CTC_EXPECTED_LOSS = 1885.65
 
-
-def is_deepspeed_zero3_enabled():
-    return False
 
 class MCTCTConv1dSubsampler(nn.Module):
     """
@@ -286,8 +281,8 @@ class MCTCTSelfAttention(nn.Module):
 class MCTCTLayerNorm(nn.Module):
     def __init__(self):
         super().__init__()
-        self.singleton_weight = Parameter(ops.ones(1),'singleton_weight')
-        self.singleton_bias = Parameter(ops.zeros(1),'singleton_bias')
+        self.singleton_weight = Parameter(ops.ones(1))
+        self.singleton_bias = Parameter(ops.zeros(1))
 
     def forward(self, hidden_states):
         return (hidden_states * self.singleton_weight) + self.singleton_bias
@@ -431,35 +426,29 @@ class MCTCTPreTrainedModel(PreTrainedModel):
     main_input_name = "input_features"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        #TODO
-        if isinstance(cell, nn.Linear):
+        std = self.config.initializer_range
+        if isinstance(module, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            # cell.weight.data.normal_(mean=0.0, std=std)
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.padding_idx is not None:
-                cell.weight[cell.padding_idx] = 0
-        elif isinstance(cell, nn.LayerNorm):
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-        elif isinstance(cell, MCTCTLayerNorm):
-            cell.singleton_weight.set_data(initializer('ones', cell.singleton_weight.shape, cell.singleton_weight.dtype))
-            # cell.singleton_bias.data.zero_()
-            cell.singleton_bias.set_data(initializer('zeros', cell.singleton_bias.shape, cell.singleton_bias.dtype))
-        if isinstance(cell, (nn.Linear, nn.Conv1d)):
-            # cell.weight.data.normal_(mean=0.0, std=std)
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
+        elif isinstance(module, MCTCTLayerNorm):
+            nn.init.zeros_(module.singleton_bias.data)
+            nn.init.ones_(module.singleton_weight.data)
+        if isinstance(module, (nn.Linear, nn.Conv1d)):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
 
     def _get_feat_extract_output_lengths(self, input_lengths: ms.Tensor):
         """
@@ -594,7 +583,6 @@ class MCTCTEncoder(MCTCTPreTrainedModel):
                     f"but it is for {head_mask.shape[0]}."
                 )
 
-        deepspeed_zero3_is_enabled = is_deepspeed_zero3_enabled()
         for idx, encoder_layer in enumerate(self.layers):
             if output_hidden_states:
                 encoder_states = encoder_states + (hidden_states,)
@@ -603,7 +591,7 @@ class MCTCTEncoder(MCTCTPreTrainedModel):
             dropout_probability = ops.rand([])
 
             skip_the_layer = self.training and (dropout_probability < self.config.layerdrop)
-            if not skip_the_layer or deepspeed_zero3_is_enabled:
+            if not skip_the_layer:
                 # under deepspeed zero3 all gpus must run in sync
                 if self.gradient_checkpointing and self.training:
                     layer_outputs = self._gradient_checkpointing_func(

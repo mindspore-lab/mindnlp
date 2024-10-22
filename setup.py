@@ -25,7 +25,7 @@ from setuptools.command.egg_info import egg_info
 from setuptools.command.build_py import build_py
 
 
-version = '0.4.0'
+version = '0.4.1'
 cur_dir = os.path.dirname(os.path.realpath(__file__))
 pkg_dir = os.path.join(cur_dir, 'build')
 
@@ -129,7 +129,8 @@ setup(
         'ml_dtypes',
         'pyctcdecode',
         'jieba',
-        'pytest==7.2.0'
+        'pytest==7.2.0',
+        'pillow>=10.0.0'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License'

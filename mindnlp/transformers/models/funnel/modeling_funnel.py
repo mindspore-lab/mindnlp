@@ -21,7 +21,7 @@ import numpy as np
 import mindspore
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -371,11 +371,11 @@ class FunnelRelMultiheadAttention(nn.Module):
         self.k_head = nn.Linear(d_model, n_head * d_head)
         self.v_head = nn.Linear(d_model, n_head * d_head)
 
-        self.r_w_bias = mindspore.Parameter(ops.zeros(n_head, d_head))
-        self.r_r_bias = mindspore.Parameter(ops.zeros(n_head, d_head))
-        self.r_kernel = mindspore.Parameter(ops.zeros(d_model, n_head, d_head))
-        self.r_s_bias = mindspore.Parameter(ops.zeros(n_head, d_head))
-        self.seg_embed = mindspore.Parameter(ops.zeros(2, n_head, d_head))
+        self.r_w_bias = Parameter(ops.zeros(n_head, d_head))
+        self.r_r_bias = Parameter(ops.zeros(n_head, d_head))
+        self.r_kernel = Parameter(ops.zeros(d_model, n_head, d_head))
+        self.r_s_bias = Parameter(ops.zeros(n_head, d_head))
+        self.seg_embed = Parameter(ops.zeros(2, n_head, d_head))
 
         self.post_proj = nn.Linear(n_head * d_head, d_model)
         self.layer_norm = nn.LayerNorm([d_model], eps=config.layer_norm_eps)
@@ -947,7 +947,7 @@ class FunnelForPreTraining(FunnelPreTrainedModel):
             >>> tokenizer = AutoTokenizer.from_pretrained("funnel-transformer/small")
             >>> model = FunnelForPreTraining.from_pretrained("funnel-transformer/small")
             ...
-            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+            >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="ms")
             >>> logits = model(**inputs).logits
             ```
         """
@@ -1114,7 +1114,7 @@ class FunnelForSequenceClassification(FunnelPreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
-                loss_fct = ops.MSELoss()
+                loss_fct = nn.MSELoss()
                 if self.num_labels == 1:
                     loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
@@ -1124,7 +1124,7 @@ class FunnelForSequenceClassification(FunnelPreTrainedModel):
                 labels = labels.astype(mindspore.int32)
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss_fct = ops.BCEWithLogitsLoss()
+                loss_fct = nn.BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
 
         if not return_dict:
@@ -1323,8 +1323,8 @@ class FunnelForQuestionAnswering(FunnelPreTrainedModel):
 
         logits = self.qa_outputs(last_hidden_state)
         start_logits, end_logits = logits.split(1, axis=-1)
-        start_logits = start_logits.squeeze(-1).contiguous()
-        end_logits = end_logits.squeeze(-1).contiguous()
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
 
         total_loss = None
         if start_positions is not None and end_positions is not None:

@@ -16,10 +16,10 @@
 import warnings
 from typing import Any, List, Optional
 
-from mindspore import Tensor, Parameter, get_grad
-from mindspore.common.initializer import initializer, Normal
+from mindspore import Tensor, get_grad
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import ParameterDict, ModuleDict
 from mindnlp.peft.utils import transpose
 from mindnlp.transformers.ms_utils import Conv1D
@@ -66,11 +66,11 @@ class AdaLoraLayer(BaseTunerLayer):
         self.lora_embedding_A = ModuleDict()
         self.lora_embedding_B = ModuleDict()
         if isinstance(base_layer, nn.Linear):
-            in_features, out_features = base_layer.in_channels, base_layer.out_channels
+            in_features, out_features = base_layer.in_features, base_layer.out_features
         elif isinstance(base_layer, nn.Conv2d):
             in_features, out_features = base_layer.in_channels, base_layer.out_channels
         elif isinstance(base_layer, nn.Embedding):
-            in_features, out_features = base_layer.vocab_size, base_layer.embedding_size
+            in_features, out_features = base_layer.num_embeddings, base_layer.embedding_dim
         elif isinstance(base_layer, Conv1D):
             in_features, out_features = (
                 base_layer.weight.ds_shape if hasattr(base_layer.weight, "ds_shape") else base_layer.weight.shape
@@ -137,44 +137,10 @@ class AdaLoraLayer(BaseTunerLayer):
         self.set_adapter(self.active_adapters)
 
     def reset_lora_parameters(self, adapter_name):
-        r"""
-        Resets the LoRa parameters of the specified adapter in the AdaLoraLayer class.
-        
-        Args:
-            self: An instance of the AdaLoraLayer class.
-            adapter_name (str): The name of the adapter for which the LoRa parameters need to be reset.
-        
-        Returns:
-            None. This method does not return any value.
-        
-        Raises:
-            None.
-        
-        This method resets the LoRa parameters of the specified adapter by setting their data to random values generated from a normal distribution with a mean of 0.0 and a standard deviation of 0.02. The LoRa
-parameters include:
-        - lora_E: The E parameter of LoRa.
-        - lora_A: The A parameter of LoRa.
-        - lora_B: The B parameter of LoRa.
-        
-        Note that the adapter_name parameter must be a valid key in the lora_A dictionary of the AdaLoraLayer instance. If the adapter_name is not found in the dictionary, the method will not perform any reset
-operation.
-        """
         if adapter_name in self.lora_A.keys():
-            self.lora_E[adapter_name].set_data(initializer(
-                Normal(sigma=0.02, mean=0.0),
-                self.lora_E[adapter_name].shape,
-                self.lora_E[adapter_name].dtype
-            ))
-            self.lora_A[adapter_name].set_data(initializer(
-                Normal(sigma=0.02, mean=0.0),
-                self.lora_A[adapter_name].shape,
-                self.lora_A[adapter_name].dtype
-            ))
-            self.lora_B[adapter_name].set_data(initializer(
-                Normal(sigma=0.02, mean=0.0),
-                self.lora_B[adapter_name].shape,
-                self.lora_B[adapter_name].dtype
-            ))
+            nn.init.zeros_(self.lora_E[adapter_name])
+            nn.init.normal_(self.lora_A[adapter_name], mean=0.0, std=0.02)
+            nn.init.normal_(self.lora_B[adapter_name], mean=0.0, std=0.02)
 
 
 class SVDLinear(nn.Module, AdaLoraLayer):

@@ -202,7 +202,7 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip(reason="DPT does not use the nn.Embedding")
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     def test_model_get_set_embeddings(self):
@@ -268,17 +268,17 @@ class DPTModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config=configs_no_init)
             # Skip the check for the backbone
             backbone_params = []
-            for name, module in model.cells_and_names():
+            for name, module in model.named_modules():
                 if module.__class__.__name__ == "DPTViTHybridEmbeddings":
-                    backbone_params = [f"{key.name}" for key in module.get_parameters()]
+                    backbone_params = [f"{name}.{key}" for key in module.state_dict().keys()]
                     break
 
-            for name, param in model.parameters_and_names():
+            for name, param in model.named_parameters():
                 if param.requires_grad:
                     if name in backbone_params:
                         continue
                     self.assertIn(
-                        ((param.data.mean() * 1e9).round() / 1e9).item(),
+                        ((param.mean() * 1e9).round() / 1e9).item(),
                         [0.0, 1.0],
                         msg=f"Parameter {name} of model {model_class} seems not properly initialized",
                     )

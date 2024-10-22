@@ -12,17 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Qwen2MoE model configuration"""
+"""Qwen2MoE model configuration"""
 
-from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
+from ....utils import logging
 
 
 logger = logging.get_logger(__name__)
-
-QWEN2MOE_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "Qwen/Qwen1.5-MoE-A2.7B": "https://huggingface.co/Qwen/Qwen1.5-MoE-A2.7B/resolve/main/config.json",
-}
 
 
 class Qwen2MoeConfig(PretrainedConfig):
@@ -52,7 +48,7 @@ class Qwen2MoeConfig(PretrainedConfig):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
             `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
-            converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be forwarded
+            converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to `32`.
         hidden_act (`str` or `function`, *optional*, defaults to `"silu"`):
@@ -95,21 +91,24 @@ class Qwen2MoeConfig(PretrainedConfig):
             allow the model to output the auxiliary loss, including load balancing loss and router z-loss.
         router_aux_loss_coef (`float`, *optional*, defaults to 0.001):
             The aux loss factor for the total loss.
+        mlp_only_layers (`List[int]`, *optional*, defaults to `[]`):
+            Indicate which layers use Qwen2MoeMLP rather than Qwen2MoeSparseMoeBlock
+            The list contains layer index, from 0 to num_layers-1 if we have num_layers layers
+            If `mlp_only_layers` is empty, `decoder_sparse_step` is used to determine the sparsity.
 
-    Example:
-        ```python
-        >>> from transformers import Qwen2MoeModel, Qwen2MoeConfig
-        ...
-        >>> # Initializing a Qwen2MoE style configuration
-        >>> configuration = Qwen2MoeConfig()
-        ...
-        >>> # Initializing a model from the Qwen1.5-MoE-A2.7B" style configuration
-        >>> model = Qwen2MoeModel(configuration)
-        ...
-        >>> # Accessing the model configuration
-        >>> configuration = model.config
-        ```
-    """
+    ```python
+    >>> from transformers import Qwen2MoeModel, Qwen2MoeConfig
+
+    >>> # Initializing a Qwen2MoE style configuration
+    >>> configuration = Qwen2MoeConfig()
+
+    >>> # Initializing a model from the Qwen1.5-MoE-A2.7B" style configuration
+    >>> model = Qwen2MoeModel(configuration)
+
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
+    ```"""
+
     model_type = "qwen2_moe"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -140,44 +139,9 @@ class Qwen2MoeConfig(PretrainedConfig):
         norm_topk_prob=False,
         output_router_logits=False,
         router_aux_loss_coef=0.001,
+        mlp_only_layers=None,
         **kwargs,
     ):
-        """
-        Initializes a Qwen2MoeConfig object with the specified parameters.
-        
-        Args:
-            vocab_size (int): The size of the vocabulary.
-            hidden_size (int): The size of the hidden layers.
-            intermediate_size (int): The size of the intermediate layers.
-            num_hidden_layers (int): The number of hidden layers.
-            num_attention_heads (int): The number of attention heads.
-            num_key_value_heads (int): The number of key and value heads.
-            hidden_act (str): The activation function for the hidden layers.
-            max_position_embeddings (int): The maximum position embeddings.
-            initializer_range (float): The range for weight initialization.
-            rms_norm_eps (float): The epsilon value for RMS normalization.
-            use_cache (bool): Whether to use caching.
-            tie_word_embeddings (bool): Whether to tie word embeddings.
-            rope_theta (float): The theta value for rope.
-            use_sliding_window (bool): Whether to use sliding window.
-            sliding_window (int): The size of the sliding window.
-            max_window_layers (int): The maximum number of window layers.
-            attention_dropout (float): The dropout rate for attention.
-            decoder_sparse_step (int): The step size for decoder sparsity.
-            moe_intermediate_size (int): The size of intermediate layers for Mixture of Experts.
-            shared_expert_intermediate_size (int): The size of shared expert intermediate layers.
-            num_experts_per_tok (int): The number of experts per token.
-            num_experts (int): The total number of experts.
-            norm_topk_prob (bool): Whether to normalize top-k probabilities.
-            output_router_logits (bool): Whether to output router logits.
-            router_aux_loss_coef (float): The coefficient for router auxiliary loss.
-        
-        Returns:
-            None.
-        
-        Raises:
-            None.
-        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.hidden_size = hidden_size
@@ -185,7 +149,7 @@ class Qwen2MoeConfig(PretrainedConfig):
         self.num_hidden_layers = num_hidden_layers
         self.num_attention_heads = num_attention_heads
         self.use_sliding_window = use_sliding_window
-        self.sliding_window = sliding_window
+        self.sliding_window = sliding_window if use_sliding_window else None
         self.max_window_layers = max_window_layers
 
         self.num_key_value_heads = num_key_value_heads
@@ -205,6 +169,7 @@ class Qwen2MoeConfig(PretrainedConfig):
         self.norm_topk_prob = norm_topk_prob
         self.output_router_logits = output_router_logits
         self.router_aux_loss_coef = router_aux_loss_coef
+        self.mlp_only_layers = [] if mlp_only_layers is None else mlp_only_layers
 
         super().__init__(
             tie_word_embeddings=tie_word_embeddings,

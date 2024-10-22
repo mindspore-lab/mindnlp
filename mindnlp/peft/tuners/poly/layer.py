@@ -16,10 +16,9 @@ import math
 from typing import Any
 
 import mindspore
-from mindspore.common.initializer import HeUniform, Zero, initializer
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import ParameterDict
+from mindnlp.core.nn import ParameterDict, Parameter
 from mindnlp.peft.tuners.tuners_utils import BaseTunerLayer
 
 from .config import PolyConfig
@@ -46,12 +45,12 @@ class PolyLayer(BaseTunerLayer):
 
         base_layer = self.get_base_layer()
         if isinstance(base_layer, nn.Linear):
-            in_channels, out_channels = base_layer.in_channels, base_layer.out_channels
+            in_features, out_features = base_layer.in_features, base_layer.out_features
         else:
             raise ValueError(f"Unsupported layer type {type(base_layer)}")
 
-        self.in_channels = in_channels
-        self.out_channels = out_channels
+        self.in_features = in_features
+        self.out_features = out_features
 
     def update_layer(self, adapter_name, poly_config):
         if poly_config.r <= 0:
@@ -65,27 +64,26 @@ class PolyLayer(BaseTunerLayer):
         self.n_splits[adapter_name] = poly_config.n_splits
         self.poly_type[adapter_name] = poly_config.poly_type
 
-        self.poly_lora_A[adapter_name] = mindspore.Parameter(
+        self.poly_lora_A[adapter_name] = Parameter(
             ops.zeros(
                 poly_config.n_splits,
                 poly_config.n_skills,
-                self.in_channels // poly_config.n_splits,
+                self.in_features // poly_config.n_splits,
                 poly_config.r,
             )
         )
-        self.poly_lora_B[adapter_name] = mindspore.Parameter(
+        self.poly_lora_B[adapter_name] = Parameter(
             ops.zeros(
                 poly_config.n_splits,
                 poly_config.n_skills,
                 poly_config.r,
-                self.out_channels // poly_config.n_splits,
+                self.out_features // poly_config.n_splits,
             )
         )
         self.poly_router[adapter_name] = get_router(poly_config)
 
         self.reset_poly_parameters(adapter_name, init_weights=poly_config.init_weights)
 
-        # self._move_adapter_to_device_of_base_layer(adapter_name)
         self.set_adapter(self.active_adapters)
 
     def reset_poly_parameters(self, adapter_name, init_weights):
@@ -95,34 +93,21 @@ class PolyLayer(BaseTunerLayer):
             n_splits, n_skills, d, r = self.poly_lora_A[adapter_name].shape
             for skill in range(n_skills):
                 for split in range(n_splits):
-                    param = ops.zeros(r, d)
-                    param = mindspore.Parameter(
-                        initializer(HeUniform(math.sqrt(5)), param.shape, param.dtype)
-                    )
+                    param = ops.empty((r, d))
+                    nn.init.kaiming_uniform_(param, a=math.sqrt(5))
                     self.poly_lora_A[adapter_name].data[split, skill, :, :] = param.T
 
             if init_weights:
                 # initialize B to zero
-                self.poly_lora_B[adapter_name] = mindspore.Parameter(
-                    initializer(
-                        Zero(),
-                        self.poly_lora_B[adapter_name].shape,
-                        self.poly_lora_B[adapter_name].dtype,
-                    )
-                )
-
+                nn.init.zeros_(self.poly_lora_B[adapter_name])
             else:
                 # initialize B the same way as the default for nn.Linear
                 n_splits, n_skills, r, d = self.poly_lora_B[adapter_name].shape
                 for skill in range(n_skills):
                     for split in range(n_splits):
-                        param = ops.zeros(d, r)
-                        param = initializer(
-                            HeUniform(math.sqrt(5)), param.shape, param.dtype
-                        )
-                        self.poly_lora_B[adapter_name].data[
-                            split, skill, :, :
-                        ] = param.T
+                        param = ops.empty((d, r))
+                        nn.init.kaiming_uniform_(param, a=math.sqrt(5))
+                        self.poly_lora_B[adapter_name].data[split, skill, :, :] = param.T
 
             # initialized router
             self.poly_router[adapter_name].reset()

@@ -22,10 +22,9 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
 from ...modeling_outputs import (
@@ -515,7 +514,7 @@ class AutoformerSinusoidalPositionalEmbedding(nn.Embedding):
         self.weight = self._init_weight(self.weight)
 
     @staticmethod
-    def _init_weight(out: mindspore.Parameter) -> mindspore.Parameter:
+    def _init_weight(out: Parameter) -> Parameter:
         """
         Identical to the XLM create_sinusoidal_embeddings except features are not interleaved. The cos features are in
         the 2nd half of the vector. [dim // 2:]
@@ -1224,34 +1223,19 @@ class AutoformerPreTrainedModel(PreTrainedModel):
     base_model_prefix = "model"
     main_input_name = "past_values"
 
-    def _init_weights(self, cell):
-        """
-        Initializes the weights of the given cell.
-
-        Args:
-            self (AutoformerPreTrainedModel): The instance of the AutoformerPreTrainedModel class.
-            cell: The cell whose weights need to be initialized.
-
-        Returns:
-            None: This method initializes the weights of the given cell in-place.
-
-        Raises:
-            None.
-        """
+    def _init_weights(self, module):
         std = self.config.init_std
-        if isinstance(cell, (nn.Linear, nn.Conv1d)):
-            cell.weight.set_data(initializer(Normal(std),
-                                             cell.weight.shape,
-                                             cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer(
-                    'zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, AutoformerSinusoidalPositionalEmbedding):
+        if isinstance(module, (nn.Linear, nn.Conv1d)):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, AutoformerSinusoidalPositionalEmbedding):
             pass
-        elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(initializer(Normal(std),
-                                                      cell.weight.shape,
-                                                      cell.weight.dtype))
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
+
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.TimeSeriesTransformerEncoder with TimeSeriesTransformer->Autoformer,TimeSeries->Autoformer
 class AutoformerEncoder(AutoformerPreTrainedModel):

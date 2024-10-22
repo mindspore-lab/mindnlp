@@ -19,10 +19,10 @@ from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, TruncatedNormal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -479,23 +479,23 @@ class Blip2PreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
         factor = self.config.initializer_range
         if isinstance(cell, (nn.Conv2d, nn.Linear, nn.Embedding)):
-            cell.weight.set_data(initializer(Normal(factor), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(factor), cell.weight.shape, cell.weight.dtype))
             if hasattr(cell, "bias") and cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
         if isinstance(cell, Blip2VisionEmbeddings):
             if hasattr(self.config, "vision_config"):
                 factor = self.config.vision_config.initializer_range
 
-            cell.position_embedding.set_data(initializer(TruncatedNormal(factor), cell.position_embedding.shape, cell.position_embedding.dtype))
-            cell.class_embedding.set_data(initializer(TruncatedNormal(factor), cell.class_embedding.shape, cell.class_embedding.dtype))
+            cell.position_embedding.assign_value(initializer(TruncatedNormal(factor), cell.position_embedding.shape, cell.position_embedding.dtype))
+            cell.class_embedding.assign_value(initializer(TruncatedNormal(factor), cell.class_embedding.shape, cell.class_embedding.dtype))
 
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
         elif isinstance(cell, nn.Linear) and cell.bias is not None:
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
 # Copied from transformers.models.blip.modeling_blip.BlipEncoder with Blip->Blip2
@@ -2019,7 +2019,7 @@ class Blip2Model(Blip2PreTrainedModel):
         ...
         >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
         >>> image = Image.open(requests.get(url, stream=True).raw)
-        >>> inputs = processor(images=image, return_tensors="pt")
+        >>> inputs = processor(images=image, return_tensors="ms")
         >>> outputs = model.get_image_features(**inputs)
         ```
     """
@@ -2205,7 +2205,7 @@ class Blip2Model(Blip2PreTrainedModel):
             >>> model = Blip2Model.from_pretrained("Salesforce/blip2-opt-2.7b")
             ...
             >>> tokenizer = AutoTokenizer.from_pretrained("Salesforce/blip2-opt-2.7b")
-            >>> inputs = tokenizer(["a photo of a cat"], padding=True, return_tensors="pt")
+            >>> inputs = tokenizer(["a photo of a cat"], padding=True, return_tensors="ms")
             >>> text_features = model.get_text_features(**inputs)
             ```
         """
@@ -2266,7 +2266,7 @@ class Blip2Model(Blip2PreTrainedModel):
             >>> processor = AutoProcessor.from_pretrained("Salesforce/blip2-opt-2.7b")
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
-            >>> inputs = processor(images=image, return_tensors="pt")
+            >>> inputs = processor(images=image, return_tensors="ms")
             >>> image_outputs = model.get_image_features(**inputs)
             ```
         """
@@ -2312,7 +2312,7 @@ class Blip2Model(Blip2PreTrainedModel):
             ...
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
-            >>> inputs = processor(images=image, return_tensors="pt")
+            >>> inputs = processor(images=image, return_tensors="ms")
             >>> qformer_outputs = model.get_qformer_features(**inputs)
             ```
         """
@@ -2372,13 +2372,13 @@ class Blip2Model(Blip2PreTrainedModel):
             ...
             ...
             >>> processor = Blip2Processor.from_pretrained("Salesforce/blip2-opt-2.7b")
-            >>> model = Blip2Model.from_pretrained("Salesforce/blip2-opt-2.7b", torch_dtype=torch.float16)
+            >>> model = Blip2Model.from_pretrained("Salesforce/blip2-opt-2.7b", ms_dtype=torch.float16)
             ...
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
             >>> image = Image.open(requests.get(url, stream=True).raw)
             ...
             >>> prompt = "Question: how many cats are there? Answer:"
-            >>> inputs = processor(images=image, text=prompt, return_tensors="pt").to(torch.float16)
+            >>> inputs = processor(images=image, text=prompt, return_tensors="ms").to(torch.float16)
             ...
             >>> outputs = model(**inputs)
             ```
@@ -2713,7 +2713,7 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
             ...
             >>> processor = Blip2Processor.from_pretrained("Salesforce/blip2-opt-2.7b")
             >>> model = Blip2ForConditionalGeneration.from_pretrained(
-            ...     "Salesforce/blip2-opt-2.7b", load_in_8bit=True, torch_dtype=torch.float16
+            ...     "Salesforce/blip2-opt-2.7b", load_in_8bit=True, ms_dtype=torch.float16
             ... )  # doctest: +IGNORE_RESULT
             ...
             >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
@@ -2723,7 +2723,7 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
             Image captioning (without providing a text prompt):
 
             ```python
-            >>> inputs = processor(images=image, return_tensors="pt").to(torch.float16)
+            >>> inputs = processor(images=image, return_tensors="ms").to(torch.float16)
             ...
             >>> generated_ids = model.generate(**inputs)
             >>> generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
@@ -2735,7 +2735,7 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
 
             ```python
             >>> prompt = "Question: how many cats are there? Answer:"
-            >>> inputs = processor(images=image, text=prompt, return_tensors="pt").to(dtype=torch.float16)
+            >>> inputs = processor(images=image, text=prompt, return_tensors="ms").to(dtype=torch.float16)
             ...
             >>> generated_ids = model.generate(**inputs)
             >>> generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
@@ -2748,10 +2748,10 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
 
             ```python
             >>> model = Blip2ForConditionalGeneration.from_pretrained(
-            ...     "Salesforce/blip2-opt-2.7b", load_in_8bit=True, torch_dtype=torch.bfloat16
+            ...     "Salesforce/blip2-opt-2.7b", load_in_8bit=True, ms_dtype=torch.bfloat16
             ... )  # doctest: +IGNORE_RESULT
             ...
-            >>> inputs = processor(images=image, text=prompt, return_tensors="pt").to(dtype=torch.bfloat16)
+            >>> inputs = processor(images=image, text=prompt, return_tensors="ms").to(dtype=torch.bfloat16)
             ...
             >>> generated_ids = model.generate(**inputs)
             >>> generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()

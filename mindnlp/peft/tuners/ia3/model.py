@@ -28,7 +28,7 @@ from dataclasses import asdict
 from enum import Enum
 from typing import Optional
 
-from mindspore import nn
+from mindnlp.core import nn
 
 from mindnlp.transformers.ms_utils import Conv1D
 from mindnlp.peft.utils import (
@@ -63,7 +63,7 @@ class IA3Model(BaseTuner):
         >>> config = IA3Config(
         ...     peft_type="IA3",
         ...     task_type="SEQ_2_SEQ_LM",
-        ...     target_cells=["k", "v", "w0"],
+        ...     target_modules=["k", "v", "w0"],
         ...     feedforward_cells=["w0"],
         ... )
 
@@ -448,13 +448,13 @@ class IA3Model(BaseTuner):
             None: This method does not return any value.
         
         Raises:
-            ValueError: If `peft_config.target_cells` is None and `model_config['model_type']` is not found in TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING.
+            ValueError: If `peft_config.target_modules` is None and `model_config['model_type']` is not found in TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING.
             ValueError: If `peft_config.feedforward_cells` is None and `model_config['model_type']` is not found in TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING.
         """
-        if peft_config.target_cells is None:
+        if peft_config.target_modules is None:
             if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING:
-                raise ValueError("Please specify `target_cells` in `peft_config`")
-            peft_config.target_cells = TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING[model_config["model_type"]]
+                raise ValueError("Please specify `target_modules` in `peft_config`")
+            peft_config.target_modules = TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING[model_config["model_type"]]
         if peft_config.feedforward_cells is None:
             if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING:
                 raise ValueError("Please specify `feedforward_cells` in `peft_config`")
@@ -498,8 +498,8 @@ class IA3Model(BaseTuner):
                     target.merge(safe_merge=safe_merge, adapter_names=adapter_names)
                 self._replace_cell(parent, target_name, target.get_base_layer(), target)
             elif isinstance(target, ModulesToSaveWrapper):
-                # save any additional trainable cells part of `cells_to_save`
-                new_cell = target.cells_to_save[target.active_adapter]
+                # save any additional trainable cells part of `modules_to_save`
+                new_cell = target.modules_to_save[target.active_adapter]
                 if hasattr(new_cell, "base_layer"):
                     # check if the cell is itself a tuner layer
                     if merge:

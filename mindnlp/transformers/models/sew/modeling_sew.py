@@ -20,11 +20,10 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore.common.initializer import initializer, Normal
 from mindnlp.utils import logging
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -883,51 +882,28 @@ class SEWPreTrainedModel(PreTrainedModel):
     base_model_prefix = "sew"
     main_input_name = "input_values"
     supports_gradient_checkpointing = True
-    _supports_flash_attn_2 = False
-    _supports_sdpa = True
 
-    def _init_weights(self, cell):
-        """Initialize the weights."""
-        if isinstance(cell, SEWPositionalConvEmbedding):
-            # 使用正态分布初始化权重
-            cell.conv.weight.set_data(
-                initializer(
-                    Normal(
-                        mean=0,
-                        sigma=2
-                        * math.sqrt(
-                            1 / (cell.conv.kernel_size[0] * cell.conv.in_channels)
-                        ),
-                    ),
-                    cell.conv.weight.shape,
-                    cell.conv.weight.dtype,
-                )
+    def _init_weights(self, module):
+        """Initialize the weights"""
+        if isinstance(module, SEWPositionalConvEmbedding):
+            nn.init.normal_(
+                module.conv.weight,
+                mean=0,
+                std=2 * math.sqrt(1 / (module.conv.kernel_size[0] * module.conv.in_channels)),
             )
-            cell.conv.bias.set_data(
-                initializer("zeros", cell.conv.bias.shape, cell.conv.bias.dtype)
-            )
-        elif isinstance(cell, nn.Linear):
-            # 使用正态分布初始化权重
-            cell.weight.set_data(
-                initializer(
-                    Normal(0.0, self.config.initializer_range),
-                    cell.weight.shape,
-                    cell.weight.dtype,
-                )
-            )
-        elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
-            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(
-                initializer("ones", cell.weight.shape, cell.weight.dtype)
-            )
-        elif isinstance(cell, nn.Conv1d):
-            # 使用kaiming正态分布初始化权重
-            cell.weight.set_data(
-                initializer("he_normal", cell.weight.shape, cell.weight.dtype)
-            )
+            nn.init.constant_(module.conv.bias, 0)
+        elif isinstance(module, nn.Linear):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+        elif isinstance(module, (nn.LayerNorm, nn.GroupNorm)):
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
+        elif isinstance(module, nn.Conv1d):
+            nn.init.kaiming_normal_(module.weight.data)
 
-        if isinstance(cell, (nn.Linear, nn.Conv1d)) and cell.bias is not None:
-            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
+        if isinstance(module, (nn.Linear, nn.Conv1d)) and module.bias is not None:
+            nn.init.zeros_(module.bias.data)
 
     def _get_feat_extract_output_lengths(
         self, input_lengths: Union[mindspore.Tensor, int]
@@ -962,7 +938,7 @@ class SEWPreTrainedModel(PreTrainedModel):
         )
         # these two operations makes sure that all values before the output lengths idxs are attended to
         attention_mask[(ops.arange(attention_mask.shape[0]), output_lengths - 1)] = 1
-        attention_mask = attention_mask.flip([-1]).cumsum(-1).flip([-1]).bool()
+        attention_mask = attention_mask.flip([-1]).int().cumsum(-1).flip([-1]).bool()
         return attention_mask
 
 
@@ -981,12 +957,8 @@ class SEWModel(SEWPreTrainedModel):
         self.feature_dropout = nn.Dropout(p=config.feat_proj_dropout)
 
         if config.mask_time_prob > 0.0 or config.mask_feature_prob > 0.0:
-            self.masked_spec_embed = mindspore.Parameter(
-                ops.uniform(
-                    shape=mindspore.Tensor(config.hidden_size),
-                    minval=mindspore.Tensor(0.0),
-                    maxval=mindspore.Tensor(1.0),
-                )
+            self.masked_spec_embed = Parameter(
+                ops.randn((config.hidden_size))
             )
 
         self.encoder = SEWEncoder(config)
@@ -1170,7 +1142,7 @@ class SEWForCTC(SEWPreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -1258,7 +1230,7 @@ class SEWForCTC(SEWPreTrainedModel):
                 blank=self.config.pad_token_id,
                 reduction=self.config.ctc_loss_reduction,
                 zero_infinity=self.config.ctc_zero_infinity,
-            )[0]
+            )
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]
@@ -1286,7 +1258,7 @@ class SEWForSequenceClassification(SEWPreTrainedModel):
             config.num_hidden_layers + 1
         )  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
-            self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers)
+            self.layer_weights = Parameter(ops.ones(num_layers) / num_layers)
         self.projector = nn.Linear(config.hidden_size, config.classifier_proj_size)
         self.classifier = nn.Linear(config.classifier_proj_size, config.num_labels)
 
@@ -1299,7 +1271,7 @@ class SEWForSequenceClassification(SEWPreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )

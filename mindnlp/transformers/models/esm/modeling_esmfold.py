@@ -22,10 +22,10 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal, XavierUniform, HeNormal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.utils import (
     ContextManagers,
     is_scipy_available,
@@ -248,7 +248,7 @@ def trunc_normal_init_(weights, scale=1.0, fan="fan_in"):
             " equivalent."
         )
         std = math.sqrt(scale)
-        weights.set_data(initializer(Normal(std), weights.shape, weights.dtype).clamp(min=0.0, max=2.0 * std))
+        weights.assign_value(initializer(Normal(std), weights.shape, weights.dtype).clamp(min=0.0, max=2.0 * std))
 
     else:
         from scipy.stats import truncnorm
@@ -256,7 +256,7 @@ def trunc_normal_init_(weights, scale=1.0, fan="fan_in"):
         std = math.sqrt(scale) / truncnorm.std(a=-2, b=2, loc=0, scale=1)
         samples = truncnorm.rvs(a=-2, b=2, loc=0, scale=std, size=weights.numel())
         samples = np.reshape(samples, shape)
-        weights.set_data(mindspore.tensor(samples))
+        weights.assign_value(mindspore.tensor(samples))
 
 
 def ipa_point_weights_init_(weights):
@@ -314,7 +314,7 @@ class EsmFoldLinear(nn.Linear):
         self.init = init
         self.init_fn = init_fn
         if bias:
-            self.bias.set_data(ops.zeros_like(self.bias))
+            self.bias.assign_value(ops.zeros_like(self.bias))
 
         if init not in ["default", "relu", "glorot", "gating", "normal", "final"]:
             raise ValueError("Invalid init string.")
@@ -1050,13 +1050,13 @@ class EsmFoldPreTrainedModel(EsmPreTrainedModel):
             elif cell.init == "relu":
                 trunc_normal_init_(cell.weight, scale=2.0)
             elif cell.init == "glorot":
-                cell.weight.set_data(initializer(XavierUniform(), cell.weight.shape, cell.weight.dtype))
+                cell.weight.assign_value(initializer(XavierUniform(), cell.weight.shape, cell.weight.dtype))
             elif cell.init == "gating":
                 cell.weight[:] = 0
                 if cell.bias is not None:
                     cell.bias[:] = 1
             elif cell.init == "normal":
-                cell.weight.set_data(initializer(HeNormal(nonlinearity="linear"), cell.weight.shape, cell.weight.dtype))
+                cell.weight.assign_value(initializer(HeNormal(nonlinearity="linear"), cell.weight.shape, cell.weight.dtype))
             elif cell.init == "final":
                 cell.weight[:] = 0
         elif isinstance(cell, EsmFoldInvariantPointAttention):
@@ -1153,12 +1153,12 @@ class EsmFoldSelfAttention(nn.Module):
         self.gated = gated
         if gated:
             self.g_proj = nn.Linear(embed_dim, embed_dim)
-            self.g_proj.weight.set_data(ops.zeros_like(self.g_proj.weight))
-            self.g_proj.bias.set_data(ops.ones_like(self.g_proj.bias))
+            self.g_proj.weight.assign_value(ops.zeros_like(self.g_proj.weight))
+            self.g_proj.bias.assign_value(ops.ones_like(self.g_proj.bias))
 
         self.rescale_factor = self.head_width**-0.5
 
-        self.o_proj.bias.set_data(ops.zeros_like(self.o_proj.bias))
+        self.o_proj.bias.assign_value(ops.zeros_like(self.o_proj.bias))
 
     def forward(self, x, mask=None, bias=None, indices=None):
         """
@@ -1312,8 +1312,8 @@ class EsmFoldSequenceToPair(nn.Module):
         self.layernorm = nn.LayerNorm(sequence_state_dim)
         self.proj = nn.Linear(sequence_state_dim, inner_dim * 2, bias=True)
         self.o_proj = nn.Linear(2 * inner_dim, pairwise_state_dim, bias=True)
-        self.proj.bias.set_data(ops.zeros_like(self.proj.bias))
-        self.o_proj.bias.set_data(ops.zeros_like(self.o_proj.bias))
+        self.proj.bias.assign_value(ops.zeros_like(self.proj.bias))
+        self.o_proj.bias.assign_value(ops.zeros_like(self.o_proj.bias))
 
     def forward(self, sequence_state):
         """
@@ -2901,7 +2901,7 @@ class EsmForProteinFolding(EsmPreTrainedModel):
         ...
         >>> model = EsmForProteinFolding.from_pretrained("facebook/esmfold_v1")
         >>> tokenizer = AutoTokenizer.from_pretrained("facebook/esmfold_v1")
-        >>> inputs = tokenizer(["MLKNVQVQLV"], return_tensors="pt", add_special_tokens=False)  # A tiny random peptide
+        >>> inputs = tokenizer(["MLKNVQVQLV"], return_tensors="ms", add_special_tokens=False)  # A tiny random peptide
         >>> outputs = model(**inputs)
         >>> folded_positions = outputs.positions
         ```
@@ -3026,7 +3026,7 @@ class EsmForProteinFolding(EsmPreTrainedModel):
             ...
             >>> model = EsmForProteinFolding.from_pretrained("facebook/esmfold_v1")
             >>> tokenizer = AutoTokenizer.from_pretrained("facebook/esmfold_v1")
-            >>> inputs = tokenizer(["MLKNVQVQLV"], return_tensors="pt", add_special_tokens=False)  # A tiny random peptide
+            >>> inputs = tokenizer(["MLKNVQVQLV"], return_tensors="ms", add_special_tokens=False)  # A tiny random peptide
             >>> outputs = model(**inputs)
             >>> folded_positions = outputs.positions
             ```

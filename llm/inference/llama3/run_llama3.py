@@ -1,8 +1,5 @@
 import mindspore
 from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
-from mindspore._c_expression import _framework_profiler_step_start
-from mindspore._c_expression import _framework_profiler_step_end
-
 
 model_id = "LLM-Research/Meta-Llama-3-8B-Instruct"
 
@@ -29,7 +26,6 @@ terminators = [
     tokenizer.convert_tokens_to_ids("<|eot_id|>")
 ]
 
-# _framework_profiler_step_start()
 outputs = model.generate(
     input_ids,
     max_new_tokens=20,
@@ -39,6 +35,5 @@ outputs = model.generate(
     # temperature=0.6,
     # top_p=0.9,
 )
-# _framework_profiler_step_end()
 response = outputs[0][input_ids.shape[-1]:]
 print(tokenizer.decode(response, skip_special_tokens=True))

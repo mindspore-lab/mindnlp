@@ -13,18 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-""" Phi model configuration"""
+"""Phi model configuration"""
 
-
-from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
+from ....utils import logging
 
 
 logger = logging.get_logger(__name__)
-
-PHI_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "microsoft/phi-2": "https://hf-mirror.com/microsoft/phi-2/resolve/main/config.json",
-}
 
 
 class PhiConfig(PretrainedConfig):
@@ -32,7 +27,7 @@ class PhiConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`PhiModel`]. It is used to instantiate an Phi
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the
     defaults will yield a similar configuration to that of the Phi
-    [microsoft/phi-1](https://hf-mirror.com/microsoft/phi-1).
+    [microsoft/phi-1](https://huggingface.co/microsoft/phi-1).
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -53,7 +48,7 @@ class PhiConfig(PretrainedConfig):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
             `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
-            converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be forwarded
+            converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
             by meanpooling all the original heads within that group. For more details checkout [this
             paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to
             `num_attention_heads`.
@@ -97,19 +92,20 @@ class PhiConfig(PretrainedConfig):
             Denotes end of sequences token id.
 
     Example:
-        ```python
-        >>> from transformers import PhiModel, PhiConfig
-        ...
-        >>> # Initializing a Phi-1 style configuration
-        >>> configuration = PhiConfig.from_pretrained("microsoft/phi-1")
-        ...
-        >>> # Initializing a model from the configuration
-        >>> model = PhiModel(configuration)
-        ...
-        >>> # Accessing the model configuration
-        >>> configuration = model.config
-        ```
-    """
+
+    ```python
+    >>> from transformers import PhiModel, PhiConfig
+
+    >>> # Initializing a Phi-1 style configuration
+    >>> configuration = PhiConfig.from_pretrained("microsoft/phi-1")
+
+    >>> # Initializing a model from the configuration
+    >>> model = PhiModel(configuration)
+
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
+    ```"""
+
     model_type = "phi"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -138,39 +134,6 @@ class PhiConfig(PretrainedConfig):
         eos_token_id=2,
         **kwargs,
     ):
-        """
-        Initializes an instance of the PhiConfig class.
-        
-        Args:
-            self: The instance of the PhiConfig class.
-            vocab_size (int): The size of the vocabulary. Default is 51200.
-            hidden_size (int): The size of the hidden layer. Default is 2048.
-            intermediate_size (int): The size of the intermediate layer. Default is 8192.
-            num_hidden_layers (int): The number of hidden layers. Default is 24.
-            num_attention_heads (int): The number of attention heads. Default is 32.
-            num_key_value_heads (int): The number of key-value heads. Default is the same as num_attention_heads.
-            resid_pdrop (float): The dropout probability for residual connections. Default is 0.0.
-            embd_pdrop (float): The dropout probability for embedding layer. Default is 0.0.
-            attention_dropout (float): The dropout probability for attention layers. Default is 0.0.
-            hidden_act (str): The activation function for the hidden layer. Default is 'gelu_new'.
-            max_position_embeddings (int): The maximum position embeddings. Default is 2048.
-            initializer_range (float): The range of the initializer. Default is 0.02.
-            layer_norm_eps (float): The epsilon value for layer normalization. Default is 1e-05.
-            use_cache (bool): Whether to use cache for transformer layers. Default is True.
-            tie_word_embeddings (bool): Whether to tie word embeddings. Default is False.
-            rope_theta (float): The theta value for rope positional encoding. Default is 10000.0.
-            rope_scaling (None or float): The scaling factor for rope positional encoding. Default is None.
-            partial_rotary_factor (float): The factor for partial rotary positional encoding. Default is 0.5.
-            qk_layernorm (bool): Whether to apply layer normalization on query-key vectors. Default is False.
-            bos_token_id (int): The ID of the beginning-of-sequence token. Default is 1.
-            eos_token_id (int): The ID of the end-of-sequence token. Default is 2.
-        
-        Returns:
-            None
-        
-        Raises:
-            None
-        """
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
         self.intermediate_size = intermediate_size
@@ -202,7 +165,6 @@ class PhiConfig(PretrainedConfig):
             **kwargs,
         )
 
-    # Copied from transformers.models.llama.configuration_llama.LlamaConfig._rope_scaling_validation
     def _rope_scaling_validation(self):
         """
         Validate the `rope_scaling` configuration.
@@ -212,8 +174,7 @@ class PhiConfig(PretrainedConfig):
 
         if not isinstance(self.rope_scaling, dict) or len(self.rope_scaling) != 2:
             raise ValueError(
-                "`rope_scaling` must be a dictionary with with two fields, `type` and `factor`, "
-                f"got {self.rope_scaling}"
+                "`rope_scaling` must be a dictionary with two fields, `type` and `factor`, " f"got {self.rope_scaling}"
             )
         rope_scaling_type = self.rope_scaling.get("type", None)
         rope_scaling_factor = self.rope_scaling.get("factor", None)

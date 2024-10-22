@@ -21,7 +21,7 @@ import re
 from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 
 import mindspore
-from mindspore import Parameter
+from mindnlp.core.nn import Parameter
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
@@ -122,7 +122,7 @@ class PrefixEncoder(nn.Module):
         if self.prefix_projection:
             # Use a two-layer MLP to encode the prefix
             self.embedding = nn.Embedding(config.pre_seq_len, config.hidden_size)
-            self.trans = nn.SequentialCell(
+            self.trans = nn.Sequential(
                 nn.Linear(config.hidden_size, config.hidden_size),
                 nn.Tanh(),
                 nn.Linear(config.hidden_size, config.num_layers * config.hidden_size * 2)
@@ -171,7 +171,7 @@ def gelu(x):
     Raises:
         None.
     """
-    return ops.gelu(x, approximate='tanh')
+    return F.gelu(x, approximate='tanh')
 
 
 class RotaryEmbedding(nn.Module):
@@ -634,7 +634,7 @@ class SelfAttention(nn.Module):
         if self.position_encoding_2d:
             q1, q2 = query_layer.chunk(2, axis=(query_layer.ndim - 1))
             k1, k2 = key_layer.chunk(2, axis=(key_layer.ndim - 1))
-            cos, sin = self.rotary_emb(q1, seq_len=position_ids.max() + 1)
+            cos, sin = self.rotary_emb(q1, seq_len=position_ids.max().item() + 1)
             position_ids, block_position_ids = position_ids[:, 0, :].swapaxes(0, 1), \
                 position_ids[:, 1, :].swapaxes(0, 1)
             q1, k1 = apply_rotary_pos_emb_index(q1, k1, cos, sin, position_ids)
@@ -643,7 +643,7 @@ class SelfAttention(nn.Module):
             key_layer = ops.concat([k1, k2], dim=(k1.ndim - 1))
         else:
             position_ids = position_ids.swapaxes(0, 1)
-            cos, sin = self.rotary_emb(value_layer, seq_len=position_ids.max() + 1)
+            cos, sin = self.rotary_emb(value_layer, seq_len=position_ids.max().item() + 1)
             # [seq_len, batch, num_attention_heads, hidden_size_per_attention_head]
             query_layer, key_layer = apply_rotary_pos_emb_index(query_layer, key_layer, cos, sin, position_ids)
 
@@ -705,7 +705,7 @@ class GEGLU(nn.Module):
             None.
         """
         super().__init__()
-        self.activation_fn = ops.gelu
+        self.activation_fn = F.gelu
 
     def forward(self, x):
         """
@@ -1207,7 +1207,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
             ValueError: If the batch_size is less than or equal to 0.
             TypeError: If the dtype is not a valid mindspore data type.
         """
-        prefix_tokens = self.prefix_tokens.unsqueeze(0).expand(batch_size, -1)
+        prefix_tokens = self.prefix_tokens.unsqueeze(0).broadcast_to((batch_size, -1))
         past_key_values = self.prefix_encoder(prefix_tokens).astype(dtype)
         past_key_values = past_key_values.view(
             batch_size,
@@ -1319,8 +1319,9 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         if attention_mask is None:
             attention_mask = ops.zeros((1, 1)).bool()
 
+        if isinstance(past_key_values[0], str):
+            past_key_values = past_key_values[1]
         for i, layer in enumerate(self.layers):
-
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
             layer_past = past_key_values[i]
@@ -1490,7 +1491,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             attention_mask = model_kwargs["attention_mask"]
             if attention_mask is not None and attention_mask.dtype == mindspore.bool_:
                 attention_mask = ops.cat(
-                    [attention_mask, attention_mask.new_ones((*attention_mask.shape[:3], 1))], dim=3)
+                    [attention_mask, ops.ones((*attention_mask.shape[:3], 1), dtype=attention_mask.dtype)], dim=3)
                 new_attention_mask = attention_mask[:, :, -1:].copy()
                 new_attention_mask[..., -1] = False
                 model_kwargs["attention_mask"] = ops.cat(
@@ -1588,7 +1589,6 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                     mask_positions=mask_positions,
                     use_gmasks=use_gmasks
                 )
-
             return {
                 "input_ids": input_ids,
                 "past_key_values": past,
@@ -1899,6 +1899,9 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         # 2. Set generation parameters if not already defined
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
+
+        kwargs_has_attention_mask = model_kwargs.get("attention_mask", None) is not None
+        self._prepare_special_tokens(generation_config, kwargs_has_attention_mask)
 
         logits_processor = self._get_logits_processor(
             generation_config=generation_config,

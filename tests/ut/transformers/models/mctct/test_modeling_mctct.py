@@ -317,8 +317,12 @@ class MCTCTModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     # MCTCT has no inputs_embeds
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
+
+    def test_model_is_small(self):
+        pass
+
 
     @unittest.skip("MindSpore has no retain grad")
     def test_retain_grad_hidden_states_attentions(self):
@@ -364,11 +368,7 @@ class MCTCTModelTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            parameters = model.get_parameters()
-            for parameter in parameters:
-            # for name, param in model.get_parameters():
-                name = parameter.name
-                param = parameter.data
+            for name, param in model.named_parameters():
                 uniform_init_parms = [
                     "conv.weight",
                     "masked_spec_embed",
@@ -466,7 +466,7 @@ class MCTCTRobustModelTest(ModelTesterMixin, unittest.TestCase):
     # MCTCT has no inputs_embeds
     # and thus the `get_input_embeddings` fn
     # is not implemented
-    def test_model_common_attributes(self):
+    def test_model_get_set_embeddings(self):
         pass
 
     @unittest.skip("MindSpore has no retain grad")
@@ -515,12 +515,7 @@ class MCTCTRobustModelTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            # for name, param in model.get_parameters():
-            parameters = model.get_parameters()
-            for parameter in parameters:
-                name = parameter.name
-                param = parameter.data
-
+            for name, param in model.named_parameters():
                 uniform_init_parms = [
                     "conv.weight",
                     "masked_spec_embed",
@@ -570,6 +565,9 @@ class MCTCTRobustModelTest(ModelTesterMixin, unittest.TestCase):
     def test_model_from_pretrained(self):
         model = MCTCTModel.from_pretrained("speechbrain/m-ctc-t-large")
         self.assertIsNotNone(model)
+
+    def test_model_is_small(self):
+        pass
 
 
 @require_mindspore

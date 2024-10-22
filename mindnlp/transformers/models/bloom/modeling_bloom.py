@@ -508,7 +508,7 @@ class BloomModel(BloomPreTrainedModel):
         if deprecated_arguments.pop("position_ids", False) is not False:
             # `position_ids` could have been `mindspore.Tensor` or `None` so defaulting pop to `False` allows to detect if users were passing explicitly `None`
             warnings.warn(
-                "`position_ids` have no functionality in BLOOM and will be removed in v5.0.0. You can safely ignore"
+                "`position_ids` have no functionality in BLOOM.0.0. You can safely ignore"
                 " passing `position_ids`.",
                 FutureWarning,
             )
@@ -538,12 +538,12 @@ class BloomModel(BloomPreTrainedModel):
 
         # kept for BC (non `Cache` `past_key_values` inputs)
         use_legacy_cache = False
-        if use_cache and not isinstance(past_key_values, Cache) and not self.training:
+        if use_cache and not isinstance(past_key_values, Cache):
             use_legacy_cache = True
             past_key_values = DynamicCache.from_legacy_cache(past_key_values)
             logger.warning_once(
-                "Using `past_key_values` as a tuple is deprecated and will be removed in v4.45. "
-                "Please use an appropriate `Cache` class (https://huggingface.co/docs/transformers/v4.41.3/en/internal/generation_utils#transformers.Cache)"
+                "Using `past_key_values` as a tuple is deprecated. "
+                "Please use an appropriate `Cache` class"
             )
 
         batch_size, seq_length, _ = inputs_embeds.shape
@@ -638,11 +638,6 @@ class BloomModel(BloomPreTrainedModel):
         past_key_values: Cache,
         output_attentions: bool,
     ):
-        # TODO: As of torch==2.2.0, the `attention_mask` passed to the model in `generate` is 2D and of dynamic length even when the static
-        # KV cache is used. This is an issue for torch.compile which then recaptures cudagraphs at each decode steps due to the dynamic shapes.
-        # (`recording cudagraph tree for symint key 13`, etc.), which is VERY slow. A workaround is `@torch.compiler.disable`, but this prevents using
-        # `fullgraph=True`. See more context in https://github.com/huggingface/transformers/pull/29114
-
         if self.config._attn_implementation == "flash_attention_2":
             if attention_mask is not None and 0.0 in attention_mask:
                 return attention_mask
@@ -767,7 +762,7 @@ class BloomForCausalLM(BloomPreTrainedModel):
         if deprecated_arguments.pop("position_ids", False) is not False:
             # `position_ids` could have been `mindspore.Tensor` or `None` so defaulting pop to `False` allows to detect if users were passing explicitly `None`
             warnings.warn(
-                "`position_ids` have no functionality in BLOOM and will be removed in v5.0.0. You can safely ignore"
+                "`position_ids` have no functionality in BLOOM.0.0. You can safely ignore"
                 " passing `position_ids`.",
                 FutureWarning,
             )
@@ -874,7 +869,7 @@ class BloomForSequenceClassification(BloomPreTrainedModel):
         if deprecated_arguments.pop("position_ids", False) is not False:
             # `position_ids` could have been `mindspore.Tensor` or `None` so defaulting pop to `False` allows to detect if users were passing explicitly `None`
             warnings.warn(
-                "`position_ids` have no functionality in BLOOM and will be removed in v5.0.0. You can safely ignore"
+                "`position_ids` have no functionality in BLOOM.0.0. You can safely ignore"
                 " passing `position_ids`.",
                 FutureWarning,
             )
@@ -997,7 +992,7 @@ class BloomForTokenClassification(BloomPreTrainedModel):
         if deprecated_arguments.pop("position_ids", False) is not False:
             # `position_ids` could have been `mindspore.Tensor` or `None` so defaulting pop to `False` allows to detect if users were passing explicitly `None`
             warnings.warn(
-                "`position_ids` have no functionality in BLOOM and will be removed in v5.0.0. You can safely ignore"
+                "`position_ids` have no functionality in BLOOM.0.0. You can safely ignore"
                 " passing `position_ids`.",
                 FutureWarning,
             )
