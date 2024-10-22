@@ -77,7 +77,7 @@ class PolyLayer(BaseTunerLayer):
                 poly_config.n_splits,
                 poly_config.n_skills,
                 poly_config.r,
-                self.out_channels // poly_config.n_splits,
+                self.out_features // poly_config.n_splits,
             )
         )
         self.poly_router[adapter_name] = get_router(poly_config)
