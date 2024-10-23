@@ -19,9 +19,8 @@ import copy
 import warnings
 from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 import mindspore
-from mindspore.common.api import _no_grad
 
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
@@ -356,7 +355,7 @@ class RMSNorm(nn.Module):
     The RMSNorm class has the following attributes:
 
     Attributes:
-        weight (mindspore.Parameter): A trainable parameter representing the weight matrix used for scaling the normalized hidden states.
+        weight (Parameter): A trainable parameter representing the weight matrix used for scaling the normalized hidden states.
         eps (float): A small value added to the denominator to avoid division by zero.
 
     Methods:
@@ -372,7 +371,7 @@ class RMSNorm(nn.Module):
         >>> class RMSNorm(nn.Module):
         >>>     def __init__(self, normalized_shape, eps=1e-05, dtype=None, **kwargs):
         >>>         super().__init__()
-        >>>         self.weight = mindspore.Parameter(ops.zeros(normalized_shape, dtype=dtype))
+        >>>         self.weight = Parameter(ops.zeros(normalized_shape, dtype=dtype))
         >>>         self.eps = eps
         ...
         >>>     def forward(self, hidden_states: mindspore.Tensor):
@@ -1781,7 +1780,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
             inputs = tokenizer([prompt], return_tensors="ms")
         return inputs
 
-    @_no_grad()
+    @no_grad()
     def chat(self, tokenizer, query: str, history: List[Tuple[str, str]] = None, max_length: int = 8192, num_beams=1,
              do_sample=True, top_p=0.8, temperature=0.8, logits_processor=None, **kwargs):
         """
@@ -1824,7 +1823,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
         history = history + [(query, response)]
         return response, history
 
-    @_no_grad()
+    @no_grad()
     def stream_chat(self, tokenizer, query: str, history: List[Tuple[str, str]] = None, past_key_values=None,
                     max_length: int = 8192, do_sample=True, top_p=0.8, temperature=0.8, logits_processor=None,
                     return_past_key_values=False, **kwargs):
@@ -1886,7 +1885,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
                 else:
                     yield response, new_history
 
-    @_no_grad()
+    @no_grad()
     def stream_generate(
             self,
             input_ids,

@@ -4,7 +4,10 @@ from functools import partial
 from contextlib import contextmanager
 from typing import Callable, Any
 from mindspore import communication
-from mindspore.communication.comm_func import barrier
+try:
+    from mindspore.communication.comm_func import barrier
+except:
+    barrier = None
 
 from .utils import (
     DistributedType, is_mindformers_available

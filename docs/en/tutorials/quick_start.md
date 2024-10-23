@@ -8,9 +8,9 @@ We will use the [BERT](https://arxiv.org/abs/1810.04805) model as an example and
 
 To perform the fine-tuning, MindNLP provides two approaches: one approach is through the user-friendly Trainer API from MindNLP, which supports essential training functionalities; To have more customized control, you can use the other approach through native MindSpore. We will guide you through both approaches in this tutorial.
 
-For both of the approches, you first need to prepare the dataset by running the [Prepare a dataset](#prepare_a_dataset) part of this tutorial.
+For both of the approaches, you first need to prepare the dataset by running the [Prepare a dataset](#prepare_a_dataset) part of this tutorial.
 
-After dataset is ready, choose one of the trategies from below and start your journey!
+After dataset is ready, choose one of the strategies from below and start your journey!
 
 * [Fine-tune a pretrained model with MindNLP Trainer.](#train_with_mindnlp_trainer)
 
@@ -120,7 +120,7 @@ MindNLP comes with a [`Trainer`](https://github.com/mindspore-lab/mindnlp/tree/m
 #### Initialize the model
 In our example here, we will first instantiate the pretrained BERT model.
 
-For this purpose, we use `AutoModelForSequenceClassification`. Supply the name of the pretrained model, i.e. `'bert-base-cased'` to `AutoModelForSequenceClassification`. It will automatically infer the model architecture, instatiate the model and load the pretrained parameters. The model loaded here is a BERT model specialized in classification tasks, `BertForSequenceClassification`.
+For this purpose, we use `AutoModelForSequenceClassification`. Supply the name of the pretrained model, i.e. `'bert-base-cased'` to `AutoModelForSequenceClassification`. It will automatically infer the model architecture, instantiate the model and load the pretrained parameters. The model loaded here is a BERT model specialized in classification tasks, `BertForSequenceClassification`.
 
 To supply additional arguments to the model initialization, you can add more key-word arguments. Here, since the classification task involves determining whether a movie review expresses a positive or negative sentiment, we supply `num_labels=2` to the BERT model.
 
@@ -166,7 +166,7 @@ For a comprehensive understanding of more parameters in `TrainingArguments`, ple
 #### Evaluate
 Evaluation is essential for understanding the model's performance and generalizability on new, unseen data.
 
-To enable evaluation of your model's performance during training, it's necessary to supply a function for metric compuation to `Trainer`.
+To enable evaluation of your model's performance during training, it's necessary to supply a function for metric computation to `Trainer`.
 
 Here, we write a `compute_metrics` function, which will take an `EvalPrediction` object as input, and compute the evaluation metrics between the predictions and ground-truth labels.
 
@@ -245,7 +245,7 @@ print(f"Positive sentiment: {probabilities[1]:.4f}")
 ### Train in native MindSpore
 If you prefer to have more customized control over the training process, you can also fine-tune a in native MindSpore.
 
-If you went trough the [Train with MindNLP Trainer](#train_with_mindnlp_trainer) part, you may need to restart your notebook and re-run the [Prepare a dataset](#prepare_a_dataset) part, or execute the following code to free some memory:
+If you went through the [Train with MindNLP Trainer](#train_with_mindnlp_trainer) part, you may need to restart your notebook and re-run the [Prepare a dataset](#prepare_a_dataset) part, or execute the following code to free some memory:
 
 
 ```python
@@ -303,7 +303,7 @@ grad_fn = value_and_grad(forward_fn, None, optimizer.parameters)
 
 #### Training step
 
-Implement a `train_step` function that will be excuted in each step of the training.
+Implement a `train_step` function that will be executed in each step of the training.
 
 This function processes a single batch of data, computes the loss and gradients, and updates the model parameters.
 
@@ -397,7 +397,7 @@ The function then iterates over all test batches. For each batch, it computes th
 
 #### Training loop for all epochs
 
-Finally, we can excute the training that loops through each epoch and at the end of each epoch, evaluate the models' performance.
+Finally, we can execute the training that loops through each epoch and at the end of each epoch, evaluate the models' performance.
 
 When the validation performance is better than all previous epochs, the model parameters will be saved as checkpoint file for future use.
 

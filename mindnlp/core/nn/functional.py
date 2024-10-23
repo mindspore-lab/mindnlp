@@ -219,12 +219,12 @@ def pad(input, pad, mode='constant', value=0.0):
     return ops.pad(input, pad, mode, value)
 
 def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
-    if label_smoothing != 0.0 or target.ndim != 1:
-        return _inner_nll_loss(input, target, weight, ignore_index, reduction, label_smoothing)
-    if weight is None:
-        weight = ops.ones(input.shape[-1], dtype=input.dtype)
-    _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
-    return _nll_loss(input, target, weight)[0]
+    return _inner_nll_loss(input, target, weight, ignore_index, reduction, label_smoothing)
+    # if label_smoothing != 0.0 or target.ndim != 1:
+    # if weight is None:
+    #     weight = ops.ones(input.shape[-1], dtype=input.dtype)
+    # _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
+    # return _nll_loss(input, target, weight)[0]
 
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     input = input.to(mindspore.float32)

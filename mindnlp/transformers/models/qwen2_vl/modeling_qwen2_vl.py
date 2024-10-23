@@ -712,7 +712,9 @@ class Qwen2VisionTransformerPretrainedModel(Qwen2VLPreTrainedModel):
         self.blocks = nn.ModuleList(
             [Qwen2VLVisionBlock(config, config._attn_implementation) for _ in range(config.depth)]
         )
-        self.merger = PatchMerger(dim=config.hidden_size, context_dim=config.embed_dim)
+        self.merger = PatchMerger(
+            dim=config.hidden_size, context_dim=config.embed_dim, spatial_merge_size=config.spatial_merge_size
+        )
 
     def get_dtype(self) -> mindspore.TensorType:
         return self.blocks[0].mlp.fc2.weight.dtype
@@ -1060,8 +1062,8 @@ class Qwen2VLForConditionalGeneration(Qwen2VLPreTrainedModel):
                 image_nums, video_nums = 0, 0
                 vision_start_indices = ops.argwhere(input_ids == vision_start_token_id).squeeze(1)
                 vision_tokens = input_ids[vision_start_indices + 1]
-                image_nums = (vision_tokens == image_token_id).sum()
-                video_nums = (vision_tokens == video_token_id).sum()
+                image_nums = ops.sum(ops.eq(vision_tokens, image_token_id))
+                video_nums = ops.sum(vision_tokens == video_token_id)
                 input_tokens = input_ids.tolist()
                 llm_pos_ids_list: list = []
                 st = 0
@@ -1075,7 +1077,7 @@ class Qwen2VLForConditionalGeneration(Qwen2VLPreTrainedModel):
                         ed_video = input_tokens.index(video_token_id, st)
                     else:
                         ed_video = len(input_tokens) + 1
-                    print(ed_image, ed_video)
+
                     if ed_image < ed_video:
                         t, h, w = (
                             image_grid_thw[image_index][0],
@@ -1301,7 +1303,6 @@ class Qwen2VLForConditionalGeneration(Qwen2VLPreTrainedModel):
         # If we have cache: let's slice `input_ids` through `cache_position`, to keep only the unprocessed tokens
         # Exception 1: when passing input_embeds, input_ids may be missing entries
         # Exception 2: some generation methods do special slicing of input_ids, so we don't need to do it here
-        print('video_grid_thw', video_grid_thw)
         if past_key_values is not None:
             if inputs_embeds is not None:  # Exception 1
                 if 0 not in input_ids.shape:

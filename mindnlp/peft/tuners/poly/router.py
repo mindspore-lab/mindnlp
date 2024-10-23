@@ -15,28 +15,13 @@
 from abc import ABC, abstractmethod
 
 import mindspore
-from mindspore.common.initializer import Uniform, initializer
 
 from mindnlp.core import nn, ops
-# from torch.distributions.relaxed_bernoulli import RelaxedBernoulli
+from mindnlp.core.nn import Parameter
+from mindnlp.core.distributions.relaxed_bernoulli import RelaxedBernoulli
 from .config import PolyConfig
 
 EPS = 1e-12
-
-
-class RelaxedBernoulli:
-    def __init__(self, temperature, probs=None, logits=None):
-        self.temperature = temperature
-        self.probs = probs
-        self.logits = logits
-
-    def rsample(self):
-        noise = ops.rand_like(self.logits)
-        eps = 1e-20
-        noise = ops.clamp(noise, eps, 1.0 - eps)
-        logit_noise = ops.log(noise) - ops.log(1 - noise)
-        sample = (self.logits + logit_noise) / self.temperature
-        return ops.sigmoid(sample)
 
 
 def get_router(poly_config: PolyConfig) -> nn.Module:
@@ -69,18 +54,12 @@ class PolyRouter(Router):
         self.n_skills = poly_config.n_skills
         self.n_splits = poly_config.n_splits
 
-        self.cell_logits = mindspore.Parameter(
+        self.cell_logits = Parameter(
             ops.zeros(self.n_tasks, self.n_splits * self.n_skills)
         )
 
     def reset(self):
-        self.cell_logits = mindspore.Parameter(
-            initializer(
-                Uniform(scale=-1e-3),
-                shape=self.cell_logits.shape,
-                dtype=self.cell_logits.dtype,
-            )
-        )
+        nn.init.uniform_(self.module_logits, -1e-3, 1e-3)
 
     def forward(self, task_ids: mindspore.Tensor, input_ids: mindspore.Tensor):
         if task_ids is None:

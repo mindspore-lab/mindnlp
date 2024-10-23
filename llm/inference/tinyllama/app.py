@@ -6,7 +6,8 @@ from threading import Thread
 
 # Loading the tokenizer and model from Hugging Face's model hub.
 tokenizer = AutoTokenizer.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
-model = AutoModelForCausalLM.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
+model = AutoModelForCausalLM.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0", ms_dtype=mindspore.float16)
+print(model.dtype)
 
 
 # Defining a custom stopping criteria class for the model's text generation.

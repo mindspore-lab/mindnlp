@@ -17,10 +17,11 @@ def as_strided(self, size, stride, storage_offset=None):
         index = index + tmp
     if storage_offset is not None:
         index = index + storage_offset
+
     if index.size == 0:
         input_indices = mindspore.numpy.empty(index.shape, dtype=mindspore.int32)
     else:
-        input_indices = mindspore.Tensor(index)
+        input_indices = mindspore.tensor(index.astype(np.int32))
     out = ops.gather(self.reshape(-1), input_indices, 0)
     return out
 
@@ -39,6 +40,7 @@ def zeros(*size, dtype=None):
         size = size[0]
     if use_pyboost():
         return mindspore.mint.zeros(size, dtype=dtype)
+    size = tuple(size)
     return _zeros(size, dtype)
 
 # zeros_like

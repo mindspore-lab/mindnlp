@@ -66,7 +66,7 @@ def llama_compute_query_states(model: nn.Module, **kwargs) -> Tensor:
     bsz, q_len, _ = hidden_states.shape
     query_states = ops.permute(model.q_proj(hidden_states).reshape(bsz, q_len, model.num_heads, model.head_dim), (0, 2, 1, 3))
 
-    factor = model.k_proj.in_channels // model.k_proj.out_channels
+    factor = model.k_proj.in_features // model.k_proj.out_features
     value_states = ops.permute(model.v_proj(hidden_states).reshape(bsz, q_len, (model.num_heads // factor), model.head_dim), (0, 2, 1, 3))
 
     seq_len = q_len

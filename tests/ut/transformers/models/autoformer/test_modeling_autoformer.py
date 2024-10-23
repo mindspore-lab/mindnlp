@@ -35,7 +35,6 @@ if is_mindspore_available():
     from mindnlp.transformers.models.autoformer.modeling_autoformer import AutoformerDecoder, AutoformerEncoder
 
 
-mindspore.set_context(pynative_synchronize=True)
 class AutoformerModelTester:
     def __init__(
         self,

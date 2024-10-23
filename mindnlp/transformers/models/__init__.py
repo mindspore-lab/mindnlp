@@ -49,6 +49,11 @@ from . import (
     byt5,
     camembert,
     canine,
+    chatglm,
+    chatglm2,
+    chatglm3,
+    chatglm4,
+    chinese_clip,
     clap,
     clip,
     clipseg,
@@ -90,10 +95,6 @@ from . import (
     ernie_m,
     falcon,
     fastspeech2_conformer,
-    chatglm,
-    chatglm2,
-    chatglm3,
-    chatglm4,
     flava,
     flaubert,
     florence2,
@@ -201,6 +202,7 @@ from . import (
     sew,
     sew_d,
     speech_encoder_decoder,
+    speech_to_text,
     speecht5,
     stablelm,
     splinter,
@@ -213,6 +215,7 @@ from . import (
     swin2sr,
     t5,
     tapas,
+    tapex,
     time_series_transformer,
     timesformer,
     tinybert,
@@ -221,6 +224,7 @@ from . import (
     udop,
     upernet,
     umt5,
+    unispeech,
     unispeech_sat,
     univnet,
     videomae,
@@ -286,7 +290,11 @@ from .bros import *
 from .byt5 import *
 from .camembert import *
 from .canine import *
+from .chatglm import *
+from .chatglm2 import *
+from .chatglm3 import *
 from .chatglm4 import *
+from .chinese_clip import *
 from .clap import *
 from .clip import *
 from .clipseg import *
@@ -326,9 +334,6 @@ from .encodec import *
 from .esm import *
 from .ernie import *
 from .ernie_m import *
-from .chatglm import *
-from .chatglm2 import *
-from .chatglm3 import *
 from .falcon import *
 from .flava import *
 from .flaubert import *
@@ -438,6 +443,7 @@ from .seggpt import *
 from .sew import *
 from .sew_d import *
 from .speech_encoder_decoder import *
+from .speech_to_text import *
 from .speecht5 import *
 from .stablelm import *
 from .splinter import *
@@ -451,12 +457,14 @@ from .swin2sr import *
 from .tinybert import *
 from .t5 import *
 from .tapas import *
+from .tapex import *
 from .time_series_transformer import *
 from .timesformer import *
 from .trocr import *
 from .tvlt import *
 from .udop import *
 from .upernet import *
+from .unispeech import *
 from .unispeech_sat import *
 from .univnet import *
 from .videomae import *
@@ -523,6 +531,11 @@ __all__.extend(bros.__all__)
 __all__.extend(byt5.__all__)
 __all__.extend(camembert.__all__)
 __all__.extend(canine.__all__)
+__all__.extend(chatglm.__all__)
+__all__.extend(chatglm2.__all__)
+__all__.extend(chatglm3.__all__)
+__all__.extend(chatglm4.__all__)
+__all__.extend(chinese_clip.__all__)
 __all__.extend(clap.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(clipseg.__all__)
@@ -562,8 +575,6 @@ __all__.extend(encodec.__all__)
 __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
 __all__.extend(esm.__all__)
-__all__.extend(chatglm.__all__)
-__all__.extend(chatglm4.__all__)
 __all__.extend(falcon.__all__)
 __all__.extend(flava.__all__)
 __all__.extend(flaubert.__all__)
@@ -573,8 +584,6 @@ __all__.extend(focalnet.__all__)
 __all__.extend(funnel.__all__)
 __all__.extend(fsmt.__all__)
 __all__.extend(fastspeech2_conformer.__all__)
-__all__.extend(chatglm2.__all__)
-__all__.extend(chatglm3.__all__)
 __all__.extend(openai.__all__)
 __all__.extend(gptj.__all__)
 __all__.extend(gemma.__all__)
@@ -675,6 +684,7 @@ __all__.extend(seggpt.__all__)
 __all__.extend(sew.__all__)
 __all__.extend(sew_d.__all__)
 __all__.extend(speech_encoder_decoder.__all__)
+__all__.extend(speech_to_text.__all__)
 __all__.extend(speecht5.__all__)
 __all__.extend(stablelm.__all__)
 __all__.extend(splinter.__all__)
@@ -688,6 +698,7 @@ __all__.extend(swin2sr.__all__)
 __all__.extend(superpoint.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(tapas.__all__)
+__all__.extend(tapex.__all__)
 __all__.extend(time_series_transformer.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
@@ -695,6 +706,7 @@ __all__.extend(trocr.__all__)
 __all__.extend(tvlt.__all__)
 __all__.extend(udop.__all__)
 __all__.extend(upernet.__all__)
+__all__.extend(unispeech.__all__)
 __all__.extend(unispeech_sat.__all__)
 __all__.extend(univnet.__all__)
 __all__.extend(videomae.__all__)

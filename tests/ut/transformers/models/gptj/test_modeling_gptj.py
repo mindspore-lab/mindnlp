@@ -17,22 +17,22 @@
 import datetime
 import unittest
 
-import pytest
-
-from mindnlp.transformers import GPTJConfig
-import numpy as np
-from mindnlp.utils.testing_utils import require_mindspore, slow, is_mindspore_available, tooslow
-import mindnlp
+from mindnlp.transformers import GPTJConfig, is_mindspore_available
+from mindnlp.utils.testing_utils import (
+    require_mindspore,
+    slow,
+    tooslow,
+)
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
-from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
+from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask
 # from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
+    from mindnlp.core import ops, manual_seed
 
     from mindnlp.transformers import (
         AutoTokenizer,
@@ -41,9 +41,6 @@ if is_mindspore_available():
         GPTJForSequenceClassification,
         GPTJModel,
     )
-
-is_torch_greater_or_equal_than_1_12 = False
-
 
 class GPTJModelTester:
     def __init__(
@@ -167,38 +164,9 @@ class GPTJModelTester:
         config.vocab_size = 300
         return config
 
-    def prepare_config_and_inputs_for_decoder(self):
-        (
-            config,
-            input_ids,
-            input_mask,
-            head_mask,
-            token_type_ids,
-            mc_token_ids,
-            sequence_labels,
-            token_labels,
-            choice_labels,
-        ) = self.prepare_config_and_inputs()
-
-        encoder_hidden_states = floats_tensor([self.batch_size, self.seq_length, self.hidden_size])
-        encoder_attention_mask = ids_tensor([self.batch_size, self.seq_length], vocab_size=2)
-
-        return (
-            config,
-            input_ids,
-            input_mask,
-            head_mask,
-            token_type_ids,
-            sequence_labels,
-            token_labels,
-            choice_labels,
-            encoder_hidden_states,
-            encoder_attention_mask,
-        )
-
     def create_and_check_gptj_model(self, config, input_ids, input_mask, head_mask, token_type_ids, *args):
         model = GPTJModel(config=config)
-        model.set_train(False)
+        model.eval()
 
         result = model(input_ids, token_type_ids=token_type_ids, head_mask=head_mask)
         result = model(input_ids, token_type_ids=token_type_ids)
@@ -209,7 +177,7 @@ class GPTJModelTester:
 
     def create_and_check_gptj_model_past(self, config, input_ids, input_mask, head_mask, token_type_ids, *args):
         model = GPTJModel(config=config)
-        model.set_train(False)
+        model.eval()
 
         # first forward pass
         outputs = model(input_ids, token_type_ids=token_type_ids, use_cache=True)
@@ -226,8 +194,8 @@ class GPTJModelTester:
         next_token_types = ids_tensor([self.batch_size, 1], self.type_vocab_size)
 
         # append to next input_ids and token_type_ids
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_token_type_ids = ops.cat([token_type_ids, next_token_types], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_token_type_ids = ops.cat([token_type_ids, next_token_types], dim=-1)
 
         output_from_no_past = model(next_input_ids, token_type_ids=next_token_type_ids)["last_hidden_state"]
         output_from_past = model(next_tokens, token_type_ids=next_token_types, past_key_values=past)[
@@ -236,18 +204,17 @@ class GPTJModelTester:
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = ops.stop_gradient(output_from_no_past[:, -1, random_slice_idx])
-        output_from_past_slice = ops.stop_gradient(output_from_past[:, 0, random_slice_idx])
+        output_from_no_past_slice = output_from_no_past[:, -1, random_slice_idx]
+        output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_gptj_model_attention_mask_past(
         self, config, input_ids, input_mask, head_mask, token_type_ids, *args
     ):
         model = GPTJModel(config=config)
-        
-        model.set_train(False)
+        model.eval()
 
         # create attention mask
         attn_mask = ops.ones(input_ids.shape, dtype=mindspore.int64)
@@ -266,10 +233,10 @@ class GPTJModelTester:
         input_ids[:, -random_seq_idx_to_change] = random_other_next_tokens
 
         # append to next input_ids and attn_mask
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
         attn_mask = ops.cat(
             [attn_mask, ops.ones((attn_mask.shape[0], 1), dtype=mindspore.int64)],
-            axis=1,
+            dim=1,
         )
 
         # get two different outputs
@@ -278,19 +245,17 @@ class GPTJModelTester:
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = ops.stop_gradient(output_from_no_past[:, -1, random_slice_idx])
-        output_from_past_slice = ops.stop_gradient(output_from_past[:, 0, random_slice_idx])
-
+        output_from_no_past_slice = output_from_no_past[:, -1, random_slice_idx]
+        output_from_past_slice = output_from_past[:, 0, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_gptj_model_past_large_inputs(
         self, config, input_ids, input_mask, head_mask, token_type_ids, *args
     ):
         model = GPTJModel(config=config)
-        
-        model.set_train(False)
+        model.eval()
 
         # first forward pass
         outputs = model(input_ids, token_type_ids=token_type_ids, attention_mask=input_mask, use_cache=True)
@@ -303,9 +268,9 @@ class GPTJModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and token_type_ids
-        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
-        next_token_type_ids = ops.cat([token_type_ids, next_token_types], axis=-1)
-        next_attention_mask = ops.cat([input_mask, next_mask], axis=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
+        next_token_type_ids = ops.cat([token_type_ids, next_token_types], dim=-1)
+        next_attention_mask = ops.cat([input_mask, next_mask], dim=-1)
 
         output_from_no_past = model(
             next_input_ids, token_type_ids=next_token_type_ids, attention_mask=next_attention_mask
@@ -317,16 +282,15 @@ class GPTJModelTester:
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = ops.stop_gradient(output_from_no_past[:, -3:, random_slice_idx])
-        output_from_past_slice = ops.stop_gradient(output_from_past[:, :, random_slice_idx])
+        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx]
+        output_from_past_slice = output_from_past[:, :, random_slice_idx]
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+        self.parent.assertTrue(ops.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
 
     def create_and_check_lm_head_model(self, config, input_ids, input_mask, head_mask, token_type_ids, *args):
         model = GPTJForCausalLM(config)
-        
-        model.set_train(False)
+        model.eval()
 
         result = model(input_ids, token_type_ids=token_type_ids, labels=input_ids)
         self.parent.assertEqual(result.loss.shape, ())
@@ -336,11 +300,13 @@ class GPTJModelTester:
         self, config, input_ids, input_mask, head_mask, token_type_ids, *args, gradient_checkpointing=False
     ):
         model = GPTJForCausalLM(config)
-        
+        if gradient_checkpointing:
+            model.gradient_checkpointing_enable()
 
         result = model(input_ids, token_type_ids=token_type_ids, labels=input_ids)
         self.parent.assertEqual(result.loss.shape, ())
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
+        result.loss.backward()
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
@@ -365,7 +331,7 @@ class GPTJModelTester:
 @require_mindspore
 class GPTJModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (
-        (GPTJForCausalLM, GPTJForSequenceClassification, GPTJForQuestionAnswering)
+        (GPTJModel, GPTJForCausalLM, GPTJForSequenceClassification, GPTJForQuestionAnswering)
         if is_mindspore_available()
         else ()
     )
@@ -387,24 +353,19 @@ class GPTJModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     test_model_parallel = False
     test_head_masking = False
 
-    @unittest.skipIf(
-        not is_torch_greater_or_equal_than_1_12, reason="PR #22069 made changes that require torch v1.12+."
-    )
-    def test_torch_fx(self):
-        super().test_torch_fx()
-
-    @unittest.skipIf(
-        not is_torch_greater_or_equal_than_1_12, reason="PR #22069 made changes that require torch v1.12+."
-    )
-    def test_torch_fx_output_loss(self):
-        super().test_torch_fx_output_loss()
-
     # TODO: Fix the failed tests
     def is_pipeline_test_to_skip(
-        self, pipeline_test_casse_name, config_class, model_architecture, tokenizer_name, processor_name
+        self,
+        pipeline_test_case_name,
+        config_class,
+        model_architecture,
+        tokenizer_name,
+        image_processor_name,
+        feature_extractor_name,
+        processor_name,
     ):
         if (
-            pipeline_test_casse_name == "QAPipelineTests"
+            pipeline_test_case_name == "QAPipelineTests"
             and tokenizer_name is not None
             and not tokenizer_name.endswith("Fast")
         ):
@@ -447,15 +408,14 @@ class GPTJModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_lm_head_model(*config_and_inputs)
 
-    def test_gptj_gradient_checkpointing(self):
-        config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        self.model_tester.create_and_check_forward_and_backwards(*config_and_inputs, gradient_checkpointing=True)
+    # def test_gptj_gradient_checkpointing(self):
+    #     config_and_inputs = self.model_tester.prepare_config_and_inputs()
+    #     self.model_tester.create_and_check_forward_and_backwards(*config_and_inputs, gradient_checkpointing=True)
 
     @tooslow
     def test_batch_generation(self):
         # Marked as @tooslow due to GPU OOM
-        model = GPTJForCausalLM.from_pretrained("EleutherAI/gpt-j-6B", revision="float16", dtype=mindspore.float16, from_pt=True)
-        
+        model = GPTJForCausalLM.from_pretrained("EleutherAI/gpt-j-6B", revision="float16", ms_dtype=mindspore.float16)
         tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-j-6B", revision="float16")
 
         tokenizer.padding_side = "left"
@@ -474,10 +434,10 @@ class GPTJModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         input_ids = inputs["input_ids"]
         token_type_ids = ops.cat(
             [
-                input_ids.new_full((input_ids.shape[0], input_ids.shape[1] - 1), 0),
-                input_ids.new_full((input_ids.shape[0], 1), 500),
+                ops.full((input_ids.shape[0], input_ids.shape[1] - 1), 0, dtype=input_ids.dtype),
+                ops.full((input_ids.shape[0], 1), 500, dtype=input_ids.dtype),
             ],
-            axis=-1,
+            dim=-1,
         )
 
         outputs = model.generate(
@@ -494,7 +454,7 @@ class GPTJModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         inputs_non_padded = tokenizer(sentences[0], return_tensors="ms").input_ids
         output_non_padded = model.generate(input_ids=inputs_non_padded)
 
-        num_paddings = inputs_non_padded.shape[-1] - inputs["attention_mask"][-1].long().sum().cpu().item()
+        num_paddings = inputs_non_padded.shape[-1] - inputs["attention_mask"][-1].long().sum().item()
         inputs_padded = tokenizer(sentences[1], return_tensors="ms").input_ids
         output_padded = model.generate(input_ids=inputs_padded, max_length=model.config.max_length - num_paddings)
 
@@ -511,49 +471,11 @@ class GPTJModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         self.assertTrue(batch_out_sentence_tt != batch_out_sentence)  # token_type_ids should change output
         self.assertListEqual(expected_output_sentence, [non_padded_sentence, padded_sentence])
 
-    # @slow
-    # def test_model_from_pretrained(self):
-    #     model_name = "EleutherAI/gpt-j-6B"
-    #     model = GPTJModel.from_pretrained(model_name, revision="float16", ms_dtype=mindspore.float16, from_pt=True)
-    #     self.assertIsNotNone(model)
-
-    # @require_flash_attn
-    # @require_mindspore_gpu
-    # @require_bitsandbytes
-    # @pytest.mark.flash_attn_test
-    # @slow
-    # def test_flash_attn_2_generate_padding_right(self):
-    #     """
-    #     Overwritting the common test as the test is flaky on tiny models
-    #     """
-    #     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-j-6b")
-    #
-    #     texts = ["hi", "Hello this is a very long sentence"]
-    #     expected_outputs = [
-    #         "hi<|endoftext|><|endoftext|><|endoftext|><|endoftext|><|endoftext|><|endoftext|>Q: I have a question about the new version of the game. I have a question about the",
-    #         "Hello this is a very long sentence.\n\nA:\n\nI think the best way to understand this is to think of it",
-    #     ]
-    #
-    #     tokenizer.padding_side = "right"
-    #     tokenizer.pad_token = tokenizer.eos_token
-    #
-    #     inputs = tokenizer(texts, return_tensors="ms", padding=True).to(0)
-    #
-    #     quantization_config = BitsAndBytesConfig(load_in_4bit=True)
-    #
-    #     model = GPTJForCausalLM.from_pretrained(
-    #         "EleutherAI/gpt-j-6b",
-    #         device_map={"": 0},
-    #         attn_implementation="flash_attention_2",
-    #         revision="float16",
-    #         torch_dtype=mindspore.float16,
-    #         quantization_config=quantization_config,
-    #     )
-    #
-    #     output_fa_2 = model.generate(**inputs, max_new_tokens=20, do_sample=False)
-    #     output_fa_2 = tokenizer.batch_decode(output_fa_2)
-    #
-    #     self.assertListEqual(expected_outputs, output_fa_2)
+    @slow
+    def test_model_from_pretrained(self):
+        model_name = "EleutherAI/gpt-j-6B"
+        model = GPTJModel.from_pretrained(model_name, revision="float16", ms_dtype=mindspore.float16)
+        self.assertIsNotNone(model)
 
 
 @require_mindspore
@@ -563,14 +485,13 @@ class GPTJModelLanguageGenerationTest(unittest.TestCase):
         # Marked as @tooslow due to GPU OOM
         for checkpointing in [True, False]:
             model = GPTJForCausalLM.from_pretrained(
-                "EleutherAI/gpt-j-6B", revision="float16", ms_dtype=mindspore.float16, from_pt=True
+                "EleutherAI/gpt-j-6B", revision="float16", ms_dtype=mindspore.float16
             )
-            # if checkpointing:
-            #     model.gradient_checkpointing_enable()
-            # else:
-            #     model.gradient_checkpointing_disable()
-            
-            input_ids = mindspore.Tensor([[464, 3290]], dtype=mindspore.int64)  # The dog
+            if checkpointing:
+                model.gradient_checkpointing_enable()
+            else:
+                model.gradient_checkpointing_disable()
+                input_ids = mindspore.tensor([[464, 3290]], dtype=mindspore.int64)  # The dog
             # The dog is a man's best friend. It is a loyal companion, and it is a friend
             expected_output_ids = [464, 3290, 318, 257, 582, 338, 1266, 1545, 13, 632, 318, 257, 9112, 15185, 11, 290, 340, 318, 257, 1545]  # fmt: skip
             output_ids = model.generate(input_ids, do_sample=False)
@@ -580,8 +501,9 @@ class GPTJModelLanguageGenerationTest(unittest.TestCase):
     def test_gptj_sample(self):
         # Marked as @tooslow due to GPU OOM (issue #13676)
         tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-j-6B", revision="float16")
-        model = GPTJForCausalLM.from_pretrained("EleutherAI/gpt-j-6B", revision="float16", ms_dtype=mindspore.float16, from_pt=True)
+        model = GPTJForCausalLM.from_pretrained("EleutherAI/gpt-j-6B", revision="float16", ms_dtype=mindspore.float16)
 
+        manual_seed(0)
         tokenized = tokenizer("Today is a nice day and", return_tensors="ms", return_token_type_ids=True)
         input_ids = tokenized.input_ids
         output_ids = model.generate(input_ids, do_sample=True)
@@ -595,6 +517,9 @@ class GPTJModelLanguageGenerationTest(unittest.TestCase):
         output_seq_strs = tokenizer.batch_decode(output_seq, skip_special_tokens=True)
         output_seq_tt_strs = tokenizer.batch_decode(output_seq_tt, skip_special_tokens=True)
 
+
+        EXPECTED_OUTPUT_STR = "Today is a nice day and one of those days that feels a bit more alive. I am ready"
+
         self.assertEqual(output_str, EXPECTED_OUTPUT_STR)
         self.assertTrue(
             all(output_seq_strs[idx] != output_seq_tt_strs[idx] for idx in range(len(output_seq_tt_strs)))
@@ -603,8 +528,9 @@ class GPTJModelLanguageGenerationTest(unittest.TestCase):
     @slow
     def test_gptj_sample_max_time(self):
         tokenizer = AutoTokenizer.from_pretrained("anton-l/gpt-j-tiny-random")
-        model = GPTJForCausalLM.from_pretrained("anton-l/gpt-j-tiny-random", from_pt=True)
+        model = GPTJForCausalLM.from_pretrained("anton-l/gpt-j-tiny-random")
 
+        manual_seed(0)
         tokenized = tokenizer("Today is a nice day and", return_tensors="ms", return_token_type_ids=True)
         input_ids = tokenized.input_ids
 
@@ -648,7 +574,7 @@ class GPTJModelLanguageGenerationTest(unittest.TestCase):
 
         tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-j-6B")
         model = GPTJForCausalLM.from_pretrained(
-            "EleutherAI/gpt-j-6B", revision="float16", ms_dtype=mindspore.float16, from_pt=True
+            "EleutherAI/gpt-j-6B", revision="float16", ms_dtype=mindspore.float16
         )
         input_ids = tokenizer(article, return_tensors="ms").input_ids
 

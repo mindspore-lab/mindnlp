@@ -26,6 +26,10 @@ import pathlib
 import warnings
 import tempfile
 import operator
+import struct
+import mmap
+import json
+import math
 
 from contextlib import closing, contextmanager
 from enum import Enum
@@ -62,11 +66,11 @@ PROTOCOL_VERSION = 1001
 def mkdtemp():
     """
     Context manager that creates a temporary directory and provides its path.
-    
+
     Usage:
         with mkdtemp() as path:
             # Use the temporary directory at 'path'
-    
+
     Args:
         This function does not take any parameters.
     
@@ -793,8 +797,11 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
         array = array.astype(np.float16)
 
     if stride is not None and len(stride) > 1 and stride[0] == 1:
-        stride = tuple((s * 4 for s in stride))
-        array = np.lib.stride_tricks.as_strided(array, size, stride)
+        # stride = tuple((s * 4 for s in stride))
+        # # stride = tuple((s * 4 if s != 1 else s for s in stride))
+        # array = np.lib.stride_tricks.as_strided(array, size, stride)
+        order = "F"
+        array = array.reshape(size, order=order)
     else:
         order = "C"
         array = array.reshape(size, order=order)
@@ -1337,7 +1344,7 @@ _NP_TYPES = {
     "BOOL": bool,
 }
 
-def safe_load_file(filename):
+def legacy_safe_load_file(filename):
     """
     This function safely loads a file containing state dictionary data and converts it into a dictionary of MindSpore Parameters.
     
@@ -1377,6 +1384,46 @@ def safe_load_file(filename):
             else:
                 result[k] = Tensor.from_numpy(arr.astype(np.float16))
         return result
+
+
+def safe_load_file(filename):
+    """
+    This function safely loads a file containing state dictionary data and converts it into a dictionary of MindSpore Parameters.
+    
+    Args:
+        filename (str): The path to the file containing the state dictionary data to be loaded.
+    
+    Returns:
+        dict: A dictionary where keys are parameter names and values are MindSpore Parameters.
+    
+    Raises:
+        FileNotFoundError: If the specified file 'filename' does not exist.
+        ValueError: If the data in the file is not in the correct format to create MindSpore Parameters.
+    """
+    def convert(info: dict[str, Any]):
+        numpy_dtype = _NP_TYPES[info['dtype']]
+        shape: list[int] = info['shape']
+        begin, end = info['data_offsets']
+        assert 0 <= begin <= end <= len(byte_buf)
+        assert end - begin == math.prod(shape) * np.dtype(numpy_dtype).itemsize
+        buf = byte_buf[begin:end]
+        array = np.frombuffer(buf, dtype=numpy_dtype).reshape(shape)
+        if array.dtype == bfloat16 and not SUPPORT_BF16:
+            logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
+            array = array.astype(np.float16)
+
+        return Tensor.from_numpy(array)
+
+    with open(filename, "rb") as fp:
+        header_size, = struct.unpack('<Q', fp.read(8))
+        header: dict[str, dict[str, Any]] = json.loads(fp.read(header_size))
+        # Use mmap for the actual data to avoid race conditions with the file offset.
+        mapped = memoryview(mmap.mmap(fp.fileno(), 0, access=mmap.ACCESS_READ))
+        byte_buf = mapped[8 + header_size:]
+
+        result = {name: convert(info) for (name, info) in header.items() if name != '__metadata__'}
+
+    return result
 
 def safe_save_file(tensor_dict, filename, metadata=None):
     """

@@ -38,7 +38,7 @@ import mindspore
 from mindspore.dataset import Dataset, BatchDataset, PaddedBatchDataset
 
 from mindnlp.core import nn, ops, optim
-from ...core.serialization import safe_load_file, safe_save_file, save, save_checkpoint, load
+from ...core.serialization import safe_load_file, safe_save_file, save, save_checkpoint, load, load_checkpoint
 from ...peft import PeftModel
 from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_SAFE_WEIGHTS_NAME, \
     WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
@@ -482,7 +482,6 @@ class Trainer:
             # to avoid arguments conflicts.
             if "optimizer_dict" in optimizer_kwargs:
                 optimizer_grouped_parameters = optimizer_kwargs.pop("optimizer_dict")
-
             self.optimizer = optimizer_cls(optimizer_grouped_parameters, **optimizer_kwargs)
 
         return self.optimizer
@@ -823,10 +822,9 @@ MindSpore's `load_checkpoint` function.
                 if self.args.save_safetensors and os.path.isfile(best_safe_model_path):
                     state_dict = safe_load_file(best_safe_model_path)
                 else:
-                    state_dict = mindspore.load_checkpoint(
+                    state_dict = load_checkpoint(
                         best_model_path,
                     )
-
                 # If the model is on the GPU, it still works!
                 # which takes *args instead of **kwargs
                 load_result = model.load_state_dict(state_dict, False)
@@ -1137,7 +1135,6 @@ MindSpore's `load_checkpoint` function.
                     # Optimizer step
                     self.optimizer.step(grads)
 
-
                     optimizer_was_run = True
                     if optimizer_was_run:
                         # Delay optimizer scheduling until metrics are generated
@@ -1244,7 +1241,7 @@ it loads the configuration using the `PretrainedConfig.from_json_file` method.
         
         Next, the method checks if either the weights file (`weights_file`) or the safe weights file (`safe_weights_file`) is present in the checkpoint directory. If either of these files is found, the method
 checks if the `save_safetensors` flag is enabled. If the flag is enabled and the safe weights file is present, it loads the model's state dictionary using the `safe_load_file` method. Otherwise, it uses the
-`mindspore.load_checkpoint` method to load the model's state dictionary. The method then loads the state dictionary into the model using the `model.load_state_dict` method, with the `False` argument indicating
+`load_checkpoint` method to load the model's state dictionary. The method then loads the state dictionary into the model using the `model.load_state_dict` method, with the `False` argument indicating
 that strict loading should be disabled. After loading the state dictionary, any temporary variables are deleted and any warnings are issued using the `_issue_warnings_after_load` method.
         
         If neither the weights file nor the safe weights file is found, the method calls the `load_sharded_checkpoint` method to load the model from the checkpoint directory, with the `prefer_safe` parameter
@@ -1289,7 +1286,7 @@ indicating whether to prefer safe tensors.
             if self.args.save_safetensors and os.path.isfile(safe_weights_file):
                 state_dict = safe_load_file(safe_weights_file)
             else:
-                state_dict = mindspore.load_checkpoint(
+                state_dict = load_checkpoint(
                     weights_file,
                 )
 
@@ -2303,7 +2300,7 @@ def load_sharded_checkpoint(model, folder, strict=True, prefer_safe=True):
             error_message += f"\nMissing key(s): {str_unexpected_keys}."
         raise RuntimeError(error_message)
 
-    loader = safe_load_file if load_safe else mindspore.load_checkpoint
+    loader = safe_load_file if load_safe else load_checkpoint
 
     for shard_file in shard_files:
         state_dict = loader(os.path.join(folder, shard_file))

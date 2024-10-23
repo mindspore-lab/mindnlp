@@ -222,7 +222,6 @@ class GitSelfAttention(nn.Module):
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
         attention_probs = self.dropout(attention_probs)
-
         # Mask heads if we want to
         if head_mask is not None:
             attention_probs = attention_probs * head_mask
@@ -873,7 +872,6 @@ class GitVisionTransformer(nn.Module):
 
         hidden_states = self.embeddings(pixel_values)
         hidden_states = self.pre_layrnorm(hidden_states)
-
         encoder_outputs = self.encoder(
             inputs_embeds=hidden_states,
             output_attentions=output_attentions,

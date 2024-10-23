@@ -18,11 +18,9 @@ import math
 from typing import Optional, Tuple, Union
 
 import mindspore
-import numpy as np
-from mindspore.common.initializer import Normal, initializer
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -459,7 +457,7 @@ class SqueezeBertLMPredictionHead(nn.Module):
         # an output-only bias for each token.
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
-        self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
+        self.bias = Parameter(ops.zeros(config.vocab_size))
 
         # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
         self.decoder.bias = self.bias
@@ -492,35 +490,21 @@ class SqueezeBertPreTrainedModel(PreTrainedModel, nn.Module):
     config_class = SqueezeBertConfig
     base_model_prefix = "transformer"
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv1d)):
+        if isinstance(module, (nn.Linear, nn.Conv1d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.assign_value(
-                initializer(
-                    Normal(self.config.initializer_range),
-                    cell.weight.shape,
-                    cell.weight.dtype,
-                )
-            )
-            if cell.bias is not None:
-                cell.bias.assign_value(
-                    initializer("zeros", cell.bias.shape, cell.bias.dtype)
-                )
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(
-                0.0, self.config.initializer_range, cell.weight.shape
-            )
-
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-            cell.weight.assign_value(mindspore.Tensor(weight, dtype=cell.weight.dtype))
-        elif isinstance(cell, SqueezeBertLayerNorm):
-            cell.weight.assign_value(
-                initializer("ones", cell.weight.shape, cell.weight.dtype)
-            )
-            cell.bias.assign_value(initializer("zeros", cell.bias.shape, cell.bias.dtype))
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
+        elif isinstance(module, SqueezeBertLayerNorm):
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
 
 
 class SqueezeBertModel(SqueezeBertPreTrainedModel):

@@ -20,10 +20,9 @@ from functools import partial
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from ....utils import is_scipy_available
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -365,7 +364,7 @@ class FNetLMPredictionHead(nn.Module):
         # an output-only bias for each token.
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
 
-        self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
+        self.bias = Parameter(ops.zeros(config.vocab_size))
         self.decoder.bias = self.bias
 
     def forward(self, hidden_states):
@@ -427,35 +426,17 @@ class FNetPreTrainedModel(PreTrainedModel):
         if isinstance(module, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.assign_value(
-                initializer(
-                    Normal(sigma=self.config.initializer_range, mean=0.0),
-                    module.weight.shape,
-                    module.weight.dtype,
-                )
-            )
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
             # NOTE: Original code uses same initialization as weights for biases as well.
             if module.bias is not None:
-                module.bias.assign_value(
-                    initializer("zeros", module.bias.shape, module.bias.dtype)
-                )
+                nn.init.zeros_(module.bias.data)
         elif isinstance(module, nn.Embedding):
-            module.weight.assign_value(
-                initializer(
-                    Normal(sigma=self.config.initializer_range, mean=0.0),
-                    module.weight.shape,
-                    module.weight.dtype,
-                )
-            )
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
             if module.padding_idx is not None:
-                module.weight[module.padding_idx] = initializer(
-                    "zeros",
-                    module.weight[module.padding_idx].shape,
-                    module.weight.dtype,
-                )
+                module.weight.data[module.padding_idx] = 0
         elif isinstance(module, nn.LayerNorm):
-            ops.initialize(module.bias, "zeros")
-            ops.initialize(module.weight, "ones")
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
 
 
 @dataclass
