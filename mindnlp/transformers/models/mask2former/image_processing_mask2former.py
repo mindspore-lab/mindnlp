@@ -215,7 +215,7 @@ def compute_segments(
     segments: List[Dict] = []
 
     if target_size is not None:
-        mask_probs = nn.functional.interpolate(
+        mask_probs = ops.interpolate(
             mask_probs.unsqueeze(0), size=target_size, mode="bilinear", align_corners=False
         )[0]
 
