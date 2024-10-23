@@ -1408,11 +1408,15 @@ def safe_load_file(filename):
         assert end - begin == math.prod(shape) * np.dtype(numpy_dtype).itemsize
         buf = byte_buf[begin:end]
         array = np.frombuffer(buf, dtype=numpy_dtype).reshape(shape)
+
         if array.dtype == bfloat16 and not SUPPORT_BF16:
             logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
             array = array.astype(np.float16)
 
-        return Tensor(array)
+        if info['dtype'] == 'I64':
+            array = array.astype(numpy_dtype)
+        out = Tensor(array)
+        return out
 
     with open(filename, "rb") as fp:
         header_size, = struct.unpack('<Q', fp.read(8))
