@@ -342,7 +342,7 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
                 logger.warning_once(
                     "Expanding inputs for image tokens in VipLLaVa should be done in processing. "
                     "Please add `patch_size` and `vision_feature_select_strategy` to the model's image processing config. "
-                    "Using processors without these attributes in the config is deprecated and will throw an error in v4.47."
+                    "Using processors without these attributes in the config is deprecated and will throw an error."
                 )
                 # prefill stage vs decoding stage (legacy behavior copied)
                 if input_ids.shape[1] != 1:
@@ -378,7 +378,6 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
                     attention_mask = ops.cat((extended_attention_mask, attention_mask[:, -target_length:]), dim=1)
                     position_ids = ops.sum(attention_mask, dim=1).unsqueeze(-1) - 1
 
-            # TODO: @raushan retain only the new behavior after v4.47
             else:
                 special_image_mask = (
                     (input_ids == self.config.image_token_index).unsqueeze(-1).expand_as(inputs_embeds)

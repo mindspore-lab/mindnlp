@@ -29,8 +29,8 @@ class DeprecatedList(list):
     Represents a list class that issues a warning about deprecated features when accessed.
     
     This class inherits from the built-in list class and overrides the __getitem__ method to issue a warning message
-    when accessing elements. The warning message alerts users that archive maps are deprecated and will be removed in
-    version v4.40.0 as they are no longer relevant. It also provides a recommendation for an alternative method to
+    when accessing elements. The warning message alerts users that archive maps are deprecated and will be removed
+    as they are no longer relevant. It also provides a recommendation for an alternative method to
     retrieve all checkpoints for a given architecture using the `huggingface_hub` library with the `list_models` method.
     """
     def __getitem__(self, item):

@@ -128,7 +128,6 @@ setup(
         'addict',
         'ml_dtypes',
         'pyctcdecode',
-        'jieba',
         'pytest==7.2.0',
         'pillow>=10.0.0'
     ],

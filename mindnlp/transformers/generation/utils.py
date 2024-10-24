@@ -1869,7 +1869,6 @@ class GenerationMixin:
         # - `model_kwargs` may be updated in place with a cache as defined by the parameters in `generation_config`.
         # - different models have a different cache name expected by the model (default = "past_key_values")
         # - `max_length`, prepared above, is used to determine the maximum cache length
-        # TODO (joao): remove `user_defined_cache` after v4.47 (remove default conversion to legacy format)
         cache_name = "past_key_values" if "mamba" not in self.__class__.__name__.lower() else "cache_params"
         user_defined_cache = model_kwargs.get(cache_name)
         max_cache_length = generation_config.max_length
@@ -2174,7 +2173,7 @@ class GenerationMixin:
 
         # Convert to legacy cache format if requested
         if (
-            generation_config.return_legacy_cache is not False  # Should check for `True` after v4.47
+            generation_config.return_legacy_cache is not False
             and hasattr(result, "past_key_values")
             and hasattr(result.past_key_values, "to_legacy_cache")
             and result.past_key_values.to_legacy_cache is not None
@@ -2192,7 +2191,7 @@ class GenerationMixin:
             )
             if not is_user_defined_cache and is_default_cache_type:
                 logger.warning_once(
-                    "From v4.47 onwards, when a model cache is to be returned, `generate` will return a `Cache` "
+                    "When a model cache is to be returned, `generate` will return a `Cache` "
                     "instance instead by default (as opposed to the legacy tuple of tuples format). If you want to "
                     "keep returning the legacy format, please set `return_legacy_cache=True`."
                 )

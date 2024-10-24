@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Speech2Text model init"""
-from typing import TYPE_CHECKING
 
 from . import configuration_speech_to_text, modeling_speech_to_text, tokenization_speech_to_text,processing_speech_to_text,feature_extraction_speech_to_text
 from .configuration_speech_to_text import *
@@ -20,19 +19,10 @@ from .modeling_speech_to_text import *
 from .tokenization_speech_to_text import *
 from .processing_speech_to_text import *
 from .feature_extraction_speech_to_text import *
+
 __all__ = []
 __all__.extend(configuration_speech_to_text.__all__)
 __all__.extend(modeling_speech_to_text.__all__)
 __all__.extend(tokenization_speech_to_text.__all__)
 __all__.extend(processing_speech_to_text.__all__)
 __all__.extend(feature_extraction_speech_to_text.__all__)
-
-_import_structure = {
-    "configuration_speech_to_text": ["Speech2TextConfig"],
-    "modeling_speech_to_text": [
-        "Speech2TextForConditionalGeneration",
-        "Speech2TextModel",
-        "Speech2TextPreTrainedModel",
-    ],
-    "tokenization_speech_to_text": ["Speech2TextTokenizer"],
-}

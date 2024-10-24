@@ -1976,7 +1976,7 @@ class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
             hidden_states = ops.stack(hidden_states, dim=1)
             norm_weights = nn.functional.softmax(self.layer_weights, dim=-1)
-            hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(dim=1)
+            hidden_states = ops.sum(hidden_states * norm_weights.view(-1, 1, 1), dim=1)
         else:
             hidden_states = outputs[0]
 

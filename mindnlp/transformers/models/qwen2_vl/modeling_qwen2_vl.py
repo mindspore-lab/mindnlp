@@ -104,7 +104,7 @@ class Qwen2VLRotaryEmbedding(nn.Module):
         if config is None:
             logger.warning_once(
                 "`Qwen2VLRotaryEmbedding` can now be fully parameterized by passing the model config through the "
-                "`config` argument. All other arguments will be removed in v4.46"
+                "`config` argument. All other arguments will be removed"
             )
             self.rope_kwargs = {
                 "rope_type": rope_type,
@@ -515,7 +515,7 @@ class Qwen2VLAttention(nn.Module):
         output_attentions: bool = False,
         use_cache: bool = False,
         cache_position: Optional[mindspore.Tensor] = None,
-        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,  # will become mandatory in v4.46
+        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         bsz, q_len, _ = hidden_states.shape
 
@@ -535,8 +535,7 @@ class Qwen2VLAttention(nn.Module):
             logger.warning_once(
                 "The attention layers in this model are transitioning from computing the RoPE embeddings internally "
                 "through `position_ids` (2D tensor with the indexes of the tokens), to using externally computed "
-                "`position_embeddings` (Tuple of tensors, containing cos and sin). In v4.46 `position_ids` will be "
-                "removed and `position_embeddings` will be mandatory."
+                "`position_embeddings` (Tuple of tensors, containing cos and sin)."
             )
             cos, sin = self.rotary_emb(value_states, position_ids)
         else:
@@ -611,7 +610,7 @@ class Qwen2VLDecoderLayer(nn.Module):
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = False,
         cache_position: Optional[mindspore.Tensor] = None,
-        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,  # will become mandatory in v4.46
+        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """
