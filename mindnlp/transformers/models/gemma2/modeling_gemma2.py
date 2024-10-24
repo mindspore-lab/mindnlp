@@ -440,8 +440,8 @@ class Gemma2DecoderLayer(nn.Module):
                 min_dtype = float(ops.finfo(hidden_states.dtype).min)
                 min_dtype = mindspore.tensor(min_dtype)
                 sliding_window_mask = ops.tril(
-                    ops.ones_like(attention_mask, dtype=mindspore.bool_), diagonal=-self.sliding_window
-                )
+                    ops.ones_like(attention_mask), diagonal=-self.sliding_window
+                ).to(mindspore.bool_)
                 attention_mask = ops.where(sliding_window_mask, min_dtype, attention_mask)
                 if attention_mask.shape[-1] <= 1:  # when decoding
                     attention_mask = attention_mask[:, :, :, -self.sliding_window :]
@@ -493,11 +493,11 @@ class Gemma2PreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         std = self.config.initializer_range
         if isinstance(module, nn.Linear):
-            nn.init.normal_(module.weight,mean=0.0, std=std)
+            nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.bias is not None:
                 nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
-            nn.init.normal_(module.weight,mean=0.0, std=std)
+            nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.padding_idx is not None:
                 module.weight[module.padding_idx] = 0
 
@@ -841,8 +841,8 @@ class Gemma2ForCausalLM(Gemma2PreTrainedModel):
                 input_ids = input_ids[:, cache_position]
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill_(attention_mask == 0, 1)
+            position_ids = attention_mask.int().cumsum(-1) - 1
+            position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
                 # This `clone` call is needed to avoid recapturing cuda graphs with `torch.compile`'s

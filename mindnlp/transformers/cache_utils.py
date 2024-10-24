@@ -1146,7 +1146,7 @@ class HybridCache(Cache):
             # into consideration when building kv cache instead of just throwing away tokens outside of the window
             return key_states, value_states
 
-        slicing = ops.ones(max_cache_len, dtype=mindspore.int64).cumsum(0)
+        slicing = ops.ones(max_cache_len, dtype=mindspore.int32).cumsum(0)
         cache_position = cache_position.clamp(0, max_cache_len - 1)
         to_shift = cache_position >= max_cache_len - 1
         indices = (slicing + to_shift[-1].int() - 1) % max_cache_len

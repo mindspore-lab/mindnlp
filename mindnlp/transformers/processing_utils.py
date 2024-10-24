@@ -1058,7 +1058,7 @@ def _validate_images_text_input_order(images, text):
     if (images is None and text_is_images) or (text is None and images_is_text) or (images_is_text and text_is_images):
         logger.warning_once(
             "You may have used the wrong order for inputs. `images` should be passed before `text`. "
-            "The `images` and `text` inputs will be swapped. This behavior will be deprecated in transformers v4.47."
+            "The `images` and `text` inputs will be swapped. This behavior will be deprecated."
         )
         return text, images
 

@@ -190,8 +190,10 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
     while not (os.path.exists(file_path) and check_md5(file_path, md5sum)):
         # get downloaded size
         tmp_file_path = file_path + "_tmp"
-        if os.path.exists(tmp_file_path) and retry_cnt != 0:
+        if os.path.exists(tmp_file_path):
             file_size = os.path.getsize(tmp_file_path)
+            if file_size % chunk_size != 0:
+                file_size = 0
             headers['Range'] = f'bytes={file_size}-'
         else:
             file_size = 0

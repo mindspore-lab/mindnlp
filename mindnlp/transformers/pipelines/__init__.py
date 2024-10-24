@@ -42,7 +42,7 @@ from ...utils import (
     is_mindspore_available,
     logging,
 )
-# from .audio_classification import AudioClassificationPipeline
+from .audio_classification import AudioClassificationPipeline
 from .automatic_speech_recognition import AutomaticSpeechRecognitionPipeline
 from .base import (
     ArgumentHandler,
@@ -135,12 +135,12 @@ TASK_ALIASES = {
     "text-to-speech": "text-to-audio",
 }
 SUPPORTED_TASKS = {
-    # "audio-classification": {
-    #     "impl": AudioClassificationPipeline,
-    #     "ms": (AutoModelForAudioClassification,) if is_mindspore_available() else (),
-    #     "default": {"model": {"ms": ("superb/wav2vec2-base-superb-ks", "372e048")}},
-    #     "type": "audio",
-    # },
+    "audio-classification": {
+        "impl": AudioClassificationPipeline,
+        "ms": (AutoModelForAudioClassification,) if is_mindspore_available() else (),
+        "default": {"model": {"ms": ("superb/wav2vec2-base-superb-ks", "372e048")}},
+        "type": "audio",
+    },
     "automatic-speech-recognition": {
         "impl": AutomaticSpeechRecognitionPipeline,
         "ms": (AutoModelForCTC, AutoModelForSpeechSeq2Seq) if is_mindspore_available() else (),

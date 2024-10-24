@@ -489,7 +489,7 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
             use_legacy_cache = True
             past_key_values = DynamicCache.from_legacy_cache(past_key_values)
             logger.warning_once(
-                "We detected that you are passing `past_key_values` as a tuple and this is deprecated and will be removed in v4.43. "
+                "We detected that you are passing `past_key_values` as a tuple and this is deprecated and will be removed. "
                 "Please use an appropriate `Cache` class (https://huggingface.co/docs/transformers/internal/generation_utils#transformers.Cache)"
             )
 
@@ -725,7 +725,6 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
 
         hidden_states = outputs[0]
         # Only compute necessary logits, and do not upcast them to float if we are not computing the loss
-        # TODO: remove the float() operation in v4.46
         logits = self.lm_head(hidden_states[:, -num_logits_to_keep:, :]).float()
 
         loss = None
