@@ -50,7 +50,9 @@ if is_datasets_available():
 
 if is_mindspore_available():
     import mindspore
+    from mindspore.dataset.audio import Resample
     from mindnlp.core import nn, ops, no_grad
+    from mindnlp.data.io.audio import read
     from mindnlp.engine import set_seed
 
     from mindnlp.transformers import (
@@ -1914,9 +1916,8 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
         audio = hf_hub_download("Narsil/asr_dummy", filename="hindi.ogg", repo_type="dataset")
 
-        from mindnlp.data.io.audio import read
         raw_audio, sr = read(audio)
-        input_speech = mindspore.dataset.audio.transforms.Resample(sr, 16_000)(raw_audio).asnumpy()
+        input_speech = Resample(sr, 16_000)(raw_audio)
 
         input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
 
@@ -1931,8 +1932,8 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
         audio = hf_hub_download("Narsil/asr_dummy", filename="hindi.ogg", repo_type="dataset")
 
-        raw_audio, sr = torchaudio.load(audio)
-        input_speech = torchaudio.transforms.Resample(sr, 16_000)(raw_audio).asnumpy()
+        raw_audio, sr = read(audio)
+        input_speech = Resample(sr, 16_000)(raw_audio)
 
         input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
 
@@ -1962,10 +1963,10 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
         audio = hf_hub_download("Narsil/asr_dummy", filename="hindi.ogg", repo_type="dataset")
 
-        raw_audio, sr = torchaudio.load(audio)
-        input_speech = torchaudio.transforms.Resample(sr, 16_000)(raw_audio)
+        raw_audio, sr = read(audio)
+        input_speech = Resample(sr, 16_000)(raw_audio)
 
-        input_speech = input_speech.tile((1, 10)).asnumpy()
+        input_speech = input_speech.tile((1, 10))
         input_features = processor(
             input_speech, return_tensors="ms", padding="longest", truncation=False, sampling_rate=16_000
         ).input_features

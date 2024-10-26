@@ -26,6 +26,7 @@ from mindnlp.utils.testing_utils import (
 )
 
 from .test_pipelines_common import ANY
+import mindspore
 
 
 @is_pipeline_test

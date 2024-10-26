@@ -50,10 +50,7 @@ def isfinite(input):
 
 # isin
 def isin(elements, test_elements):
-    elements = elements.asnumpy()
-    test_elements = test_elements.asnumpy()
-    mask = np.in1d(elements, test_elements).reshape(elements.shape)
-    return mindspore.tensor(mask)
+    return mindspore.numpy.isin(elements, test_elements)
 
 # isinf
 def isinf(input):

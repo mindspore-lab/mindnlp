@@ -3088,7 +3088,7 @@ class GenerationMixin:
             )
 
             unfinished_sequences = unfinished_sequences & ~stopping_criteria(input_ids, scores)
-            this_peer_finished = unfinished_sequences.max() == 0
+            this_peer_finished = ops.max(unfinished_sequences).item() == 0
             cur_len += 1
 
             if _record_time:

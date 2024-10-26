@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch Wav2Vec2 model."""
+"""Testing suite for the MindSpore Wav2Vec2 model."""
 
 import gc
 import math
@@ -23,6 +23,7 @@ import tempfile
 import traceback
 import unittest
 
+import mindspore.dataset.audio
 import numpy as np
 from datasets import load_dataset
 from pytest import mark
@@ -51,8 +52,10 @@ from ...test_modeling_common import (
 
 if is_mindspore_available():
     import mindspore
+    from mindspore.dataset.audio import Resample
+
     from mindnlp.core import ops, no_grad, nn
-    from mindnlp.core.nn import functional
+    from mindnlp.core.nn import functional as F
     from mindnlp.core.serialization import safe_save_file, save
 
     from mindnlp.transformers import (
@@ -74,7 +77,6 @@ if is_mindspore_available():
         _sample_negative_indices,
     )
 
-
 if is_pyctcdecode_available():
     import pyctcdecode.decoder
 
@@ -93,9 +95,8 @@ def _test_wav2vec2_with_lm_invalid_pool(in_queue, out_queue, timeout):
         )
         sample = next(iter(ds))
 
-        resampled_audio = torchaudio.functional.resample(
-            mindspore.tensor(sample["audio"]["array"]), 48_000, 16_000
-        ).numpy()
+        resample = Resample(48_000, 16_000)
+        resampled_audio = resample(sample["audio"]["array"])
 
         model = Wav2Vec2ForCTC.from_pretrained("patrickvonplaten/wav2vec2-large-xlsr-53-spanish-with-lm")
         processor = Wav2Vec2ProcessorWithLM.from_pretrained("patrickvonplaten/wav2vec2-large-xlsr-53-spanish-with-lm")
@@ -1591,9 +1592,8 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
         )
         sample = next(iter(ds))
 
-        resampled_audio = torchaudio.functional.resample(
-            mindspore.tensor(sample["audio"]["array"]), 48_000, 16_000
-        ).numpy()
+        resample = Resample(48_000, 16_000)
+        resampled_audio = resample(sample["audio"]["array"])
 
         model = Wav2Vec2ForCTC.from_pretrained("patrickvonplaten/wav2vec2-large-xlsr-53-spanish-with-lm")
         processor = Wav2Vec2ProcessorWithLM.from_pretrained("patrickvonplaten/wav2vec2-large-xlsr-53-spanish-with-lm")
@@ -1614,9 +1614,8 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
         )
         sample = next(iter(ds))
 
-        resampled_audio = torchaudio.functional.resample(
-            mindspore.tensor(sample["audio"]["array"]), 48_000, 16_000
-        ).numpy()
+        resample = Resample(48_000, 16_000)
+        resampled_audio = resample(sample["audio"]["array"])
 
         model = Wav2Vec2ForCTC.from_pretrained("patrickvonplaten/wav2vec2-large-xlsr-53-spanish-with-lm")
         processor = Wav2Vec2ProcessorWithLM.from_pretrained("patrickvonplaten/wav2vec2-large-xlsr-53-spanish-with-lm")
@@ -1714,9 +1713,8 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
             model.load_adapter(wav2vec2_lang)
             processor.tokenizer.set_target_lang(wav2vec2_lang)
 
-            resampled_audio = torchaudio.functional.resample(
-                mindspore.tensor(sample["audio"]["array"]), 48_000, 16_000
-            ).numpy()
+            resample = Resample(48_000, 16_000)
+            resampled_audio = resample(sample["audio"]["array"])
 
             inputs = processor(resampled_audio, sampling_rate=16_000, return_tensors="ms")
             input_values = inputs.input_values
