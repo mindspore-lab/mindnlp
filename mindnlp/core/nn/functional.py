@@ -461,19 +461,28 @@ def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode
         output_1d = output_2d.squeeze(2)
         return output_1d
 
+
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if use_pyboost():
         return mindspore.mint.nn.functional.group_norm(input, num_groups, weight, bias, eps)
+
     input_shape = input.shape
-    input = input.reshape(input_shape[0], num_groups, -1)
-    mean = ops.mean(input, axis=2, keep_dims=True)
-    var = ops.div(ops.sum(ops.square(ops.sub(input, mean)), 2, keepdim=True), (math.prod(input_shape[1:]) / num_groups))
-    std = ops.sqrt(var + eps)
-    input = ops.div(ops.sub(input, mean), std)
-    input = input.reshape(input_shape)
-    output = ops.add(input *weight.reshape((-1,) + (1,) * (len(input_shape) - 2)),
-                        bias.reshape((-1,) + (1,) * (len(input_shape) - 2)))
-    return output
+    N = input_shape[0]
+    C = input_shape[1]
+    input_reshaped = input.view(1, N * num_groups, -1 if N!=0 else 1)
+    outputs = batch_norm(input_reshaped, None, None, None, None, True, 0., eps)
+    out = outputs.view(input_shape)
+    affine_param_shape = [1] * input.ndim
+    affine_param_shape[1] = C
+    affine_param_shape = tuple(affine_param_shape)
+    if weight is not None and bias is not None:
+        out = bias.view(affine_param_shape).addcmul(out, weight.view(affine_param_shape), 1)
+    elif weight is not None:
+        out = out.mul(weight.view(affine_param_shape))
+    elif bias is not None:
+        out = out.add(bias.view(affine_param_shape))
+    return out
+
 
 def _in_projection(
     q,

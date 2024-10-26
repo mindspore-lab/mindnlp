@@ -52,7 +52,6 @@ if is_mindspore_available():
     import mindspore
     from mindnlp.core import ops
 
-
 # We can't use this mixin because it assumes TF support.
 # from .test_pipelines_common import CustomInputPipelineCommonMixin
 
@@ -991,6 +990,7 @@ class AutomaticSpeechRecognitionPipelineTests(unittest.TestCase):
 
         # batch size 1: copy the audio sample since pipeline consumes it
         output = pipe(sample.copy(), batch_size=1)
+        print(output)
         self.assertDictEqual(output, EXPECTED_OUTPUT)
 
         # batch size 2: input audio is chunked into smaller pieces so it's testing batching

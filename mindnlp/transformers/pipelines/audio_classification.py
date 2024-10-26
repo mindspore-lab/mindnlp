@@ -18,6 +18,7 @@ from typing import Union
 import numpy as np
 import requests
 
+from mindnlp.core import ops
 from ...utils import logging
 from .base import Pipeline
 
@@ -210,7 +211,8 @@ class AudioClassificationPipeline(Pipeline):
             probs = model_outputs.logits[0].sigmoid()
         else:
             probs = model_outputs.logits[0]
-        scores, ids = probs.topk(top_k)
+
+        scores, ids = ops.topk(probs, top_k)
 
         scores = scores.tolist()
         ids = ids.tolist()
