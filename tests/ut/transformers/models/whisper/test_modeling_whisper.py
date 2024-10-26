@@ -1898,8 +1898,8 @@ class WhisperModelIntegrationTests(unittest.TestCase):
         output_without_prompt = processor.decode(output_without_prompt[0])
         output_with_prompt = processor.decode(output_with_prompt[0])
 
-        self.assertEqual(output_without_prompt, expected_without_prompt)
         self.assertEqual(output_with_prompt, expected_with_prompt)
+        self.assertEqual(output_without_prompt, expected_without_prompt)
 
     @slow
     def test_language_detection(self):
