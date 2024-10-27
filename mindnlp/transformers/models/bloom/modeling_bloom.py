@@ -538,7 +538,7 @@ class BloomModel(BloomPreTrainedModel):
 
         # kept for BC (non `Cache` `past_key_values` inputs)
         use_legacy_cache = False
-        if use_cache and not isinstance(past_key_values, Cache) and not self.training:
+        if use_cache and not isinstance(past_key_values, Cache):
             use_legacy_cache = True
             past_key_values = DynamicCache.from_legacy_cache(past_key_values)
             logger.warning_once(

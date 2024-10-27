@@ -8,3 +8,5 @@ from .normal import Normal
 from .studentT import StudentT
 from .transformed_distribution import TransformedDistribution
 from .transforms import *
+from .relaxed_categorical import *
+from .relaxed_bernoulli import *

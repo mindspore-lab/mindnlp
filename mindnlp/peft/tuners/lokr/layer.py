@@ -335,7 +335,7 @@ the base layer's output. The class provides methods for creating, updating, merg
         """
         if adapter_name in self.lokr_w1:
             # nn.init.zeros_(self.lokr_w1[adapter_name])
-            self.lokr_w1[adapter_name].set_data(
+            self.lokr_w1[adapter_name].assign_value(
                 initializer(
                     Zero(),
                     self.lokr_w1[adapter_name].shape,
@@ -345,7 +345,7 @@ the base layer's output. The class provides methods for creating, updating, merg
 
         else:
             # nn.init.zeros_(self.lokr_w1_a[adapter_name])
-            self.lokr_w1_a[adapter_name].set_data(
+            self.lokr_w1_a[adapter_name].assign_value(
                 initializer(
                     Zero(),
                     self.lokr_w1[adapter_name].shape,
@@ -353,7 +353,7 @@ the base layer's output. The class provides methods for creating, updating, merg
                 )
             )
             # nn.init.kaiming_uniform_(self.lokr_w1_b[adapter_name], a=math.sqrt(5))
-            self.lokr_w1_b[adapter_name].set_data(
+            self.lokr_w1_b[adapter_name].assign_value(
                 initializer(
                     HeUniform(negative_slope=math.sqrt(5)),
                     self.lokr_w1_b[adapter_name].shape,
@@ -362,7 +362,7 @@ the base layer's output. The class provides methods for creating, updating, merg
             )
         if adapter_name in self.lokr_w2:
             # nn.init.kaiming_uniform_(self.lokr_w2[adapter_name], a=math.sqrt(5))
-            self.lokr_w2[adapter_name].set_data(
+            self.lokr_w2[adapter_name].assign_value(
                 initializer(
                     HeUniform(negative_slope=math.sqrt(5)),
                     self.lokr_w2[adapter_name].shape,
@@ -371,7 +371,7 @@ the base layer's output. The class provides methods for creating, updating, merg
             )
         else:
             # nn.init.kaiming_uniform_(self.lokr_w2_a[adapter_name], a=math.sqrt(5))
-            self.lokr_w2_a[adapter_name].set_data(
+            self.lokr_w2_a[adapter_name].assign_value(
                 initializer(
                     HeUniform(negative_slope=math.sqrt(5)),
                     self.lokr_w2_a[adapter_name].shape,
@@ -379,7 +379,7 @@ the base layer's output. The class provides methods for creating, updating, merg
                 )
             )
             # nn.init.kaiming_uniform_(self.lokr_w2_b[adapter_name], a=math.sqrt(5))
-            self.lokr_w2_b[adapter_name].set_data(
+            self.lokr_w2_b[adapter_name].assign_value(
                 initializer(
                     HeUniform(negative_slope=math.sqrt(5)),
                     self.lokr_w2_b[adapter_name].shape,
@@ -389,7 +389,7 @@ the base layer's output. The class provides methods for creating, updating, merg
 
         if adapter_name in self.lokr_t2:
             # nn.init.kaiming_uniform_(self.lokr_t2[adapter_name], a=math.sqrt(5))
-            self.lokr_t2[adapter_name].set_data(
+            self.lokr_t2[adapter_name].assign_value(
                 initializer(
                     HeUniform(negative_slope=math.sqrt(5)),
                     self.lokr_t2[adapter_name].shape,
@@ -423,7 +423,7 @@ initialization.
         """
         if adapter_name in self.lokr_w1:
             # nn.init.kaiming_uniform_(self.lokr_w1[adapter_name], a=math.sqrt(5))
-            self.lokr_w1[adapter_name].set_data(
+            self.lokr_w1[adapter_name].assign_value(
                 initializer(
                     HeUniform(negative_slope=math.sqrt(5)),
                     self.lokr_w1[adapter_name].shape,
@@ -432,7 +432,7 @@ initialization.
             )
         else:
             # nn.init.kaiming_uniform_(self.lokr_w1_a[adapter_name], a=math.sqrt(5))
-            self.lokr_w1_a[adapter_name].set_data(
+            self.lokr_w1_a[adapter_name].assign_value(
                 initializer(
                     HeUniform(negative_slope=math.sqrt(5)),
                     self.lokr_w1_a[adapter_name].shape,
@@ -440,7 +440,7 @@ initialization.
                 )
             )
             # nn.init.kaiming_uniform_(self.lokr_w1_b[adapter_name], a=math.sqrt(5))
-            self.lokr_w1_b[adapter_name].set_data(
+            self.lokr_w1_b[adapter_name].assign_value(
                 initializer(
                     HeUniform(negative_slope=math.sqrt(5)),
                     self.lokr_w1_b[adapter_name].shape,
@@ -450,7 +450,7 @@ initialization.
 
         if adapter_name in self.lokr_w2:
             # nn.init.kaiming_uniform_(self.lokr_w2[adapter_name], a=math.sqrt(5))
-            self.lokr_w2[adapter_name].set_data(
+            self.lokr_w2[adapter_name].assign_value(
                 initializer(
                     HeUniform(negative_slope=math.sqrt(5)),
                     self.lokr_w2[adapter_name].shape,
@@ -459,7 +459,7 @@ initialization.
             )
         else:
             # nn.init.kaiming_uniform_(self.lokr_w2_a[adapter_name], a=math.sqrt(5))
-            self.lokr_w2_a[adapter_name].set_data(
+            self.lokr_w2_a[adapter_name].assign_value(
                 initializer(
                     HeUniform(negative_slope=math.sqrt(5)),
                     self.lokr_w2_a[adapter_name].shape,
@@ -467,7 +467,7 @@ initialization.
                 )
             )
             # nn.init.kaiming_uniform_(self.lokr_w2_b[adapter_name], a=math.sqrt(5))
-            self.lokr_w2_b[adapter_name].set_data(
+            self.lokr_w2_b[adapter_name].assign_value(
                 initializer(
                     HeUniform(negative_slope=math.sqrt(5)),
                     self.lokr_w2_b[adapter_name].shape,
@@ -477,7 +477,7 @@ initialization.
 
         if adapter_name in self.lokr_t2:
             # nn.init.kaiming_uniform_(self.lokr_t2[adapter_name], a=math.sqrt(5))
-            self.lokr_t2[adapter_name].set_data(
+            self.lokr_t2[adapter_name].assign_value(
                 initializer(
                     HeUniform(negative_slope=math.sqrt(5)),
                     self.lokr_t2[adapter_name].shape,
@@ -525,7 +525,7 @@ initialization.
 
         # Determine shape of LoKr weights
         if isinstance(base_layer, nn.Linear):
-            in_dim, out_dim = base_layer.in_channels, base_layer.out_channels
+            in_dim, out_dim = base_layer.in_features, base_layer.out_features
 
             in_m, in_n = factorization(in_dim, decompose_factor)
             out_l, out_k = factorization(out_dim, decompose_factor)

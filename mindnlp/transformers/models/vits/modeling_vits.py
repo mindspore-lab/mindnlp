@@ -348,11 +348,10 @@ class VitsWaveNet(nn.Module):
         self.res_skip_layers = nn.ModuleList()
         self.dropout = nn.Dropout(config.wavenet_dropout)
 
-        weight_norm = nn.utils.weight_norm
-        # if hasattr(nn.utils.parametrizations, "weight_norm"):
-        #     weight_norm = nn.utils.parametrizations.weight_norm
-        # else:
-        #     weight_norm = nn.utils.weight_norm
+        if hasattr(nn.utils.parametrizations, "weight_norm"):
+            weight_norm = nn.utils.parametrizations.weight_norm
+        else:
+            weight_norm = nn.utils.weight_norm
 
         if config.speaker_embedding_size != 0:
             cond_layer = nn.Conv1d(config.speaker_embedding_size, 2 * config.hidden_size * num_layers, 1)
@@ -474,10 +473,14 @@ class HifiGanResidualBlock(nn.Module):
         return (kernel_size * dilation - dilation) // 2
 
     def apply_weight_norm(self):
+        weight_norm = nn.utils.weight_norm
+        if hasattr(nn.utils.parametrizations, "weight_norm"):
+            weight_norm = nn.utils.parametrizations.weight_norm
+
         for layer in self.convs1:
-            nn.utils.weight_norm(layer)
+            weight_norm(layer)
         for layer in self.convs2:
-            nn.utils.weight_norm(layer)
+            weight_norm(layer)
 
     def remove_weight_norm(self):
         for layer in self.convs1:

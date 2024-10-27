@@ -18,10 +18,9 @@ import warnings
 from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindspore.common.initializer import Uniform, HeNormal, initializer,Normal
 
 from mindnlp.core import nn, ops, no_grad
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import logging
 from ...activations import ACT2FN
 #from ...integrations.deepspeed import is_deepspeed_zero3_enabled
@@ -672,33 +671,30 @@ class Data2VecAudioPreTrainedModel(PreTrainedModel):
     base_model_prefix = "data2vec_audio"
     main_input_name = "input_values"
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, Data2VecAudioFeatureProjection):
-            k = math.sqrt(1 / cell.projection.in_features)
-            cell.projection.weight.set_data(initializer(Uniform(scale=k), cell.projection.weight.shape, cell.projection.weight.dtype))
-            cell.projection.bias.set_data(initializer(Uniform(scale=k), cell.projection.bias.shape, cell.projection.bias.dtype))
-        elif isinstance(cell, Data2VecAudioPositionalConvLayer):
-            cell.conv.bias.set_data(initializer(0, cell.conv.bias.shape, cell.conv.bias.dtype))
-        elif isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
+        if isinstance(module, Data2VecAudioFeatureProjection):
+            k = math.sqrt(1 / module.projection.in_features)
+            nn.init.uniform_(module.projection.weight, a=-k, b=k)
+            nn.init.uniform_(module.projection.bias, a=-k, b=k)
+        elif isinstance(module, Data2VecAudioPositionalConvLayer):
+            nn.init.constant_(module.conv.bias, 0)
+        elif isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
 
-            if hasattr(cell, "bias") and cell.bias is not None:
-                cell.bias.set_data(
-                    initializer("zeros", cell.bias.shape, cell.bias.dtype)
-                )
-            if hasattr(cell, "weight") and cell.weight is not None:
-                cell.weight.set_data(
-                    initializer("ones", cell.weight.shape, cell.weight.dtype)
-                )
-        elif isinstance(cell, nn.Conv1d):
-            cell.weight.set_data(initializer(HeNormal(), cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                k = math.sqrt(cell.groups / (cell.in_channels * cell.kernel_size[0]))
-                cell.bias.set_data(initializer(Uniform(scale=k), cell.bias.shape, cell.bias.dtype))
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, (nn.LayerNorm, nn.GroupNorm)):
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+            if module.weight is not None:
+                nn.init.ones_(module.weight.data)
+        elif isinstance(module, nn.Conv1d):
+            nn.init.kaiming_normal_(module.weight)
+
+            if module.bias is not None:
+                k = math.sqrt(module.groups / (module.in_channels * module.kernel_size[0]))
+                nn.init.uniform_(module.bias, a=-k, b=k)
 
     # Copied from transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2PreTrainedModel._get_feat_extract_output_lengths with
     def _get_feat_extract_output_lengths(
@@ -792,7 +788,8 @@ class Data2VecAudioModel(Data2VecAudioPreTrainedModel):
 
         # model only needs masking vector if mask prob is > 0.0
         if config.mask_time_prob > 0.0 or config.mask_feature_prob > 0.0:
-            self.masked_spec_embed= mindspore.Parameter(initializer(Uniform(), (config.hidden_size,), mindspore.float32),name ='masked_spec_embed')
+            self.masked_spec_embed= Parameter(ops.zeros(config.hidden_size))
+            nn.init.uniform_(self.masked_spec_embed)
         self.encoder = Data2VecAudioEncoder(config)
         self.adapter = Data2VecAudioAdapter(config) if config.add_adapter else None
         # Initialize weights and apply final processing
@@ -1010,8 +1007,7 @@ class Data2VecAudioForSequenceClassification(Data2VecAudioPreTrainedModel):
         self.data2vec_audio = Data2VecAudioModel(config)
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
-            self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers)
-            #self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers,'layer_weights')
+            self.layer_weights = Parameter(ops.ones(num_layers) / num_layers)
         self.projector = nn.Linear(config.hidden_size, config.classifier_proj_size)
         self.classifier = nn.Linear(config.classifier_proj_size, config.num_labels)
         # Initialize weights and apply final processing
@@ -1118,7 +1114,7 @@ class Data2VecAudioForAudioFrameClassification(Data2VecAudioPreTrainedModel):
         self.data2vec_audio = Data2VecAudioModel(config)
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
-            self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers,'layer_weights')
+            self.layer_weights = Parameter(ops.ones(num_layers) / num_layers)
         self.classifier = nn.Linear(config.hidden_size, config.num_labels)
         self.num_labels = config.num_labels
         self.init_weights()
@@ -1210,7 +1206,7 @@ class AMSoftmaxLoss(nn.Module):
         self.scale = scale
         self.margin = margin
         self.num_labels = num_labels
-        self.weight = mindspore.Parameter(ops.randn(input_dim, num_labels), requires_grad=True,name ='weight')
+        self.weight = Parameter(ops.randn(input_dim, num_labels), requires_grad=True)
         #self.loss = F.cross_entropy()
 
 
@@ -1265,7 +1261,7 @@ class Data2VecAudioForXVector(Data2VecAudioPreTrainedModel):
         self.data2vec_audio = Data2VecAudioModel(config)
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
-            self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers,name = 'layer_weights')
+            self.layer_weights = Parameter(ops.ones(num_layers) / num_layers)
         self.projector = nn.Linear(config.hidden_size, config.tdnn_dim[0])
         tdnn_layers = [TDNNLayer(config, i) for i in range(len(config.tdnn_dim))]
         self.tdnn = nn.ModuleList(tdnn_layers)

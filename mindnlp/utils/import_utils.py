@@ -95,6 +95,8 @@ _sudachipy_available, _sudachipy_version = _is_package_available("sudachipy", re
 _librosa_available = _is_package_available("librosa")
 _scipy_available = _is_package_available("scipy")
 _sacremoses_available = _is_package_available("sacremoses")
+_torchaudio_available = _is_package_available("pykaldi")
+_kenlm_available = _is_package_available("kenlm")
 
 _pretty_midi_available = importlib.util.find_spec("pretty_midi") is not None
 try:
@@ -717,3 +719,11 @@ def direct_transformers_import(path: str, file="__init__.py") -> ModuleType:
 
 def is_soundfile_availble():
     return _soundfile_available
+
+
+def is_speech_available():
+    return _torchaudio_available
+
+
+def is_kenlm_available():
+    return _kenlm_available

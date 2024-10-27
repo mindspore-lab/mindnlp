@@ -26,13 +26,13 @@ from threading import Thread
 
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
-from mindspore.common.initializer import initializer, Normal
+from mindspore import Tensor
 from mindspore import dtype as mstype
 from mindnlp.utils import logging
 
 from mindnlp.configs import use_pyboost
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from .configuration_baichuan import BaiChuanConfig
 from ...generation.utils import GenerationConfig
@@ -280,9 +280,7 @@ def _make_causal_mask(
     """
     bsz, tgt_len = input_ids_shape
     mask = ops.full(
-        (tgt_len, tgt_len),
-        Tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min, dtype),
-    )
+        (tgt_len, tgt_len), float(ops.finfo(dtype).min), dtype)
     mask_cond = ops.arange(mask.shape[-1])
     mask = ops.masked_fill(mask, mask_cond < (mask_cond + 1).view(mask.shape[-1], 1), 0.)
     mask = mask.to(dtype)
@@ -311,8 +309,7 @@ def _expand_mask(mask: Tensor, dtype: mstype, tgt_len: Optional[int] = None):
 
     return inverted_mask.masked_fill(
         inverted_mask.to(mindspore.bool_),
-        mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min),
-    )
+        ops.finfo(dtype).min)
 
 def _get_interleave(n):
     """
@@ -336,7 +333,8 @@ def _get_interleave(n):
         return _get_interleave_power_of_2(n)
     closest_power_of_2 = 2 ** math.floor(math.log2(n))
     return _get_interleave_power_of_2(closest_power_of_2) + \
-            _get_interleave(2 * closest_power_of_2)[0::2][:n - closest_power_of_2]
+           _get_interleave(2 * closest_power_of_2)[0::2][:n - closest_power_of_2]
+
 
 def _fill_with_neg_inf(t):
     """FP16-compatible function that fills a tensor with -inf."""
@@ -373,7 +371,7 @@ class RMSNorm(nn.Module):
         RMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
-        self.weight = Parameter(ops.ones(hidden_size), 'weight')
+        self.weight = Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
@@ -491,8 +489,9 @@ class RotaryEmbedding(nn.Module):
 
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
-    x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2:]
+    # x1 = x[..., : x.shape[-1] // 2]
+    # x2 = x[..., x.shape[-1] // 2:]
+    x1, x2 = ops.split(x, x.shape[-1] // 2, dim=-1)
     return ops.cat((-x2, x1), dim=-1)
 
 
@@ -858,7 +857,7 @@ class BaiChuanAttention(nn.Module):
         bsz, q_len, _ = hidden_states.shape
 
         proj = self.W_pack(hidden_states)
-        proj = proj.unflatten(-1, (3, self.hidden_size)).unsqueeze(0).swapaxes(0, -2).squeeze(-2)
+        proj = ops.unflatten(proj, -1, (3, self.hidden_size)).unsqueeze(0).swapaxes(0, -2).squeeze(-2)
         query_states = proj[0].view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
         key_states = proj[1].view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
         value_states = proj[2].view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
@@ -1109,32 +1108,16 @@ class BaiChuanPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["DecoderLayer", "BaiChuanLayer"]
     _keys_to_ignore_on_load_unexpected = [r"decoder\.version"]
 
-    def _init_weights(self, cell):
-        """
-        Initializes the weights for the given cell.
-
-        Args:
-            self (BaiChuanPreTrainedModel): The instance of the BaiChuanPreTrainedModel class.
-            cell: The cell for which the weights need to be initialized.
-
-        Returns:
-            None.
-
-        Raises:
-            None.
-        """
+    def _init_weights(self, module):
         std = self.config.initializer_range
-        if isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(
-                sigma=std, mean=0.0), cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, std, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
 
 
 class BaiChuan7bModel(BaiChuanPreTrainedModel):

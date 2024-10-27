@@ -19,8 +19,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import Tensor, Parameter
-from mindspore.common.initializer import initializer, Uniform, HeUniform, XavierUniform, Normal
+from mindspore import Tensor
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
@@ -807,29 +806,28 @@ class DetrPreTrainedModel(PreTrainedModel):
     main_input_name = "pixel_values"
     _no_split_modules = [r"DetrConvEncoder", r"DetrEncoderLayer", r"DetrDecoderLayer"]
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         std = self.config.init_std
         xavier_std = self.config.init_xavier_std
 
-        if isinstance(cell, DetrMHAttentionMap):
-            cell.k_linear.bias.set_data(initializer('zeros', cell.k_linear.bias.shape, cell.k_linear.bias.dtype))
-            cell.q_linear.bias.set_data(initializer('zeros', cell.q_linear.bias.shape, cell.q_linear.bias.dtype))
-            cell.k_linear.weight.set_data(initializer(XavierUniform(xavier_std), cell.k_linear.weight.shape, cell.k_linear.weight.dtype))
-            cell.q_linear.weight.set_data(initializer(XavierUniform(xavier_std), cell.q_linear.weight.shape, cell.q_linear.weight.dtype))
-        elif isinstance(cell, DetrLearnedPositionEmbedding):
-            cell.row_embeddings.weight.set_data(initializer(Uniform(), cell.row_embeddings.weight.shape, cell.row_embeddings.weight.dtype))
-            cell.column_embeddings.weight.set_data(initializer(Uniform(), cell.column_embeddings.weight.shape, cell.column_embeddings.weight.dtype))
-        if isinstance(cell, (nn.Linear, nn.Conv2d, nn.BatchNorm2d)):
+        if isinstance(module, DetrMHAttentionMap):
+            nn.init.zeros_(module.k_linear.bias)
+            nn.init.zeros_(module.q_linear.bias)
+            nn.init.xavier_uniform_(module.k_linear.weight, gain=xavier_std)
+            nn.init.xavier_uniform_(module.q_linear.weight, gain=xavier_std)
+        elif isinstance(module, DetrLearnedPositionEmbedding):
+            nn.init.uniform_(module.row_embeddings.weight)
+            nn.init.uniform_(module.column_embeddings.weight)
+        if isinstance(module, (nn.Linear, nn.Conv2d, nn.BatchNorm2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(sigma=std), cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(initializer(Normal(sigma=std), cell.weight.shape, cell.weight.dtype))
-            if cell.padding_idx is not None:
-                cell.weight[cell.padding_idx] = 0.0
-
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
 
 class DetrEncoder(DetrPreTrainedModel):
     """
@@ -1704,8 +1702,8 @@ class DetrMaskHeadSmallConv(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                m.weight.set_data(Parameter(initializer(HeUniform(), m.weight.shape, m.weight.dtype)))
-                m.bias.set_data(Parameter(initializer('zeros', m.bias.shape, m.bias.dtype)))
+                nn.init.kaiming_uniform_(m.weight, a=1)
+                nn.init.constant_(m.bias, 0)
 
     def forward(self, x: Tensor, bbox_mask: Tensor, fpns: List[Tensor]):
         # here we concatenate x, the projected feature map, of shape (batch_size, d_model, heigth/32, width/32) with

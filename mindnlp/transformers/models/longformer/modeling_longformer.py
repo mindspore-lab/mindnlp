@@ -21,10 +21,11 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops, no_grad
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
@@ -882,7 +883,8 @@ class LongformerSelfAttention(nn.Module):
             chunk_size = list(hidden_states.shape)
             chunk_size[1] = chunk_size[1] * 2 - 1
 
-            chunk_stride = list(hidden_states.stride())
+            chunk_stride = list(hidden_states.strides)
+            chunk_stride = [i // 4 for i in chunk_stride]
             chunk_stride[1] = chunk_stride[1] // 2
             return ops.as_strided(hidden_states, size=chunk_size, stride=chunk_stride)
 
@@ -1039,7 +1041,8 @@ class LongformerSelfAttention(nn.Module):
 
         # chunk padded_value into chunks of size 3 window overlap and an overlap of size window overlap
         chunked_value_size = (batch_size * num_heads, chunks_count + 1, 3 * window_overlap, head_dim)
-        chunked_value_stride = padded_value.stride()
+        chunked_value_stride = padded_value.strides
+        chunked_value_stride = [i // 4 for i in chunked_value_stride]
         chunked_value_stride = (
             chunked_value_stride[0],
             window_overlap * chunked_value_stride[1],
@@ -2049,7 +2052,7 @@ class LongformerLMHead(nn.Module):
         self.layer_norm = nn.LayerNorm([config.hidden_size], eps=config.layer_norm_eps)
 
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
-        self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
+        self.bias = Parameter(ops.zeros(config.vocab_size))
         self.decoder.bias = self.bias
 
     def forward(self, features, **kwargs):
@@ -2106,19 +2109,19 @@ class LongformerPreTrainedModel(PreTrainedModel):
         if isinstance(cell, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+            cell.weight.assign_value(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
 
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
 class LongformerModel(LongformerPreTrainedModel):

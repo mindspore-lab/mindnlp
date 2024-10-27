@@ -84,7 +84,7 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
         causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
         # causal_mask = causal_mask[None, None, :, :].broadcast_to((batch_size, 1, -1, -1))
         # speed up by unsqueeze
-        causal_mask = causal_mask.view(1, 1, *causal_mask.shape).broadcast_to((batch_size, 1, -1, -1))
+        causal_mask = ops.broadcast_to(causal_mask.view(1, 1, *causal_mask.shape), (batch_size, 1, -1, -1))
         if attention_mask is not None:
             if SUPPORT_VIEW:
                 causal_mask = causal_mask.contiguous()  # copy to contiguous memory for in-place edit
@@ -150,7 +150,7 @@ class LlamaRotaryEmbedding(nn.Module):
         if config is None:
             logger.warning_once(
                 "`LlamaRotaryEmbedding` can now be fully parameterized by passing the model config through the "
-                "`config` argument. All other arguments will be removed in v4.45"
+                "`config` argument. All other arguments will be removed"
             )
             self.rope_kwargs = {
                 "rope_type": rope_type,
@@ -202,7 +202,7 @@ class LlamaRotaryEmbedding(nn.Module):
             self._dynamic_frequency_update(position_ids)
 
         # Core RoPE block
-        inv_freq_expanded = self.inv_freq.view(1, -1, 1).float().broadcast_to((position_ids.shape[0], -1, 1))
+        inv_freq_expanded = ops.broadcast_to(self.inv_freq.view(1, -1, 1).float(), (position_ids.shape[0], -1, 1))
         position_ids_expanded = ops.unsqueeze(position_ids, 1).float()
         # Force float32 (see https://github.com/huggingface/transformers/pull/29285)
         freqs = ops.transpose(ops.matmul(inv_freq_expanded.float(), position_ids_expanded.float()), 1, 2)
@@ -291,9 +291,9 @@ class LlamaMLP(nn.Module):
     def forward(self, x):
         if self.config.pretraining_tp > 1:
             slice = self.intermediate_size // self.config.pretraining_tp
-            gate_proj_slices = self.gate_proj.weight.split(slice, dim=0)
-            up_proj_slices = self.up_proj.weight.split(slice, dim=0)
-            down_proj_slices = self.down_proj.weight.split(slice, dim=1)
+            gate_proj_slices = ops.split(self.gate_proj.weight, slice, dim=0)
+            up_proj_slices = ops.split(self.up_proj.weight, slice, dim=0)
+            down_proj_slices = ops.split(self.down_proj.weight, slice, dim=1)
 
             gate_proj = ops.cat(
                 [F.linear(x, gate_proj_slices[i]) for i in range(self.config.pretraining_tp)], dim=-1
@@ -320,7 +320,7 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     if n_rep == 1:
         return hidden_states
     # hidden_states = hidden_states[:, :, None, :, :].broadcast_to((batch, num_key_value_heads, n_rep, slen, head_dim))
-    hidden_states = ops.unsqueeze(hidden_states, 2).broadcast_to((batch, num_key_value_heads, n_rep, slen, head_dim))
+    hidden_states = ops.broadcast_to(ops.unsqueeze(hidden_states, 2), (batch, num_key_value_heads, n_rep, slen, head_dim))
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
@@ -359,7 +359,6 @@ class LlamaAttention(nn.Module):
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.o_proj = nn.Linear(self.hidden_size, self.hidden_size, bias=config.attention_bias)
 
-        # TODO (joao): remove in v4.45 (RoPE is computed in the model, not in the decoder layers)
         self.rotary_emb = LlamaRotaryEmbedding(config=self.config)
 
     def forward(
@@ -371,18 +370,19 @@ class LlamaAttention(nn.Module):
         output_attentions: bool = False,
         use_cache: bool = False,
         cache_position: Optional[mindspore.Tensor] = None,
-        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,  # will become mandatory in v4.45
+        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         bsz, q_len, _ = hidden_states.shape
 
         if self.config.pretraining_tp > 1:
             key_value_slicing = (self.num_key_value_heads * self.head_dim) // self.config.pretraining_tp
-            query_slices = self.q_proj.weight.split(
+            query_slices = ops.split(
+                self.q_proj.weight,
                 (self.num_heads * self.head_dim) // self.config.pretraining_tp, dim=0
             )
-            key_slices = self.k_proj.weight.split(key_value_slicing, dim=0)
-            value_slices = self.v_proj.weight.split(key_value_slicing, dim=0)
+            key_slices = ops.split(self.k_proj.weight, key_value_slicing, dim=0)
+            value_slices = ops.split(self.v_proj.weight, key_value_slicing, dim=0)
 
             query_states = [F.linear(hidden_states, query_slices[i]) for i in range(self.config.pretraining_tp)]
             query_states = ops.cat(query_states, dim=-1)
@@ -406,8 +406,7 @@ class LlamaAttention(nn.Module):
             logger.warning_once(
                 "The attention layers in this model are transitioning from computing the RoPE embeddings internally "
                 "through `position_ids` (2D tensor with the indexes of the tokens), to using externally computed "
-                "`position_embeddings` (Tuple of tensors, containing cos and sin). In v4.45 `position_ids` will be "
-                "removed and `position_embeddings` will be mandatory."
+                "`position_embeddings` (Tuple of tensors, containing cos and sin)."
             )
             cos, sin = self.rotary_emb(value_states, position_ids)
         else:
@@ -445,8 +444,8 @@ class LlamaAttention(nn.Module):
         attn_output = attn_output.reshape(bsz, q_len, -1)
 
         if self.config.pretraining_tp > 1:
-            attn_output = attn_output.split(self.hidden_size // self.config.pretraining_tp, dim=2)
-            o_proj_slices = self.o_proj.weight.split(self.hidden_size // self.config.pretraining_tp, dim=1)
+            attn_output = ops.split(attn_output, self.hidden_size // self.config.pretraining_tp, dim=2)
+            o_proj_slices = ops.split(self.o_proj.weight, self.hidden_size // self.config.pretraining_tp, dim=1)
             attn_output = sum(F.linear(attn_output[i], o_proj_slices[i]) for i in range(self.config.pretraining_tp))
         else:
             attn_output = self.o_proj(attn_output)
@@ -482,7 +481,7 @@ class LlamaDecoderLayer(nn.Module):
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = False,
         cache_position: Optional[mindspore.Tensor] = None,
-        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,  # will become mandatory in v4.45
+        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """
@@ -615,10 +614,11 @@ class LlamaModel(LlamaPreTrainedModel):
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        if (input_ids is None) ^ (inputs_embeds is not None):
-            raise ValueError(
-                "You cannot specify both input_ids and inputs_embeds at the same time, and must specify either one"
-            )
+        if not self.skip_syntax:
+            if (input_ids is None) ^ (inputs_embeds is not None):
+                raise ValueError(
+                    "You cannot specify both input_ids and inputs_embeds at the same time, and must specify either one"
+                )
 
         if self.gradient_checkpointing and self.training and use_cache:
             logger.warning_once(
@@ -661,7 +661,7 @@ class LlamaModel(LlamaPreTrainedModel):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
 
-        for decoder_layer in self.layers:
+        for decoder_layer in self.layers._modules.values():
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
@@ -910,7 +910,8 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             position_ids = ops.masked_fill(position_ids, attention_mask == 0, 1)
             if past_key_values:
                 # position_ids = position_ids[:, -input_ids.shape[1] :]
-                position_ids = ops.narrow(position_ids, 1, position_ids.shape[1] - input_ids.shape[1], input_ids.shape[1])
+                if input_ids.shape[1] != 0:
+                    position_ids = ops.narrow(position_ids, 1, position_ids.shape[1] - input_ids.shape[1], input_ids.shape[1])
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
         if inputs_embeds is not None and cache_position[0] == 0:
             model_inputs = {"inputs_embeds": inputs_embeds}

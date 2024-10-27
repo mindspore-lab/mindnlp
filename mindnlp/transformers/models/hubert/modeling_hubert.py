@@ -259,7 +259,8 @@ class HubertPositionalConvEmbedding(nn.Module):
         )
 
         weight_norm = nn.utils.weight_norm
-
+        if hasattr(nn.utils.parametrizations, "weight_norm"):
+            weight_norm = nn.utils.parametrizations.weight_norm
         self.conv = weight_norm(self.conv, name="weight", dim=2)
 
         self.padding = HubertSamePadLayer(config.num_conv_pos_embeddings)
@@ -850,7 +851,7 @@ class HubertPreTrainedModel(PreTrainedModel):
             nn.init.zeros_(module.bias)
             nn.init.ones_(module.weight)
         elif isinstance(module, nn.Conv1d):
-            nn.init.kaiming_normal_(module.weight.data)
+            nn.init.kaiming_normal_(module.weight)
         if isinstance(module, (nn.Linear, nn.Conv1d)) and module.bias is not None:
             nn.init.zeros_(module.bias)
 

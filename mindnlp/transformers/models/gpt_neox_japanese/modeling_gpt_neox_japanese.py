@@ -18,10 +18,9 @@ from typing import Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindspore.common.initializer import Normal, initializer
 
 from mindnlp.core import nn, ops, get_default_dtype
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -46,35 +45,22 @@ class GPTNeoXJapanesePreTrainedModel(PreTrainedModel):
     _no_split_modules = ["GPTNeoXJapaneseLayer"]
     _skip_keys_device_placement = "past_key_values"
 
-    def _init_weights(self, cell):
+    _supports_cache_class = True
+    _supports_static_cache = True
+
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, nn.Linear):
-            cell.weight.set_data(
-                initializer(
-                    Normal(self.config.initializer_range),
-                    shape=cell.weight.shape,
-                    dtype=cell.weight.dtype,
-                )
-            )
-            if cell.bias is not None:
-                cell.bias.set_data(
-                    initializer("zeros", cell.bias.shape, cell.bias.dtype)
-                )
-        elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(
-                initializer(
-                    Normal(self.config.initializer_range),
-                    cell.weight.shape,
-                    cell.weight.dtype,
-                )
-            )
-            if cell.padding_idx:
-                cell.weight[cell.padding_idx] = 0
-        elif isinstance(cell, nn.LayerNorm):
-            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(
-                initializer("ones", cell.weight.shape, cell.weight.dtype)
-            )
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
 
 
 class GPTNeoXJapaneseAttention(nn.Module):
@@ -103,7 +89,7 @@ class GPTNeoXJapaneseAttention(nn.Module):
         # Activate bias if the last layer
         self.use_bias = use_bias
         self.dense_bias = (
-            mindspore.Parameter(ops.zeros(config.hidden_size)) if use_bias else None
+            Parameter(ops.zeros(config.hidden_size)) if use_bias else None
         )
 
     def forward(

@@ -18,9 +18,9 @@ import math
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import Normal
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 
 from ...activations import ACT2FN, get_activation
@@ -152,8 +152,8 @@ class SeparableConv1D(nn.Module):
         self.pointwise = nn.Conv1d(input_filters, output_filters, kernel_size=1, bias=False)
         self.bias = nn.Parameter(ops.zeros(output_filters, 1))
 
-        self.depthwise.weight.set_data(ops.normal(0., config.initializer_range, self.depthwise.weight.shape))
-        self.pointwise.weight.set_data(ops.normal(0., config.initializer_range, self.pointwise.weight.shape))
+        self.depthwise.weight.assign_value(ops.normal(0., config.initializer_range, self.depthwise.weight.shape))
+        self.pointwise.weight.assign_value(ops.normal(0., config.initializer_range, self.pointwise.weight.shape))
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         x = self.depthwise(hidden_states)

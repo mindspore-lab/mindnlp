@@ -23,10 +23,9 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import mindspore as ms
-from mindspore import Parameter
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, meshgrid, prune_linear_layer
@@ -154,10 +153,10 @@ class DonutSwinEmbeddings(nn.Module):
         self.patch_embeddings = DonutSwinPatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
         self.patch_grid = self.patch_embeddings.grid_size
-        self.mask_token = Parameter(ops.zeros(1, 1, config.embed_dim),'mask_token') if use_mask_token else None
+        self.mask_token = Parameter(ops.zeros(1, 1, config.embed_dim)) if use_mask_token else None
 
         if config.use_absolute_embeddings:
-            self.position_embeddings = Parameter(ops.zeros(1, num_patches + 1, config.embed_dim),'position_embeddings')
+            self.position_embeddings = Parameter(ops.zeros(1, num_patches + 1, config.embed_dim))
         else:
             self.position_embeddings = None
 
@@ -378,7 +377,6 @@ class DonutSwinSelfAttention(nn.Module):
 
         self.relative_position_bias_table = Parameter(
             ops.zeros((2 * self.window_size[0] - 1) * (2 * self.window_size[1] - 1), num_heads),
-            'relative_position_bias_table'
         )
 
         # get pair-wise relative position index for each token inside the window
@@ -844,54 +842,17 @@ class DonutSwinPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["DonutSwinStage"]
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv2d)):
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
-                                             cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-
-
-SWIN_START_DOCSTRING = r"""
-    This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) sub-class. Use
-    it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
-    behavior.
-
-    Parameters:
-        config ([`DonutSwinConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-SWIN_INPUTS_DOCSTRING = r"""
-    Args:
-        pixel_values (`torch.FloatTensor` of shape `(batch_size, num_channels, height, width)`):
-            Pixel values. Pixel values can be obtained using [`AutoImageProcessor`]. See
-            [`DonutImageProcessor.__call__`] for details.
-        head_mask (`torch.FloatTensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-            Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
-
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        interpolate_pos_encoding (`bool`, *optional*, defaults to `False`):
-            Whether to interpolate the pre-trained position encodings.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
-
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
 
 
 class DonutSwinModel(DonutSwinPreTrainedModel):

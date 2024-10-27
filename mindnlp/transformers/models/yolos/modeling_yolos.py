@@ -21,10 +21,11 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import (
     ModelOutput,
@@ -112,12 +113,12 @@ class YolosEmbeddings(nn.Module):
     def __init__(self, config: YolosConfig) -> None:
         super().__init__()
 
-        self.cls_token = Parameter(ops.zeros(1, 1, config.hidden_size), 'cls_token')
-        self.detection_tokens = Parameter(ops.zeros(1, config.num_detection_tokens, config.hidden_size), 'detection_tokens')
+        self.cls_token = Parameter(ops.zeros(1, 1, config.hidden_size))
+        self.detection_tokens = Parameter(ops.zeros(1, config.num_detection_tokens, config.hidden_size))
         self.patch_embeddings = YolosPatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
         self.position_embeddings = Parameter(
-            ops.zeros(1, num_patches + config.num_detection_tokens + 1, config.hidden_size), 'position_embeddings'
+            ops.zeros(1, num_patches + config.num_detection_tokens + 1, config.hidden_size)
         )
 
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
@@ -452,7 +453,6 @@ class YolosEncoder(nn.Module):
                     seq_length,
                     config.hidden_size,
                 ),
-                'mid_position_embeddings'
             )
             if config.use_mid_position_embeddings
             else None
@@ -529,14 +529,14 @@ class YolosPreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
+            cell.weight.assign_value(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
                                              cell.weight.shape,cell.weight.dtype))
 
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
 
 
 class YolosModel(YolosPreTrainedModel):

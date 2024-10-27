@@ -45,13 +45,6 @@ from ..cache_utils import (
     StaticCache,
 )
 from ..modeling_outputs import CausalLMOutputWithPast, Seq2SeqLMOutput
-from ..models.auto import (
-    MODEL_FOR_CAUSAL_IMAGE_MODELING_MAPPING,
-    MODEL_FOR_CAUSAL_LM_MAPPING,
-    MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING,
-    MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING,
-    MODEL_FOR_VISION_2_SEQ_MAPPING,
-)
 from ..tokenization_utils import ExtensionsTrie
 from ...utils import (
     ModelOutput,
@@ -1135,25 +1128,17 @@ class GenerationMixin:
         right class to use.
         """
         if not self.can_generate():
-            generate_compatible_mappings = [
-                MODEL_FOR_CAUSAL_LM_MAPPING,
-                MODEL_FOR_CAUSAL_IMAGE_MODELING_MAPPING,
-                MODEL_FOR_VISION_2_SEQ_MAPPING,
-                MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING,
-                MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING,
+            terminations_with_generation_support = [
+                "ForCausalLM",
+                "ForConditionalGeneration",
+                "ForSpeechSeq2Seq",
+                "ForVision2Seq",
             ]
-            generate_compatible_classes = set()
-            for model_mapping in generate_compatible_mappings:
-                supported_models = model_mapping.get(type(self.config), default=None)
-                if supported_models is not None:
-                    generate_compatible_classes.add(supported_models.__name__)
-            exception_message = (
+            raise TypeError(
                 f"The current model class ({self.__class__.__name__}) is not compatible with `.generate()`, as "
-                "it doesn't have a language model head."
+                "it doesn't have a language model head. Classes that support generation often end in one of these "
+                f"names: {terminations_with_generation_support}."
             )
-            if generate_compatible_classes:
-                exception_message += f" Please use one of the following classes instead: {generate_compatible_classes}"
-            raise TypeError(exception_message)
 
     def _validate_assistant(self, assistant_model):
         if assistant_model is None:
@@ -1366,7 +1351,7 @@ class GenerationMixin:
                         " https://huggingface.co/docs/transformers/generation_strategies#default-text-generation-configuration )"
                     )
                     self.generation_config = new_generation_config
-            using_model_generation_config = True
+
             generation_config = self.generation_config
             using_model_generation_config = True
 
@@ -1473,6 +1458,130 @@ class GenerationMixin:
         """
         return self._supports_cache_class and "jamba" not in self.__class__.__name__.lower()
 
+    def _prepare_cache_for_generation(
+        self,
+        generation_config: GenerationConfig,
+        model_kwargs: Dict,
+        assistant_model: "PreTrainedModel",
+        batch_size: int,
+        max_cache_length: int,
+    ) -> bool:
+        """
+        Prepares the cache for generation (if applicable), given `generate`'s paramaterization. If a cache is
+        instantiated, writes it to `model_kwargs`, under the name expected by the model.
+        """
+
+        cache_name = "past_key_values" if "mamba" not in self.__class__.__name__.lower() else "cache_params"
+        requires_cross_attention_cache = (
+            self.config.is_encoder_decoder or model_kwargs.get("encoder_outputs") is not None
+        )
+
+        # Quick escape route 1: if the user specifies a cache, we only need to:
+        # a) check for conflicting `generate` arguments
+        # b) convert to the new cache format (if the user passes a legacy cache and model supports it)
+        user_defined_cache = model_kwargs.get(cache_name)
+        if user_defined_cache is not None:
+            if generation_config.cache_implementation is not None:
+                raise ValueError(
+                    f"Passing both `cache_implementation` (used to initialize certain caches) and `{cache_name}` (a "
+                    "Cache object) is unsupported. Please use only one of the two."
+                )
+            if isinstance(user_defined_cache, tuple) and self._supports_default_dynamic_cache():
+                model_kwargs[cache_name] = (
+                    DynamicCache.from_legacy_cache(user_defined_cache)
+                    if not requires_cross_attention_cache
+                    else EncoderDecoderCache.from_legacy_cache(user_defined_cache)
+                )
+            return
+
+        # Quick escape route 2: if the user specifies no cache is to be used. (conflicting arguments are handled in
+        # `generation_config.validate()`)
+        if generation_config.use_cache is False:
+            return
+
+        # Quick escape route 3: model that only supports legacy caches = nothing to prepare
+        if not self._supports_default_dynamic_cache():
+            if generation_config.cache_implementation is not None:
+                warnings.warn(
+                    "This model does not support `Cache` instances, it only supports the legacy cache format (tuple "
+                    f"of tuples). `cache_implementation` (set to {generation_config.cache_implementation}) will be "
+                    "ignored.",
+                    UserWarning,
+                )
+            return
+
+        # Otherwise we NEED to prepare a cache, based on `generation_config.cache_implementation`
+
+        # TODO(joao): support static caches in assisted generation. assisted generation needs to roll back caches,
+        # which is only supported in dynamic caches atm
+        if assistant_model is not None and generation_config.cache_implementation is not None:
+            logger.warning_once(
+                "An assistant model is provided, using a dynamic cache instead of a cache of type="
+                f"'{generation_config.cache_implementation}'."
+            )
+            generation_config.cache_implementation = None
+
+        if generation_config.cache_implementation is not None:
+            if generation_config.cache_implementation in NEED_SETUP_CACHE_CLASSES_MAPPING:
+                if generation_config.cache_implementation == "static" and not self._supports_static_cache:
+                    raise ValueError(
+                        "This model does not support `cache_implementation='static'`. Please check the following "
+                        "issue: https://github.com/huggingface/transformers/issues/28981"
+                    )
+                model_kwargs[cache_name] = self._get_cache(
+                    cache_implementation=generation_config.cache_implementation,
+                    max_batch_size=max(generation_config.num_beams, generation_config.num_return_sequences) * batch_size,
+                    max_cache_len=max_cache_length,
+                    model_kwargs=model_kwargs,
+                )
+            elif generation_config.cache_implementation == "quantized":
+                pass
+            #     if not self._supports_quantized_cache:
+            #         raise ValueError(
+            #             "This model does not support the quantized cache. If you want your model to support quantized "
+            #             "cache, please open an issue and tag @zucchini-nlp."
+            #         )
+
+            #     cache_config = (
+            #         generation_config.cache_config
+            #         if generation_config.cache_config is not None
+            #         else QuantizedCacheConfig()
+            #     )
+            #     cache_class = QUANT_BACKEND_CLASSES_MAPPING[cache_config.backend]
+
+            #     if cache_config.backend == "quanto" and not is_quanto_available():
+            #         raise ImportError(
+            #             "You need to install `quanto` in order to use KV cache quantization with quanto backend. "
+            #             "Please install it via  with `pip install quanto`"
+            #         )
+            #     elif cache_config.backend == "HQQ" and not is_hqq_available():
+            #         raise ImportError(
+            #             "You need to install `HQQ` in order to use KV cache quantization with HQQ backend. "
+            #             "Please install it via  with `pip install hqq`"
+            #         )
+
+            #     model_kwargs[cache_name] = cache_class(cache_config)
+            # elif generation_config.cache_implementation == "offloaded":
+            #     model_kwargs[cache_name] = OffloadedCache()
+
+        # Use DynamicCache() instance by default. This will avoid back and forth from legacy format that
+        # keeps copying the cache thus using much more memory
+        else:
+            num_hidden_layers = self.config.get_text_config().num_hidden_layers
+            model_kwargs[cache_name] = (
+                DynamicCache(num_hidden_layers)
+                if not requires_cross_attention_cache
+                else EncoderDecoderCache(DynamicCache(num_hidden_layers), DynamicCache(num_hidden_layers))
+            )
+
+    def _supports_num_logits_to_keep(self) -> bool:
+        """
+        Return True if the current model supports the keyword argument `num_logits_to_keep` in forward()
+        to save memory. Checking it in this way allows to avoid using a new model attribute.
+        """
+        return "num_logits_to_keep" in set(inspect.signature(self.forward).parameters.keys())
+
+
     def _prepare_special_tokens(
         self,
         generation_config: GenerationConfig,
@@ -1560,7 +1669,7 @@ class GenerationMixin:
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
         prefix_allowed_tokens_fn: Optional[Callable[[int, mindspore.Tensor], List[int]]] = None,
-        synced_gpus: Optional[bool] = None,
+        synced_devices: Optional[bool] = None,
         assistant_model: Optional["PreTrainedModel"] = None,
         streamer: Optional["BaseStreamer"] = None,
         negative_prompt_ids: Optional[mindspore.Tensor] = None,
@@ -1612,7 +1721,7 @@ class GenerationMixin:
                 on the batch ID `batch_id` and the previously generated tokens `inputs_ids`. This argument is useful
                 for constrained generation conditioned on the prefix, as described in [Autoregressive Entity
                 Retrieval](https://arxiv.org/abs/2010.00904).
-            synced_gpus (`bool`, *optional*):
+            synced_devices (`bool`, *optional*):
                 Whether to continue running the while loop until max_length. Unless overridden this flag will be set to
                 `True` under DeepSpeed ZeRO Stage 3 multiple GPUs environment to avoid hanging if one GPU finished
                 generating before other GPUs. Otherwise it'll be set to `False`.
@@ -1659,11 +1768,11 @@ class GenerationMixin:
         self._validate_assistant(assistant_model)
 
         # 2. Set generation parameters if not already defined
-        if synced_gpus is None:
+        if synced_devices is None:
             # if is_deepspeed_zero3_enabled() and dist.get_world_size() > 1:
-            #     synced_gpus = True
+            #     synced_devices = True
             # else:
-            synced_gpus = False
+            synced_devices = False
 
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
@@ -1706,12 +1815,17 @@ class GenerationMixin:
             model_kwargs["attention_mask"] = self._prepare_attention_mask_for_generation(
                 inputs_tensor, generation_config._pad_token_tensor, generation_config._eos_token_tensor
             )
+        elif kwargs_has_attention_mask:
+            # TODO (joao): generalize this check with other types of inputs
+            if model_input_name == "input_ids" and len(model_kwargs["attention_mask"].shape) > 2:
+                raise ValueError("`attention_mask` passed to `generate` must be 2D.")
 
         if self.config.is_encoder_decoder and "encoder_outputs" not in model_kwargs:
             # if model is encoder decoder encoder_outputs are created and added to `model_kwargs`
             model_kwargs = self._prepare_encoder_decoder_kwargs_for_generation(
                 inputs_tensor, model_kwargs, model_input_name, generation_config
             )
+
         # 5. Prepare `input_ids` which will be used for auto-regressive generation
         if self.config.is_encoder_decoder:
             input_ids, model_kwargs = self._prepare_decoder_input_ids_for_generation(
@@ -1728,6 +1842,7 @@ class GenerationMixin:
 
         if streamer is not None:
             streamer.put(input_ids)
+
         # 6. Prepare `max_length` depending on other stopping criteria.
         input_ids_length = input_ids.shape[-1]
         has_default_max_length = kwargs.get("max_length") is None and generation_config.max_length is not None
@@ -1741,99 +1856,31 @@ class GenerationMixin:
             input_ids_length=input_ids_length,
         )
 
-        use_dynamic_cache_by_default = False
-        if "mamba" in self.__class__.__name__.lower():
-            cache_name = "cache_params"
-        else:
-            cache_name = "past_key_values"
-
-        # TODO(joao): support static caches in assisted generation. assisted generation needs to roll back caches,
-        # which is only supported in dynamic caches atm
-        if (
-            assistant_model is not None
-            and generation_config.cache_implementation is not None
-            and self._supports_default_dynamic_cache()
-        ):
-            logger.warning_once(
-                "An assistant model is provided, using a dynamic cache instead of a cache of type="
-                f"'{generation_config.cache_implementation}'."
-            )
-            generation_config.cache_implementation = None
-
-        # if (model_kwargs.get(cache_name) is not None) and is_torchdynamo_compiling():
-        #     raise ValueError(
-        #         "Passing `past_key_values` is not supported when compiling `model.generate` with torch.compile -- you "
-        #         "may get incorrect outputs. Please compile `model.forward` only or use the `cache_implementation` "
-        #         "input argument."
-        #     )
-        if generation_config.cache_implementation is not None and (model_kwargs.get(cache_name) is not None):
-            raise ValueError(
-                f"Passing both `cache_implementation` (used to initialize certain caches) and `{cache_name}` (a "
-                "Cache object) is unsupported. Please use only one of the two."
-            )
-        elif generation_config.cache_implementation is not None:
-            if generation_config.cache_implementation in NEED_SETUP_CACHE_CLASSES_MAPPING:
-                if generation_config.cache_implementation == "static" and not self._supports_static_cache:
-                    raise ValueError(
-                        "This model does not support `cache_implementation='static'`. Please check the following "
-                        "issue: https://github.com/huggingface/transformers/issues/28981"
-                    )
-                model_kwargs[cache_name] = self._get_cache(
-                    generation_config.cache_implementation,
-                    getattr(generation_config, "num_beams", 1) * batch_size,
-                    generation_config.max_length,
-                    model_kwargs,
-                )
-            elif generation_config.cache_implementation == "quantized":
-                raise RuntimeError('MindNLP do not support quantized generation.')
-                # if not self._supports_quantized_cache:
-                #     raise ValueError(
-                #         "This model does not support the quantized cache. If you want your model to support quantized "
-                #         "cache, please open an issue."
-                #     )
-
-                # cache_config = (
-                #     generation_config.cache_config
-                #     if generation_config.cache_config is not None
-                #     else QuantizedCacheConfig()
-                # )
-                # cache_class = QUANT_BACKEND_CLASSES_MAPPING[cache_config.backend]
-
-                # if cache_config.backend == "quanto" and not is_quanto_available():
-                #     raise ImportError(
-                #         "You need to install `quanto` in order to use KV cache quantization with quanto backend. "
-                #         "Please install it via  with `pip install quanto`"
-                #     )
-                # elif cache_config.backend == "HQQ" and not is_hqq_available():
-                #     raise ImportError(
-                #         "You need to install `HQQ` in order to use KV cache quantization with HQQ backend. "
-                #         "Please install it via  with `pip install hqq`"
-                #     )
-
-                # model_kwargs[cache_name] = cache_class(cache_config)
-        # Use DynamicCache() instance by default. This will avoid back and forth from legacy format that
-        # keeps copying the cache thus using much more memory
-        elif generation_config.cache_implementation is None and self._supports_default_dynamic_cache():
-            past = model_kwargs.get(cache_name, None)
-            requires_cross_attention_cache = (
-                self.config.is_encoder_decoder or model_kwargs.get("encoder_outputs") is not None
-            )
-            if past is None:
-                model_kwargs[cache_name] = (
-                    DynamicCache()
-                    if not requires_cross_attention_cache
-                    else EncoderDecoderCache(DynamicCache(), DynamicCache())
-                )
-                use_dynamic_cache_by_default = True
-            elif isinstance(past, tuple):
-                model_kwargs[cache_name] = (
-                    DynamicCache.from_legacy_cache(past)
-                    if not requires_cross_attention_cache
-                    else EncoderDecoderCache.from_legacy_cache(past)
-                )
-                use_dynamic_cache_by_default = True
+        # If the model supports `num_logits_to_keep` in forward(), set it to 1 to avoid computing the whole
+        # logit matrix. This can save a lot of memory during the first forward pass. Note that assisted decoding
+        # dynamically overrides this value as it can need more than the last token logits
+        if self._supports_num_logits_to_keep() and "num_logits_to_keep" not in model_kwargs:
+            model_kwargs["num_logits_to_keep"] = 1
 
         self._validate_generated_length(generation_config, input_ids_length, has_default_max_length)
+
+
+        # 7. Prepare the cache.
+        # - `model_kwargs` may be updated in place with a cache as defined by the parameters in `generation_config`.
+        # - different models have a different cache name expected by the model (default = "past_key_values")
+        # - `max_length`, prepared above, is used to determine the maximum cache length
+        cache_name = "past_key_values" if "mamba" not in self.__class__.__name__.lower() else "cache_params"
+        user_defined_cache = model_kwargs.get(cache_name)
+        max_cache_length = generation_config.max_length
+        if (
+            inputs_tensor.shape[1] != input_ids_length
+            and model_input_name == "inputs_embeds"
+            and not self.config.is_encoder_decoder
+        ):
+            max_cache_length += inputs_tensor.shape[1]
+        self._prepare_cache_for_generation(
+            generation_config, model_kwargs, assistant_model, batch_size, max_cache_length
+        )
 
         # 7. determine generation mode
         generation_mode = generation_config.get_generation_mode(assistant_model)
@@ -1911,7 +1958,7 @@ class GenerationMixin:
                 logits_warper=prepared_logits_warper,
                 stopping_criteria=prepared_stopping_criteria,
                 generation_config=generation_config,
-                synced_gpus=synced_gpus,
+                synced_devices=synced_devices,
                 streamer=streamer,
                 **model_kwargs,
             )
@@ -1933,7 +1980,7 @@ class GenerationMixin:
                 logits_warper=prepared_logits_warper,
                 stopping_criteria=prepared_stopping_criteria,
                 generation_config=generation_config,
-                synced_gpus=synced_gpus,
+                synced_devices=synced_devices,
                 streamer=streamer,
                 **model_kwargs,
             )
@@ -1952,7 +1999,7 @@ class GenerationMixin:
                 logits_processor=prepared_logits_processor,
                 stopping_criteria=prepared_stopping_criteria,
                 generation_config=generation_config,
-                synced_gpus=synced_gpus,
+                synced_devices=synced_devices,
                 streamer=streamer,
                 **model_kwargs,
             )
@@ -1980,7 +2027,7 @@ class GenerationMixin:
                 logits_warper=prepared_logits_warper,
                 stopping_criteria=prepared_stopping_criteria,
                 generation_config=generation_config,
-                synced_gpus=synced_gpus,
+                synced_devices=synced_devices,
                 streamer=streamer,
                 **model_kwargs,
             )
@@ -2019,7 +2066,7 @@ class GenerationMixin:
                 logits_warper=prepared_logits_warper,
                 stopping_criteria=prepared_stopping_criteria,
                 generation_config=generation_config,
-                synced_gpus=synced_gpus,
+                synced_devices=synced_devices,
                 **model_kwargs,
             )
 
@@ -2048,7 +2095,7 @@ class GenerationMixin:
                 logits_processor=prepared_logits_processor,
                 stopping_criteria=prepared_stopping_criteria,
                 generation_config=generation_config,
-                synced_gpus=synced_gpus,
+                synced_devices=synced_devices,
                 **model_kwargs,
             )
 
@@ -2117,24 +2164,47 @@ class GenerationMixin:
                 logits_processor=prepared_logits_processor,
                 stopping_criteria=prepared_stopping_criteria,
                 generation_config=generation_config,
-                synced_gpus=synced_gpus,
+                synced_devices=synced_devices,
                 **model_kwargs,
             )
 
         if _run_profiler:
             _framework_profiler_step_end()
 
-        # Convert to legacy cache if needed
-        if use_dynamic_cache_by_default and generation_config.return_legacy_cache:
-            if isinstance(result, ModelOutput) and hasattr(result, "past_key_values"):
-                if isinstance(result.past_key_values, (DynamicCache, EncoderDecoderCache)):
-                    result.past_key_values = result.past_key_values.to_legacy_cache()
+        # Convert to legacy cache format if requested
+        if (
+            generation_config.return_legacy_cache is not False
+            and hasattr(result, "past_key_values")
+            and hasattr(result.past_key_values, "to_legacy_cache")
+            and result.past_key_values.to_legacy_cache is not None
+        ):
+            # handle BC (convert by default if he user hasn't passed a cache AND the cache is of the default type)
+            should_convert_cache = generation_config.return_legacy_cache
+            is_user_defined_cache = user_defined_cache is not None
+            is_default_cache_type = (
+                type(result.past_key_values) == DynamicCache  # noqa E721
+                or (
+                    isinstance(result.past_key_values, EncoderDecoderCache)
+                    and type(result.past_key_values.self_attention_cache) == DynamicCache  # noqa E721
+                    and type(result.past_key_values.cross_attention_cache) == DynamicCache  # noqa E721
+                )
+            )
+            if not is_user_defined_cache and is_default_cache_type:
+                logger.warning_once(
+                    "When a model cache is to be returned, `generate` will return a `Cache` "
+                    "instance instead by default (as opposed to the legacy tuple of tuples format). If you want to "
+                    "keep returning the legacy format, please set `return_legacy_cache=True`."
+                )
+                should_convert_cache = True
+            if should_convert_cache:
+                result.past_key_values = result.past_key_values.to_legacy_cache()
         return result
+
 
     def _has_unfinished_sequences(
         self,
         this_peer_finished: bool,
-        synced_gpus: bool,
+        synced_devices: bool,
         cur_len: Optional[int] = None,
         max_length: Optional[int] = None,
     ) -> bool:
@@ -2148,8 +2218,8 @@ class GenerationMixin:
         # if is_torchdynamo_compiling():
         #     return cur_len < max_length
         # else:
-        # if synced_gpus:
-        #     # Under synced_gpus the `forward` call must continue until all gpus complete their sequence.
+        # if synced_devices:
+        #     # Under synced_devices the `forward` call must continue until all gpus complete their sequence.
         #     # The following logic allows an early break if all peers finished generating their sequence
         #     this_peer_finished_flag = mindspore.tensor(0.0 if this_peer_finished else 1.0)
         #     # send 0.0 if we finished, 1.0 otherwise
@@ -2237,7 +2307,7 @@ class GenerationMixin:
         logits_processor: LogitsProcessorList,
         stopping_criteria: StoppingCriteriaList,
         generation_config: GenerationConfig,
-        synced_gpus: bool,
+        synced_devices: bool,
         streamer: "BaseStreamer",
         logits_warper: Optional[LogitsProcessorList],
         **model_kwargs,
@@ -2263,7 +2333,7 @@ class GenerationMixin:
                 used to tell if the generation loop should stop.
             generation_config ([`~generation.GenerationConfig`]):
                 The generation configuration to be used as parametrization of the decoding method.
-            synced_gpus (`bool`):
+            synced_devices (`bool`):
                 Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
             streamer (`BaseStreamer`, *optional*):
                 Streamer object that will be used to stream the generated sequences. Generated tokens are passed
@@ -2317,7 +2387,7 @@ class GenerationMixin:
         this_peer_finished = False
 
         # prepare layers for DoLa decoding
-        final_layer = self.config.num_hidden_layers
+        final_layer = self.config.get_text_config().num_hidden_layers
         # if the model has tied word embeddings, we skip the word embeddings (0-th) layer and start from the 2nd layer,
         # as the early exit from word embeddings will become identity function
         # if the model is really shallow (<=2 layers), we use the 1st layer if it's not the final layer and the 0-th
@@ -2360,7 +2430,7 @@ class GenerationMixin:
         if lm_head is None:
             raise ValueError("DoLa is not supported for models that don't have output embeddings.")
 
-        while self._has_unfinished_sequences(this_peer_finished, synced_gpus):
+        while self._has_unfinished_sequences(this_peer_finished, synced_devices):
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
@@ -2380,7 +2450,7 @@ class GenerationMixin:
                     outputs.hidden_states[candidate_premature_layer][:, -1, :]
                 )
 
-            if synced_gpus and this_peer_finished:
+            if synced_devices and this_peer_finished:
                 continue  # don't waste resources running the code we don't need
 
             next_token_logits = _dola_select_contrast(
@@ -2456,7 +2526,7 @@ class GenerationMixin:
         logits_processor: LogitsProcessorList,
         stopping_criteria: StoppingCriteriaList,
         generation_config: GenerationConfig,
-        synced_gpus: bool,
+        synced_devices: bool,
         streamer: Optional["BaseStreamer"],
         **model_kwargs,
     ) -> Union[GenerateNonBeamOutput, mindspore.Tensor]:
@@ -2475,7 +2545,7 @@ class GenerationMixin:
                 used to tell if the generation loop should stop.
             generation_config ([`~generation.GenerationConfig`]):
                 The generation configuration to be used as parametrization of the decoding method.
-            synced_gpus (`bool`):
+            synced_devices (`bool`):
                 Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
             streamer (`BaseStreamer`, *optional*):
                 Streamer object that will be used to stream the generated sequences. Generated tokens are passed
@@ -2524,7 +2594,7 @@ class GenerationMixin:
 
         this_peer_finished = False
 
-        while self._has_unfinished_sequences(this_peer_finished, synced_gpus):
+        while self._has_unfinished_sequences(this_peer_finished, synced_devices):
             # if the first step in the loop, encode all the prefix and obtain: (1) past_key_values;
             # (2) last_hidden_states; (3) logit_for_next_step; (4) update model kwargs for the next step
             if model_kwargs.get("past_key_values") is None or (
@@ -2798,7 +2868,7 @@ class GenerationMixin:
                 )
             # contrastive_search main logic end
 
-            if synced_gpus and this_peer_finished:
+            if synced_devices and this_peer_finished:
                 continue  # don't waste resources running the code we don't need
 
             # finished sentences should have their next token be a padding token
@@ -2870,7 +2940,7 @@ class GenerationMixin:
         logits_processor: LogitsProcessorList,
         stopping_criteria: StoppingCriteriaList,
         generation_config: GenerationConfig,
-        synced_gpus: bool,
+        synced_devices: bool,
         streamer: Optional["BaseStreamer"],
         logits_warper: Optional[LogitsProcessorList] = None,
         **model_kwargs,
@@ -2890,7 +2960,7 @@ class GenerationMixin:
                 used to tell if the generation loop should stop.
             generation_config ([`~generation.GenerationConfig`]):
                 The generation configuration to be used as parametrization of the decoding method.
-            synced_gpus (`bool`):
+            synced_devices (`bool`):
                 Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
             streamer (`BaseStreamer`, *optional*):
                 Streamer object that will be used to stream the generated sequences. Generated tokens are passed
@@ -2951,7 +3021,7 @@ class GenerationMixin:
         _record_time = parse_flag_from_env('INFERENCE_TIME_RECORD', False)
 
         while self._has_unfinished_sequences(
-            this_peer_finished, synced_gpus, cur_len=cur_len, max_length=max_length
+            this_peer_finished, synced_devices, cur_len=cur_len, max_length=max_length
         ):
             if _record_time:
                 infer_start = time.time()
@@ -2965,7 +3035,7 @@ class GenerationMixin:
             # forward pass to get next token
             outputs = self(**model_inputs, return_dict=True)
 
-            if synced_gpus and this_peer_finished:
+            if synced_devices and this_peer_finished:
                 continue  # don't waste resources running the code we don't need
 
             # Clone is needed to avoid keeping a hanging ref to outputs.logits which may be very large for first iteration
@@ -3018,7 +3088,7 @@ class GenerationMixin:
             )
 
             unfinished_sequences = unfinished_sequences & ~stopping_criteria(input_ids, scores)
-            this_peer_finished = unfinished_sequences.max() == 0
+            this_peer_finished = ops.max(unfinished_sequences).item() == 0
             cur_len += 1
 
             if _record_time:
@@ -3098,7 +3168,7 @@ class GenerationMixin:
         logits_processor: LogitsProcessorList,
         stopping_criteria: StoppingCriteriaList,
         generation_config: GenerationConfig,
-        synced_gpus: bool,
+        synced_devices: bool,
         logits_warper: Optional[LogitsProcessorList],
         **model_kwargs,
     ) -> Union[GenerateBeamOutput, mindspore.Tensor]:
@@ -3120,7 +3190,7 @@ class GenerationMixin:
                 used to tell if the generation loop should stop.
             generation_config ([`~generation.GenerationConfig`]):
                 The generation configuration to be used as parametrization of the decoding method.
-            synced_gpus (`bool`):
+            synced_devices (`bool`):
                 Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
             logits_warper (`LogitsProcessorList`, *optional*):
                 An instance of [`LogitsProcessorList`]. List of instances of class derived from [`LogitsWarper`] used
@@ -3196,11 +3266,10 @@ class GenerationMixin:
         time_record = []
         _record_time = parse_flag_from_env('INFERENCE_TIME_RECORD', False)
 
-        while self._has_unfinished_sequences(this_peer_finished, synced_gpus):
+        while self._has_unfinished_sequences(this_peer_finished, synced_devices):
             if _record_time:
                 infer_start = time.time()
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
-
             # prepare variable output controls (note: some models won't accept all output controls)
             model_inputs.update({"output_attentions": output_attentions} if output_attentions else {})
             model_inputs.update({"output_hidden_states": output_hidden_states} if output_hidden_states else {})
@@ -3237,7 +3306,7 @@ class GenerationMixin:
             else:  # Unchanged original behavior
                 outputs = self(**model_inputs, return_dict=True)
 
-            if synced_gpus and this_peer_finished:
+            if synced_devices and this_peer_finished:
                 cur_len = cur_len + 1
                 continue  # don't waste resources running the code we don't need
 
@@ -3433,7 +3502,7 @@ class GenerationMixin:
         logits_processor: LogitsProcessorList,
         stopping_criteria: StoppingCriteriaList,
         generation_config: GenerationConfig,
-        synced_gpus: bool,
+        synced_devices: bool,
         **model_kwargs,
     ):
         r"""
@@ -3454,7 +3523,7 @@ class GenerationMixin:
                 used to tell if the generation loop should stop.
             generation_config ([`~generation.GenerationConfig`]):
                 The generation configuration to be used as parametrization of the decoding method.
-            synced_gpus (`bool`):
+            synced_devices (`bool`):
                 Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
             model_kwargs:
                 Additional model specific kwargs that will be forwarded to the `forward` function of the model. If
@@ -3517,7 +3586,7 @@ class GenerationMixin:
         this_peer_finished = False
 
         decoder_prompt_len = input_ids.shape[-1]  # record the prompt length of decoder
-        while self._has_unfinished_sequences(this_peer_finished, synced_gpus):
+        while self._has_unfinished_sequences(this_peer_finished, synced_devices):
             # predicted tokens in cur_len step
             current_tokens = ops.zeros(batch_size * num_beams, dtype=input_ids.dtype)
 
@@ -3533,7 +3602,7 @@ class GenerationMixin:
 
             outputs = self(**model_inputs, return_dict=True)
 
-            if synced_gpus and this_peer_finished:
+            if synced_devices and this_peer_finished:
                 cur_len = cur_len + 1
                 continue  # don't waste resources running the code we don't need
 
@@ -3561,9 +3630,9 @@ class GenerationMixin:
                 # select outputs of beams of current group only
                 # No need to clone() the logits here as they will not retain outputs.logits at the end of the loop
                 if ON_ORANGE_PI:
-                    next_token_logits = ops.getitem(outputs.logits, (batch_group_indices, -1, slice(None, None, None)))
+                    next_token_logits = ops.getitem(outputs.logits, (batch_group_indices, -1, slice(None, None, None))).float()
                 else:
-                    next_token_logits = outputs.logits[batch_group_indices, -1, :]
+                    next_token_logits = outputs.logits[batch_group_indices, -1, :].float()
                 next_token_scores = nn.functional.log_softmax(
                     next_token_logits, dim=-1
                 )  # (batch_size * group_size, vocab_size)
@@ -3744,7 +3813,7 @@ class GenerationMixin:
         logits_processor: LogitsProcessorList,
         stopping_criteria: StoppingCriteriaList,
         generation_config: GenerationConfig,
-        synced_gpus: bool,
+        synced_devices: bool,
         **model_kwargs,
     ) -> Union[GenerateBeamOutput, mindspore.Tensor]:
         r"""
@@ -3770,7 +3839,7 @@ class GenerationMixin:
                 sampling at each generation step.
             generation_config ([`~generation.GenerationConfig`]):
                 The generation configuration to be used as parametrization of the decoding method.
-            synced_gpus (`bool`):
+            synced_devices (`bool`):
                 Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
             model_kwargs:
                 Additional model specific kwargs will be forwarded to the `forward` function of the model. If model is
@@ -3829,7 +3898,7 @@ class GenerationMixin:
         this_peer_finished = False
 
         decoder_prompt_len = input_ids.shape[-1]  # record the prompt length of decoder
-        while self._has_unfinished_sequences(this_peer_finished, synced_gpus):
+        while self._has_unfinished_sequences(this_peer_finished, synced_devices):
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
             # prepare variable output controls (note: some models won't accept all output controls)
@@ -3838,7 +3907,7 @@ class GenerationMixin:
 
             outputs = self(**model_inputs, return_dict=True)
 
-            if synced_gpus and this_peer_finished:
+            if synced_devices and this_peer_finished:
                 cur_len = cur_len + 1
                 continue  # don't waste resources running the code we don't need
 
@@ -3988,7 +4057,7 @@ class GenerationMixin:
         logits_warper: LogitsProcessorList,
         stopping_criteria: StoppingCriteriaList,
         generation_config: GenerationConfig,
-        synced_gpus: bool,
+        synced_devices: bool,
         streamer: Optional["BaseStreamer"],
         **model_kwargs,
     ) -> Union[GenerateNonBeamOutput, mindspore.Tensor]:
@@ -4016,7 +4085,7 @@ class GenerationMixin:
                 used to tell if the generation loop should stop.
             generation_config ([`~generation.GenerationConfig`]):
                 The generation configuration to be used as parametrization of the decoding method.
-            synced_gpus (`bool`):
+            synced_devices (`bool`):
                 Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
             streamer (`BaseStreamer`, *optional*):
                 Streamer object that will be used to stream the generated sequences. Generated tokens are passed
@@ -4066,11 +4135,11 @@ class GenerationMixin:
             isinstance(past_key_values, EncoderDecoderCache)
             and isinstance(past_key_values.self_attention_cache, DynamicCache)
         ):
-            if len(past_key_values) == 0:
+            if past_key_values.get_seq_length() == 0:
                 start_from_empty_dynamic_cache = True
 
         this_peer_finished = False
-        while self._has_unfinished_sequences(this_peer_finished, synced_gpus):
+        while self._has_unfinished_sequences(this_peer_finished, synced_devices):
             cur_len = input_ids.shape[-1]
             #  1. Fetch candidate sequences from a `CandidateGenerator`
             candidate_input_ids, candidate_logits = candidate_generator.get_candidates(input_ids)
@@ -4168,7 +4237,7 @@ class GenerationMixin:
             # 5. Update the candidate generation strategy if needed
             candidate_generator.update_candidate_strategy(input_ids, new_logits, n_matches)
 
-            if synced_gpus and this_peer_finished:
+            if synced_devices and this_peer_finished:
                 continue  # don't waste resources running the code we don't need
 
             # Store scores, attentions and hidden_states when required
@@ -4185,7 +4254,6 @@ class GenerationMixin:
                     start_from_empty_dynamic_cache = False
                 else:
                     added_len = n_matches + 1
-
                 if output_attentions:
                     if self.config.is_encoder_decoder:
                         cross_attentions = _split_model_outputs(

@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Whisper model."""
+"""MindSpore Whisper model."""
 
 import math
 from typing import Optional, Tuple, Union
@@ -115,14 +115,14 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     """
     Shift input ids one token to the right.
     """
-    shifted_input_ids = input_ids.new_zeros(input_ids.shape)
+    shifted_input_ids = ops.zeros(input_ids.shape, dtype=input_ids.dtype)
     shifted_input_ids[:, 1:] = input_ids[:, :-1].clone()
     shifted_input_ids[:, 0] = decoder_start_token_id
 
     if pad_token_id is None:
         raise ValueError("self.model.config.pad_token_id has to be defined.")
     # replace possible -100 values in labels by `pad_token_id`
-    shifted_input_ids.masked_fill_(shifted_input_ids == -100, pad_token_id)
+    shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
 
     return shifted_input_ids
 
@@ -183,7 +183,7 @@ def _compute_mask_indices(
 
     # compute number of masked spans in batch
     input_lengths = (
-        attention_mask.sum(-1).detach().tolist()
+        attention_mask.sum(-1).tolist()
         if attention_mask is not None
         else [sequence_length for _ in range(batch_size)]
     )
@@ -917,7 +917,7 @@ class WhisperDecoder(WhisperPreTrainedModel):
             elif not isinstance(past_key_values, EncoderDecoderCache):
                 return_legacy_cache = True
                 logger.warning_once(
-                    "Passing a tuple of `past_key_values` is deprecated and will be removed in Transformers v4.43.0. "
+                    "Passing a tuple of `past_key_values` is deprecated and will be removed. "
                     "You should pass an instance of `EncoderDecoderCache` instead, e.g. "
                     "`past_key_values=EncoderDecoderCache.from_legacy_cache(past_key_values)`."
                 )
@@ -933,7 +933,6 @@ class WhisperDecoder(WhisperPreTrainedModel):
             cache_position = ops.arange(
                 past_key_values_length, past_key_values_length + input_shape[1]
             )
-
         if position_ids is None:
             position_ids = cache_position.unsqueeze(0)
 
@@ -1410,6 +1409,7 @@ class WhisperForConditionalGeneration(WhisperGenerationMixin, WhisperPreTrainedM
             decoder_position_ids = (decoder_attention_mask.cumsum(-1) - 1).clamp(min=0)
 
         past_length = 0
+
         if past_key_values is not None:
             if isinstance(past_key_values, EncoderDecoderCache):
                 past_length = cache_position[0] if cache_position is not None else past_key_values.get_seq_length()

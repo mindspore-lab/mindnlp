@@ -1,7 +1,8 @@
 """activation"""
 from typing import Optional, Tuple
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
+from ..parameter import Parameter
 
 from .module import Module
 from .linear import Linear

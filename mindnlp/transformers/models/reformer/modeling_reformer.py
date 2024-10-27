@@ -136,7 +136,6 @@ class AxialPositionEmbeddings(nn.Module):
         # broadcast weights to correct shape
         batch_size = position_ids.shape[0]
         sequence_length = position_ids.shape[1]
-
         broadcasted_weights = [
             weight.broadcast_to((batch_size,) + self.axial_pos_shape + weight.shape[-1:]) for weight in self.weights
         ]

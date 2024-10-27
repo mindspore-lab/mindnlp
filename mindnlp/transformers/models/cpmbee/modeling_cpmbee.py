@@ -20,10 +20,10 @@ from collections import UserDict
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...generation.beam_search import BeamHypotheses, BeamSearchScorer
@@ -63,7 +63,7 @@ class CpmBeeLinear(nn.Linear):
     Attributes:
         dim_in (int): The input dimension of the linear layer.
         dim_out (int): The output dimension of the linear layer.
-        weight (mindspore.Parameter): The weight parameter of the linear layer.
+        weight (Parameter): The weight parameter of the linear layer.
     
     Methods:
         __init__(self, dim_in, dim_out, dtype):
@@ -767,7 +767,7 @@ class CpmBeeBucketPositionBias(nn.Module):
         num_buckets (int): The number of position bias buckets.
         num_segment_bucket (int): The number of segment buckets used for position bias.
         max_distance (int): The maximum distance for position bias calculation.
-        relative_attention_bias (mindspore.Parameter): The learnable parameter used for relative attention bias calculation.
+        relative_attention_bias (Parameter): The learnable parameter used for relative attention bias calculation.
 
     Methods:
         __init__:
@@ -1137,19 +1137,19 @@ class CpmBeePreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
         std = self.config.init_std
         if isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         # still needed
         elif isinstance(cell, CpmBeeEmbeddingExt):
-            cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, CpmBeeLayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
         elif isinstance(cell, CpmBeeBucketPositionBias):
-            cell.relative_attention_bias.set_data(initializer(
+            cell.relative_attention_bias.assign_value(initializer(
                 Normal(std), cell.relative_attention_bias.shape, cell.relative_attention_bias.dtype))
 
 
@@ -2541,7 +2541,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         output_scores: Optional[bool] = None,
         return_dict_in_generate: Optional[bool] = None,
-        synced_gpus: bool = False,
+        synced_devices: bool = False,
         **model_kwargs,
     ) -> List:
         """
@@ -2724,7 +2724,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
             cur_len += 1
 
             if beam_scorer.is_done or cur_len == max_length + 1:
-                if not synced_gpus:
+                if not synced_devices:
                     break
 
         sequence_outputs = beam_scorer.finalize()
@@ -2739,7 +2739,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
         prefix_allowed_tokens_fn: Optional[Callable[[int, mindspore.Tensor], List[int]]] = None,
-        synced_gpus: Optional[bool] = None,
+        synced_devices: Optional[bool] = None,
         streamer: Optional["BaseStreamer"] = None,
         **kwargs,
     ) -> List:
@@ -2908,7 +2908,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
             vocab_size=kwargs.get("vocab_size", None),
             output_scores=generation_config.output_scores,
             return_dict_in_generate=generation_config.return_dict_in_generate,
-            synced_gpus=synced_gpus,
+            synced_devices=synced_devices,
             **model_kwargs,
         )
 

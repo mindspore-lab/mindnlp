@@ -19,10 +19,9 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
-from mindspore.common.initializer import Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from ...activations import ACT2FN, QuickGELUActivation
 from ...modeling_outputs import (
@@ -618,8 +617,8 @@ class BridgeTowerLinkTower(nn.Module):
     Attributes:
         link_tower_type (str): The type of link tower to be used. It can be one of ['add', 'scaled_add', 'interpolate'].
         hidden_size (int): The size of the hidden states.
-        scaled_factor (mindspore.Parameter): The scaling factor used in the 'scaled_add' link tower type.
-        beta (mindspore.Parameter): The interpolation factor used in the 'interpolate' link tower type.
+        scaled_factor (Parameter): The scaling factor used in the 'scaled_add' link tower type.
+        beta (Parameter): The interpolation factor used in the 'interpolate' link tower type.
         LayerNorm (mindspore.nn.LayerNorm): The layer normalization module.
 
     Raises:
@@ -2040,41 +2039,31 @@ class BridgeTowerPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["BridgeTowerSelfAttention", "BridgeTowerResidualAttention"]
     _skip_keys_device_placement = "past_key_values"
 
-    def _init_weights(self, cell):
-        """
-        Initializes the weights of the model's cells.
-
-        Args:
-            self: An instance of the BridgeTowerPreTrainedModel class.
-            cell: The cell whose weights need to be initialized.
-
-        Returns:
-            None
-
-        Raises:
-            None
-        """
-        if isinstance(cell, BridgeTowerVisionModel):
-            proj_std = (cell.visual.transformer.hidden_size**-0.5) * (
-                (2 * cell.visual.transformer.num_hidden_layers) ** -0.5
+    def _init_weights(self, module):
+        if isinstance(module, BridgeTowerVisionModel):
+            proj_std = (module.visual.transformer.hidden_size**-0.5) * (
+                (2 * module.visual.transformer.num_hidden_layers) ** -0.5
             )
-            attn_std = cell.visual.transformer.hidden_size**-0.5
-            fc_std = (2 * cell.visual.transformer.hidden_size) ** -0.5
-            for block in cell.visual.transformer.resblocks:
-                ops.initialize(block.attn.in_proj_weight, Normal(attn_std * self.config.initializer_factor))
-                ops.initialize(block.attn.out_proj.weight, Normal(proj_std * self.config.initializer_factor))
-                ops.initialize(block.mlp.c_fc.weight, Normal(fc_std * self.config.initializer_factor))
-                ops.initialize(block.mlp.c_proj.weight, Normal(proj_std * self.config.initializer_factor))
+            attn_std = module.visual.transformer.hidden_size**-0.5
+            fc_std = (2 * module.visual.transformer.hidden_size) ** -0.5
+            for block in module.visual.transformer.resblocks:
+                nn.init.normal_(block.attn.in_proj_weight, std=attn_std * self.config.initializer_factor)
+                nn.init.normal_(block.attn.out_proj.weight, std=proj_std * self.config.initializer_factor)
+                nn.init.normal_(block.mlp.c_fc.weight, std=fc_std * self.config.initializer_factor)
+                nn.init.normal_(block.mlp.c_proj.weight, std=proj_std * self.config.initializer_factor)
 
-            ops.initialize(cell.visual.embeddings.class_embedding, Normal(attn_std * self.config.initializer_factor))
-            ops.initialize(cell.visual.embeddings.position_embedding.weight, Normal(attn_std * self.config.initializer_factor))
-        elif isinstance(cell, (nn.Linear, nn.Conv2d, nn.Embedding)):
-            ops.initialize(cell.weight, Normal(0.05 * self.config.initializer_factor))
-        elif isinstance(cell, nn.LayerNorm):
-            ops.initialize(cell.bias, 'zeros')
-            ops.initialize(cell.weight, 'ones')
-        if isinstance(cell, nn.Linear) and cell.bias is not None:
-            ops.initialize(cell.bias, 'zeros')
+            nn.init.normal_(module.visual.embeddings.class_embedding, std=attn_std * self.config.initializer_factor)
+            nn.init.normal_(
+                module.visual.embeddings.position_embedding.weight, std=attn_std * self.config.initializer_factor
+            )
+        elif isinstance(module, (nn.Linear, nn.Conv2d, nn.Embedding)):
+            nn.init.normal_(module.weight.data, mean=0.0, std=0.05 * self.config.initializer_factor)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
+
+        if isinstance(module, nn.Linear) and module.bias is not None:
+            nn.init.zeros_(module.bias.data)
 
 
 class BridgeTowerVisionModel(BridgeTowerPreTrainedModel):

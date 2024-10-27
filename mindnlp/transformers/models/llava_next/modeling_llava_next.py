@@ -240,7 +240,6 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
         self.language_model = AutoModelForCausalLM.from_config(
             config.text_config, attn_implementation=config._attn_implementation
         )
-        print(type(self.language_model))
         self.pad_token_id = self.config.pad_token_id if self.config.pad_token_id is not None else -1
         self._padding_side = "left"  # set it to left by default, user can use setter to change padding_sides
         self.post_init()
@@ -703,7 +702,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
                     "Expanding inputs for image tokens in LLaVa-NeXT should be done in processing. "
                     "Please add `patch_size` and `vision_feature_select_strategy` to the model's processing config or set directly "
                     "with `processor.patch_size = {{patch_size}}` and processor.vision_feature_select_strategy = {{vision_feature_select_strategy}}`. "
-                    "Using processors without these attributes in the config is deprecated and will throw an error in v4.47."
+                    "Using processors without these attributes in the config is deprecated and will throw an error."
                 )
                 if input_ids.shape[1] != 1:
                     inputs_embeds = inputs_embeds.to(image_features.dtype)
@@ -745,7 +744,6 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
                     attention_mask = ops.cat((extended_attention_mask, attention_mask[:, -target_length:]), dim=1)
                     position_ids = ops.sum(attention_mask, dim=1).unsqueeze(-1) - 1
 
-            # TODO: @raushan retain only the new behavior after v4.47
             else:
                 special_image_mask = (
                     (input_ids == self.config.image_token_index).unsqueeze(-1).expand_as(inputs_embeds)

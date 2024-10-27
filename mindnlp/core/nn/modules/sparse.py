@@ -1,6 +1,7 @@
 """sparse"""
 from typing import Optional
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
+from ..parameter import Parameter
 from .module import Module
 from .. import functional as F
 from .. import init

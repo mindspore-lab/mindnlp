@@ -8,11 +8,12 @@ import itertools
 from collections import OrderedDict, namedtuple
 
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common._stub_tensor import StubTensor
 from mindspore.common.dtype import Float
 
 from mindnlp.configs import ON_ORANGE_PI, set_pyboost
+from ..parameter import Parameter
 from ...utils import hooks
 from ...utils.hooks import RemovableHandle
 
@@ -109,6 +110,7 @@ class Module:
                return F.relu(self.conv2(x))
     """
 
+    __ms_class__ = False
     training: bool
     _parameters: Dict[str, Optional[Parameter]]
     _buffers: Dict[str, Optional[Tensor]]
@@ -200,7 +202,7 @@ class Module:
         Example::
 
             >>> # xdoctest: +SKIP("undefined vars")
-            >>> self.register_buffer('running_mean', torch.zeros(num_features))
+            >>> self.register_buffer('running_mean', ops.zeros(num_features))
 
         """
         if '_buffers' not in self.__dict__:
@@ -261,7 +263,7 @@ class Module:
             self._parameters[name] = None
         elif not isinstance(param, Parameter):
             raise TypeError(f"cannot assign '{type(param)}' object to parameter '{name}' "
-                            "(torch.nn.Parameter or None required)"
+                            "(nn.Parameter or None required)"
                             )
         else:
             for hook in _global_parameter_registration_hooks.values():
@@ -367,12 +369,12 @@ class Module:
             Parameter containing:
              1  1
              1  1
-            [torch.FloatTensor of size 2x2]
+            [mindspore.Tensor of size 2x2]
             Linear (2 -> 2)
             Parameter containing:
              1  1
              1  1
-            [torch.FloatTensor of size 2x2]
+            [mindspore.Tensor of size 2x2]
             Sequential (
               (0): Linear (2 -> 2)
               (1): Linear (2 -> 2)
@@ -384,6 +386,8 @@ class Module:
         return self
 
     def _wrapped_call_impl(self, *args, **kwargs):
+        if self.__ms_class__:
+            return self.forward(*args, **kwargs)
         return self._call_impl(*args, **kwargs)
 
     # torchrec tests the code consistency with the following code
@@ -568,6 +572,9 @@ class Module:
                         d.discard(name)
 
         params = self.__dict__.get('_parameters')
+
+        if isinstance(value, StubTensor):
+            value = value.stub_sync()
         if isinstance(value, Parameter):
             if params is None:
                 raise AttributeError(
@@ -577,7 +584,7 @@ class Module:
         elif params is not None and name in params:
             if value is not None:
                 raise TypeError(f"cannot assign '{type(value)}' as parameter '{name}' "
-                                "(mindspore.Parameter or None expected)"
+                                "(mindnlp.core.nn.Parameter or None expected)"
                                 )
             self.register_parameter(name, value)
         else:
@@ -595,7 +602,7 @@ class Module:
             elif modules is not None and name in modules:
                 if value is not None:
                     raise TypeError(f"cannot assign '{type(value)}' as child module '{name}' "
-                                    "(torch.nn.Module or None expected)"
+                                    "(nn.Module or None expected)"
                                     )
                 for hook in _global_module_registration_hooks.values():
                     output = hook(self, name, value)
@@ -685,7 +692,7 @@ class Module:
         r"""Copy parameters and buffers from :attr:`state_dict` into only this module, but not its descendants.
 
         This is called on every submodule
-        in :meth:`~torch.nn.Module.load_state_dict`. Metadata saved for this
+        in :meth:`~nn.Module.load_state_dict`. Metadata saved for this
         module in input :attr:`state_dict` is provided as :attr:`local_metadata`.
         For state dicts without metadata, :attr:`local_metadata` is empty.
         Subclasses can achieve class-specific backward compatible loading using
@@ -696,7 +703,7 @@ class Module:
 
         .. note::
             :attr:`state_dict` is not the same object as the input
-            :attr:`state_dict` to :meth:`~torch.nn.Module.load_state_dict`. So
+            :attr:`state_dict` to :meth:`~nn.Module.load_state_dict`. So
             it can be modified.
 
         Args:
@@ -715,7 +722,7 @@ class Module:
                 keys to this list
             error_msgs (list of str): error messages should be added to this
                 list, and will be reported together in
-                :meth:`~torch.nn.Module.load_state_dict`
+                :meth:`~nn.Module.load_state_dict`
         """
         for hook in self._load_state_dict_pre_hooks.values():
             hook(state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs)
@@ -755,16 +762,18 @@ class Module:
                                 input_param = Parameter(input_param, requires_grad=param.requires_grad)
                             else:
                                 input_param.requires_grad = param.requires_grad
+
                         setattr(self, name, input_param)
                     else:
+                        param.data_sync(True)
                         dtype = param.dtype
                         param.assign_value(input_param)
                         param.set_dtype(dtype)
                 except Exception as ex:
                     action = "copying"
                     error_msgs.append(f'While {action} the parameter named "{key}", '
-                                      f'whose dimensions in the model are {param.size()} and '
-                                      f'whose dimensions in the checkpoint are {input_param.size()}, '
+                                      f'whose dimensions in the model are {param.shape} and '
+                                      f'whose dimensions in the checkpoint are {input_param.shape}, '
                                       f'an exception occurred : {ex.args}.'
                                       )
             elif strict:
@@ -796,23 +805,18 @@ class Module:
 
         If :attr:`strict` is ``True``, then
         the keys of :attr:`state_dict` must exactly match the keys returned
-        by this module's :meth:`~torch.nn.Module.state_dict` function.
-
-        .. warning::
-            If :attr:`assign` is ``True`` the optimizer must be created after
-            the call to :attr:`load_state_dict` unless
-            :func:`~torch.__future__.get_swap_module_params_on_conversion` is ``True``.
+        by this module's :meth:`~nn.Module.state_dict` function.
 
         Args:
             state_dict (dict): a dict containing parameters and
                 persistent buffers.
             strict (bool, optional): whether to strictly enforce that the keys
                 in :attr:`state_dict` match the keys returned by this module's
-                :meth:`~torch.nn.Module.state_dict` function. Default: ``True``
+                :meth:`~nn.Module.state_dict` function. Default: ``True``
             assign (bool, optional): When ``False``, the properties of the tensors
                 in the current module are preserved while when ``True``, the
                 properties of the Tensors in the state dict are preserved. The only
-                exception is the ``requires_grad`` field of :class:`~torch.nn.Parameter`s
+                exception is the ``requires_grad`` field of :class:`~nn.Parameter`s
                 for which the value from the module is preserved.
                 Default: ``False``
 
@@ -967,7 +971,7 @@ class Module:
                 fully-qualified string.)
 
         Returns:
-            torch.nn.Module: The submodule referenced by ``target``
+            nn.Module: The submodule referenced by ``target``
 
         Raises:
             AttributeError: If the target string references an invalid
@@ -1188,6 +1192,16 @@ class Module:
     def cells_and_names(self, cells=None, name_prefix=''):
         return self.named_modules(cells, name_prefix)
 
+    def jit(self, mode=True):
+        self.__ms_class__ = mode
+        for module in self.children():
+            module.jit(mode)
+        return self
+
+    @property
+    def skip_syntax(self):
+        return self.__ms_class__
+
     def train(self, mode=True):
         """Sets the module in training mode.
 
@@ -1246,7 +1260,7 @@ class Module:
             except NotImplementedError as e:
                 if str(e) == "Cannot copy out of meta tensor; no data!":
                     raise NotImplementedError(
-                        f"{e} Please use torch.nn.Module.to_empty() instead of torch.nn.Module.to() "
+                        f"{e} Please use nn.Module.to_empty() instead of nn.Module.to() "
                         f"when moving module from meta to a different device."
                     ) from None
                 else:
@@ -1295,7 +1309,7 @@ class Module:
 
         The `destination` dictionary will contain the state
         of the module, but not its descendants. This is called on every
-        submodule in :meth:`~torch.nn.Module.state_dict`.
+        submodule in :meth:`~nn.Module.state_dict`.
 
         In rare cases, subclasses can achieve class-specific behavior by
         overriding this method with custom logic.
@@ -1381,9 +1395,7 @@ class Module:
                 keep_vars = args[2]
             # DeprecationWarning is ignored by default
             warnings.warn(
-                "Positional args are being deprecated, use kwargs instead. Refer to "
-                "https://pytorch.org/docs/master/generated/torch.nn.Module.html#torch.nn.Module.state_dict"
-                " for details.")
+                "Positional args are being deprecated, use kwargs instead.")
 
         if destination is None:
             destination = OrderedDict()
@@ -1406,7 +1418,7 @@ class Module:
         return destination
 
     def _register_load_state_dict_pre_hook(self, hook, with_module=False):
-        r"""Register a pre-hook for the :meth:`~torch.nn.Module.load_state_dict` method.
+        r"""Register a pre-hook for the :meth:`~nn.Module.load_state_dict` method.
 
         These hooks will be called with arguments: `state_dict`, `prefix`,
         `local_metadata`, `strict`, `missing_keys`, `unexpected_keys`,
@@ -1447,7 +1459,7 @@ class Module:
         clearing out both missing and unexpected keys will avoid an error.
 
         Returns:
-            :class:`torch.utils.hooks.RemovableHandle`:
+            :class:`utils.hooks.RemovableHandle`:
                 a handle that can be used to remove the added hook by calling
                 ``handle.remove()``
         """
@@ -1497,9 +1509,9 @@ class Module:
             hook (Callable): The user defined hook to be registered.
             prepend (bool): If true, the provided ``hook`` will be fired before
                 all existing ``forward_pre`` hooks on this
-                :class:`torch.nn.modules.Module`. Otherwise, the provided
+                :class:`nn.modules.Module`. Otherwise, the provided
                 ``hook`` will be fired after all existing ``forward_pre`` hooks
-                on this :class:`torch.nn.modules.Module`. Note that global
+                on this :class:`nn.modules.Module`. Note that global
                 ``forward_pre`` hooks registered with
                 :func:`register_module_forward_pre_hook` will fire before all
                 hooks registered by this method.
@@ -1509,7 +1521,7 @@ class Module:
                 Default: ``False``
 
         Returns:
-            :class:`torch.utils.hooks.RemovableHandle`:
+            :class:`utils.hooks.RemovableHandle`:
                 a handle that can be used to remove the added hook by calling
                 ``handle.remove()``
         """
@@ -1559,9 +1571,9 @@ class Module:
             hook (Callable): The user defined hook to be registered.
             prepend (bool): If ``True``, the provided ``hook`` will be fired
                 before all existing ``forward`` hooks on this
-                :class:`torch.nn.modules.Module`. Otherwise, the provided
+                :class:`nn.modules.Module`. Otherwise, the provided
                 ``hook`` will be fired after all existing ``forward`` hooks on
-                this :class:`torch.nn.modules.Module`. Note that global
+                this :class:`nn.modules.Module`. Note that global
                 ``forward`` hooks registered with
                 :func:`register_module_forward_hook` will fire before all hooks
                 registered by this method.
@@ -1571,7 +1583,7 @@ class Module:
                 Default: ``False``
 
         Returns:
-            :class:`torch.utils.hooks.RemovableHandle`:
+            :class:`utils.hooks.RemovableHandle`:
                 a handle that can be used to remove the added hook by calling
                 ``handle.remove()``
         """

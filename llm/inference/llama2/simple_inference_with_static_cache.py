@@ -1,7 +1,7 @@
 import mindspore
-from mindnlp.transformers import LlamaTokenizer, LlamaForCausalLM, StaticCache, logging
-from mindnlp.utils.testing_utils import CaptureLogger
+from mindnlp.transformers import LlamaTokenizer, LlamaForCausalLM, StaticCache
 from mindnlp.core import ops, no_grad
+import time
 
 prompts = [
     "Simply put, the theory of relativity states that ",
@@ -12,7 +12,7 @@ NUM_TOKENS_TO_GENERATE = 40
 
 model_id = 'shakechen/llama-2-7b-hf'
 tokenizer = LlamaTokenizer.from_pretrained(model_id, mirror='modelscope', pad_token="</s>", padding_side="right")
-model = LlamaForCausalLM.from_pretrained(model_id, mirror='modelscope')
+model = LlamaForCausalLM.from_pretrained(model_id, mirror='modelscope', use_safetensors=False, ms_dtype=mindspore.float16)
 inputs = tokenizer(prompts, return_tensors="ms", padding=True)
 
 def decode_one_tokens(model, cur_token, input_pos, cache_position, past_key_values):
@@ -30,7 +30,7 @@ def decode_one_tokens(model, cur_token, input_pos, cache_position, past_key_valu
 batch_size, seq_length = inputs["input_ids"].shape
 with no_grad():
     past_key_values = StaticCache(
-        config=model.config, max_batch_size=2, max_cache_len=1024, dtype=model.dtype
+        config=model.config, max_batch_size=2, max_cache_len=512, dtype=model.dtype
     )
     cache_position = ops.arange(seq_length)
     generated_ids = ops.zeros(
@@ -46,7 +46,10 @@ with no_grad():
 
     cache_position = mindspore.tensor([seq_length + 1])
     for _ in range(1, NUM_TOKENS_TO_GENERATE):
+        s = time.time()
         next_token = decode_one_tokens(model, next_token, None, cache_position, past_key_values)
+        t = time.time()
+        print(t - s)
         generated_ids[:, cache_position] = next_token.int()
         cache_position += 1
 

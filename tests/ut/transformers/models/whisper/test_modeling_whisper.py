@@ -50,7 +50,9 @@ if is_datasets_available():
 
 if is_mindspore_available():
     import mindspore
+    from mindspore.dataset.audio import Resample
     from mindnlp.core import nn, ops, no_grad
+    from mindnlp.data.io.audio import read
     from mindnlp.engine import set_seed
 
     from mindnlp.transformers import (
@@ -399,9 +401,9 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCas
 
         return False
 
-    def _get_logits_processor_kwargs(self, do_sample=False):
+    def _get_logits_processor_kwargs(self, do_sample=False, config=None):
         # Overwritten from `GenerationTesterMixin`, Whisper needs `"temperature": 0.0` to be able to do beam search
-        logits_processor_kwargs = super()._get_logits_processor_kwargs(do_sample=do_sample)
+        logits_processor_kwargs = super()._get_logits_processor_kwargs(do_sample=do_sample, config=config)
         logits_processor_kwargs["temperature"] = 0.0
         return logits_processor_kwargs
 
@@ -487,18 +489,18 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCas
         config_and_inputs = self.model_tester.prepare_config_and_inputs_for_common()
         self.model_tester.check_encoder_decoder_model_standalone(*config_and_inputs)
 
-    def _get_input_ids_and_config(self, batch_size=3):
-        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
-        input_ids = inputs_dict[self.input_name]
+    # def _get_input_ids_and_config(self, batch_size=3):
+    #     config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+    #     input_ids = inputs_dict[self.input_name]
 
-        # cut to half length & take max batch_size=batch_size
-        input_ids = input_ids[:batch_size, :, :]
+    #     # cut to half length & take max batch_size=batch_size
+    #     input_ids = input_ids[:batch_size, :, :]
 
-        if config.eos_token_id is not None and config.pad_token_id is None:
-            # hack to allow generate for models such as GPT2 as is done in `generate()`
-            config.pad_token_id = config.eos_token_id
+    #     if config.eos_token_id is not None and config.pad_token_id is None:
+    #         # hack to allow generate for models such as GPT2 as is done in `generate()`
+    #         config.pad_token_id = config.eos_token_id
 
-        return config, input_ids, None
+    #     return config, input_ids, None
 
     def test_inputs_embeds(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -986,8 +988,8 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCas
 
         with self.assertRaisesRegex(
             ValueError,
-            f"The length of `decoder_input_ids` equal `prompt_ids` plus special start tokens is {decoder_input_ids.shape[-1]}, and the `max_new_tokens` "
-            f"is {max_new_tokens}. Thus, the combined length of "
+            f"The length of `decoder_input_ids`, including special start tokens, prompt tokens, and previous tokens, is {decoder_input_ids.shape[-1]}, "
+            f" and `max_new_tokens` is {max_new_tokens}. Thus, the combined length of "
             f"`decoder_input_ids` and `max_new_tokens` is: {max_new_tokens + decoder_input_ids.shape[-1]}. This exceeds the "
             f"`max_target_positions` of the Whisper model: {config.max_target_positions}. "
             "You should either reduce the length of your prompt, or reduce the value of `max_new_tokens`, "
@@ -1201,49 +1203,6 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCas
 
     def test_longform_generate_multi_batch_cond_prev(self):
         self._check_longform_generate_multi_batch(condition_on_prev_tokens=True)
-
-    def test_beam_sample_generate_dict_output(self):
-        # We overwrite test_beam_sample_generate_dict_output in test_utils as
-        # we can only perform beam search if the temperature is set to 0 in Whisper.
-        config, input_ids, attention_mask = self._get_input_ids_and_config()
-
-        # disable cache
-        config.use_cache = False
-
-        model = WhisperForConditionalGeneration(config).eval()
-        _, logits_warper_kwargs = self._get_logits_processor_and_warper_kwargs(input_ids.shape[-1])
-        beam_kwargs = self._get_beam_kwargs()
-
-        # With Whisper, we can only perform a beam search if the temperature is set to 0.
-        logits_warper_kwargs["temperature"] = 0
-        # We will return num_beams sequences per input only if num_return_sequences == num_beams:
-        beam_kwargs["num_return_sequences"] = beam_kwargs["num_beams"]
-
-        output_generate = self._beam_sample_generate(
-            model=model,
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            beam_kwargs=beam_kwargs,
-            logits_warper_kwargs=logits_warper_kwargs,
-            output_scores=True,
-            output_logits=True,
-            output_hidden_states=True,
-            output_attentions=True,
-            return_dict_in_generate=True,
-        )
-        if model.config.is_encoder_decoder:
-            self.assertTrue(output_generate.sequences.shape[-1] == self.max_new_tokens + 1)
-            self.assertIsInstance(output_generate, GenerateBeamEncoderDecoderOutput)
-            # Retrocompatibility check
-            self.assertIsInstance(output_generate, BeamSampleEncoderDecoderOutput)
-        else:
-            self.assertTrue(output_generate.sequences.shape[-1] == self.max_new_tokens + input_ids.shape[-1])
-            self.assertIsInstance(output_generate, GenerateBeamDecoderOnlyOutput)
-            # Retrocompatibility check
-            self.assertIsInstance(output_generate, BeamSampleDecoderOnlyOutput)
-
-        self._check_outputs(output_generate, input_ids, model.config, num_return_sequences=beam_kwargs["num_beams"])
-
 
     @is_flaky()  # TODO (joao, sanchit): fails ~9% of the times. Does the original test have the same issue?
     def test_custom_4d_attention_mask(self):
@@ -1939,8 +1898,8 @@ class WhisperModelIntegrationTests(unittest.TestCase):
         output_without_prompt = processor.decode(output_without_prompt[0])
         output_with_prompt = processor.decode(output_with_prompt[0])
 
-        self.assertEqual(output_without_prompt, expected_without_prompt)
         self.assertEqual(output_with_prompt, expected_with_prompt)
+        self.assertEqual(output_without_prompt, expected_without_prompt)
 
     @slow
     def test_language_detection(self):
@@ -1957,9 +1916,8 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
         audio = hf_hub_download("Narsil/asr_dummy", filename="hindi.ogg", repo_type="dataset")
 
-        from mindnlp.data.io.audio import read
         raw_audio, sr = read(audio)
-        input_speech = mindspore.dataset.audio.transforms.Resample(sr, 16_000)(raw_audio).asnumpy()
+        input_speech = Resample(sr, 16_000)(raw_audio)
 
         input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
 
@@ -1974,8 +1932,8 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
         audio = hf_hub_download("Narsil/asr_dummy", filename="hindi.ogg", repo_type="dataset")
 
-        raw_audio, sr = torchaudio.load(audio)
-        input_speech = torchaudio.transforms.Resample(sr, 16_000)(raw_audio).asnumpy()
+        raw_audio, sr = read(audio)
+        input_speech = Resample(sr, 16_000)(raw_audio)
 
         input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
 
@@ -2005,10 +1963,10 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
         audio = hf_hub_download("Narsil/asr_dummy", filename="hindi.ogg", repo_type="dataset")
 
-        raw_audio, sr = torchaudio.load(audio)
-        input_speech = torchaudio.transforms.Resample(sr, 16_000)(raw_audio)
+        raw_audio, sr = read(audio)
+        input_speech = Resample(sr, 16_000)(raw_audio)
 
-        input_speech = input_speech.tile((1, 10)).asnumpy()
+        input_speech = input_speech.tile((1, 10))
         input_features = processor(
             input_speech, return_tensors="ms", padding="longest", truncation=False, sampling_rate=16_000
         ).input_features

@@ -10,7 +10,6 @@ from mindspore.ops.function.random_func import _get_seed, _set_prim_op_user_data
 from mindspore.ops.operations import nn_ops
 
 from mindnlp.configs import DEVICE_TARGET, ON_ORANGE_PI, use_pyboost
-from .modules._utils import _pair
 
 def gelu(input, approximate='none'):
     if use_pyboost():
@@ -132,22 +131,7 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
     - numpy array: The result of the average pooling operation.
     """
     if use_pyboost():
-        if stride is None:
-            stride = kernel_size
-
-        if isinstance(padding, int):
-            pad_height, pad_width = padding, padding
-        else:
-            pad_height, pad_width = padding
-
-        # Add padding to the input array
-        if pad_height > 0 or pad_width > 0:
-            input = pad(input, (pad_width, pad_width, pad_height, pad_height), mode='constant')
-
-        pad_mode = "SAME" if ceil_mode else "VALID"
-        _avgpool2d = _get_cache_prim(ops.AvgPool)(kernel_size=_pair(kernel_size), strides=_pair(stride), pad_mode=pad_mode)
-        output = _avgpool2d(input)
-        return output
+        return mindspore.ops.function.nn_func.avg_pool2d_ext(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
     return ops.avg_pool2d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
@@ -235,12 +219,12 @@ def pad(input, pad, mode='constant', value=0.0):
     return ops.pad(input, pad, mode, value)
 
 def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
-    if label_smoothing != 0.0 or target.ndim != 1:
-        return _inner_nll_loss(input, target, weight, ignore_index, reduction, label_smoothing)
-    if weight is None:
-        weight = ops.ones(input.shape[-1], dtype=input.dtype)
-    _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
-    return _nll_loss(input, target, weight)[0]
+    return _inner_nll_loss(input, target, weight, ignore_index, reduction, label_smoothing)
+    # if label_smoothing != 0.0 or target.ndim != 1:
+    # if weight is None:
+    #     weight = ops.ones(input.shape[-1], dtype=input.dtype)
+    # _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
+    # return _nll_loss(input, target, weight)[0]
 
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     input = input.to(mindspore.float32)
@@ -477,19 +461,28 @@ def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode
         output_1d = output_2d.squeeze(2)
         return output_1d
 
+
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if use_pyboost():
         return mindspore.mint.nn.functional.group_norm(input, num_groups, weight, bias, eps)
+
     input_shape = input.shape
-    input = input.reshape(input_shape[0], num_groups, -1)
-    mean = ops.mean(input, axis=2, keep_dims=True)
-    var = ops.div(ops.sum(ops.square(ops.sub(input, mean)), 2, keepdim=True), (math.prod(input_shape[1:]) / num_groups))
-    std = ops.sqrt(var + eps)
-    input = ops.div(ops.sub(input, mean), std)
-    input = input.reshape(input_shape)
-    output = ops.add(input *weight.reshape((-1,) + (1,) * (len(input_shape) - 2)),
-                        bias.reshape((-1,) + (1,) * (len(input_shape) - 2)))
-    return output
+    N = input_shape[0]
+    C = input_shape[1]
+    input_reshaped = input.view(1, N * num_groups, -1 if N!=0 else 1)
+    outputs = batch_norm(input_reshaped, None, None, None, None, True, 0., eps)
+    out = outputs.view(input_shape)
+    affine_param_shape = [1] * input.ndim
+    affine_param_shape[1] = C
+    affine_param_shape = tuple(affine_param_shape)
+    if weight is not None and bias is not None:
+        out = bias.view(affine_param_shape).addcmul(out, weight.view(affine_param_shape), 1)
+    elif weight is not None:
+        out = out.mul(weight.view(affine_param_shape))
+    elif bias is not None:
+        out = out.add(bias.view(affine_param_shape))
+    return out
+
 
 def _in_projection(
     q,
@@ -1058,7 +1051,7 @@ def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
         pad_mode = padding
         pad = (0,) * 4
 
-    _conv2d = _get_cache_prim(ops.Conv2D)(out_channel=weight.shape[1] * groups,
+    _conv2d = _get_cache_prim(ops.Conv2D)(out_channel=weight.shape[0] * groups,
                                         kernel_size=(1, weight.shape[-1]),
                                         mode=1,
                                         pad_mode=pad_mode,

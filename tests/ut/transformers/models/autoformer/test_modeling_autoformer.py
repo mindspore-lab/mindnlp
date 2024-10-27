@@ -34,6 +34,7 @@ if is_mindspore_available():
 
     from mindnlp.transformers.models.autoformer.modeling_autoformer import AutoformerDecoder, AutoformerEncoder
 
+
 class AutoformerModelTester:
     def __init__(
         self,

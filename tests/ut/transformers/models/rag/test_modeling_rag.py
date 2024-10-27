@@ -270,7 +270,6 @@ class RagTestMixin:
         for model_class in [RagTokenForGeneration, RagSequenceForGeneration]:
             model = model_class(config, retriever=retriever)
             model.set_context_encoder_for_training(dpr_context_encoder)  # set the context_encoder for training
-            model
             model.eval()
 
             self.assertTrue(model.config.is_encoder_decoder)

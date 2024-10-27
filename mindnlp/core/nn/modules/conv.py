@@ -2,7 +2,8 @@
 """conv"""
 import math
 from typing import Optional, Tuple, Union, List
-from mindspore import Tensor, Parameter, ops as mops
+from mindspore import Tensor, ops as mops
+from ..parameter import Parameter
 from .module import Module
 from ..common_types import _size_2_t, _size_1_t
 from ._utils import _single, _pair, _reverse_repeat_tuple

@@ -12,20 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch GPT-J model."""
+"""MindSpore GPT-J model."""
 
 from typing import Optional, Tuple, Union
 
-import numpy as np
 import mindspore
-from mindspore import Tensor
-from mindspore.common.initializer import initializer, Normal
-
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
-from mindnlp.utils import logging
+from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
 from ...activations import ACT2FN
+from ...cache_utils import Cache, DynamicCache, StaticCache
+from ...generation import GenerationMixin
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
@@ -33,9 +30,9 @@ from ...modeling_outputs import (
     SequenceClassifierOutputWithPast,
 )
 from ...modeling_utils import PreTrainedModel
-
-
-
+from ....utils import (
+    logging,
+)
 from .configuration_gptj import GPTJConfig
 
 
@@ -44,15 +41,6 @@ logger = logging.get_logger(__name__)
 _CHECKPOINT_FOR_DOC = "hf-internal-testing/tiny-random-gptj"
 _REAL_CHECKPOINT_FOR_DOC = "EleutherAI/gpt-j-6B"
 _CONFIG_FOR_DOC = "GPTJConfig"
-
-
-# Copied from transformers.models.llama.modeling_llama._get_unpad_data
-def _get_unpad_data(attention_mask):
-    seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
-    indices = ops.nonzero(attention_mask.flatten()).flatten()
-    max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, dim=0, dtype=mindspore.int32), (1, 0))
-    return indices, cu_seqlens, max_seqlen_in_batch
 
 
 def create_sinusoidal_positions(num_pos: int, dim: int) -> mindspore.Tensor:
@@ -66,35 +54,35 @@ def get_embed_positions(embed_positions, position_ids):
 
 
 def rotate_every_two(x: mindspore.Tensor) -> mindspore.Tensor:
-    # x1 = x[:, :, :, ::2]
-    # x2 = x[:, :, :, 1::2]
-    x1 = ops.index_select(x, -1, ops.arange(0, x.shape[-1], 2))
-    x2 = ops.index_select(x, -1, ops.arange(1, x.shape[-1], 2))
+    x1 = x[:, :, :, ::2]
+    x2 = x[:, :, :, 1::2]
     x = ops.stack((-x2, x1), dim=-1)
-
-    return x.flatten(start_dim=-2)  # in einsum notation: rearrange(x, '... d j -> ... (d j)')
+    return ops.flatten(x, -2)  # in einsum notation: rearrange(x, '... d j -> ... (d j)')
 
 
 def apply_rotary_pos_emb(tensor: mindspore.Tensor, sin: mindspore.Tensor, cos: mindspore.Tensor) -> mindspore.Tensor:
     sin = ops.repeat_interleave(sin[:, :, None, :], 2, 3)
     cos = ops.repeat_interleave(cos[:, :, None, :], 2, 3)
-
     return (tensor * cos) + (rotate_every_two(tensor) * sin)
 
 
 class GPTJAttention(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, layer_idx=None):
         super().__init__()
         self.config = config
         max_positions = config.max_position_embeddings
-        self.bias = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.int32)).view(
-                1, 1, max_positions, max_positions).to(mindspore.bool_)
-        self.masked_bias = mindspore.Tensor(-1e9)
 
-        self.attn_dropout = nn.Dropout(p=config.attn_pdrop)
-        self.resid_dropout = nn.Dropout(p=config.resid_pdrop)
+        self.attn_dropout = nn.Dropout(config.attn_pdrop)
+        self.resid_dropout = nn.Dropout(config.resid_pdrop)
 
         self.is_causal = True
+        self.layer_idx = layer_idx
+        if layer_idx is None:
+            logger.warning_once(
+                f"Instantiating {self.__class__.__name__} without passing a `layer_idx` is not recommended and will "
+                "lead to errors during the forward call if caching is used. Please make sure to provide a `layer_idx` "
+                "when creating this class."
+            )
 
         self.embed_dim = config.hidden_size
         self.num_attention_heads = config.num_attention_heads
@@ -104,7 +92,7 @@ class GPTJAttention(nn.Module):
                 f"embed_dim must be divisible by num_attention_heads (got `embed_dim`: {self.embed_dim} and"
                 f" `num_attention_heads`: {self.num_attention_heads})."
             )
-        self.scale_attn = ops.sqrt(mindspore.Tensor(self.head_dim, dtype=mindspore.float32))
+        self.scale_attn = ops.sqrt(mindspore.Tensor(self.head_dim, dtype=mindspore.float32)).to(get_default_dtype())
 
         self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
         self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=False)
@@ -150,29 +138,18 @@ class GPTJAttention(nn.Module):
         attention_mask=None,
         head_mask=None,
     ):
-        # compute causal mask from causal mask buffer
-        query_length, key_length = query.shape[-2], key.shape[-2]
-        causal_mask = self.bias[:, :, key_length - query_length : key_length, :key_length]
-
         # Keep the attention weights computation in fp32 to avoid overflow issues
         query = query.to(mindspore.float32)
         key = key.to(mindspore.float32)
 
-        attn_weights = ops.matmul(query, key.swapaxes(-1, -2))
-
-        mask_value = Tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min)
-        # Need to be a tensor, otherwise we get error: `RuntimeError: expected scalar type float but found double`.
-        # Need to be on the same device, otherwise `RuntimeError: ..., x and y to be on the same device`
-        mask_value = mindspore.Tensor(mask_value, dtype=attn_weights.dtype)
-        attn_weights = ops.where(causal_mask, attn_weights, mask_value)
-
+        attn_weights = ops.matmul(query, ops.transpose(key, -1, -2))
         attn_weights = attn_weights / self.scale_attn
 
-        if attention_mask is not None:
-            # Apply the attention mask
-            attn_weights = attn_weights + attention_mask
+        if attention_mask is not None:  # no matter the length, we just slice it
+            causal_mask = attention_mask[:, :, :, : key.shape[-2]]
+            attn_weights = attn_weights + causal_mask
 
-        attn_weights = ops.softmax(attn_weights, dim=-1)
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1)
         attn_weights = attn_weights.to(value.dtype)
         attn_weights = self.attn_dropout(attn_weights)
 
@@ -186,17 +163,18 @@ class GPTJAttention(nn.Module):
 
     def _get_embed_positions(self, position_ids):
         embed_positions = self.embed_positions
-        return ops.tile(embed_positions, (position_ids.shape[0], 1, 1))
+        return embed_positions.tile((position_ids.shape[0], 1, 1))
 
     def forward(
         self,
         hidden_states: mindspore.Tensor,
-        layer_past: Optional[Tuple[mindspore.Tensor]] = None,
+        layer_past: Optional[Cache] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = False,
         output_attentions: Optional[bool] = False,
+        cache_position: Optional[mindspore.Tensor] = None,
     ) -> Union[
         Tuple[mindspore.Tensor, Tuple[mindspore.Tensor]],
         Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor], Tuple[mindspore.Tensor, ...]]],
@@ -209,16 +187,10 @@ class GPTJAttention(nn.Module):
         key = self._split_heads(key, self.num_attention_heads, self.head_dim, True)
         value = self._split_heads(value, self.num_attention_heads, self.head_dim, False)
 
-        # if is_torch_fx_proxy(position_ids) or torch.jit.is_tracing():
-        #     # The logic to conditionally copy to GPU could not be traced, so we do this
-        #     # every time in the torch.fx case
-        #     embed_positions = get_embed_positions(self.embed_positions, position_ids)
-        # else:
         embed_positions = self._get_embed_positions(position_ids)
 
-        repeated_position_ids = ops.tile(position_ids.unsqueeze(-1), (1, 1, embed_positions.shape[-1]))
+        repeated_position_ids = position_ids.unsqueeze(-1).tile((1, 1, embed_positions.shape[-1]))
         sincos = ops.gather(embed_positions, 1, repeated_position_ids)
-
         sin, cos = ops.split(sincos, sincos.shape[-1] // 2, dim=-1)
 
         if self.rotary_dim is not None:
@@ -231,8 +203,8 @@ class GPTJAttention(nn.Module):
             k_rot = apply_rotary_pos_emb(k_rot, sin, cos)
             q_rot = apply_rotary_pos_emb(q_rot, sin, cos)
 
-            key = ops.cat([k_rot, k_pass], dim=-1)
-            query = ops.cat([q_rot, q_pass], dim=-1)
+            key = ops.cat([k_rot.to(k_pass.dtype), k_pass], dim=-1)
+            query = ops.cat([q_rot.to(q_pass.dtype), q_pass], dim=-1)
         else:
             key = apply_rotary_pos_emb(key, sin, cos)
             query = apply_rotary_pos_emb(query, sin, cos)
@@ -241,17 +213,13 @@ class GPTJAttention(nn.Module):
         query = query.permute(0, 2, 1, 3)
 
         if layer_past is not None:
-            past_key = layer_past[0]
-            past_value = layer_past[1]
-            key = ops.cat((past_key, key), dim=-2)
-            value = ops.cat((past_value, value), dim=-2)
-
-        if use_cache is True:
-            # Note that this cast is quite ugly, but is not implemented before ROPE as the original codebase keeps the key in float32 all along the computation.
-            # Reference: https://github.com/kingoflolz/mesh-transformer-jax/blob/f8315e3003033b23f21d78361b288953064e0e76/mesh_transformer/layers.py#L128
-            present = (key.to(hidden_states.dtype), value)
-        else:
-            present = None
+            cache_kwargs = {
+                "sin": sin,
+                "cos": cos,
+                "partial_rotation_size": self.rotary_dim,
+                "cache_position": cache_position,
+            }
+            key, value = layer_past.update(key, value, self.layer_idx, cache_kwargs)
 
         # compute self-attention: V x Softmax(QK^T)
         attn_output, attn_weights = self._attn(query, key, value, attention_mask, head_mask)
@@ -260,13 +228,11 @@ class GPTJAttention(nn.Module):
         attn_output = self.out_proj(attn_output)
         attn_output = self.resid_dropout(attn_output)
 
-        outputs = (attn_output, present)
+        outputs = (attn_output, layer_past)
         if output_attentions:
             outputs += (attn_weights,)
 
         return outputs  # a, present, (attentions)
-
-
 
 
 GPTJ_ATTENTION_CLASSES = {
@@ -283,7 +249,7 @@ class GPTJMLP(nn.Module):
         self.fc_out = nn.Linear(intermediate_size, embed_dim)
 
         self.act = ACT2FN[config.activation_function]
-        self.dropout = nn.Dropout(p=config.resid_pdrop)
+        self.dropout = nn.Dropout(config.resid_pdrop)
 
     def forward(self, hidden_states: Optional[mindspore.Tensor]) -> mindspore.Tensor:
         hidden_states = self.fc_in(hidden_states)
@@ -294,22 +260,23 @@ class GPTJMLP(nn.Module):
 
 
 class GPTJBlock(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, layer_idx=None):
         super().__init__()
         inner_dim = config.n_inner if config.n_inner is not None else 4 * config.n_embd
         self.ln_1 = nn.LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
-        self.attn = GPTJ_ATTENTION_CLASSES[config._attn_implementation](config)
+        self.attn = GPTJ_ATTENTION_CLASSES[config._attn_implementation](config, layer_idx)
         self.mlp = GPTJMLP(inner_dim, config)
 
     def forward(
         self,
         hidden_states: Optional[mindspore.Tensor],
-        layer_past: Optional[Tuple[mindspore.Tensor]] = None,
+        layer_past: Optional[Cache] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = False,
         output_attentions: Optional[bool] = False,
+        cache_position: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple[mindspore.Tensor], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor, ...]]]]:
         residual = hidden_states
         hidden_states = self.ln_1(hidden_states)
@@ -321,6 +288,7 @@ class GPTJBlock(nn.Module):
             head_mask=head_mask,
             use_cache=use_cache,
             output_attentions=output_attentions,
+            cache_position=cache_position,
         )
         attn_output = attn_outputs[0]  # output_attn: a, present, (attentions)
         outputs = attn_outputs[1:]
@@ -348,133 +316,25 @@ class GPTJPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["GPTJBlock"]
     _skip_keys_device_placement = "past_key_values"
-    _supports_flash_attn_2 = True
+    _supports_cache_class = True
+    _supports_static_cache = True
+    _supports_param_buffer_assignment = False
 
-    # def __init__(self, *inputs, **kwargs):
-    #     super().__init__(*inputs, **kwargs)
-
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights."""
-        if isinstance(cell, (nn.Linear,)):
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                             cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-
-
-GPTJ_START_DOCSTRING = r"""
-    This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) sub-class. Use
-    it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
-    behavior.
-
-    Parameters:
-        config ([`GPTJConfig`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-GPTJ_INPUTS_DOCSTRING = r"""
-    Args:
-        input_ids (`mindspore.Tensor` of shape `({0})`):
-            Indices of input sequence tokens in the vocabulary.
-
-            Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-            [`PreTrainedTokenizer.__call__`] for details.
-
-            [What are input IDs?](../glossary#input-ids)
-        attention_mask (`mindspore.Tensor` of shape `({0})`, *optional*):
-            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-            
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-
-            [What are attention masks?](../glossary#attention-mask)
-        token_type_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
-            Segment token indices to indicate first and second portions of the inputs. Indices are selected in `[0,
-                1]`:
-                
-            - 0 corresponds to a *sentence A* token,
-            - 1 corresponds to a *sentence B* token.
-
-            [What are token type IDs?](../glossary#token-type-ids)
-        position_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
-            Indices of positions of each input sequence tokens in the position embeddings. Selected in the range `[0,
-            config.n_positions - 1]`.
-
-            [What are position IDs?](../glossary#position-ids)
-        head_mask (`mindspore.Tensor` of shape `(num_attention_heads,)` or `(n_layer, num_attention_heads)`, *optional*):
-            Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-            
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
-
-        inputs_embeds (`mindspore.Tensor` of shape `({0}, hidden_dim)`, *optional*):
-            Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation. This
-            is useful if you want more control over how to convert *input_ids* indices into associated vectors than the
-            model's internal embedding lookup matrix.
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
-
-PARALLELIZE_DOCSTRING = r"""
-    This is an experimental feature and is a subject to change at a moment's notice. Uses a device map to distribute
-    attention modules of the model across several devices. If no device map is given, it will evenly distribute blocks
-    across all devices.
-
-    Args:
-        device_map (`Dict[int, list]`, optional, defaults to None):
-            A dictionary that maps attention modules to devices. Note that the embedding module and LMHead are always
-            automatically mapped to the first device (for esoteric reasons). That means that the first device should
-            have fewer attention modules mapped to it than other devices. For reference, the GPT-J models have the
-            following number of attention modules:
-            
-                - gpt-j-6B: 28
-
-    Example:
-        ```python
-        >>> # Here is an example of a device map on a machine with 4 GPUs using gpt-j-6B, which has a total of 28 attention modules:
-        >>> model = GPTJForCausalLM.from_pretrained("EleutherAI/gpt-j-6B")
-        >>> device_map = {
-        >>>     0: [0, 1, 2, 3, 4, 5, 6],
-        >>>     1: [7, 8, 9, 10, 11, 12, 13],
-        >>>     2: [14, 15, 16, 17, 18, 19, 20],
-        >>>     3: [21, 22, 23, 24, 25, 26, 27],
-        >>> }
-        >>> model.parallelize(device_map)
-        ```
-"""
-
-DEPARALLELIZE_DOCSTRING = r"""
-    Moves the model to CPU from a model parallel state.
-
-    Example:
-        ```python
-        >>> # On a 4 GPU machine with gpt-j-6B:
-        >>> model = GPTJForCausalLM.from_pretrained("EleutherAI/gpt-j-6B")
-        >>> device_map = {
-        >>>     0: [0, 1, 2, 3, 4, 5, 6],
-        >>>     1: [7, 8, 9, 10, 11, 12, 13],
-        >>>     2: [14, 15, 16, 17, 18, 19, 20],
-        >>>     3: [21, 22, 23, 24, 25, 26, 27],
-        >>> }
-        >>> model.parallelize(device_map)  # Splits the model across several devices
-        >>> model.deparallelize()  # Put the model back on cpu and cleans memory by calling torch.cuda.empty_cache()
-        ```
-"""
+        if isinstance(module, (nn.Linear,)):
+            # Slightly different from Mesh Transformer JAX which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
 
 
 class GPTJModel(GPTJPreTrainedModel):
@@ -484,8 +344,8 @@ class GPTJModel(GPTJPreTrainedModel):
         self.embed_dim = config.n_embd
         self.vocab_size = config.vocab_size
         self.wte = nn.Embedding(config.vocab_size, self.embed_dim)
-        self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.ModuleList([GPTJBlock(config) for _ in range(config.n_layer)])
+        self.drop = nn.Dropout(config.embd_pdrop)
+        self.h = nn.ModuleList([GPTJBlock(config, layer_idx=i) for i in range(config.n_layer)])
         self.ln_f = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_epsilon)
 
         # Model parallel
@@ -495,8 +355,7 @@ class GPTJModel(GPTJPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-        self._use_flash_attention_2 = False
-
+        self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
 
     def get_input_embeddings(self):
         return self.wte
@@ -507,7 +366,7 @@ class GPTJModel(GPTJPreTrainedModel):
     def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
-        past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
+        past_key_values: Optional[Union[Cache, Tuple[Tuple[mindspore.Tensor]]]] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
@@ -517,6 +376,7 @@ class GPTJModel(GPTJPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        cache_position: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -525,72 +385,8 @@ class GPTJModel(GPTJPreTrainedModel):
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        if input_ids is not None and inputs_embeds is not None:
-            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
-        elif input_ids is not None:
-            self.warn_if_padding_and_no_attention_mask(input_ids, attention_mask)
-            input_shape = input_ids.shape
-            input_ids = input_ids.view(-1, input_shape[-1])
-            batch_size = input_ids.shape[0]
-        elif inputs_embeds is not None:
-            input_shape = inputs_embeds.shape[:-1]
-            batch_size = inputs_embeds.shape[0]
-        else:
-            raise ValueError("You have to specify either input_ids or inputs_embeds")
-
-
-        if token_type_ids is not None:
-            token_type_ids = token_type_ids.view(-1, input_shape[-1])
-
-        if past_key_values is None:
-            past_length = 0
-            past_key_values = tuple([None] * len(self.h))
-        else:
-            past_length = past_key_values[0][0].shape[-2]
-
-        if position_ids is None:
-            position_ids = ops.arange(past_length, input_shape[-1] + past_length, dtype=mindspore.int64)
-            position_ids = position_ids.unsqueeze(0)
-
-        if not self._use_flash_attention_2:
-            # Attention mask.
-            if attention_mask is not None:
-                if batch_size <= 0:
-                    raise ValueError("batch_size has to be defined and > 0")
-                attention_mask = attention_mask.view(batch_size, -1)
-                # We create a 3D attention mask from a 2D tensor mask.
-                # Sizes are [batch_size, 1, 1, to_seq_length]
-                # So we can broadcast to [batch_size, num_heads, from_seq_length, to_seq_length]
-                # this attention mask is more simple than the triangular masking of causal attention
-                # used in OpenAI GPT, we just need to prepare the broadcast dimension here.
-                attention_mask = attention_mask[:, None, None, :]
-
-                # Since attention_mask is 1.0 for positions we want to attend and 0.0 for
-                # masked positions, this operation will create a tensor which is 0.0 for
-                # positions we want to attend and the dtype's smallest value for masked positions.
-                # Since we are adding it to the raw scores before the softmax, this is
-                # effectively the same as removing these entirely.
-                attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
-                attention_mask = (1.0 - attention_mask) * Tensor(np.finfo(mindspore.dtype_to_nptype(self.dtype)).min)
-
-        # Prepare head mask if needed
-        # 1.0 in head_mask indicate we keep the head
-        # attention_probs has shape bsz x num_attention_heads x N x N
-        # head_mask has shape n_layer x batch x num_attention_heads x N x N
-        head_mask = self.get_head_mask(head_mask, self.config.n_layer)
-
-        if inputs_embeds is None:
-            inputs_embeds = self.wte(input_ids)
-
-        hidden_states = inputs_embeds
-
-        if token_type_ids is not None:
-            token_type_embeds = self.wte(token_type_ids)
-            hidden_states = hidden_states + token_type_embeds
-
-        hidden_states = self.drop(hidden_states)
-
-        output_shape = (-1,) + input_shape[1:] + (hidden_states.shape[-1],)
+        if (input_ids is None) ^ (inputs_embeds is not None):
+            raise ValueError("You must specify exactly one of input_ids or inputs_embeds")
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -599,10 +395,56 @@ class GPTJModel(GPTJPreTrainedModel):
                 )
                 use_cache = False
 
-        presents = () if use_cache else None
+        if inputs_embeds is None:
+            inputs_embeds = self.wte(input_ids)
+
+        # kept for BC (non `Cache` `past_key_values` inputs)
+        return_legacy_cache = False
+        if use_cache and not isinstance(past_key_values, Cache):
+            return_legacy_cache = True
+            if past_key_values is None:
+                past_key_values = DynamicCache()
+            else:
+                past_key_values = DynamicCache.from_legacy_cache(past_key_values)
+                logger.warning_once(
+                    "We detected that you are passing `past_key_values` as a tuple of tuples. This is deprecated and "
+                    "will be removed. Please convert your cache or use an appropriate `Cache` class "
+                    "(https://huggingface.co/docs/transformers/kv_cache#legacy-cache-format)"
+                )
+
+        seq_length = inputs_embeds.shape[1]
+        if cache_position is None:
+            past_key_values_length = past_key_values.get_seq_length() if past_key_values is not None else 0
+            cache_position = ops.arange(
+                past_key_values_length, past_key_values_length + seq_length
+            )
+
+        if position_ids is None:
+            position_ids = cache_position.unsqueeze(0)
+
+        causal_mask = self._update_causal_mask(
+            attention_mask, inputs_embeds, cache_position, past_key_values, output_attentions
+        )
+
+        # Prepare head mask if needed
+        # 1.0 in head_mask indicate we keep the head
+        # attention_probs has shape bsz x num_attention_heads x N x N
+        # head_mask has shape n_layer x batch x num_attention_heads x N x N
+        head_mask = self.get_head_mask(head_mask, self.config.n_layer)
+        hidden_states = inputs_embeds
+
+        if token_type_ids is not None:
+            token_type_ids = token_type_ids.view(-1, seq_length)
+            token_type_embeds = self.wte(token_type_ids)
+            hidden_states = hidden_states + token_type_embeds
+
+        hidden_states = self.drop(hidden_states)
+        output_shape = (-1, seq_length, hidden_states.shape[-1])
+
+        next_decoder_cache = None
         all_self_attentions = () if output_attentions else None
         all_hidden_states = () if output_hidden_states else None
-        for i, (block, layer_past) in enumerate(zip(self.h, past_key_values)):
+        for i, block in enumerate(self.h):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
@@ -611,30 +453,31 @@ class GPTJModel(GPTJPreTrainedModel):
                     block.__call__,
                     hidden_states,
                     None,
-                    attention_mask,
+                    causal_mask,
                     position_ids,
                     head_mask[i],
                     use_cache,
                     output_attentions,
+                    cache_position,
                 )
             else:
                 outputs = block(
                     hidden_states=hidden_states,
-                    layer_past=layer_past,
-                    attention_mask=attention_mask,
+                    layer_past=past_key_values,
+                    attention_mask=causal_mask,
                     position_ids=position_ids,
                     head_mask=head_mask[i],
                     use_cache=use_cache,
                     output_attentions=output_attentions,
+                    cache_position=cache_position,
                 )
 
             hidden_states = outputs[0]
             if use_cache is True:
-                presents = presents + (outputs[1],)
+                next_decoder_cache = outputs[1]
 
             if output_attentions:
                 all_self_attentions = all_self_attentions + (outputs[2 if use_cache else 1],)
-
 
         hidden_states = self.ln_f(hidden_states)
 
@@ -643,18 +486,112 @@ class GPTJModel(GPTJPreTrainedModel):
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
 
+        next_cache = next_decoder_cache if use_cache else None
+        if return_legacy_cache:
+            next_cache = next_cache.to_legacy_cache()
+
         if not return_dict:
-            return tuple(v for v in [hidden_states, presents, all_hidden_states, all_self_attentions] if v is not None)
+            return tuple(
+                v for v in [hidden_states, next_cache, all_hidden_states, all_self_attentions] if v is not None
+            )
 
         return BaseModelOutputWithPast(
             last_hidden_state=hidden_states,
-            past_key_values=presents,
+            past_key_values=next_cache,
             hidden_states=all_hidden_states,
             attentions=all_self_attentions,
         )
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaModel._update_causal_mask
+    def _update_causal_mask(
+        self,
+        attention_mask: mindspore.Tensor,
+        input_tensor: mindspore.Tensor,
+        cache_position: mindspore.Tensor,
+        past_key_values: Cache,
+        output_attentions: bool,
+    ):
+        past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
+        using_static_cache = isinstance(past_key_values, StaticCache)
 
-class GPTJForCausalLM(GPTJPreTrainedModel):
+        dtype = input_tensor.dtype
+        sequence_length = input_tensor.shape[1]
+        if using_static_cache:
+            target_length = past_key_values.get_max_cache_shape()
+        else:
+            target_length = (
+                attention_mask.shape[-1]
+                if isinstance(attention_mask, mindspore.Tensor)
+                else past_seen_tokens + sequence_length + 1
+            )
+
+        # In case the provided `attention` mask is 2D, we generate a causal mask here (4D).
+        causal_mask = self._prepare_4d_causal_attention_mask_with_cache_position(
+            attention_mask,
+            sequence_length=sequence_length,
+            target_length=target_length,
+            dtype=dtype,
+            cache_position=cache_position,
+            batch_size=input_tensor.shape[0],
+        )
+
+        return causal_mask
+
+    @staticmethod
+    # Copied from transformers.models.llama.modeling_llama.LlamaModel._prepare_4d_causal_attention_mask_with_cache_position
+    def _prepare_4d_causal_attention_mask_with_cache_position(
+        attention_mask: mindspore.Tensor,
+        sequence_length: int,
+        target_length: int,
+        dtype: mindspore.dtype,
+        cache_position: mindspore.Tensor,
+        batch_size: int,
+    ):
+        """
+        Creates a causal 4D mask of shape `(batch_size, 1, query_length, key_value_length)` from a 2D mask of shape
+        `(batch_size, key_value_length)`, or if the input `attention_mask` is already 4D, do nothing.
+
+        Args:
+            attention_mask (`mindspore.Tensor`):
+                A 2D attention mask of shape `(batch_size, key_value_length)` or a 4D attention mask of shape
+                `(batch_size, 1, query_length, key_value_length)`.
+            sequence_length (`int`):
+                The sequence length being processed.
+            target_length (`int`):
+                The target length: when generating with static cache, the mask should be as long as the static cache,
+                to account for the 0 padding, the part of the cache that is not filled yet.
+            dtype (`mindspore.dtype`):
+                The dtype to use for the 4D attention mask.
+            cache_position (`mindspore.Tensor`):
+                Indices depicting the position of the input sequence tokens in the sequence.
+            batch_size (`mindspore.Tensor`):
+                Batch size.
+        """
+        if attention_mask is not None and attention_mask.dim() == 4:
+            # In this case we assume that the mask comes already in inverted form and requires no inversion or slicing.
+            causal_mask = attention_mask
+        else:
+            min_dtype = float(ops.finfo(dtype).min)
+            causal_mask = ops.full(
+                (sequence_length, target_length), fill_value=min_dtype, dtype=dtype
+            )
+            if sequence_length != 1:
+                causal_mask = ops.triu(causal_mask, diagonal=1)
+            causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
+            causal_mask = causal_mask[None, None, :, :].broadcast_to((batch_size, 1, -1, -1))
+            if attention_mask is not None:
+                causal_mask = causal_mask.copy()  # copy to contiguous memory for in-place edit
+                mask_length = attention_mask.shape[-1]
+                padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
+                padding_mask = padding_mask == 0
+                causal_mask[:, :, :, :mask_length] = causal_mask[:, :, :, :mask_length].masked_fill(
+                    padding_mask, min_dtype
+                )
+
+        return causal_mask
+
+
+class GPTJForCausalLM(GPTJPreTrainedModel, GenerationMixin):
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
@@ -662,6 +599,7 @@ class GPTJForCausalLM(GPTJPreTrainedModel):
         self.transformer = GPTJModel(config)
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size)
 
+        # Model parallel
         self.model_parallel = False
 
         # Initialize weights and apply final processing
@@ -673,56 +611,81 @@ class GPTJForCausalLM(GPTJPreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.lm_head = new_embeddings
 
-    def prepare_inputs_for_generation(self, input_ids, past_key_values=None, inputs_embeds=None, **kwargs):
-        token_type_ids = kwargs.get("token_type_ids", None)
-        # Omit tokens covered by past_key_values
-        if past_key_values:
-            past_length = past_key_values[0][0].shape[2]
+    def prepare_inputs_for_generation(
+        self,
+        input_ids,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        past_key_values=None,
+        inputs_embeds=None,
+        cache_position=None,
+        use_cache=True,
+        **kwargs,
+    ):
+        # If we have cache: let's slice `input_ids` through `cache_position`, to keep only the unprocessed tokens
+        # Exception 1: when passing input_embeds, input_ids may be missing entries
+        # Exception 2: some generation methods do special slicing of input_ids, so we don't need to do it here
+        if past_key_values is not None:
+            if inputs_embeds is not None:  # Exception 1
+                if 0 not in input_ids.shape:
+                    input_ids = input_ids[:, -cache_position.shape[0] :]
+            elif input_ids.shape[1] != cache_position.shape[0]:  # Default case (the "else", a no op, is Exception 2)
+                input_ids = input_ids[:, cache_position]
 
-            # Some generation methods already pass only the last input ID
-            if input_ids.shape[1] > past_length:
-                remove_prefix_length = past_length
-            else:
-                # Default to old behavior: keep only final ID
-                remove_prefix_length = input_ids.shape[1] - 1
-
-            input_ids = input_ids[:, remove_prefix_length:]
             if token_type_ids is not None:
                 token_type_ids = token_type_ids[:, -input_ids.shape[1] :]
-
-        attention_mask = kwargs.get("attention_mask", None)
-        position_ids = kwargs.get("position_ids", None)
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
             position_ids = attention_mask.int().cumsum(-1) - 1
-            # position_ids.masked_fill_(attention_mask == 0, 1)
-            position_ids=ops.where(attention_mask == 0, 1, position_ids)
+            position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
 
+
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
-        if inputs_embeds is not None and past_key_values is None:
-            model_inputs = {"inputs_embeds": inputs_embeds}
+        if inputs_embeds is not None and cache_position[0] == 0:
+            model_inputs = {"inputs_embeds": inputs_embeds, "input_ids": None}
         else:
-            model_inputs = {"input_ids": input_ids}
+            # The clone here is for the same reason as for `position_ids`.
+            model_inputs = {"input_ids": input_ids.copy(), "inputs_embeds": None}
+
+        if isinstance(past_key_values, StaticCache) and attention_mask.ndim == 2:
+            if model_inputs["inputs_embeds"] is not None:
+                batch_size, sequence_length, _ = model_inputs["inputs_embeds"].shape
+            else:
+                batch_size, sequence_length = model_inputs["input_ids"].shape
+
+            dtype = self.lm_head.weight.dtype
+            min_dtype = float(ops.finfo(dtype).min)
+
+            attention_mask = self._prepare_4d_causal_attention_mask_with_cache_position(
+                attention_mask,
+                sequence_length=sequence_length,
+                target_length=past_key_values.get_max_length(),
+                dtype=dtype,
+                min_dtype=min_dtype,
+                cache_position=cache_position,
+                batch_size=batch_size,
+            )
 
         model_inputs.update(
             {
-                "past_key_values": past_key_values,
-                "use_cache": kwargs.get("use_cache"),
                 "position_ids": position_ids,
-                "attention_mask": attention_mask,
+                "cache_position": cache_position,
+                "past_key_values": past_key_values,
+                "use_cache": use_cache,
                 "token_type_ids": token_type_ids,
+                "attention_mask": attention_mask,
             }
         )
-
         return model_inputs
 
     def forward(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
-        past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
+        past_key_values: Optional[Union[Cache, Tuple[Tuple[mindspore.Tensor]]]] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
@@ -733,13 +696,13 @@ class GPTJForCausalLM(GPTJPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        cache_position: Optional[mindspore.Tensor] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
-        Args:
-            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-                `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-                are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -755,9 +718,9 @@ class GPTJForCausalLM(GPTJPreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            cache_position=cache_position,
         )
         hidden_states = transformer_outputs[0]
-
 
         # make sure sampling in fp16 works correctly and
         # compute loss in fp32 to match with mesh-tf version
@@ -766,12 +729,12 @@ class GPTJForCausalLM(GPTJPreTrainedModel):
 
         loss = None
         if labels is not None:
-            # move labels to correct device to enable model parallelism
             # Shift so that tokens < n predict n
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
             loss = loss.to(hidden_states.dtype)
 
@@ -831,11 +794,10 @@ class GPTJForSequenceClassification(GPTJPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        Args:
-            labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-                config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-                `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -871,7 +833,7 @@ class GPTJForSequenceClassification(GPTJPreTrainedModel):
                 sequence_lengths = sequence_lengths % input_ids.shape[-1]
             else:
                 sequence_lengths = -1
-                logger.warning(
+                logger.warning_once(
                     f"{self.__class__.__name__} will not detect padding tokens in `inputs_embeds`. Results may be "
                     "unexpected if using padding tokens in conjunction with `inputs_embeds.`"
                 )
@@ -889,14 +851,16 @@ class GPTJForSequenceClassification(GPTJPreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = F.mse_loss(pooled_logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(pooled_logits.squeeze(), labels.squeeze())
                 else:
-                    loss = F.mse_loss(pooled_logits, labels)
+                    loss = loss_fct(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = F.cross_entropy(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(pooled_logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss_fct = nn.BCEWithLogitsLoss()
+                loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
@@ -939,15 +903,14 @@ class GPTJForQuestionAnswering(GPTJPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         r"""
-        Args:
-            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for position (index) of the start of the labelled span for computing the token classification loss.
-                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-                are not taken into account for computing the loss.
-            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-                Labels for position (index) of the end of the labelled span for computing the token classification loss.
-                Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-                are not taken into account for computing the loss.
+        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the start of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+            are not taken into account for computing the loss.
+        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the end of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+            are not taken into account for computing the loss.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -966,7 +929,7 @@ class GPTJForQuestionAnswering(GPTJPreTrainedModel):
         sequence_output = outputs[0]
 
         logits = self.qa_outputs(sequence_output)
-        start_logits, end_logits = logits.split(1, axis=-1)
+        start_logits, end_logits = ops.split(logits, 1, dim=-1)
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
 
@@ -982,8 +945,9 @@ class GPTJForQuestionAnswering(GPTJPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = F.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = F.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
@@ -999,9 +963,9 @@ class GPTJForQuestionAnswering(GPTJPreTrainedModel):
         )
 
 __all__=[
-        "GPTJForCausalLM",
-        "GPTJForQuestionAnswering",
-        "GPTJForSequenceClassification",
-        "GPTJModel",
-        "GPTJPreTrainedModel",
-    ]
+    "GPTJForCausalLM",
+    "GPTJForQuestionAnswering",
+    "GPTJForSequenceClassification",
+    "GPTJModel",
+    "GPTJPreTrainedModel",
+]

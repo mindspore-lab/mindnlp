@@ -14,11 +14,10 @@
 """loha layer"""
 import math
 from typing import Any, Set, Tuple
-from mindspore.common.initializer import HeUniform, initializer
 
 import mindspore
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import ParameterDict
+from mindnlp.core.nn import ParameterDict, Parameter
 
 from mindnlp.peft.tuners.lycoris_utils import LycorisLayer
 
@@ -125,159 +124,77 @@ adapter parameters, as well as to calculate delta weights and apply the adaptati
         The method's code is: 
         def create_adapter_parameters(self, adapter_name: str, r: int, shape: Tuple[int, ...]):
             if len(shape) == 4:
-                self.hada_t1[adapter_name] = mindspore.Parameter(ops.zeros(r, r, shape[2], shape[3]))
-                self.hada_w1_a[adapter_name] = mindspore.Parameter(ops.zeros(r, shape[0]))
-                self.hada_w1_b[adapter_name] = mindspore.Parameter(ops.zeros(r, shape[1]))
-                self.hada_t2[adapter_name] = mindspore.Parameter(ops.zeros(r, r, shape[2], shape[3]))
-                self.hada_w2_a[adapter_name] = mindspore.Parameter(ops.zeros(r, shape[0]))
-                self.hada_w2_b[adapter_name] = mindspore.Parameter(ops.zeros(r, shape[1]))
+                self.hada_t1[adapter_name] = Parameter(ops.zeros(r, r, shape[2], shape[3]))
+                self.hada_w1_a[adapter_name] = Parameter(ops.zeros(r, shape[0]))
+                self.hada_w1_b[adapter_name] = Parameter(ops.zeros(r, shape[1]))
+                self.hada_t2[adapter_name] = Parameter(ops.zeros(r, r, shape[2], shape[3]))
+                self.hada_w2_a[adapter_name] = Parameter(ops.zeros(r, shape[0]))
+                self.hada_w2_b[adapter_name] = Parameter(ops.zeros(r, shape[1]))
             else:
-                self.hada_w1_a[adapter_name] = mindspore.Parameter(ops.zeros(shape[0], r))
-                self.hada_w1_b[adapter_name] = mindspore.Parameter(ops.zeros(r, shape[1]))
-                self.hada_w2_a[adapter_name] = mindspore.Parameter(ops.zeros(shape[0], r))
-                self.hada_w2_b[adapter_name] = mindspore.Parameter(ops.zeros(r, shape[1]))
+                self.hada_w1_a[adapter_name] = Parameter(ops.zeros(shape[0], r))
+                self.hada_w1_b[adapter_name] = Parameter(ops.zeros(r, shape[1]))
+                self.hada_w2_a[adapter_name] = Parameter(ops.zeros(shape[0], r))
+                self.hada_w2_b[adapter_name] = Parameter(ops.zeros(r, shape[1]))
         """
         # https://github.com/KohakuBlueleaf/LyCORIS/blob/eb460098187f752a5d66406d3affade6f0a07ece/lycoris/modules/loha.py#L130C9-L143C75
         if len(shape) == 4:
-            self.hada_t1[adapter_name] = mindspore.Parameter(
+            self.hada_t1[adapter_name] = Parameter(
                 ops.zeros(r, r, shape[2], shape[3])
             )
-            self.hada_w1_a[adapter_name] = mindspore.Parameter(
+            self.hada_w1_a[adapter_name] = Parameter(
                 ops.zeros(r, shape[0])
             )  # out_dim, 1-mode
-            self.hada_w1_b[adapter_name] = mindspore.Parameter(
+            self.hada_w1_b[adapter_name] = Parameter(
                 ops.zeros(r, shape[1])
             )  # in_dim , 2-mode
 
-            self.hada_t2[adapter_name] = mindspore.Parameter(
+            self.hada_t2[adapter_name] = Parameter(
                 ops.zeros(r, r, shape[2], shape[3])
             )
-            self.hada_w2_a[adapter_name] = mindspore.Parameter(
+            self.hada_w2_a[adapter_name] = Parameter(
                 ops.zeros(r, shape[0])
             )  # out_dim, 1-mode
 
-            self.hada_w2_b[adapter_name] = mindspore.Parameter(
+            self.hada_w2_b[adapter_name] = Parameter(
                 ops.zeros(r, shape[1])
             )  # in_dim , 2-mode
 
         else:
-            self.hada_w1_a[adapter_name] = mindspore.Parameter(ops.zeros(shape[0], r))
-            self.hada_w1_b[adapter_name] = mindspore.Parameter(ops.zeros(r, shape[1]))
+            self.hada_w1_a[adapter_name] = Parameter(ops.zeros(shape[0], r))
+            self.hada_w1_b[adapter_name] = Parameter(ops.zeros(r, shape[1]))
 
-            self.hada_w2_a[adapter_name] = mindspore.Parameter(ops.zeros(shape[0], r))
-            self.hada_w2_b[adapter_name] = mindspore.Parameter(ops.zeros(r, shape[1]))
+            self.hada_w2_a[adapter_name] = Parameter(ops.zeros(shape[0], r))
+            self.hada_w2_b[adapter_name] = Parameter(ops.zeros(r, shape[1]))
 
-    # TODO
     def reset_adapter_parameters(self, adapter_name: str):
-        r"""
-        Resets the adapter parameters for the specified adapter name.
-        
-        Args:
-            self (LoHaLayer): The instance of the LoHaLayer class.
-            adapter_name (str): The name of the adapter for which the parameters need to be reset. It should be a string.
-        
-        Returns:
-            None: This method does not return any value.
-        
-        Raises:
-            KeyError: If the specified adapter_name is not found in the internal dictionaries.
-            ValueError: If the specified adapter_name is not a valid string or if the adapter parameters cannot be reset for any other reason.
-        """
         # Original implementation performs initialization with normal distribution
         # https://github.com/KohakuBlueleaf/LyCORIS/blob/3549fdef8f564761d68b695a08ef88b1122fdedc/lycoris/modules/loha.py#L158
 
         # FedPara paper proposes to perform He initialization, let's stick with it
         # It is enough to initialize only single matrix with zeros to make adapter do nothing after initialization
         if adapter_name in self.hada_w1_a.keys():
-            self.hada_w1_a[adapter_name].set_data(
-                initializer(
-                    HeUniform(math.sqrt(5)), shape=self.hada_w1_a[adapter_name].shape
-                )
-            )
-            self.hada_w1_b[adapter_name].set_data(
-                initializer(
-                    HeUniform(math.sqrt(5)), shape=self.hada_w1_b[adapter_name].shape
-                )
-            )
-            self.hada_w2_a[adapter_name].set_data(
-                initializer(
-                    HeUniform(math.sqrt(5)), shape=self.hada_w2_a[adapter_name].shape
-                )
-            )
-            self.hada_w2_b[adapter_name].set_data(
-                initializer(
-                    HeUniform(math.sqrt(5)), shape=self.hada_w2_b[adapter_name].shape
-                )
-            )
+            nn.init.kaiming_uniform_(self.hada_w1_a[adapter_name], a=math.sqrt(5))
+            nn.init.kaiming_uniform_(self.hada_w1_b[adapter_name], a=math.sqrt(5))
+            nn.init.kaiming_uniform_(self.hada_w2_a[adapter_name], a=math.sqrt(5))
+            nn.init.zeros_(self.hada_w2_b[adapter_name])
         if adapter_name in self.hada_t1.keys():
-            self.hada_t1[adapter_name].set_data(
-                initializer(
-                    HeUniform(math.sqrt(5)), shape=self.hada_t1[adapter_name].shape
-                )
-            )
-            self.hada_t2[adapter_name].set_data(
-                initializer(
-                    HeUniform(math.sqrt(5)), shape=self.hada_t2[adapter_name].shape
-                )
-            )
+            nn.init.kaiming_uniform_(self.hada_t1[adapter_name], a=math.sqrt(5))
+            nn.init.kaiming_uniform_(self.hada_t2[adapter_name], a=math.sqrt(5))
 
     def reset_adapter_parameters_random(self, adapter_name: str):
-        r"""
-        Resets the adapter parameters randomly for the specified adapter name in the LoHaLayer class.
-        
-        Args:
-            self: Instance of the LoHaLayer class.
-                This parameter represents the instance of the class itself.
-                It is used to access the adapter parameters dictionaries for the specified adapter name.
-                
-            adapter_name (str): The name of the adapter for which the parameters need to be reset.
-                This parameter is a string representing the name of the adapter.
-                The method will reset the parameters for the specified adapter name.
-                
-        Returns:
-            None. This method does not return any value.
-            The adapter parameters for the specified adapter name are reset randomly within the method.
-        
-        Raises:
-            None.
-        """
         # Original implementation performs initialization with normal distribution
         # https://github.com/KohakuBlueleaf/LyCORIS/blob/3549fdef8f564761d68b695a08ef88b1122fdedc/lycoris/modules/loha.py#L158
 
         # FedPara paper proposes to perform He initialization, let's stick with it
         # It is enough to initialize only single matrix with zeros to make adapter do nothing after initialization
         if adapter_name in self.hada_w1_a.keys():
-            self.hada_w1_a[adapter_name].set_data(
-                initializer(
-                    HeUniform(math.sqrt(5)), shape=self.hada_w1_a[adapter_name].shape
-                )
-            )
-            self.hada_w1_b[adapter_name].set_data(
-                initializer(
-                    HeUniform(math.sqrt(5)), shape=self.hada_w1_b[adapter_name].shape
-                )
-            )
-            self.hada_w2_a[adapter_name].set_data(
-                initializer(
-                    HeUniform(math.sqrt(5)), shape=self.hada_w2_a[adapter_name].shape
-                )
-            )
-            self.hada_w2_b[adapter_name].set_data(
-                initializer(
-                    HeUniform(math.sqrt(5)), shape=self.hada_w2_b[adapter_name].shape
-                )
-            )
+            nn.init.kaiming_uniform_(self.hada_w1_a[adapter_name], a=math.sqrt(5))
+            nn.init.kaiming_uniform_(self.hada_w1_b[adapter_name], a=math.sqrt(5))
+            nn.init.kaiming_uniform_(self.hada_w2_a[adapter_name], a=math.sqrt(5))
+            nn.init.kaiming_uniform_(self.hada_w2_b[adapter_name], a=math.sqrt(5))
         if adapter_name in self.hada_t1.keys():
-            self.hada_t1[adapter_name].set_data(
-                initializer(
-                    HeUniform(math.sqrt(5)), shape=self.hada_t1[adapter_name].shape
-                )
-            )
-            self.hada_t2[adapter_name].set_data(
-                initializer(
-                    HeUniform(math.sqrt(5)), shape=self.hada_t2[adapter_name].shape
-                )
-            )
+            nn.init.kaiming_uniform_(self.hada_t1[adapter_name], a=math.sqrt(5))
+            nn.init.kaiming_uniform_(self.hada_t2[adapter_name], a=math.sqrt(5))
 
     def update_layer(
         self,

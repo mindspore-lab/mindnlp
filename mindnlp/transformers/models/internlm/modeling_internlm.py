@@ -19,11 +19,12 @@ import math
 from typing import List, Optional, Tuple, Union
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 from mindspore import dtype as mstype
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from .configuration_internlm import InternLMConfig
@@ -695,16 +696,16 @@ class InternLMPreTrainedModel(PreTrainedModel):
         """
         std = self.config.initializer_range
         if isinstance(cell, nn.Linear):
-            cell.weight.set_data(initializer(Normal(
+            cell.weight.assign_value(initializer(Normal(
                 sigma=std, mean=0.0), cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, std, cell.weight.shape)
             if cell.padding_idx is not None:
                 weight[cell.padding_idx] = 0
 
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
 
     def _set_gradient_checkpointing(self, module, value=False):
         """

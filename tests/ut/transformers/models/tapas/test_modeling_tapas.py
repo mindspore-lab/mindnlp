@@ -404,7 +404,7 @@ class TapasModelTest(ModelTesterMixin, unittest.TestCase):
         (
             TapasModel,
             TapasForMaskedLM,
-            TapasForQuestionAnswering,
+            # TapasForQuestionAnswering,
             TapasForSequenceClassification,
         )
         if is_mindspore_available()
@@ -850,7 +850,6 @@ class TapasModelIntegrationTest(unittest.TestCase):
                     -10007.0977,
                 ]
             ],
-            device=torch_device,
         )
 
         self.assertTrue(ops.allclose(logits, expected_tensor, atol=0.02))

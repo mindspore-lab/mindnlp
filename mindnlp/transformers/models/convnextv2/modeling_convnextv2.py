@@ -18,10 +18,10 @@
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from ...backbone_utils import BackboneMixin
@@ -90,8 +90,8 @@ class ConvNextV2GRN(nn.Module):
 
     def __init__(self, dim: int):
         super().__init__()
-        self.weight = Parameter(ops.zeros(1, 1, 1, dim), 'weight')
-        self.bias = Parameter(ops.zeros(1, 1, 1, dim), 'bias')
+        self.weight = Parameter(ops.zeros(1, 1, 1, dim))
+        self.bias = Parameter(ops.zeros(1, 1, 1, dim))
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         # Compute and normalize global spatial feature maps
@@ -299,13 +299,13 @@ class ConvNextV2PreTrainedModel(PreTrainedModel):
         if isinstance(cell, (nn.Linear, nn.Conv2d)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+            cell.weight.assign_value(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
 # Copied from transformers.models.convnext.modeling_convnext.ConvNextModel with CONVNEXT->CONVNEXTV2, ConvNext->ConvNextV2

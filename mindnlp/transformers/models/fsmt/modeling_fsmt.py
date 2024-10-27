@@ -1207,16 +1207,14 @@ class SinusoidalPositionalEmbedding(nn.Embedding):
 
     def make_weight(self, num_positions, embedding_dim, padding_idx):
         weight = self.get_embedding(num_positions, embedding_dim, padding_idx)
-        # if not hasattr(self, "weight"):
-        #     # in ___init__
-        #     super().__init__(num_positions, embedding_dim, padding_idx=padding_idx, _weight=weight)
-        # else:
-        #     # in forward put the weights on the correct dtype and device of the param
-        #     weight = weight.to(dtype=self.weight.dtype)
-        #     self.weight = mindspore.Parameter(weight)
-        weight = weight.to(dtype=self.weight.dtype)
-        self.weight = mindspore.Parameter(weight)
-        # self.weight.detach_()
+        if not hasattr(self, "weight"):
+            # in ___init__
+            super().__init__(num_positions, embedding_dim, padding_idx, _weight=weight)
+        else:
+            # in forward put the weights on the correct dtype and device of the param
+            weight = weight.to(dtype=self.weight.dtype)
+            self.weight = nn.Parameter(weight)
+        ops.stop_gradient(self.weight)
         self.weight.requires_grad = False
 
     @staticmethod

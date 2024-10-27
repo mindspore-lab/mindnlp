@@ -188,6 +188,8 @@ class SeamlessM4TConformerPositionalConvEmbedding(nn.Module):
         )
 
         weight_norm = nn.utils.weight_norm
+        if hasattr(nn.utils.parametrizations, "weight_norm"):
+            weight_norm = nn.utils.parametrizations.weight_norm
         self.conv = weight_norm(self.conv, name="weight", dim=2)
 
         self.padding = SeamlessM4TConformerSamePadLayer(config.num_conv_pos_embeddings)
@@ -2145,10 +2147,15 @@ class HifiGanResidualBlock(nn.Module):
         return (kernel_size * dilation - dilation) // 2
 
     def apply_weight_norm(self):
+        weight_norm = nn.utils.weight_norm
+        if hasattr(nn.utils.parametrizations, "weight_norm"):
+            weight_norm = nn.utils.parametrizations.weight_norm
+
         for layer in self.convs1:
-            nn.utils.weight_norm(layer)
+            weight_norm(layer)
         for layer in self.convs2:
-            nn.utils.weight_norm(layer)
+            weight_norm(layer)
+
 
     def remove_weight_norm(self):
         for layer in self.convs1:
@@ -2413,12 +2420,16 @@ class SeamlessM4TCodeHifiGan(PreTrainedModel):
                 module.weight[module.padding_idx] = 0
 
     def apply_weight_norm(self):
-        nn.utils.weight_norm(self.hifi_gan.conv_pre)
+        weight_norm = nn.utils.weight_norm
+        if hasattr(nn.utils.parametrizations, "weight_norm"):
+            weight_norm = nn.utils.parametrizations.weight_norm
+
+        weight_norm(self.hifi_gan.conv_pre)
         for layer in self.hifi_gan.upsampler:
-            nn.utils.weight_norm(layer)
+            weight_norm(layer)
         for layer in self.hifi_gan.resblocks:
             layer.apply_weight_norm()
-        nn.utils.weight_norm(self.hifi_gan.conv_post)
+        weight_norm(self.hifi_gan.conv_post)
 
     def remove_weight_norm(self):
         nn.utils.remove_weight_norm(self.hifi_gan.conv_pre)
@@ -2578,7 +2589,7 @@ class SeamlessM4TForTextToText(SeamlessM4TPreTrainedModel):
         logits_processor=None,
         stopping_criteria=None,
         prefix_allowed_tokens_fn=None,
-        synced_gpus=False,
+        synced_devices=False,
         **kwargs,
     ):
         """
@@ -2627,7 +2638,7 @@ class SeamlessM4TForTextToText(SeamlessM4TPreTrainedModel):
                 on the batch ID `batch_id` and the previously generated tokens `inputs_ids`. This argument is useful
                 for constrained generation conditioned on the prefix, as described in [Autoregressive Entity
                 Retrieval](https://arxiv.org/abs/2010.00904).
-            synced_gpus (`bool`, *optional*, defaults to `False`):
+            synced_devices (`bool`, *optional*, defaults to `False`):
                 Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
             kwargs (`Dict[str, Any]`, *optional*):
                 Ad hoc parametrization of `generate_config` and/or additional model-specific kwargs that will be
@@ -2675,7 +2686,7 @@ class SeamlessM4TForTextToText(SeamlessM4TPreTrainedModel):
             logits_processor,
             stopping_criteria,
             prefix_allowed_tokens_fn,
-            synced_gpus,
+            synced_devices,
             decoder_input_ids=text_decoder_input_ids,
             **kwargs,
         )
@@ -2859,7 +2870,7 @@ class SeamlessM4TForSpeechToText(SeamlessM4TPreTrainedModel):
         logits_processor=None,
         stopping_criteria=None,
         prefix_allowed_tokens_fn=None,
-        synced_gpus=False,
+        synced_devices=False,
         **kwargs,
     ):
         """
@@ -2905,7 +2916,7 @@ class SeamlessM4TForSpeechToText(SeamlessM4TPreTrainedModel):
                 on the batch ID `batch_id` and the previously generated tokens `inputs_ids`. This argument is useful
                 for constrained generation conditioned on the prefix, as described in [Autoregressive Entity
                 Retrieval](https://arxiv.org/abs/2010.00904).
-            synced_gpus (`bool`, *optional*, defaults to `False`):
+            synced_devices (`bool`, *optional*, defaults to `False`):
                 Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
             kwargs (`Dict[str, Any]`, *optional*):
                 Ad hoc parametrization of `generate_config` and/or additional model-specific kwargs that will be
@@ -2958,7 +2969,7 @@ class SeamlessM4TForSpeechToText(SeamlessM4TPreTrainedModel):
             logits_processor,
             stopping_criteria,
             prefix_allowed_tokens_fn,
-            synced_gpus,
+            synced_devices,
             decoder_input_ids=text_decoder_input_ids,
             **kwargs,
         )

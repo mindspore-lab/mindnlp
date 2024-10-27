@@ -1,7 +1,6 @@
 """normalization"""
 import numbers
-from mindspore import Parameter
-
+from ..parameter import Parameter
 from .module import Module
 from ..functional import group_norm, layer_norm
 from .. import init
@@ -146,11 +145,23 @@ class GroupNorm(Module):
         self.num_channels = num_channels
         self.eps = eps
         self.affine = affine
-        self.weight = Parameter(ops.empty(num_channels, **factory_kwargs), 'weight', affine)
-        self.bias = Parameter(ops.empty(num_channels, **factory_kwargs),  'bias', affine)
+        if self.affine:
+            self.weight = Parameter(ops.empty(num_channels, **factory_kwargs))
+            self.bias = Parameter(ops.empty(num_channels, **factory_kwargs))
+        else:
+            self.register_parameter('weight', None)
+            self.register_parameter('bias', None)
+
+        self.reset_parameters()
 
     def forward(self, input):
         return group_norm(input, self.num_groups, self.weight, self.bias, self.eps)
+
+
+    def reset_parameters(self) -> None:
+        if self.affine:
+            init.ones_(self.weight)
+            init.zeros_(self.bias)
 
     def extra_repr(self):
         return '{num_groups}, {num_channels}, eps={eps}, ' \

@@ -44,6 +44,7 @@ import numpy as np
 
 import mindspore
 from mindnlp.utils import logging as mindnlp_logging
+from mindnlp.configs import SUPPORT_BF16
 
 from .import_utils import (
     is_pytest_available,
@@ -241,6 +242,10 @@ def require_mindspore(test_case):
 
     """
     return unittest.skipUnless(is_mindspore_available(), "test requires MindSpore")(test_case)
+
+def require_bfloat16(test_case):
+    """require_bfloat16"""
+    return unittest.skipUnless(SUPPORT_BF16, "test need bfloat16")(test_case)
 
 def require_mindspore_gpu(test_case):
     """Decorator marking a test that requires CUDA and MindSpore."""
@@ -1637,7 +1642,7 @@ class SubprocessCallException(Exception):
 def run_command(command: List[str], return_stdout=False):
     """
     Runs `command` with `subprocess.check_output` and will potentially return the `stdout`. Will also properly capture
-    if an error occured while running `command`
+    if an error occurred while running `command`
     """
     try:
         output = subprocess.check_output(command, stderr=subprocess.STDOUT)

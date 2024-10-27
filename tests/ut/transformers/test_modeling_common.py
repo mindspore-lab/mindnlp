@@ -114,7 +114,7 @@ def _mock_init_weights(self, module):
     for name, param in module.named_parameters(recurse=False):
         # Use the first letter of the name to get a value and go from a <> -13 to z <> 12
         value = ord(name[0].lower()) - 110
-        param.set_data(ops.full(param.shape, value, dtype=param.dtype))
+        param.assign_value(ops.full(param.shape, value, dtype=param.dtype))
 
 
 def _mock_all_init_weights(self):
@@ -169,7 +169,7 @@ class ModelTesterMixin:
                 i // s // ms for i, s, ms in zip(config.image_size, config.patch_stride, config.masked_unit_size)
             ]
             num_windows = math.prod(mask_spatial_shape)
-            set_seed(0)
+            set_seed(123)
             inputs_dict["noise"] = ops.rand(self.model_tester.batch_size, num_windows)
 
         if return_labels:
@@ -739,6 +739,7 @@ class ModelTesterMixin:
                 if hasattr(self, "zero_init_hidden_state") and "decoder_hidden_states" in key:
                     model_batched_output[key] = model_batched_output[key][1:]
                     model_row_output[key] = model_row_output[key][1:]
+
                 recursive_check(model_batched_output[key], model_row_output[key], model_name, key)
 
     def check_training_gradient_checkpointing(self, gradient_checkpointing_kwargs=None):
@@ -799,6 +800,8 @@ class ModelTesterMixin:
                 return model(**inputs).loss
             
             grad_fn = mindspore.value_and_grad(forward, None, tuple(model.parameters()))
+            loss = forward(**inputs)
+            print(loss)
             loss, grads = grad_fn(**inputs)
 
     @unittest.skip
@@ -1062,7 +1065,7 @@ class ModelTesterMixin:
             with tempfile.TemporaryDirectory() as temp_dir_name:
                 model.save_pretrained(temp_dir_name)
                 model = model_class.from_pretrained(temp_dir_name)
-    
+
             with no_grad():
                 outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs[-1]
@@ -2563,7 +2566,7 @@ class ModelTesterMixin:
     #             )
 
     #             model = model_class.from_pretrained(tmpdirname, ms_dtype=torch.bfloat16)
-    # 
+    #
     #             dummy_input = inputs_dict[model.main_input_name][:1]
     #             if dummy_input.dtype in [mindspore.float32, mindspore.float16]:
     #                 dummy_input = dummy_input.to(torch.bfloat16)

@@ -325,8 +325,8 @@ containing the specified prefix.
                     parent, target_name, target.get_base_layer(), target
                 )
             elif isinstance(target, ModulesToSaveWrapper):
-                # save any additional trainable cells part of `cells_to_save`
-                new_cell = target.cells_to_save[target.active_adapter]
+                # save any additional trainable cells part of `modules_to_save`
+                new_cell = target.modules_to_save[target.active_adapter]
                 if hasattr(new_cell, "base_layer"):
                     # check if the cell is itself a tuner layer
                     if merge:
@@ -342,7 +342,7 @@ containing the specified prefix.
         r"""
         Perform unloading checks for the LoKrModel class.
         
-        This method checks if multiple adapters with `cells_to_save` specified can be unloaded.
+        This method checks if multiple adapters with `modules_to_save` specified can be unloaded.
         If any of the specified adapters have cells to save, unloading multiple adapters is not allowed.
         
         Args:
@@ -353,17 +353,17 @@ containing the specified prefix.
             None. This method does not return any value.
         
         Raises:
-            ValueError: If multiple adapters with `cells_to_save` specified are attempted to be unloaded.
+            ValueError: If multiple adapters with `modules_to_save` specified are attempted to be unloaded.
         
         """
         adapters_to_consider = adapter_names or self.active_adapters
-        is_cells_to_save_available = any(
-            self.peft_config[adapter].cells_to_save
+        is_modules_to_save_available = any(
+            self.peft_config[adapter].modules_to_save
             for adapter in adapters_to_consider
         )
-        if is_cells_to_save_available and len(adapters_to_consider) > 1:
+        if is_modules_to_save_available and len(adapters_to_consider) > 1:
             raise ValueError(
-                "Cannot unload multiple adapters that specify `cells_to_save`."
+                "Cannot unload multiple adapters that specify `modules_to_save`."
             )
 
     @staticmethod

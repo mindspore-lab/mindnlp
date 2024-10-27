@@ -19,10 +19,9 @@ import os
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import logging
 
 from ...activations import ACT2FN
@@ -297,7 +296,7 @@ class MarkupLMLMPredictionHead(nn.Module):
         # an output-only bias for each token.
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
-        self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
+        self.bias = Parameter(ops.zeros(config.vocab_size))
 
         # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
         self.decoder.bias = self.bias
@@ -705,45 +704,22 @@ class MarkupLMPreTrainedModel(PreTrainedModel):
     base_model_prefix = "markuplm"
 
     # Copied from transformers.models.bert.modeling_bert.BertPreTrainedModel._init_weights with Bert->MarkupLM
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, nn.Linear):
+        if isinstance(module, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            import numpy as np
-            # embedding_table = np.random.normal(0.0, self.config.initializer_range, cell.embedding_table.shape)
-            # if cell.padding_idx:
-            #     embedding_table[cell.padding_idx] = 0
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx] = 0
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
 
-            # cell.embedding_table.set_data(mindspore.Tensor(embedding_table, cell.embedding_table.dtype))
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-
-            cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-    # def _init_weights(self, module):
-    #     """Initialize the weights"""
-    #     if isinstance(module, nn.Linear):
-    #         # Slightly different from the TF version which uses truncated_normal for initialization
-    #         # cf https://github.com/pytorch/pytorch/pull/5617
-    #         module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-    #         if module.bias is not None:
-    #             module.bias.data.zero_()
-    #     elif isinstance(module, nn.Embedding):
-    #         module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-    #         if module.padding_idx is not None:
-    #             module.weight.data[module.padding_idx].zero_()
-    #     elif isinstance(module, nn.LayerNorm):
-    #         module.bias.data.zero_()
-    #         module.weight.data.fill_(1.0)
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Optional[Union[str, os.PathLike]], *model_args, **kwargs):
         return super(MarkupLMPreTrainedModel, cls).from_pretrained(

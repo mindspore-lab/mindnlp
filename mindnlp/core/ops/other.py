@@ -6,7 +6,7 @@ from mindspore import ops
 from mindspore.common.initializer import initializer
 from mindspore.ops._primitive_cache import _get_cache_prim
 
-from mindnlp.configs import use_pyboost
+from mindnlp.configs import use_pyboost, ON_ORANGE_PI
 from .reduction import any
 from .comparison import eq
 
@@ -31,8 +31,26 @@ def broadcast_tensors(*tensors):
 
     return broadcasted_tensors
 
+def manual_expand(tensor, shape):
+    assert len(shape) >= tensor.dim(), "Target shape must have equal or more dimensions than the tensor."
+
+    for _ in range(len(shape) - tensor.dim()):
+        tensor = tensor.unsqueeze(0)
+
+    repeats = []
+    for i, (tensor_dim, target_dim) in enumerate(zip(tensor.shape, shape)):
+        if target_dim == -1:
+            repeats.append(1)
+        else:
+            repeats.append(target_dim // tensor_dim if tensor_dim == 1 else 1)
+
+    return tensor.tile(tuple(repeats))
+
 # broadcast_to
 def broadcast_to(input, shape):
+    if ON_ORANGE_PI and not use_pyboost():
+        # return input.expand(mindspore.tensor(shape))
+        return manual_expand(input, shape)
     if use_pyboost():
         return mindspore.mint.broadcast_to(input, shape)
     return ops.broadcast_to(input, shape)
@@ -92,7 +110,7 @@ def clone(input):
 
 # cumsum
 def cumsum(input, dim, dtype=None):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI: # since cann8.0 community remove aclnn cumsum
         return mindspore.mint.cumsum(input, dim, dtype)
     if input.dtype == mindspore.bool_:
         input = input.to(mindspore.int32)
@@ -693,7 +711,7 @@ def initialize(self, init_method):
     Note:
         This function sets the data of the object using the specified `init_method` and the object's shape and data type.
     """
-    self.set_data(initializer(init_method, self.shape, self.dtype))
+    self.assign_value(initializer(init_method, self.shape, self.dtype))
 
 _stop_gradient = ops.StopGradient()
 def stop_gradient(input):

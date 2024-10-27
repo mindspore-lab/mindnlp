@@ -39,6 +39,7 @@ if is_mindspore_available():
         LongformerSelfAttention,
     )
 
+
 class LongformerModelTester:
     def __init__(
         self,
