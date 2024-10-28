@@ -369,7 +369,7 @@ def _inject_property(module: Module, tensor_name: str) -> None:
         key = (id(module), tensor_name)
         tensor = _cache.get(key)
         if tensor is None:
-            tensor = parametrization()
+            tensor = Parameter(parametrization())
             _cache[key] = tensor
         return tensor
 
@@ -379,11 +379,10 @@ def _inject_property(module: Module, tensor_name: str) -> None:
             return get_cached_parametrization(parametrization)
         else:
             # If caching is not active, this function just evaluates the parametrization
-            return parametrization()
+            return Parameter(parametrization())
 
     def set_original(self, value: Tensor) -> None:
         self.parametrizations[tensor_name].right_inverse(value)
-
     setattr(module.__class__, tensor_name, property(get_parametrized, set_original))
 
 
