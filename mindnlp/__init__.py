@@ -45,8 +45,6 @@ if platform.system().lower() == 'linux':
 
 from mindspore import jit as ms_jit
 from mindnlp import transformers
-from mindnlp import dataset
-from mindnlp import evaluate
-from mindnlp import core
+
 
 __all__ = ['ms_jit', 'transformers']
