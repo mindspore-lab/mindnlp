@@ -20,19 +20,22 @@
 
 ## Table of Contents
 
-- [News 📢](#news-)
-- [Installation](#installation)
-  - [Install from Pypi](#install-from-pypi)
-  - [Daily build](#daily-build)
-  - [Install from source](#install-from-source)
-  - [Version Compatibility](#version-compatibility)
-- [Introduction](#introduction)
-  - [Major Features](#major-features)
-- [Supported models](#supported-models)
-- [License](#license)
-- [Feedbacks and Contact](#feedbacks-and-contact)
-- [Acknowledgement](#acknowledgement)
-- [Citation](#citation)
+- [ MindNLP](#-mindnlp)
+  - [Table of Contents](#table-of-contents)
+  - [News 📢](#news-)
+  - [Installation](#installation)
+      - [Install from Pypi](#install-from-pypi)
+      - [Daily build](#daily-build)
+      - [Install from source](#install-from-source)
+      - [Version Compatibility](#version-compatibility)
+  - [Introduction](#introduction)
+      - [Major Features](#major-features)
+  - [Supported models](#supported-models)
+  - [License](#license)
+  - [Feedbacks and Contact](#feedbacks-and-contact)
+  - [MindSpore NLP SIG](#mindspore-nlp-sig)
+  - [Acknowledgement](#acknowledgement)
+  - [Citation](#citation)
 
 ## News 📢
 
@@ -120,6 +123,16 @@ This project is released under the [Apache 2.0 license](LICENSE).
 ## Feedbacks and Contact
 
 The dynamic version is still under development, if you find any issue or have an idea on new features, please don't hesitate to contact us via [Github Issues](https://github.com/mindspore-lab/mindnlp/issues).
+
+
+## MindSpore NLP SIG
+
+MindSpore NLP SIG (Natural Language Processing Special Interest Group) is the main development team of the MindNLP framework. It aims to collaborate with developers from both industry and academia who are interested in research, application development, and the practical implementation of natural language processing. Our goal is to create the best NLP framework based on the domestic framework MindSpore. Additionally, we regularly hold NLP technology sharing sessions and offline events. Interested developers can join our SIG group using the QR code below.
+
+<div align="center">
+    <img src="./assets/qrcode_qq_group.jpg" width="250" />
+</div>
+
 
 ## Acknowledgement
 
