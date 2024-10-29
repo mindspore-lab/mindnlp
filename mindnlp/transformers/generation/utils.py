@@ -3088,7 +3088,7 @@ class GenerationMixin:
             )
 
             unfinished_sequences = unfinished_sequences & ~stopping_criteria(input_ids, scores)
-            this_peer_finished = ops.max(unfinished_sequences).item() == 0
+            this_peer_finished = np.max(unfinished_sequences.asnumpy()).item() == 0
             cur_len += 1
 
             if _record_time:
@@ -4183,9 +4183,6 @@ class GenerationMixin:
             if len(logits_processor) > 0:
                 for i in range(candidate_length + 1):
                     new_logits[:, i, :] = logits_processor(candidate_input_ids[:, : cur_len + i], new_logits[:, i, :])
-            if do_sample and len(logits_warper) > 0:
-                for i in range(candidate_length + 1):
-                    new_logits[:, i, :] = logits_warper(candidate_input_ids[:, : cur_len + i], new_logits[:, i, :])
 
             # 3. Select the accepted tokens. There are two possible cases:
             # Case 1: `do_sample=True` and we have logits for the candidates (originally from speculative decoding)

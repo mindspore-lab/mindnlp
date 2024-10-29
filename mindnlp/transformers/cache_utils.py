@@ -827,7 +827,7 @@ class StaticCache(Cache):
         # Occupied cache == any slot in the 3rd dim (sequence length) holds a non-zero value. To save on compute, let's
         # limit the check to the first batch member and head dimension.
         # TODO: deprecate this function in favor of `cache_position`
-        return (ops.any(self.key_cache[layer_idx][0, 0], dim=-1)).sum()
+        return (ops.any(self.key_cache[layer_idx][0, 0] != 0, dim=-1)).sum()
 
     def get_max_length(self) -> Optional[int]:
         """Returns the maximum sequence length of the cached states."""
