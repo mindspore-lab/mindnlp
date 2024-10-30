@@ -3100,7 +3100,8 @@ class GenerationMixin:
 
         average_infer_time = None
         if time_record:
-            time_record.pop(0)
+            if len(time_record) > 1:
+                time_record.pop(0)
             average_infer_time = sum(time_record) / len(time_record)
             print(f'average inference time is: {average_infer_time}')
             print(f'inference time record: {time_record}')
