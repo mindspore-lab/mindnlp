@@ -237,7 +237,7 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel, GenerationMixin):
             )
 
         final_embedding[image_to_overwrite] = image_features.reshape(-1, embed_dim)
-        final_attention_mask |= image_to_overwrite
+        final_attention_mask =  final_attention_mask.int() | image_to_overwrite.int()
         position_ids = (final_attention_mask.int().cumsum(-1) - 1).masked_fill((final_attention_mask == 0), 1)
 
         # 6. Mask out the embedding at padding positions, as we later use the past_key_value value to determine the non-attended tokens.
