@@ -42,6 +42,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("beit", "BeitModel"),
         ("bert", "BertModel"),
         ("bert-generation", "BertGenerationEncoder"),
+        ("bge-m3", "BgeM3Model"),
         ("big_bird", "BigBirdModel"),
         ("bigbird_pegasus", "BigBirdPegasusModel"),
         ("biogpt", "BioGptModel"),

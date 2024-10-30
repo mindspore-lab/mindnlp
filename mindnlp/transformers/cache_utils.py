@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import mindspore
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import Parameter
 from mindnlp.configs import ON_ORANGE_PI
 from .configuration_utils import PretrainedConfig
 from ..utils import logging
@@ -755,8 +756,8 @@ class StaticCache(Cache):
         cache_shape = (max_batch_size, self.num_key_value_heads, self.max_cache_len, self.head_dim)
         for idx in range(config.num_hidden_layers):
             # Note: `torch.export()`` requires mutations to be registered as buffers.
-            self.register_buffer(f"key_cache_{idx}", ops.zeros(cache_shape, dtype=dtype))
-            self.register_buffer(f"value_cache_{idx}", ops.zeros(cache_shape, dtype=dtype))
+            self.register_buffer(f"key_cache_{idx}", Parameter(ops.zeros(cache_shape, dtype=dtype)))
+            self.register_buffer(f"value_cache_{idx}", Parameter(ops.zeros(cache_shape, dtype=dtype)))
             key_cache = getattr(self, f"key_cache_{idx}")
             value_cache = getattr(self, f"value_cache_{idx}")
             # Note: `mark_static_address` is used to tag the cache as an fixed data pointer, preventing cuda graph
@@ -811,10 +812,13 @@ class StaticCache(Cache):
             # # The operator 'aten::index_copy.out' is not currently implemented for the MPS device.
             # k_out[:, :, cache_position] = key_states
             # v_out[:, :, cache_position] = value_states
-
-            # use index_add for mindspore since tensor slice is too slow and no implementation of index_copy
-            k_out = ops.index_add(k_out, 2, cache_position.int(), key_states)
-            v_out = ops.index_add(v_out, 2, cache_position.int(), value_states)
+            if ON_ORANGE_PI:
+                k_out = ops.inplace_index_add(k_out, 2, cache_position.int(), key_states)
+                v_out = ops.inplace_index_add(v_out, 2, cache_position.int(), value_states)
+            else:
+                # use index_add for mindspore since tensor slice is too slow and no implementation of index_copy
+                k_out = ops.index_add(k_out, 2, cache_position.int(), key_states)
+                v_out = ops.index_add(v_out, 2, cache_position.int(), value_states)
 
         return k_out, v_out
 
@@ -823,7 +827,7 @@ class StaticCache(Cache):
         # Occupied cache == any slot in the 3rd dim (sequence length) holds a non-zero value. To save on compute, let's
         # limit the check to the first batch member and head dimension.
         # TODO: deprecate this function in favor of `cache_position`
-        return (ops.any(self.key_cache[layer_idx][0, 0], dim=-1)).sum()
+        return (ops.any(self.key_cache[layer_idx][0, 0] != 0, dim=-1)).sum().item()
 
     def get_max_length(self) -> Optional[int]:
         """Returns the maximum sequence length of the cached states."""
@@ -1002,9 +1006,13 @@ class EncoderDecoderCache(Cache):
 
     def get_seq_length(self, layer_idx: Optional[int] = 0) -> int:
         """Returns the sequence length of the cached states. A layer index can be optionally passed."""
-        if len(self.self_attention_cache.key_cache) <= layer_idx:
+        # check if empty list because in case of static cache it will be a tensors and we can't check `if not torch.Tensor`
+        if self.self_attention_cache.key_cache == []:
             return 0
-        return (ops.any(self.self_attention_cache.key_cache[layer_idx][0, 0].bool(), dim=-1)).sum().item()
+        if len(self.self_attention_cache.key_cache) > 1 and self.self_attention_cache.key_cache[layer_idx] == []:
+            return 0
+
+        return (ops.any(self.self_attention_cache.key_cache[layer_idx][0, 0] != 0, dim=-1)).sum().item()
 
     def reset(self):
         if hasattr(self.self_attention_cache, "reset"):
@@ -1138,7 +1146,7 @@ class HybridCache(Cache):
             # into consideration when building kv cache instead of just throwing away tokens outside of the window
             return key_states, value_states
 
-        slicing = ops.ones(max_cache_len, dtype=mindspore.int64).cumsum(0)
+        slicing = ops.ones(max_cache_len, dtype=mindspore.int32).cumsum(0)
         cache_position = cache_position.clamp(0, max_cache_len - 1)
         to_shift = cache_position >= max_cache_len - 1
         indices = (slicing + to_shift[-1].int() - 1) % max_cache_len

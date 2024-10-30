@@ -572,6 +572,9 @@ class Module:
                         d.discard(name)
 
         params = self.__dict__.get('_parameters')
+
+        if isinstance(value, StubTensor):
+            value = value.stub_sync()
         if isinstance(value, Parameter):
             if params is None:
                 raise AttributeError(
@@ -581,7 +584,7 @@ class Module:
         elif params is not None and name in params:
             if value is not None:
                 raise TypeError(f"cannot assign '{type(value)}' as parameter '{name}' "
-                                "(mindspore.Parameter or None expected)"
+                                "(mindnlp.core.nn.Parameter or None expected)"
                                 )
             self.register_parameter(name, value)
         else:
@@ -759,16 +762,18 @@ class Module:
                                 input_param = Parameter(input_param, requires_grad=param.requires_grad)
                             else:
                                 input_param.requires_grad = param.requires_grad
+
                         setattr(self, name, input_param)
                     else:
+                        param.data_sync(True)
                         dtype = param.dtype
                         param.assign_value(input_param)
                         param.set_dtype(dtype)
                 except Exception as ex:
                     action = "copying"
                     error_msgs.append(f'While {action} the parameter named "{key}", '
-                                      f'whose dimensions in the model are {param.size()} and '
-                                      f'whose dimensions in the checkpoint are {input_param.size()}, '
+                                      f'whose dimensions in the model are {param.shape} and '
+                                      f'whose dimensions in the checkpoint are {input_param.shape}, '
                                       f'an exception occurred : {ex.args}.'
                                       )
             elif strict:
@@ -1192,6 +1197,10 @@ class Module:
         for module in self.children():
             module.jit(mode)
         return self
+
+    @property
+    def skip_syntax(self):
+        return self.__ms_class__
 
     def train(self, mode=True):
         """Sets the module in training mode.

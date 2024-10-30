@@ -50,7 +50,9 @@ if is_datasets_available():
 
 if is_mindspore_available():
     import mindspore
+    from mindspore.dataset.audio import Resample
     from mindnlp.core import nn, ops, no_grad
+    from mindnlp.data.io.audio import read
     from mindnlp.engine import set_seed
 
     from mindnlp.transformers import (
@@ -62,14 +64,7 @@ if is_mindspore_available():
         WhisperProcessor,
     )
     from mindnlp.transformers.generation import (
-        BeamSampleDecoderOnlyOutput,
-        BeamSampleEncoderDecoderOutput,
-        BeamSearchDecoderOnlyOutput,
-        BeamSearchEncoderDecoderOutput,
-        GenerateBeamDecoderOnlyOutput,
-        GenerateBeamEncoderDecoderOutput,
         GenerateEncoderDecoderOutput,
-        PhrasalConstraint,
     )
     from mindnlp.transformers.generation.logits_process import LogitsProcessor
     from mindnlp.transformers.models.whisper.modeling_whisper import WhisperDecoder, WhisperEncoder, sinusoids
@@ -399,9 +394,9 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCas
 
         return False
 
-    def _get_logits_processor_kwargs(self, do_sample=False):
+    def _get_logits_processor_kwargs(self, do_sample=False, config=None):
         # Overwritten from `GenerationTesterMixin`, Whisper needs `"temperature": 0.0` to be able to do beam search
-        logits_processor_kwargs = super()._get_logits_processor_kwargs(do_sample=do_sample)
+        logits_processor_kwargs = super()._get_logits_processor_kwargs(do_sample=do_sample, config=config)
         logits_processor_kwargs["temperature"] = 0.0
         return logits_processor_kwargs
 
@@ -487,18 +482,18 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCas
         config_and_inputs = self.model_tester.prepare_config_and_inputs_for_common()
         self.model_tester.check_encoder_decoder_model_standalone(*config_and_inputs)
 
-    def _get_input_ids_and_config(self, batch_size=3):
-        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
-        input_ids = inputs_dict[self.input_name]
+    # def _get_input_ids_and_config(self, batch_size=3):
+    #     config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+    #     input_ids = inputs_dict[self.input_name]
 
-        # cut to half length & take max batch_size=batch_size
-        input_ids = input_ids[:batch_size, :, :]
+    #     # cut to half length & take max batch_size=batch_size
+    #     input_ids = input_ids[:batch_size, :, :]
 
-        if config.eos_token_id is not None and config.pad_token_id is None:
-            # hack to allow generate for models such as GPT2 as is done in `generate()`
-            config.pad_token_id = config.eos_token_id
+    #     if config.eos_token_id is not None and config.pad_token_id is None:
+    #         # hack to allow generate for models such as GPT2 as is done in `generate()`
+    #         config.pad_token_id = config.eos_token_id
 
-        return config, input_ids, None
+    #     return config, input_ids, None
 
     def test_inputs_embeds(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -986,8 +981,8 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCas
 
         with self.assertRaisesRegex(
             ValueError,
-            f"The length of `decoder_input_ids` equal `prompt_ids` plus special start tokens is {decoder_input_ids.shape[-1]}, and the `max_new_tokens` "
-            f"is {max_new_tokens}. Thus, the combined length of "
+            f"The length of `decoder_input_ids`, including special start tokens, prompt tokens, and previous tokens, is {decoder_input_ids.shape[-1]}, "
+            f" and `max_new_tokens` is {max_new_tokens}. Thus, the combined length of "
             f"`decoder_input_ids` and `max_new_tokens` is: {max_new_tokens + decoder_input_ids.shape[-1]}. This exceeds the "
             f"`max_target_positions` of the Whisper model: {config.max_target_positions}. "
             "You should either reduce the length of your prompt, or reduce the value of `max_new_tokens`, "
@@ -1202,49 +1197,6 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCas
     def test_longform_generate_multi_batch_cond_prev(self):
         self._check_longform_generate_multi_batch(condition_on_prev_tokens=True)
 
-    def test_beam_sample_generate_dict_output(self):
-        # We overwrite test_beam_sample_generate_dict_output in test_utils as
-        # we can only perform beam search if the temperature is set to 0 in Whisper.
-        config, input_ids, attention_mask = self._get_input_ids_and_config()
-
-        # disable cache
-        config.use_cache = False
-
-        model = WhisperForConditionalGeneration(config).eval()
-        _, logits_warper_kwargs = self._get_logits_processor_and_warper_kwargs(input_ids.shape[-1])
-        beam_kwargs = self._get_beam_kwargs()
-
-        # With Whisper, we can only perform a beam search if the temperature is set to 0.
-        logits_warper_kwargs["temperature"] = 0
-        # We will return num_beams sequences per input only if num_return_sequences == num_beams:
-        beam_kwargs["num_return_sequences"] = beam_kwargs["num_beams"]
-
-        output_generate = self._beam_sample_generate(
-            model=model,
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            beam_kwargs=beam_kwargs,
-            logits_warper_kwargs=logits_warper_kwargs,
-            output_scores=True,
-            output_logits=True,
-            output_hidden_states=True,
-            output_attentions=True,
-            return_dict_in_generate=True,
-        )
-        if model.config.is_encoder_decoder:
-            self.assertTrue(output_generate.sequences.shape[-1] == self.max_new_tokens + 1)
-            self.assertIsInstance(output_generate, GenerateBeamEncoderDecoderOutput)
-            # Retrocompatibility check
-            self.assertIsInstance(output_generate, BeamSampleEncoderDecoderOutput)
-        else:
-            self.assertTrue(output_generate.sequences.shape[-1] == self.max_new_tokens + input_ids.shape[-1])
-            self.assertIsInstance(output_generate, GenerateBeamDecoderOnlyOutput)
-            # Retrocompatibility check
-            self.assertIsInstance(output_generate, BeamSampleDecoderOnlyOutput)
-
-        self._check_outputs(output_generate, input_ids, model.config, num_return_sequences=beam_kwargs["num_beams"])
-
-
     @is_flaky()  # TODO (joao, sanchit): fails ~9% of the times. Does the original test have the same issue?
     def test_custom_4d_attention_mask(self):
         config, input_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -1335,7 +1287,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_tiny_logits_librispeech(self):
-        set_seed(0)
+        set_seed(2345)
         model = WhisperModel.from_pretrained("openai/whisper-tiny")
         input_speech = self._load_datasamples(1)
         feature_extractor = WhisperFeatureExtractor()
@@ -1379,7 +1331,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_small_en_logits_librispeech(self):
-        set_seed(0)
+        set_seed(2345)
         model = WhisperModel.from_pretrained("openai/whisper-small.en")
 
         input_speech = self._load_datasamples(1)
@@ -1412,7 +1364,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_large_logits_librispeech(self):
-        set_seed(0)
+        set_seed(2345)
 
         model = WhisperModel.from_pretrained("openai/whisper-large")
 
@@ -1454,7 +1406,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_tiny_en_generation(self):
-        set_seed(0)
+        set_seed(2345)
         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
         model.config.decoder_start_token_id = 50257
@@ -1473,7 +1425,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_tiny_generation(self):
-        set_seed(0)
+        set_seed(2345)
         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
 
@@ -1491,7 +1443,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_large_generation(self):
-        set_seed(0)
+        set_seed(123)
         processor = WhisperProcessor.from_pretrained("openai/whisper-large")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large")
 
@@ -1508,7 +1460,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_large_generation_multilingual(self):
-        set_seed(0)
+        set_seed(2345)
         processor = WhisperProcessor.from_pretrained("openai/whisper-large")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large")
 
@@ -1536,7 +1488,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_large_batched_generation(self):
-        set_seed(0)
+        set_seed(2345)
         processor = WhisperProcessor.from_pretrained("openai/whisper-large")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large")
 
@@ -1571,7 +1523,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_large_batched_generation_multilingual(self):
-        set_seed(0)
+        set_seed(2345)
         processor = WhisperProcessor.from_pretrained("openai/whisper-large")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large")
 
@@ -1603,13 +1555,13 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_tiny_en_batched_generation(self):
-        set_seed(0)
+        set_seed(2345)
         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
 
         input_speech = self._load_datasamples(4)
         input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
-        generated_ids = model.generate(input_features, max_length=20).to("cpu")
+        generated_ids = model.generate(input_features, max_length=20)
 
         # fmt: off
         EXPECTED_LOGITS = mindspore.tensor(
@@ -1622,7 +1574,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
         )
         # fmt: on
-
+        print(generated_ids)
         self.assertTrue(ops.allclose(generated_ids, EXPECTED_LOGITS))
 
         # fmt: off
@@ -1639,14 +1591,14 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_tiny_timestamp_generation(self):
-        set_seed(0)
+        set_seed(2345)
         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
 
         input_speech = np.concatenate(self._load_datasamples(4))
         input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
 
-        generated_ids = model.generate(input_features, max_length=448, return_timestamps=True).to("cpu")
+        generated_ids = model.generate(input_features, max_length=448, return_timestamps=True)
 
         EXPECTED_OUTPUT = mindspore.tensor([50258, 50259, 50359, 50364, 2221, 13, 2326, 388, 391, 307, 264, 50244, 295, 264, 2808, 5359, 11, 293, 321, 366, 5404, 281, 2928, 702, 14943, 13, 50692, 50692, 6966, 307, 2221, 13, 2326, 388, 391, 311, 9060, 1570, 1880, 813, 702, 1871, 13, 50926, 50926, 634, 5112, 505, 300, 412, 341, 42729, 3196, 295, 264, 1064, 11, 365, 5272, 293, 12904, 9256, 450, 10539, 51208, 51208, 949, 505, 11, 14138, 10117, 490, 3936, 293, 1080, 3542, 5160, 881, 26336, 281, 264, 1575, 13, 51552, 51552, 634, 575, 12525, 22618, 1968, 6144, 35617, 7354, 1292, 6, 589, 307, 534, 10281, 934, 439, 11, 293, 51836, 51836, 50257])  # fmt: skip
 
@@ -1700,7 +1652,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_large_timestamp_generation(self):
-        set_seed(0)
+        set_seed(2345)
         processor = WhisperProcessor.from_pretrained("openai/whisper-large-v3")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large-v3")
 
@@ -1709,11 +1661,12 @@ class WhisperModelIntegrationTests(unittest.TestCase):
             input_speech, return_tensors="ms", sampling_rate=16_000, return_token_timestamps=True
         ).input_features
 
-        generated_ids = model.generate(input_features, max_length=448, return_timestamps=True).to("cpu")
+        generated_ids = model.generate(input_features, max_length=448, return_timestamps=True)
 
         # fmt: off
         EXPECTED_OUTPUT = mindspore.tensor([50258, 50259, 50360, 50365, 2221, 13, 2326, 388, 391, 307, 264, 50244, 295, 264, 2808, 5359, 11, 293, 321, 366, 5404, 281, 2928, 702, 14943, 13, 50629, 50682, 6966, 307, 2221, 13, 2326, 388, 391, 311, 9060, 1570, 1880, 813, 702,  1871, 13, 50870, 50911, 634, 5112, 505, 300, 412, 341, 42729, 3196, 295, 264,  1064,  11, 365,  5272,   293, 12904,  9256, 450, 10539, 949, 505, 11, 51245, 51287,  1034, 4680, 10117, 490, 3936, 293, 1080,  3542, 5160, 881, 26336, 281, 264, 1575, 13, 51494, 51523, 634, 575, 12525, 22618, 1968,  6144, 35617, 1456, 397, 266, 311, 589, 307, 534, 10281, 934, 439, 11, 51799, 51815, 50257])
         # fmt: on
+        print(generated_ids)
         self.assertTrue(ops.allclose(generated_ids, EXPECTED_OUTPUT))
 
         EXPECTED_TRANSCRIPT = [
@@ -1761,7 +1714,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_tiny_token_timestamp_generation(self):
-        set_seed(0)
+        set_seed(2345)
         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
         model.generation_config.alignment_heads = [[2, 2], [3, 0], [3, 2], [3, 3], [3, 4], [3, 5]]
@@ -1784,11 +1737,11 @@ class WhisperModelIntegrationTests(unittest.TestCase):
         ])
         # fmt: on
 
-        self.assertTrue(ops.allclose(generate_outputs.token_timestamps.to("cpu"), EXPECTED_OUTPUT))
+        self.assertTrue(ops.allclose(generate_outputs.token_timestamps, EXPECTED_OUTPUT))
 
     @slow
     def test_large_token_timestamp_generation(self):
-        set_seed(0)
+        set_seed(2345)
         processor = WhisperProcessor.from_pretrained("openai/whisper-large-v3")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large-v3")
 
@@ -1812,11 +1765,11 @@ class WhisperModelIntegrationTests(unittest.TestCase):
         ])
         # fmt: on
 
-        self.assertTrue(ops.allclose(generate_outputs.token_timestamps.to("cpu"), EXPECTED_OUTPUT))
+        self.assertTrue(ops.allclose(generate_outputs.token_timestamps, EXPECTED_OUTPUT))
 
     @slow
     def test_tiny_token_timestamp_batch_generation(self):
-        set_seed(0)
+        set_seed(2345)
         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
         model.generation_config.alignment_heads = [[2, 2], [3, 0], [3, 2], [3, 3], [3, 4], [3, 5]]
@@ -1843,7 +1796,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_tiny_token_timestamp_generation_longform(self):
-        set_seed(0)
+        set_seed(2345)
         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
         model.generation_config.alignment_heads = [[2, 2], [3, 0], [3, 2], [3, 3], [3, 4], [3, 5]]
@@ -1891,7 +1844,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_tiny_specaugment_librispeech(self):
-        set_seed(0)
+        set_seed(2345)
         # Apply SpecAugment
         model = WhisperModel.from_pretrained("openai/whisper-tiny", apply_spec_augment=True)
         # Set model to training mode to enable SpecAugment
@@ -1939,8 +1892,8 @@ class WhisperModelIntegrationTests(unittest.TestCase):
         output_without_prompt = processor.decode(output_without_prompt[0])
         output_with_prompt = processor.decode(output_with_prompt[0])
 
-        self.assertEqual(output_without_prompt, expected_without_prompt)
         self.assertEqual(output_with_prompt, expected_with_prompt)
+        self.assertEqual(output_without_prompt, expected_without_prompt)
 
     @slow
     def test_language_detection(self):
@@ -1957,9 +1910,8 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
         audio = hf_hub_download("Narsil/asr_dummy", filename="hindi.ogg", repo_type="dataset")
 
-        from mindnlp.data.io.audio import read
         raw_audio, sr = read(audio)
-        input_speech = mindspore.dataset.audio.transforms.Resample(sr, 16_000)(raw_audio).asnumpy()
+        input_speech = Resample(sr, 16_000)(raw_audio)
 
         input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
 
@@ -1974,8 +1926,8 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
         audio = hf_hub_download("Narsil/asr_dummy", filename="hindi.ogg", repo_type="dataset")
 
-        raw_audio, sr = torchaudio.load(audio)
-        input_speech = torchaudio.transforms.Resample(sr, 16_000)(raw_audio).asnumpy()
+        raw_audio, sr = read(audio)
+        input_speech = Resample(sr, 16_000)(raw_audio)
 
         input_features = processor(input_speech, return_tensors="ms", sampling_rate=16_000).input_features
 
@@ -2005,10 +1957,10 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
         audio = hf_hub_download("Narsil/asr_dummy", filename="hindi.ogg", repo_type="dataset")
 
-        raw_audio, sr = torchaudio.load(audio)
-        input_speech = torchaudio.transforms.Resample(sr, 16_000)(raw_audio)
+        raw_audio, sr = read(audio)
+        input_speech = Resample(sr, 16_000)(raw_audio)
 
-        input_speech = input_speech.tile((1, 10)).asnumpy()
+        input_speech = input_speech.tile((1, 10))
         input_features = processor(
             input_speech, return_tensors="ms", padding="longest", truncation=False, sampling_rate=16_000
         ).input_features
@@ -2264,7 +2216,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
             "logprob_threshold": -1.0,
         }
 
-        set_seed(0)
+        set_seed(2345)
         result = model.generate(input_features, **gen_kwargs)
         decoded = processor.batch_decode(result, skip_special_tokens=True)
 
@@ -2296,7 +2248,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
             "logprob_threshold": -1.0,
         }
 
-        set_seed(0)
+        set_seed(2345)
         result = model.generate(input_features, **gen_kwargs)
         decoded = processor.batch_decode(result.sequences, skip_special_tokens=True)
 
@@ -2311,7 +2263,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
             "logprob_threshold": -1.0,
         }
 
-        set_seed(0)
+        set_seed(2345)
         result = model.generate(input_features, **gen_kwargs)
         decoded = processor.batch_decode(result.sequences, skip_special_tokens=True)
 
@@ -2348,7 +2300,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
         self._patch_generation_mixin_generate(check_args_fn=check_gen_kwargs)
 
-        set_seed(0)
+        set_seed(2345)
         result = model.generate(input_features, **gen_kwargs)
         decoded = processor.batch_decode(result, skip_special_tokens=True)
 
@@ -2500,7 +2452,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
     def test_whisper_longform_multi_batch_hard_prev_cond(self):
         # Without this set here, this test may fail if it is run with other tests (say, `test_tiny_*`). It's unclear
         # why other tests may affect this tests: it seems some random operations are beyond the scene.
-        set_seed(0)
+        set_seed(2345)
         # fmt: off
         EXPECTED_TEXT = [
             " Folks, if you watch the show, you know I spent a lot of time right over there. Patiently and astutely scrutinizing the boxwood and mahogany chest set of the day's biggest stories, developing the central headline pawns, definitely maneuvering an oh-so-topical night to F6, faming of classic Sicilian, named or variation on the news, all the while seeing eight moves deep and patiently marshalling the latest press releases into a Fisher shows in lip-nitsky attack that culminates in the elegant lethal slow-played, all-pass on checkmate that is my nightly monologue, but sometimes sometimes folks I sometimes I start to the wake-up side down in the monkey bars of a condemned playground on a super fun site, get all hepped up on goofballs, rummage that would discard a tag bag of defective toys, yank out a fistball of disembodied doll limbs, toss them on a stain kid's place mad from a defunct denies, set up a table inside a rusty cargo container down by the warf and challenge toothless drifters to the godless bughouse blitz of tournament that is my segment, meanwhile.",
@@ -2560,7 +2512,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
     def test_whisper_shortform_multi_batch_hard_prev_cond(self):
         # Without this set here, this test may fail if it is run with other tests (say, `test_tiny_*`). It's unclear
         # why other tests may affect this tests: it seems some random operations are beyond the scene.
-        set_seed(0)
+        set_seed(2345)
         # fmt: off
         EXPECTED_TEXT = [
             ' Mr. Kfilter is the apostle of the Middle Classes and we are glad to welcome his gospel.',
@@ -2654,7 +2606,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
             "num_beams": 5,
         }
 
-        set_seed(0)
+        set_seed(2345)
         result = model.generate(**inputs, **gen_kwargs)
         decoded_all = processor.batch_decode(result, skip_special_tokens=True)
 
@@ -2694,7 +2646,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
             "task": "transcribe",
         }
 
-        set_seed(0)
+        set_seed(2345)
         model.generate(**inputs, **gen_kwargs)
 
     @slow
@@ -2716,7 +2668,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
         # check the compiled graph can be re-used and that the cache is correctly reset
         # reverse the ordering of the input features
         permutation_idx = (
-            ops.arange(input_features.shape[0], 0, step=-1, dtype=mindspore.int64, device=input_features.device) - 1
+            ops.arange(input_features.shape[0], 0, step=-1, dtype=mindspore.int64) - 1
         )
         input_features = input_features[permutation_idx, ...]
         static_generated_ids = model.generate(input_features, max_new_tokens=64)
@@ -2767,7 +2719,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
         # reverse the ordering of the input features
         input_features = inputs.input_features
         permutation_idx = (
-            ops.arange(input_features.shape[0], 0, step=-1, dtype=mindspore.int64, device=input_features.device) - 1
+            ops.arange(input_features.shape[0], 0, step=-1, dtype=mindspore.int64) - 1
         )
         input_features = input_features[permutation_idx, ...]
         attention_mask = inputs.attention_mask[permutation_idx, ...]

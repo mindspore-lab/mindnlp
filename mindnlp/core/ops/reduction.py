@@ -38,7 +38,8 @@ def all(input, dim=None, keepdim=False, *, dtype=None):
 def any(input, dim=None, keepdim=False):
     if use_pyboost():
         return mindspore.mint.any(input, dim, keepdim)
-    return ops.any(input, dim, keepdim)
+    any_ = _get_cache_prim(ops.ReduceAny)(keepdim)
+    return any_(input, dim)
 
 # max
 def max(input, dim=None, keepdim=False):
@@ -129,6 +130,8 @@ def std_mean(input, dim=None, *, correction=1, keepdim=False):
 
 # sum
 def sum(input, dim=None, keepdim=False, *, dtype=None):
+    if 0 in input.shape:
+        return mindspore.tensor(0, dtype=dtype)
     if use_pyboost():
         return mindspore.mint.sum(input, dim, keepdim, dtype=dtype)
     return ops.sum(input, dim, keepdim, dtype=dtype)

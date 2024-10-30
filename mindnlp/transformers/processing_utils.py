@@ -21,8 +21,11 @@ import copy
 import inspect
 import json
 import os
+import sys
+import typing
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, TypedDict, Union
+import typing_extensions
 
 import numpy as np
 from mindnlp import transformers
@@ -68,6 +71,10 @@ AUTO_TO_BASE_CLASS_MAPPING = {
     "AutoImageProcessor": "ImageProcessingMixin",
 }
 
+if sys.version_info >= (3, 11):
+    Unpack = typing.Unpack
+else:
+    Unpack = typing_extensions.Unpack
 
 class TextKwargs(TypedDict, total=False):
     """
@@ -1051,7 +1058,7 @@ def _validate_images_text_input_order(images, text):
     if (images is None and text_is_images) or (text is None and images_is_text) or (images_is_text and text_is_images):
         logger.warning_once(
             "You may have used the wrong order for inputs. `images` should be passed before `text`. "
-            "The `images` and `text` inputs will be swapped. This behavior will be deprecated in transformers v4.47."
+            "The `images` and `text` inputs will be swapped. This behavior will be deprecated."
         )
         return text, images
 

@@ -12,9 +12,31 @@ class Parameter(Tensor):
         self.param_info.requires_grad = requires_grad
         self.requires_grad = requires_grad
 
+    def __deepcopy__(self, memodict):
+        new_obj = Parameter(self)
+        return new_obj
+
     @property
     def data(self):
         return self
 
     def clone(self):
         return copy.deepcopy(self)
+
+    def __parameter__(self): # only for O2
+        """For parse check."""
+
+    @property
+    def name(self): # only for O2
+        """
+        Get the name of the parameter.
+
+        Examples:
+            >>> from mindspore import Tensor, Parameter
+            >>> import numpy as np
+            >>> x = Parameter(Tensor(np.array([1, 2], dtype=np.float32)), name="param")
+            >>> x.name = "param1"
+            >>> x.name
+            'param1'
+        """
+        return self.param_info.name

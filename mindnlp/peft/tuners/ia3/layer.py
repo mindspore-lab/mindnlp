@@ -91,7 +91,7 @@ class IA3Layer(BaseTunerLayer):
         elif isinstance(base_layer, nn.Conv2d):
             in_features, out_features = base_layer.in_channels, base_layer.out_channels
         elif isinstance(base_layer, nn.Embedding):
-            in_features, out_features = base_layer.vocab_size, base_layer.embedding_size
+            in_features, out_features = base_layer.num_embeddings, base_layer.embedding_dim
         elif isinstance(base_layer, Conv1D):
             in_features, out_features = (
                 base_layer.weight.ds_shape if hasattr(base_layer.weight, "ds_shape") else base_layer.weight.shape

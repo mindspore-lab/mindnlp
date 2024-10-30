@@ -22,9 +22,9 @@ from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import CrossEntropyLoss
-from mindnlp.core.serialization import load, safe_load_file
+from mindnlp.core.nn import CrossEntropyLoss, functional as F
 
+from mindnlp.core.serialization import safe_load_file, load
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -47,6 +47,7 @@ from .configuration_wav2vec2 import Wav2Vec2Config
 
 WAV2VEC2_ADAPTER_PT_FILE = "adapter.{}.bin"
 WAV2VEC2_ADAPTER_SAFE_FILE = "adapter.{}.safetensors"
+
 
 
 logger = logging.get_logger(__name__)
@@ -316,9 +317,9 @@ class Wav2Vec2LayerNormConvLayer(nn.Module):
     def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
 
-        hidden_states = ops.transpose(hidden_states, -2, -1)
+        hidden_states = hidden_states.swapaxes(-2, -1)
         hidden_states = self.layer_norm(hidden_states)
-        hidden_states = ops.transpose(hidden_states, -2, -1)
+        hidden_states = hidden_states.swapaxes(-2, -1)
 
         hidden_states = self.activation(hidden_states)
         return hidden_states
@@ -360,6 +361,8 @@ class Wav2Vec2PositionalConvEmbedding(nn.Module):
         )
 
         weight_norm = nn.utils.weight_norm
+        if hasattr(nn.utils.parametrizations, "weight_norm"):
+            weight_norm = nn.utils.parametrizations.weight_norm
 
         self.conv = weight_norm(self.conv, name="weight", dim=2)
 
@@ -367,13 +370,13 @@ class Wav2Vec2PositionalConvEmbedding(nn.Module):
         self.activation = ACT2FN[config.feat_extract_activation]
 
     def forward(self, hidden_states):
-        hidden_states = ops.transpose(hidden_states, 1, 2)
+        hidden_states = hidden_states.swapaxes(1, 2)
 
         hidden_states = self.conv(hidden_states)
         hidden_states = self.padding(hidden_states)
         hidden_states = self.activation(hidden_states)
 
-        hidden_states = ops.transpose(hidden_states, 1, 2)
+        hidden_states = hidden_states.swapaxes(1, 2)
         return hidden_states
 
 
@@ -430,7 +433,6 @@ class Wav2Vec2FeatureEncoder(nn.Module):
                 )
             else:
                 hidden_states = conv_layer(hidden_states)
-
         return hidden_states
 
 
@@ -439,7 +441,7 @@ class Wav2Vec2FeatureExtractor(Wav2Vec2FeatureEncoder):
         super().__init__(config)
         warnings.warn(
             f"The class `{self.__class__.__name__}` has been depreciated "
-            "and will be removed in Transformers v5. "
+            "and will be removed. "
             f"Use `{self.__class__.__bases__[0].__name__}` instead.",
             FutureWarning,
         )
@@ -460,7 +462,7 @@ class Wav2Vec2FeatureProjection(nn.Module):
         return hidden_states, norm_hidden_states
 
 
-# Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->Wav2Vec2
+# Copied from mindnlp.transformers.models.bart.modeling_bart.BartAttention with Bart->Wav2Vec2
 class Wav2Vec2Attention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
@@ -496,7 +498,7 @@ class Wav2Vec2Attention(nn.Module):
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return ops.transpose(tensor.view(bsz, seq_len, self.num_heads, self.head_dim), 1, 2)
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def forward(
         self,
@@ -560,7 +562,7 @@ class Wav2Vec2Attention(nn.Module):
         value_states = value_states.reshape(*proj_shape)
 
         src_len = key_states.shape[1]
-        attn_weights = ops.bmm(query_states, ops.transpose(key_states, 1, 2))
+        attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
 
         if attn_weights.shape != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
@@ -608,7 +610,7 @@ class Wav2Vec2Attention(nn.Module):
             )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
-        attn_output = ops.transpose(attn_output, 1, 2)
+        attn_output = attn_output.swapaxes(1, 2)
 
         # Use the `embed_dim` from the config (stored in the class) rather than `hidden_state` because `attn_output` can be
         # partitioned across GPUs when using tensor-parallelism.
@@ -741,7 +743,7 @@ class Wav2Vec2Encoder(nn.Module):
 
     def forward(
         self,
-        hidden_states: mindspore.tensor,
+        hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
         output_hidden_states: bool = False,
@@ -777,9 +779,9 @@ class Wav2Vec2Encoder(nn.Module):
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             dropout_probability = ops.rand([])
 
-            skip_the_layer = self.training and (dropout_probability < self.config.layerdrop)
+            skip_the_layer = bool(self.training and (dropout_probability < self.config.layerdrop))
             if not skip_the_layer:
-                # under deepspeed zero3 all gpus must run in sync
+                # under fsdp or deepspeed zero3 all gpus must run in sync
                 if self.gradient_checkpointing and self.training:
                     layer_outputs = self._gradient_checkpointing_func(
                         layer.__call__,
@@ -838,7 +840,7 @@ class Wav2Vec2EncoderStableLayerNorm(nn.Module):
         if attention_mask is not None:
             # make sure padded tokens are not attended to
             expand_attention_mask = attention_mask.unsqueeze(-1).tile((1, 1, hidden_states.shape[2]))
-            hidden_states[~expand_attention_mask] = 0
+            hidden_states = hidden_states * expand_attention_mask.to(dtype=hidden_states.dtype)
             if self._use_flash_attention_2:
                 # 2d mask is passed through the layers
                 attention_mask = attention_mask if (attention_mask is not None and 0 in attention_mask) else None
@@ -862,8 +864,9 @@ class Wav2Vec2EncoderStableLayerNorm(nn.Module):
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             dropout_probability = ops.rand([])
 
-            skip_the_layer = self.training and (dropout_probability < self.config.layerdrop)
+            skip_the_layer = bool(self.training and (dropout_probability < self.config.layerdrop))
             if not skip_the_layer:
+                # under fsdp or deepspeed zero3 all gpus must run in sync
                 if self.gradient_checkpointing and self.training:
                     layer_outputs = self._gradient_checkpointing_func(
                         layer.__call__,
@@ -956,10 +959,9 @@ class Wav2Vec2GumbelVectorQuantizer(nn.Module):
         else:
             # take argmax in non-differentiable way
             # comptute hard codevector distribution (one hot)
-            codevector_idx = ops.argmax(hidden_states, dim=-1).view(-1, 1)
-            codevector_probs = ops.scatter(
-                ops.zeros(hidden_states.shape, dtype=hidden_states.dtype),
-                -1, codevector_idx, ops.ones(codevector_idx.shape, dtype=hidden_states.dtype)
+            codevector_idx = ops.argmax(hidden_states, dim=-1)
+            codevector_probs = ops.scatter(ops.zeros(hidden_states.shape, dtype=hidden_states.dtype),
+                -1, codevector_idx.view(-1, 1), 1.0
             )
             codevector_probs = codevector_probs.view(batch_size * sequence_length, self.num_groups, -1)
 
@@ -994,14 +996,14 @@ class Wav2Vec2Adapter(nn.Module):
             hidden_states = self.proj(hidden_states)
             hidden_states = self.proj_layer_norm(hidden_states)
 
-        hidden_states = ops.transpose(hidden_states, 1, 2)
+        hidden_states = hidden_states.swapaxes(1, 2)
 
         for layer in self.layers:
             layerdrop_prob = np.random.random()
             if not self.training or (layerdrop_prob > self.layerdrop):
                 hidden_states = layer(hidden_states)
 
-        hidden_states = ops.transpose(hidden_states, 1, 2)
+        hidden_states = hidden_states.swapaxes(1, 2)
         return hidden_states
 
 
@@ -1058,6 +1060,8 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
     base_model_prefix = "wav2vec2"
     main_input_name = "input_values"
     supports_gradient_checkpointing = True
+    _supports_flash_attn_2 = True
+    _supports_sdpa = True
 
     def _init_weights(self, module):
         """Initialize the weights"""
@@ -1069,8 +1073,8 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
             module.project_q._is_initialized = True
         # gumbel softmax requires special init
         elif isinstance(module, Wav2Vec2GumbelVectorQuantizer):
-            nn.init.normal_(module.weight_proj.weight, mean=0.0, std=1)
-            nn.init.zeros_(module.weight_proj.bias)
+            nn.init.normal_(module.weight_proj.weight.data, mean=0.0, std=1)
+            nn.init.zeros_(module.weight_proj.bias.data)
             nn.init.uniform_(module.codevectors)
         elif isinstance(module, Wav2Vec2PositionalConvEmbedding):
             nn.init.normal_(
@@ -1084,14 +1088,16 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
             nn.init.uniform_(module.projection.weight, a=-k, b=k)
             nn.init.uniform_(module.projection.bias, a=-k, b=k)
         elif isinstance(module, nn.Linear):
-            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+
             if module.bias is not None:
-                nn.init.zeros_(module.bias)
+                nn.init.zeros_(module.bias.data)
         elif isinstance(module, (nn.LayerNorm, nn.GroupNorm)):
-            nn.init.zeros_(module.bias)
-            nn.init.ones_(module.weight)
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
         elif isinstance(module, nn.Conv1d):
             nn.init.kaiming_normal_(module.weight)
+
             if module.bias is not None:
                 k = math.sqrt(module.groups / (module.in_channels * module.kernel_size[0]))
                 nn.init.uniform_(module.bias, a=-k, b=k)
@@ -1135,7 +1141,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
         )
         # these two operations makes sure that all values before the output lengths idxs are attended to
         attention_mask[(ops.arange(attention_mask.shape[0]), output_lengths - 1)] = 1
-        attention_mask = attention_mask.flip([-1]).int().cumsum(-1).flip([-1]).bool()
+        attention_mask = attention_mask.flip([-1]).cumsum(-1).flip([-1]).bool()
         return attention_mask
 
     def _get_adapters(self):
@@ -1185,7 +1191,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
                 cached versions if they exist.
             resume_download:
                 Deprecated and ignored. All downloads are now resumed by default when possible.
-                Will be removed in v5 of Transformers.
+                Will be removed.
             proxies (`Dict[str, str]`, *optional*):
                 A dictionary of proxy servers to use by protocol or endpoint, e.g., `{'http': 'foo.bar:3128',
                 'http://hostname': 'foo.bar:4012'}`. The proxies are used on each request.
@@ -1201,7 +1207,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
 
                 <Tip>
 
-                To test a pull request you made on the Hub, you can pass `revision="refs/pr/<pr_number>".
+                To test a pull request you made on the Hub, you can pass `revision="refs/pr/<pr_number>"`.
 
                 </Tip>
 
@@ -1220,7 +1226,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
         Examples:
 
         ```python
-        >>> from transformers import Wav2Vec2ForCTC, AutoProcessor
+        >>> from mindnlp.transformers import Wav2Vec2ForCTC, AutoProcessor
 
         >>> ckpt = "facebook/mms-1b-all"
         >>> processor = AutoProcessor.from_pretrained(ckpt)
@@ -1249,7 +1255,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
 
         if use_auth_token is not None:
             warnings.warn(
-                "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
+                "The `use_auth_token` argument is deprecated and will be removed. Please use `token` instead.",
                 FutureWarning,
             )
             if token is not None:
@@ -1313,15 +1319,16 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
                     cache_dir=cache_dir,
                 )
 
-                state_dict = load(weight_path)
+                state_dict = load(
+                    weight_path,
+                )
 
             except EnvironmentError:
                 # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted
                 # to the original exception.
                 raise
 
-            except Exception as e:
-                print(e)
+            except Exception:
                 # For any other exception, we throw a generic error.
                 raise EnvironmentError(
                     f"Can't load the model for '{model_path_or_id}'. If you were trying to load it"
@@ -1382,7 +1389,7 @@ class Wav2Vec2Model(Wav2Vec2PreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated and will be removed. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -1457,7 +1464,7 @@ class Wav2Vec2Model(Wav2Vec2PreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         extract_features = self.feature_extractor(input_values)
-        extract_features = ops.transpose(extract_features, 1, 2)
+        extract_features = extract_features.swapaxes(1, 2)
 
         if attention_mask is not None:
             # compute reduced attention_mask corresponding to feature vectors
@@ -1520,7 +1527,7 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated and will be removed. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -1546,7 +1553,7 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
         """
         target_features = ops.cat([target_features, negative_features], dim=0)
 
-        logits = nn.functional.cosine_similarity(predicted_features.float(), target_features.float(), dim=-1).type_as(
+        logits = F.cosine_similarity(predicted_features.float(), target_features.float(), dim=-1).type_as(
             target_features
         )
 
@@ -1577,16 +1584,16 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
         Example:
 
         ```python
-        >>> import torch
-        >>> from transformers import AutoFeatureExtractor, Wav2Vec2ForPreTraining
-        >>> from transformers.models.wav2vec2.modeling_wav2vec2 import _compute_mask_indices, _sample_negative_indices
+        >>> import mindspore
+        >>> from mindnlp.transformers import AutoFeatureExtractor, Wav2Vec2ForPreTraining
+        >>> from mindnlp.transformers.models.wav2vec2.modeling_wav2vec2 import _compute_mask_indices, _sample_negative_indices
         >>> from datasets import load_dataset
 
         >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base")
         >>> model = Wav2Vec2ForPreTraining.from_pretrained("facebook/wav2vec2-base")
 
         >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-        >>> input_values = feature_extractor(ds[0]["audio"]["array"], return_tensors="ms").input_values  # Batch size 1
+        >>> input_values = feature_extractor(ds[0]["audio"]["array"], return_tensors="pt").input_values  # Batch size 1
 
         >>> # compute masked indices
         >>> batch_size, raw_sequence_length = input_values.shape
@@ -1608,7 +1615,7 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
         ...     outputs = model(input_values, mask_time_indices=mask_time_indices)
 
         >>> # compute cosine similarity between predicted (=projected_states) and target (=projected_quantized_states)
-        >>> cosine_sim = ops.cosine_similarity(outputs.projected_states, outputs.projected_quantized_states, dim=-1)
+        >>> cosine_sim = F.cosine_similarity(outputs.projected_states, outputs.projected_quantized_states, dim=-1)
 
         >>> # show that cosine similarity is much higher than random
         >>> cosine_sim[mask_time_indices.to(mindspore.bool_)].mean() > 0.5
@@ -1683,17 +1690,18 @@ class Wav2Vec2ForPreTraining(Wav2Vec2PreTrainedModel):
             neg_is_pos = (quantized_features == negative_quantized_features).all(-1)
 
             if neg_is_pos.any():
-                logits[1:][neg_is_pos] = float(ops.finfo(logits.dtype).min)
+                logits[1:][neg_is_pos] = float("-inf")
 
             # 6. compute contrastive loss \mathbf{L}_m = cross_entropy(logs) =
             # -log(exp(sim(c_t, q_t)/\kappa) / \sum_{\sim{q}} exp(sim(c_t, \sim{q})/\kappa))
-            logits = ops.transpose(logits, 0, 2).reshape(-1, logits.shape[0])
-            target = ops.transpose(((1 - mask_time_indices.long()) * -100), 0, 1).flatten()
+            logits = logits.swapaxes(0, 2).reshape(-1, logits.shape[0])
+            target = ((1 - mask_time_indices.long()) * -100).swapaxes(0, 1).flatten()
 
             contrastive_loss = nn.functional.cross_entropy(logits.float(), target, reduction="sum")
             # 7. compute diversity loss: \mathbf{L}_d
             num_codevectors = self.config.num_codevectors_per_group * self.config.num_codevector_groups
             diversity_loss = ((num_codevectors - codevector_perplexity) / num_codevectors) * mask_time_indices.sum()
+
             # 8. \mathbf{L} = \mathbf{L}_m + \alpha * \mathbf{L}_d
             loss = contrastive_loss + self.config.diversity_loss_weight * diversity_loss
 
@@ -1809,7 +1817,7 @@ class Wav2Vec2ForCTC(Wav2Vec2PreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated and will be removed. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -1879,7 +1887,7 @@ class Wav2Vec2ForCTC(Wav2Vec2PreTrainedModel):
             flattened_targets = labels.masked_select(labels_mask)
 
             # ctc_loss doesn't support fp16
-            log_probs = ops.transpose(nn.functional.log_softmax(logits, dim=-1, dtype=mindspore.float32), 0, 1)
+            log_probs = nn.functional.log_softmax(logits, dim=-1, dtype=mindspore.float32).swapaxes(0, 1)
 
             loss = nn.functional.ctc_loss(
                 log_probs,
@@ -1924,7 +1932,7 @@ class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated and will be removed. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -1976,7 +1984,7 @@ class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
             hidden_states = ops.stack(hidden_states, dim=1)
             norm_weights = nn.functional.softmax(self.layer_weights, dim=-1)
-            hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(dim=1)
+            hidden_states = ops.sum((hidden_states * norm_weights.view(-1, 1, 1)), dim=1)
         else:
             hidden_states = outputs[0]
 
@@ -2006,6 +2014,7 @@ class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
             attentions=outputs.attentions,
         )
 
+
 class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -2029,7 +2038,7 @@ class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated and will be removed. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -2081,7 +2090,7 @@ class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
             hidden_states = ops.stack(hidden_states, dim=1)
             norm_weights = nn.functional.softmax(self.layer_weights, dim=-1)
-            hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(dim=1)
+            hidden_states = ops.sum((hidden_states * norm_weights.view(-1, 1, 1)), dim=1)
         else:
             hidden_states = outputs[0]
 
@@ -2139,7 +2148,8 @@ class TDNNLayer(nn.Module):
         self.activation = nn.ReLU()
 
     def forward(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
-        from ....peft.tuners.lora import LoraLayer
+        from mindnlp.peft.tuners.lora import LoraLayer
+
         if isinstance(self.kernel, LoraLayer):
             warnings.warn(
                 "Detected LoRA on TDNNLayer. LoRA weights won't be applied due to optimization. "
@@ -2147,10 +2157,10 @@ class TDNNLayer(nn.Module):
             )
 
         # for backward compatibility, we keep nn.Linear but call F.conv1d for speed up
-        hidden_states = ops.transpose(hidden_states, 1, 2)
-        weight = ops.transpose(self.kernel.weight.view(self.out_conv_dim, self.kernel_size, self.in_conv_dim), 1, 2)
+        hidden_states = hidden_states.swapaxes(1, 2)
+        weight = self.kernel.weight.view(self.out_conv_dim, self.kernel_size, self.in_conv_dim).swapaxes(1, 2)
         hidden_states = nn.functional.conv1d(hidden_states, weight, self.kernel.bias, dilation=self.dilation)
-        hidden_states = ops.transpose(hidden_states, 1, 2)
+        hidden_states = hidden_states.swapaxes(1, 2)
 
         hidden_states = self.activation(hidden_states)
         return hidden_states
@@ -2182,7 +2192,7 @@ class Wav2Vec2ForXVector(Wav2Vec2PreTrainedModel):
         not be updated during training.
         """
         warnings.warn(
-            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "The method `freeze_feature_extractor` is deprecated and will be removed. "
             "Please use the equivalent `freeze_feature_encoder` method instead.",
             FutureWarning,
         )
@@ -2248,7 +2258,7 @@ class Wav2Vec2ForXVector(Wav2Vec2PreTrainedModel):
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
             hidden_states = ops.stack(hidden_states, dim=1)
             norm_weights = nn.functional.softmax(self.layer_weights, dim=-1)
-            hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(dim=1)
+            hidden_states = ops.sum((hidden_states * norm_weights.view(-1, 1, 1)), dim=1)
         else:
             hidden_states = outputs[0]
 
@@ -2262,7 +2272,7 @@ class Wav2Vec2ForXVector(Wav2Vec2PreTrainedModel):
             mean_features = ops.mean(hidden_states, dim=1)
             std_features = ops.std(hidden_states, dim=1)
         else:
-            feat_extract_output_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(dim=1))
+            feat_extract_output_lengths = self._get_feat_extract_output_lengths(ops.sum(attention_mask, dim=1))
             tdnn_output_lengths = self._get_tdnn_output_lengths(feat_extract_output_lengths)
             mean_features = []
             std_features = []

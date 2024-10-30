@@ -21,7 +21,6 @@ from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, Union
 
 import mindspore
-from mindspore.common.initializer import initializer, Normal
 import mindnlp.core.nn.functional as F
 from mindnlp.core import nn, ops
 
@@ -734,56 +733,37 @@ class ClvpPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _skip_keys_device_placement = "past_key_values"
 
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
         factor = self.config.initializer_factor
-        if isinstance(cell, nn.Embedding):
-            cell.weight.assign_value(initializer(Normal(mean=0.0, sigma=factor * 0.02),
-                                             cell.weight.shape, cell.weight.dtype))
-        elif isinstance(cell, (nn.Linear, Conv1D, nn.Conv1d)):
-            cell.weight.assign_value(initializer(Normal(mean=0.0, sigma=factor * 0.02),
-                                             cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.assign_value(
-                    initializer(
-                        "zeros",
-                        cell.bias.shape,
-                        cell.bias.dtype,
-                    )
-                )
-        elif isinstance(cell, ClvpEncoderMLP):
+        if isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight.data, mean=0.0, std=factor * 0.02)
+        elif isinstance(module, (nn.Linear, Conv1D, nn.Conv1d)):
+            nn.init.normal_(module.weight.data, mean=0.0, std=factor * 0.02)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, ClvpEncoderMLP):
             factor = self.config.initializer_factor
-            in_proj_std = (cell.config.hidden_size**-0.5) * \
-                ((2 * cell.config.num_hidden_layers) ** -0.5) * factor
-            fc_std = (2 * cell.config.hidden_size) ** -0.5 * factor
-            (cell.fc1.proj.weight if getattr(cell.fc1, "proj") else cell.fc1.weight).assign_value(initializer(Normal(fc_std), (cell.fc1.proj.weight if getattr(cell.fc1, "proj") else cell.fc1.weight).shape,
-                                                                                                          (cell.fc1.proj.weight if getattr(cell.fc1, "proj") else cell.fc1.weight).dtype))
-            cell.fc2.weight.assign_value(initializer(Normal(in_proj_std),
-                                                 cell.fc2.weight.shape, cell.fc2.weight.dtype))
-        elif isinstance(cell, ClvpEncoder):
-            config = self.config.text_config if hasattr(
-                self.config, "text_config") else self.config
+            in_proj_std = (module.config.hidden_size**-0.5) * ((2 * module.config.num_hidden_layers) ** -0.5) * factor
+            fc_std = (2 * module.config.hidden_size) ** -0.5 * factor
+            nn.init.normal_(module.fc1.proj.weight if getattr(module.fc1, "proj") else module.fc1.weight, std=fc_std)
+            nn.init.normal_(module.fc2.weight, std=in_proj_std)
+        elif isinstance(module, ClvpEncoder):
+            config = self.config.get_text_config()
             factor = config.initializer_factor
-            cell.projection.weight.assign_value(initializer(Normal(factor * (config.hidden_size**-0.5)),
-                                                        cell.projection.weight.shape, cell.projection.weight.dtype))
-        elif isinstance(cell, ClvpConditioningEncoder):
-            cell.mel_conv.weight.assign_value(initializer(Normal(factor),
-                                                      cell.mel_conv.weight.shape, cell.mel_conv.weight.dtype))
-            cell.mel_conv.bias.assign_value(initializer(
-                'zeros', cell.mel_conv.bias.shape, cell.mel_conv.bias.dtype))
-        elif isinstance(cell, ClvpForCausalLM):
-            for name, p in cell.parameters_and_names():
+            nn.init.normal_(module.projection.weight.data, mean=0.0, std=factor * (config.hidden_size**-0.5))
+        elif isinstance(module, ClvpConditioningEncoder):
+            nn.init.normal_(module.mel_conv.weight.data, mean=0.0, std=factor)
+            nn.init.zeros_(module.mel_conv.bias.data)
+        elif isinstance(module, ClvpForCausalLM):
+            for name, p in module.named_parameters():
                 if name == "c_proj.weight":
-                    p.assign_value(initializer(Normal
-                                           (self.config.initializer_range /
-                                            math.sqrt(2 * self.config.num_hidden_layers)),
-                                           p.shape, p.dtype)
-                               )
-        if isinstance(cell, nn.LayerNorm):
-            cell.weight.assign_value(initializer(
-                'ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.assign_value(initializer(
-                'zeros', cell.bias.shape, cell.bias.dtype))
+                    nn.init.normal_(
+                        p.data, mean=0.0, std=(self.config.initializer_range / math.sqrt(2 * self.config.num_hidden_layers))
+                    )
+        if isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
 
 
 class ClvpEncoder(ClvpPreTrainedModel):

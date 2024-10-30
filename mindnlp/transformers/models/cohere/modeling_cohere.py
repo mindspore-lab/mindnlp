@@ -733,7 +733,6 @@ class CohereForCausalLM(CoherePreTrainedModel):
 
         hidden_states = outputs[0]
         # Only compute necessary logits, and do not upcast them to float if we are not computing the loss
-        # TODO: remove the float() operation in v4.46
         logits = self.lm_head(hidden_states[:, -num_logits_to_keep:, :]).float()
         logits = logits * self.logit_scale
 

@@ -23,10 +23,9 @@ from typing import Optional, Set, Tuple, Union
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core import nn, ops, no_grad
+from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import (
     ModelOutput,
     logging
@@ -216,8 +215,8 @@ class VideoMAESelfAttention(nn.Module):
         self.value = nn.Linear(config.hidden_size, self.all_head_size, bias=False)
 
         if config.qkv_bias:
-            self.q_bias = mindspore.Parameter(ops.zeros([self.all_head_size]),name="q_bias")
-            self.v_bias = mindspore.Parameter(ops.zeros([self.all_head_size]),name="v_bias")
+            self.q_bias = Parameter(ops.zeros([self.all_head_size]))
+            self.v_bias = Parameter(ops.zeros([self.all_head_size]))
         else:
             self.q_bias = None
             self.v_bias = None
@@ -473,20 +472,19 @@ class VideoMAEPreTrainedModel(PreTrainedModel):
     base_model_prefix = "videomae"
     main_input_name = "pixel_values"
     supports_gradient_checkpointing = True
-    _supports_sdpa = True
-    def _init_weights(self, cell) -> None:
 
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, (nn.Linear, nn.Conv3d)):
-            # Upcast the input in `fp32` and cast it back to desired `dtype` to avoid
-            # `trunc_normal_cpu` not implemented in `half` issues
-            cell.weight.assign_value(initializer(Normal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        if isinstance(module, (nn.Linear, nn.Conv3d)):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
+
 
 class VideoMAEModel(VideoMAEPreTrainedModel):
     def __init__(self, config):
@@ -636,7 +634,7 @@ class VideoMAEForPreTraining(VideoMAEPreTrainedModel):
         self.videomae = VideoMAEModel(config)
 
         self.encoder_to_decoder = nn.Linear(config.hidden_size, config.decoder_hidden_size, bias=False)
-        self.mask_token = mindspore.Parameter(ops.zeros((1, 1, config.decoder_hidden_size)),name="mask_token")
+        self.mask_token = Parameter(ops.zeros((1, 1, config.decoder_hidden_size)))
         self.position_embeddings = get_sinusoid_encoding_table(
             self.videomae.embeddings.num_patches, config.decoder_hidden_size
         )
@@ -688,7 +686,7 @@ class VideoMAEForPreTraining(VideoMAEPreTrainedModel):
         logits = decoder_outputs.logits
 
         loss = None
-        with mindspore._no_grad():
+        with no_grad():
             # calculate the labels to be predicted
             if self.config.num_channels != 3:
                 # Can't unnormalize with default means/stds

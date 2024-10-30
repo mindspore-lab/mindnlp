@@ -22,7 +22,7 @@ import requests
 from mindnlp.transformers import (
     AutoProcessor,
     Qwen2VLConfig,
-    Qwen2VLForConditionalGeneration,
+    Qwen2VLForConditionalGeneration
 )
 from mindnlp.utils import (
     is_mindspore_available,
@@ -55,11 +55,11 @@ class Qwen2VLVisionText2TextModelTester:
     def __init__(
         self,
         parent,
-        batch_size=8,
+        batch_size=2,
         seq_length=7,
         num_channels=3,
         ignore_index=-100,
-        image_size=28,
+        image_size=14,
         bos_token_id=0,
         eos_token_id=1,
         pad_token_id=2,
@@ -87,7 +87,7 @@ class Qwen2VLVisionText2TextModelTester:
             "mlp_ratio": 4,
             "num_heads": 4,
             "patch_size": 14,
-            "spatial_merge_size": 2,
+            "spatial_merge_size": 1,
             "temporal_patch_size": 2,
         },
         rope_scaling={"type": "mrope", "mrope_section": [2, 1, 1]},
@@ -116,9 +116,10 @@ class Qwen2VLVisionText2TextModelTester:
         self.batch_size = batch_size
         self.num_channels = num_channels
         self.image_size = image_size
-        self.seq_length = seq_length
         self.is_training = is_training
         self.vocab_size = vocab_size
+        self.num_image_tokens = 32
+        self.seq_length = seq_length + self.num_image_tokens
 
     def get_config(self):
         return Qwen2VLConfig(
@@ -159,22 +160,18 @@ class Qwen2VLVisionText2TextModelTester:
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
         config, pixel_values = config_and_inputs
-        vision_seqlen = pixel_values.shape[0] // self.batch_size // (self.vision_config["spatial_merge_size"] ** 2)
-        input_ids = ids_tensor([self.batch_size, self.seq_length - 1 + vision_seqlen], self.vocab_size)
+        input_ids = ids_tensor([self.batch_size, self.seq_length], self.vocab_size)
         attention_mask = ops.ones(input_ids.shape, dtype=mindspore.int64)
 
         input_ids[input_ids == self.image_token_id] = self.pad_token_id
-        input_ids[:, ops.arange(vision_seqlen) + 1] = self.image_token_id
+        input_ids[:, self.num_image_tokens] = self.image_token_id
         labels = ops.zeros(
-            (self.batch_size, self.seq_length - 1 + vision_seqlen),
+            (self.batch_size, self.seq_length),
             dtype=mindspore.int64,
         )
-        patch_size = self.vision_config["patch_size"]
         inputs_dict = {
             "pixel_values": pixel_values,
-            "image_grid_thw": mindspore.tensor(
-                [[1, self.image_size // patch_size, self.image_size // patch_size]] * self.batch_size
-            ),
+            "image_grid_thw": mindspore.tensor([[1, 1, 1]] * self.batch_size),
             "input_ids": input_ids,
             "attention_mask": attention_mask,
             "labels": labels,
@@ -306,11 +303,17 @@ class Qwen2VLModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCas
     def test_beam_search_low_memory(self):
         pass
 
+    @unittest.skip(
+        reason="VLMs can't generate from inputs embeds and pixels. This can be tested as part of bacbone LM, no need to run the tes for VLMs"
+    )
+    def test_generate_from_inputs_embeds_with_static_cache(self):
+        pass
+
 
 @require_mindspore
 class Qwen2VLIntegrationTest(unittest.TestCase):
     def setUp(self):
-        self.processor = AutoProcessor.from_pretrained("Qwen/Qwen2-VL-7B-Instruct", mirror='modelscope')
+        self.processor = AutoProcessor.from_pretrained("Qwen/Qwen2-VL-7B-Instruct")
         self.messages = [
             {
                 "role": "user",
@@ -330,7 +333,7 @@ class Qwen2VLIntegrationTest(unittest.TestCase):
     @slow
     def test_small_model_integration_test(self):
         model = Qwen2VLForConditionalGeneration.from_pretrained(
-            "Qwen/Qwen2-VL-7B-Instruct", ms_dtype=mindspore.float16, device_map="auto", mirror='modelscope'
+            "Qwen/Qwen2-VL-7B-Instruct", ms_dtype="auto", device_map="auto"
         )
 
         text = self.processor.apply_chat_template(self.messages, tokenize=False, add_generation_prompt=True)
@@ -352,6 +355,7 @@ class Qwen2VLIntegrationTest(unittest.TestCase):
         )
         assert ops.allclose(expected_pixel_slice, inputs.pixel_values[:6, :3], atol=3e-3)
 
+
         output = model.generate(**inputs, max_new_tokens=30)
         EXPECTED_DECODED_TEXT = "system\nYou are a helpful assistant.\nuser\nWhat kind of dog is this?\nassistant\nThe dog in the picture appears to be a Labrador Retriever. Labradors are known for their friendly and intelligent nature, making them popular pets"
 
@@ -363,10 +367,11 @@ class Qwen2VLIntegrationTest(unittest.TestCase):
     @slow
     def test_small_model_integration_test_batch(self):
         model = Qwen2VLForConditionalGeneration.from_pretrained(
-            "Qwen/Qwen2-VL-7B-Instruct", ms_dtype=mindspore.float16, device_map="auto", mirror='modelscope'
+            "Qwen/Qwen2-VL-7B-Instruct", ms_dtype="auto", device_map="auto"
         )
         text = self.processor.apply_chat_template(self.messages, tokenize=False, add_generation_prompt=True)
         inputs = self.processor(text=[text, text], images=[self.image, self.image], return_tensors="ms")
+
         # it should not matter whether two images are the same size or not
         output = model.generate(**inputs, max_new_tokens=30)
 
@@ -382,7 +387,7 @@ class Qwen2VLIntegrationTest(unittest.TestCase):
     @slow
     def test_small_model_integration_test_batch_wo_image(self):
         model = Qwen2VLForConditionalGeneration.from_pretrained(
-            "Qwen/Qwen2-VL-7B-Instruct", ms_dtype=mindspore.float16, device_map="auto", mirror='modelscope'
+            "Qwen/Qwen2-VL-7B-Instruct", ms_dtype="auto", device_map="auto"
         )
         text = self.processor.apply_chat_template(self.messages, tokenize=False, add_generation_prompt=True)
         messages2 = [
@@ -391,7 +396,7 @@ class Qwen2VLIntegrationTest(unittest.TestCase):
         ]
         text2 = self.processor.apply_chat_template(messages2, tokenize=False, add_generation_prompt=True)
         inputs = self.processor(text=[text, text2], images=[self.image], padding=True, return_tensors="ms")
-        print(inputs)
+
         # it should not matter whether two images are the same size or not
         output = model.generate(**inputs, max_new_tokens=30)
 
@@ -407,12 +412,13 @@ class Qwen2VLIntegrationTest(unittest.TestCase):
     @slow
     def test_small_model_integration_test_batch_different_resolutions(self):
         model = Qwen2VLForConditionalGeneration.from_pretrained(
-            "Qwen/Qwen2-VL-7B-Instruct", ms_dtype=mindspore.float16, device_map="auto", mirror='modelscope'
+            "Qwen/Qwen2-VL-7B-Instruct", ms_dtype="auto", device_map="auto"
         )
         text = self.processor.apply_chat_template(self.messages, tokenize=False, add_generation_prompt=True)
         text2 = self.processor.apply_chat_template(self.messages, tokenize=False, add_generation_prompt=True)
         image2 = self.image.resize((224, 224))
         inputs = self.processor(text=[text, text2], images=[self.image, image2], padding=True, return_tensors="ms")
+
         # it should not matter whether two images are the same size or not
         output = model.generate(**inputs, max_new_tokens=30)
 

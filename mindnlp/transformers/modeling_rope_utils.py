@@ -40,7 +40,7 @@ def _compute_default_rope_parameters(
         seq_len (`int`, *optional*):
             The current sequence length. Unused for this type of RoPE.
         rope_kwargs (`Dict`, *optional*):
-            BC compatibility with the previous RoPE class instantiation, will be removed in v4.45.
+            BC compatibility with the previous RoPE class instantiation, will be removed.
     Returns:
         Tuple of (`mindspore.Tensor`, `float`), containing the inverse frequencies for the RoPE embeddings and the
         post-processing scaling factor applied to the computed cos/sin (unused in this type of RoPE).
@@ -78,7 +78,7 @@ def _compute_linear_scaling_rope_parameters(
         seq_len (`int`, *optional*):
             The current sequence length. Unused for this type of RoPE.
         rope_kwargs (`Dict`, *optional*):
-            BC compatibility with the previous RoPE class instantiation, will be removed in v4.45.
+            BC compatibility with the previous RoPE class instantiation, will be removed.
     Returns:
         Tuple of (`mindspore.Tensor`, `float`), containing the inverse frequencies for the RoPE embeddings and the
         post-processing scaling factor applied to the computed cos/sin (unused in this type of RoPE).
@@ -116,7 +116,7 @@ def _compute_dynamic_ntk_parameters(
         seq_len (`int`, *optional*):
             The current sequence length, used to update the dynamic RoPE at inference time.
         rope_kwargs (`Dict`, *optional*):
-            BC compatibility with the previous RoPE class instantiation, will be removed in v4.45.
+            BC compatibility with the previous RoPE class instantiation, will be removed.
     Returns:
         Tuple of (`mindspore.Tensor`, `float`), containing the inverse frequencies for the RoPE embeddings and the
         post-processing scaling factor applied to the computed cos/sin (unused in this type of RoPE).
@@ -162,7 +162,7 @@ def _compute_yarn_parameters(
         seq_len (`int`, *optional*):
             The current sequence length. Unused for this type of RoPE.
         rope_kwargs (`Dict`, *optional*):
-            BC compatibility with the previous RoPE class instantiation, will be removed in v4.45.
+            BC compatibility with the previous RoPE class instantiation, will be removed.
     Returns:
         Tuple of (`mindspore.Tensor`, `float`), containing the inverse frequencies for the RoPE embeddings and the
         post-processing scaling factor applied to the computed cos/sin.
@@ -238,7 +238,7 @@ def _compute_longrope_parameters(
         seq_len (`int`, *optional*):
             The current sequence length. Unused for this type of RoPE.
         rope_kwargs (`Dict`, *optional*):
-            BC compatibility with the previous RoPE class instantiation, will be removed in v4.45.
+            BC compatibility with the previous RoPE class instantiation, will be removed.
     Returns:
         Tuple of (`mindspore.Tensor`, `float`), containing the inverse frequencies for the RoPE embeddings and the
         post-processing scaling factor applied to the computed cos/sin.
@@ -300,7 +300,7 @@ def _compute_llama3_parameters(
         seq_len (`int`, *optional*):
             The current sequence length. Unused for this type of RoPE.
         rope_kwargs (`Dict`, *optional*):
-            BC compatibility with the previous RoPE class instantiation, will be removed in v4.45.
+            BC compatibility with the previous RoPE class instantiation, will be removed.
     Returns:
         Tuple of (`mindspore.Tensor`, `float`), containing the inverse frequencies for the RoPE embeddings and the
         post-processing scaling factor applied to the computed cos/sin.

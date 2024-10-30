@@ -612,4 +612,4 @@ def tensor_scatter_min(input, indeices, updates):
 def strided_slice_update(input, begin, end, strides, update, begin_mask=0, end_mask=0, ellipsis_mask=0, new_axis_mask=0, shrink_axis_mask=0):
     strided_slice_grad = _get_cache_prim(StridedSliceGrad)(begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask)
     updated_tensor = strided_slice_grad(update, input.shape, begin, end, strides)
-    return where(updated_tensor != 0, updated_tensor, input)
+    return ops.assign(input, where(updated_tensor != 0, updated_tensor, input))

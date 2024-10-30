@@ -178,7 +178,7 @@ def make_log_bucket_position(relative_pos, bucket_size, max_position):
     sign = ops.sign(relative_pos)
     mid = bucket_size // 2
     abs_pos = ops.where(
-        (relative_pos < mid) & (relative_pos > -mid),
+        ((relative_pos < mid).int() & (relative_pos > -mid).int()).bool(),
         mindspore.tensor(mid - 1).type_as(relative_pos),
         ops.abs(relative_pos),
     )
@@ -322,8 +322,10 @@ class SEWDPositionalConvEmbedding(nn.Module):
             stride=config.squeeze_factor,
         )
 
-
-        self.conv = nn.utils.weight_norm(self.conv, name="weight", dim=2)
+        weight_norm = nn.utils.weight_norm
+        if hasattr(nn.utils.parametrizations, "weight_norm"):
+            weight_norm = nn.utils.parametrizations.weight_norm
+        self.conv = weight_norm(self.conv, name="weight", dim=2)
 
         self.padding = SEWDSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -1096,7 +1098,7 @@ class SEWDPreTrainedModel(PreTrainedModel):
         )
         # these two operations makes sure that all values before the output lengths idxs are attended to
         attention_mask[(ops.arange(attention_mask.shape[0]), output_lengths - 1)] = 1
-        attention_mask = attention_mask.flip([-1]).cumsum(-1).flip([-1]).bool()
+        attention_mask = attention_mask.flip([-1]).int().cumsum(-1).flip([-1]).bool()
         return attention_mask
 
 

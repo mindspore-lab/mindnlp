@@ -18,28 +18,50 @@
     </a>
 </p>
 
+## Table of Contents
 
-### News 📢
+- [ MindNLP](#-mindnlp)
+  - [Table of Contents](#table-of-contents)
+  - [News 📢](#news-)
+  - [Installation](#installation)
+      - [Install from Pypi](#install-from-pypi)
+      - [Daily build](#daily-build)
+      - [Install from source](#install-from-source)
+      - [Version Compatibility](#version-compatibility)
+  - [Introduction](#introduction)
+      - [Major Features](#major-features)
+  - [Supported models](#supported-models)
+  - [License](#license)
+  - [Feedbacks and Contact](#feedbacks-and-contact)
+  - [MindSpore NLP SIG](#mindspore-nlp-sig)
+  - [Acknowledgement](#acknowledgement)
+  - [Citation](#citation)
+
+## News 📢
 
 * 🔥 **Latest Features**
 
-  * 🤗 Hugging *huggingface* ecosystem, we use **datasets** lib as default dataset loader to support
-  mounts of useful datasets.
-  * 📝 MindNLP supports NLP tasks such as *language model*, *machine translation*, *question answering*, *sentiment analysis*, *sequence labeling*, *summarization*, etc. You can access them through [examples](./examples/).
-  * 🚀 MindNLP currently supports industry-leading Large Language Models (LLMs), including **Llama**, **GLM**, **RWKV**, etc. For support related to large language models, including ***pre-training***, ***fine-tuning***, and **inference** demo examples, you can find them in the ["llm" directory](./llm/).
-  * 🤗 Pretrained models support ***huggingface transformers-like apis***, including **60+** models like **[BERT](./mindnlp/transformers/models/bert)**, **[Roberta](./mindnlp/transformers/models/roberta)**, **[GPT2](./mindnlp/transformers/models/gpt2)**, **[T5](./mindnlp/transformers/models/t5)**, etc.
+  * 🤗 **250+** Pretrained models support ***huggingface transformers-like apis***.
     You can use them easily by following code snippet:
     ```python
     from mindnlp.transformers import AutoModel
 
     model = AutoModel.from_pretrained('bert-base-cased')
     ```
+  * **Full Platform Support**: Comprehensive support for `Ascend 910 series`, `Ascend 310B (Orange Pi)`, `GPU`, and `CPU`. (Note: Currently the only AI development kit available on Orange Pi.)
+  * **Distributed Parallel Inference**: Multi-device, multi-process parallel inference support for models exceeding 10B parameters.
+  * **Quantization Algorithm Support**: SmoothQuant available for Orange Pi; bitsandbytes-like int8 quantization supported on GPU.
+  * **Sentence Transformer Support**: Enables efficient RAG (Retrieval-Augmented Generation) development.
+  * **Dynamic Graph Performance Optimization**: Achieves PyTorch+GPU-level inference speeds for dynamic graphs on Ascend hardware (tested Llama performance at **85ms/token**).
+  * **True Static and Dynamic Graph Unification**: One-line switching to graph mode with `mindspore.jit`, fully compatible with ***Hugging Face code style*** for both ease of use and rapid performance improvement. Tested Llama performance on Ascend hardware reaches 2x dynamic graph speed (**45ms/token**), consistent with other MindSpore static graph-based suites.
+  * **Extensive LLM Application Updates**: Includes `Text information extraction`, `Chatbots`, `Speech recognition`, `ChatPDF`, `Music generation`, `Code generation`, `Voice clone`, etc. With increased model support, even more exciting applications await development!
 
-### Installation
+
+## Installation
 
 #### Install from Pypi
 
-You can install the official version of MindNLP which uploaded to pypi.
+You can install the official version of MindNLP which is uploaded to pypi.
 
 ```bash
 pip install mindnlp
@@ -68,8 +90,10 @@ bash scripts/build_and_reinstall.sh
 | master          | daily build       | >=3.7.5, <=3.9           |
 | 0.1.1           | >=1.8.1, <=2.0.0  | >=3.7.5, <=3.9           |
 | 0.2.x           | >=2.1.0           | >=3.8, <=3.9             |
+| 0.3.x           | >=2.1.0, <=2.3.1  | >=3.8, <=3.9             |
+| 0.4.x           | >=2.2.x           | >=3.9, <=3.11            |
 
-### Introduction
+## Introduction
 
 MindNLP is an open source NLP library based on MindSpore. It supports a platform for solving natural language processing tasks, containing many common approaches in NLP. It can help researchers and developers to construct and train models more conveniently and rapidly.
 
@@ -79,10 +103,10 @@ The master branch works with **MindSpore master**.
 
 - **Comprehensive data processing**: Several classical NLP datasets are packaged into friendly module for easy use, such as Multi30k, SQuAD, CoNLL, etc.
 - **Friendly NLP model toolset**: MindNLP provides various configurable components. It is friendly to customize models using MindNLP.
-- **Easy-to-use engine**: MindNLP simplified complicated training process in MindSpore. It supports Trainer and Evaluator interfaces to train and evaluate models easily.
+- **Easy-to-use engine**: MindNLP simplified the complicated training process in MindSpore. It supports Trainer and Evaluator interfaces to train and evaluate models easily.
 
 
-### Supported models
+## Supported models
 
 Since there are too many supported models, please check [here](https://mindnlp.cqu.ai/supported_models)
 
@@ -92,22 +116,32 @@ Since there are too many supported models, please check [here](https://mindnlp.c
 
 <!-- ## Notes -->
 
-### License
+## License
 
 This project is released under the [Apache 2.0 license](LICENSE).
 
-### Feedbacks and Contact
+## Feedbacks and Contact
 
 The dynamic version is still under development, if you find any issue or have an idea on new features, please don't hesitate to contact us via [Github Issues](https://github.com/mindspore-lab/mindnlp/issues).
 
-### Acknowledgement
 
-MindSpore is an open source project that welcome any contribution and feedback.  
+## MindSpore NLP SIG
+
+MindSpore NLP SIG (Natural Language Processing Special Interest Group) is the main development team of the MindNLP framework. It aims to collaborate with developers from both industry and academia who are interested in research, application development, and the practical implementation of natural language processing. Our goal is to create the best NLP framework based on the domestic framework MindSpore. Additionally, we regularly hold NLP technology sharing sessions and offline events. Interested developers can join our SIG group using the QR code below.
+
+<div align="center">
+    <img src="./assets/qrcode_qq_group.jpg" width="250" />
+</div>
+
+
+## Acknowledgement
+
+MindSpore is an open source project that welcomes any contribution and feedback.  
 We wish that the toolbox and benchmark could serve the growing research  
-community by providing a flexible as well as standardized toolkit to reimplement existing methods  
+community by providing a flexible as well as standardized toolkit to re-implement existing methods  
 and develop their own new semantic segmentation methods.
 
-### Citation
+## Citation
 
 If you find this project useful in your research, please consider citing:
 

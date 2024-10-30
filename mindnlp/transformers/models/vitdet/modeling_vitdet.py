@@ -615,8 +615,8 @@ class VitDetPreTrainedModel(PreTrainedModel):
         if isinstance(module, (nn.Linear, nn.Conv2d)):
             # Upcast the input in `fp32` and cast it back to desired `dtype` to avoid
             # `trunc_normal_cpu` not implemented in `half` issues
-            module.weight = nn.init.trunc_normal_(
-                module.weight.to(mindspore.float32), mean=0.0, std=self.config.initializer_range
+            nn.init.trunc_normal_(
+                module.weight, mean=0.0, std=self.config.initializer_range
             ).to(module.weight.dtype)
             if module.bias is not None:
                 nn.init.zeros_(module.bias)
@@ -625,20 +625,20 @@ class VitDetPreTrainedModel(PreTrainedModel):
             nn.init.ones_(module.weight)
 
         elif isinstance(module, VitDetEmbeddings):
-            module.position_embeddings = nn.init.trunc_normal_(
-                module.position_embeddings.to(mindspore.float32),
+            nn.init.trunc_normal_(
+                module.position_embeddings,
                 mean=0.0,
                 std=self.config.initializer_range,
             ).to(module.position_embeddings.dtype)
 
         elif isinstance(module, VitDetAttention) and self.config.use_relative_position_embeddings:
-            module.rel_pos_h = nn.init.trunc_normal_(
-                module.rel_pos_h.to(mindspore.float32),
+            nn.init.trunc_normal_(
+                module.rel_pos_h,
                 mean=0.0,
                 std=self.config.initializer_range,
             )
-            module.rel_pos_w = nn.init.trunc_normal_(
-                module.rel_pos_w.to(mindspore.float32),
+            nn.init.trunc_normal_(
+                module.rel_pos_w,
                 mean=0.0,
                 std=self.config.initializer_range,
             )

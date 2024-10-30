@@ -8,14 +8,21 @@ from ..scheduler import AcceleratedScheduler
 from .imports import is_mindformers_available
 from ...utils import logging
 
-if is_mindformers_available():
-    from mindformers.experimental.model import LlamaForCausalLM  # pylint: disable=import-error
-    from mindformers.experimental.parallel_core.pynative.config import init_configs_from_dict  # pylint: disable=import-error
-    from mindformers.experimental.parallel_core.pynative.training import get_model, TrainOneStepCell  # pylint: disable=import-error
-    from mindformers.experimental.parallel_core.pynative.parallel_state import initialize_model_parallel  # pylint: disable=import-error
-    from mindformers.experimental.parallel_core.pynative import get_optimizer  # pylint: disable=import-error
 
 logger = logging.get_logger(__name__)
+
+if is_mindformers_available():
+    try:
+        from mindformers.experimental.model import LlamaForCausalLM  # pylint: disable=import-error
+        from mindformers.experimental.parallel_core.pynative.config import init_configs_from_dict  # pylint: disable=import-error
+        from mindformers.experimental.parallel_core.pynative.training import get_model, TrainOneStepCell  # pylint: disable=import-error
+        from mindformers.experimental.parallel_core.pynative.parallel_state import initialize_model_parallel  # pylint: disable=import-error
+        from mindformers.experimental.parallel_core.pynative import get_optimizer  # pylint: disable=import-error
+    except Exception as e:
+        logger.warning('cannot found `mindformers.experimental`, please install dev version by\n'
+                      '`pip install git+https://gitee.com/mindspore/mindformers` \n'
+                      'or remove mindformers by \n'
+                      '`pip uninstall mindformers`')
 
 _GLOBAL_CONFIG_DICT: dict
 

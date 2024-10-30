@@ -20,11 +20,10 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore.common.initializer import initializer, Normal
 from mindnlp.utils import logging
 
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import functional as F
+from mindnlp.core.nn import functional as F, Parameter
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -273,7 +272,10 @@ class SEWPositionalConvEmbedding(nn.Module):
             stride=config.squeeze_factor,
             bias=True,
         )
-        self.conv = nn.utils.weight_norm(self.conv, dim=2)
+        weight_norm = nn.utils.weight_norm
+        if hasattr(nn.utils.parametrizations, "weight_norm"):
+            weight_norm = nn.utils.parametrizations.weight_norm
+        self.conv = weight_norm(self.conv, dim=2)
 
         self.padding = SEWSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
@@ -883,51 +885,28 @@ class SEWPreTrainedModel(PreTrainedModel):
     base_model_prefix = "sew"
     main_input_name = "input_values"
     supports_gradient_checkpointing = True
-    _supports_flash_attn_2 = False
-    _supports_sdpa = True
 
-    def _init_weights(self, cell):
-        """Initialize the weights."""
-        if isinstance(cell, SEWPositionalConvEmbedding):
-            # 使用正态分布初始化权重
-            cell.conv.weight.assign_value(
-                initializer(
-                    Normal(
-                        mean=0,
-                        sigma=2
-                        * math.sqrt(
-                            1 / (cell.conv.kernel_size[0] * cell.conv.in_channels)
-                        ),
-                    ),
-                    cell.conv.weight.shape,
-                    cell.conv.weight.dtype,
-                )
+    def _init_weights(self, module):
+        """Initialize the weights"""
+        if isinstance(module, SEWPositionalConvEmbedding):
+            nn.init.normal_(
+                module.conv.weight,
+                mean=0,
+                std=2 * math.sqrt(1 / (module.conv.kernel_size[0] * module.conv.in_channels)),
             )
-            cell.conv.bias.assign_value(
-                initializer("zeros", cell.conv.bias.shape, cell.conv.bias.dtype)
-            )
-        elif isinstance(cell, nn.Linear):
-            # 使用正态分布初始化权重
-            cell.weight.assign_value(
-                initializer(
-                    Normal(0.0, self.config.initializer_range),
-                    cell.weight.shape,
-                    cell.weight.dtype,
-                )
-            )
-        elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
-            cell.bias.assign_value(initializer("zeros", cell.bias.shape, cell.bias.dtype))
-            cell.weight.assign_value(
-                initializer("ones", cell.weight.shape, cell.weight.dtype)
-            )
-        elif isinstance(cell, nn.Conv1d):
-            # 使用kaiming正态分布初始化权重
-            cell.weight.assign_value(
-                initializer("he_normal", cell.weight.shape, cell.weight.dtype)
-            )
+            nn.init.constant_(module.conv.bias, 0)
+        elif isinstance(module, nn.Linear):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
+        elif isinstance(module, (nn.LayerNorm, nn.GroupNorm)):
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
+        elif isinstance(module, nn.Conv1d):
+            nn.init.kaiming_normal_(module.weight.data)
 
-        if isinstance(cell, (nn.Linear, nn.Conv1d)) and cell.bias is not None:
-            cell.bias.assign_value(initializer("zeros", cell.bias.shape, cell.bias.dtype))
+        if isinstance(module, (nn.Linear, nn.Conv1d)) and module.bias is not None:
+            nn.init.zeros_(module.bias.data)
 
     def _get_feat_extract_output_lengths(
         self, input_lengths: Union[mindspore.Tensor, int]
@@ -981,7 +960,7 @@ class SEWModel(SEWPreTrainedModel):
         self.feature_dropout = nn.Dropout(p=config.feat_proj_dropout)
 
         if config.mask_time_prob > 0.0 or config.mask_feature_prob > 0.0:
-            self.masked_spec_embed = mindspore.Parameter(
+            self.masked_spec_embed = Parameter(
                 ops.randn((config.hidden_size))
             )
 
@@ -1282,7 +1261,7 @@ class SEWForSequenceClassification(SEWPreTrainedModel):
             config.num_hidden_layers + 1
         )  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
-            self.layer_weights = mindspore.Parameter(ops.ones(num_layers) / num_layers)
+            self.layer_weights = Parameter(ops.ones(num_layers) / num_layers)
         self.projector = nn.Linear(config.hidden_size, config.classifier_proj_size)
         self.classifier = nn.Linear(config.classifier_proj_size, config.num_labels)
 

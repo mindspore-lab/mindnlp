@@ -525,7 +525,7 @@ initialization.
 
         # Determine shape of LoKr weights
         if isinstance(base_layer, nn.Linear):
-            in_dim, out_dim = base_layer.in_channels, base_layer.out_channels
+            in_dim, out_dim = base_layer.in_features, base_layer.out_features
 
             in_m, in_n = factorization(in_dim, decompose_factor)
             out_l, out_k = factorization(out_dim, decompose_factor)
