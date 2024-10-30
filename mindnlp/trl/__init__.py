@@ -17,5 +17,7 @@
 from .trainer import (
     DPOTrainer,
     DPOConfig,
-    FDivergenceType
+    FDivergenceType,
+    _build_tokenized_answer,
+    _truncate_tokens
 )

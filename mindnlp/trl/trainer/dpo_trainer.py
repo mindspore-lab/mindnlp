@@ -18,24 +18,27 @@ import inspect
 import random
 import warnings
 from collections import defaultdict
-
-import numpy
 from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from functools import partial
-from tqdm import tqdm
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union, NewType
 
+
+import numpy
+from tqdm import tqdm
+
 import mindspore
-from mindspore import amp, nn, ops, Dataset
-from huggingface_hub.utils._deprecation import _deprecate_arguments
+from mindspore import amp, nn, ops
+from mindspore import Tensor
 from mindspore.dataset import GeneratorDataset
+from huggingface_hub.utils._deprecation import _deprecate_arguments
+
 from ...transformers import (
     AutoModelForCausalLM,
     PreTrainedModel,
     PreTrainedTokenizerBase,
 )
-from mindspore import Tensor
+
 from ...engine import (
     Trainer,
 )
@@ -43,7 +46,6 @@ from ...engine import (
 from ...transformers.models.auto.modeling_auto import MODEL_FOR_VISION_2_SEQ_MAPPING_NAMES
 from ...engine.callbacks import TrainerCallback
 from ...engine.utils import EvalLoopOutput
-from ..import_utils import is_peft_available, is_wandb_available
 from ..models import PreTrainedModelWrapper, create_reference_model
 from .callbacks import SyncRefModelCallback
 from .dpo_config import DPOConfig, FDivergenceConstants, FDivergenceType
@@ -58,15 +60,7 @@ from .utils import (
     peft_module_casting_to_bf16,
 )
 
-
-if is_peft_available():
-    from ...peft import PeftModel, get_peft_model
-
-# if is_wandb_available():
-#     import wandb
-
-# if is_deepspeed_available():
-#     import deepspeed
+from ...peft import PeftModel, get_peft_model
 
 InputDataClass = NewType("InputDataClass", Any)
 DataCollator = NewType("DataCollator", Callable[[List[InputDataClass]], Dict[str, Any]])
@@ -177,8 +171,7 @@ def _adjust_prompt_length(
         for k, v in p_tokens.items():
             p_tokens[k] = v[:min_len]
 
-        num_diff_tokens = sum([a != b for a, b in
-            zip(c_tokens["prompt_input_ids"], r_tokens["prompt_input_ids"])])
+        num_diff_tokens = sum(a != b for a, b in zip(c_tokens["prompt_input_ids"], r_tokens["prompt_input_ids"]))
         num_diff_len = abs(c_len - r_len)
         if num_diff_tokens > 1 or num_diff_len > 1:
             raise ValueError(
@@ -475,8 +468,8 @@ class DPOTrainer(Trainer):
         label_pad_token_id: int = -100,
         padding_value: Optional[int] = None,
         truncation_mode: str = "keep_end",
-        train_dataset: Optional[Dataset] = None,
-        eval_dataset: Optional[Union[Dataset, Dict[str, Dataset]]] = None,
+        train_dataset: Optional[GeneratorDataset] = None,
+        eval_dataset: Optional[Union[GeneratorDataset, Dict[str, GeneratorDataset]]] = None,
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
         model_init: Optional[Callable[[], PreTrainedModel]] = None,
         callbacks: Optional[List[TrainerCallback]] = None,
@@ -516,17 +509,12 @@ class DPOTrainer(Trainer):
             )
         else:
             model_init_kwargs = args.model_init_kwargs
-            torch_dtype = model_init_kwargs.get("torch_dtype")
-            if torch_dtype is not None:
+            ms_dtype = model_init_kwargs.get("ms_dtype")
+            if ms_dtype is not None:
                 # Convert to `torch.dtype` if an str is passed
-                if isinstance(torch_dtype, str) and torch_dtype != "auto":
-                    torch_dtype = getattr(mindspore, torch_dtype)
-                if torch_dtype != "auto" and not isinstance(torch_dtype, mindspore.dtype):
-                    raise ValueError(
-                        f"Invalid `torch_dtype` passed to the DPOConfig. Expected a string"
-                        "with either `torch.dtype` or 'auto', but got {torch_dtype}."
-                    )
-                model_init_kwargs["torch_dtype"] = torch_dtype
+                if isinstance(ms_dtype, str) and ms_dtype != "auto":
+                    ms_dtype = getattr(mindspore, ms_dtype)
+                model_init_kwargs["ms_dtype"] = ms_dtype
 
         if ref_model_init_kwargs is not None:
             warnings.warn(
@@ -544,17 +532,12 @@ class DPOTrainer(Trainer):
             )
         else:
             ref_model_init_kwargs = args.ref_model_init_kwargs
-            torch_dtype = ref_model_init_kwargs.get("torch_dtype")
-            if torch_dtype is not None:
+            ms_dtype = ref_model_init_kwargs.get("ms_dtype")
+            if ms_dtype is not None:
                 # Convert to `torch.dtype` if an str is passed
-                if isinstance(torch_dtype, str) and torch_dtype != "auto":
-                    torch_dtype = getattr(mindspore, torch_dtype)
-                if torch_dtype != "auto" and not isinstance(torch_dtype, mindspore.dtype):
-                    raise ValueError(
-                        f"Invalid `torch_dtype` passed to the DPOConfig. Expected a string"
-                        "with either `torch.dtype` or 'auto', but got {torch_dtype}."
-                    )
-                ref_model_init_kwargs["torch_dtype"] = torch_dtype
+                if isinstance(ms_dtype, str) and ms_dtype != "auto":
+                    ms_dtype = getattr(mindspore, ms_dtype)
+                ref_model_init_kwargs["ms_dtype"] = ms_dtype
 
         if isinstance(model, str):
             warnings.warn(
@@ -582,12 +565,8 @@ class DPOTrainer(Trainer):
             )
             args.force_use_ref_model = force_use_ref_model
 
-        if not is_peft_available() and peft_config is not None:
-            raise ValueError(
-                "PEFT is not installed and you passed a `peft_config` in the trainer's kwargs,"
-                "please install it to use the PEFT models"
-            )
-        elif is_peft_available() and peft_config is not None:
+
+        if peft_config is not None:
             # if model is a peft model and we have a peft_config, we merge and unload it first
             if isinstance(model, PeftModel):
                 model = model.merge_and_unload()
@@ -645,11 +624,6 @@ class DPOTrainer(Trainer):
                 "passed will override the one in the `DPOConfig`."
             )
             args.generate_during_eval = generate_during_eval
-        if args.generate_during_eval and not is_wandb_available():
-            raise ValueError(
-                "`generate_during_eval=True` requires Weights and Biases to be installed."
-                " Please install `wandb` to resolve."
-            )
 
         if is_encoder_decoder is not None:
             warnings.warn(
@@ -683,7 +657,7 @@ class DPOTrainer(Trainer):
         else:
             self.tokenizer = tokenizer
 
-        self.is_peft_model = is_peft_available() and isinstance(model, PeftModel)
+        self.is_peft_model = isinstance(model, PeftModel)
         if model_adapter_name is not None:
             warnings.warn(
                 "You passed `model_adapter_name` to the DPOTrainer, the value you"
@@ -1064,7 +1038,7 @@ class DPOTrainer(Trainer):
 
     def get_eval_dataloader(
             self,
-            eval_dataset: Optional[Dataset] = None
+            eval_dataset: Optional[GeneratorDataset] = None
         ) -> GeneratorDataset:
         """
         Returns the evaluation [`~torch.utils.data.GeneratorDataset`].
@@ -1235,7 +1209,7 @@ class DPOTrainer(Trainer):
                 batch["prompt_attention_mask"].repeat(2, 1)
             )
             concatenated_batch["concatenated_decoder_input_ids"] = mindspore.ops.cat(
-                [batch["chosen_decoder_input_ids"], batch["rejected_decoder_input_ids"]], dim=0
+                [batch["chosen_decoder_input_ids"], batch["rejected_decoder_input_ids"]], axis=0
             )
 
         if is_vision_model:
@@ -1299,7 +1273,7 @@ class DPOTrainer(Trainer):
         else:
             pi_logratios = policy_chosen_logps - policy_rejected_logps
             if self.reference_free:
-                ref_logratios = mindspore.tensor([0], dtype=pi_logratios.dtype, device=pi_logratios)
+                ref_logratios = mindspore.tensor([0], dtype=pi_logratios.dtype)
             else:
                 ref_logratios = reference_chosen_logps - reference_rejected_logps
 
@@ -1320,7 +1294,7 @@ class DPOTrainer(Trainer):
         #  in the range of 0.1 to 0.5.We ignore the reference model as beta -> 0.
         # The label_smoothing parameter encodes our uncertainty about the labels and
         # calculates a conservative DPO loss.
-        
+
         if self.loss_type == "sigmoid":
             losses = (
                 - ops.logsigmoid(self.beta * logits) * (1 - self.label_smoothing)
@@ -1771,7 +1745,7 @@ class DPOTrainer(Trainer):
         }
         logits = tuple(v.unsqueeze(dim=0) for k, v in logits_dict.items() if k not in ignore_keys)
         logits = mindspore.ops.stack(logits).mean(axis=1).to(self.accelerator.device)
-        labels = mindspore.ops.zeros(logits.shape[0], device=self.accelerator.device)
+        labels = mindspore.ops.zeros(logits.shape[0])
 
         return (loss, logits, labels)
 

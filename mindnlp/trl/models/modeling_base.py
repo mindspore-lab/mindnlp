@@ -11,18 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
+"""trl model main class."""
 import logging
 import os
 from copy import deepcopy
 from typing import Optional
 
 import mindspore
-import mindspore.nn as nn
-# from accelerate import PartialState
+from mindspore import nn
 
-# from safetensors.torch import load_file as safe_load_file
-from ...transformers import GenerationMixin, PreTrainedModel
+from ...transformers import PreTrainedModel
 
 from ...peft import (
     PeftConfig,
@@ -39,10 +37,6 @@ LAYER_PATTERNS = [
     "gpt_neox.layers.{layer}",
     "model.layers.{layer}",
 ]
-
-def is_peft_available():
-    # use mindnlp internal peft module.
-    return True
 
 
 class PreTrainedModelWrapper(nn.Cell):
@@ -158,28 +152,17 @@ class PreTrainedModelWrapper(nn.Cell):
             )
             pretrained_kwargs["device_map"] = {"": current_device}
 
-        if is_peft_available() and peft_config is not None and not isinstance(peft_config, PeftConfig):
+        if peft_config is not None and not isinstance(peft_config, PeftConfig):
             raise ValueError("The `peft_config` argument should be an instance of `peft.PeftConfig` class.")
 
         # First, load the pre-trained model using the parent-class
         # either `AutoModelForCausalLM` or `AutoModelForSeq2SeqLM`
         if isinstance(pretrained_model_name_or_path, str):
-            if is_peft_available():
-                # try:
-                #     # If there is a trained peft adapter in the hub, load its config.
-                #     remote_adapter_config = hf_hub_download(
-                #         pretrained_model_name_or_path,
-                #         "adapter_config.json",
-                #         token=token,
-                #     )
-                # except (EntryNotFoundError, LocalEntryNotFoundError, HFValidationError, RepositoryNotFoundError):
-                remote_adapter_config = None
-            else:
-                remote_adapter_config = None
+            remote_adapter_config = None
 
             local_adapter_present = os.path.exists(os.path.join(pretrained_model_name_or_path, "adapter_config.json"))
 
-            if (local_adapter_present or remote_adapter_config is not None) and is_peft_available():
+            if local_adapter_present or remote_adapter_config is not None:
                 if peft_config is not None:
                     logging.warning(
                         "`peft_config` argument ignored since a peft config file was found in "
@@ -236,14 +219,13 @@ class PreTrainedModelWrapper(nn.Cell):
                 f"but is {type(pretrained_model_name_or_path)}"
             )
 
-        if is_peft_available():
-            if isinstance(pretrained_model, PeftModel):
-                is_peft_model = True
-                # for backward compatibility
-                if hasattr(pretrained_model, "active_peft_config") and isinstance(
-                    pretrained_model.active_peft_config, PromptLearningConfig
-                ):
-                    raise ValueError("PromptLearningConfig is not supported for PPO training.")
+        if isinstance(pretrained_model, PeftModel):
+            is_peft_model = True
+            # for backward compatibility
+            if hasattr(pretrained_model, "active_peft_config") and isinstance(
+                pretrained_model.active_peft_config, PromptLearningConfig
+            ):
+                raise ValueError("PromptLearningConfig is not supported for PPO training.")
 
         # Add reward modeling adapter if specified
         if not is_peft_model and reward_adapter is not None:
@@ -298,8 +280,7 @@ class PreTrainedModelWrapper(nn.Cell):
             #         use_safe = False
 
             loading_func = mindspore.load_checkpoint
-            load_kwargs = {} if use_safe else {"map_location": "cpu", "weights_only": True}
-
+            load_kwargs = {}
             if is_resuming_training:
                 # if is_sharded:
                 #     # download each file and add it to the state_dict
@@ -406,11 +387,6 @@ class PreTrainedModelWrapper(nn.Cell):
         """
         check_peft_kwargs = False
 
-        if is_peft_available():
-            from peft import prepare_model_for_kbit_training
-
-            check_peft_kwargs = True
-
         supported_kwargs = {}
         unsupported_kwargs = {}
         peft_kwargs = {}
@@ -420,12 +396,6 @@ class PreTrainedModelWrapper(nn.Cell):
                 supported_kwargs[key] = value
             else:
                 unsupported_kwargs[key] = value
-
-            if check_peft_kwargs:
-                if key in prepare_model_for_kbit_training.__code__.co_varnames:
-                    peft_kwargs[key] = value
-                    if key in unsupported_kwargs:
-                        unsupported_kwargs.pop(key)
 
         return supported_kwargs, unsupported_kwargs, peft_kwargs
 
@@ -474,7 +444,7 @@ class PreTrainedModelWrapper(nn.Cell):
         local_filename = filename
 
         loading_func = mindspore.load_checkpoint
-        load_kwargs = {} if safe_loading else {"map_location": "cpu", "weights_only": True}
+        load_kwargs = {}
 
         adapter_state_dict = loading_func(local_filename, **load_kwargs)
 
