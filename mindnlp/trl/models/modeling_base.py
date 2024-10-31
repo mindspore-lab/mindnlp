@@ -20,9 +20,7 @@ from typing import Optional
 import mindspore
 from mindspore import nn
 
-from ...transformers import PreTrainedModel
-
-from ...peft import (
+from mindnlp.peft import (
     PeftConfig,
     PeftModel,
     PeftModelForCausalLM,
@@ -30,6 +28,9 @@ from ...peft import (
     PromptLearningConfig,
     get_peft_model,
 )
+
+from ...transformers import PreTrainedModel
+
 
 LAYER_PATTERNS = [
     "transformer.h.{layer}",
