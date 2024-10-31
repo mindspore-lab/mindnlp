@@ -203,6 +203,7 @@ from . import (
     sew_d,
     speech_encoder_decoder,
     speech_to_text,
+    speech_to_text_2,
     speecht5,
     stablelm,
     splinter,
@@ -444,6 +445,7 @@ from .sew import *
 from .sew_d import *
 from .speech_encoder_decoder import *
 from .speech_to_text import *
+from .speech_to_text_2 import *
 from .speecht5 import *
 from .stablelm import *
 from .splinter import *
@@ -685,6 +687,7 @@ __all__.extend(sew.__all__)
 __all__.extend(sew_d.__all__)
 __all__.extend(speech_encoder_decoder.__all__)
 __all__.extend(speech_to_text.__all__)
+__all__.extend(speech_to_text_2.__all__)
 __all__.extend(speecht5.__all__)
 __all__.extend(stablelm.__all__)
 __all__.extend(splinter.__all__)

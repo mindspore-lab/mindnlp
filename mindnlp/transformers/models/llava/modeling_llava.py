@@ -228,7 +228,7 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel, GenerationMixin):
             (batch_size, max_embed_dim), True, dtype=mindspore.bool_
         )
         image_to_overwrite[batch_indices, text_to_overwrite] = False
-        image_to_overwrite &= image_to_overwrite.cumsum(-1) - 1 >= nb_image_pad[:, None]
+        image_to_overwrite = ((image_to_overwrite.int()) & (image_to_overwrite.cumsum(-1) - 1 >= nb_image_pad[:, None]).int()).bool()
 
         if image_to_overwrite.sum() != reduce(lambda x, y: x * y, image_features.shape[:-1]):
             raise ValueError(
@@ -237,8 +237,8 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel, GenerationMixin):
             )
 
         final_embedding[image_to_overwrite] = image_features.reshape(-1, embed_dim)
-        final_attention_mask |= image_to_overwrite
-        position_ids = (final_attention_mask.cumsum(-1) - 1).masked_fill((final_attention_mask == 0), 1)
+        final_attention_mask =  final_attention_mask.int() | image_to_overwrite.int()
+        position_ids = (final_attention_mask.int().cumsum(-1) - 1).masked_fill((final_attention_mask == 0), 1)
 
         # 6. Mask out the embedding at padding positions, as we later use the past_key_value value to determine the non-attended tokens.
         batch_indices, pad_indices = ops.nonzero(input_ids == self.pad_token_id, as_tuple=True)
@@ -384,7 +384,8 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel, GenerationMixin):
                     new_non_attended_tokens = non_attended_tokens[valid_indices]
 
                     # Zero-out the places where we don't need to attend
-                    extended_attention_mask[new_batch_index, new_non_attended_tokens] = 0
+                    if 0 not in new_batch_index.shape:
+                        extended_attention_mask[new_batch_index, new_non_attended_tokens] = 0
 
                     attention_mask = ops.cat((extended_attention_mask, attention_mask[:, -target_length:]), dim=1)
                     position_ids = ops.sum(attention_mask, dim=1).unsqueeze(-1) - 1
@@ -392,7 +393,6 @@ class LlavaForConditionalGeneration(LlavaPreTrainedModel, GenerationMixin):
                         -target_length:
                     ]
 
-            # TODO: @raushan retain only the new behavior after v4.47
             else:
                 special_image_mask = (
                     (input_ids == self.config.image_token_index)

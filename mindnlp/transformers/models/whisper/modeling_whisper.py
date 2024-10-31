@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Whisper model."""
+"""MindSpore Whisper model."""
 
 import math
 from typing import Optional, Tuple, Union
@@ -24,6 +24,7 @@ from mindnlp.core.nn import CrossEntropyLoss
 
 from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, EncoderDecoderCache, StaticCache
+from ...generation import GenerationMixin
 from ...modeling_attn_mask_utils import AttentionMaskConverter
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -34,7 +35,9 @@ from ...modeling_outputs import (
     SequenceClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from ....utils import logging
+from ....utils import (
+    logging,
+)
 from .configuration_whisper import WhisperConfig
 from .generation_whisper import WhisperGenerationMixin
 
@@ -116,13 +119,13 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     Shift input ids one token to the right.
     """
     shifted_input_ids = input_ids.new_zeros(input_ids.shape)
-    shifted_input_ids[:, 1:] = input_ids[:, :-1].clone()
+    shifted_input_ids[:, 1:] = input_ids[:, :-1].copy()
     shifted_input_ids[:, 0] = decoder_start_token_id
 
     if pad_token_id is None:
         raise ValueError("self.model.config.pad_token_id has to be defined.")
     # replace possible -100 values in labels by `pad_token_id`
-    shifted_input_ids.masked_fill_(shifted_input_ids == -100, pad_token_id)
+    shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
 
     return shifted_input_ids
 
@@ -183,7 +186,7 @@ def _compute_mask_indices(
 
     # compute number of masked spans in batch
     input_lengths = (
-        attention_mask.sum(-1).detach().tolist()
+        attention_mask.sum(-1).tolist()
         if attention_mask is not None
         else [sequence_length for _ in range(batch_size)]
     )
@@ -303,7 +306,7 @@ class WhisperAttention(nn.Module):
 
     # Copied from transformers.models.bart.modeling_bart.BartAttention._shape with BART->whisper
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return ops.transpose(tensor.view(bsz, seq_len, self.num_heads, self.head_dim), 1, 2)
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def forward(
         self,
@@ -350,7 +353,7 @@ class WhisperAttention(nn.Module):
                     key_states, value_states, self.layer_idx, {"cache_position": cache_position}
                 )
 
-        attn_weights = ops.matmul(query_states, ops.transpose(key_states, 2, 3))
+        attn_weights = ops.matmul(query_states, key_states.swapaxes(2, 3))
 
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
@@ -375,7 +378,7 @@ class WhisperAttention(nn.Module):
                 f" {attn_output.shape}"
             )
 
-        attn_output = ops.transpose(attn_output, 1, 2)
+        attn_output = attn_output.swapaxes(1, 2)
         # Use the `embed_dim` from the config (stored in the class) rather than `hidden_state` because `attn_output` can be
         # partitioned across GPUs when using tensor-parallelism.
         attn_output = attn_output.reshape(bsz, tgt_len, self.embed_dim)
@@ -450,7 +453,7 @@ class WhisperEncoderLayer(nn.Module):
         if hidden_states.dtype == mindspore.float16 and (
             ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any()
         ):
-            clamp_value = FloatingPointError(ops.finfo(hidden_states.dtype).max) - 1000
+            clamp_value = float(ops.finfo(hidden_states.dtype).max) - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -592,13 +595,13 @@ class WhisperPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         std = self.config.init_std
         if isinstance(module, (nn.Linear, nn.Conv1d)):
-            nn.init.normal_(module.weight, mean=0.0, std=std)
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
             if module.bias is not None:
-                nn.init.zeros_(module.bias)
+                nn.init.zeros_(module.bias.data)
         elif isinstance(module, nn.Embedding):
-            nn.init.normal_(module.weight, mean=0.0, std=std)
+            nn.init.normal_(module.weight.data, mean=0.0, std=std)
             if module.padding_idx is not None:
-                module.weight[module.padding_idx] = 0
+                module.weight.data[module.padding_idx] = 0
         elif isinstance(module, WhisperEncoder):
             with no_grad():
                 embed_positions = module.embed_positions.weight
@@ -791,9 +794,6 @@ class WhisperDecoder(WhisperPreTrainedModel):
         self.layers = nn.ModuleList(
             [WhisperDecoderLayer(config, layer_idx) for layer_idx in range(config.decoder_layers)]
         )
-        self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
-        self._use_sdpa = config._attn_implementation == "sdpa"
-
         self.layer_norm = nn.LayerNorm(config.d_model)
 
         self.gradient_checkpointing = False
@@ -933,6 +933,7 @@ class WhisperDecoder(WhisperPreTrainedModel):
             cache_position = ops.arange(
                 past_key_values_length, past_key_values_length + input_shape[1]
             )
+
         if position_ids is None:
             position_ids = cache_position.unsqueeze(0)
 
@@ -1053,9 +1054,6 @@ class WhisperDecoder(WhisperPreTrainedModel):
         past_key_values: Cache,
         output_attentions: bool,
     ):
-        # For SDPA, when possible, we will rely on its `is_causal` argument instead of its `attn_mask` argument, in
-        # order to dispatch on Flash Attention 2. This feature is not compatible with static cache, as SDPA will fail
-        # to infer the attention mask.
         past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
         using_static_cache = isinstance(past_key_values, StaticCache)
 
@@ -1190,7 +1188,7 @@ class WhisperModel(WhisperPreTrainedModel):
 
         Example:
          ```python
-         >>> import torch
+         >>> import mindspore
          >>> from transformers import AutoFeatureExtractor, WhisperModel
          >>> from datasets import load_dataset
 
@@ -1269,6 +1267,7 @@ class WhisperForConditionalGeneration(WhisperGenerationMixin, WhisperPreTrainedM
         super().__init__(config)
         self.model = WhisperModel(config)
         self.proj_out = nn.Linear(config.d_model, config.vocab_size, bias=False)
+        self.max_target_positions = config.max_target_positions
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1319,7 +1318,7 @@ class WhisperForConditionalGeneration(WhisperGenerationMixin, WhisperPreTrainedM
         labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the language modeling loss. Indices should either be in `[0, ..., config.vocab_size]`
             or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored (masked), the loss is
-            only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+            only computed for the tokens with labels in `[0, ..., config.vocab_size]`. `sequence_length` should be smaller than or equal to `config.max_target_positions`.
 
         Returns:
 
@@ -1347,6 +1346,10 @@ class WhisperForConditionalGeneration(WhisperGenerationMixin, WhisperPreTrainedM
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if labels is not None:
+            if labels.shape[1] > self.max_target_positions:
+                raise ValueError(
+                    f"Labels' sequence length {labels.shape[1]} cannot exceed the maximum allowed length of {self.max_target_positions} tokens."
+                )
             if decoder_input_ids is None and decoder_inputs_embeds is None:
                 decoder_input_ids = shift_tokens_right(
                     labels, self.config.pad_token_id, self.config.decoder_start_token_id
@@ -1409,10 +1412,12 @@ class WhisperForConditionalGeneration(WhisperGenerationMixin, WhisperPreTrainedM
             decoder_position_ids = (decoder_attention_mask.cumsum(-1) - 1).clamp(min=0)
 
         past_length = 0
-
         if past_key_values is not None:
             if isinstance(past_key_values, EncoderDecoderCache):
-                past_length = cache_position[0] if cache_position is not None else past_key_values.get_seq_length()
+                if 0 in cache_position.shape:
+                    past_length = 0
+                else:
+                    past_length = cache_position[0] if cache_position is not None else past_key_values.get_seq_length()
             else:
                 past_length = past_key_values[0][0].shape[2]
 
@@ -1491,7 +1496,7 @@ class WhisperDecoderWrapper(WhisperPreTrainedModel):
         return self.decoder(*args, **kwargs)
 
 
-class WhisperForCausalLM(WhisperPreTrainedModel):
+class WhisperForCausalLM(WhisperPreTrainedModel, GenerationMixin):
     _tied_weights_keys = ["proj_out.weight"]
     main_input_name = "input_ids"
 

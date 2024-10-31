@@ -680,10 +680,6 @@ class QuantState:
 
 
 def check_matmul(A, B, out, transposed_A, transposed_B, expected_type=mindspore.int8):
-    if context.get_context("device_target") != "GPU":
-        context.set_context(device_target="GPU")
-
-    # 检查数据类型
     if A.dtype != expected_type or B.dtype != expected_type:
         raise TypeError(
             f"Expected {expected_type} input tensors A and B, but got {A.dtype} and {B.dtype}"

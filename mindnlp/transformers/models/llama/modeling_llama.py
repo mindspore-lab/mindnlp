@@ -150,7 +150,7 @@ class LlamaRotaryEmbedding(nn.Module):
         if config is None:
             logger.warning_once(
                 "`LlamaRotaryEmbedding` can now be fully parameterized by passing the model config through the "
-                "`config` argument. All other arguments will be removed in v4.45"
+                "`config` argument. All other arguments will be removed"
             )
             self.rope_kwargs = {
                 "rope_type": rope_type,
@@ -359,7 +359,6 @@ class LlamaAttention(nn.Module):
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.o_proj = nn.Linear(self.hidden_size, self.hidden_size, bias=config.attention_bias)
 
-        # TODO (joao): remove in v4.45 (RoPE is computed in the model, not in the decoder layers)
         self.rotary_emb = LlamaRotaryEmbedding(config=self.config)
 
     def forward(
@@ -371,7 +370,7 @@ class LlamaAttention(nn.Module):
         output_attentions: bool = False,
         use_cache: bool = False,
         cache_position: Optional[mindspore.Tensor] = None,
-        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,  # will become mandatory in v4.45
+        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         bsz, q_len, _ = hidden_states.shape
@@ -407,8 +406,7 @@ class LlamaAttention(nn.Module):
             logger.warning_once(
                 "The attention layers in this model are transitioning from computing the RoPE embeddings internally "
                 "through `position_ids` (2D tensor with the indexes of the tokens), to using externally computed "
-                "`position_embeddings` (Tuple of tensors, containing cos and sin). In v4.45 `position_ids` will be "
-                "removed and `position_embeddings` will be mandatory."
+                "`position_embeddings` (Tuple of tensors, containing cos and sin)."
             )
             cos, sin = self.rotary_emb(value_states, position_ids)
         else:
@@ -483,7 +481,7 @@ class LlamaDecoderLayer(nn.Module):
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = False,
         cache_position: Optional[mindspore.Tensor] = None,
-        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,  # will become mandatory in v4.45
+        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """

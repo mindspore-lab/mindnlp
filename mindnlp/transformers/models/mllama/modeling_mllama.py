@@ -701,7 +701,7 @@ class MllamaSelfAttentionDecoderLayer(nn.Module):
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = False,
         cache_position: Optional[mindspore.Tensor] = None,
-        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,  # will become mandatory in v4.45
+        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """
         Args:

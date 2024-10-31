@@ -1233,7 +1233,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
                 continue
             if "PreTrainedModel" not in str(base) and base.can_generate():
                 return True
-        # BC: Detects whether `prepare_inputs_for_generation` has been overwritten in the model. Prior to v4.45, this
+        # BC: Detects whether `prepare_inputs_for_generation` has been overwritten in the model. this
         # was how we detected whether a model could generate.
         if "GenerationMixin" not in str(cls.prepare_inputs_for_generation):
             logger.warning_once(
@@ -2022,7 +2022,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
                             "To avoid this behavior and this warning, we recommend you to overwrite the generation "
                             "config model attribute before calling the model's `save_pretrained`, preferably also "
                             "removing any generation kwargs from the model config. This warning will be raised to an "
-                            "exception in v4.41."
+                            "exception."
                         )
                 model_to_save.generation_config.save_pretrained(save_directory)
 
@@ -3144,6 +3144,18 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
                 return key.replace("beta", "bias")
             if "gamma" in key:
                 return key.replace("gamma", "weight")
+
+            # to avoid logging parametrized weight norm renaming
+            if hasattr(nn.utils.parametrizations, "weight_norm"):
+                if "weight_g" in key:
+                    return key.replace("weight_g", "parametrizations.weight.original0")
+                if "weight_v" in key:
+                    return key.replace("weight_v", "parametrizations.weight.original1")
+            else:
+                if "parametrizations.weight.original0" in key:
+                    return key.replace("parametrizations.weight.original0", "weight_g")
+                if "parametrizations.weight.original1" in key:
+                    return key.replace("parametrizations.weight.original1", "weight_v")
             return key
 
         original_loaded_keys = loaded_keys

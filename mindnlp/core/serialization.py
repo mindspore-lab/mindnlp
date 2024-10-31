@@ -805,7 +805,7 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
     else:
         order = "C"
         array = array.reshape(size, order=order)
-    param = Tensor.from_numpy(array)
+    param = Tensor(array)
     return param
 
 def _rebuild_from_type_v2(func, new_type, args, state):
@@ -1134,7 +1134,7 @@ def _legacy_load(f, pickle_module, **pickle_load_args):
         if array.dtype == bfloat16 and not SUPPORT_BF16:
             logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
             array = array.astype(np.float16)
-        new_result[k] = Tensor.from_numpy(array)
+        new_result[k] = Tensor(array)
 
     return new_result
 
@@ -1380,9 +1380,9 @@ def legacy_safe_load_file(filename):
             arr = np.frombuffer(v["data"], dtype=dtype).reshape(v["shape"])
 
             if (not SUPPORT_BF16 and dtype != bfloat16) or SUPPORT_BF16:
-                result[k] = Tensor.from_numpy(arr)
+                result[k] = Tensor(arr)
             else:
-                result[k] = Tensor.from_numpy(arr.astype(np.float16))
+                result[k] = Tensor(arr.astype(np.float16))
         return result
 
 
@@ -1402,17 +1402,27 @@ def safe_load_file(filename):
     """
     def convert(info: dict[str, Any]):
         numpy_dtype = _NP_TYPES[info['dtype']]
+        ms_dtype = _MS_TYPES[info['dtype']]
         shape: list[int] = info['shape']
         begin, end = info['data_offsets']
         assert 0 <= begin <= end <= len(byte_buf)
         assert end - begin == math.prod(shape) * np.dtype(numpy_dtype).itemsize
         buf = byte_buf[begin:end]
-        array = np.frombuffer(buf, dtype=numpy_dtype).reshape(shape)
-        if array.dtype == bfloat16 and not SUPPORT_BF16:
-            logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
-            array = array.astype(np.float16)
 
-        return Tensor.from_numpy(array)
+        try:
+            if info['dtype'] == 'BF16' and not SUPPORT_BF16:
+                logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
+                ms_dtype = mindspore.float16
+            out = Tensor.convert_bytes_to_tensor(buf, tuple(shape), ms_dtype)
+        except:
+            array = np.frombuffer(buf, dtype=numpy_dtype).reshape(shape)
+
+            if array.dtype == bfloat16 and not SUPPORT_BF16:
+                logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
+                array = array.astype(np.float16)
+            array = array.astype(array.dtype)
+            out = Tensor(array)
+        return out
 
     with open(filename, "rb") as fp:
         header_size, = struct.unpack('<Q', fp.read(8))
@@ -1506,7 +1516,7 @@ def load_checkpoint(ckpt_file_name):
                 dims = element.tensor.dims
                 param_data = np.frombuffer(data, np_type)
                 param_data = param_data.reshape(list(dims))
-                parameter = Tensor(param_data, ms_type)
+                parameter = Tensor(param_data)
                 parameter_dict[element.tag] = parameter
                 continue
             element_data = np.frombuffer(data, np_type)
@@ -1526,7 +1536,7 @@ def load_checkpoint(ckpt_file_name):
                         param_data = int(param_data[0])
                     if dims not in ([0], [1]):
                         param_data = param_data.reshape(list(dims))
-                    parameter = Tensor(param_data, ms_type)
+                    parameter = Tensor(param_data)
                     parameter_dict[element.tag] = parameter
 
     except BaseException as e:

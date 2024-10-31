@@ -446,7 +446,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
             )
             max_embed_dim = embed_sequence_lengths.max().item()
 
-            batch_indices, non_image_indices = ops.nonzero((input_ids != image_token_index) & (attention_mask == 1), as_tuple=True)
+            batch_indices, non_image_indices = ops.nonzero((input_ids != image_token_index).int() & (attention_mask == 1).int(), as_tuple=True)
             # 2. Compute the positions where text should be written
             # Calculate new positions for text tokens in merged image-text sequence.
             # `special_image_token_mask` identifies image tokens. Each image token will be replaced by `nb_text_tokens_per_images` text tokens.
@@ -501,7 +501,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
             else:
                 # exclude padding on the right
                 val = embed_indices < embed_seq_lens
-            image_to_overwrite &= val
+            image_to_overwrite = (image_to_overwrite.int() & val.int()).bool()
 
             if image_to_overwrite.sum() != num_image_features:
                 raise ValueError(
@@ -511,7 +511,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
                     f"This prevents correct indexing and breaks batch generation."
                 )
         final_embedding[image_to_overwrite] = image_features.reshape(-1, embed_dim)
-        final_attention_mask |= image_to_overwrite
+        final_attention_mask = final_attention_mask.int() | image_to_overwrite.int()
         position_ids = (final_attention_mask.cumsum(-1) - 1).masked_fill((final_attention_mask == 0), 1)
 
         return final_embedding, final_attention_mask, position_ids, final_labels, final_input_ids
@@ -702,7 +702,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
                     "Expanding inputs for image tokens in LLaVa-NeXT should be done in processing. "
                     "Please add `patch_size` and `vision_feature_select_strategy` to the model's processing config or set directly "
                     "with `processor.patch_size = {{patch_size}}` and processor.vision_feature_select_strategy = {{vision_feature_select_strategy}}`. "
-                    "Using processors without these attributes in the config is deprecated and will throw an error in v4.47."
+                    "Using processors without these attributes in the config is deprecated and will throw an error."
                 )
                 if input_ids.shape[1] != 1:
                     inputs_embeds = inputs_embeds.to(image_features.dtype)
@@ -744,7 +744,6 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel):
                     attention_mask = ops.cat((extended_attention_mask, attention_mask[:, -target_length:]), dim=1)
                     position_ids = ops.sum(attention_mask, dim=1).unsqueeze(-1) - 1
 
-            # TODO: @raushan retain only the new behavior after v4.47
             else:
                 special_image_mask = (
                     (input_ids == self.config.image_token_index).unsqueeze(-1).expand_as(inputs_embeds)
