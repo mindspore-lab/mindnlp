@@ -140,7 +140,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python: [3.8]
+        python: [3.9]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v3
@@ -170,10 +170,10 @@ jobs:
     if: github.event_name == 'push' && github.repository_owner == 'mindspore-lab'
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.8
+    - name: Set up Python 3.9
       uses: actions/setup-python@v4
       with:
-        python-version: 3.8
+        python-version: 3.9
     - uses: "lvyufeng/action-kaggle-gpu-test@latest"
       with:
         kaggle_username: "${{ secrets.KAGGLE_USERNAME }}"
