@@ -56,7 +56,7 @@ from .base import (
     get_default_model_and_revision,
     load_model,
 )
-# from .depth_estimation import DepthEstimationPipeline
+from .depth_estimation import DepthEstimationPipeline
 from .document_question_answering import DocumentQuestionAnsweringPipeline
 # from .feature_extraction import FeatureExtractionPipeline
 from .fill_mask import FillMaskPipeline
@@ -341,12 +341,12 @@ SUPPORTED_TASKS = {
     #     "default": {"model": {"ms": ("google/owlvit-base-patch32", "cbc355f")}},
     #     "type": "multimodal",
     # },
-    # "depth-estimation": {
-    #     "impl": DepthEstimationPipeline,
-    #     "ms": (AutoModelForDepthEstimation,) if is_mindspore_available() else (),
-    #     "default": {"model": {"ms": ("Intel/dpt-large", "bc15f29")}},
-    #     "type": "image",
-    # },
+    "depth-estimation": {
+        "impl": DepthEstimationPipeline,
+        "ms": (AutoModelForDepthEstimation,) if is_mindspore_available() else (),
+        "default": {"model": {"ms": ("Intel/dpt-large", "bc15f29")}},
+        "type": "image",
+    },
     # "video-classification": {
     #     "impl": VideoClassificationPipeline,
     #     "ms": (AutoModelForVideoClassification,) if is_mindspore_available() else (),
