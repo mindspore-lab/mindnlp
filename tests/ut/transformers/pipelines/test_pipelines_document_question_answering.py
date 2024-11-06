@@ -44,7 +44,7 @@ else:
 # This is a pinned image from a specific revision of a document question answering space, hosted by HuggingFace,
 # so we can expect it to be available.
 INVOICE_URL = (
-    "https://hf.co/spaces/impira/docquery/resolve/2f6c96314dc84dfda62d40de9da55f2f5165d403/invoice.png"
+    "https://hf-mirror.com/spaces/impira/docquery/resolve/2f6c96314dc84dfda62d40de9da55f2f5165d403/invoice.png"
 )
 
 
@@ -182,7 +182,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
         image = INVOICE_URL
         question = "What is the invoice number?"
 
-        outputs = dqa_pipeline(image=image, question=question, top_k=2)
+        outputs = dqa_pipeline(image=image, question=question, top_k=2, padding=True)
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
             [
@@ -191,7 +191,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
             ],
         )
 
-        outputs = dqa_pipeline({"image": image, "question": question}, top_k=2)
+        outputs = dqa_pipeline({"image": image, "question": question}, top_k=2, padding=True)
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
             [
@@ -201,7 +201,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
         )
 
         outputs = dqa_pipeline(
-            [{"image": image, "question": question}, {"image": image, "question": question}], top_k=2
+            [{"image": image, "question": question}, {"image": image, "question": question}], top_k=2, padding=True
         )
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
@@ -293,7 +293,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
         image = INVOICE_URL
         question = "What is the invoice number?"
 
-        outputs = dqa_pipeline(image=image, question=question, top_k=2)
+        outputs = dqa_pipeline(image=image, question=question, top_k=2, padding=True)
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
             [
@@ -303,7 +303,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
         )
 
         outputs = dqa_pipeline(
-            [{"image": image, "question": question}, {"image": image, "question": question}], top_k=2
+            [{"image": image, "question": question}, {"image": image, "question": question}], top_k=2, padding=True
         )
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
@@ -319,7 +319,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
         word_boxes = list(zip(*apply_tesseract(load_image(image), None, "")))
 
         # This model should also work if `image` is set to None
-        outputs = dqa_pipeline({"image": None, "word_boxes": word_boxes, "question": question}, top_k=2)
+        outputs = dqa_pipeline({"image": None, "word_boxes": word_boxes, "question": question}, top_k=2, padding=True)
         self.assertEqual(
             nested_simplify(outputs, decimals=4),
             [
@@ -335,7 +335,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
             "document-question-answering",
             model="naver-clova-ix/donut-base-finetuned-docvqa",
             tokenizer=AutoTokenizer.from_pretrained("naver-clova-ix/donut-base-finetuned-docvqa"),
-            feature_extractor="naver-clova-ix/donut-base-finetuned-docvqa",
+            image_processor="naver-clova-ix/donut-base-finetuned-docvqa",
         )
 
         image = INVOICE_URL
