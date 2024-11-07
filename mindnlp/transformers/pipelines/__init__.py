@@ -58,7 +58,7 @@ from .base import (
 )
 from .depth_estimation import DepthEstimationPipeline
 from .document_question_answering import DocumentQuestionAnsweringPipeline
-# from .feature_extraction import FeatureExtractionPipeline
+from .feature_extraction import FeatureExtractionPipeline
 from .fill_mask import FillMaskPipeline
 # from .image_classification import ImageClassificationPipeline
 # from .image_feature_extraction import ImageFeatureExtractionPipeline
@@ -153,16 +153,16 @@ SUPPORTED_TASKS = {
     #     "default": {"model": {"ms": ("suno/bark-small", "1dbd7a1")}},
     #     "type": "text",
     # },
-    # "feature-extraction": {
-    #     "impl": FeatureExtractionPipeline,
-    #     "ms": (AutoModel,) if is_mindspore_available() else (),
-    #     "default": {
-    #         "model": {
-    #             "ms": ("distilbert/distilbert-base-cased", "6ea8117"),
-    #         }
-    #     },
-    #     "type": "multimodal",
-    # },
+    "feature-extraction": {
+        "impl": FeatureExtractionPipeline,
+        "ms": (AutoModel,) if is_mindspore_available() else (),
+        "default": {
+            "model": {
+                "ms": ("distilbert/distilbert-base-cased", "6ea8117"),
+            }
+        },
+        "type": "multimodal",
+    },
     "text-classification": {
         "impl": TextClassificationPipeline,
         "ms": (AutoModelForSequenceClassification,) if is_mindspore_available() else (),
@@ -1041,6 +1041,11 @@ def pipeline(
     return pipeline_class(model=model, task=task, **kwargs)
 
 __all__ = [
+    "AudioClassificationPipeline",
+    "AutomaticSpeechRecognitionPipeline",
+    "DepthEstimationPipeline",
+    "DocumentQuestionAnsweringPipeline",
+    "FeatureExtractionPipeline",
     'CsvPipelineDataFormat',
     'FillMaskPipeline',
     'JsonPipelineDataFormat',
