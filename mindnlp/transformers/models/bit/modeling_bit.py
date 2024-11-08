@@ -35,7 +35,7 @@ from ...modeling_utils import PreTrainedModel
 from ....utils import (
     logging,
 )
-from ...backbone_utils import BackboneMixin
+from ....utils.backbone_utils import BackboneMixin
 from .configuration_bit import BitConfig
 
 

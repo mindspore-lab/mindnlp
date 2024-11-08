@@ -32,7 +32,7 @@ from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithCrossAttentions
 from ...modeling_utils import PreTrainedModel
 from ....utils import ModelOutput, logging
-from ...backbone_utils import load_backbone
+from ....utils.backbone_utils import load_backbone
 from .configuration_mask2former import Mask2FormerConfig
 
 

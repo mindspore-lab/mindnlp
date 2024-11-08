@@ -18,7 +18,7 @@ from typing import List, Optional, Tuple, Union
 import mindspore
 from mindnlp.core import nn
 from mindnlp.core.nn import functional as F
-from ...backbone_utils import load_backbone
+from ....utils.backbone_utils import load_backbone
 from ...modeling_outputs import DepthEstimatorOutput
 from ...modeling_utils import PreTrainedModel
 from ....utils import logging

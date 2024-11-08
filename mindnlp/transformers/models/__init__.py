@@ -138,6 +138,7 @@ from . import (
     marian,
     markuplm,
     m2m_100,
+    maskformer,
     mask2former,
     mbart,
     mbart50,
@@ -380,6 +381,7 @@ from .m2m_100 import *
 from .mamba import *
 from .marian import *
 from .markuplm import *
+from .maskformer import *
 from .mask2former import *
 from .mbart import *
 from .mbart50 import *
@@ -622,6 +624,7 @@ __all__.extend(m2m_100.__all__)
 __all__.extend(mamba.__all__)
 __all__.extend(marian.__all__)
 __all__.extend(markuplm.__all__)
+__all__.extend(maskformer.__all__)
 __all__.extend(mask2former.__all__)
 __all__.extend(mbart.__all__)
 __all__.extend(mbart50.__all__)

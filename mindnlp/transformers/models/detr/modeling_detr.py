@@ -35,7 +35,7 @@ from ....utils import (
     logging,
     requires_backends,
 )
-from ...backbone_utils import load_backbone
+from ....utils.backbone_utils import load_backbone
 from .configuration_detr import DetrConfig
 
 

@@ -22,7 +22,7 @@ from mindnlp.core.nn import CrossEntropyLoss
 
 from ...modeling_outputs import SemanticSegmenterOutput
 from ...modeling_utils import PreTrainedModel
-from ...backbone_utils import load_backbone
+from ....utils.backbone_utils import load_backbone
 from .configuration_upernet import UperNetConfig
 
 

@@ -16,7 +16,7 @@
 
 from ...configuration_utils import PretrainedConfig
 from ....utils import logging
-from ...backbone_utils import verify_backbone_config_arguments
+from ....utils.backbone_utils import verify_backbone_config_arguments
 from ..auto import CONFIG_MAPPING
 
 

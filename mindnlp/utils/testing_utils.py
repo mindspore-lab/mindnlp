@@ -2097,3 +2097,7 @@ def require_soundfile(test_case):
     return unittest.skipUnless(is_soundfile_availble(), "test requires soundfile")(
         test_case
     )
+
+def backend_empty_cache():
+    if hasattr(mindspore, 'hal'):
+        mindspore.hal.empty_cache()

@@ -459,6 +459,10 @@ class BackboneConfigMixin:
         output["out_indices"] = output.pop("_out_indices")
         return output
 
+backbone_map = {
+    'resnet18': 'microsoft/resnet-18',
+    'resnet50': 'microsoft/resnet-50'
+}
 
 def load_backbone(config):
     """
@@ -476,6 +480,9 @@ def load_backbone(config):
     use_pretrained_backbone = getattr(config, "use_pretrained_backbone", None)
     backbone_checkpoint = getattr(config, "backbone", None)
     backbone_kwargs = getattr(config, "backbone_kwargs", None)
+    if use_timm_backbone and backbone_checkpoint is not None:
+        backbone_checkpoint = backbone_map[backbone_checkpoint]
+        use_timm_backbone = False
 
     backbone_kwargs = {} if backbone_kwargs is None else backbone_kwargs
 

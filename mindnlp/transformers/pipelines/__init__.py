@@ -58,11 +58,11 @@ from .base import (
 )
 from .depth_estimation import DepthEstimationPipeline
 from .document_question_answering import DocumentQuestionAnsweringPipeline
-# from .feature_extraction import FeatureExtractionPipeline
+from .feature_extraction import FeatureExtractionPipeline
 from .fill_mask import FillMaskPipeline
-# from .image_classification import ImageClassificationPipeline
-# from .image_feature_extraction import ImageFeatureExtractionPipeline
-# from .image_segmentation import ImageSegmentationPipeline
+from .image_classification import ImageClassificationPipeline
+from .image_feature_extraction import ImageFeatureExtractionPipeline
+from .image_segmentation import ImageSegmentationPipeline
 # from .image_to_image import ImageToImagePipeline
 # from .image_to_text import ImageToTextPipeline
 # from .mask_generation import MaskGenerationPipeline
@@ -153,16 +153,16 @@ SUPPORTED_TASKS = {
     #     "default": {"model": {"ms": ("suno/bark-small", "1dbd7a1")}},
     #     "type": "text",
     # },
-    # "feature-extraction": {
-    #     "impl": FeatureExtractionPipeline,
-    #     "ms": (AutoModel,) if is_mindspore_available() else (),
-    #     "default": {
-    #         "model": {
-    #             "ms": ("distilbert/distilbert-base-cased", "6ea8117"),
-    #         }
-    #     },
-    #     "type": "multimodal",
-    # },
+    "feature-extraction": {
+        "impl": FeatureExtractionPipeline,
+        "ms": (AutoModel,) if is_mindspore_available() else (),
+        "default": {
+            "model": {
+                "ms": ("distilbert/distilbert-base-cased", "6ea8117"),
+            }
+        },
+        "type": "multimodal",
+    },
     "text-classification": {
         "impl": TextClassificationPipeline,
         "ms": (AutoModelForSequenceClassification,) if is_mindspore_available() else (),
@@ -293,32 +293,32 @@ SUPPORTED_TASKS = {
     #     },
     #     "type": "multimodal",
     # },
-    # "image-classification": {
-    #     "impl": ImageClassificationPipeline,
-    #     "ms": (AutoModelForImageClassification,) if is_mindspore_available() else (),
-    #     "default": {
-    #         "model": {
-    #             "ms": ("google/vit-base-patch16-224", "3f49326"),
-    #         }
-    #     },
-    #     "type": "image",
-    # },
-    # "image-feature-extraction": {
-    #     "impl": ImageFeatureExtractionPipeline,
-    #     "ms": (AutoModel,) if is_mindspore_available() else (),
-    #     "default": {
-    #         "model": {
-    #             "ms": ("google/vit-base-patch16-224", "3f49326"),
-    #         }
-    #     },
-    #     "type": "image",
-    # },
-    # "image-segmentation": {
-    #     "impl": ImageSegmentationPipeline,
-    #     "ms": (AutoModelForImageSegmentation, AutoModelForSemanticSegmentation) if is_mindspore_available() else (),
-    #     "default": {"model": {"ms": ("facebook/detr-resnet-50-panoptic", "d53b52a")}},
-    #     "type": "multimodal",
-    # },
+    "image-classification": {
+        "impl": ImageClassificationPipeline,
+        "ms": (AutoModelForImageClassification,) if is_mindspore_available() else (),
+        "default": {
+            "model": {
+                "ms": ("google/vit-base-patch16-224", "3f49326"),
+            }
+        },
+        "type": "image",
+    },
+    "image-feature-extraction": {
+        "impl": ImageFeatureExtractionPipeline,
+        "ms": (AutoModel,) if is_mindspore_available() else (),
+        "default": {
+            "model": {
+                "ms": ("google/vit-base-patch16-224", "3f49326"),
+            }
+        },
+        "type": "image",
+    },
+    "image-segmentation": {
+        "impl": ImageSegmentationPipeline,
+        "ms": (AutoModelForImageSegmentation, AutoModelForSemanticSegmentation) if is_mindspore_available() else (),
+        "default": {"model": {"ms": ("facebook/detr-resnet-50-panoptic", "d53b52a")}},
+        "type": "multimodal",
+    },
     # "image-to-text": {
     #     "impl": ImageToTextPipeline,
     #     "ms": (AutoModelForVision2Seq,) if is_mindspore_available() else (),
@@ -1041,8 +1041,16 @@ def pipeline(
     return pipeline_class(model=model, task=task, **kwargs)
 
 __all__ = [
-    'CsvPipelineDataFormat',
+    "AudioClassificationPipeline",
+    "AutomaticSpeechRecognitionPipeline",
+    "DepthEstimationPipeline",
+    "DocumentQuestionAnsweringPipeline",
+    "FeatureExtractionPipeline",
     'FillMaskPipeline',
+    "ImageClassificationPipeline",
+    "ImageFeatureExtractionPipeline",
+    "ImageSegmentationPipeline",
+    'CsvPipelineDataFormat',
     'JsonPipelineDataFormat',
     'PipedPipelineDataFormat',
     'Pipeline',
