@@ -8,9 +8,9 @@ on:
     branches: [ "master" ]
     paths:
       - 'mindnlp/**'
-      - 'tests/ut/**'
+      - 'tests/**'
       - '!mindnlp/dataset/**'
-      - '!tests/ut/dataset/**'
+      - '!tests/dataset/**'
       - '!docs/**'
       - '.github/workflows/**'
   push:
@@ -80,7 +80,7 @@ jobs:
         pip install -r download.txt
     - name: Test with pytest
       run: |
-        pytest -c pytest.ini -m 'not download and not gpu_only' --ignore=tests/ut/transformers tests/ut
+        pytest -c pytest.ini -m 'not download and not gpu_only' --ignore=tests/transformers tests/ut
 
   release-test:
     needs: pylint-check
@@ -104,7 +104,7 @@ jobs:
         pip install https://ms-release.obs.cn-north-4.myhuaweicloud.com/${{matrix.ms_version}}/MindSpore/unified/x86_64/mindspore-${{matrix.ms_version}}-cp39-cp39-linux_x86_64.whl --trusted-host ms-release.obs.cn-north-4.myhuaweicloud.com
     - name: Test with pytest
       run: |
-        pytest -c pytest.ini -m 'not download and not gpu_only' --ignore=tests/ut/transformers tests/ut 
+        pytest -c pytest.ini -m 'not download and not gpu_only' --ignore=tests/transformers tests/ut 
         # pytest -c pytest.ini -m 'not download and not gpu_only' tests/ut
 
   transformers-model-test:
@@ -133,36 +133,7 @@ jobs:
         pip install -r download.txt
     - name: Test with pytest
       run: |
-        pytest -vs tests/ut/transformers/models/${{ matrix.alpha }}*/test_modeling*
-
-  st-test:
-    needs: ut-test
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        python: [3.9]
-    runs-on: ${{ matrix.os }}
-    steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip==24.0
-        pip install -r requirements/requirements.txt
-    - name: Install MindSpore
-      shell: bash
-      env:
-        OS: ${{ matrix.os }}
-        PYTHON: ${{ matrix.python }}
-      run: |
-        python .github/install_mindspore.py
-        pip install -r download.txt
-    - name: Test ST with pytest
-      run: |
-        pytest -c pytest.ini tests/st
+        pytest -vs tests/transformers/models/${{ matrix.alpha }}*/test_modeling*
 
   kaggle-gpu-test:
     needs: pylint-check

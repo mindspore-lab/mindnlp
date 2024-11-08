@@ -23,7 +23,7 @@ from mindnlp.core import nn, ops, get_default_dtype
 from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import logging
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 from ...modeling_utils import PreTrainedModel
 from .configuration_gpt_neox_japanese import GPTNeoXJapaneseConfig

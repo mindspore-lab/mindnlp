@@ -84,7 +84,7 @@ def randn(*size, dtype=None):
     return ops.randn(*size, dtype=dtype)
 
 # randn_like
-def randn_like(input, *, dtype):
+def randn_like(input, *, dtype=None):
     return ops.randn_like(input, dtype=dtype)
 
 # randperm

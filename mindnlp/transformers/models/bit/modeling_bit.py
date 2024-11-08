@@ -24,7 +24,7 @@ from mindspore import Tensor
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import (
     BackboneOutput,
     BaseModelOutputWithNoAttention,

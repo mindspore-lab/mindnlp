@@ -20,7 +20,7 @@ import mindspore
 from mindnlp.core import nn, ops, get_default_dtype
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, StaticCache
 
 from ...modeling_attn_mask_utils import AttentionMaskConverter

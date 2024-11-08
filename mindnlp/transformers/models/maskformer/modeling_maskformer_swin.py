@@ -25,7 +25,7 @@ import mindspore
 from mindspore import Tensor
 from mindnlp.core import nn, ops
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ....utils.generic import ModelOutput
 from ...modeling_outputs import BackboneOutput
 from ...modeling_utils import PreTrainedModel

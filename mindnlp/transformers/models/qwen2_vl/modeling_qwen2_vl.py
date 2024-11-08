@@ -28,7 +28,7 @@ from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import functional as F
 from mindnlp.core.nn import CrossEntropyLoss, LayerNorm
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...cache_utils import Cache, StaticCache
 from ...modeling_attn_mask_utils import (
     AttentionMaskConverter,

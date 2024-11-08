@@ -40,7 +40,7 @@ from mindnlp.core.serialization import load, save_checkpoint, load_checkpoint, s
 from mindnlp.core.nn import CrossEntropyLoss, Identity
 from mindnlp.utils.serialization import split_state_dict_into_shards
 
-from .activations import get_activation
+from ..common.activations import get_activation
 from .configuration_utils import PretrainedConfig
 from .generation import GenerationConfig, GenerationMixin
 from .integrations import PeftAdapterMixin

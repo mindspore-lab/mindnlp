@@ -33,7 +33,7 @@ from mindnlp.utils import (
     logging,
 )
 from .configuration_albert import AlbertConfig
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
     BaseModelOutputWithPooling,

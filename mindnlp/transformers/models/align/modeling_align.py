@@ -31,7 +31,7 @@ from mindnlp.utils import (
     ModelOutput,
     logging,
 )
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutputWithNoAttention,
     BaseModelOutputWithPastAndCrossAttentions,

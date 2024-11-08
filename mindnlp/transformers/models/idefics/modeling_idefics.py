@@ -29,7 +29,7 @@ from mindnlp.core import nn, ops
 from mindnlp.utils import logging
 
 from ...modeling_utils import PreTrainedModel
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 from ...modeling_outputs import ModelOutput
 from ...modeling_utils import PretrainedConfig
