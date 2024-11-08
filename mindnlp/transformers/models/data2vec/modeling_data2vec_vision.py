@@ -26,7 +26,7 @@ from mindnlp.utils import (
 )
 
 from .configuration_data2vec_vision import Data2VecVisionConfig
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
     BaseModelOutputWithPooling,

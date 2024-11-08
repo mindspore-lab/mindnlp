@@ -27,7 +27,7 @@ from mindnlp.utils import logging
 from .nezha_config import NezhaConfig
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import prune_linear_layer, find_pruneable_heads_and_indices, apply_chunking_to_forward
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 
 
 logger = logging.get_logger(__name__)

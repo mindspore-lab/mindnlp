@@ -65,6 +65,21 @@ def leaky_relu(input, alpha=0.2):
         return mindspore.mint.nn.functional.leaky_relu(input, alpha)
     return ops.leaky_relu(input, alpha)
 
+def prelu(input, weight):
+    return ops.prelu(input, weight)
+
+def celu(input, alpha=1., inplace=False):
+    return ops.celu(input, alpha)
+
+def selu(input):
+    return ops.selu(input)
+
+def hardsigmoid(input, inplace=False):
+    return ops.hardsigmoid(input)
+
+def hardswish(input: Tensor, inplace: bool = False) -> Tensor:
+    return ops.hardswish(input)
+
 def avg_pool1d(input_array, pool_size, stride, padding=0, ceil_mode=False, count_include_pad=True):
     """
     Perform 1D average pooling on the input array of shape (N, C, L) without using explicit for loops.

@@ -23,7 +23,7 @@ from mindnlp.core import nn, ops
 from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 
-from ...activations import ACT2FN, get_activation
+from ....common.activations import ACT2FN, get_activation
 from ...modeling_outputs import (
     BaseModelOutputWithCrossAttentions,
     MaskedLMOutput,

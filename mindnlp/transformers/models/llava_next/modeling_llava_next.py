@@ -22,7 +22,7 @@ import numpy as np
 import mindspore
 from mindnlp.core import nn, ops, no_grad
 from ...modeling_utils import PreTrainedModel
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...image_processing_utils import select_best_resolution
 from ...modeling_outputs import ModelOutput
 from ....utils import (

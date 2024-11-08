@@ -23,7 +23,7 @@ import mindspore
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import CrossEntropyLoss, SmoothL1Loss
 
-from ...activations import ACT2FN, gelu
+from ....common.activations import ACT2FN, gelu
 from ...modeling_utils import PreTrainedModel
 from ....utils import (
     ModelOutput,

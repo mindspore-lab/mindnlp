@@ -24,7 +24,7 @@ from mindnlp.core.nn import CrossEntropyLoss
 from mindnlp.configs import use_pyboost, SUPPORT_VIEW, ON_ORANGE_PI
 
 from ...modeling_utils import PreTrainedModel
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...cache_utils import Cache
 from ...generation import GenerationMixin
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPast, CausalLMOutputWithPast

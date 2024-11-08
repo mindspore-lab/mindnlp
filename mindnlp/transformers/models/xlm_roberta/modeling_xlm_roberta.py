@@ -31,7 +31,7 @@ from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
 from .configuration_xlm_roberta import XLMRobertaConfig
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
 from ...modeling_outputs import (

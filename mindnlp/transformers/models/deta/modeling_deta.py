@@ -26,7 +26,7 @@ from mindspore import Tensor
 from mindnlp.core import nn, ops, no_grad, get_default_dtype
 import mindnlp.core.nn.functional as F
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ....utils import (
     ModelOutput,
     is_scipy_available,

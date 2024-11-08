@@ -25,7 +25,7 @@ from mindnlp.core import nn, ops
 from mindnlp.core.nn import CrossEntropyLoss, functional as F
 
 from mindnlp.core.serialization import safe_load_file, load
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
     CausalLMOutput,

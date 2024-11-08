@@ -24,7 +24,7 @@ import mindspore
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F, Parameter
 from ....utils import is_scipy_available
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
     BaseModelOutputWithPooling,

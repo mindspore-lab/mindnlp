@@ -24,7 +24,7 @@ from mindspore import Tensor
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithCrossAttentions, Seq2SeqModelOutput
 from ...modeling_utils import PreTrainedModel

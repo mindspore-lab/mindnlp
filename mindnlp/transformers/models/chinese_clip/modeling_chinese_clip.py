@@ -21,7 +21,7 @@ from typing import Any, List, Optional, Tuple, Union
 import mindspore
 from mindnlp.core import nn, ops
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
     BaseModelOutputWithPastAndCrossAttentions,

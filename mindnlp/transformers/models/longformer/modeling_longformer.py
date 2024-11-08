@@ -31,7 +31,7 @@ from mindnlp.utils import (
     ModelOutput,
     logging,
 )
-from ...activations import ACT2FN, gelu
+from ....common.activations import ACT2FN, gelu
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
 from .configuration_longformer import LongformerConfig

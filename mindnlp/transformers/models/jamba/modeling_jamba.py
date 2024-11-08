@@ -28,7 +28,7 @@ import mindnlp.core.nn.functional as F
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache  # we need __iter__ and __len__ of pkv
 from ...modeling_outputs import (
     MoeCausalLMOutputWithPast,

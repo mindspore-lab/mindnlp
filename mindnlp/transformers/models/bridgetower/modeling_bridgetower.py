@@ -23,7 +23,7 @@ import mindspore
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
-from ...activations import ACT2FN, QuickGELUActivation
+from ....common.activations import ACT2FN, QuickGELU
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
     BaseModelOutputWithPoolingAndCrossAttentions,
@@ -178,7 +178,7 @@ class BridgeTowerResidualAttention(nn.Module):
             OrderedDict(
                 [
                     ("c_fc", nn.Linear(config.hidden_size, config.hidden_size * 4)),
-                    ("gelu", QuickGELUActivation()),
+                    ("gelu", QuickGELU()),
                     ("c_proj", nn.Linear(config.hidden_size * 4, config.hidden_size)),
                 ]
             )

@@ -21,7 +21,7 @@ from functools import reduce
 import mindspore
 from mindnlp.core import nn, ops
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...generation import GenerationMixin
 from ...modeling_outputs import ModelOutput
 from ...modeling_utils import PreTrainedModel

@@ -665,3 +665,250 @@ class MultiheadAttention(Module):
 
         # no attn_mask and no key_padding_mask, returns None, None
         return merged_mask, mask_type
+
+class PReLU(Module):
+    r"""Applies the element-wise PReLU function.
+
+    .. math::
+        \text{PReLU}(x) = \max(0,x) + a * \min(0,x)
+
+    or
+
+    .. math::
+        \text{PReLU}(x) =
+        \begin{cases}
+        x, & \text{ if } x \ge 0 \\
+        ax, & \text{ otherwise }
+        \end{cases}
+
+    Here :math:`a` is a learnable parameter. When called without arguments, `nn.PReLU()` uses a single
+    parameter :math:`a` across all input channels. If called with `nn.PReLU(nChannels)`,
+    a separate :math:`a` is used for each input channel.
+
+
+    .. note::
+        weight decay should not be used when learning :math:`a` for good performance.
+
+    .. note::
+        Channel dim is the 2nd dim of input. When input has dims < 2, then there is
+        no channel dim and the number of channels = 1.
+
+    Args:
+        num_parameters (int): number of :math:`a` to learn.
+            Although it takes an int as input, there is only two values are legitimate:
+            1, or the number of channels at input. Default: 1
+        init (float): the initial value of :math:`a`. Default: 0.25
+
+    Shape:
+        - Input: :math:`( *)` where `*` means, any number of additional
+          dimensions.
+        - Output: :math:`(*)`, same shape as the input.
+
+    Attributes:
+        weight (Tensor): the learnable weights of shape (:attr:`num_parameters`).
+
+    .. image:: ../scripts/activation_images/PReLU.png
+
+    Examples::
+
+        >>> m = nn.PReLU()
+        >>> input = torch.randn(2)
+        >>> output = m(input)
+    """
+
+    __constants__ = ["num_parameters"]
+    num_parameters: int
+
+    def __init__(
+        self, num_parameters: int = 1, init: float = 0.25, dtype=None
+    ) -> None:
+        factory_kwargs = {"dtype": dtype}
+        self.num_parameters = num_parameters
+        super().__init__()
+        self.init = init
+        self.weight = Parameter(ops.empty(num_parameters, **factory_kwargs))
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        init.constant_(self.weight, self.init)
+
+    def forward(self, input: Tensor) -> Tensor:
+        return F.prelu(input, self.weight)
+
+    def extra_repr(self) -> str:
+        return f"num_parameters={self.num_parameters}"
+
+class CELU(Module):
+    r"""Applies the CELU function element-wise.
+
+    .. math::
+        \text{CELU}(x) = \max(0,x) + \min(0, \alpha * (\exp(x/\alpha) - 1))
+
+    More details can be found in the paper `Continuously Differentiable Exponential Linear Units`_ .
+
+    Args:
+        alpha: the :math:`\alpha` value for the CELU formulation. Default: 1.0
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(*)`, where :math:`*` means any number of dimensions.
+        - Output: :math:`(*)`, same shape as the input.
+
+    .. image:: ../scripts/activation_images/CELU.png
+
+    Examples::
+
+        >>> m = nn.CELU()
+        >>> input = torch.randn(2)
+        >>> output = m(input)
+
+    .. _`Continuously Differentiable Exponential Linear Units`:
+        https://arxiv.org/abs/1704.07483
+    """
+
+    __constants__ = ["alpha", "inplace"]
+    alpha: float
+    inplace: bool
+
+    def __init__(self, alpha: float = 1.0, inplace: bool = False) -> None:
+        super().__init__()
+        self.alpha = alpha
+        self.inplace = inplace
+
+    def forward(self, input: Tensor) -> Tensor:
+        return F.celu(input, self.alpha, self.inplace)
+
+    def extra_repr(self) -> str:
+        inplace_str = ", inplace=True" if self.inplace else ""
+        return f"alpha={self.alpha}{inplace_str}"
+
+class SELU(Module):
+    r"""Applies the SELU function element-wise.
+
+    .. math::
+        \text{SELU}(x) = \text{scale} * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))
+
+    with :math:`\alpha = 1.6732632423543772848170429916717` and
+    :math:`\text{scale} = 1.0507009873554804934193349852946`.
+
+    .. warning::
+        When using ``kaiming_normal`` or ``kaiming_normal_`` for initialisation,
+        ``nonlinearity='linear'`` should be used instead of ``nonlinearity='selu'``
+        in order to get `Self-Normalizing Neural Networks`_.
+        See :func:`torch.nn.init.calculate_gain` for more information.
+
+    More details can be found in the paper `Self-Normalizing Neural Networks`_ .
+
+    Args:
+        inplace (bool, optional): can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(*)`, where :math:`*` means any number of dimensions.
+        - Output: :math:`(*)`, same shape as the input.
+
+    .. image:: ../scripts/activation_images/SELU.png
+
+    Examples::
+
+        >>> m = nn.SELU()
+        >>> input = torch.randn(2)
+        >>> output = m(input)
+
+    .. _Self-Normalizing Neural Networks: https://arxiv.org/abs/1706.02515
+    """
+
+    __constants__ = ["inplace"]
+    inplace: bool
+
+    def __init__(self, inplace: bool = False) -> None:
+        super().__init__()
+        self.inplace = inplace
+
+    def forward(self, input: Tensor) -> Tensor:
+        return F.selu(input)
+
+    def extra_repr(self) -> str:
+        inplace_str = "inplace=True" if self.inplace else ""
+        return inplace_str
+
+
+class Hardsigmoid(Module):
+    r"""Applies the Hardsigmoid function element-wise.
+
+    Hardsigmoid is defined as:
+
+    .. math::
+        \text{Hardsigmoid}(x) = \begin{cases}
+            0 & \text{if~} x \le -3, \\
+            1 & \text{if~} x \ge +3, \\
+            x / 6 + 1 / 2 & \text{otherwise}
+        \end{cases}
+
+    Args:
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(*)`, where :math:`*` means any number of dimensions.
+        - Output: :math:`(*)`, same shape as the input.
+
+    .. image:: ../scripts/activation_images/Hardsigmoid.png
+
+    Examples::
+
+        >>> m = nn.Hardsigmoid()
+        >>> input = torch.randn(2)
+        >>> output = m(input)
+    """
+
+    __constants__ = ["inplace"]
+
+    inplace: bool
+
+    def __init__(self, inplace: bool = False) -> None:
+        super().__init__()
+        self.inplace = inplace
+
+    def forward(self, input: Tensor) -> Tensor:
+        return F.hardsigmoid(input, self.inplace)
+
+
+class Hardswish(Module):
+    r"""Applies the Hardswish function, element-wise.
+
+    Method described in the paper: `Searching for MobileNetV3 <https://arxiv.org/abs/1905.02244>`_.
+
+    Hardswish is defined as:
+
+    .. math::
+        \text{Hardswish}(x) = \begin{cases}
+            0 & \text{if~} x \le -3, \\
+            x & \text{if~} x \ge +3, \\
+            x \cdot (x + 3) /6 & \text{otherwise}
+        \end{cases}
+
+    Args:
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(*)`, where :math:`*` means any number of dimensions.
+        - Output: :math:`(*)`, same shape as the input.
+
+    .. image:: ../scripts/activation_images/Hardswish.png
+
+    Examples::
+
+        >>> m = nn.Hardswish()
+        >>> input = torch.randn(2)
+        >>> output = m(input)
+    """
+
+    __constants__ = ["inplace"]
+
+    inplace: bool
+
+    def __init__(self, inplace: bool = False) -> None:
+        super().__init__()
+        self.inplace = inplace
+
+    def forward(self, input: Tensor) -> Tensor:
+        return F.hardswish(input, self.inplace)

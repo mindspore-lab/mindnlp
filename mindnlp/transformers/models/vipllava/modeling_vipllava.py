@@ -21,7 +21,7 @@ import mindspore
 from mindnlp.core import nn, ops, no_grad
 
 from ...modeling_utils import PreTrainedModel
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import ModelOutput
 from ....utils import (
     logging,

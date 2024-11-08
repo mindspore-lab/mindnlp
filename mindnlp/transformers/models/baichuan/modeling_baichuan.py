@@ -37,7 +37,7 @@ from mindnlp.core.nn import functional as F
 from .configuration_baichuan import BaiChuanConfig
 from ...generation.utils import GenerationConfig
 from ...modeling_utils import PreTrainedModel
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast

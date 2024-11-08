@@ -30,7 +30,7 @@ from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 
 from mindnlp.utils import logging
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
 from .configuration_ernie import ErnieConfig

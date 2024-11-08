@@ -26,7 +26,7 @@ from mindnlp.core import nn, ops, no_grad
 import mindnlp.core.nn.functional as F
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindnlp.configs import use_pyboost, SUPPORT_VIEW, ON_ORANGE_PI
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, StaticCache
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
