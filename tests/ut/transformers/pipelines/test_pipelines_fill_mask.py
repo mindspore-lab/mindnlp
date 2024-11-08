@@ -15,10 +15,12 @@
 import gc
 import unittest
 
-from mindnlp.transformers import MODEL_FOR_MASKED_LM_MAPPING,FillMaskPipeline, pipeline
-from mindnlp.transformers.pipelines.base import PipelineException
+from mindnlp.transformers import MODEL_FOR_MASKED_LM_MAPPING, FillMaskPipeline, pipeline
+from mindnlp.transformers.pipelines import PipelineException
 from mindnlp.utils.testing_utils import (
+    backend_empty_cache,
     is_pipeline_test,
+    is_mindspore_available,
     nested_simplify,
     require_mindspore,
     slow,
@@ -33,11 +35,14 @@ class FillMaskPipelineTests(unittest.TestCase):
 
     def tearDown(self):
         super().tearDown()
-        # clean-up as much as possible GPU memory occupied
+        # clean-up as much as possible GPU memory occupied by PyTorch
         gc.collect()
+        if is_mindspore_available():
+            backend_empty_cache()
+
 
     @require_mindspore
-    def test_small_model_ms(self):
+    def test_small_model(self):
         unmasker = pipeline(task="fill-mask", model="sshleifer/tiny-distilroberta-base", top_k=2)
 
         outputs = unmasker("My name is <mask>")
@@ -60,6 +65,16 @@ class FillMaskPipelineTests(unittest.TestCase):
                     "token_str": " Maul",
                 },
                 {"sequence": "The largest city in France isELS", "score": 2.2e-05, "token": 16416, "token_str": "ELS"},
+            ],
+        )
+
+        outputs = unmasker("My name is <mask>", targets=[" Patrick", " Clara", " Teven"], top_k=3)
+        self.assertEqual(
+            nested_simplify(outputs, decimals=6),
+            [
+                {"sequence": "My name is Patrick", "score": 2.1e-05, "token": 3499, "token_str": " Patrick"},
+                {"sequence": "My name is Te", "score": 2e-05, "token": 2941, "token_str": " Te"},
+                {"sequence": "My name is Clara", "score": 2e-05, "token": 13606, "token_str": " Clara"},
             ],
         )
 
@@ -89,11 +104,17 @@ class FillMaskPipelineTests(unittest.TestCase):
             ],
         )
 
-
+    @require_mindspore
     def test_fp16_casting(self):
-        pipe = pipeline(task="fill-mask", model="sshleifer/tiny-distilroberta-base")
+        pipe = pipeline(
+            "fill-mask",
+            model="hf-internal-testing/tiny-random-distilbert",
+        )
 
-        response = pipe("Paris is the <mask> of France.")
+        # convert model to fp16
+        pipe.model.half()
+
+        response = pipe("Paris is the [MASK] of France.")
         # We actually don't care about the result, we just want to make sure
         # it works, meaning the float16 tensor got casted back to float32
         # for postprocessing.
@@ -101,9 +122,10 @@ class FillMaskPipelineTests(unittest.TestCase):
 
     @slow
     @require_mindspore
-    def test_large_model_ms(self):
+    def test_large_model(self):
         unmasker = pipeline(task="fill-mask", model="distilbert/distilroberta-base", top_k=2)
         self.run_large_test(unmasker)
+
 
     def run_large_test(self, unmasker):
         outputs = unmasker("My name is <mask>")
@@ -165,17 +187,32 @@ class FillMaskPipelineTests(unittest.TestCase):
         )
 
     @require_mindspore
-    def test_model_no_pad_ms(self):
+    def test_model_no_pad(self):
         unmasker = pipeline(task="fill-mask", model="sshleifer/tiny-distilroberta-base")
         unmasker.tokenizer.pad_token_id = None
         unmasker.tokenizer.pad_token = None
         self.run_pipeline_test(unmasker, [])
 
-    def get_test_pipeline(self, model, tokenizer, processor):
+    def get_test_pipeline(
+        self,
+        model,
+        tokenizer=None,
+        image_processor=None,
+        feature_extractor=None,
+        processor=None,
+        torch_dtype="float32",
+    ):
         if tokenizer is None or tokenizer.mask_token_id is None:
-            self.skipTest("The provided tokenizer has no mask token, (probably reformer or wav2vec2)")
+            self.skipTest(reason="The provided tokenizer has no mask token, (probably reformer or wav2vec2)")
 
-        fill_masker = FillMaskPipeline(model=model, tokenizer=tokenizer)
+        fill_masker = FillMaskPipeline(
+            model=model,
+            tokenizer=tokenizer,
+            feature_extractor=feature_extractor,
+            image_processor=image_processor,
+            processor=processor,
+            torch_dtype=torch_dtype,
+        )
         examples = [
             f"This is another {tokenizer.mask_token} test",
         ]
@@ -184,6 +221,7 @@ class FillMaskPipelineTests(unittest.TestCase):
     def run_pipeline_test(self, fill_masker, examples):
         tokenizer = fill_masker.tokenizer
         model = fill_masker.model
+
         outputs = fill_masker(
             f"This is a {tokenizer.mask_token}",
         )

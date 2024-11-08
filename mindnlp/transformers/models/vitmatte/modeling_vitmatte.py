@@ -24,7 +24,7 @@ from ...modeling_utils import PreTrainedModel
 from ....utils import (
     ModelOutput,
 )
-from ...backbone_utils import load_backbone
+from ....utils.backbone_utils import load_backbone
 from .configuration_vitmatte import VitMatteConfig
 
 

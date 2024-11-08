@@ -33,7 +33,7 @@ from ....utils import (
     logging,
     requires_backends,
 )
-from ...backbone_utils import load_backbone
+from ....utils.backbone_utils import load_backbone
 from .configuration_conditional_detr import ConditionalDetrConfig
 
 is_timm_available = False

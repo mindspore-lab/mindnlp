@@ -34,7 +34,7 @@ from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
 from ....utils import (
     logging,
 )
-from ...backbone_utils import BackboneMixin
+from ....utils.backbone_utils import BackboneMixin
 from .configuration_dinov2 import Dinov2Config
 
 

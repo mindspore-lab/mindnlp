@@ -620,7 +620,9 @@ def repeat_interleave(input, repeats, dim=None):
 
 # roll
 def roll(input, shifts, dims=None):
-    return mindspore.numpy.roll(input, shifts, dims)
+    if use_pyboost():
+        return mindspore.mint.roll(input, shifts, dims)
+    return ops.roll(input, shifts, dims)
 
 # searchsorted
 def searchsorted(sorted_sequence, values, *, out_int32=False, right=False, side=None, sorter=None):

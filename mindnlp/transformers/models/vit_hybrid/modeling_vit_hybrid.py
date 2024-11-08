@@ -27,7 +27,7 @@ from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling, Ima
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
 from ....utils import logging
-from ...backbone_utils import load_backbone
+from ....utils.backbone_utils import load_backbone
 from .configuration_vit_hybrid import ViTHybridConfig
 
 

@@ -33,7 +33,7 @@ from mindnlp.utils import (
 )
 
 from ...activations import ACT2FN
-from ...backbone_utils import load_backbone
+from ....utils.backbone_utils import load_backbone
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
 from ...modeling_outputs import BaseModelOutput
 from ...modeling_utils import PreTrainedModel

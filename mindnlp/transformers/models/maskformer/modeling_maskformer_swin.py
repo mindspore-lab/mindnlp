@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2022 Microsoft Research and The HuggingFace Inc. team. All rights reserved.
+# Copyright 2022 Meta Platforms, Inc. and The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,197 +12,94 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""MindSpore Swin Transformer model."""
+
+"""MaskFormer Swin Transformer. The reason Swin Transformer is implemented here is because MaskFormer uses the hidden
+states before downsampling, which is different from the default Swin Transformer."""
 
 import collections.abc
 import math
-import warnings
 from dataclasses import dataclass
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import mindspore
+from mindspore import Tensor
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
 from ...activations import ACT2FN
+from ....utils.generic import ModelOutput
 from ...modeling_outputs import BackboneOutput
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, meshgrid, prune_linear_layer
-from ....utils import (
-    ModelOutput,
-    logging,
-)
 from ....utils.backbone_utils import BackboneMixin
-from .configuration_swin import SwinConfig
-
-
-logger = logging.get_logger(__name__)
-
-# General docstring
-_CONFIG_FOR_DOC = "SwinConfig"
-
-# Base docstring
-_CHECKPOINT_FOR_DOC = "microsoft/swin-tiny-patch4-window7-224"
-_EXPECTED_OUTPUT_SHAPE = [1, 49, 768]
-
-# Image classification docstring
-_IMAGE_CLASS_CHECKPOINT = "microsoft/swin-tiny-patch4-window7-224"
-_IMAGE_CLASS_EXPECTED_OUTPUT = "tabby, tabby cat"
-
-
-# drop_path, SwinPatchEmbeddings, SwinPatchMerging and SwinDropPath are from the timm library.
+from .configuration_maskformer_swin import MaskFormerSwinConfig
 
 
 @dataclass
-class SwinEncoderOutput(ModelOutput):
+class MaskFormerSwinModelOutputWithPooling(ModelOutput):
     """
-    Swin encoder's outputs, with potential hidden states and attentions.
+    Class for MaskFormerSwinModel's outputs that also contains the spatial dimensions of the hidden states.
+
+    Args:
+        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
+            Sequence of hidden-states at the output of the last layer of the model.
+        pooler_output (`mindspore.Tensor` of shape `(batch_size, hidden_size)`):
+            Last layer hidden-state after a mean pooling operation.
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+            shape `(batch_size, sequence_length, hidden_size)`.
+
+            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
+        hidden_states_spatial_dimensions (`tuple(tuple(int, int))`, *optional*):
+            A tuple containing the spatial dimension of each `hidden_state` needed to reshape the `hidden_states` to
+            `batch, channels, height, width`. Due to padding, their spatial size cannot be inferred before the
+            `forward` method.
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+            sequence_length)`.
+
+            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
+            heads.
+    """
+
+    last_hidden_state: mindspore.Tensor = None
+    pooler_output: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    hidden_states_spatial_dimensions: Tuple[Tuple[int, int]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+
+
+@dataclass
+class MaskFormerSwinBaseModelOutput(ModelOutput):
+    """
+    Class for SwinEncoder's outputs.
 
     Args:
         last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
             Sequence of hidden-states at the output of the last layer of the model.
         hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
             shape `(batch_size, sequence_length, hidden_size)`.
 
             Hidden-states of the model at the output of each layer plus the initial embedding outputs.
+        hidden_states_spatial_dimensions (`tuple(tuple(int, int))`, *optional*):
+            A tuple containing the spatial dimension of each `hidden_state` needed to reshape the `hidden_states` to
+            `batch, channels, height, width`. Due to padding, their spatial size cannot inferred before the `forward`
+            method.
         attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each stage) of shape `(batch_size, num_heads, sequence_length,
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
             sequence_length)`.
 
             Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
             heads.
-        reshaped_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
-            shape `(batch_size, hidden_size, height, width)`.
-
-            Hidden-states of the model at the output of each layer plus the initial embedding outputs reshaped to
-            include the spatial dimensions.
     """
 
     last_hidden_state: mindspore.Tensor = None
-    hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
-    attentions: Optional[Tuple[mindspore.Tensor, ...]] = None
-    reshaped_hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    hidden_states_spatial_dimensions: Tuple[Tuple[int, int]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
-@dataclass
-class SwinModelOutput(ModelOutput):
-    """
-    Swin model's outputs that also contains a pooling of the last hidden states.
-
-    Args:
-        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
-            Sequence of hidden-states at the output of the last layer of the model.
-        pooler_output (`mindspore.Tensor` of shape `(batch_size, hidden_size)`, *optional*, returned when `add_pooling_layer=True` is passed):
-            Average pooling of the last layer hidden-state.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
-            shape `(batch_size, sequence_length, hidden_size)`.
-
-            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each stage) of shape `(batch_size, num_heads, sequence_length,
-            sequence_length)`.
-
-            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
-            heads.
-        reshaped_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
-            shape `(batch_size, hidden_size, height, width)`.
-
-            Hidden-states of the model at the output of each layer plus the initial embedding outputs reshaped to
-            include the spatial dimensions.
-    """
-
-    last_hidden_state: mindspore.Tensor = None
-    pooler_output: Optional[mindspore.Tensor] = None
-    hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
-    attentions: Optional[Tuple[mindspore.Tensor, ...]] = None
-    reshaped_hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
-
-
-@dataclass
-class SwinMaskedImageModelingOutput(ModelOutput):
-    """
-    Swin masked image model outputs.
-
-    Args:
-        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `bool_masked_pos` is provided):
-            Masked image modeling (MLM) loss.
-        reconstruction (`mindspore.Tensor` of shape `(batch_size, num_channels, height, width)`):
-            Reconstructed pixel values.
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
-            shape `(batch_size, sequence_length, hidden_size)`.
-
-            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each stage) of shape `(batch_size, num_heads, sequence_length,
-            sequence_length)`.
-
-            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
-            heads.
-        reshaped_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
-            shape `(batch_size, hidden_size, height, width)`.
-
-            Hidden-states of the model at the output of each layer plus the initial embedding outputs reshaped to
-            include the spatial dimensions.
-    """
-
-    loss: Optional[mindspore.Tensor] = None
-    reconstruction: mindspore.Tensor = None
-    hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
-    attentions: Optional[Tuple[mindspore.Tensor, ...]] = None
-    reshaped_hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
-
-    @property
-    def logits(self):
-        warnings.warn(
-            "logits attribute is deprecated and will be removed in version 5 of Transformers."
-            " Please use the reconstruction attribute to retrieve the final output instead.",
-            FutureWarning,
-        )
-        return self.reconstruction
-
-
-@dataclass
-class SwinImageClassifierOutput(ModelOutput):
-    """
-    Swin outputs for image classification.
-
-    Args:
-        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
-            Classification (or regression if config.num_labels==1) loss.
-        logits (`mindspore.Tensor` of shape `(batch_size, config.num_labels)`):
-            Classification (or regression if config.num_labels==1) scores (before SoftMax).
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
-            shape `(batch_size, sequence_length, hidden_size)`.
-
-            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each stage) of shape `(batch_size, num_heads, sequence_length,
-            sequence_length)`.
-
-            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
-            heads.
-        reshaped_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each stage) of
-            shape `(batch_size, hidden_size, height, width)`.
-
-            Hidden-states of the model at the output of each layer plus the initial embedding outputs reshaped to
-            include the spatial dimensions.
-    """
-
-    loss: Optional[mindspore.Tensor] = None
-    logits: mindspore.Tensor = None
-    hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
-    attentions: Optional[Tuple[mindspore.Tensor, ...]] = None
-    reshaped_hidden_states: Optional[Tuple[mindspore.Tensor, ...]] = None
-
-
+# Copied from transformers.models.swin.modeling_swin.window_partition
 def window_partition(input_feature, window_size):
     """
     Partitions the given input into windows.
@@ -215,6 +112,7 @@ def window_partition(input_feature, window_size):
     return windows
 
 
+# Copied from transformers.models.swin.modeling_swin.window_reverse
 def window_reverse(windows, window_size, height, width):
     """
     Merges windows to produce higher resolution features.
@@ -225,18 +123,38 @@ def window_reverse(windows, window_size, height, width):
     return windows
 
 
-class SwinEmbeddings(nn.Module):
+# Copied from transformers.models.swin.modeling_swin.drop_path
+def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = False) -> mindspore.Tensor:
     """
-    Construct the patch and position embeddings. Optionally, also the mask token.
+    Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
+
+    Comment by Ross Wightman: This is the same as the DropConnect impl I created for EfficientNet, etc networks,
+    however, the original name is misleading as 'Drop Connect' is a different form of dropout in a separate paper...
+    See discussion: https://github.com/tensorflow/tpu/issues/494#issuecomment-532968956 ... I've opted for changing the
+    layer and argument names to 'drop path' rather than mix DropConnect as a layer name and use 'survival rate' as the
+    argument.
+    """
+    if drop_prob == 0.0 or not training:
+        return input
+    keep_prob = 1 - drop_prob
+    shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
+    random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
+    random_tensor = random_tensor.floor()  # binarize
+    output = input.div(keep_prob) * random_tensor
+    return output
+
+
+class MaskFormerSwinEmbeddings(nn.Module):
+    """
+    Construct the patch and position embeddings.
     """
 
-    def __init__(self, config, use_mask_token=False):
+    def __init__(self, config):
         super().__init__()
 
-        self.patch_embeddings = SwinPatchEmbeddings(config)
+        self.patch_embeddings = MaskFormerSwinPatchEmbeddings(config)
         num_patches = self.patch_embeddings.num_patches
         self.patch_grid = self.patch_embeddings.grid_size
-        self.mask_token = nn.Parameter(ops.zeros(1, 1, config.embed_dim)) if use_mask_token else None
 
         if config.use_absolute_embeddings:
             self.position_embeddings = nn.Parameter(ops.zeros(1, num_patches + 1, config.embed_dim))
@@ -246,21 +164,22 @@ class SwinEmbeddings(nn.Module):
         self.norm = nn.LayerNorm(config.embed_dim)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.patch_size = config.patch_size
-        self.config = config
 
     # Copied from transformers.models.vit.modeling_vit.ViTEmbeddings.interpolate_pos_encoding
     def interpolate_pos_encoding(self, embeddings: mindspore.Tensor, height: int, width: int) -> mindspore.Tensor:
         """
         This method allows to interpolate the pre-trained position encodings, to be able to use the model on higher resolution
-        images.
+        images. 
+
+        Adapted from:
+        - https://github.com/facebookresearch/dino/blob/de9ee3df6cf39fac952ab558447af1fa1365362a/vision_transformer.py#L174-L194, and
+        - https://github.com/facebookresearch/dinov2/blob/e1277af2ba9496fbadf7aec6eba56e8d882d1e35/dinov2/models/vision_transformer.py#L179-L211
         """
 
         num_patches = embeddings.shape[1] - 1
         num_positions = self.position_embeddings.shape[1] - 1
 
         # always interpolate when tracing to ensure the exported model works for dynamic input shapes
-        if num_patches == num_positions and height == width:
-            return self.position_embeddings
 
         class_pos_embed = self.position_embeddings[:, :1]
         patch_pos_embed = self.position_embeddings[:, 1:]
@@ -285,22 +204,10 @@ class SwinEmbeddings(nn.Module):
 
         return ops.cat((class_pos_embed, patch_pos_embed), dim=1)
 
-    def forward(
-        self,
-        pixel_values: Optional[mindspore.Tensor],
-        bool_masked_pos: Optional[mindspore.Tensor] = None,
-        interpolate_pos_encoding: bool = False,
-    ) -> Tuple[mindspore.Tensor]:
+    def forward(self, pixel_values, interpolate_pos_encoding):
         _, num_channels, height, width = pixel_values.shape
         embeddings, output_dimensions = self.patch_embeddings(pixel_values)
         embeddings = self.norm(embeddings)
-        batch_size, seq_len, _ = embeddings.shape
-
-        if bool_masked_pos is not None:
-            mask_tokens = self.mask_token.broadcast_to((batch_size, seq_len, -1))
-            # replace the masked visual tokens by mask_tokens
-            mask = bool_masked_pos.unsqueeze(-1).type_as(mask_tokens)
-            embeddings = embeddings * (1.0 - mask) + mask_tokens * mask
 
         if self.position_embeddings is not None:
             if interpolate_pos_encoding:
@@ -313,7 +220,8 @@ class SwinEmbeddings(nn.Module):
         return embeddings, output_dimensions
 
 
-class SwinPatchEmbeddings(nn.Module):
+# Copied from transformers.models.swin.modeling_swin.SwinPatchEmbeddings with Swin->MaskFormerSwin
+class MaskFormerSwinPatchEmbeddings(nn.Module):
     """
     This class turns `pixel_values` of shape `(batch_size, num_channels, height, width)` into the initial
     `hidden_states` (patch embeddings) of shape `(batch_size, seq_length, hidden_size)` to be consumed by a
@@ -356,7 +264,8 @@ class SwinPatchEmbeddings(nn.Module):
         return embeddings, output_dimensions
 
 
-class SwinPatchMerging(nn.Module):
+# Copied from transformers.models.swin.modeling_swin.SwinPatchMerging
+class MaskFormerSwinPatchMerging(nn.Module):
     """
     Patch Merging Layer.
 
@@ -410,29 +319,8 @@ class SwinPatchMerging(nn.Module):
         return input_feature
 
 
-# Copied from transformers.models.beit.modeling_beit.drop_path
-def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = False) -> mindspore.Tensor:
-    """
-    Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
-
-    Comment by Ross Wightman: This is the same as the DropConnect impl I created for EfficientNet, etc networks,
-    however, the original name is misleading as 'Drop Connect' is a different form of dropout in a separate paper...
-    See discussion: https://github.com/tensorflow/tpu/issues/494#issuecomment-532968956 ... I've opted for changing the
-    layer and argument names to 'drop path' rather than mix DropConnect as a layer name and use 'survival rate' as the
-    argument.
-    """
-    if drop_prob == 0.0 or not training:
-        return input
-    keep_prob = 1 - drop_prob
-    shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
-    random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
-    random_tensor = random_tensor.floor()  # binarize
-    output = input.div(keep_prob) * random_tensor
-    return output
-
-
-# Copied from transformers.models.beit.modeling_beit.BeitDropPath with Beit->Swin
-class SwinDropPath(nn.Module):
+# Copied from transformers.models.swin.modeling_swin.SwinDropPath with Swin->MaskFormerSwin
+class MaskFormerSwinDropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks)."""
 
     def __init__(self, drop_prob: Optional[float] = None) -> None:
@@ -446,7 +334,8 @@ class SwinDropPath(nn.Module):
         return "p={}".format(self.drop_prob)
 
 
-class SwinSelfAttention(nn.Module):
+# Copied from transformers.models.swin.modeling_swin.SwinSelfAttention with Swin->MaskFormerSwin
+class MaskFormerSwinSelfAttention(nn.Module):
     def __init__(self, config, dim, num_heads, window_size):
         super().__init__()
         if dim % num_heads != 0:
@@ -517,7 +406,7 @@ class SwinSelfAttention(nn.Module):
         attention_scores = attention_scores + relative_position_bias.unsqueeze(0)
 
         if attention_mask is not None:
-            # Apply the attention mask is (precomputed for all layers in SwinModel forward() function)
+            # Apply the attention mask is (precomputed for all layers in MaskFormerSwinModel forward() function)
             mask_shape = attention_mask.shape[0]
             attention_scores = attention_scores.view(
                 batch_size // mask_shape, mask_shape, self.num_attention_heads, dim, dim
@@ -546,7 +435,8 @@ class SwinSelfAttention(nn.Module):
         return outputs
 
 
-class SwinSelfOutput(nn.Module):
+# Copied from transformers.models.swin.modeling_swin.SwinSelfOutput with Swin->MaskFormerSwin
+class MaskFormerSwinSelfOutput(nn.Module):
     def __init__(self, config, dim):
         super().__init__()
         self.dense = nn.Linear(dim, dim)
@@ -559,11 +449,12 @@ class SwinSelfOutput(nn.Module):
         return hidden_states
 
 
-class SwinAttention(nn.Module):
+# Copied from transformers.models.swin.modeling_swin.SwinAttention with Swin->MaskFormerSwin
+class MaskFormerSwinAttention(nn.Module):
     def __init__(self, config, dim, num_heads, window_size):
         super().__init__()
-        self.self = SwinSelfAttention(config, dim, num_heads, window_size)
-        self.output = SwinSelfOutput(config, dim)
+        self.self = MaskFormerSwinSelfAttention(config, dim, num_heads, window_size)
+        self.output = MaskFormerSwinSelfOutput(config, dim)
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
@@ -597,7 +488,8 @@ class SwinAttention(nn.Module):
         return outputs
 
 
-class SwinIntermediate(nn.Module):
+# Copied from transformers.models.swin.modeling_swin.SwinIntermediate with Swin->MaskFormerSwin
+class MaskFormerSwinIntermediate(nn.Module):
     def __init__(self, config, dim):
         super().__init__()
         self.dense = nn.Linear(dim, int(config.mlp_ratio * dim))
@@ -612,7 +504,8 @@ class SwinIntermediate(nn.Module):
         return hidden_states
 
 
-class SwinOutput(nn.Module):
+# Copied from transformers.models.swin.modeling_swin.SwinOutput with Swin->MaskFormerSwin
+class MaskFormerSwinOutput(nn.Module):
     def __init__(self, config, dim):
         super().__init__()
         self.dense = nn.Linear(int(config.mlp_ratio * dim), dim)
@@ -624,43 +517,41 @@ class SwinOutput(nn.Module):
         return hidden_states
 
 
-class SwinLayer(nn.Module):
-    def __init__(self, config, dim, input_resolution, num_heads, shift_size=0):
+class MaskFormerSwinLayer(nn.Module):
+    def __init__(self, config, dim, input_resolution, num_heads, drop_path_rate=0.0, shift_size=0):
         super().__init__()
-        self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.shift_size = shift_size
         self.window_size = config.window_size
         self.input_resolution = input_resolution
         self.layernorm_before = nn.LayerNorm(dim, eps=config.layer_norm_eps)
-        self.attention = SwinAttention(config, dim, num_heads, window_size=self.window_size)
-        self.drop_path = SwinDropPath(config.drop_path_rate) if config.drop_path_rate > 0.0 else nn.Identity()
+        self.attention = MaskFormerSwinAttention(config, dim, num_heads, self.window_size)
+        self.drop_path = MaskFormerSwinDropPath(drop_path_rate) if drop_path_rate > 0.0 else nn.Identity()
         self.layernorm_after = nn.LayerNorm(dim, eps=config.layer_norm_eps)
-        self.intermediate = SwinIntermediate(config, dim)
-        self.output = SwinOutput(config, dim)
+        self.intermediate = MaskFormerSwinIntermediate(config, dim)
+        self.output = MaskFormerSwinOutput(config, dim)
 
-    def set_shift_and_window_size(self, input_resolution):
-        if min(input_resolution) <= self.window_size:
-            # if window size is larger than input resolution, we don't partition windows
-            self.shift_size = mindspore.tensor(0)
-            self.window_size = min(input_resolution)
-
-    def get_attn_mask(self, height, width, dtype):
+    def get_attn_mask(self, input_resolution):
         if self.shift_size > 0:
             # calculate attention mask for SW-MSA
-            img_mask = ops.zeros((1, height, width, 1), dtype=dtype)
+            height, width = input_resolution
+            img_mask = ops.zeros((1, height, width, 1))
             height_slices = (
-                slice(0, -self.window_size),
-                slice(-self.window_size, -self.shift_size),
-                slice(-self.shift_size, None),
+                slice(0, height-self.window_size),
+                slice(height-self.window_size, height-self.shift_size),
+                slice(height-self.shift_size, None),
             )
             width_slices = (
-                slice(0, -self.window_size),
-                slice(-self.window_size, -self.shift_size),
-                slice(-self.shift_size, None),
+                slice(0, width-self.window_size),
+                slice(width-self.window_size, width-self.shift_size),
+                slice(width-self.shift_size, None),
             )
             count = 0
             for height_slice in height_slices:
+                if height_slice.stop is not None and (height_slice.stop - height_slice.start) == 0:
+                    continue
                 for width_slice in width_slices:
+                    if width_slice.stop is not None and (width_slice.stop - width_slice.start) == 0:
+                        continue
                     img_mask[:, height_slice, width_slice, :] = count
                     count += 1
 
@@ -673,32 +564,20 @@ class SwinLayer(nn.Module):
         return attn_mask
 
     def maybe_pad(self, hidden_states, height, width):
-        pad_right = (self.window_size - width % self.window_size) % self.window_size
+        pad_left = pad_top = 0
+        pad_rigth = (self.window_size - width % self.window_size) % self.window_size
         pad_bottom = (self.window_size - height % self.window_size) % self.window_size
-        pad_values = (0, 0, 0, pad_right, 0, pad_bottom)
+        pad_values = (0, 0, pad_left, pad_rigth, pad_top, pad_bottom)
         hidden_states = nn.functional.pad(hidden_states, pad_values)
         return hidden_states, pad_values
 
-    def forward(
-        self,
-        hidden_states: mindspore.Tensor,
-        input_dimensions: Tuple[int, int],
-        head_mask: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = False,
-        always_partition: Optional[bool] = False,
-    ) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
-        if not always_partition:
-            self.set_shift_and_window_size(input_dimensions)
-        else:
-            pass
+    def forward(self, hidden_states, input_dimensions, head_mask=None, output_attentions=False):
         height, width = input_dimensions
-        batch_size, _, channels = hidden_states.shape
+        batch_size, dim, channels = hidden_states.shape
         shortcut = hidden_states
 
         hidden_states = self.layernorm_before(hidden_states)
-
         hidden_states = hidden_states.view(batch_size, height, width, channels)
-
         # pad hidden_states to multiples of window size
         hidden_states, pad_values = self.maybe_pad(hidden_states, height, width)
 
@@ -712,53 +591,53 @@ class SwinLayer(nn.Module):
         # partition windows
         hidden_states_windows = window_partition(shifted_hidden_states, self.window_size)
         hidden_states_windows = hidden_states_windows.view(-1, self.window_size * self.window_size, channels)
-        attn_mask = self.get_attn_mask(
-            height_pad, width_pad, dtype=hidden_states.dtype
-        )
+        attn_mask = self.get_attn_mask((height_pad, width_pad))
 
-        attention_outputs = self.attention(
+        self_attention_outputs = self.attention(
             hidden_states_windows, attn_mask, head_mask, output_attentions=output_attentions
         )
 
-        attention_output = attention_outputs[0]
+        attention_output = self_attention_outputs[0]
+        outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
 
         attention_windows = attention_output.view(-1, self.window_size, self.window_size, channels)
-        shifted_windows = window_reverse(attention_windows, self.window_size, height_pad, width_pad)
+        shifted_windows = window_reverse(
+            attention_windows, self.window_size, height_pad, width_pad
+        )  # B height' width' C
 
         # reverse cyclic shift
         if self.shift_size > 0:
             attention_windows = ops.roll(shifted_windows, shifts=(self.shift_size, self.shift_size), dims=(1, 2))
         else:
             attention_windows = shifted_windows
-
         was_padded = pad_values[3] > 0 or pad_values[5] > 0
         if was_padded:
             attention_windows = attention_windows[:, :height, :width, :]
 
         attention_windows = attention_windows.view(batch_size, height * width, channels)
-
         hidden_states = shortcut + self.drop_path(attention_windows)
-
         layer_output = self.layernorm_after(hidden_states)
         layer_output = self.intermediate(layer_output)
         layer_output = hidden_states + self.output(layer_output)
+        outputs = (layer_output,) + outputs
 
-        layer_outputs = (layer_output, attention_outputs[1]) if output_attentions else (layer_output,)
-        return layer_outputs
+        return outputs
 
 
-class SwinStage(nn.Module):
+class MaskFormerSwinStage(nn.Module):
+    # Copied from transformers.models.swin.modeling_swin.SwinStage.__init__ with Swin->MaskFormerSwin
     def __init__(self, config, dim, input_resolution, depth, num_heads, drop_path, downsample):
         super().__init__()
         self.config = config
         self.dim = dim
         self.blocks = nn.ModuleList(
             [
-                SwinLayer(
+                MaskFormerSwinLayer(
                     config=config,
                     dim=dim,
                     input_resolution=input_resolution,
                     num_heads=num_heads,
+                    drop_path_rate=drop_path[i],
                     shift_size=0 if (i % 2 == 0) else config.window_size // 2,
                 )
                 for i in range(depth)
@@ -774,39 +653,35 @@ class SwinStage(nn.Module):
         self.pointing = False
 
     def forward(
-        self,
-        hidden_states: mindspore.Tensor,
-        input_dimensions: Tuple[int, int],
-        head_mask: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = False,
-        always_partition: Optional[bool] = False,
-    ) -> Tuple[mindspore.Tensor]:
+        self, hidden_states, input_dimensions, head_mask=None, output_attentions=False, output_hidden_states=False
+    ):
+        all_hidden_states = () if output_hidden_states else None
+
         height, width = input_dimensions
-        for i, layer_module in enumerate(self.blocks):
+        for i, block_module in enumerate(self.blocks):
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+
             layer_head_mask = head_mask[i] if head_mask is not None else None
+            block_hidden_states = block_module(hidden_states, input_dimensions, layer_head_mask, output_attentions)
 
-            layer_outputs = layer_module(
-                hidden_states, input_dimensions, layer_head_mask, output_attentions, always_partition
-            )
+            hidden_states = block_hidden_states[0]
 
-            hidden_states = layer_outputs[0]
+            if output_hidden_states:
+                all_hidden_states += (hidden_states,)
 
-        hidden_states_before_downsampling = hidden_states
         if self.downsample is not None:
             height_downsampled, width_downsampled = (height + 1) // 2, (width + 1) // 2
             output_dimensions = (height, width, height_downsampled, width_downsampled)
-            hidden_states = self.downsample(hidden_states_before_downsampling, input_dimensions)
+            hidden_states = self.downsample(hidden_states, input_dimensions)
         else:
             output_dimensions = (height, width, height, width)
 
-        stage_outputs = (hidden_states, hidden_states_before_downsampling, output_dimensions)
-
-        if output_attentions:
-            stage_outputs += layer_outputs[1:]
-        return stage_outputs
+        return hidden_states, output_dimensions, all_hidden_states
 
 
-class SwinEncoder(nn.Module):
+class MaskFormerSwinEncoder(nn.Module):
+    # Copied from transformers.models.swin.modeling_swin.SwinEncoder.__init__ with Swin->MaskFormerSwin
     def __init__(self, config, grid_size):
         super().__init__()
         self.num_layers = len(config.depths)
@@ -814,14 +689,14 @@ class SwinEncoder(nn.Module):
         dpr = [x.item() for x in ops.linspace(0, config.drop_path_rate, sum(config.depths))]
         self.layers = nn.ModuleList(
             [
-                SwinStage(
+                MaskFormerSwinStage(
                     config=config,
                     dim=int(config.embed_dim * 2**i_layer),
                     input_resolution=(grid_size[0] // (2**i_layer), grid_size[1] // (2**i_layer)),
                     depth=config.depths[i_layer],
                     num_heads=config.num_heads[i_layer],
                     drop_path=dpr[sum(config.depths[:i_layer]) : sum(config.depths[: i_layer + 1])],
-                    downsample=SwinPatchMerging if (i_layer < self.num_layers - 1) else None,
+                    downsample=MaskFormerSwinPatchMerging if (i_layer < self.num_layers - 1) else None,
                 )
                 for i_layer in range(self.num_layers)
             ]
@@ -831,120 +706,97 @@ class SwinEncoder(nn.Module):
 
     def forward(
         self,
-        hidden_states: mindspore.Tensor,
-        input_dimensions: Tuple[int, int],
-        head_mask: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = False,
-        output_hidden_states: Optional[bool] = False,
-        output_hidden_states_before_downsampling: Optional[bool] = False,
-        always_partition: Optional[bool] = False,
-        return_dict: Optional[bool] = True,
-    ) -> Union[Tuple, SwinEncoderOutput]:
+        hidden_states,
+        input_dimensions,
+        head_mask=None,
+        output_attentions=False,
+        output_hidden_states=False,
+        return_dict=True,
+    ):
         all_hidden_states = () if output_hidden_states else None
-        all_reshaped_hidden_states = () if output_hidden_states else None
+        all_input_dimensions = ()
         all_self_attentions = () if output_attentions else None
 
         if output_hidden_states:
-            batch_size, _, hidden_size = hidden_states.shape
-            # rearrange b (h w) c -> b c h w
-            reshaped_hidden_state = hidden_states.view(batch_size, *input_dimensions, hidden_size)
-            reshaped_hidden_state = reshaped_hidden_state.permute(0, 3, 1, 2)
-            all_hidden_states += (hidden_states,)
-            all_reshaped_hidden_states += (reshaped_hidden_state,)
+            all_hidden_states = all_hidden_states + (hidden_states,)
 
         for i, layer_module in enumerate(self.layers):
             layer_head_mask = head_mask[i] if head_mask is not None else None
 
             if self.gradient_checkpointing and self.training:
-                layer_outputs = self._gradient_checkpointing_func(
+                layer_hidden_states, output_dimensions, layer_all_hidden_states = self._gradient_checkpointing_func(
                     layer_module.__call__,
+                    hidden_states,
+                    layer_head_mask,
+                    output_attentions,
+                )
+            else:
+                layer_hidden_states, output_dimensions, layer_all_hidden_states = layer_module(
                     hidden_states,
                     input_dimensions,
                     layer_head_mask,
                     output_attentions,
-                    always_partition,
+                    output_hidden_states,
                 )
-            else:
-                layer_outputs = layer_module(
-                    hidden_states, input_dimensions, layer_head_mask, output_attentions, always_partition
-                )
-
-            hidden_states = layer_outputs[0]
-            hidden_states_before_downsampling = layer_outputs[1]
-            output_dimensions = layer_outputs[2]
 
             input_dimensions = (output_dimensions[-2], output_dimensions[-1])
+            all_input_dimensions += (input_dimensions,)
+            if output_hidden_states:
+                all_hidden_states += (layer_all_hidden_states,)
 
-            if output_hidden_states and output_hidden_states_before_downsampling:
-                batch_size, _, hidden_size = hidden_states_before_downsampling.shape
-                # rearrange b (h w) c -> b c h w
-                # here we use the original (not downsampled) height and width
-                reshaped_hidden_state = hidden_states_before_downsampling.view(
-                    batch_size, *(output_dimensions[0], output_dimensions[1]), hidden_size
-                )
-                reshaped_hidden_state = reshaped_hidden_state.permute(0, 3, 1, 2)
-                all_hidden_states += (hidden_states_before_downsampling,)
-                all_reshaped_hidden_states += (reshaped_hidden_state,)
-            elif output_hidden_states and not output_hidden_states_before_downsampling:
-                batch_size, _, hidden_size = hidden_states.shape
-                # rearrange b (h w) c -> b c h w
-                reshaped_hidden_state = hidden_states.view(batch_size, *input_dimensions, hidden_size)
-                reshaped_hidden_state = reshaped_hidden_state.permute(0, 3, 1, 2)
-                all_hidden_states += (hidden_states,)
-                all_reshaped_hidden_states += (reshaped_hidden_state,)
-
+            hidden_states = layer_hidden_states
             if output_attentions:
-                all_self_attentions += layer_outputs[3:]
+                all_self_attentions = all_self_attentions + (layer_all_hidden_states[1],)
 
         if not return_dict:
             return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)
 
-        return SwinEncoderOutput(
+        return MaskFormerSwinBaseModelOutput(
             last_hidden_state=hidden_states,
             hidden_states=all_hidden_states,
+            hidden_states_spatial_dimensions=all_input_dimensions,
             attentions=all_self_attentions,
-            reshaped_hidden_states=all_reshaped_hidden_states,
         )
 
 
-class SwinPreTrainedModel(PreTrainedModel):
+# Copied from transformers.models.swin.modeling_swin.SwinPreTrainedModel with Swin->MaskFormerSwin, swin->model
+class MaskFormerSwinPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
 
-    config_class = SwinConfig
-    base_model_prefix = "swin"
+    config_class = MaskFormerSwinConfig
+    base_model_prefix = "model"
     main_input_name = "pixel_values"
     supports_gradient_checkpointing = True
-    _no_split_modules = ["SwinStage"]
+    _no_split_modules = ["MaskFormerSwinStage"]
 
     def _init_weights(self, module):
         """Initialize the weights"""
         if isinstance(module, (nn.Linear, nn.Conv2d)):
-            nn.init.normal_(module.weight, mean=0.0, std=self.config.initializer_range)
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            nn.init.normal_(module.weight.data, mean=0.0, std=self.config.initializer_range)
             if module.bias is not None:
-                nn.init.zeros_(module.bias)
+                nn.init.zeros_(module.bias.data)
         elif isinstance(module, nn.LayerNorm):
-            nn.init.zeros_(module.bias)
-            nn.init.ones_(module.weight)
+            nn.init.zeros_(module.bias.data)
+            nn.init.ones_(module.weight.data)
 
 
-class SwinModel(SwinPreTrainedModel):
-    def __init__(self, config, add_pooling_layer=True, use_mask_token=False):
+class MaskFormerSwinModel(MaskFormerSwinPreTrainedModel):
+    def __init__(self, config, add_pooling_layer=True):
         super().__init__(config)
         self.config = config
         self.num_layers = len(config.depths)
         self.num_features = int(config.embed_dim * 2 ** (self.num_layers - 1))
 
-        self.embeddings = SwinEmbeddings(config, use_mask_token=use_mask_token)
-        self.encoder = SwinEncoder(config, self.embeddings.patch_grid)
+        self.embeddings = MaskFormerSwinEmbeddings(config)
+        self.encoder = MaskFormerSwinEncoder(config, self.embeddings.patch_grid)
 
         self.layernorm = nn.LayerNorm(self.num_features, eps=config.layer_norm_eps)
         self.pooler = nn.AdaptiveAvgPool1d(1) if add_pooling_layer else None
-
-        # Initialize weights and apply final processing
-        self.post_init()
 
     def get_input_embeddings(self):
         return self.embeddings.patch_embeddings
@@ -959,18 +811,13 @@ class SwinModel(SwinPreTrainedModel):
 
     def forward(
         self,
-        pixel_values: Optional[mindspore.Tensor] = None,
-        bool_masked_pos: Optional[mindspore.Tensor] = None,
-        head_mask: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        interpolate_pos_encoding: bool = False,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, SwinModelOutput]:
-        r"""
-        bool_masked_pos (`mindspore.Tensor` of shape `(batch_size, num_patches)`, *optional*):
-            Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
-        """
+        pixel_values=None,
+        head_mask=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        interpolate_pos_encoding=False,
+        return_dict=None,
+    ):
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -988,7 +835,7 @@ class SwinModel(SwinPreTrainedModel):
         head_mask = self.get_head_mask(head_mask, len(self.config.depths))
 
         embedding_output, input_dimensions = self.embeddings(
-            pixel_values, bool_masked_pos=bool_masked_pos, interpolate_pos_encoding=interpolate_pos_encoding
+            pixel_values, interpolate_pos_encoding=interpolate_pos_encoding
         )
 
         encoder_outputs = self.encoder(
@@ -1000,7 +847,7 @@ class SwinModel(SwinPreTrainedModel):
             return_dict=return_dict,
         )
 
-        sequence_output = encoder_outputs[0]
+        sequence_output = encoder_outputs.last_hidden_state if return_dict else encoder_outputs[0]
         sequence_output = self.layernorm(sequence_output)
 
         pooled_output = None
@@ -1009,292 +856,91 @@ class SwinModel(SwinPreTrainedModel):
             pooled_output = ops.flatten(pooled_output, 1)
 
         if not return_dict:
-            output = (sequence_output, pooled_output) + encoder_outputs[1:]
+            return (sequence_output, pooled_output) + encoder_outputs[1:]
 
-            return output
+        hidden_states_spatial_dimensions = (input_dimensions,) + encoder_outputs.hidden_states_spatial_dimensions
 
-        return SwinModelOutput(
+        return MaskFormerSwinModelOutputWithPooling(
             last_hidden_state=sequence_output,
             pooler_output=pooled_output,
             hidden_states=encoder_outputs.hidden_states,
+            hidden_states_spatial_dimensions=hidden_states_spatial_dimensions,
             attentions=encoder_outputs.attentions,
-            reshaped_hidden_states=encoder_outputs.reshaped_hidden_states,
         )
 
 
-class SwinForMaskedImageModeling(SwinPreTrainedModel):
-    def __init__(self, config):
-        super().__init__(config)
+class MaskFormerSwinBackbone(MaskFormerSwinPreTrainedModel, BackboneMixin):
+    """
+    MaskFormerSwin backbone, designed especially for the MaskFormer framework.
 
-        self.swin = SwinModel(config, add_pooling_layer=False, use_mask_token=True)
+    This classes reshapes `hidden_states` from (`batch_size, sequence_length, hidden_size)` to (`batch_size,
+    num_channels, height, width)`). It also adds additional layernorms after each stage.
 
-        num_features = int(config.embed_dim * 2 ** (config.num_layers - 1))
-        self.decoder = nn.Sequential(
-            nn.Conv2d(
-                in_channels=num_features, out_channels=config.encoder_stride**2 * config.num_channels, kernel_size=1
-            ),
-            nn.PixelShuffle(config.encoder_stride),
-        )
+    Args:
+        config (`MaskFormerSwinConfig`):
+            The configuration used by [`MaskFormerSwinModel`].
+    """
 
-        # Initialize weights and apply final processing
-        self.post_init()
-
-    def forward(
-        self,
-        pixel_values: Optional[mindspore.Tensor] = None,
-        bool_masked_pos: Optional[mindspore.Tensor] = None,
-        head_mask: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        interpolate_pos_encoding: bool = False,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, SwinMaskedImageModelingOutput]:
-        r"""
-        bool_masked_pos (`mindspore.Tensor` of shape `(batch_size, num_patches)`):
-            Boolean masked positions. Indicates which patches are masked (1) and which aren't (0).
-
-        Returns:
-
-        Examples:
-        ```python
-        >>> from transformers import AutoImageProcessor, SwinForMaskedImageModeling
-        >>> import torch
-        >>> from PIL import Image
-        >>> import requests
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> image_processor = AutoImageProcessor.from_pretrained("microsoft/swin-base-simmim-window6-192")
-        >>> model = SwinForMaskedImageModeling.from_pretrained("microsoft/swin-base-simmim-window6-192")
-
-        >>> num_patches = (model.config.image_size // model.config.patch_size) ** 2
-        >>> pixel_values = image_processor(images=image, return_tensors="ms").pixel_values
-        >>> # create random boolean mask of shape (batch_size, num_patches)
-        >>> bool_masked_pos = ops.randint(low=0, high=2, size=(1, num_patches)).bool()
-
-        >>> outputs = model(pixel_values, bool_masked_pos=bool_masked_pos)
-        >>> loss, reconstructed_pixel_values = outputs.loss, outputs.reconstruction
-        >>> list(reconstructed_pixel_values.shape)
-        [1, 3, 192, 192]
-        ```"""
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
-        outputs = self.swin(
-            pixel_values,
-            bool_masked_pos=bool_masked_pos,
-            head_mask=head_mask,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            interpolate_pos_encoding=interpolate_pos_encoding,
-            return_dict=return_dict,
-        )
-
-        sequence_output = outputs[0]
-        # Reshape to (batch_size, num_channels, height, width)
-        sequence_output = ops.transpose(sequence_output, 1, 2)
-        batch_size, num_channels, sequence_length = sequence_output.shape
-        height = width = math.floor(sequence_length**0.5)
-        sequence_output = sequence_output.reshape(batch_size, num_channels, height, width)
-
-        # Reconstruct pixel values
-        reconstructed_pixel_values = self.decoder(sequence_output)
-
-        masked_im_loss = None
-        if bool_masked_pos is not None:
-            size = self.config.image_size // self.config.patch_size
-            bool_masked_pos = bool_masked_pos.reshape(-1, size, size)
-            mask = (
-                ops.repeat_interleave(ops.repeat_interleave(bool_masked_pos, self.config.patch_size, 1), self.config.patch_size, 2)
-                .unsqueeze(1)
-            )
-            reconstruction_loss = nn.functional.l1_loss(pixel_values, reconstructed_pixel_values, reduction="none")
-            masked_im_loss = (reconstruction_loss * mask).sum() / (mask.sum() + 1e-5) / self.config.num_channels
-
-        if not return_dict:
-            output = (reconstructed_pixel_values,) + outputs[2:]
-            return ((masked_im_loss,) + output) if masked_im_loss is not None else output
-
-        return SwinMaskedImageModelingOutput(
-            loss=masked_im_loss,
-            reconstruction=reconstructed_pixel_values,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-            reshaped_hidden_states=outputs.reshaped_hidden_states,
-        )
-
-
-class SwinForImageClassification(SwinPreTrainedModel):
-    def __init__(self, config):
-        super().__init__(config)
-
-        self.num_labels = config.num_labels
-        self.swin = SwinModel(config)
-
-        # Classifier head
-        self.classifier = (
-            nn.Linear(self.swin.num_features, config.num_labels) if config.num_labels > 0 else nn.Identity()
-        )
-
-        # Initialize weights and apply final processing
-        self.post_init()
-
-    def forward(
-        self,
-        pixel_values: Optional[mindspore.Tensor] = None,
-        head_mask: Optional[mindspore.Tensor] = None,
-        labels: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        interpolate_pos_encoding: bool = False,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, SwinImageClassifierOutput]:
-        r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the image classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
-        """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
-        outputs = self.swin(
-            pixel_values,
-            head_mask=head_mask,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            interpolate_pos_encoding=interpolate_pos_encoding,
-            return_dict=return_dict,
-        )
-
-        pooled_output = outputs[1]
-
-        logits = self.classifier(pooled_output)
-
-        loss = None
-        if labels is not None:
-            if self.config.problem_type is None:
-                if self.num_labels == 1:
-                    self.config.problem_type = "regression"
-                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
-                    self.config.problem_type = "single_label_classification"
-                else:
-                    self.config.problem_type = "multi_label_classification"
-
-            if self.config.problem_type == "regression":
-                loss_fct = MSELoss()
-                if self.num_labels == 1:
-                    loss = loss_fct(logits.squeeze(), labels.squeeze())
-                else:
-                    loss = loss_fct(logits, labels)
-            elif self.config.problem_type == "single_label_classification":
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-            elif self.config.problem_type == "multi_label_classification":
-                loss_fct = BCEWithLogitsLoss()
-                loss = loss_fct(logits, labels)
-
-        if not return_dict:
-            output = (logits,) + outputs[2:]
-            return ((loss,) + output) if loss is not None else output
-
-        return SwinImageClassifierOutput(
-            loss=loss,
-            logits=logits,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-            reshaped_hidden_states=outputs.reshaped_hidden_states,
-        )
-
-
-class SwinBackbone(SwinPreTrainedModel, BackboneMixin):
-    def __init__(self, config: SwinConfig):
+    def __init__(self, config: MaskFormerSwinConfig):
         super().__init__(config)
         super()._init_backbone(config)
 
+        self.model = MaskFormerSwinModel(config)
+        if "stem" in self.out_features:
+            raise ValueError("This backbone does not support 'stem' in the `out_features`.")
         self.num_features = [config.embed_dim] + [int(config.embed_dim * 2**i) for i in range(len(config.depths))]
-        self.embeddings = SwinEmbeddings(config)
-        self.encoder = SwinEncoder(config, self.embeddings.patch_grid)
-
-        # Add layer norms to hidden states of out_features
-        hidden_states_norms = {}
-        for stage, num_channels in zip(self._out_features, self.channels):
-            hidden_states_norms[stage] = nn.LayerNorm(num_channels)
-        self.hidden_states_norms = nn.ModuleDict(hidden_states_norms)
+        self.hidden_states_norms = nn.ModuleList(
+            [nn.LayerNorm(num_channels) for num_channels in self.num_features[1:]]
+        )
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def get_input_embeddings(self):
-        return self.embeddings.patch_embeddings
-
     def forward(
         self,
-        pixel_values: mindspore.Tensor,
+        pixel_values: Tensor,
         output_hidden_states: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> BackboneOutput:
-        """
-        Returns:
-
-        Examples:
-
-        ```python
-        >>> from transformers import AutoImageProcessor, AutoBackbone
-        >>> import torch
-        >>> from PIL import Image
-        >>> import requests
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> processor = AutoImageProcessor.from_pretrained("shi-labs/nat-mini-in1k-224")
-        >>> model = AutoBackbone.from_pretrained(
-        ...     "microsoft/swin-tiny-patch4-window7-224", out_features=["stage1", "stage2", "stage3", "stage4"]
-        ... )
-
-        >>> inputs = processor(image, return_tensors="ms")
-        >>> outputs = model(**inputs)
-        >>> feature_maps = outputs.feature_maps
-        >>> list(feature_maps[-1].shape)
-        [1, 768, 7, 7]
-        ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
 
-        embedding_output, input_dimensions = self.embeddings(pixel_values)
-
-        outputs = self.encoder(
-            embedding_output,
-            input_dimensions,
-            head_mask=None,
-            output_attentions=output_attentions,
-            output_hidden_states=True,
-            output_hidden_states_before_downsampling=True,
-            always_partition=True,
-            return_dict=True,
+        outputs = self.model(
+            pixel_values, output_hidden_states=True, output_attentions=output_attentions, return_dict=True
         )
 
-        hidden_states = outputs.reshaped_hidden_states
-
+        # we skip the stem
+        hidden_states = outputs.hidden_states[1:]
+        # we need to reshape the hidden states to their original spatial dimensions
+        # spatial dimensions contains all the heights and widths of each stage, including after the embeddings
+        spatial_dimensions: Tuple[Tuple[int, int]] = outputs.hidden_states_spatial_dimensions
         feature_maps = ()
-        for stage, hidden_state in zip(self.stage_names, hidden_states):
+        for i, (hidden_state, stage, (height, width)) in enumerate(
+            zip(hidden_states, self.stage_names[1:], spatial_dimensions)
+        ):
+            norm = self.hidden_states_norms[i]
+            # the last element corespond to the layer's last block output but before patch merging
+            hidden_state_unpolled = hidden_state[-1]
+            hidden_state_norm = norm(hidden_state_unpolled)
+            # the pixel decoder (FPN) expects 3D tensors (features)
+            batch_size, _, hidden_size = hidden_state_norm.shape
+            # reshape "b (h w) d -> b d h w"
+            hidden_state_permuted = (
+                hidden_state_norm.permute(0, 2, 1).view((batch_size, hidden_size, height, width))
+            )
             if stage in self.out_features:
-                batch_size, num_channels, height, width = hidden_state.shape
-                hidden_state = hidden_state.permute(0, 2, 3, 1)
-                hidden_state = hidden_state.view(batch_size, height * width, num_channels)
-                hidden_state = self.hidden_states_norms[stage](hidden_state)
-                hidden_state = hidden_state.view(batch_size, height, width, num_channels)
-                hidden_state = hidden_state.permute(0, 3, 1, 2)
-                feature_maps += (hidden_state,)
+                feature_maps += (hidden_state_permuted,)
 
         if not return_dict:
             output = (feature_maps,)
             if output_hidden_states:
                 output += (outputs.hidden_states,)
+            if output_attentions:
+                output += (outputs.attentions,)
             return output
 
         return BackboneOutput(
@@ -1304,8 +950,7 @@ class SwinBackbone(SwinPreTrainedModel, BackboneMixin):
         )
 
 __all__ = [
-    'SwinModel',
-    'SwinForMaskedImageModeling',
-    'SwinForImageClassification',
-    'SwinBackbone',
+    "MaskFormerSwinBackbone",
+    "MaskFormerSwinModel",
+    "MaskFormerSwinPreTrainedModel",
 ]

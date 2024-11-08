@@ -15,10 +15,19 @@
 """
 MaskFormer Models init
 """
-from . import configuration_maskformer, modeling_maskformer
+from . import configuration_maskformer, modeling_maskformer, feature_extraction_maskformer, image_processing_maskformer, \
+    configuration_maskformer_swin, modeling_maskformer_swin
 from .configuration_maskformer import *
+from .configuration_maskformer_swin import *
 from .modeling_maskformer import *
+from .feature_extraction_maskformer import *
+from .image_processing_maskformer import *
+from .modeling_maskformer_swin import *
 
 __all__ = []
 __all__.extend(modeling_maskformer.__all__)
+__all__.extend(modeling_maskformer_swin.__all__)
 __all__.extend(configuration_maskformer.__all__)
+__all__.extend(configuration_maskformer_swin.__all__)
+__all__.extend(feature_extraction_maskformer.__all__)
+__all__.extend(image_processing_maskformer.__all__)

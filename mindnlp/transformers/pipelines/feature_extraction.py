@@ -1,3 +1,4 @@
+"""feature extraction"""
 from typing import Dict
 
 from .base import GenericTensor, Pipeline

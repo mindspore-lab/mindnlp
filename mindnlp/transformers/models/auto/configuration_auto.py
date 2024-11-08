@@ -138,6 +138,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("marian", "MarianConfig"),
         ('markuplm', "MarkupLMConfig"),
         ("mask2former", "Mask2FormerConfig"),
+        ("maskformer", "MaskFormerConfig"),
+        ("maskformer-swin", "MaskFormerSwinConfig"),
         ("mbart", "MBartConfig"),
         ("mctct", "MCTCTConfig"),
         ("megatron-bert", 'MegatronBertConfig'),

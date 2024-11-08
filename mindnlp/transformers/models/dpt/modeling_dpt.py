@@ -34,7 +34,7 @@ from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, DepthEstimatorOutput, SemanticSegmenterOutput
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
-from ...backbone_utils import load_backbone
+from ....utils.backbone_utils import load_backbone
 from .configuration_dpt import DPTConfig
 
 logger = logging.get_logger(__name__)
