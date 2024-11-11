@@ -1103,7 +1103,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
             mask_cls = class_queries_logits[i]
 
             scores = ops.softmax(mask_cls, axis=-1)[:, :-1]
-            labels = ops.arange(num_classes).unsqueeze(0).repeat(num_queries, 1).flatten()
+            labels = ops.arange(num_classes).unsqueeze(0).repeat(num_queries, 0).flatten()
 
             scores_per_image, topk_indices = scores.flatten().topk(num_queries, sorted=False)
             labels_per_image = labels[topk_indices]
