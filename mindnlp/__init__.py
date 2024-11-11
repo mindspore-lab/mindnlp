@@ -44,6 +44,7 @@ if platform.system().lower() == 'linux':
         context.set_context(ascend_config={"precision_mode": "allow_mix_precision"})
 
 from mindspore import jit as ms_jit
+from mindnlp import patch
 from mindnlp import transformers
 from mindnlp import dataset
 from mindnlp import evaluate
