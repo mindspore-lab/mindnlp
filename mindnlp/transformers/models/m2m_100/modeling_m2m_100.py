@@ -21,7 +21,7 @@ import mindspore
 from mindnlp.core import nn, ops, no_grad, get_default_dtype
 from mindnlp.core.nn import CrossEntropyLoss
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
     BaseModelOutput,

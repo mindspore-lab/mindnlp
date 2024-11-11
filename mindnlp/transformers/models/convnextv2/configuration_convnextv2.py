@@ -15,7 +15,7 @@
 """ ConvNeXTV2 model configuration"""
 
 from mindnlp.utils import logging
-from ...backbone_utils import BackboneConfigMixin, get_aligned_output_features_output_indices
+from ....utils.backbone_utils import BackboneConfigMixin, get_aligned_output_features_output_indices
 from ...configuration_utils import PretrainedConfig
 
 logger = logging.get_logger(__name__)

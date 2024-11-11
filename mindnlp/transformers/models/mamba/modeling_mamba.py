@@ -22,7 +22,7 @@ import mindspore
 from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import CrossEntropyLoss
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...cache_utils import MambaCache
 from ...modeling_utils import PreTrainedModel
 from ....utils import (

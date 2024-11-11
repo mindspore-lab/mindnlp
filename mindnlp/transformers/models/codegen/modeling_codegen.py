@@ -25,7 +25,7 @@ from mindspore.common.initializer import initializer, Normal
 from mindnlp.core import nn, ops, get_default_dtype
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 from ...modeling_utils import PreTrainedModel
 from .configuration_codegen import CodeGenConfig

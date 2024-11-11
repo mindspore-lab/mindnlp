@@ -25,7 +25,7 @@ from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 from mindnlp.core.nn import CrossEntropyLoss
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 # from ...integrations.deepspeed import is_deepspeed_zero3_enabled
 from ...modeling_outputs import BaseModelOutput, CausalLMOutput, SequenceClassifierOutput, Wav2Vec2BaseModelOutput
 from ...modeling_utils import PreTrainedModel
@@ -294,24 +294,10 @@ class UniSpeechPositionalConvEmbedding(nn.Module):
         )
 
         weight_norm = nn.utils.weight_norm
-        # if hasattr(nn.utils.parametrizations, "weight_norm"):
-        weight_norm = nn.utils.weight_norm
+        if hasattr(nn.utils.parametrizations, "weight_norm"):
+            weight_norm = nn.utils.parametrizations.weight_norm
 
-        # if is_deepspeed_zero3_enabled():
-        #     import deepspeed
-
-        # with deepspeed.zero.GatheredParameters(self.conv.weight, modifier_rank=0):
         self.conv = weight_norm(self.conv, name="weight", dim=2)
-        # if hasattr(self.conv, "parametrizations"):
-        #     weight_g = self.conv.parametrizations.weight.original0
-        #     weight_v = self.conv.parametrizations.weight.original1
-        # else:
-        #     weight_g = self.conv.weight_g
-        #     weight_v = self.conv.weight_v
-        # deepspeed.zero.register_external_parameter(self, weight_v)
-        # deepspeed.zero.register_external_parameter(self, weight_g)
-        # else:
-        #     self.conv = weight_norm(self.conv, name="weight", dim=2)
 
         self.padding = UniSpeechSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]

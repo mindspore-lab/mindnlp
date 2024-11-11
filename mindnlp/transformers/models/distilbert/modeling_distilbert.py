@@ -27,7 +27,7 @@ from mindspore.common.initializer import initializer, Normal
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from ...activations import get_activation
+from ....common.activations import get_activation
 from ...configuration_utils import PretrainedConfig
 from ...modeling_outputs import (
     BaseModelOutput,

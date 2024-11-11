@@ -24,7 +24,7 @@ from mindspore.common.initializer import initializer, Normal, TruncatedNormal
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPooling
 from ...modeling_utils import PreTrainedModel
 from ....utils import (

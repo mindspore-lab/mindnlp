@@ -26,7 +26,7 @@ from mindnlp.core import nn, ops
 from mindnlp.core.nn import Parameter
 from mindnlp.utils import logging
 from .configuration_gpt2 import GPT2Config
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_utils import PreTrainedModel, SequenceSummary
 from ...ms_utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 

@@ -22,7 +22,7 @@ import mindspore
 from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import logging
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 #from ...integrations.deepspeed import is_deepspeed_zero3_enabled
 from ...modeling_outputs import (
     BaseModelOutput,

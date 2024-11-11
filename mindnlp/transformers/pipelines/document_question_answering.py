@@ -11,26 +11,32 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=import-error
-"""
-document-question-answering
-"""
+"""document qa"""
 import re
 from typing import List, Optional, Tuple, Union
 
-import mindspore
 import numpy as np
-from mindnlp.transformers.models.auto.modeling_auto import MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING_NAMES
 
-from mindnlp.transformers.pipelines.base import ChunkPipeline
+from ...utils import (
+    ExplicitEnum,
+    is_pytesseract_available,
+    is_mindspore_available,
+    is_vision_available,
+    logging,
+)
+from .base import ChunkPipeline
+from .question_answering import select_starts_ends
 
-from mindnlp.utils import is_vision_available, ExplicitEnum, logging
-from ...utils.import_utils import is_pytesseract_available
 
 if is_vision_available():
     from PIL import Image
 
     from ..image_utils import load_image
+
+if is_mindspore_available():
+    import mindspore
+
+    from ..models.auto.modeling_auto import MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING_NAMES
 
 TESSERACT_LOADED = False
 if is_pytesseract_available():
@@ -44,21 +50,6 @@ logger = logging.get_logger(__name__)
 # However, because the pipeline may evolve from what layoutlmv3 currently does, it's copied (vs. imported) to avoid creating an
 # unnecessary dependency.
 def normalize_box(box, width, height):
-    """
-    This function normalizes the coordinates of a bounding box relative to a given width and height.
-    
-    Args:
-        box (list): A list containing the coordinates of the bounding box in the format [x_min, y_min, x_max, y_max].
-        width (int): The width of the image or area to which the bounding box coordinates are relative.
-        height (int): The height of the image or area to which the bounding box coordinates are relative.
-
-    Returns:
-        list: A normalized bounding box coordinates in the format [x_min_norm, y_min_norm, x_max_norm, y_max_norm].
-            The values are scaled by 1000 and rounded to integers.
-
-    Raises:
-        None
-    """
     return [
         int(1000 * (box[0] / width)),
         int(1000 * (box[1] / height)),
@@ -101,160 +92,42 @@ def apply_tesseract(image: "Image.Image", lang: Optional[str], tesseract_config:
 
 
 class ModelType(ExplicitEnum):
-
-    """
-    Represents a custom model type that inherits from ExplicitEnum.
-
-    This class provides a custom model type implementation by inheriting from ExplicitEnum.
-    It defines various properties and methods for working with model types.
-    """
     LayoutLM = "layoutlm"
     LayoutLMv2andv3 = "layoutlmv2andv3"
     VisionEncoderDecoder = "vision_encoder_decoder"
 
 
-def decode_spans(
-        start: np.ndarray, end: np.ndarray, topk: int, max_answer_len: int, undesired_tokens: np.ndarray
-) -> Tuple:
-    """
-    Take the output of any `ModelForQuestionAnswering` and will generate probabilities for each span to be the actual
-    answer.
-    In addition, it filters out some unwanted/impossible cases like answer len being greater than max_answer_len or
-    answer end position being before the starting position. The method supports output the k-best answer through the
-    topk argument.
-
-    Args:
-        start (`np.ndarray`): Individual start probabilities for each token.
-        end (`np.ndarray`): Individual end probabilities for each token.
-        topk (`int`): Indicates how many possible answer span(s) to extract from the model output.
-        max_answer_len (`int`): Maximum size of the answer to extract from the model's output.
-        undesired_tokens (`np.ndarray`): Mask determining tokens that can be part of the answer
-    """
-    # Ensure we have batch axis
-    if start.ndim == 1:
-        start = start[None]
-
-    if end.ndim == 1:
-        end = end[None]
-
-    # Compute the score of each tuple(start, end) to be the real answer
-    outer = np.matmul(np.expand_dims(start, -1), np.expand_dims(end, 1))
-
-    # Remove candidate with end < start and end - start > max_answer_len
-    candidates = np.tril(np.triu(outer), max_answer_len - 1)
-
-    #  Inspired by Chen & al. (https://github.com/facebookresearch/DrQA)
-    scores_flat = candidates.flatten()
-    if topk == 1:
-        idx_sort = [np.argmax(scores_flat)]
-    elif len(scores_flat) < topk:
-        idx_sort = np.argsort(-scores_flat)
-    else:
-        idx = np.argpartition(-scores_flat, topk)[0:topk]
-        idx_sort = idx[np.argsort(-scores_flat[idx])]
-
-    starts, ends = np.unravel_index(idx_sort, candidates.shape)[1:] # pylint: disable=unbalanced-tuple-unpacking
-    desired_spans = np.isin(starts, undesired_tokens.nonzero()) & np.isin(ends, undesired_tokens.nonzero())
-    starts = starts[desired_spans]
-    ends = ends[desired_spans]
-    scores = candidates[0, starts, ends]
-
-    return starts, ends, scores
-
-
-def select_starts_ends(
-        start,
-        end,
-        p_mask,
-        attention_mask,
-        min_null_score=1000000,
-        top_k=1,
-        handle_impossible_answer=False,
-        max_answer_len=15,
-):
-    """
-    Takes the raw output of any `ModelForQuestionAnswering` and first normalizes its outputs and then uses
-    `decode_spans()` to generate probabilities for each span to be the actual answer.
-
-    Args:
-        start (`np.ndarray`): Individual start logits for each token.
-        end (`np.ndarray`): Individual end logits for each token.
-        p_mask (`np.ndarray`): A mask with 1 for values that cannot be in the answer
-        attention_mask (`np.ndarray`): The attention mask generated by the tokenizer
-        min_null_score(`float`): The minimum null (empty) answer score seen so far.
-        topk (`int`): Indicates how many possible answer span(s) to extract from the model output.
-        handle_impossible_answer(`bool`): Whether to allow null (empty) answers
-        max_answer_len (`int`): Maximum size of the answer to extract from the model's output.
-    """
-    # Ensure padded tokens & question tokens cannot belong to the set of candidate answers.
-    undesired_tokens = np.abs(np.array(p_mask) - 1)
-
-    if attention_mask is not None:
-        undesired_tokens = undesired_tokens & attention_mask
-
-    # Generate mask
-    undesired_tokens_mask = undesired_tokens == 0.0
-
-    # Make sure non-context indexes in the tensor cannot contribute to the softmax
-    start = np.where(undesired_tokens_mask, -10000.0, start)
-    end = np.where(undesired_tokens_mask, -10000.0, end)
-
-    # Normalize logits and spans to retrieve the answer
-    start = np.exp(start - start.max(axis=-1, keepdims=True)) # pylint: disable=unexpected-keyword-arg
-    start = start / start.sum()
-
-    end = np.exp(end - end.max(axis=-1, keepdims=True)) # pylint: disable=unexpected-keyword-arg
-    end = end / end.sum()
-
-    if handle_impossible_answer:
-        min_null_score = min(min_null_score, (start[0, 0] * end[0, 0]).item())
-
-    # Mask CLS
-    start[0, 0] = end[0, 0] = 0.0
-
-    starts, ends, scores = decode_spans(start, end, top_k, max_answer_len, undesired_tokens)
-    return starts, ends, scores, min_null_score
-
-
 class DocumentQuestionAnsweringPipeline(ChunkPipeline):
+    # TODO: Update task_summary docs to include an example with document QA and then update the first sentence
     """
     Document Question Answering pipeline using any `AutoModelForDocumentQuestionAnswering`. The inputs/outputs are
     similar to the (extractive) question answering pipeline; however, the pipeline takes an image (and optional OCR'd
     words/boxes) as input instead of text context.
 
     Example:
-        ```python
-        >>> from transformers import pipeline
-        >>> document_qa = pipeline(model="impira/layoutlm-document-qa")
-        >>> document_qa(
-        ...     image="https://hf.co/spaces/impira/docquery/resolve/2359223c1837a7587402bda0f2643382a6eefeab/invoice.png",
-        ...     question="What is the invoice number?",
-        ... )
-        [{'score': 0.425, 'answer': 'us-001', 'start': 16, 'end': 16}]
-        ```
+
+    ```python
+    >>> from transformers import pipeline
+
+    >>> document_qa = pipeline(model="impira/layoutlm-document-qa")
+    >>> document_qa(
+    ...     image="https://huggingface.co/spaces/impira/docquery/resolve/2359223c1837a7587402bda0f2643382a6eefeab/invoice.png",
+    ...     question="What is the invoice number?",
+    ... )
+    [{'score': 0.425, 'answer': 'us-001', 'start': 16, 'end': 16}]
+    ```
+
     Learn more about the basics of using a pipeline in the [pipeline tutorial](../pipeline_tutorial)
+
     This document question answering pipeline can currently be loaded from [`pipeline`] using the following task
     identifier: `"document-question-answering"`.
+
     The models that this pipeline can use are models that have been fine-tuned on a document question answering task.
     See the up-to-date list of available models on
-    [hf-mirror.com/models](https://hf-mirror.com/models?filter=document-question-answering).
+    [huggingface.co/models](https://huggingface.co/models?filter=document-question-answering).
     """
+
     def __init__(self, *args, **kwargs):
-        """
-        Initializes a new instance of the DocumentQuestionAnsweringPipeline class.
-
-        Args:
-            self: The current instance of the class.
-
-        Returns:
-            None.
-
-        Raises:
-            ValueError: Raised if a slow tokenizer is provided instead of a fast tokenizer.
-            ValueError: Raised if a VisionEncoderDecoder model other than Donut is provided.
-            ValueError: Raised if an unsupported VisionEncoderDecoder model is provided.
-
-        """
         super().__init__(*args, **kwargs)
         if self.tokenizer is not None and not self.tokenizer.__class__.__name__.endswith("Fast"):
             raise ValueError(
@@ -274,45 +147,19 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
                 self.model_type = ModelType.LayoutLMv2andv3
 
     def _sanitize_parameters(
-            self,
-            padding=None,
-            doc_stride=None,
-            max_question_len=None,
-            lang: Optional[str] = None,
-            tesseract_config: Optional[str] = None,
-            max_answer_len=None,
-            max_seq_len=None,
-            top_k=None,
-            handle_impossible_answer=None,
-            timeout=None,
-            **kwargs,
+        self,
+        padding=None,
+        doc_stride=None,
+        max_question_len=None,
+        lang: Optional[str] = None,
+        tesseract_config: Optional[str] = None,
+        max_answer_len=None,
+        max_seq_len=None,
+        top_k=None,
+        handle_impossible_answer=None,
+        timeout=None,
+        **kwargs,
     ):
-        """
-        This method '_sanitize_parameters' is a part of the 'DocumentQuestionAnsweringPipeline' class and is used to
-        sanitize and validate the input parameters for the document question answering pipeline.
-
-        Args:
-            self: The instance of the class.
-            padding (int): The padding value to be used during preprocessing. Default is None.
-            doc_stride (int): The document stride value to be used during preprocessing. Default is None.
-            max_question_len (int): The maximum length allowed for the question input. Default is None.
-            lang (Optional[str]): The language of the input text. Default is None.
-            tesseract_config (Optional[str]): The Tesseract OCR configuration to be used. Default is None.
-            max_answer_len (int): The maximum length allowed for the answer output. Default is None.
-            max_seq_len (int): The maximum sequence length for input text processing. Default is None.
-            top_k (int): The top-k value for post-processing. Must be >= 1.
-            handle_impossible_answer: The flag to handle impossible answers. Default is None.
-            timeout: The timeout value for processing. Default is None.
-
-        Returns:
-            preprocess_params (dict): Dictionary containing sanitized preprocessing parameters.
-            postprocess_params (dict): Dictionary containing sanitized postprocessing parameters.
-            postprocess_params may include 'top_k', 'max_answer_len', and 'handle_impossible_answer' based on input values.
-
-        Raises:
-            ValueError: If 'top_k' is less than 1.
-            ValueError: If 'max_answer_len' is less than 1.
-        """
         preprocess_params, postprocess_params = {}, {}
         if padding is not None:
             preprocess_params["padding"] = padding
@@ -343,17 +190,18 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
         return preprocess_params, {}, postprocess_params
 
     def __call__(
-            self,
-            image: Union["Image.Image", str],
-            question: Optional[str] = None,
-            word_boxes: Tuple[str, List[float]] = None,
-            **kwargs,
+        self,
+        image: Union["Image.Image", str],
+        question: Optional[str] = None,
+        word_boxes: Tuple[str, List[float]] = None,
+        **kwargs,
     ):
         """
         Answer the question(s) given as inputs by using the document(s). A document is defined as an image and an
         optional list of (word, box) tuples which represent the text in the document. If the `word_boxes` are not
         provided, it will use the Tesseract OCR engine (if available) to extract the words and boxes automatically for
         LayoutLM-like models which require them as input. For Donut, no OCR is run.
+
         You can invoke the pipeline several ways:
 
         - `pipeline(image=image, question=question)`
@@ -401,17 +249,16 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
                 The maximum time in seconds to wait for fetching images from the web. If None, no timeout is set and
                 the call may block forever.
 
-        Returns:
-            A `dict` or a list of `dict`:
-                with the following keys:
-                
-                - **score** (`float`) -- The probability associated to the answer.
-                - **start** (`int`) -- The start word index of the answer (in the OCR'd version of the input or provided
-                  `word_boxes`).
-                - **end** (`int`) -- The end word index of the answer (in the OCR'd version of the input or provided
-                  `word_boxes`).
-                - **answer** (`str`) -- The answer to the question.
-                - **words** (`list[int]`) -- The index of each word/box pair that is in the answer
+        Return:
+            A `dict` or a list of `dict`: Each result comes as a dictionary with the following keys:
+
+            - **score** (`float`) -- The probability associated to the answer.
+            - **start** (`int`) -- The start word index of the answer (in the OCR'd version of the input or provided
+              `word_boxes`).
+            - **end** (`int`) -- The end word index of the answer (in the OCR'd version of the input or provided
+              `word_boxes`).
+            - **answer** (`str`) -- The answer to the question.
+            - **words** (`list[int]`) -- The index of each word/box pair that is in the answer
         """
         if isinstance(question, str):
             inputs = {"question": question, "image": image}
@@ -422,41 +269,16 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
         return super().__call__(inputs, **kwargs)
 
     def preprocess(
-            self,
-            inputs,
-            padding="do_not_pad",
-            doc_stride=None,
-            max_seq_len=None,
-            word_boxes: Tuple[str, List[float]] = None,
-            lang=None,
-            tesseract_config="",
-            timeout=None,
+        self,
+        input,
+        padding="do_not_pad",
+        doc_stride=None,
+        max_seq_len=None,
+        word_boxes: Tuple[str, List[float]] = None,
+        lang=None,
+        tesseract_config="",
+        timeout=None,
     ):
-        """
-        Preprocesses inputs for document question answering.
-
-        Args:
-            self (DocumentQuestionAnsweringPipeline): The current instance of the DocumentQuestionAnsweringPipeline class.
-            inputs (Dict[str, Any]): The inputs for preprocessing.
-            padding (str, optional): The padding strategy to use. Defaults to 'do_not_pad'.
-            doc_stride (int, optional): The stride for splitting the document into chunks. Defaults to None.
-            max_seq_len (int, optional): The maximum sequence length. Defaults to None.
-            word_boxes (Tuple[str, List[float]], optional): The word boxes for the document. Defaults to None.
-            lang (str, optional): The language for OCR. Defaults to None.
-            tesseract_config (str, optional): The configuration for Tesseract OCR. Defaults to ''.
-            timeout (int, optional): The timeout for loading images. Defaults to None.
-
-        Returns:
-            None
-
-        Raises:
-            ValueError: If max_seq_len is not provided and the tokenizer's model_max_length is also not set.
-            ValueError: If doc_stride is not provided and the default value cannot be determined.
-            ValueError: If using a VisionEncoderDecoderModel without a feature extractor.
-            ValueError: If word_boxes are not provided and OCR is used but pytesseract is not available.
-            ValueError: If neither an image nor word_boxes are provided.
-
-        """
         # NOTE: This code mirrors the code in question answering and will be implemented in a follow up PR
         # to support documents with enough tokens that overflow the model's window
         if max_seq_len is None:
@@ -467,20 +289,21 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
 
         image = None
         image_features = {}
-        if inputs.get("image", None) is not None:
-            image = load_image(inputs["image"], timeout=timeout)
+        if input.get("image", None) is not None:
+            image = load_image(input["image"], timeout=timeout)
             if self.image_processor is not None:
-                image_features.update(self.image_processor(images=image, return_tensors='ms'))
+                image_inputs = self.image_processor(images=image, return_tensors="ms")
+                image_features.update(image_inputs)
             elif self.feature_extractor is not None:
-                image_features.update(self.feature_extractor(images=image, return_tensors='ms'))
+                image_features.update(self.feature_extractor(images=image, return_tensors="ms"))
             elif self.model_type == ModelType.VisionEncoderDecoder:
                 raise ValueError("If you are using a VisionEncoderDecoderModel, you must provide a feature extractor")
 
         words, boxes = None, None
         if not self.model_type == ModelType.VisionEncoderDecoder:
-            if "word_boxes" in inputs:
-                words = [x[0] for x in inputs["word_boxes"]]
-                boxes = [x[1] for x in inputs["word_boxes"]]
+            if "word_boxes" in input:
+                words = [x[0] for x in input["word_boxes"]]
+                boxes = [x[1] for x in input["word_boxes"]]
             elif "words" in image_features and "boxes" in image_features:
                 words = image_features.pop("words")[0]
                 boxes = image_features.pop("boxes")[0]
@@ -505,12 +328,12 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
             )
 
         if self.model_type == ModelType.VisionEncoderDecoder:
-            task_prompt = f'<s_docvqa><s_question>{inputs["question"]}</s_question><s_answer>'
-            # Adapted from https://hf.co/spaces/nielsr/donut-docvqa/blob/main/app.py
+            task_prompt = f'<s_docvqa><s_question>{input["question"]}</s_question><s_answer>'
+            # Adapted from https://huggingface.co/spaces/nielsr/donut-docvqa/blob/main/app.py
             encoding = {
                 "inputs": image_features["pixel_values"],
                 "decoder_input_ids": self.tokenizer(
-                    task_prompt, add_special_tokens=False, return_tensors='ms'
+                    task_prompt, add_special_tokens=False, return_tensors="ms"
                 ).input_ids,
                 "return_dict_in_generate": True,
             }
@@ -525,11 +348,11 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
         else:
             tokenizer_kwargs = {}
             if self.model_type == ModelType.LayoutLM:
-                tokenizer_kwargs["text"] = inputs["question"].split()
+                tokenizer_kwargs["text"] = input["question"].split()
                 tokenizer_kwargs["text_pair"] = words
                 tokenizer_kwargs["is_split_into_words"] = True
             else:
-                tokenizer_kwargs["text"] = [inputs["question"]]
+                tokenizer_kwargs["text"] = [input["question"]]
                 tokenizer_kwargs["text_pair"] = [words]
                 tokenizer_kwargs["boxes"] = [boxes]
 
@@ -549,9 +372,9 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
             # p_mask: mask with 1 for token than cannot be in the answer (0 for token which can be in an answer)
             # We put 0 on the tokens from the context and 1 everywhere else (question and special tokens)
             # This logic mirrors the logic in the question_answering pipeline
-            p_mask = [[tok != 1 for tok in encoding.sequence_ids(span_id)] for span_id in range(num_spans)]
+            p_mask = np.array([[tok != 1 for tok in encoding.sequence_ids(span_id)] for span_id in range(num_spans)])
             for span_idx in range(num_spans):
-                span_encoding = {k: mindspore.tensor(v[span_idx: span_idx + 1]) for (k, v) in encoding.items()}
+                span_encoding = {k: mindspore.tensor(v[span_idx : span_idx + 1]) for (k, v) in encoding.items()}
                 if "pixel_values" in image_features:
                     span_encoding["image"] = image_features["pixel_values"]
 
@@ -567,9 +390,9 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
                 if "boxes" not in tokenizer_kwargs:
                     bbox = []
                     for input_id, sequence_id, word_id in zip(
-                            encoding.input_ids[span_idx],
-                            encoding.sequence_ids(span_idx),
-                            encoding.word_ids(span_idx),
+                        encoding.input_ids[span_idx],
+                        encoding.sequence_ids(span_idx),
+                        encoding.word_ids(span_idx),
                     ):
                         if sequence_id == 1:
                             bbox.append(boxes[word_id])
@@ -579,7 +402,6 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
                             bbox.append([0] * 4)
 
                     span_encoding["bbox"] = mindspore.tensor(bbox).unsqueeze(0)
-
                 yield {
                     **span_encoding,
                     "p_mask": p_mask[span_idx],
@@ -588,42 +410,18 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
                     "is_last": span_idx == num_spans - 1,
                 }
 
-    def _forward(self, model_inputs):
-        """
-        This method '_forward' in the class 'DocumentQuestionAnsweringPipeline' processes the model inputs and 
-        generates the model outputs.
-
-        Args:
-            self: An instance of the 'DocumentQuestionAnsweringPipeline' class.
-            model_inputs (dict):
-                A dictionary containing the model inputs with the following possible keys:
-
-                - 'p_mask' (array, optional): A mask to indicate which tokens should be attended to.
-                - 'word_ids' (array, optional): The word IDs for input tokens.
-                - 'words' (array, optional): The input words.
-                - 'is_last' (bool, optional): A flag indicating if it is the last input.
-                - 'attention_mask' (array, optional): A mask to indicate which tokens should be attended to.
-
-        Returns:
-            dict or None:
-                Returns a dictionary containing the model outputs with the following possible keys:
-
-                - 'p_mask' (array): The input mask.
-                - 'word_ids' (array): The word IDs for output tokens.
-                - 'words' (array): The generated words.
-                - 'attention_mask' (array, optional): The attention mask for the outputs.
-                - 'is_last' (bool): A flag indicating if it is the last output.
-        
-        Raises:
-            None
-        """
+    def _forward(self, model_inputs, **generate_kwargs):
         p_mask = model_inputs.pop("p_mask", None)
         word_ids = model_inputs.pop("word_ids", None)
         words = model_inputs.pop("words", None)
         is_last = model_inputs.pop("is_last", False)
 
         if self.model_type == ModelType.VisionEncoderDecoder:
-            model_outputs = self.model.generate(**model_inputs)
+            # User-defined `generation_config` passed to the pipeline call take precedence
+            if "generation_config" not in generate_kwargs:
+                generate_kwargs["generation_config"] = self.generation_config
+
+            model_outputs = self.model.generate(**model_inputs, **generate_kwargs)
         else:
             model_outputs = self.model(**model_inputs)
 
@@ -636,22 +434,6 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
         return model_outputs
 
     def postprocess(self, model_outputs, top_k=1, **kwargs):
-        """
-        This method 'postprocess' is defined in the class 'DocumentQuestionAnsweringPipeline' and is used to 
-        process the model outputs and return the top-k answers.
-        
-        Args:
-            self: The instance of the 'DocumentQuestionAnsweringPipeline' class.
-            model_outputs (list): The list of model outputs to be processed.
-            top_k (int): The number of top answers to be returned. Default value is 1.
-        
-        Returns:
-            list: A list of top-k answers containing dictionaries with information about the answers.
-        
-        Raises:
-            TypeError: If the model_type attribute is not of type ModelType.VisionEncoderDecoder.
-            ValueError: If the top_k parameter is not a positive integer.
-        """
         if self.model_type == ModelType.VisionEncoderDecoder:
             answers = [self.postprocess_encoder_decoder_single(o) for o in model_outputs]
         else:
@@ -661,23 +443,6 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
         return answers
 
     def postprocess_encoder_decoder_single(self, model_outputs, **kwargs):
-        """
-        This method postprocesses the output from the encoder-decoder model to extract the answer.
-        
-        Args:
-            self (DocumentQuestionAnsweringPipeline): An instance of the DocumentQuestionAnsweringPipeline class.
-            model_outputs (dict): A dictionary containing the model outputs with the key 'sequences'.
-            
-        Returns:
-            dict:
-                A dictionary containing the processed answer under the key 'answer'.
-
-                - If the answer is found in the processed sequence, it is extracted and stored in the 'answer' key.
-                - If no answer is found, the 'answer' key remains None.
-        
-        Raises:
-            None.
-        """
         sequence = self.tokenizer.batch_decode(model_outputs["sequences"])[0]
 
         # TODO: A lot of this logic is specific to Donut and should probably be handled in the tokenizer
@@ -694,28 +459,8 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
         return ret
 
     def postprocess_extractive_qa(
-            self, model_outputs, top_k=1, handle_impossible_answer=False, max_answer_len=15, **kwargs
+        self, model_outputs, top_k=1, handle_impossible_answer=False, max_answer_len=15, **kwargs
     ):
-        """
-        This method postprocess_extractive_qa is defined within the class DocumentQuestionAnsweringPipeline.
-        It post-processes the model outputs for extractive question answering.
-        
-        Args:
-            self: (object) The instance of the class.
-            model_outputs: (list) The list of model outputs containing information
-                such as words, start_logits, end_logits, p_mask, attention_mask, and word_ids.
-            top_k: (int) The maximum number of answers to consider for each model output. Default is 1.
-            handle_impossible_answer: (bool) A flag indicating whether to handle impossible answers. Default is False.
-            max_answer_len: (int) The maximum length of the answer. Default is 15.
-        
-        Returns:
-            `List[dict]`:
-                The post-processed answers containing the score, answer text, start position, and end position
-                for each answer.
-        
-        Raises:
-            None.
-        """
         min_null_score = 1000000  # large and positive
         answers = []
         for output in model_outputs:
@@ -740,7 +485,7 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
                     answers.append(
                         {
                             "score": float(score),
-                            "answer": " ".join(words[word_start: word_end + 1]),
+                            "answer": " ".join(words[word_start : word_end + 1]),
                             "start": word_start,
                             "end": word_end,
                         }

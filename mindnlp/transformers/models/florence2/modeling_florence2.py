@@ -33,7 +33,7 @@ from mindnlp.utils import (
     is_einops_available
 )
 
-from mindnlp.transformers.activations import ACT2FN
+from mindnlp.common.activations import ACT2FN
 from mindnlp.transformers.modeling_attn_mask_utils import (
     _prepare_4d_attention_mask,
     _prepare_4d_causal_attention_mask,

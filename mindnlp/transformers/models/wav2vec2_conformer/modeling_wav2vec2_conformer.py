@@ -24,7 +24,7 @@ import mindspore
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import CrossEntropyLoss
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
     CausalLMOutput,
@@ -346,7 +346,8 @@ class Wav2Vec2ConformerPositionalConvEmbedding(nn.Module):
         )
 
         weight_norm = nn.utils.weight_norm
-
+        if hasattr(nn.utils.parametrizations, "weight_norm"):
+            weight_norm = nn.utils.parametrizations.weight_norm
         self.conv = weight_norm(self.conv, name="weight", dim=2)
 
         self.padding = Wav2Vec2ConformerSamePadLayer(config.num_conv_pos_embeddings)

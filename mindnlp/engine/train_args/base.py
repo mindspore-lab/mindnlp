@@ -1164,8 +1164,8 @@ class TrainingArguments:
 
         # Remove deprecated arguments. That code should be removed once
         # those deprecated arguments are removed from TrainingArguments. (TODO: v5)
-        del self_as_dict["per_gpu_train_batch_size"]
-        del self_as_dict["per_gpu_eval_batch_size"]
+        del self_as_dict["per_device_train_batch_size"]
+        del self_as_dict["per_device_eval_batch_size"]
 
         self_as_dict = {k: f"<{k.upper()}>" if k.endswith("_token") else v for k, v in self_as_dict.items()}
 
@@ -1193,7 +1193,7 @@ class TrainingArguments:
     @property
     def train_batch_size(self) -> int:
         """
-        The actual batch size for training (may differ from `per_gpu_train_batch_size` in distributed training).
+        The actual batch size for training (may differ from `per_device_train_batch_size` in distributed training).
         """
         per_device_batch_size = self.per_device_train_batch_size
         train_batch_size = per_device_batch_size * max(1, self.n_device)
@@ -1202,7 +1202,7 @@ class TrainingArguments:
     @property
     def eval_batch_size(self) -> int:
         """
-        The actual batch size for evaluation (may differ from `per_gpu_eval_batch_size` in distributed training).
+        The actual batch size for evaluation (may differ from `per_device_eval_batch_size` in distributed training).
         """
         per_device_batch_size = self.per_device_eval_batch_size
         eval_batch_size = per_device_batch_size * max(1, self.n_device)

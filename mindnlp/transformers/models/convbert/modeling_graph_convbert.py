@@ -22,7 +22,7 @@ from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 from mindnlp.core.nn import CrossEntropyLoss
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutputWithCrossAttentions,
     QuestionAnsweringModelOutput,

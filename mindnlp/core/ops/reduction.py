@@ -38,7 +38,7 @@ def all(input, dim=None, keepdim=False, *, dtype=None):
 def any(input, dim=None, keepdim=False):
     if use_pyboost():
         return mindspore.mint.any(input, dim, keepdim)
-    return ops.any(input, dim, keepdim)
+    return ops.any(input, dim)
 
 # max
 def max(input, dim=None, keepdim=False):

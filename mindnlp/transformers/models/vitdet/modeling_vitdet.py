@@ -21,13 +21,13 @@ from typing import Dict, List, Optional, Tuple, Union
 import mindspore
 from mindnlp.core import nn, ops
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import BackboneOutput, BaseModelOutput
 from ...modeling_utils import PreTrainedModel
 from ....utils import (
     logging,
 )
-from ...backbone_utils import BackboneMixin
+from ....utils.backbone_utils import BackboneMixin
 from .configuration_vitdet import VitDetConfig
 
 

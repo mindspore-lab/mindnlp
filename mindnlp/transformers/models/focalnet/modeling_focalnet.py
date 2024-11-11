@@ -28,11 +28,11 @@ from mindspore.common.initializer import initializer, Normal
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import BackboneOutput, ModelOutput
 from ...modeling_utils import PreTrainedModel
 from ....utils import logging
-from ...backbone_utils import BackboneMixin
+from ....utils.backbone_utils import BackboneMixin
 from .configuration_focalnet import FocalNetConfig
 
 

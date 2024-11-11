@@ -1,4 +1,5 @@
 """random op"""
+import numpy as np
 import mindspore
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
@@ -83,7 +84,7 @@ def randn(*size, dtype=None):
     return ops.randn(*size, dtype=dtype)
 
 # randn_like
-def randn_like(input, *, dtype):
+def randn_like(input, *, dtype=None):
     return ops.randn_like(input, dtype=dtype)
 
 # randperm
@@ -101,4 +102,6 @@ def randperm(n, seed=0, offset=0, dtype=mindspore.int64):
     return randperm_op(mindspore.tensor([n]))
 
 def gamma(shape, alpha, beta):
+    if DEVICE_TARGET != 'Ascend':
+        return mindspore.tensor(np.random.gamma(alpha, 1/beta, shape))
     return ops.gamma(shape, alpha, beta)

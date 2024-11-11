@@ -22,7 +22,7 @@ import mindspore
 from mindnlp.core import nn, ops, get_default_dtype, no_grad
 from mindnlp.core.nn import CrossEntropyLoss
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...generation import GenerationMixin
 from ...modeling_outputs import (
     BaseModelOutput,
