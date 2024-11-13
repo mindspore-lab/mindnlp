@@ -1,9 +1,9 @@
 import os
 import platform
-from mindnlp.transformers import ChatGLM3Tokenizer, ChatGLM3ForConditionalGeneration
+from mindnlp.transformers import ChatGLM3Tokenizer, AutoModelForCausalLM
 
 tokenizer = ChatGLM3Tokenizer.from_pretrained("ZhipuAI/chatglm3-6b", mirror='modelscope', revision='master')
-model = ChatGLM3ForConditionalGeneration.from_pretrained("ZhipuAI/chatglm3-6b", mirror='modelscope', revision='master')
+model = AutoModelForCausalLM.from_pretrained("ZhipuAI/chatglm3-6b", mirror='modelscope', revision='master')
 model = model.set_train(False)
 
 os_name = platform.system()

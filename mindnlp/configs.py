@@ -23,6 +23,7 @@ from mindspore._c_expression import MSContext # pylint: disable=no-name-in-modul
 SOC = MSContext.get_instance().get_ascend_soc_version()
 DEVICE_TARGET = mindspore.get_context('device_target')
 GENERATOR_SEED = version.parse(mindspore.__version__) >= version.parse('2.3.0')
+SUPPORT_ASYNC_DIST_OP = version.parse(mindspore.__version__) >= version.parse('2.4.0')
 SUPPORT_VIEW = GENERATOR_SEED
 SUPPORT_BF16 = GENERATOR_SEED and '910b' in SOC
 ON_ORANGE_PI = '310b' in SOC

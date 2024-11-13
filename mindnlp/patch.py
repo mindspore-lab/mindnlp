@@ -1,3 +1,4 @@
+"""patch for mindspore"""
 import numpy as np
 import mindspore
 from mindspore import Tensor
