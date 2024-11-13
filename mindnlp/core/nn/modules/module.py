@@ -386,8 +386,8 @@ class Module:
         return self
 
     def _wrapped_call_impl(self, *args, **kwargs):
-        if self.__ms_class__:
-            return self.forward(*args, **kwargs)
+        if self._compiled_call_impl is not None:
+            return self._compiled_call_impl(*args, **kwargs)  # type: ignore[misc]
         return self._call_impl(*args, **kwargs)
 
     # torchrec tests the code consistency with the following code
@@ -396,6 +396,9 @@ class Module:
         forward_call = self.forward
         # If we don't have any hooks, we want to skip the rest of the logic in
         # this function, and just call forward.
+        if self.__ms_class__:
+            return forward_call(*args, **kwargs)
+
         if not (self._backward_hooks or self._backward_pre_hooks or self._forward_hooks or self._forward_pre_hooks
                 or _global_backward_pre_hooks or _global_backward_hooks
                 or _global_forward_hooks or _global_forward_pre_hooks):
@@ -1197,6 +1200,14 @@ class Module:
         for module in self.children():
             module.jit(mode)
         return self
+
+    def compile(self, *args, **kwargs):
+        self.jit()
+        def forward_fn(*args, **kwargs):
+            return self.forward(*args, **kwargs)
+
+        forward_fn = mindspore.jit(forward_fn, *args, **kwargs)
+        self._compiled_call_impl = forward_fn
 
     @property
     def skip_syntax(self):
