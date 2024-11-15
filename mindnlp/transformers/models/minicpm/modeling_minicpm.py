@@ -46,16 +46,17 @@ logger = logging.get_logger(__name__)
 
 _CONFIG_FOR_DOC = "MiniCPMConfig"
 
+
 def rms_layernorm(hidden: mindspore.Tensor, weight: mindspore.Tensor, eps: float):
     """
     Args:
         hidden (mindspore.Tensor): The input tensor to be normalized.
         weight (mindspore.Tensor): The weight tensor applied to the normalized input.
         eps (float): A small value added to the variance to avoid division by zero.
-    
+
     Returns:
         None: This function does not return a value. It operates in place on the 'hidden' tensor.
-    
+
     Raises:
         ValueError: If the 'hidden' tensor or 'weight' tensor is not of type mindspore.Tensor.
         TypeError: If the 'eps' parameter is not of type float.
@@ -67,11 +68,10 @@ def rms_layernorm(hidden: mindspore.Tensor, weight: mindspore.Tensor, eps: float
 
 
 class MiniCPMRMSNorm(nn.Module):
-
     """
-    MiniCPMRMSNorm is a custom layer normalization module designed to mimic the functionality of T5LayerNorm. 
+    MiniCPMRMSNorm is a custom layer normalization module designed to mimic the functionality of T5LayerNorm.
     It performs RMS-based layer normalization on the input hidden states using the provided weight and epsilon value.
-    
+
     Parameters:
         hidden_size (int): The size of the hidden states being normalized.
         eps (float, optional): A small value added to the variance to prevent division by zero. Default is 1e-06.
@@ -87,6 +87,7 @@ class MiniCPMRMSNorm(nn.Module):
         __init__: Initializes the MiniCPMRMSNorm instance with the given hidden size and epsilon.
         forward: Applies RMS-based layer normalization on the input hidden states using the weight and epsilon.
     """
+
     def __init__(self, hidden_size, eps=1e-6):
         """
         MiniCPMRMSNorm is equivalent to T5LayerNorm
@@ -117,7 +118,6 @@ ALL_LAYERNORM_LAYERS.append(MiniCPMRMSNorm)
 
 
 class MiniCPMRotaryEmbedding(nn.Module):
-
     """
     MiniCPMRotaryEmbedding is a class that represents a rotary positional embedding layer for neural networks.
     It inherits from nn.Module and provides methods for initializing the embedding layer, setting cosine and sine cache,
@@ -128,6 +128,7 @@ class MiniCPMRotaryEmbedding(nn.Module):
     cosine and sine values for positional embeddings.
     The forward method generates the positional embeddings based on the input data and the specified sequence length.
     """
+
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         """
         Initializes a new instance of the MiniCPMRotaryEmbedding class.
@@ -212,6 +213,7 @@ class MiniCPMRotaryEmbedding(nn.Module):
 
 class MiniCPMLinearScalingRotaryEmbedding(MiniCPMRotaryEmbedding):
     """MiniCPMRotaryEmbedding extended with linear scaling. Credits to the Reddit user /u/kaiokendev"""
+
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         """
         Initializes an instance of MiniCPMLinearScalingRotaryEmbedding.
@@ -260,6 +262,7 @@ class MiniCPMLinearScalingRotaryEmbedding(MiniCPMRotaryEmbedding):
 
 class MiniCPMDynamicNTKScalingRotaryEmbedding(MiniCPMRotaryEmbedding):
     """MiniCPMRotaryEmbedding extended with Dynamic NTK scaling. Credits to the Reddit users /u/bloc97 and /u/emozilla"""
+
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         """
         Initializes a new instance of the MiniCPMDynamicNTKScalingRotaryEmbedding class.
@@ -302,7 +305,7 @@ class MiniCPMDynamicNTKScalingRotaryEmbedding(MiniCPMRotaryEmbedding):
 
         if seq_len > self.max_position_embeddings:
             base = self.base * (
-                (self.scaling_factor * seq_len / self.max_position_embeddings) - (self.scaling_factor - 1)
+                    (self.scaling_factor * seq_len / self.max_position_embeddings) - (self.scaling_factor - 1)
             ) ** (self.dim / (self.dim - 2))
             inv_freq = 1.0 / (base ** (ops.arange(0, self.dim, 2).float() / self.dim))
             self.inv_freq = inv_freq
@@ -315,6 +318,7 @@ class MiniCPMDynamicNTKScalingRotaryEmbedding(MiniCPMRotaryEmbedding):
 
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
+
 
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
@@ -358,8 +362,8 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     k_embed = (k_fp32 * cos) + (rotate_half(k_fp32) * sin)
     return q_embed.to(dtype=orig_dtype), k_embed.to(dtype=orig_dtype)
 
-class MiniCPMMLP(nn.Module):
 
+class MiniCPMMLP(nn.Module):
     """
     MiniCPMMLP is a neural network model that implements a specific variant of a Multi-Layer Perceptron (MLP)
     architecture for deep learning tasks.
@@ -385,6 +389,7 @@ class MiniCPMMLP(nn.Module):
     Returns:
         down_proj: The output tensor resulting from the forward pass computation of the MiniCPMMLP model.
     """
+
     def __init__(self, config):
         """
         Initializes a MiniCPMMLP object with the provided configuration.
@@ -458,6 +463,7 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
 
 class MiniCPMAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
+
     def __init__(self, config: MiniCPMConfig, layer_idx: Optional[int] = None):
         """
         Initializes an instance of the MiniCPMAttention class.
@@ -594,14 +600,14 @@ class MiniCPMAttention(nn.Module):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def forward(
-        self,
-        hidden_states: mindspore.Tensor,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        position_ids: Optional[mindspore.Tensor] = None,
-        past_key_value: Optional[Cache] = None,
-        output_attentions: bool = False,
-        use_cache: bool = False,
-        **kwargs,
+            self,
+            hidden_states: mindspore.Tensor,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            position_ids: Optional[mindspore.Tensor] = None,
+            past_key_value: Optional[Cache] = None,
+            output_attentions: bool = False,
+            use_cache: bool = False,
+            **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         '''
         This method forwards the MiniCPMAttention layer.
@@ -730,7 +736,6 @@ MINICPM_ATTENTION_CLASSES = {
 
 
 class MiniCPMDecoderLayer(nn.Module):
-
     """
     MiniCPMDecoderLayer represents a single layer of the MiniCPM (Minimalist Conditional Pretrained Model) decoder.
     This class is responsible for processing input hidden states through self-attention mechanism and MLP
@@ -767,6 +772,7 @@ class MiniCPMDecoderLayer(nn.Module):
         If 'padding_mask' is passed as a keyword argument in kwargs, a deprecation warning will be issued.
         It is recommended to use 'attention_mask' instead.
     """
+
     def __init__(self, config: MiniCPMConfig, layer_idx: int):
         """
         Initializes a new instance of MiniCPMDecoderLayer.
@@ -796,14 +802,14 @@ class MiniCPMDecoderLayer(nn.Module):
         self.num_hidden_layers = config.num_hidden_layers
 
     def forward(
-        self,
-        hidden_states: mindspore.Tensor,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        position_ids: Optional[mindspore.Tensor] = None,
-        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
-        output_attentions: Optional[bool] = False,
-        use_cache: Optional[bool] = False,
-        **kwargs,
+            self,
+            hidden_states: mindspore.Tensor,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            position_ids: Optional[mindspore.Tensor] = None,
+            past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+            output_attentions: Optional[bool] = False,
+            use_cache: Optional[bool] = False,
+            **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """
         Args:
@@ -858,7 +864,6 @@ class MiniCPMDecoderLayer(nn.Module):
 
 
 class MiniCPMPreTrainedModel(PreTrainedModel):
-
     """
     Represents a pre-trained mini version of CPM (Code-PM) model for various NLP tasks.
     This class inherits from PreTrainedModel and provides functionality to initialize weights for different types
@@ -916,6 +921,7 @@ class MiniCPMModel(MiniCPMPreTrainedModel):
     Args:
         config: MiniCPMConfig
     """
+
     def __init__(self, config: MiniCPMConfig):
         """
         Initializes a MiniCPMModel instance with the provided configuration.
@@ -995,16 +1001,16 @@ class MiniCPMModel(MiniCPMPreTrainedModel):
         self.embed_tokens = new_embeddings
 
     def forward(
-        self,
-        input_ids: mindspore.Tensor = None,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        position_ids: Optional[mindspore.Tensor] = None,
-        past_key_values: Optional[List[mindspore.Tensor]] = None,
-        inputs_embeds: Optional[mindspore.Tensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: mindspore.Tensor = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            position_ids: Optional[mindspore.Tensor] = None,
+            past_key_values: Optional[List[mindspore.Tensor]] = None,
+            inputs_embeds: Optional[mindspore.Tensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         """
         Constructs the MiniCPMModel.
@@ -1299,17 +1305,17 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
         return self.model
 
     def forward(
-        self,
-        input_ids: mindspore.Tensor = None,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        position_ids: Optional[mindspore.Tensor] = None,
-        past_key_values: Optional[List[mindspore.Tensor]] = None,
-        inputs_embeds: Optional[mindspore.Tensor] = None,
-        labels: Optional[mindspore.Tensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: mindspore.Tensor = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            position_ids: Optional[mindspore.Tensor] = None,
+            past_key_values: Optional[List[mindspore.Tensor]] = None,
+            inputs_embeds: Optional[mindspore.Tensor] = None,
+            labels: Optional[mindspore.Tensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
         Args:
@@ -1389,7 +1395,7 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
         )
 
     def prepare_inputs_for_generation(
-        self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
+            self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
         """
         Prepare inputs for generation.
@@ -1428,7 +1434,7 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
             # some of the inputs are exclusivelly passed as part of the cache (e.g. when passing input_embeds as
             # input)
             if attention_mask is not None and attention_mask.shape[1] > input_ids.shape[1]:
-                input_ids = input_ids[:, -(attention_mask.shape[1] - past_length) :]
+                input_ids = input_ids[:, -(attention_mask.shape[1] - past_length):]
             # 2 - If the past_length is smaller than input_ids', then input_ids holds all input tokens. We can discard
             # input_ids based on the past_length.
             elif past_length < input_ids.shape[1]:
@@ -1437,19 +1443,19 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
 
             # If we are about to go beyond the maximum cache length, we need to crop the input attention mask.
             if (
-                max_cache_length is not None
-                and attention_mask is not None
-                and cache_length + input_ids.shape[1] > max_cache_length
+                    max_cache_length is not None
+                    and attention_mask is not None
+                    and cache_length + input_ids.shape[1] > max_cache_length
             ):
                 attention_mask = attention_mask[:, -max_cache_length:]
 
         position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.long().int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
-                position_ids = position_ids[:, -input_ids.shape[1] :]
+                position_ids = position_ids[:, -input_ids.shape[1]:]
 
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
         if inputs_embeds is not None and past_key_values is None:
@@ -1524,10 +1530,10 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
             history = []
         if logits_processor:
             gen_kwargs = {"max_length": max_length, "num_beams": num_beams, "do_sample": do_sample, "top_p": top_p,
-                        "temperature": temperature, "logits_processor": logits_processor, **kwargs}
+                          "temperature": temperature, "logits_processor": logits_processor, **kwargs}
         else:
             gen_kwargs = {"max_length": max_length, "num_beams": num_beams, "do_sample": do_sample, "top_p": top_p,
-                        "temperature": temperature, "logits_processor": logits_processor, **kwargs}
+                          "temperature": temperature, "logits_processor": logits_processor, **kwargs}
 
         history.append({"role": role, "content": query})
         history_str = tokenizer.apply_chat_template(history, tokenize=False, add_generation_prompt=False)
@@ -1544,7 +1550,6 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
 
 
 class MiniCPMForSequenceClassification(MiniCPMPreTrainedModel):
-
     """
     MiniCPMForSequenceClassification is a Python class that represents a fine-tuning model for sequence classification
     tasks based on the MiniCPM architecture. It inherits from the MiniCPMPreTrainedModel class and provides methods for
@@ -1584,6 +1589,7 @@ class MiniCPMForSequenceClassification(MiniCPMPreTrainedModel):
         This class inherits from MiniCPMPreTrainedModel and extends its functionality to support sequence
         classification tasks.
     """
+
     def __init__(self, config):
         """
         Initializes a new instance of the MiniCPMForSequenceClassification class.
@@ -1640,17 +1646,17 @@ class MiniCPMForSequenceClassification(MiniCPMPreTrainedModel):
         self.model.embed_tokens = new_embeddings
 
     def forward(
-        self,
-        input_ids: mindspore.Tensor = None,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        position_ids: Optional[mindspore.Tensor] = None,
-        past_key_values: Optional[List[mindspore.Tensor]] = None,
-        inputs_embeds: Optional[mindspore.Tensor] = None,
-        labels: Optional[mindspore.Tensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: mindspore.Tensor = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            position_ids: Optional[mindspore.Tensor] = None,
+            past_key_values: Optional[List[mindspore.Tensor]] = None,
+            inputs_embeds: Optional[mindspore.Tensor] = None,
+            labels: Optional[mindspore.Tensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
         Args:
@@ -1722,6 +1728,7 @@ class MiniCPMForSequenceClassification(MiniCPMPreTrainedModel):
             hidden_states=transformer_outputs.hidden_states,
             attentions=transformer_outputs.attentions,
         )
+
 
 __all__ = [
     'MiniCPMModel',
