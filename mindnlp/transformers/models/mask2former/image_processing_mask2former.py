@@ -59,7 +59,6 @@ logger = logging.get_logger(__name__)
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn
 
 
 # Copied from transformers.models.detr.image_processing_detr.max_across_indices
