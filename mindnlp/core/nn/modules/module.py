@@ -688,7 +688,10 @@ class Module:
         return sorted(keys)
 
     def cuda(self):
-        return self
+        return self._apply(lambda t: t.move_to('GPU'))
+    
+    def npu(self):
+        return self._apply(lambda t: t.move_to('Ascend'))
 
     def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict,
                               missing_keys, unexpected_keys, error_msgs):
