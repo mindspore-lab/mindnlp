@@ -689,7 +689,7 @@ class Module:
 
     def cuda(self):
         return self._apply(lambda t: t.move_to('GPU'))
-    
+
     def npu(self):
         return self._apply(lambda t: t.move_to('Ascend'))
 

@@ -733,8 +733,8 @@ def _load_state_dict_into_meta_model(
             if dtype is None:
                 param = param.to(old_param.dtype)
 
-            if old_param.is_contiguous():
-                param = param.contiguous()
+            # if old_param.is_contiguous():
+            #     param = param.contiguous()
 
         set_module_kwargs["value"] = param
 
@@ -2658,6 +2658,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
         use_flash_attention_2 = kwargs.pop("use_flash_attention_2", False)
 
         gguf_file = kwargs.pop("gguf_file", None)
+        gguf_path = None
 
         if token is not None and adapter_kwargs is not None and "token" not in adapter_kwargs:
             adapter_kwargs["token"] = token
@@ -3099,6 +3100,13 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PeftAdapterM
                 loaded_state_dict_keys = sharded_metadata["all_checkpoint_keys"]
             else:
                 loaded_state_dict_keys = list(state_dict.keys())
+
+            if gguf_path is None and (low_cpu_mem_usage or use_keep_in_fp32_modules):
+                # In case some weights need to be kept in float32 and accelerate is not installed,
+                # we later on want to take the path where state_dict is not None, that is the one
+                # that do not require accelerate.
+                state_dict = None
+
 
         config.name_or_path = pretrained_model_name_or_path
 
