@@ -44,7 +44,7 @@ from mindnlp.transformers import (
     logging,
 )
 from mindnlp.engine import set_seed
-from mindnlp.core import no_grad, optim
+from mindnlp.core import no_grad, optim, value_and_grad
 from mindnlp.core.serialization import save_checkpoint, load_checkpoint
 from mindnlp.transformers.models.auto import get_values
 from mindnlp.transformers.models.auto.modeling_auto import (
@@ -775,9 +775,9 @@ class ModelTesterMixin:
             def forward(**inputs):
                 loss = model(**inputs).loss
                 return loss
-            grad_fn = mindspore.value_and_grad(forward, None, tuple(model.parameters()))
-            loss, grads = grad_fn(**inputs)
-            optimizer.step(grads)
+            grad_fn = value_and_grad(forward, tuple(model.parameters()), attach_grads=True)
+            loss = grad_fn(**inputs)
+            optimizer.step()
 
     def test_training(self):
         if not self.model_tester.is_training:
@@ -799,10 +799,8 @@ class ModelTesterMixin:
             def forward(**inputs):
                 return model(**inputs).loss
             
-            grad_fn = mindspore.value_and_grad(forward, None, tuple(model.parameters()))
-            loss = forward(**inputs)
-            print(loss)
-            loss, grads = grad_fn(**inputs)
+            grad_fn = value_and_grad(forward, tuple(model.parameters()))
+            loss = grad_fn(**inputs)
 
     @unittest.skip
     def test_training_gradient_checkpointing(self):
