@@ -70,7 +70,7 @@ class AdamW(Optimizer):
                         else mindspore.tensor(step_val, dtype=_get_scalar_dtype())
                     )
 
-    def step(self, grads):
+    def step(self, grads=None):
         """Perform a single optimization step.
 
         Args:
@@ -78,14 +78,11 @@ class AdamW(Optimizer):
                 and returns the loss.
         """
 
-        start = 0
         for group in self.param_groups:
-            end = start + len(group['params'])
             amsgrad = group['amsgrad']
             maximize = group["maximize"]
-            for (p, grad) in zip(group['params'], grads[start: end]):
-                grad = grad if not maximize else -grad
-                start = end
+            for p in group['params']:
+                grad = p.grad if not maximize else -p.grad
 
                 state = self.state[p]
 

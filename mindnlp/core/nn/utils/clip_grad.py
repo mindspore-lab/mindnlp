@@ -28,7 +28,7 @@ def _no_grad(func):
 
 @_no_grad
 def clip_grad_norm_(
-        gradients: _tensor_or_tensors, max_norm: float, norm_type: float = 2.0,
+        parameters: _tensor_or_tensors, max_norm: float, norm_type: float = 2.0,
         error_if_nonfinite: bool = False, foreach: Optional[bool] = None) -> mindspore.Tensor:
     r"""Clip the gradient norm of an iterable of parameters.
 
@@ -52,7 +52,9 @@ def clip_grad_norm_(
     Returns:
         Total norm of the parameter gradients (viewed as a single vector).
     """
-    grads = gradients
+    if isinstance(parameters, mindspore.Tensor):
+        parameters = [parameters]
+    grads = [p.grad for p in parameters if p.grad is not None]
     max_norm = float(max_norm)
     norm_type = float(norm_type)
     if len(grads) == 0:

@@ -38,6 +38,7 @@ import mindspore
 from mindspore.dataset import Dataset, BatchDataset, PaddedBatchDataset
 
 from mindnlp.core import nn, ops, optim
+from ...core.autograd import value_and_grad
 from ...core.serialization import safe_load_file, safe_save_file, save, save_checkpoint, load, load_checkpoint
 from ...peft import PeftModel
 from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_SAFE_WEIGHTS_NAME, \
@@ -1104,7 +1105,7 @@ MindSpore's `load_checkpoint` function.
                 if step % args.gradient_accumulation_steps == 0:
                     self.control = self.callback_handler.on_step_begin(args, self.state, self.control)
 
-                tr_loss_step, grads = self.training_step(model, inputs)
+                tr_loss_step = self.training_step(model, inputs)
                 if (
                     args.logging_nan_inf_filter
                     and (ops.isnan(tr_loss_step) or ops.isinf(tr_loss_step))
@@ -1129,11 +1130,11 @@ MindSpore's `load_checkpoint` function.
                     if args.max_grad_norm is not None and args.max_grad_norm > 0:
                         # deepspeed does its own clipping
                         _grad_norm = nn.utils.clip_grad_norm_(
-                            grads,
+                            model.parameters(),
                             args.max_grad_norm,
                         )
                     # Optimizer step
-                    self.optimizer.step(grads)
+                    self.optimizer.step()
 
                     optimizer_was_run = True
                     if optimizer_was_run:
@@ -1141,6 +1142,7 @@ MindSpore's `load_checkpoint` function.
                         if not isinstance(self.lr_scheduler, optim.lr_scheduler.ReduceLROnPlateau):
                             self.lr_scheduler.step()
 
+                    model.zero_grad()
                     self.state.global_step += 1
                     self.state.epoch = epoch + (step + 1 + steps_skipped) / steps_in_epoch
                     self.control = self.callback_handler.on_step_end(args, self.state, self.control)
@@ -1377,11 +1379,11 @@ indicating whether to prefer safe tensors.
             weights = ()
             for group in self.optimizer.param_groups:
                 weights += tuple(group['params'])
-            self.grad_fn = mindspore.value_and_grad(forward, None, weights)
+            self.grad_fn = value_and_grad(forward, weights, attach_grads=True)
 
-        loss, grads = self.grad_fn(inputs)
+        loss = self.grad_fn(inputs)
 
-        return loss / self.args.gradient_accumulation_steps, grads
+        return loss / self.args.gradient_accumulation_steps
 
     def compute_loss(self, model, inputs, return_outputs=False):
         """
