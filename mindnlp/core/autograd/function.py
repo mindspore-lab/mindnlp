@@ -9,7 +9,7 @@ from mindnlp.configs import GENERATOR_SEED
 
 grad_ = GradOperation(False, True, False)
 
-def value_and_grad(fn, params_or_argnums, has_aux=False, attach_grads=False):
+def value_and_grad(fn, params_or_argnums, has_aux=False, attach_grads=True):
     use_argnums = False
     if isinstance(params_or_argnums, Generator):
         params_or_argnums = tuple(params_or_argnums)

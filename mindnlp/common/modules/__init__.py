@@ -13,17 +13,15 @@
 # limitations under the License.
 # ============================================================================
 """modules init"""
-from . import loss, attentions, crf, accumulator
+from . import loss, attentions, crf
 from .attentions import ScaledDotProductAttention, DotProductAttention, \
     BilinearAttention, AdditiveAttention, CosineAttention, \
     LinearAttention
 from .crf import CRF
 from .loss import RDropLoss, CMRC2018Loss
-from .accumulator import *
 
 __all__ = []
 
 __all__.extend(attentions.__all__)
 __all__.extend(crf.__all__)
 __all__.extend(loss.__all__)
-__all__.extend(accumulator.__all__)
