@@ -29,17 +29,21 @@ def value_and_grad(fn, params_or_argnums, has_aux=False, attach_grads=True):
     else:
         fn_ = fn
 
-    def value_and_grad_f(*args):
+    def value_and_grad_f(*args, **kwargs):
         _pynative_executor.set_grad_flag(True)
-        _pynative_executor.new_graph(fn, *args)
-        values = fn_(*args)
-        _pynative_executor.end_graph(fn, values, *args)
+        _pynative_executor.new_graph(fn, *args, **kwargs)
+        values = fn_(*args, **kwargs)
+        _pynative_executor.end_graph(fn, values, *args, **kwargs)
+
+        run_args = args
+        if kwargs:
+            run_args = args + tuple(kwargs.values())
 
         if GENERATOR_SEED:
-            grads = _pynative_executor.grad(fn_, grad_, params_or_argnums, None, *args)
+            grads = _pynative_executor.grad(fn_, grad_, params_or_argnums, None, *run_args)
             # grads = grad_(fn_, params)(*args, *params)
         else:
-            _pynative_executor.grad(fn_, grad_, params_or_argnums, None, *args)
+            _pynative_executor.grad(fn_, grad_, params_or_argnums, None, *run_args)
             grads = _pynative_executor() # pylint: disable=not-callable
         grads = tuple(mindspore.Tensor(grad) for grad in grads)
         if attach_grads:
