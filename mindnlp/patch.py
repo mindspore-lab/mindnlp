@@ -2,6 +2,7 @@
 import numpy as np
 import mindspore
 from mindspore import Tensor
+from mindnlp.configs import GENERATOR_SEED
 
 def infer_value_for_BroadcastTo(x, shape):
     """Infer value for BroadcastTo op."""
@@ -18,4 +19,5 @@ def infer_value_for_BroadcastTo(x, shape):
     np_data = np.broadcast_to(x.asnumpy(), shape)
     return Tensor(np_data)
 
-mindspore.ops.operations.manually_defined.ops_def.infer_value_for_BroadcastTo = infer_value_for_BroadcastTo
+if GENERATOR_SEED:
+    mindspore.ops.operations.manually_defined.ops_def.infer_value_for_BroadcastTo = infer_value_for_BroadcastTo

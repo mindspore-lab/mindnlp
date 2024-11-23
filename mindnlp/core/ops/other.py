@@ -619,9 +619,12 @@ def repeat_interleave(input, repeats, dim=None):
     return input.repeat(repeats, dim)
 
 # roll
+DEVICE_TARGET = mindspore.get_context('device_target')
 def roll(input, shifts, dims=None):
     if use_pyboost():
         return mindspore.mint.roll(input, shifts, dims)
+    if DEVICE_TARGET == 'CPU':
+        return mindspore.numpy.roll(input, shifts, dims)
     return ops.roll(input, shifts, dims)
 
 # searchsorted
