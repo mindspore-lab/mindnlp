@@ -15,5 +15,5 @@
 """core module"""
 from . import optim, ops, nn, distributions
 from .utils import get_default_dtype, set_default_dtype, manual_seed
-from .autograd import no_grad, enable_grad
+from .autograd import no_grad, enable_grad, value_and_grad
 from .serialization import *

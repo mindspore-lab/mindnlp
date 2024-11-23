@@ -24,7 +24,7 @@ from mindnlp.utils import logging
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F, Parameter
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
     CausalLMOutput,
@@ -272,7 +272,10 @@ class SEWPositionalConvEmbedding(nn.Module):
             stride=config.squeeze_factor,
             bias=True,
         )
-        self.conv = nn.utils.weight_norm(self.conv, dim=2)
+        weight_norm = nn.utils.weight_norm
+        if hasattr(nn.utils.parametrizations, "weight_norm"):
+            weight_norm = nn.utils.parametrizations.weight_norm
+        self.conv = weight_norm(self.conv, dim=2)
 
         self.padding = SEWSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]

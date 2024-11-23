@@ -24,7 +24,7 @@ from mindspore import Tensor
 from mindnlp.core import nn, ops, get_default_dtype, no_grad
 from mindnlp.core.nn import CrossEntropyLoss
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -2388,10 +2388,14 @@ class HifiGanResidualBlock(nn.Module):
         return (kernel_size * dilation - dilation) // 2
 
     def apply_weight_norm(self):
+        weight_norm = nn.utils.weight_norm
+        if hasattr(nn.utils.parametrizations, "weight_norm"):
+            weight_norm = nn.utils.parametrizations.weight_norm
+
         for layer in self.convs1:
-            nn.utils.weight_norm(layer)
+            weight_norm(layer)
         for layer in self.convs2:
-            nn.utils.weight_norm(layer)
+            weight_norm(layer)
 
     def remove_weight_norm(self):
         for layer in self.convs1:
@@ -2664,12 +2668,16 @@ class SeamlessM4Tv2CodeHifiGan(PreTrainedModel):
 
     # Copied from transformers.models.seamless_m4t.modeling_seamless_m4t.SeamlessM4TCodeHifiGan.apply_weight_norm
     def apply_weight_norm(self):
-        nn.utils.weight_norm(self.hifi_gan.conv_pre)
+        weight_norm = nn.utils.weight_norm
+        if hasattr(nn.utils.parametrizations, "weight_norm"):
+            weight_norm = nn.utils.parametrizations.weight_norm
+
+        weight_norm(self.hifi_gan.conv_pre)
         for layer in self.hifi_gan.upsampler:
-            nn.utils.weight_norm(layer)
+            weight_norm(layer)
         for layer in self.hifi_gan.resblocks:
             layer.apply_weight_norm()
-        nn.utils.weight_norm(self.hifi_gan.conv_post)
+        weight_norm(self.hifi_gan.conv_post)
 
     # Copied from transformers.models.seamless_m4t.modeling_seamless_m4t.SeamlessM4TCodeHifiGan.remove_weight_norm
     def remove_weight_norm(self):

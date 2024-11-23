@@ -22,10 +22,10 @@ import numpy as np
 import mindspore
 from mindspore import Tensor
 
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import logging
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -83,7 +83,7 @@ class MarianSinusoidalPositionalEmbedding(nn.Embedding):
         out.stop_gradient = True
         return out
 
-    @mindspore._no_grad()
+    @no_grad()
     def forward(self, input_ids_shape, past_key_values_length: int = 0) -> mindspore.Tensor:
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         bsz, seq_len = input_ids_shape[:2]

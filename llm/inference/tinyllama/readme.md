@@ -24,3 +24,12 @@ We offer an easy way to interact with Tinyllama. This guide explains how to set 
 ```bash
 sudo sync && echo 3 | sudo tee /proc/sys/vm/drop_caches
 ```
+
+```bash
+export TE_PARALLEL_COMPILER=1
+export MAX_COMPILE_CORE_NUMBER=1
+export MS_BUILD_PROCESS_NUM=1
+export MAX_RUNTIME_CORE_NUMBER=1
+# if use O2
+export MS_ENABLE_IO_REUSE=1
+```

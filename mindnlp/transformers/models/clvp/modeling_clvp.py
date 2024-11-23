@@ -24,7 +24,7 @@ import mindspore
 import mindnlp.core.nn.functional as F
 from mindnlp.core import nn, ops
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...generation import GenerationConfig
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (

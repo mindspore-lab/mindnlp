@@ -29,7 +29,7 @@ from mindnlp.utils import (
     ModelOutput,
     logging,
 )
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from .configuration_mamba import MambaConfig
 

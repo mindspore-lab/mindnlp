@@ -56,7 +56,7 @@ class Accelerator:
                 raise ImportError("MindFormers is not installed. Please install it")
             # The distributed backend required to initialize the communication service.
             # Should be placed before Tensor and Parameter are created.
-            mindspore.set_context(mode=mindspore.PYNATIVE_MODE, device_target="Ascend")
+            mindspore.set_context(mode=mindspore.PYNATIVE_MODE)
             init()
 
         # Internal references to the training objects

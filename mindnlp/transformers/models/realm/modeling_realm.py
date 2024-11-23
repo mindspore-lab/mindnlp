@@ -25,7 +25,7 @@ from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F, Parameter
 from mindnlp.utils import logging
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
     BaseModelOutputWithPoolingAndCrossAttentions,

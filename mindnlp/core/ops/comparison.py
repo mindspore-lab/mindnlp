@@ -50,10 +50,13 @@ def isfinite(input):
 
 # isin
 def isin(elements, test_elements):
-    elements = elements.asnumpy()
-    test_elements = test_elements.asnumpy()
-    mask = np.in1d(elements, test_elements).reshape(elements.shape)
-    return mindspore.tensor(mask)
+    elements = elements.ravel().expand_dims(-1)
+    test_elements = test_elements.ravel()
+    included = ops.equal(elements, test_elements)
+    # F.reduce_sum only supports float
+    res = ops.sum(included.int(), -1).astype(mindspore.bool_)
+
+    return res
 
 # isinf
 def isinf(input):

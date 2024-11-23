@@ -26,7 +26,7 @@ from mindspore.common.initializer import initializer, Constant, Normal
 from mindnlp.core import nn, ops
 import mindnlp.core.nn.functional as F
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import MoECausalLMOutputWithPast, MoEModelOutputWithPastAndCrossAttentions
 from ...modeling_utils import PreTrainedModel
 from ....utils import (

@@ -22,7 +22,7 @@ import mindspore
 from mindnlp.core import nn, ops
 from mindnlp.core.distributions import Distribution
 
-from ...activations import ACT2CLS
+from ....common.activations import ACT2CLS
 from ...modeling_outputs import BaseModelOutput
 from ...modeling_utils import PreTrainedModel
 from ...time_series_utils import NegativeBinomialOutput, NormalOutput, StudentTOutput

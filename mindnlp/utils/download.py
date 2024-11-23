@@ -190,8 +190,10 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
     while not (os.path.exists(file_path) and check_md5(file_path, md5sum)):
         # get downloaded size
         tmp_file_path = file_path + "_tmp"
-        if os.path.exists(tmp_file_path) and retry_cnt != 0:
+        if os.path.exists(tmp_file_path):
             file_size = os.path.getsize(tmp_file_path)
+            if file_size % chunk_size != 0:
+                file_size = 0
             headers['Range'] = f'bytes={file_size}-'
         else:
             file_size = 0
@@ -236,7 +238,9 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
             retry_cnt += 1
         else:
             raise HTTPError(
-                f"Download from {url} failed. " "Retry limit reached")
+                f"Download from {url} failed. " "Retry limit reached. \n"
+                f"If you want to speedup the download, please use `AutoModel.from_pretrained('model_id', mirror='modelers')` instead.\n"
+                f'The optional mirrors can be ["modelers", "modelscope", "wisemodel", "gitee", "aifast"]')
 
     return file_path
 
@@ -882,6 +886,7 @@ MIRROR_MAP = {
     'wisemodel': "https://awsdownload.wisemodel.cn/file-proxy/{}/-/raw/{}/{}",
     'gitee': "https://ai.gitee.com/huggingface/{}/resolve/{}/{}",
     'aifast': "https://aifasthub.com/models/{}/{}",
+    'modelers': "https://modelers.cn/coderepo/web/v1/file/{}/{}/media/{}"
 }
 
 def build_download_url(
@@ -899,8 +904,8 @@ def build_download_url(
         revision = 'main'
     if mirror not in MIRROR_MAP:
         raise ValueError('The mirror name not support, please use one of the mirror website below: '
-                         '["huggingface", "modelscope", "wisemodel", "gitee", "aifast"]')
-    if mirror in ('huggingface', 'gitee', 'modelscope', 'wisemodel'):
+                         '["huggingface", "modelscope", "wisemodel", "gitee", "aifast", "modelers"]')
+    if mirror in ('huggingface', 'gitee', 'modelscope', 'wisemodel', 'modelers'):
         if mirror == 'modelscope' and revision == 'main':
             revision = 'master'
         return MIRROR_MAP[mirror].format(repo_id, revision, filename)

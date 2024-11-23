@@ -30,8 +30,8 @@ from mindnlp.core import nn, ops
 from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import functional as F
 from mindnlp.utils import logging
-from ...backbone_utils import BackboneMixin
-from ...activations import ACT2FN
+from ....utils.backbone_utils import BackboneMixin
+from ....common.activations import ACT2FN
 from ...modeling_outputs import (
     BackboneOutput,
     BaseModelOutput,

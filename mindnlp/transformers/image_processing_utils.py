@@ -281,6 +281,7 @@ class ImageProcessingMixin:
         token = kwargs.pop("token", None)
         local_files_only = kwargs.pop("local_files_only", False)
         subfolder = kwargs.pop("subfolder", "")
+        mirror = kwargs.pop('mirror', 'huggingface')
 
         from_pipeline = kwargs.pop("_from_pipeline", None)
         from_auto_class = kwargs.pop("_from_auto", False)
@@ -317,6 +318,7 @@ class ImageProcessingMixin:
                     local_files_only=local_files_only,
                     token=token,
                     subfolder=subfolder,
+                    mirror=mirror
                 )
             except EnvironmentError:
                 # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted to

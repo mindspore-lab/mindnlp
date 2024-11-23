@@ -17,10 +17,7 @@ JiebaTokenizer Python version
 """
 import logging
 import os
-
-import jieba
-
-jieba.setLogLevel(log_level="ERROR")
+from mindnlp.utils import is_jieba_available
 
 class JiebaTokenizer:
 
@@ -64,6 +61,9 @@ Recognition (NER) recognition.
         Raises:
             None. This method does not raise any exceptions.
         """
+        if is_jieba_available():
+            import jieba
+
         self.model = jieba
         self.model.default_logger.setLevel(logging.ERROR)
         # 初始化大词典

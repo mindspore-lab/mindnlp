@@ -60,6 +60,8 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("chinese_clip", "ChineseCLIPModel"),
         ("chinese_clip_vision_model", "ChineseCLIPVisionModel"),
         ("chatglm", "ChatGLMModel"),
+        ("chatglm2", "ChatGLM2Model"),
+        ("chatglm3", "ChatGLM3Model"),
         ("chatglm4", "ChatGLM4Model"),
         ("clap", "ClapModel"),
         ("clip", "CLIPModel"),
@@ -159,6 +161,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("mega", "MegaModel"),
         ("megatron-bert", "MegatronBertModel"),
         ("mgp-str", "MgpstrForSceneTextRecognition"),
+        ('minicpm', 'MiniCPMModel'),
         ("mistral", "MistralModel"),
         ("mixtral", "MixtralModel"),
         ("mobilebert", "MobileBertModel"),
@@ -316,6 +319,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("mamba", "MambaForCausalLM"),
         ("mega", "MegaForMaskedLM"),
         ("megatron-bert", "MegatronBertForPreTraining"),
+        ('minicpm', 'MiniCPMForCausalLM'),
         ("mllama", "MllamaForConditionalGeneration"),
         ("mobilebert", "MobileBertForPreTraining"),
         ("mpnet", "MPNetForMaskedLM"),
@@ -402,6 +406,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("marian", "MarianMTModel"),
         ("mega", "MegaForMaskedLM"),
         ("megatron-bert", "MegatronBertForCausalLM"),
+        ('minicpm', 'MiniCPMForCausalLM'),
         ("mobilebert", "MobileBertForMaskedLM"),
         ("mpnet", "MPNetForMaskedLM"),
         ("mpt", "MptForCausalLM"),
@@ -453,6 +458,8 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("bloom", "BloomForCausalLM"),
         ("camembert", "CamembertForCausalLM"),
         ('chatglm', 'ChatGLMForConditionalGeneration'),
+        ('chatglm2', 'ChatGLM2ForConditionalGeneration'),
+        ('chatglm3', 'ChatGLM3ForConditionalGeneration'),
         ('chatglm4', 'ChatGLM4ForConditionalGeneration'),
         ("code_llama", "LlamaForCausalLM"),
         ("codegen", "CodeGenForCausalLM"),
@@ -484,6 +491,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("mbart", "MBartForCausalLM"),
         ("mega", "MegaForCausalLM"),
         ("megatron-bert", "MegatronBertForCausalLM"),
+        ('minicpm', 'MiniCPMForCausalLM'),
         ("mistral", "MistralForCausalLM"),
         ("mixtral", "MixtralForCausalLM"),
         ("mllama", "MllamaForCausalLM"),
@@ -679,7 +687,7 @@ MODEL_FOR_SEMANTIC_SEGMENTATION_MAPPING_NAMES = OrderedDict(
         ("mobilevit", "MobileViTForSemanticSegmentation"),
         ("mobilevitv2", "MobileViTV2ForSemanticSegmentation"),
         ("segformer", "SegformerForSemanticSegmentation"),
-        ("upernet", "UperNetForSemanticSegmentation"),
+        # ("upernet", "UperNetForSemanticSegmentation"),
     ]
 )
 
@@ -726,6 +734,32 @@ MODEL_FOR_VISION_2_SEQ_MAPPING_NAMES = OrderedDict(
         ("paligemma", "PaliGemmaForConditionalGeneration"),
         # ("pix2struct", "Pix2StructForConditionalGeneration"),
         ("video_llava", "VideoLlavaForConditionalGeneration"),
+        ("vipllava", "VipLlavaForConditionalGeneration"),
+        ("vision-encoder-decoder", "VisionEncoderDecoderModel"),
+    ]
+)
+
+MODEL_FOR_IMAGE_TEXT_TO_TEXT_MAPPING_NAMES = OrderedDict(
+    [
+        ("blip", "BlipForConditionalGeneration"),
+        ("blip-2", "Blip2ForConditionalGeneration"),
+        ("chameleon", "ChameleonForConditionalGeneration"),
+        ("fuyu", "FuyuForCausalLM"),
+        ("git", "GitForCausalLM"),
+        ("idefics", "IdeficsForVisionText2Text"),
+        ("idefics2", "Idefics2ForConditionalGeneration"),
+        ("idefics3", "Idefics3ForConditionalGeneration"),
+        ("instructblip", "InstructBlipForConditionalGeneration"),
+        ("kosmos-2", "Kosmos2ForConditionalGeneration"),
+        ("llava", "LlavaForConditionalGeneration"),
+        ("llava_next", "LlavaNextForConditionalGeneration"),
+        ("llava_onevision", "LlavaOnevisionForConditionalGeneration"),
+        ("mllama", "MllamaForConditionalGeneration"),
+        ("paligemma", "PaliGemmaForConditionalGeneration"),
+        ("pix2struct", "Pix2StructForConditionalGeneration"),
+        ("pixtral", "LlavaForConditionalGeneration"),
+        ("qwen2_vl", "Qwen2VLForConditionalGeneration"),
+        ("udop", "UdopForConditionalGeneration"),
         ("vipllava", "VipLlavaForConditionalGeneration"),
         ("vision-encoder-decoder", "VisionEncoderDecoderModel"),
     ]
@@ -907,6 +941,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("mbart", "MBartForSequenceClassification"),
         ("mega", "MegaForSequenceClassification"),
         ("megatron-bert", "MegatronBertForSequenceClassification"),
+        ('minicpm', 'MiniCPMForSequenceClassification'),
         ("mistral", "MistralForSequenceClassification"),
         ("mixtral", "MixtralForSequenceClassification"),
         ("mobilebert", "MobileBertForSequenceClassification"),
@@ -1397,6 +1432,9 @@ MODEL_FOR_VIDEO_CLASSIFICATION_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, MODEL_FOR_VIDEO_CLASSIFICATION_MAPPING_NAMES
 )
 MODEL_FOR_VISION_2_SEQ_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, MODEL_FOR_VISION_2_SEQ_MAPPING_NAMES)
+MODEL_FOR_IMAGE_TEXT_TO_TEXT_MAPPING = _LazyAutoMapping(
+    CONFIG_MAPPING_NAMES, MODEL_FOR_IMAGE_TEXT_TO_TEXT_MAPPING_NAMES
+)
 MODEL_FOR_VISUAL_QUESTION_ANSWERING_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, MODEL_FOR_VISUAL_QUESTION_ANSWERING_MAPPING_NAMES
 )

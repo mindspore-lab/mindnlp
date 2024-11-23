@@ -16,9 +16,9 @@
 import warnings
 from typing import Any, List, Optional
 
-from mindspore import Tensor, get_grad
+from mindspore import Tensor
 
-from mindnlp.core import nn, ops
+from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import Parameter
 from mindnlp.core.nn import ParameterDict, ModuleDict
 from mindnlp.peft.utils import transpose
@@ -440,36 +440,16 @@ applied.
             mask_ind = step % self.peft_config.deltaT == 0
         return budget, mask_ind
 
-    def update_ipt(self, model,gradient):
-        r"""
-        This method updates the importance parameter table (ipt) for the given model using the provided gradient.
-        
-        Args:
-            self: The instance of the RankAllocator class.
-            model: The model for which the importance parameter table is being updated.
-                   Type: model object
-                   Purpose: To access the parameters and names of the model for updating the ipt.
-                   Restrictions: None
-            gradient: The gradient to be used for updating the ipt.
-                      Type: gradient object
-                      Purpose: To calculate the importance parameter table based on the gradient.
-                      Restrictions: None
-        
-        Returns:
-            None. The method does not return any value.
-        
-        Raises:
-            None
-        """
+    def update_ipt(self, model):
         # Update the sensitivity and uncertainty for every weight
-        for n, p in model.parameters_and_names():
+        for n, p in model.named_parameters():
             if "lora_" in n and self.adapter_name in n:
                 if n not in self.ipt:
-                    grad = get_grad(gradient, p)
                     self.ipt[n] = ops.zeros_like(p)
                     self.exp_avg_ipt[n] = ops.zeros_like(p)
                     self.exp_avg_unc[n] = ops.zeros_like(p)
-                    self.ipt[n] = (p * grad).abs()
+                with no_grad():
+                    self.ipt[n] = (p * p.grad).abs()
                     # Sensitivity smoothing
                     self.exp_avg_ipt[n] = self.beta1 * self.exp_avg_ipt[n] + (1 - self.beta1) * self.ipt[n]
                     # Uncertainty quantification
@@ -586,27 +566,10 @@ applied.
                 rank_pattern[n] = (~(triplet_ipt[n] <= mask_threshold)).view(-1).asnumpy().tolist()
         return rank_pattern
 
-    def update_and_allocate(self, model, global_step, gradient, force_mask=False):
-        r"""
-        This method updates the model and allocates budget based on the global step and gradient information.
-        
-        Args:
-        - self: Reference to the current instance of the class.
-        - model: The model to be updated and allocated the budget.
-        - global_step: The current global step of the training process.
-        - gradient: The gradient information used for updating the model.
-        - force_mask: A boolean flag indicating whether to force the masking operation. Default is False.
-        
-        Returns:
-        - budget: The allocated budget for the current step.
-        - rank_pattern: The rank pattern based on the budget allocation, or None if no masking is needed.
-        
-        Raises:
-        - No specific exceptions are raised by this method.
-        """
+    def update_and_allocate(self, model, global_step, force_mask=False):
         # # Update the importance score and allocate the budget
         if global_step < self.peft_config.total_step - self.peft_config.tfinal:
-            self.update_ipt(model,gradient)
+            self.update_ipt(model)
         budget, mask_ind = self.budget_schedule(global_step)
         # Allocate the budget according to importance scores
         if mask_ind or force_mask:

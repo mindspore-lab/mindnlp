@@ -45,12 +45,12 @@ class PolyLayer(BaseTunerLayer):
 
         base_layer = self.get_base_layer()
         if isinstance(base_layer, nn.Linear):
-            in_channels, out_channels = base_layer.in_channels, base_layer.out_channels
+            in_features, out_features = base_layer.in_features, base_layer.out_features
         else:
             raise ValueError(f"Unsupported layer type {type(base_layer)}")
 
-        self.in_channels = in_channels
-        self.out_channels = out_channels
+        self.in_features = in_features
+        self.out_features = out_features
 
     def update_layer(self, adapter_name, poly_config):
         if poly_config.r <= 0:
@@ -68,7 +68,7 @@ class PolyLayer(BaseTunerLayer):
             ops.zeros(
                 poly_config.n_splits,
                 poly_config.n_skills,
-                self.in_channels // poly_config.n_splits,
+                self.in_features // poly_config.n_splits,
                 poly_config.r,
             )
         )
@@ -77,7 +77,7 @@ class PolyLayer(BaseTunerLayer):
                 poly_config.n_splits,
                 poly_config.n_skills,
                 poly_config.r,
-                self.out_channels // poly_config.n_splits,
+                self.out_features // poly_config.n_splits,
             )
         )
         self.poly_router[adapter_name] = get_router(poly_config)

@@ -1869,7 +1869,6 @@ class GenerationMixin:
         # - `model_kwargs` may be updated in place with a cache as defined by the parameters in `generation_config`.
         # - different models have a different cache name expected by the model (default = "past_key_values")
         # - `max_length`, prepared above, is used to determine the maximum cache length
-        # TODO (joao): remove `user_defined_cache` after v4.47 (remove default conversion to legacy format)
         cache_name = "past_key_values" if "mamba" not in self.__class__.__name__.lower() else "cache_params"
         user_defined_cache = model_kwargs.get(cache_name)
         max_cache_length = generation_config.max_length
@@ -2174,7 +2173,7 @@ class GenerationMixin:
 
         # Convert to legacy cache format if requested
         if (
-            generation_config.return_legacy_cache is not False  # Should check for `True` after v4.47
+            generation_config.return_legacy_cache is not False
             and hasattr(result, "past_key_values")
             and hasattr(result.past_key_values, "to_legacy_cache")
             and result.past_key_values.to_legacy_cache is not None
@@ -2192,7 +2191,7 @@ class GenerationMixin:
             )
             if not is_user_defined_cache and is_default_cache_type:
                 logger.warning_once(
-                    "From v4.47 onwards, when a model cache is to be returned, `generate` will return a `Cache` "
+                    "When a model cache is to be returned, `generate` will return a `Cache` "
                     "instance instead by default (as opposed to the legacy tuple of tuples format). If you want to "
                     "keep returning the legacy format, please set `return_legacy_cache=True`."
                 )
@@ -3089,7 +3088,7 @@ class GenerationMixin:
             )
 
             unfinished_sequences = unfinished_sequences & ~stopping_criteria(input_ids, scores)
-            this_peer_finished = unfinished_sequences.max() == 0
+            this_peer_finished = np.max(unfinished_sequences.asnumpy()).item() == 0
             cur_len += 1
 
             if _record_time:
@@ -3101,7 +3100,8 @@ class GenerationMixin:
 
         average_infer_time = None
         if time_record:
-            time_record.pop(0)
+            if len(time_record) > 1:
+                time_record.pop(0)
             average_infer_time = sum(time_record) / len(time_record)
             print(f'average inference time is: {average_infer_time}')
             print(f'inference time record: {time_record}')
@@ -4184,9 +4184,6 @@ class GenerationMixin:
             if len(logits_processor) > 0:
                 for i in range(candidate_length + 1):
                     new_logits[:, i, :] = logits_processor(candidate_input_ids[:, : cur_len + i], new_logits[:, i, :])
-            if do_sample and len(logits_warper) > 0:
-                for i in range(candidate_length + 1):
-                    new_logits[:, i, :] = logits_warper(candidate_input_ids[:, : cur_len + i], new_logits[:, i, :])
 
             # 3. Select the accepted tokens. There are two possible cases:
             # Case 1: `do_sample=True` and we have logits for the candidates (originally from speculative decoding)

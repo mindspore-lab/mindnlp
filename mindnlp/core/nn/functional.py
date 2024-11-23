@@ -65,6 +65,21 @@ def leaky_relu(input, alpha=0.2):
         return mindspore.mint.nn.functional.leaky_relu(input, alpha)
     return ops.leaky_relu(input, alpha)
 
+def prelu(input, weight):
+    return ops.prelu(input, weight)
+
+def celu(input, alpha=1., inplace=False):
+    return ops.celu(input, alpha)
+
+def selu(input):
+    return ops.selu(input)
+
+def hardsigmoid(input, inplace=False):
+    return ops.hardsigmoid(input)
+
+def hardswish(input: Tensor, inplace: bool = False) -> Tensor:
+    return ops.hardswish(input)
+
 def avg_pool1d(input_array, pool_size, stride, padding=0, ceil_mode=False, count_include_pad=True):
     """
     Perform 1D average pooling on the input array of shape (N, C, L) without using explicit for loops.
@@ -219,12 +234,12 @@ def pad(input, pad, mode='constant', value=0.0):
     return ops.pad(input, pad, mode, value)
 
 def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
-    if label_smoothing != 0.0 or target.ndim != 1:
-        return _inner_nll_loss(input, target, weight, ignore_index, reduction, label_smoothing)
-    if weight is None:
-        weight = ops.ones(input.shape[-1], dtype=input.dtype)
-    _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
-    return _nll_loss(input, target, weight)[0]
+    return _inner_nll_loss(input, target, weight, ignore_index, reduction, label_smoothing)
+    # if label_smoothing != 0.0 or target.ndim != 1:
+    # if weight is None:
+    #     weight = ops.ones(input.shape[-1], dtype=input.dtype)
+    # _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
+    # return _nll_loss(input, target, weight)[0]
 
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     input = input.to(mindspore.float32)
@@ -461,19 +476,28 @@ def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode
         output_1d = output_2d.squeeze(2)
         return output_1d
 
+
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if use_pyboost():
         return mindspore.mint.nn.functional.group_norm(input, num_groups, weight, bias, eps)
+
     input_shape = input.shape
-    input = input.reshape(input_shape[0], num_groups, -1)
-    mean = ops.mean(input, axis=2, keep_dims=True)
-    var = ops.div(ops.sum(ops.square(ops.sub(input, mean)), 2, keepdim=True), (math.prod(input_shape[1:]) / num_groups))
-    std = ops.sqrt(var + eps)
-    input = ops.div(ops.sub(input, mean), std)
-    input = input.reshape(input_shape)
-    output = ops.add(input *weight.reshape((-1,) + (1,) * (len(input_shape) - 2)),
-                        bias.reshape((-1,) + (1,) * (len(input_shape) - 2)))
-    return output
+    N = input_shape[0]
+    C = input_shape[1]
+    input_reshaped = input.view(1, N * num_groups, -1 if N!=0 else 1)
+    outputs = batch_norm(input_reshaped, None, None, None, None, True, 0., eps)
+    out = outputs.view(input_shape)
+    affine_param_shape = [1] * input.ndim
+    affine_param_shape[1] = C
+    affine_param_shape = tuple(affine_param_shape)
+    if weight is not None and bias is not None:
+        out = bias.view(affine_param_shape).addcmul(out, weight.view(affine_param_shape), 1)
+    elif weight is not None:
+        out = out.mul(weight.view(affine_param_shape))
+    elif bias is not None:
+        out = out.add(bias.view(affine_param_shape))
+    return out
+
 
 def _in_projection(
     q,

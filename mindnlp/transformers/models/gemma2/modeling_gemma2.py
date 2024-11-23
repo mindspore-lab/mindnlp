@@ -16,11 +16,11 @@
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn,ops
+from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import functional as F
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from ....amp import autocast
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...cache_utils import Cache, HybridCache
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
@@ -118,7 +118,7 @@ class Gemma2RotaryEmbedding(nn.Module):
         inv_freq = 1.0 / (self.base ** (ops.arange(0, self.dim, 2, dtype=mindspore.int64).float() / self.dim))
         self.register_buffer("inv_freq", tensor=inv_freq, persistent=False)
 
-    @mindspore._no_grad()
+    @no_grad()
     def forward(self, x, position_ids, seq_len=None):
         inv_freq_expanded = self.inv_freq[None, :, None].float().broadcast_to((position_ids.shape[0], -1, 1))
         position_ids_expanded = position_ids[:, None, :].float()
@@ -440,8 +440,8 @@ class Gemma2DecoderLayer(nn.Module):
                 min_dtype = float(ops.finfo(hidden_states.dtype).min)
                 min_dtype = mindspore.tensor(min_dtype)
                 sliding_window_mask = ops.tril(
-                    ops.ones_like(attention_mask, dtype=mindspore.bool_), diagonal=-self.sliding_window
-                )
+                    ops.ones_like(attention_mask), diagonal=-self.sliding_window
+                ).to(mindspore.bool_)
                 attention_mask = ops.where(sliding_window_mask, min_dtype, attention_mask)
                 if attention_mask.shape[-1] <= 1:  # when decoding
                     attention_mask = attention_mask[:, :, :, -self.sliding_window :]
@@ -493,11 +493,11 @@ class Gemma2PreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         std = self.config.initializer_range
         if isinstance(module, nn.Linear):
-            nn.init.normal_(module.weight,mean=0.0, std=std)
+            nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.bias is not None:
                 nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
-            nn.init.normal_(module.weight,mean=0.0, std=std)
+            nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.padding_idx is not None:
                 module.weight[module.padding_idx] = 0
 
@@ -841,8 +841,8 @@ class Gemma2ForCausalLM(Gemma2PreTrainedModel):
                 input_ids = input_ids[:, cache_position]
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill_(attention_mask == 0, 1)
+            position_ids = attention_mask.int().cumsum(-1) - 1
+            position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
                 # This `clone` call is needed to avoid recapturing cuda graphs with `torch.compile`'s

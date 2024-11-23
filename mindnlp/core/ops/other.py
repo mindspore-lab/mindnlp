@@ -49,6 +49,7 @@ def manual_expand(tensor, shape):
 # broadcast_to
 def broadcast_to(input, shape):
     if ON_ORANGE_PI and not use_pyboost():
+        # return input.expand(mindspore.tensor(shape))
         return manual_expand(input, shape)
     if use_pyboost():
         return mindspore.mint.broadcast_to(input, shape)
@@ -109,7 +110,7 @@ def clone(input):
 
 # cumsum
 def cumsum(input, dim, dtype=None):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI: # since cann8.0 community remove aclnn cumsum
         return mindspore.mint.cumsum(input, dim, dtype)
     if input.dtype == mindspore.bool_:
         input = input.to(mindspore.int32)
@@ -619,7 +620,9 @@ def repeat_interleave(input, repeats, dim=None):
 
 # roll
 def roll(input, shifts, dims=None):
-    return mindspore.numpy.roll(input, shifts, dims)
+    if use_pyboost():
+        return mindspore.mint.roll(input, shifts, dims)
+    return ops.roll(input, shifts, dims)
 
 # searchsorted
 def searchsorted(sorted_sequence, values, *, out_int32=False, right=False, side=None, sorter=None):

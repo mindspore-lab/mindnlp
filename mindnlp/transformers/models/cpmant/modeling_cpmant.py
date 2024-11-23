@@ -22,7 +22,7 @@ import mindnlp.core.nn.functional as F
 from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import CrossEntropyLoss
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 from ...modeling_utils import PreTrainedModel
 from ....utils import logging

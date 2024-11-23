@@ -22,7 +22,7 @@ from mindspore.common.initializer import initializer, HeNormal
 
 from mindnlp.core import nn
 from mindnlp.core.nn import functional as F
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import (
     BackboneOutput,
     BaseModelOutputWithNoAttention,
@@ -31,7 +31,7 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ....utils import logging
-from ...backbone_utils import BackboneMixin
+from ....utils.backbone_utils import BackboneMixin
 from .configuration_resnet import ResNetConfig
 
 

@@ -17,7 +17,7 @@
 import copy
 from ...configuration_utils import PretrainedConfig
 from ....utils import logging
-from ...backbone_utils import verify_backbone_config_arguments
+from ....utils.backbone_utils import verify_backbone_config_arguments
 from ..auto.configuration_auto import CONFIG_MAPPING
 
 logger = logging.get_logger(__name__)

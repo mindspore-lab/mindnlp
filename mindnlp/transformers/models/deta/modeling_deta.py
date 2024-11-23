@@ -26,7 +26,7 @@ from mindspore import Tensor
 from mindnlp.core import nn, ops, no_grad, get_default_dtype
 import mindnlp.core.nn.functional as F
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ....utils import (
     ModelOutput,
     is_scipy_available,
@@ -38,7 +38,7 @@ from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
 from ...modeling_outputs import BaseModelOutput
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import meshgrid
-from ...backbone_utils import load_backbone
+from ....utils.backbone_utils import load_backbone
 from .configuration_deta import DetaConfig
 from .image_processing_deta import batched_nms
 

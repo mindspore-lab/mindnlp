@@ -13,3 +13,11 @@
 # limitations under the License.
 # ============================================================================
 """MindNLP Transformer Reinforcement Learning."""
+
+from .trainer import (
+    DPOTrainer,
+    DPOConfig,
+    FDivergenceType,
+    _build_tokenized_answer,
+    _truncate_tokens
+)

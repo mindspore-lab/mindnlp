@@ -48,7 +48,7 @@ class SGD(Optimizer):
             group.setdefault("nesterov", False)
             group.setdefault("maximize", False)
 
-    def step(self, grads):
+    def step(self, grads=None):
         """Performs a single optimization step.
 
         Arguments:
@@ -65,10 +65,8 @@ class SGD(Optimizer):
             nesterov = group['nesterov']
             maximize=group["maximize"]
 
-            end = start + len(group['params'])
-            for (p, d_p) in zip(group['params'], grads[start: end]):
-                d_p = d_p if not maximize else -d_p
-                start = end
+            for p in group['params']:
+                d_p = p.grad if not maximize else -p.grad
                 # if weight_decay != 0:
                 #     d_p = d_p.add(p, alpha=weight_decay)
                 # if momentum != 0:

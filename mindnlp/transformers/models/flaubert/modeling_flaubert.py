@@ -33,7 +33,7 @@ from mindnlp.utils import (
     logging,
 )
 
-from ...activations import gelu
+from ....common.activations import gelu
 from ...modeling_outputs import (
     BaseModelOutput,
     MaskedLMOutput,

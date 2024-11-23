@@ -138,6 +138,7 @@ from . import (
     marian,
     markuplm,
     m2m_100,
+    maskformer,
     mask2former,
     mbart,
     mbart50,
@@ -203,6 +204,7 @@ from . import (
     sew_d,
     speech_encoder_decoder,
     speech_to_text,
+    speech_to_text_2,
     speecht5,
     stablelm,
     splinter,
@@ -379,6 +381,7 @@ from .m2m_100 import *
 from .mamba import *
 from .marian import *
 from .markuplm import *
+from .maskformer import *
 from .mask2former import *
 from .mbart import *
 from .mbart50 import *
@@ -444,6 +447,7 @@ from .sew import *
 from .sew_d import *
 from .speech_encoder_decoder import *
 from .speech_to_text import *
+from .speech_to_text_2 import *
 from .speecht5 import *
 from .stablelm import *
 from .splinter import *
@@ -620,6 +624,7 @@ __all__.extend(m2m_100.__all__)
 __all__.extend(mamba.__all__)
 __all__.extend(marian.__all__)
 __all__.extend(markuplm.__all__)
+__all__.extend(maskformer.__all__)
 __all__.extend(mask2former.__all__)
 __all__.extend(mbart.__all__)
 __all__.extend(mbart50.__all__)
@@ -685,6 +690,7 @@ __all__.extend(sew.__all__)
 __all__.extend(sew_d.__all__)
 __all__.extend(speech_encoder_decoder.__all__)
 __all__.extend(speech_to_text.__all__)
+__all__.extend(speech_to_text_2.__all__)
 __all__.extend(speecht5.__all__)
 __all__.extend(stablelm.__all__)
 __all__.extend(splinter.__all__)

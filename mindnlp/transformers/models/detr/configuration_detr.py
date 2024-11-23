@@ -12,10 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" DETR model configuration"""
+"""DETR model configuration"""
 
 from ...configuration_utils import PretrainedConfig
 from ....utils import logging
+from ....utils.backbone_utils import verify_backbone_config_arguments
 from ..auto import CONFIG_MAPPING
 
 
@@ -33,7 +34,7 @@ class DetrConfig(PretrainedConfig):
     documentation from [`PretrainedConfig`] for more information.
 
     Args:
-        use_timm_backbone (`bool`, *optional*, defaults to `False`):
+        use_timm_backbone (`bool`, *optional*, defaults to `True`):
             Whether or not to use the `timm` library for the backbone. If set to `False`, will use the [`AutoBackbone`]
             API.
         backbone_config (`PretrainedConfig` or `dict`, *optional*):
@@ -134,8 +135,8 @@ class DetrConfig(PretrainedConfig):
 
     def __init__(
         self,
-        use_timm_backbone=False,    # MindNLP defaults to false
-        backbone_config=None,       # MindNLP defaults ResNetConfig
+        use_timm_backbone=True,
+        backbone_config=None,
         num_channels=3,
         num_queries=100,
         encoder_layers=6,
@@ -156,8 +157,8 @@ class DetrConfig(PretrainedConfig):
         init_xavier_std=1.0,
         auxiliary_loss=False,
         position_embedding_type="sine",
-        backbone=None,                  # backbone name for timm, or pretrained_model_name_or_path for HF
-        use_pretrained_backbone=False,  # MindNLP defaults to false
+        backbone="resnet50",
+        use_pretrained_backbone=True,
         backbone_kwargs=None,
         dilation=False,
         class_cost=1,
@@ -170,23 +171,15 @@ class DetrConfig(PretrainedConfig):
         eos_coefficient=0.1,
         **kwargs,
     ):
-        if backbone_config is not None and backbone is not None:
-            raise ValueError("You can't specify both `backbone` and `backbone_config`.")
-
-        if backbone_config is not None and use_timm_backbone:
-            raise ValueError("You can't specify both `backbone_config` and `use_timm_backbone`.")
-
-        if backbone_kwargs is not None and backbone_kwargs and backbone_config is not None:
-            raise ValueError("You can't specify both `backbone_kwargs` and `backbone_config`.")
-
         # We default to values which were previously hard-coded in the model. This enables configurability of the config
         # while keeping the default behavior the same.
         if use_timm_backbone and backbone_kwargs is None:
-            backbone_kwargs = {}
-            if dilation:
-                backbone_kwargs["output_stride"] = 16
-            backbone_kwargs["out_indices"] = [1, 2, 3, 4]
-            backbone_kwargs["in_chans"] = num_channels
+            # backbone_kwargs = {}
+            # if dilation:
+            #     backbone_kwargs["output_stride"] = 16
+            # backbone_kwargs["out_indices"] = [1, 2, 3, 4]
+            # backbone_kwargs["in_chans"] = num_channels
+            pass
         # Backwards compatibility
         elif not use_timm_backbone and backbone in (None, "resnet50"):
             if backbone_config is None:
@@ -199,6 +192,14 @@ class DetrConfig(PretrainedConfig):
             backbone = None
             # set timm attributes to None
             dilation = None
+
+        verify_backbone_config_arguments(
+            use_timm_backbone=use_timm_backbone,
+            use_pretrained_backbone=use_pretrained_backbone,
+            backbone=backbone,
+            backbone_config=backbone_config,
+            backbone_kwargs=backbone_kwargs,
+        )
 
         self.use_timm_backbone = use_timm_backbone
         self.backbone_config = backbone_config
@@ -257,6 +258,5 @@ class DetrConfig(PretrainedConfig):
             [`DetrConfig`]: An instance of a configuration object
         """
         return cls(backbone_config=backbone_config, **kwargs)
-
 
 __all__ = ['DetrConfig']

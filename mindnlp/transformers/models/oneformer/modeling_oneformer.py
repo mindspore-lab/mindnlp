@@ -25,7 +25,7 @@ import mindspore
 from mindspore import Tensor
 from mindnlp.core import nn, ops, no_grad
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput
 from ...modeling_utils import PreTrainedModel
 from ....utils import (
@@ -34,7 +34,7 @@ from ....utils import (
     logging,
     requires_backends,
 )
-from ...backbone_utils import load_backbone
+from ....utils.backbone_utils import load_backbone
 from .configuration_oneformer import OneFormerConfig
 
 

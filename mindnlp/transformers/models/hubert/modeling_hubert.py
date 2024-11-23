@@ -22,7 +22,7 @@ import mindspore
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import CrossEntropyLoss
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, CausalLMOutput, SequenceClassifierOutput
 from ...modeling_utils import PreTrainedModel
 from ....utils import logging
@@ -259,7 +259,8 @@ class HubertPositionalConvEmbedding(nn.Module):
         )
 
         weight_norm = nn.utils.weight_norm
-
+        if hasattr(nn.utils.parametrizations, "weight_norm"):
+            weight_norm = nn.utils.parametrizations.weight_norm
         self.conv = weight_norm(self.conv, name="weight", dim=2)
 
         self.padding = HubertSamePadLayer(config.num_conv_pos_embeddings)

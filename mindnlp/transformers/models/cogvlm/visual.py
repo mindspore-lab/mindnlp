@@ -5,7 +5,7 @@ from argparse import Namespace
 import mindspore
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import Parameter
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 
 
 class PatchEmbedding(nn.Module):

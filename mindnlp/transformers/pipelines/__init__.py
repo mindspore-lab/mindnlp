@@ -42,7 +42,7 @@ from ...utils import (
     is_mindspore_available,
     logging,
 )
-# from .audio_classification import AudioClassificationPipeline
+from .audio_classification import AudioClassificationPipeline
 from .automatic_speech_recognition import AutomaticSpeechRecognitionPipeline
 from .base import (
     ArgumentHandler,
@@ -56,13 +56,13 @@ from .base import (
     get_default_model_and_revision,
     load_model,
 )
-# from .depth_estimation import DepthEstimationPipeline
+from .depth_estimation import DepthEstimationPipeline
 from .document_question_answering import DocumentQuestionAnsweringPipeline
-# from .feature_extraction import FeatureExtractionPipeline
+from .feature_extraction import FeatureExtractionPipeline
 from .fill_mask import FillMaskPipeline
-# from .image_classification import ImageClassificationPipeline
-# from .image_feature_extraction import ImageFeatureExtractionPipeline
-# from .image_segmentation import ImageSegmentationPipeline
+from .image_classification import ImageClassificationPipeline
+from .image_feature_extraction import ImageFeatureExtractionPipeline
+from .image_segmentation import ImageSegmentationPipeline
 # from .image_to_image import ImageToImagePipeline
 # from .image_to_text import ImageToTextPipeline
 # from .mask_generation import MaskGenerationPipeline
@@ -135,12 +135,12 @@ TASK_ALIASES = {
     "text-to-speech": "text-to-audio",
 }
 SUPPORTED_TASKS = {
-    # "audio-classification": {
-    #     "impl": AudioClassificationPipeline,
-    #     "ms": (AutoModelForAudioClassification,) if is_mindspore_available() else (),
-    #     "default": {"model": {"ms": ("superb/wav2vec2-base-superb-ks", "372e048")}},
-    #     "type": "audio",
-    # },
+    "audio-classification": {
+        "impl": AudioClassificationPipeline,
+        "ms": (AutoModelForAudioClassification,) if is_mindspore_available() else (),
+        "default": {"model": {"ms": ("superb/wav2vec2-base-superb-ks", "372e048")}},
+        "type": "audio",
+    },
     "automatic-speech-recognition": {
         "impl": AutomaticSpeechRecognitionPipeline,
         "ms": (AutoModelForCTC, AutoModelForSpeechSeq2Seq) if is_mindspore_available() else (),
@@ -153,16 +153,16 @@ SUPPORTED_TASKS = {
     #     "default": {"model": {"ms": ("suno/bark-small", "1dbd7a1")}},
     #     "type": "text",
     # },
-    # "feature-extraction": {
-    #     "impl": FeatureExtractionPipeline,
-    #     "ms": (AutoModel,) if is_mindspore_available() else (),
-    #     "default": {
-    #         "model": {
-    #             "ms": ("distilbert/distilbert-base-cased", "6ea8117"),
-    #         }
-    #     },
-    #     "type": "multimodal",
-    # },
+    "feature-extraction": {
+        "impl": FeatureExtractionPipeline,
+        "ms": (AutoModel,) if is_mindspore_available() else (),
+        "default": {
+            "model": {
+                "ms": ("distilbert/distilbert-base-cased", "6ea8117"),
+            }
+        },
+        "type": "multimodal",
+    },
     "text-classification": {
         "impl": TextClassificationPipeline,
         "ms": (AutoModelForSequenceClassification,) if is_mindspore_available() else (),
@@ -293,32 +293,32 @@ SUPPORTED_TASKS = {
     #     },
     #     "type": "multimodal",
     # },
-    # "image-classification": {
-    #     "impl": ImageClassificationPipeline,
-    #     "ms": (AutoModelForImageClassification,) if is_mindspore_available() else (),
-    #     "default": {
-    #         "model": {
-    #             "ms": ("google/vit-base-patch16-224", "3f49326"),
-    #         }
-    #     },
-    #     "type": "image",
-    # },
-    # "image-feature-extraction": {
-    #     "impl": ImageFeatureExtractionPipeline,
-    #     "ms": (AutoModel,) if is_mindspore_available() else (),
-    #     "default": {
-    #         "model": {
-    #             "ms": ("google/vit-base-patch16-224", "3f49326"),
-    #         }
-    #     },
-    #     "type": "image",
-    # },
-    # "image-segmentation": {
-    #     "impl": ImageSegmentationPipeline,
-    #     "ms": (AutoModelForImageSegmentation, AutoModelForSemanticSegmentation) if is_mindspore_available() else (),
-    #     "default": {"model": {"ms": ("facebook/detr-resnet-50-panoptic", "d53b52a")}},
-    #     "type": "multimodal",
-    # },
+    "image-classification": {
+        "impl": ImageClassificationPipeline,
+        "ms": (AutoModelForImageClassification,) if is_mindspore_available() else (),
+        "default": {
+            "model": {
+                "ms": ("google/vit-base-patch16-224", "3f49326"),
+            }
+        },
+        "type": "image",
+    },
+    "image-feature-extraction": {
+        "impl": ImageFeatureExtractionPipeline,
+        "ms": (AutoModel,) if is_mindspore_available() else (),
+        "default": {
+            "model": {
+                "ms": ("google/vit-base-patch16-224", "3f49326"),
+            }
+        },
+        "type": "image",
+    },
+    "image-segmentation": {
+        "impl": ImageSegmentationPipeline,
+        "ms": (AutoModelForImageSegmentation, AutoModelForSemanticSegmentation) if is_mindspore_available() else (),
+        "default": {"model": {"ms": ("facebook/detr-resnet-50-panoptic", "d53b52a")}},
+        "type": "multimodal",
+    },
     # "image-to-text": {
     #     "impl": ImageToTextPipeline,
     #     "ms": (AutoModelForVision2Seq,) if is_mindspore_available() else (),
@@ -341,12 +341,12 @@ SUPPORTED_TASKS = {
     #     "default": {"model": {"ms": ("google/owlvit-base-patch32", "cbc355f")}},
     #     "type": "multimodal",
     # },
-    # "depth-estimation": {
-    #     "impl": DepthEstimationPipeline,
-    #     "ms": (AutoModelForDepthEstimation,) if is_mindspore_available() else (),
-    #     "default": {"model": {"ms": ("Intel/dpt-large", "bc15f29")}},
-    #     "type": "image",
-    # },
+    "depth-estimation": {
+        "impl": DepthEstimationPipeline,
+        "ms": (AutoModelForDepthEstimation,) if is_mindspore_available() else (),
+        "default": {"model": {"ms": ("Intel/dpt-large", "bc15f29")}},
+        "type": "image",
+    },
     # "video-classification": {
     #     "impl": VideoClassificationPipeline,
     #     "ms": (AutoModelForVideoClassification,) if is_mindspore_available() else (),
@@ -1041,8 +1041,16 @@ def pipeline(
     return pipeline_class(model=model, task=task, **kwargs)
 
 __all__ = [
-    'CsvPipelineDataFormat',
+    "AudioClassificationPipeline",
+    "AutomaticSpeechRecognitionPipeline",
+    "DepthEstimationPipeline",
+    "DocumentQuestionAnsweringPipeline",
+    "FeatureExtractionPipeline",
     'FillMaskPipeline',
+    "ImageClassificationPipeline",
+    "ImageFeatureExtractionPipeline",
+    "ImageSegmentationPipeline",
+    'CsvPipelineDataFormat',
     'JsonPipelineDataFormat',
     'PipedPipelineDataFormat',
     'Pipeline',

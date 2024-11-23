@@ -249,7 +249,7 @@ class WhisperGenerationMixin(GenerationMixin):
             weights = _median_filter(weights, self.config.median_filter_width)
 
             # Average the different cross-attention heads.
-            weights = weights.mean(dim=1)
+            weights = ops.mean(weights, dim=1)
 
         # Perform dynamic time warping on each element of the batch.
         for batch_idx in range(batch_size):
@@ -263,11 +263,11 @@ class WhisperGenerationMixin(GenerationMixin):
                 matrix = _median_filter(matrix, self.config.median_filter_width)
 
                 # Average the different cross-attention heads.
-                matrix = matrix.mean(dim=0)
+                matrix = ops.mean(matrix, dim=0)
             else:
                 matrix = weights[batch_idx]
 
-            text_indices, time_indices = _dynamic_time_warping(-matrix.double().asnumpy())
+            text_indices, time_indices = _dynamic_time_warping(-matrix.astype(mindspore.float64).asnumpy())
             jumps = np.pad(np.diff(text_indices), (1, 0), constant_values=1).astype(bool)
             jump_times = time_indices[jumps] * time_precision
             timestamps[batch_idx, 1:] = mindspore.tensor(jump_times)
@@ -948,7 +948,7 @@ class WhisperGenerationMixin(GenerationMixin):
 
         def split_by_batch_index(values, key, batch_idx, is_shortform, beam_indices=None):
             if beam_indices is not None and key == "scores":
-                return [v[beam_idx] for (v, beam_idx) in zip(values, beam_indices[batch_idx][: len(values)])]
+                return [v[(beam_idx + v.shape[0]) % v.shape[0]] for (v, beam_idx) in zip(values, beam_indices[batch_idx][: len(values)])]
             if key in ["scores", "encoder_attentions", "encoder_hidden_states", "logits"]:
                 return [v[batch_idx] for v in values]
             if key in ["decoder_attentions", "decoder_hidden_states", "cross_attentions"]:

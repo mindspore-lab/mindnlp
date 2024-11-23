@@ -32,7 +32,7 @@ from mindnlp.utils import (
     DUMMY_MASK,
     logging,
 )
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
     BaseModelOutputWithPastAndCrossAttentions,

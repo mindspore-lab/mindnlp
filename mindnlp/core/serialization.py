@@ -26,6 +26,10 @@ import pathlib
 import warnings
 import tempfile
 import operator
+import struct
+import mmap
+import json
+import math
 
 from contextlib import closing, contextmanager
 from enum import Enum
@@ -62,11 +66,11 @@ PROTOCOL_VERSION = 1001
 def mkdtemp():
     """
     Context manager that creates a temporary directory and provides its path.
-    
+
     Usage:
         with mkdtemp() as path:
             # Use the temporary directory at 'path'
-    
+
     Args:
         This function does not take any parameters.
     
@@ -1264,11 +1268,11 @@ def convert_torch_to_mindspore(pth_file):
     has_bf16 = False
     for key, value in state_dict.items():
         if value.dtype == torch.bfloat16:
-            data = Tensor(value.to(torch.float).numpy(), dtype=mindspore.float16)
+            data = Tensor.from_numpy(value.to(torch.float).numpy().astype(np.float16))
             if not has_bf16:
                 has_bf16 = True
         else:
-            data = Tensor(value.numpy())
+            data = Tensor.from_numpy(value.numpy())
         ms_ckpt.append({'name': key, 'data': data})
 
     if has_bf16:
@@ -1340,7 +1344,7 @@ _NP_TYPES = {
     "BOOL": bool,
 }
 
-def safe_load_file(filename):
+def legacy_safe_load_file(filename):
     """
     This function safely loads a file containing state dictionary data and converts it into a dictionary of MindSpore Parameters.
     
@@ -1380,6 +1384,56 @@ def safe_load_file(filename):
             else:
                 result[k] = Tensor.from_numpy(arr.astype(np.float16))
         return result
+
+
+def safe_load_file(filename):
+    """
+    This function safely loads a file containing state dictionary data and converts it into a dictionary of MindSpore Parameters.
+    
+    Args:
+        filename (str): The path to the file containing the state dictionary data to be loaded.
+    
+    Returns:
+        dict: A dictionary where keys are parameter names and values are MindSpore Parameters.
+    
+    Raises:
+        FileNotFoundError: If the specified file 'filename' does not exist.
+        ValueError: If the data in the file is not in the correct format to create MindSpore Parameters.
+    """
+    def convert(info: dict[str, Any]):
+        numpy_dtype = _NP_TYPES[info['dtype']]
+        ms_dtype = _MS_TYPES[info['dtype']]
+        shape: list[int] = info['shape']
+        begin, end = info['data_offsets']
+        assert 0 <= begin <= end <= len(byte_buf)
+        assert end - begin == math.prod(shape) * np.dtype(numpy_dtype).itemsize
+        buf = byte_buf[begin:end]
+
+        try:
+            if info['dtype'] == 'BF16' and not SUPPORT_BF16:
+                logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
+                ms_dtype = mindspore.float16
+            out = Tensor.convert_bytes_to_tensor(buf, tuple(shape), ms_dtype)
+        except:
+            array = np.frombuffer(buf, dtype=numpy_dtype).reshape(shape)
+
+            if array.dtype == bfloat16 and not SUPPORT_BF16:
+                logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
+                array = array.astype(np.float16)
+            array = array.astype(array.dtype)
+            out = Tensor.from_numpy(array)
+        return out
+
+    with open(filename, "rb") as fp:
+        header_size, = struct.unpack('<Q', fp.read(8))
+        header: dict[str, dict[str, Any]] = json.loads(fp.read(header_size))
+        # Use mmap for the actual data to avoid race conditions with the file offset.
+        mapped = memoryview(mmap.mmap(fp.fileno(), 0, access=mmap.ACCESS_READ))
+        byte_buf = mapped[8 + header_size:]
+
+        result = {name: convert(info) for (name, info) in header.items() if name != '__metadata__'}
+
+    return result
 
 def safe_save_file(tensor_dict, filename, metadata=None):
     """
@@ -1462,7 +1516,7 @@ def load_checkpoint(ckpt_file_name):
                 dims = element.tensor.dims
                 param_data = np.frombuffer(data, np_type)
                 param_data = param_data.reshape(list(dims))
-                parameter = Tensor(param_data, ms_type)
+                parameter = Tensor.from_numpy(param_data)
                 parameter_dict[element.tag] = parameter
                 continue
             element_data = np.frombuffer(data, np_type)
@@ -1482,7 +1536,7 @@ def load_checkpoint(ckpt_file_name):
                         param_data = int(param_data[0])
                     if dims not in ([0], [1]):
                         param_data = param_data.reshape(list(dims))
-                    parameter = Tensor(param_data, ms_type)
+                    parameter = Tensor.from_numpy(param_data)
                     parameter_dict[element.tag] = parameter
 
     except BaseException as e:

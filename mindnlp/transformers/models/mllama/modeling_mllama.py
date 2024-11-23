@@ -24,7 +24,7 @@ from mindnlp.core.nn import CrossEntropyLoss
 from mindnlp.configs import use_pyboost, SUPPORT_VIEW, ON_ORANGE_PI
 
 from ...modeling_utils import PreTrainedModel
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...cache_utils import Cache
 from ...generation import GenerationMixin
 from ...modeling_outputs import BaseModelOutput, BaseModelOutputWithPast, CausalLMOutputWithPast
@@ -701,7 +701,7 @@ class MllamaSelfAttentionDecoderLayer(nn.Module):
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = False,
         cache_position: Optional[mindspore.Tensor] = None,
-        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,  # will become mandatory in v4.45
+        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """
         Args:
