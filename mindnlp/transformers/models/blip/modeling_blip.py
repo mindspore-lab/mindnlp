@@ -1679,7 +1679,7 @@ class BlipForQuestionAnswering(BlipPreTrainedModel):
         question_attention_mask = ops.ones(*question_embeds.shape[:-1], dtype=mindspore.int64)
 
         bos_ids = ops.full(
-            (question_embeds.shape[0], 1), fill_value=self.decoder_start_token_id
+            (question_embeds.shape[0], 1), fill_value=self.decoder_start_token_id, dtype=mindspore.int64
         )
 
         outputs = self.text_decoder.generate(
