@@ -73,13 +73,13 @@ def init_on_empty(include_buffers: bool = None):
         if param is not None:
             kwargs = module._parameters[name].__dict__
             kwargs["requires_grad"] = param.requires_grad
-            module._parameters[name].assign_value(Tensor_(shape=(), dtype=module._parameters[name].dtype))
+            module._parameters[name].assign_value(Tensor_(shape=module._parameters[name].shape, dtype=module._parameters[name].dtype))
             module._parameters[name].meta = True
 
     def register_empty_buffer(module, name, buffer, persistent=True):
         old_register_buffer(module, name, buffer, persistent=persistent)
         if buffer is not None:
-            module._buffers[name].assign_value(Tensor_(shape=(), dtype=module._buffers[name].dtype))
+            module._buffers[name].assign_value(Tensor_(shape=module._parameters[name].shape, dtype=module._buffers[name].dtype))
             module._buffers[name].meta = True
 
     try:
