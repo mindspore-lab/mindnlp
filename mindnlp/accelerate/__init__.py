@@ -5,7 +5,6 @@ from .utils import (
     # DDPCommunicationHookType,
     # DeepSpeedPlugin,
     # DistributedDataParallelKwargs,
-    # DistributedType,
     # FullyShardedDataParallelPlugin,
     # GradScalerKwargs,
     # InitProcessGroupKwargs,

@@ -45,6 +45,8 @@ from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_
     WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from ...dataset import BaseMapFunction
 from ...utils import logging, find_labels, can_return_loss
+from ...utils.constants import _actual_distributed_type 
+from ...utils.dataclasses import DistributedType
 from ...utils.import_utils import is_safetensors_available
 from ...transformers.modeling_utils import PreTrainedModel
 from ...transformers.configuration_utils import PretrainedConfig
@@ -88,6 +90,7 @@ from ..callbacks import (
     TrainerControl,
     TrainerState,
 )
+from ..utils import _get_learning_rate
 
 
 logger = logging.get_logger(__name__)
@@ -124,7 +127,6 @@ class Trainer:
     """
     Trainer is a simple but feature-complete training and eval loop for MindSpore, optimized for 🤗 Transformers.
     """
-    from ..utils import _get_learning_rate
     def __init__(
         self,
         model: Union[PreTrainedModel, nn.Module] = None,
@@ -284,6 +286,7 @@ class Trainer:
         # Internal variables to help with automatic batch size reduction
         self._train_batch_size = args.train_batch_size
         self._created_lr_scheduler = False
+        self.actual_distributed_type = _actual_distributed_type
 
     def _activate_neftune(self, model):
         r"""

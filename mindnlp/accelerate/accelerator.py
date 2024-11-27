@@ -1,20 +1,20 @@
 """accelerate"""
 import os
+import mindspore
+import numpy
+
 from contextlib import contextmanager
 from typing import Optional
-
-import mindspore
 from mindspore import nn
 from mindspore.communication import init
 
 from .state import AcceleratorState
 from .utils import (
-    DistributedType,
     MindFormersPlugin,
     is_mindformers_available,
     wait_for_everyone
 )
-from ..utils import logging
+from ..utils import _actual_distributed_type, logging, DistributedType
 
 if is_mindformers_available():
     from .utils import (
@@ -45,7 +45,7 @@ class Accelerator:
         # init mindformers_plugin from env variables
         if mindformers_plugin is None:
             mindformers_plugin = (
-                MindFormersPlugin() if os.environ.get("ACCELERATE_USE_MINDFORMERS", "false") == "true" else None
+                MindFormersPlugin() if _actual_distributed_type == DistributedType.MINDFORMERS else None
             )
         else:
             os.environ["ACCELERATE_USE_MINDFORMERS"] = "true"
@@ -104,11 +104,19 @@ class Accelerator:
         """
         result = []
 
-        # Only support mindsormers now
+        # Only support mindsormers and MULTI_NPU_DATA_PARALLEL now
         if self.distributed_type == DistributedType.MINDFORMERS:
             result = self._prepare_mindformers(*args)
-
+        elif self.distributed_type == DistributedType.MULTI_NPU_DATA_PARALLEL:
+            result = self._prepare_data_parallel_native_minspore(*args)
         return result
+
+    def _prepare_data_parallel_native_minspore(self, *args):
+        # initialize data parallel for native mindspore
+        mindspore.set_context(mode=mindspore.GRAPH_MODE)
+        mindspore.set_auto_parallel_context(parallel_mode=mindspore.ParallelMode.DATA_PARALLEL, gradients_mean=True)
+        mindspore.communication.init()
+        mindspore.set_seed(numpy.random.seed())
 
     def _prepare_mindformers(self, *args):
         mindformers_plugin = self.state.mindformers_plugin

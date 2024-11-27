@@ -23,6 +23,8 @@ from datasets import load_dataset as hf_load
 from datasets import Dataset, IterableDataset, Split, Features, \
     DownloadConfig, DownloadMode, VerificationMode, Version
 from mindnlp.configs import DEFAULT_ROOT
+from ..utils.constants import _actual_distributed_type
+from ..utils.dataclasses import DistributedType
 
 class TransferIterableDataset():
     """TransferDataset for Huggingface Dataset."""
@@ -331,8 +333,16 @@ def load_dataset(
         column_names = list(raw_ds.features.keys())
         source = TransferDataset(raw_ds, column_names) if isinstance(raw_ds, Dataset) \
             else TransferIterableDataset(raw_ds, column_names)
-        ms_ds = GeneratorDataset(
-            source=source,
+        ms_ds = ms_ds
+        if _actual_distributed_type == DistributedType.MULTI_NPU_DATA_PARALLEL:
+            from mindspore.communication import get_rank, get_group_size
+            ms_ds = GeneratorDataset(source=source, 
+            column_names=column_names, 
+            shuffle=shuffle,
+            num_parallel_workers=num_proc if num_proc else 1,
+            num_shards=get_group_size(), shard_id=get_rank())
+        else:
+            ms_ds = GeneratorDataset(source=source,
             column_names=column_names,
             shuffle=shuffle,
             num_parallel_workers=num_proc if num_proc else 1)

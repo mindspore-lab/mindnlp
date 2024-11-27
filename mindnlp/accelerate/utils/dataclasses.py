@@ -11,18 +11,6 @@ from mindnlp.accelerate.utils.config import (
 )
 
 
-class DistributedType(str, enum.Enum):
-    """
-    Represents a type of distributed environment.
-
-    Values:
-        - **MINDFORMERS** -- Using mindformers
-    """
-
-    MINDFORMERS = "MINDFORMERS"
-    NO = "NO"
-
-
 @dataclass
 class MindFormersPlugin:
     """
