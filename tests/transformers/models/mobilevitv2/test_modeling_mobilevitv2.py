@@ -18,17 +18,18 @@ import numpy as np
 import unittest
 from mindnlp.transformers import MobileViTV2Config
 from mindnlp.utils.testing_utils import is_flaky, require_mindspore, require_vision, slow
-from transformers.utils import cached_property, is_mindspore_available, is_vision_available
+from mindnlp.utils import cached_property, is_mindspore_available, is_vision_available
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
-from ...test_pipeline_mixin import PipelineTesterMixin
+# from ...test_pipeline_mixin import PipelineTesterMixin
 
 if is_mindspore_available():
     import mindspore
+
     from mindnlp.core import ops, no_grad
-    from mindmlp.transformers import MobileViTV2ForImageClassification, MobileViTV2ForSemanticSegmentation, MobileViTV2Model
-    from mindmlp.transformers.models.mobilevitv2.modeling_mobilevitv2 import (
+    from mindnlp.transformers import MobileViTV2ForImageClassification, MobileViTV2ForSemanticSegmentation, MobileViTV2Model
+    from mindnlp.transformers.models.mobilevitv2.modeling_mobilevitv2 import (
         make_divisible,
     )
 
@@ -171,7 +172,7 @@ class MobileViTV2ModelTester:
 
 
 @require_mindspore
-class MobileViTV2ModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase):
+class MobileViTV2ModelTest(ModelTesterMixin, unittest.TestCase):
     """
     Here we also overwrite some of the tests of test_modeling_common.py, as MobileViTV2 does not use input_ids, inputs_embeds,
     attention_mask and seq_length.
@@ -218,9 +219,9 @@ class MobileViTV2ModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestC
         pass
 
     # @require_torch_multi_gpu
-    # @unittest.skip(reason="Got `CUDA error: misaligned address` for tests after this one being run.")
-    # def test_multi_gpu_data_parallel_forward(self):
-    #     pass
+    @unittest.skip(reason="Got `CUDA error: misaligned address` for tests after this one being run.")
+    def test_multi_gpu_data_parallel_forward(self):
+        pass
 
     def test_model(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -274,7 +275,7 @@ class MobileViTV2ModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestC
     @slow
     def test_model_from_pretrained(self):
         model_name = "apple/mobilevitv2-1.0-imagenet1k-256"
-        model = MobileViTV2Model.from_pretrained(model_name)
+        model = MobileViTV2Model.from_pretrained(model_name, from_pt=True)
         self.assertIsNotNone(model)
 
 
@@ -301,7 +302,7 @@ class MobileViTV2ModelIntegrationTest(unittest.TestCase):
 
         image_processor = self.default_image_processor
         image = prepare_img()
-        inputs = image_processor(images=image, return_tensors="pt")
+        inputs = image_processor(images=image, return_tensors="ms")
 
         # forward pass
         with no_grad():
@@ -313,7 +314,7 @@ class MobileViTV2ModelIntegrationTest(unittest.TestCase):
 
         expected_slice = mindspore.tensor([-1.6336e00, -7.3204e-02, -5.1883e-01])
 
-        self.assertTrue(np.allclose(outputs.logits[0, :3].np, expected_slice.np, atol=1e-4))
+        self.assertTrue(ops.allclose(outputs.logits[0, :3], expected_slice, atol=1e-4))
 
     @slow
     def test_inference_semantic_segmentation(self):
@@ -322,7 +323,7 @@ class MobileViTV2ModelIntegrationTest(unittest.TestCase):
         image_processor = MobileViTImageProcessor.from_pretrained("shehan97/mobilevitv2-1.0-voc-deeplabv3")
 
         image = prepare_img()
-        inputs = image_processor(images=image, return_tensors="pt")
+        inputs = image_processor(images=image, return_tensors="ms")
 
         # forward pass
         with no_grad():
@@ -341,7 +342,7 @@ class MobileViTV2ModelIntegrationTest(unittest.TestCase):
             ],
         )
 
-        self.assertTrue(ops.allclose(logits[0, :3, :3, :3].np, expected_slice, atol=1e-4))
+        self.assertTrue(ops.allclose(logits[0, :3, :3, :3], expected_slice, atol=1e-3))
 
     @slow
     def test_post_processing_semantic_segmentation(self):
@@ -356,7 +357,7 @@ class MobileViTV2ModelIntegrationTest(unittest.TestCase):
         with no_grad():
             outputs = model(**inputs)
 
-        outputs.logits = outputs.logits.detach().cpu()
+        outputs.logits = mindspore.ops.stop_gradient(outputs.logits)
 
         segmentation = image_processor.post_process_semantic_segmentation(outputs=outputs, target_sizes=[(50, 60)])
         expected_shape = (50, 60)

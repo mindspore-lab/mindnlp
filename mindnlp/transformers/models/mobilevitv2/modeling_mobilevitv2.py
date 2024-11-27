@@ -252,7 +252,7 @@ class MobileViTV2LinearSelfAttention(nn.Module):
         # Project hidden_states into query, key and value
         # Query --> [batch_size, 1, num_pixels_in_patch, num_patches]
         # value, key --> [batch_size, embed_dim, num_pixels_in_patch, num_patches]
-        query, key, value = ops.split(qkv, split_size_or_sections=[1, self.embed_dim, self.embed_dim], axis=1)
+        query, key, value = ops.split(qkv, split_size_or_sections=[1, self.embed_dim, self.embed_dim], dim=1)
 
         # apply softmax along num_patches dimension
         context_scores = ops.softmax(query, dim=-1)
@@ -262,11 +262,11 @@ class MobileViTV2LinearSelfAttention(nn.Module):
         # [batch_size, embed_dim, num_pixels_in_patch, num_patches] x [batch_size, 1, num_pixels_in_patch, num_patches] -> [batch_size, embed_dim, num_pixels_in_patch, num_patches]
         context_vector = key * context_scores
         # [batch_size, embed_dim, num_pixels_in_patch, num_patches] --> [batch_size, embed_dim, num_pixels_in_patch, 1]
-        context_vector = ops.sum(context_vector, keep_dims=True)
+        context_vector = ops.sum(context_vector, dim=-1,keepdim=True)
 
         # combine context vector with values
         # [batch_size, embed_dim, num_pixels_in_patch, num_patches] * [batch_size, embed_dim, num_pixels_in_patch, 1] --> [batch_size, embed_dim, num_pixels_in_patch, num_patches]
-        out = ops.relu(value) * context_vector.expand_as(value)
+        out = ms.ops.relu(value) * context_vector.expand_as(value)
         out = self.out_proj(out)
         return out
 
@@ -431,7 +431,7 @@ class MobileViTV2Layer(nn.Module):
 
     def unfolding(self, feature_map: ms.Tensor) -> Tuple[ms.Tensor, Tuple[int, int]]:
         batch_size, in_channels, img_height, img_width = feature_map.shape
-        patches = ops.unfold(input=feature_map,
+        patches = ms.ops.unfold(input=feature_map,
                              kernel_size=(self.patch_height, self.patch_width),
                              stride=(self.patch_height, self.patch_width),
                              )
@@ -443,7 +443,7 @@ class MobileViTV2Layer(nn.Module):
         batch_size, in_dim, patch_size, n_patches = patches.shape
         patches = patches.reshape(batch_size, in_dim * patch_size, n_patches)
         output_size_tensor = ms.Tensor(output_size)
-        feature_map = ops.fold(
+        feature_map = ms.ops.fold(
             patches,
             output_size=output_size_tensor,
             kernel_size=(self.patch_height, self.patch_width),
@@ -670,7 +670,7 @@ class MobileViTV2Model(MobileViTV2PreTrainedModel):
             last_hidden_state = encoder_outputs[0]
 
             # global average pooling: (batch_size, channels, height, width) -> (batch_size, channels)
-            pooled_output = ops.mean(last_hidden_state, dim=[-2, -1], keep_dims=False)
+            pooled_output = ops.mean(last_hidden_state, dim=[-2, -1], keepdim=False)
         else:
             last_hidden_state = encoder_outputs[0]
             pooled_output = None
@@ -942,6 +942,7 @@ class MobileViTV2ForSemanticSegmentation(MobileViTV2PreTrainedModel):
 
         loss = None
         if labels is not None:
+            labels = labels.astype(ms.int32)
             # upsample logits to the images' original size
             upsampled_logits = F.interpolate(
                 logits, size=labels.shape[-2:], mode="bilinear", align_corners=False
