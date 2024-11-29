@@ -17,8 +17,11 @@ class DistributedType(str, enum.Enum):
 
     Values:
         - **MINDFORMERS** -- Using mindformers
+        - **NO** -- Not a distributed environment, just a single process.
+        - **MULTI_NPU_DP** -- Distributed data parallel on multiple NPUs.
     """
 
+    MULTI_NPU_DP = "MULTI_NPU_DP"
     MINDFORMERS = "MINDFORMERS"
     NO = "NO"
 
