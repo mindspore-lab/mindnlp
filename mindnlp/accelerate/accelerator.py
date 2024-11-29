@@ -14,7 +14,8 @@ from .utils import (
     is_mindformers_available,
     wait_for_everyone
 )
-from ..utils import _actual_distributed_type, logging, DistributedType
+from .utils import DistributedType,accelerate_distributed_type
+from ..utils import logging
 
 if is_mindformers_available():
     from .utils import (
@@ -45,7 +46,7 @@ class Accelerator:
         # init mindformers_plugin from env variables
         if mindformers_plugin is None:
             mindformers_plugin = (
-                MindFormersPlugin() if _actual_distributed_type == DistributedType.MINDFORMERS else None
+                MindFormersPlugin() if accelerate_distributed_type == DistributedType.MINDFORMERS else None
             )
         else:
             os.environ["ACCELERATE_USE_MINDFORMERS"] = "true"
@@ -104,10 +105,10 @@ class Accelerator:
         """
         result = []
 
-        # Only support mindsormers and MULTI_NPU_DATA_PARALLEL now
+        # Only support mindsormers and MULTI_NPU_DP now
         if self.distributed_type == DistributedType.MINDFORMERS:
             result = self._prepare_mindformers(*args)
-        elif self.distributed_type == DistributedType.MULTI_NPU_DATA_PARALLEL:
+        elif self.distributed_type == DistributedType.MULTI_NPU_DP:
             result = self._prepare_data_parallel_native_minspore(*args)
         return result
 

@@ -1,5 +1,7 @@
 """accelerate utils"""
+from .constants import accelerate_distributed_type
 from .dataclasses import (
+    DistributedType,
     MindFormersPlugin
 )
 from .environment import (

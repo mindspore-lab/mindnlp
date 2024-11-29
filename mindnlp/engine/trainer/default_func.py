@@ -19,8 +19,8 @@ from mindspore import nn, ops, value_and_grad
 from mindspore.amp import all_finite
 
 from mindnlp.utils import ModelOutput
-from ...utils.constants import _actual_distributed_type
-from ...utils.dataclasses import DistributedType
+from ...accelerate.utils import DistributedType
+from ...accelerate.utils import accelerate_distributed_type
 
 def get_default_forward_fn_with_loss_fn(network, loss_fn, loss_scaler):
     """get default forward function with loss function"""
@@ -66,9 +66,6 @@ def get_default_train_step_fn(forward_fn, optimizer, loss_scaler, check_gradient
     def default_run_step(labels, *args, **kwargs):
         """Core process of each step, including the forward propagation process and back propagation of data."""
         loss, grads = grad_fn(labels, *args, **kwargs)
-        if _actual_distributed_type == DistributedType.MULTI_NPU_DATA_PARALLEL:
-            grads = nn.DistributedGradReducer(optimizer.parameters)
-        grad_reducer = nn.DistributedGradReducer(optimizer.parameters)
         loss = loss_scaler.unscale(loss)
         if check_gradients:
             is_finite = all_finite(grads)
@@ -83,8 +80,6 @@ def get_default_train_step_fn(forward_fn, optimizer, loss_scaler, check_gradient
     def default_run_step_for_obj_net(*args, **kwargs):
         """Core process of each step, including the forward propagation process and back propagation of data."""
         loss, grads = grad_fn(*args, **kwargs)
-        if _actual_distributed_type == DistributedType.MULTI_NPU_DATA_PARALLEL:
-            grads = nn.DistributedGradReducer(optimizer.parameters)
         loss = loss_scaler.unscale(loss)
         if check_gradients:
             is_finite = all_finite(grads)

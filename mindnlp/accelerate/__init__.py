@@ -6,6 +6,8 @@ from .utils import (
     # DeepSpeedPlugin,
     # DistributedDataParallelKwargs,
     # FullyShardedDataParallelPlugin,
+    accelerate_distributed_type,
+    DistributedType,
     # GradScalerKwargs,
     # InitProcessGroupKwargs,
     # ProfileKwargs,

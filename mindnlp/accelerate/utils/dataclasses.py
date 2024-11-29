@@ -11,6 +11,21 @@ from mindnlp.accelerate.utils.config import (
 )
 
 
+class DistributedType(str, enum.Enum):
+    """
+    Represents a type of distributed environment.
+
+    Values:
+        - **MINDFORMERS** -- Using mindformers
+        - **NO** -- Not a distributed environment, just a single process.
+        - **MULTI_NPU_DP** -- Distributed data parallel on multiple NPUs.
+    """
+
+    MULTI_NPU_DP = "MULTI_NPU_DP"
+    MINDFORMERS = "MINDFORMERS"
+    NO = "NO"
+
+
 @dataclass
 class MindFormersPlugin:
     """

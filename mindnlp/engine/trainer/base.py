@@ -45,8 +45,8 @@ from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_
     WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from ...dataset import BaseMapFunction
 from ...utils import logging, find_labels, can_return_loss
-from ...utils.constants import _actual_distributed_type 
-from ...utils.dataclasses import DistributedType
+from ...accelerate.utils import DistributedType
+from ...accelerate.utils import accelerate_distributed_type 
 from ...utils.import_utils import is_safetensors_available
 from ...transformers.modeling_utils import PreTrainedModel
 from ...transformers.configuration_utils import PretrainedConfig
@@ -286,7 +286,7 @@ class Trainer:
         # Internal variables to help with automatic batch size reduction
         self._train_batch_size = args.train_batch_size
         self._created_lr_scheduler = False
-        self.actual_distributed_type = _actual_distributed_type
+        self.actual_distributed_type = accelerate_distributed_type
 
     def _activate_neftune(self, model):
         r"""
@@ -1376,6 +1376,14 @@ indicating whether to prefer safe tensors.
         inputs = self._prepare_inputs(inputs)
 
         def forward(inputs):
+            if accelerate_distributed_type == DistributedType.MULTI_NPU_DP:
+                from mindspore.communication import get_group_size
+                import mindspore.ops as msops
+                rank_size = get_group_size()
+                for parameter in model.parameters():
+                    all_reduce_sum =  msops.AllReduce(msops.ReduceOp.SUM)
+                    new_grads_mean = all_reduce_sum(parameter.grad) / rank_size
+                    parameter.grad = new_grads_mean
             return self.compute_loss(model, inputs)
 
         if getattr(self, 'grad_fn', None) is None or self.model_reload:
