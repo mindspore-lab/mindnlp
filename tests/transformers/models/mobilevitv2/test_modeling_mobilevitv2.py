@@ -14,10 +14,9 @@
 # limitations under the License.
 """Testing suite for the PyTorch MobileViTV2 model."""
 
-import numpy as np
 import unittest
 from mindnlp.transformers import MobileViTV2Config
-from mindnlp.utils.testing_utils import is_flaky, require_mindspore, require_vision, slow
+from mindnlp.utils.testing_utils import require_mindspore, require_vision, slow
 from mindnlp.utils import cached_property, is_mindspore_available, is_vision_available
 
 from ...test_configuration_common import ConfigTester

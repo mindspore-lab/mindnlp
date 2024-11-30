@@ -23,7 +23,6 @@ import mindspore as ms
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from mindspore.common.initializer import Normal
 from ....common.activations import ACT2FN
 
 from ...modeling_outputs import (
@@ -730,7 +729,7 @@ class MobileViTV2ForImageClassification(MobileViTV2PreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == ms.int64 or labels.dtype == ms.int32):
+                elif self.num_labels > 1 and labels.dtype in (ms.int64, ms.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
