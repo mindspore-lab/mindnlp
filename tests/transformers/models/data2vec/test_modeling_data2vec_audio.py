@@ -30,7 +30,7 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init
 
 if is_mindspore_available():
     import mindspore
-    from mindnlp.core import nn, ops, optim
+    from mindnlp.core import nn, ops, optim, value_and_grad
 
     from mindnlp.transformers import (
         Data2VecAudioForAudioFrameClassification,
@@ -291,10 +291,10 @@ class Data2VecAudioModelTester:
             loss = model(input_values, labels=labels).loss
             return loss
         optimizer = optim.Adam(model.trainable_params(), lr=0.001)
-        grad_fn = mindspore.value_and_grad(forward_fn, None, model.trainable_params())
+        grad_fn = value_and_grad(forward_fn, model.trainable_params())
         loss,grads = grad_fn(input_values,labels)
         #loss.backward()
-        optimizer.step(grads)
+        optimizer.step()
         #loss.backward()
 
     def check_seq_classifier_training(self, config, input_values, *args):
@@ -321,11 +321,9 @@ class Data2VecAudioModelTester:
             loss = model(input_values, labels=labels).loss
             return loss
         optimizer = optim.Adam(model.trainable_params(), lr=0.001)
-        grad_fn = mindspore.value_and_grad(forward_fn, None, model.trainable_params())
-        loss,grads = grad_fn(input_values,labels)
-        #loss.backward()
-        optimizer.step(grads)
-        #loss.backward()
+        grad_fn = value_and_grad(forward_fn, model.trainable_params())
+        loss = grad_fn(input_values,labels)
+        optimizer.step()
     
     def check_xvector_training(self, config, input_values, *args):
         config.ctc_zero_infinity = True

@@ -10,8 +10,12 @@ from collections import OrderedDict, defaultdict
 from typing import Optional, Dict, Union, List, Tuple, Set
 import mindspore
 from mindspore.communication import get_group_size, get_rank
+from mindnlp.configs import SUPPORT_ASYNC_DIST_OP
 try:
-    from mindspore.communication.comm_func import isend, irecv, broadcast
+    if SUPPORT_ASYNC_DIST_OP:
+        from mindspore.communication.comm_func import send as isend, recv as irecv, broadcast
+    else:
+        from mindspore.communication.comm_func import isend, irecv, broadcast
 except:
     from mindnlp.parallel.comm_func import isend, irecv, broadcast
 

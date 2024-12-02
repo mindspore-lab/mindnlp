@@ -7,7 +7,7 @@ import time
 
 if ON_ORANGE_PI:
     mindspore.set_context(
-        enable_compile_cache=True,
+        enable_graph_kernel=True,
         mode=mindspore.GRAPH_MODE,
         jit_config={
             "jit_level": "O2",
@@ -23,7 +23,8 @@ NUM_TOKENS_TO_GENERATE = 40
 
 model_id = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 tokenizer = LlamaTokenizer.from_pretrained(model_id)
-model = LlamaForCausalLM.from_pretrained(model_id, ms_dtype=mindspore.float16)
+model = LlamaForCausalLM.from_pretrained(model_id, ms_dtype=mindspore.float16, low_cpu_mem_usage=True)
+model = model.npu()
 
 # quantize_cfg = w8x8(model.model.config)
 # quantize(model, cfg=quantize_cfg)

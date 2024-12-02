@@ -805,7 +805,7 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
     else:
         order = "C"
         array = array.reshape(size, order=order)
-    param = Tensor(array)
+    param = Tensor.from_numpy(array)
     return param
 
 def _rebuild_from_type_v2(func, new_type, args, state):
@@ -1134,7 +1134,7 @@ def _legacy_load(f, pickle_module, **pickle_load_args):
         if array.dtype == bfloat16 and not SUPPORT_BF16:
             logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
             array = array.astype(np.float16)
-        new_result[k] = Tensor(array)
+        new_result[k] = Tensor.from_numpy(array)
 
     return new_result
 
@@ -1268,11 +1268,11 @@ def convert_torch_to_mindspore(pth_file):
     has_bf16 = False
     for key, value in state_dict.items():
         if value.dtype == torch.bfloat16:
-            data = Tensor(value.to(torch.float).numpy(), dtype=mindspore.float16)
+            data = Tensor.from_numpy(value.to(torch.float).numpy().astype(np.float16))
             if not has_bf16:
                 has_bf16 = True
         else:
-            data = Tensor(value.numpy())
+            data = Tensor.from_numpy(value.numpy())
         ms_ckpt.append({'name': key, 'data': data})
 
     if has_bf16:
@@ -1380,9 +1380,9 @@ def legacy_safe_load_file(filename):
             arr = np.frombuffer(v["data"], dtype=dtype).reshape(v["shape"])
 
             if (not SUPPORT_BF16 and dtype != bfloat16) or SUPPORT_BF16:
-                result[k] = Tensor(arr)
+                result[k] = Tensor.from_numpy(arr)
             else:
-                result[k] = Tensor(arr.astype(np.float16))
+                result[k] = Tensor.from_numpy(arr.astype(np.float16))
         return result
 
 
@@ -1421,7 +1421,7 @@ def safe_load_file(filename):
                 logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
                 array = array.astype(np.float16)
             array = array.astype(array.dtype)
-            out = Tensor(array)
+            out = Tensor.from_numpy(array)
         return out
 
     with open(filename, "rb") as fp:
@@ -1516,7 +1516,7 @@ def load_checkpoint(ckpt_file_name):
                 dims = element.tensor.dims
                 param_data = np.frombuffer(data, np_type)
                 param_data = param_data.reshape(list(dims))
-                parameter = Tensor(param_data)
+                parameter = Tensor.from_numpy(param_data)
                 parameter_dict[element.tag] = parameter
                 continue
             element_data = np.frombuffer(data, np_type)
@@ -1536,7 +1536,7 @@ def load_checkpoint(ckpt_file_name):
                         param_data = int(param_data[0])
                     if dims not in ([0], [1]):
                         param_data = param_data.reshape(list(dims))
-                    parameter = Tensor(param_data)
+                    parameter = Tensor.from_numpy(param_data)
                     parameter_dict[element.tag] = parameter
 
     except BaseException as e:

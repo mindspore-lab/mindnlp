@@ -386,8 +386,8 @@ class Module:
         return self
 
     def _wrapped_call_impl(self, *args, **kwargs):
-        if self.__ms_class__:
-            return self.forward(*args, **kwargs)
+        if self._compiled_call_impl is not None:
+            return self._compiled_call_impl(*args, **kwargs)  # type: ignore[misc]
         return self._call_impl(*args, **kwargs)
 
     # torchrec tests the code consistency with the following code
@@ -396,6 +396,9 @@ class Module:
         forward_call = self.forward
         # If we don't have any hooks, we want to skip the rest of the logic in
         # this function, and just call forward.
+        if self.__ms_class__:
+            return forward_call(*args, **kwargs)
+
         if not (self._backward_hooks or self._backward_pre_hooks or self._forward_hooks or self._forward_pre_hooks
                 or _global_backward_pre_hooks or _global_backward_hooks
                 or _global_forward_hooks or _global_forward_pre_hooks):
@@ -685,7 +688,10 @@ class Module:
         return sorted(keys)
 
     def cuda(self):
-        return self
+        return self._apply(lambda t: t.move_to('GPU'))
+
+    def npu(self):
+        return self._apply(lambda t: t.move_to('Ascend'))
 
     def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict,
                               missing_keys, unexpected_keys, error_msgs):
@@ -1198,6 +1204,14 @@ class Module:
             module.jit(mode)
         return self
 
+    def compile(self, *args, **kwargs):
+        self.jit()
+        def forward_fn(*args, **kwargs):
+            return self.forward(*args, **kwargs)
+
+        forward_fn = mindspore.jit(forward_fn, *args, **kwargs)
+        self._compiled_call_impl = forward_fn
+
     @property
     def skip_syntax(self):
         return self.__ms_class__
@@ -1598,3 +1612,24 @@ class Module:
         if prepend:
             self._forward_hooks.move_to_end(handle.id, last=False)  # type: ignore[attr-defined]
         return handle
+
+    def zero_grad(self, set_to_none: bool = True) -> None:
+        r"""Reset gradients of all model parameters.
+
+        See similar function under :class:`torch.optim.Optimizer` for more context.
+
+        Args:
+            set_to_none (bool): instead of setting to zero, set the grads to None.
+                See :meth:`torch.optim.Optimizer.zero_grad` for details.
+        """
+        if getattr(self, "_is_replica", False):
+            warnings.warn(
+                "Calling .zero_grad() from a module created with nn.DataParallel() has no effect. "
+                "The parameters are copied (in a differentiable manner) from the original module. "
+                "This means they are not leaf nodes in autograd and so don't accumulate gradients. "
+                "If you need gradients in your forward method, consider using autograd.grad instead."
+            )
+
+        for p in self.parameters():
+            if p.grad is not None:
+                p.grad = None

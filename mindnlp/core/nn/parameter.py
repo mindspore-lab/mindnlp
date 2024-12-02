@@ -7,8 +7,10 @@ from mindspore._c_expression import ParamInfo # pylint: disable=no-name-in-modul
 class Parameter(Tensor):
     def __init__(self, input_data=None, requires_grad=True):
         super().__init__(input_data)
+        self.meta = False
         self.param_info = ParamInfo()
         self.param_info.name = str(uuid.uuid4())
+        self.param_info.parameter_shape = self.shape
         self.param_info.requires_grad = requires_grad
         self.requires_grad = requires_grad
 
