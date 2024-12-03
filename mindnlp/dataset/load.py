@@ -335,7 +335,7 @@ def load_dataset(
         column_names = list(raw_ds.features.keys())
         source = TransferDataset(raw_ds, column_names) if isinstance(raw_ds, Dataset) \
             else TransferIterableDataset(raw_ds, column_names)
-        if accelerate_distributed_type == DistributedType.MULTI_NPU_DP:
+        if accelerate_distributed_type == DistributedType.MULTI_NPU:
             ms_ds = GeneratorDataset(source=source, 
             column_names=column_names, 
             shuffle=shuffle,
