@@ -1,10 +1,9 @@
 """accelerate"""
 import os
-import mindspore
-import numpy
-
 from contextlib import contextmanager
 from typing import Optional
+
+import mindspore
 from mindspore import nn
 from mindspore.communication import init
 

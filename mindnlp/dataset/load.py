@@ -18,11 +18,10 @@ load
 """
 import os
 from typing import Union, Optional, Dict, Sequence, Mapping
-from mindspore.dataset import GeneratorDataset
 from datasets import load_dataset as hf_load
 from datasets import Dataset, IterableDataset, Split, Features, \
     DownloadConfig, DownloadMode, VerificationMode, Version
-from mindnlp.configs import DEFAULT_ROOT
+from mindspore.dataset import GeneratorDataset
 from mindspore.communication import get_rank, get_group_size
 from ..accelerate import DistributedType
 from ..accelerate.utils import accelerate_distributed_type
