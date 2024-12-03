@@ -1,7 +1,18 @@
 """constants"""
 import os
+import mindspore
+import numpy
 from .dataclasses import DistributedType
 
+
+def _prepare_data_parallel_native_minspore():
+    # initialize data parallel hcc backend for data_loader and Trainer API
+    mindspore.set_context(mode=mindspore.GRAPH_MODE)
+    mindspore.set_auto_parallel_context(parallel_mode=mindspore.ParallelMode.DATA_PARALLEL, gradients_mean=True)
+    mindspore.communication.init()
+    random_seed = numpy.random.randint(10000)
+    mindspore.set_seed(random_seed)
+    
 def detect_accelerate_distributed_type():
     """
     detect distributed_type
@@ -10,8 +21,9 @@ def detect_accelerate_distributed_type():
         _type_: According to the factors such as the available parallel software and hardware environment of the current system and the user-specified parallel scheme,
           the optimal parallel strategy is comprehensively decided in different situations.
     """
-    if os.environ.get("MULTI_NPU_DP", None) == "true": 
-        return DistributedType.MULTI_NPU_DP
+    if os.environ.get("MULTI_NPU", None) == "true": 
+        _prepare_data_parallel_native_minspore()
+        return DistributedType.MULTI_NPU
     if os.environ.get("ACCELERATE_USE_MINDFORMERS", "false") == "true": 
         return DistributedType.MINDFORMERS
     else:

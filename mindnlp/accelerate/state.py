@@ -347,9 +347,9 @@ class PartialState:
         if accelerate_distributed_type == DistributedType.MINDFORMERS and is_mindformers_available():
             self.backend = "hccl"
             self.distributed_type = DistributedType.MINDFORMERS
-        elif accelerate_distributed_type == DistributedType.MULTI_NPU_DP:
+        elif accelerate_distributed_type == DistributedType.MULTI_NPU:
             self.backend = "hccl"
-            self.distributed_type = DistributedType.MULTI_NPU_DP
+            self.distributed_type = DistributedType.MULTI_NPU
             
     @num_processes.setter
     def num_processes(self, value):
@@ -372,8 +372,8 @@ class AcceleratorState:
             PartialState(**kwargs)
         self.__dict__.update(PartialState._shared_state)
         # set distributed_type
-        if accelerate_distributed_type == DistributedType.MULTI_NPU_DP:
-            self.distributed_type = DistributedType.MULTI_NPU_DP
+        if accelerate_distributed_type == DistributedType.MULTI_NPU:
+            self.distributed_type = DistributedType.MULTI_NPU
         elif accelerate_distributed_type == DistributedType.MINDFORMERS:
             self.distributed_type = DistributedType.MINDFORMERS
             self.mindformers_plugin = mindformers_plugin

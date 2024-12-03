@@ -105,19 +105,12 @@ class Accelerator:
         """
         result = []
 
-        # Only support mindsormers and MULTI_NPU_DP now
+        # Only support mindsormers and MULTI_NPU now
         if self.distributed_type == DistributedType.MINDFORMERS:
             result = self._prepare_mindformers(*args)
-        elif self.distributed_type == DistributedType.MULTI_NPU_DP:
-            result = self._prepare_data_parallel_native_minspore(*args)
+        elif self.distributed_type == DistributedType.MULTI_NPU:
+            pass # nothing prepare for data parallel
         return result
-
-    def _prepare_data_parallel_native_minspore(self, *args):
-        # initialize data parallel for native mindspore
-        mindspore.set_context(mode=mindspore.GRAPH_MODE)
-        mindspore.set_auto_parallel_context(parallel_mode=mindspore.ParallelMode.DATA_PARALLEL, gradients_mean=True)
-        mindspore.communication.init()
-        mindspore.set_seed(numpy.random.seed())
 
     def _prepare_mindformers(self, *args):
         mindformers_plugin = self.state.mindformers_plugin
