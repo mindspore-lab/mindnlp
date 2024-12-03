@@ -90,7 +90,6 @@ from ..callbacks import (
     TrainerControl,
     TrainerState,
 )
-from ..utils import _get_learning_rate
 
 
 logger = logging.get_logger(__name__)
@@ -126,7 +125,7 @@ def _is_peft_model(model):
 class Trainer:
     """
     Trainer is a simple but feature-complete training and eval loop for MindSpore, optimized for 🤗 Transformers.
-    """
+    """ 
     def __init__(
         self,
         model: Union[PreTrainedModel, nn.Module] = None,
@@ -287,6 +286,29 @@ class Trainer:
         self._train_batch_size = args.train_batch_size
         self._created_lr_scheduler = False
         self.actual_distributed_type = accelerate_distributed_type
+
+
+    def _get_learning_rate(self):
+        r"""
+        This function retrieves the learning rate used by the optimizer.
+        
+        Args:
+            self: An instance of the class containing the optimizer and learning rate scheduler.
+        
+        Returns:
+            The learning rate value (float) used by the optimizer.
+        
+        Raises:
+            None.
+        """
+        if isinstance(self.lr_scheduler, optim.lr_scheduler.ReduceLROnPlateau):
+            last_lr = self.optimizer.param_groups[0]["lr"]
+        else:
+            last_lr = self.lr_scheduler.get_last_lr()[0]
+        if ops.is_tensor(last_lr):
+            last_lr = last_lr.item()
+        return last_lr
+
 
     def _activate_neftune(self, model):
         r"""
@@ -1136,6 +1158,7 @@ MindSpore's `load_checkpoint` function.
                             model.parameters(),
                             args.max_grad_norm,
                         )
+                    
                     # Optimizer step
                     self.optimizer.step()
 
@@ -1376,7 +1399,7 @@ indicating whether to prefer safe tensors.
         inputs = self._prepare_inputs(inputs)
 
         def forward(inputs):
-            if accelerate_distributed_type == DistributedType.MULTI_NPU_DP:
+            if accelerate_distributed_type == DistributedType.MULTI_NPU:
                 from mindspore.communication import get_group_size
                 import mindspore.ops as msops
                 rank_size = get_group_size()
