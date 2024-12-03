@@ -23,6 +23,7 @@ from datasets import Dataset, IterableDataset, Split, Features, \
     DownloadConfig, DownloadMode, VerificationMode, Version
 from mindspore.dataset import GeneratorDataset
 from mindspore.communication import get_rank, get_group_size
+from mindnlp.configs import DEFAULT_ROOT
 from ..accelerate import DistributedType
 from ..accelerate.utils import accelerate_distributed_type
 
