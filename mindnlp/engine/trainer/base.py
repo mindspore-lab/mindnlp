@@ -1377,6 +1377,20 @@ indicating whether to prefer safe tensors.
 
         return inputs
 
+
+    def update_gradient_by_distributed_type(self, model: nn.Module) -> None:
+        """update gradient by distributed_type"""
+        if accelerate_distributed_type == DistributedType.NO:
+            return
+        if accelerate_distributed_type == DistributedType.MULTI_NPU:
+            from mindspore.communication import get_group_size
+            from mindspore.communication.comm_func import all_reduce
+            rank_size = get_group_size()
+            for parameter in model.parameters():
+                new_grads_mean = all_reduce(parameter.grad) / rank_size
+                parameter.grad = new_grads_mean
+
+
     def training_step(self, model: nn.Module, inputs: Dict[str, Union[mindspore.Tensor, Any]]) -> Tuple[List[mindspore.Tensor], mindspore.Tensor]:
         """
         Perform a training step on a batch of inputs.
@@ -1399,14 +1413,6 @@ indicating whether to prefer safe tensors.
         inputs = self._prepare_inputs(inputs)
 
         def forward(inputs):
-            if accelerate_distributed_type == DistributedType.MULTI_NPU:
-                from mindspore.communication import get_group_size
-                import mindspore.ops as msops
-                rank_size = get_group_size()
-                for parameter in model.parameters():
-                    all_reduce_sum =  msops.AllReduce(msops.ReduceOp.SUM)
-                    new_grads_mean = all_reduce_sum(parameter.grad) / rank_size
-                    parameter.grad = new_grads_mean
             return self.compute_loss(model, inputs)
 
         if getattr(self, 'grad_fn', None) is None or self.model_reload:
@@ -1416,7 +1422,7 @@ indicating whether to prefer safe tensors.
             self.grad_fn = value_and_grad(forward, weights, attach_grads=True)
 
         loss = self.grad_fn(inputs)
-
+        self.update_gradient_by_distributed_type(model)
         return loss / self.args.gradient_accumulation_steps
 
     def compute_loss(self, model, inputs, return_outputs=False):

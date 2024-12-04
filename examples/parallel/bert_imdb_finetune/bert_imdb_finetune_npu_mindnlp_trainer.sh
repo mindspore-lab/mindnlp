@@ -19,7 +19,8 @@ mkdir bert_imdb_finetune_cpu_mindnlp_trainer_npus_same
 echo "start training"
 
 export MULTI_NPU="true" 
-# unset MULTI_NPU
-msrun --worker_num=2 --local_worker_num=2 --master_port=8119 \
+export ASCEND_SLOG_PRINT_TO_STDOUT=1
+
+msrun --worker_num=2 --local_worker_num=2 --master_port=8121 \
 --log_dir=bert_imdb_finetune_cpu_mindnlp_trainer_npus_same --join=True \
---cluster_time_out=30 bert_imdb_finetune_cpu_mindnlp_trainer_npus_same.py 
+--cluster_time_out=10 bert_imdb_finetune_cpu_mindnlp_trainer_npus_same.py 
