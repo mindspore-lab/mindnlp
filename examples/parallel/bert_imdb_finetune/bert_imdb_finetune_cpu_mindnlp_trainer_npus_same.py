@@ -1,20 +1,28 @@
 #!/usr/bin/env python
 # coding: utf-8
 """
-python bert_imdb_finetune_cpu_mindnlp_trainer.py
+unset MULTI_NPU && python bert_imdb_finetune_cpu_mindnlp_trainer_npus_same.py
 bash bert_imdb_finetune_npu_mindnlp_trainer.sh
 """
 
-def main():
-    import mindspore
-    from mindspore.dataset import transforms
-    from mindnlp.engine import Trainer
-    from mindnlp.dataset import load_dataset
+import mindspore
+from mindspore.dataset import transforms
+from mindnlp.engine import Trainer
+from mindnlp.dataset import load_dataset
 
+from mindnlp.accelerate.utils.constants import accelerate_distributed_type
+from mindnlp.accelerate.utils.dataclasses import DistributedType
+
+def main():
+    """demo
+
+    Returns:
+        desc: _description_
+    """
     imdb_ds = load_dataset('imdb', split=['train', 'test'])
     imdb_train = imdb_ds['train']
-    imdb_test = imdb_ds['test']
     imdb_train.get_dataset_size()
+
     from mindnlp.transformers import AutoTokenizer
     # tokenizer
     tokenizer = AutoTokenizer.from_pretrained('bert-base-cased')
@@ -41,15 +49,10 @@ def main():
             dataset = dataset.padded_batch(batch_size, pad_info={'input_ids': (None, tokenizer.pad_token_id),
                                                                 'token_type_ids': (None, 0),
                                                                 'attention_mask': (None, 0)})
-
         return dataset
 
-    # split train dataset into train and valid datasets
-    imdb_train, imdb_val = imdb_train.split([0.7, 0.3])
 
     dataset_train = process_dataset(imdb_train, tokenizer, shuffle=True)
-    dataset_val = process_dataset(imdb_val, tokenizer)
-    dataset_test = process_dataset(imdb_test, tokenizer)
 
     next(dataset_train.create_tuple_iterator())
 
@@ -62,35 +65,20 @@ def main():
     
     training_args = TrainingArguments(
         output_dir="bert_imdb_finetune_cpu",
-        evaluation_strategy="epoch",
         save_strategy="epoch",
         logging_strategy="epoch",
-        load_best_model_at_end=True,
         num_train_epochs=2.0,
         learning_rate=2e-5
     )
-    training_args = training_args.set_optimizer(name="adamw", beta1=0.8) # OptimizerNames.SGD
+    training_args = training_args.set_optimizer(name="adamw", beta1=0.8) # 手动指定优化器，OptimizerNames.SGD
 
-    from mindnlp import evaluate
-    import numpy as np
-    metric = evaluate.load("accuracy")
-    def compute_metrics(eval_pred):
-        logits, labels = eval_pred
-        predictions = np.argmax(logits, axis=-1)
-        return metric.compute(predictions=predictions, references=labels)
-    
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=dataset_train,
-        eval_dataset=dataset_val,
-        compute_metrics=compute_metrics
     )
     print("Start training")
     trainer.train()
-
-    print("Start checking the test set")
-    trainer.evaluate(dataset_test)
 
 if __name__ == '__main__':
     main()
