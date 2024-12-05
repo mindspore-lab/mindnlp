@@ -15,10 +15,12 @@
 """
 utils for trainer.
 """
-from mindspore import ops, value_and_grad
+from mindspore import nn, ops, value_and_grad
 from mindspore.amp import all_finite
 
 from mindnlp.utils import ModelOutput
+from ...accelerate.utils import DistributedType
+from ...accelerate.utils import accelerate_distributed_type
 
 def get_default_forward_fn_with_loss_fn(network, loss_fn, loss_scaler):
     """get default forward function with loss function"""
