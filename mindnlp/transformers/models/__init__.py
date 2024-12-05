@@ -152,6 +152,7 @@ from . import (
     mobilenet_v1,
     mobilenet_v2,
     mobilevit,
+    mobilevitv2,
     mpnet,
     mpt,
     mllama,
@@ -395,6 +396,7 @@ from .mobilebert import *
 from .mobilenet_v1 import *
 from .mobilenet_v2 import *
 from .mobilevit import *
+from .mobilevitv2 import *
 from .mpnet import *
 from .mllama import *
 from .mluke import *
@@ -640,6 +642,7 @@ __all__.extend(mobilebert.__all__)
 __all__.extend(mobilenet_v1.__all__)
 __all__.extend(mobilenet_v2.__all__)
 __all__.extend(mobilevit.__all__)
+__all__.extend(mobilevitv2.__all__)
 __all__.extend(mpnet.__all__)
 __all__.extend(mpt.__all__)
 __all__.extend(mt5.__all__)
