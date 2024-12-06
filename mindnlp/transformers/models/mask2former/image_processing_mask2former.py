@@ -59,7 +59,6 @@ logger = logging.get_logger(__name__)
 
 if is_mindspore_available():
     import mindspore
-    from mindspore import nn
 
 
 # Copied from transformers.models.detr.image_processing_detr.max_across_indices
@@ -215,7 +214,7 @@ def compute_segments(
     segments: List[Dict] = []
 
     if target_size is not None:
-        mask_probs = nn.functional.interpolate(
+        mask_probs = ops.interpolate(
             mask_probs.unsqueeze(0), size=target_size, mode="bilinear", align_corners=False
         )[0]
 
@@ -1103,7 +1102,7 @@ class Mask2FormerImageProcessor(BaseImageProcessor):
             mask_cls = class_queries_logits[i]
 
             scores = ops.softmax(mask_cls, axis=-1)[:, :-1]
-            labels = ops.arange(num_classes).unsqueeze(0).repeat(num_queries, 1).flatten()
+            labels = ops.arange(num_classes).unsqueeze(0).tile((num_queries, 1)).flatten()
 
             scores_per_image, topk_indices = scores.flatten().topk(num_queries, sorted=False)
             labels_per_image = labels[topk_indices]
