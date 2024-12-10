@@ -2,7 +2,7 @@
 # coding: utf-8
 """
 unset MULTI_NPU && python bert_imdb_finetune_cpu_mindnlp_trainer_npus_same.py
-bash bert_imdb_finetune_npu_mindnlp_trainer.sh
+bash bert_imdb_finetune_npu_mindnlp_trainer.sh # 数据并行
 """
 
 import mindspore
@@ -17,7 +17,7 @@ def main():
     """demo
 
     Returns:
-        desc: _description_
+        desc: a demo for data parallel training by mindnlp.
     """
     imdb_ds = load_dataset('imdb', split=['train', 'test'])
     imdb_train = imdb_ds['train']
