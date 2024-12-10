@@ -4,14 +4,14 @@ import mindspore
 import numpy
 from .dataclasses import DistributedType
 
+_random_seed = numpy.random.randint(1000)
 
 def _prepare_data_parallel_native_minspore():
     # initialize data parallel hcc backend for data_loader and Trainer API
-    mindspore.set_context(mode=mindspore.GRAPH_MODE)
+    mindspore.set_context(mode=mindspore.PYNATIVE_MODE) 
     mindspore.set_auto_parallel_context(parallel_mode=mindspore.ParallelMode.DATA_PARALLEL, gradients_mean=True)
     mindspore.communication.init()
-    random_seed = numpy.random.randint(10000)
-    mindspore.set_seed(random_seed)
+    mindspore.set_seed(_random_seed)
     
 def detect_accelerate_distributed_type():
     """
