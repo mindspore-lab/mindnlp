@@ -35,11 +35,15 @@ Once the installation is complete, you can choose use differnet models to start 
    python model_QNLI.py --model bart
 
    # Evaluate with custom dataset
-   python model_QNLI.py --model bert --data ./QNLI/dev.tsv
+   python model_QNLI.py --model bart --data ./QNLI/test.tsv
    ```
-   Supported model options: `bart`, `bert`, `roberta`, `xlm-roberta`, `distilbert`, `t5`, `gpt2`, `llama`, `opt`, `albert`
+   Supported model options: `bart`, `bert`, `roberta`, `xlm-roberta`, `gpt2`, `t5`, `distilbert`, `albert`, `llama`, `opt`
 
 ## Accuracy Comparsion
+Our reproduced model performance on QNLI/dev.tsv is reported as follows.
+Experiments are tested on ascend 910* with mindspore 2.3.1 graph mode.
+All fine-tuned models are derived from open-source models provided by huggingface.
+
 |  Model Name | bart | bert | roberta | xlm-roberta | gpt2 | t5 | distilbert | albert | opt | llama |
 |---|---|---|---|---|---|---|---|---|---|---|
 |  Base Model  | facebook/bart-base  |  google-bert/bert-base-uncased | FacebookAI/roberta-large | FacebookAI/xlm-roberta-large |  openai-community/gpt2 |  google-t5/t5-small |  distilbert/distilbert-base-uncased | albert/albert-base-v2  | facebook/opt-125m  | JackFram/llama-160m  |

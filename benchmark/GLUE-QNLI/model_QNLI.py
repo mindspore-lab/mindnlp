@@ -77,15 +77,12 @@ def evaluate_model(model_type, data_path):
     """评估模型在QNLI数据集上的表现"""
     print(f"正在评估模型: {model_type}")
     
-    # 加载模型和分词器
     model, tokenizer = get_model_and_tokenizer(model_type)
     print(f"模型类型: {model.config.model_type}")
     
-    # 加载数据
-    df = pd.read_csv(data_path, sep='\t', header=0, names=['idx', 'question', 'sentence', 'label'])
+    df = pd.read_csv(data_path, sep='\t', header=0, names=['idx', 'question', 'sentence', 'label'], on_bad_lines='skip')
     df = df.dropna(subset=['label'])
     
-    # 标签映射
     label_map = {'entailment': 0, 'not_entailment': 1}
     valid_data = df[df['label'].isin(label_map.keys())]
     
@@ -93,7 +90,6 @@ def evaluate_model(model_type, data_path):
     sentences = valid_data['sentence'].tolist()
     labels = [label_map[label] for label in valid_data['label']]
     
-    # 预测和评估
     predict_true = 0
     for question, sentence, true_label in tqdm(zip(questions, sentences, labels), 
                                              total=len(questions), 
@@ -102,7 +98,6 @@ def evaluate_model(model_type, data_path):
         if pred_label == true_label:
             predict_true += 1
     
-    # 输出结果
     accuracy = float(predict_true / len(questions) * 100)
     print(f"测试集总样本数: {len(questions)}")
     print(f"预测正确的数量: {predict_true}")
