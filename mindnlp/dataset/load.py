@@ -336,8 +336,8 @@ def load_dataset(
         source = TransferDataset(raw_ds, column_names) if isinstance(raw_ds, Dataset) \
             else TransferIterableDataset(raw_ds, column_names)
         if accelerate_distributed_type == DistributedType.MULTI_NPU:
-            ms_ds = GeneratorDataset(source=source, 
-            column_names=column_names, 
+            ms_ds = GeneratorDataset(source=source,
+            column_names=column_names,
             shuffle=shuffle,
             num_parallel_workers=num_proc if num_proc else 1,
             num_shards=get_group_size(), shard_id=get_rank())

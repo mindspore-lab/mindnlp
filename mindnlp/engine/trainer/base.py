@@ -46,7 +46,7 @@ from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_
 from ...dataset import BaseMapFunction
 from ...utils import logging, find_labels, can_return_loss
 from ...accelerate.utils import DistributedType
-from ...accelerate.utils import accelerate_distributed_type 
+from ...accelerate.utils import accelerate_distributed_type
 from ...utils.import_utils import is_safetensors_available
 from ...transformers.modeling_utils import PreTrainedModel
 from ...transformers.configuration_utils import PretrainedConfig
@@ -125,7 +125,7 @@ def _is_peft_model(model):
 class Trainer:
     """
     Trainer is a simple but feature-complete training and eval loop for MindSpore, optimized for 🤗 Transformers.
-    """ 
+    """
     def __init__(
         self,
         model: Union[PreTrainedModel, nn.Module] = None,
@@ -1158,7 +1158,7 @@ MindSpore's `load_checkpoint` function.
                             model.parameters(),
                             args.max_grad_norm,
                         )
-                    
+
                     # Optimizer step
                     self.optimizer.step()
 

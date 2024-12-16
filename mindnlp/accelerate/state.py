@@ -1,5 +1,4 @@
 """accelerate state"""
-import os
 from functools import partial
 from contextlib import contextmanager
 from typing import Callable, Any
@@ -350,7 +349,7 @@ class PartialState:
         elif accelerate_distributed_type == DistributedType.MULTI_NPU:
             self.backend = "hccl"
             self.distributed_type = DistributedType.MULTI_NPU
-            
+
     @num_processes.setter
     def num_processes(self, value):
         self._num_processes = value
@@ -377,7 +376,7 @@ class AcceleratorState:
         elif accelerate_distributed_type == DistributedType.MINDFORMERS:
             self.distributed_type = DistributedType.MINDFORMERS
             self.mindformers_plugin = mindformers_plugin
-        else: 
+        else:
             self.distributed_type = DistributedType.NO
 
         PartialState._shared_state["distributed_type"] = self.distributed_type
