@@ -23,29 +23,33 @@ MODEL_CONFIGS = {
         "model_name": "tmnam20/xlm-roberta-large-qnli-1",
         "tokenizer_name": "FacebookAI/xlm-roberta-large"
     },
-    "distilbert": {
-        "model_name": "anirudh21/distilbert-base-uncased-finetuned-qnli",
-        "tokenizer_name": "distilbert/distilbert-base-uncased"
+    "gpt2": {
+        "model_name": "tanganke/gpt2_qnli",
+        "tokenizer_name": "openai-community/gpt2"
     },
     "t5": {
         "model_name": "lightsout19/t5-small-qnli",
         "tokenizer_name": "google-t5/t5-small"
     },
-    "gpt2": {
-        "model_name": "tanganke/gpt2_qnli",
-        "tokenizer_name": "openai-community/gpt2"
+    "distilbert": {
+        "model_name": "anirudh21/distilbert-base-uncased-finetuned-qnli",
+        "tokenizer_name": "distilbert/distilbert-base-uncased"
     },
     "llama": {
         "model_name": "Cheng98/llama-160m-qnli",
         "tokenizer_name": "JackFram/llama-160m"
     },
+    "albert": {
+        "model_name": "orafandina/albert-base-v2-finetuned-qnli",
+        "tokenizer_name": "albert/albert-base-v2"
+    },
     "opt": {
         "model_name": "utahnlp/qnli_facebook_opt-125m_seed-1",
         "tokenizer_name": "facebook/opt-125m"
     },
-    "albert": {
-        "model_name": "orafandina/albert-base-v2-finetuned-qnli",
-        "tokenizer_name": "albert/albert-base-v2"
+    "llama": {
+        "model_name": "Cheng98/llama-160m-qnli",
+        "tokenizer_name": "JackFram/llama-160m"
     },
 }
 
