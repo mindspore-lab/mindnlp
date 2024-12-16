@@ -32,10 +32,10 @@ Please note that mindnlp is in the Ascend environment, while transformers is in 
 Once the installation is complete, you can choose use differnet models to start inference. Here's how to run the inference:
    ```bash
    # Evaluate specific model using default dataset (dev.tsv)
-   python model_qnli.py --model albert
+   python model_QNLI.py --model albert
 
    # Evaluate with custom dataset
-   python model_qnli.py --model bert --data ./QNLI/dev.tsv
+   python model_QNLI.py --model bert --data ./QNLI/dev.tsv
    ```
    Supported model options: `albert`, `bert`, `roberta`, `xlm-roberta`, `distilbert`, `t5`, `gpt2`, `llama`, `opt`, `bart`
 
