@@ -8,8 +8,8 @@ import argparse
 
 MODEL_CONFIGS = {
     "bart": {
-        "model_name": "facebook/bart-large-qnli",
-        "tokenizer_name": "ModelTC/bart-base-qnli"
+        "model_name": "ModelTC/bart-base-qnli",
+        "tokenizer_name": "facebook/bart-base"
     },
     "bert": {
         "model_name": "Li/bert-base-uncased-qnli",
