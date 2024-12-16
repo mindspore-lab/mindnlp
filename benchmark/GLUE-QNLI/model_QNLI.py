@@ -7,9 +7,9 @@ from tqdm import tqdm
 import argparse
 
 MODEL_CONFIGS = {
-    "albert": {
-        "model_name": "orafandina/albert-base-v2-finetuned-qnli",
-        "tokenizer_name": "albert/albert-base-v2"
+    "bart": {
+        "model_name": "facebook/bart-large-qnli",
+        "tokenizer_name": "ModelTC/bart-base-qnli"
     },
     "bert": {
         "model_name": "Li/bert-base-uncased-qnli",
@@ -40,13 +40,13 @@ MODEL_CONFIGS = {
         "tokenizer_name": "JackFram/llama-160m"
     },
     "opt": {
-        "model_name": "facebook/opt-125m",
-        "tokenizer_name": "utahnlp/qnli_facebook_opt-125m_seed-1"
+        "model_name": "utahnlp/qnli_facebook_opt-125m_seed-1",
+        "tokenizer_name": "facebook/opt-125m"
     },
-    "bart": {
-        "model_name": "facebook/bart-large-qnli",
-        "tokenizer_name": "ModelTC/bart-base-qnli"
-    }
+    "albert": {
+        "model_name": "orafandina/albert-base-v2-finetuned-qnli",
+        "tokenizer_name": "albert/albert-base-v2"
+    },
 }
 
 def get_model_and_tokenizer(model_type):
@@ -63,7 +63,9 @@ def get_model_and_tokenizer(model_type):
 def predict_qnli(model, tokenizer, question, sentence):
     """预测QNLI任务"""
     inputs = tokenizer(question, sentence, return_tensors="ms", truncation=True, max_length=512)
-    outputs = model(**inputs)
+    input_ids = inputs["input_ids"]
+    attention_mask = inputs["attention_mask"]
+    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
     logits = outputs.logits
     return logits.argmax(axis=1).asnumpy()[0]
 
