@@ -1,3 +1,4 @@
+""" MiniCPM tokenization"""
 import ast
 import json
 import keyword
