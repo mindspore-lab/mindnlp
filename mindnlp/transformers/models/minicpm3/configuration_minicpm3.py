@@ -19,8 +19,8 @@
 # limitations under the License.
 """ MiniCPM model configuration"""
 
-from ...configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
+from ...configuration_utils import PretrainedConfig
 
 
 logger = logging.get_logger(__name__)
@@ -150,11 +150,11 @@ class MiniCPM3Config(PretrainedConfig):
         self.qk_rope_head_dim = qk_rope_head_dim
         self.q_lora_rank = q_lora_rank
         self.kv_lora_rank = kv_lora_rank
-        
+
         if v_head_dim is None:
             v_head_dim = qk_nope_head_dim
         self.v_head_dim = v_head_dim
-        
+
         # for backward compatibility
         if num_key_value_heads is None:
             num_key_value_heads = num_attention_heads

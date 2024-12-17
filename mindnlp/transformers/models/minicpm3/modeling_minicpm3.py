@@ -21,11 +21,11 @@
 import math
 import warnings
 from typing import List, Optional, Tuple, Union, Dict
-import numpy as np
 
 import mindspore
-from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.utils import logging
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
@@ -41,9 +41,8 @@ from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast,
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import ALL_LAYERNORM_LAYERS
 
-from mindnlp.utils import logging
 from .configuration_minicpm3 import MiniCPM3Config
-import re
+
 
 
 logger = logging.get_logger(__name__)
@@ -205,7 +204,7 @@ class MiniCPM3LongRoPE(MiniCPM3RotaryEmbedding):
             ext_factors = mindspore.Tensor(self.long_factor, dtype=mindspore.float32)
         else:
             ext_factors = mindspore.Tensor(self.short_factor, dtype=mindspore.float32)
-        
+
         freqs = ops.mul(
             ops.outer(t, 1.0 / ext_factors),
             self.inv_freq.to(dtype)
@@ -568,7 +567,7 @@ class MiniCPM3DecoderLayer(nn.Module):
             use_cache=use_cache,
             **kwargs,
         )
-        
+
         hidden_states = residual + hidden_states * (self.scale_depth / math.sqrt(self.num_hidden_layers))
 
         # Fully Connected
@@ -766,7 +765,7 @@ class MiniCPM3Model(MiniCPM3PreTrainedModel):
                 all_self_attns += (layer_outputs[1],)
 
         hidden_states = self.norm(hidden_states)
-        
+
         # add hidden states from the last decoder layer
         if output_hidden_states:
             all_hidden_states += (hidden_states,)
@@ -884,7 +883,6 @@ class MiniCPM3ForCausalLM(MiniCPM3PreTrainedModel):
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Enable model parallelism
-            shift_labels = shift_labels
             loss = loss_fct(shift_logits, shift_labels)
 
         if not return_dict:
@@ -963,7 +961,7 @@ class MiniCPM3ForCausalLM(MiniCPM3PreTrainedModel):
                 tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),
             )
         return reordered_past
-    
+
     def chat(self, tokenizer, query: str, history: List[Dict] = None, role: str = "user",
              max_length: int = 4096, num_beams=1, do_sample=True, top_p=0.8, temperature=0.3, logits_processor=None,
              **kwargs):
@@ -975,7 +973,7 @@ class MiniCPM3ForCausalLM(MiniCPM3PreTrainedModel):
         else:
             gen_kwargs = {"max_length": max_length, "num_beams": num_beams, "do_sample": do_sample, "top_p": top_p,
                         "temperature": temperature, "logits_processor": logits_processor, **kwargs}
-        
+
         history.append({"role": role, "content": query})
         history_str = tokenizer.apply_chat_template(history, tokenize=False, add_generation_prompt=True)
         inputs = tokenizer(history_str, return_tensors='ms')
@@ -1057,7 +1055,6 @@ class MiniCPM3ForSequenceClassification(MiniCPM3PreTrainedModel):
 
         loss = None
         if labels is not None:
-            labels = labels
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
@@ -1089,7 +1086,7 @@ class MiniCPM3ForSequenceClassification(MiniCPM3PreTrainedModel):
             hidden_states=transformer_outputs.hidden_states,
             attentions=transformer_outputs.attentions,
         )
-    
+
 __all__ = [
     "MiniCPM3Model",
     "MiniCPM3ForCausalLM",
