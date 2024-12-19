@@ -24,7 +24,7 @@ from .mapping import (
 from .peft_model import (
     PeftModel,
     PeftModelForCausalLM,
-    # PeftModelForFeatureExtraction,
+    PeftModelForFeatureExtraction,
     # PeftModelForQuestionAnswering,
     PeftModelForSeq2SeqLM,
     PeftModelForSequenceClassification,

@@ -9,16 +9,18 @@ from copy import deepcopy
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Union
 
-from datamodel_code_generator import DataModelType
-from datamodel_code_generator.format import PythonVersion
-from datamodel_code_generator.model import get_data_model_types
-from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
-from jsonschema import Draft202012Validator, exceptions, validate
 
 from mindnlp.transformers.models.llama import LlamaTokenizerFast
 from mindnlp.transformers.tokenization_utils_base import BatchEncoding
 from mindnlp.utils import TensorType
+from mindnlp.utils.import_utils import is_datamodel_code_generator_availabel
 
+if is_datamodel_code_generator_availabel():
+    from datamodel_code_generator import DataModelType
+    from datamodel_code_generator.format import PythonVersion
+    from datamodel_code_generator.model import get_data_model_types
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+    from jsonschema import Draft202012Validator, exceptions, validate
 
 logger = getLogger(__name__)
 

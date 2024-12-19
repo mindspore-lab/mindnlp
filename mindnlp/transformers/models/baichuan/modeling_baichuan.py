@@ -23,8 +23,6 @@ from typing import List, Optional, Tuple, Union
 from queue import Queue
 from threading import Thread
 
-
-import numpy as np
 import mindspore
 from mindspore import Tensor
 from mindspore import dtype as mstype
