@@ -28,7 +28,7 @@ from mindnlp.core import nn, ops
 from mindnlp.peft.config import PeftConfig
 from mindnlp.peft.utils import (
     ModulesToSaveWrapper,
-    _get_subcells,
+    _get_submodules,
 )
 
 from .tuners_utils import (
@@ -304,7 +304,7 @@ class LycorisTuner(BaseTuner):
                 new_module.state = child.state
 
     def _set_adapter_layers(self, enabled=True):
-        for module in self.model.cells():
+        for module in self.model.modules():
             if isinstance(module, (BaseTunerLayer, ModulesToSaveWrapper)):
                 module.enable_adapters(enabled)
 
@@ -323,12 +323,12 @@ class LycorisTuner(BaseTuner):
 
         self._unloading_checks(adapter_names)
         key_list = [
-            key for key, _ in self.model.named_cells() if self.prefix not in key
+            key for key, _ in self.model.named_modules() if self.prefix not in key
         ]
         desc = "Unloading " + ("and merging " if merge else "") + "model"
         for key in tqdm(key_list, disable=not progressbar, desc=desc):
             try:
-                parent, target, target_name = _get_subcells(self.model, key)
+                parent, target, target_name = _get_submodules(self.model, key)
             except AttributeError:
                 continue
 
@@ -440,7 +440,7 @@ class LycorisTuner(BaseTuner):
         ]
         new_adapter = None
         for key in key_list:
-            _, target, _ = _get_subcells(self.model, key)
+            _, target, _ = _get_submodules(self.model, key)
             if isinstance(target, LycorisLayer):
                 target.delete_adapter(adapter_name)
                 if new_adapter is None:

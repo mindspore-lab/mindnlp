@@ -114,7 +114,7 @@ class PeftModel(nn.Module):
             self.base_model = PEFT_TYPE_TO_MODEL_MAPPING[peft_config.peft_type](
                 self.base_model, self.peft_config, adapter_name
             )
-            self.set_additional_trainable_cells(peft_config, adapter_name)
+            self.set_additional_trainable_modules(peft_config, adapter_name)
         else:
             self.add_adapter(adapter_name, peft_config)
 
@@ -247,7 +247,7 @@ class PeftModel(nn.Module):
         load_result = set_peft_model_state_dict(self, adapters_weights, adapter_name=adapter_name)
         # TODO: add parallel logic & offload logic & device map logic(dispatch_model)
 
-        # Set model in evaluation mode to deactivate Dropout cells by default
+        # Set model in evaluation mode to deactivate Dropout modules by default
         if not is_trainable:
             self.set_train(False)
 
@@ -425,10 +425,10 @@ class PeftModel(nn.Module):
             del self.peft_config[adapter_name]
             raise
 
-        self.set_additional_trainable_cells(peft_config, adapter_name)
+        self.set_additional_trainable_modules(peft_config, adapter_name)
 
-    def set_additional_trainable_cells(self, peft_config, adapter_name):
-        """set additional trainable cells"""
+    def set_additional_trainable_modules(self, peft_config, adapter_name):
+        """set additional trainable modules"""
         if getattr(peft_config, "modules_to_save", None) is not None:
             if self.modules_to_save is None:
                 self.modules_to_save = set(peft_config.modules_to_save)
@@ -473,7 +473,7 @@ class PeftModelForSequenceClassification(PeftModel):
         else:
             self.modules_to_save.update({"classifier", "score"})
 
-        for name, _ in self.base_model.cells_and_names():
+        for name, _ in self.base_model.modules_and_names():
             if any(module_name in name for module_name in self.modules_to_save):
                 self.cls_layer_name = name
                 break
@@ -955,7 +955,7 @@ class PeftModelForTokenClassification(PeftModel):
         else:
             self.modules_to_save.update({"classifier", "score"})
 
-        for name, _ in self.base_model.cells_and_names():
+        for name, _ in self.base_model.modules_and_names():
             if any(module_name in name for module_name in self.modules_to_save):
                 self.cls_layer_name = name
                 break
@@ -1079,15 +1079,15 @@ class PeftModelForTokenClassification(PeftModel):
         if "past_key_values" in fwd_params:
             return self.base_model(labels=labels, **kwargs)
         else:
-            transformer_backbone_name = self.base_model.get_subcell(self.transformer_backbone_name)
+            transformer_backbone_name = self.base_model.get_submodule(self.transformer_backbone_name)
             fwd_params = list(inspect.signature(transformer_backbone_name.forward).parameters.keys())
             if "past_key_values" not in fwd_params:
                 raise ValueError("Model does not support past key values which are required for prefix tuning.")
             outputs = transformer_backbone_name(**kwargs)
             sequence_output = outputs[0]
-            if "dropout" in [name for name, _ in list(self.base_model.cells_and_names())]:
+            if "dropout" in [name for name, _ in list(self.base_model.modules_and_names())]:
                 sequence_output = self.base_model.dropout(sequence_output)
-            logits = self.base_model.get_subcell(self.cls_layer_name)(sequence_output)
+            logits = self.base_model.get_submodule(self.cls_layer_name)(sequence_output)
 
             loss = None
             if labels is not None:

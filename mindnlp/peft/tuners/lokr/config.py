@@ -27,7 +27,7 @@ class LoKrConfig(PeftConfig):
 
     Args:
         r (`int`): lokr attention dimension.
-        target_modules (`Union[List[str],str]`): The names of the cells to apply Lora to.
+        target_modules (`Union[List[str],str]`): The names of the modules to apply Lora to.
         lora_alpha (`float`): The alpha parameter for Lokr scaling.
         rank_dropout (`float`):The dropout probability for rank dimension during training.
         module_dropout (`float`): The dropout probability for LoKR layers.
@@ -39,7 +39,7 @@ class LoKrConfig(PeftConfig):
 
         bias (`str`): Bias type for Lora. Can be 'none', 'all' or 'lora_only'
         modules_to_save (`List[str]`):
-            List of cells apart from LoRA layers to be set as trainable
+            List of modules apart from LoRA layers to be set as trainable
             and saved in the final checkpoint.
         init_weights (`bool`):
             Whether to perform initialization of adapter weights. This defaults to `True`, 
@@ -95,7 +95,7 @@ class LoKrConfig(PeftConfig):
     modules_to_save: Optional[List[str]] = field(
         default=None,
         metadata={
-            "help": "List of cells apart from LoRA layers to be set as trainable and saved in the final checkpoint. "
+            "help": "List of modules apart from LoRA layers to be set as trainable and saved in the final checkpoint. "
             "For example, in Sequence Classification or Token Classification tasks, "
             "the final layer `classifier/score` are randomly initialized and as such need to be trainable and saved."
         },

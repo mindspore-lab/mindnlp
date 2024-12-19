@@ -110,7 +110,7 @@ class PolyModel(BaseTuner):
             return Dense(target, adapter_name, poly_config, **kwargs)
         else:
             raise ValueError(
-                f"Target cell {target} is not supported. Currently, only the following cells are supported: "
+                f"Target cell {target} is not supported. Currently, only the following modules are supported: "
                 "`nn.Linear`."
             )
 
@@ -132,7 +132,7 @@ class PolyModel(BaseTuner):
         return config
 
     def _set_adapter_layers(self, enabled=True):
-        for cell in self.model.cells():
+        for cell in self.model.modules():
             if isinstance(cell, (PolyLayer, ModulesToSaveWrapper)):
                 cell.enable_adapters(enabled)
 
@@ -143,7 +143,7 @@ class PolyModel(BaseTuner):
         self._set_adapter_layers(enabled=False)
 
     def set_adapter(self, adapter_name):
-        for cell in self.model.cells():
+        for cell in self.model.modules():
             if isinstance(cell, PolyLayer):
                 cell.set_adapter(adapter_name)
 
@@ -172,7 +172,7 @@ class PolyModel(BaseTuner):
             return args, kwargs
 
         handles = []
-        for cell in self.model.cells():
+        for cell in self.model.modules():
             if isinstance(cell, Dense):
                 handle = cell.register_forward_pre_hook(pre_hook)
                 handles.append(handle)
