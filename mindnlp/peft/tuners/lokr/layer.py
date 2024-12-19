@@ -667,7 +667,7 @@ initialization.
             RuntimeError: If an error occurs during the calculation of the delta weight.
             TypeError: If the input data types are incorrect or incompatible.
         """
-        # https://github.com/KohakuBlueleaf/LyCORIS/blob/e4259b870d3354a9615a96be61cb5d07455c58ea/lycoris/cells/lokr.py#L224
+        # https://github.com/KohakuBlueleaf/LyCORIS/blob/e4259b870d3354a9615a96be61cb5d07455c58ea/lycoris/modules/lokr.py#L224
         if adapter_name in self.lokr_w1:
             w1 = self.lokr_w1[adapter_name]
         else:
