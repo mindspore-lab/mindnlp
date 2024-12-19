@@ -28,7 +28,7 @@ from ...utils import (
 from ..tuners_utils import (
     BaseTuner,
     BaseTunerLayer,
-    check_target_cell_exists,
+    check_target_module_exists,
 )
 from .layer import Conv2d, Dense, LoKrLayer
 from .config import LoKrConfig
@@ -59,7 +59,7 @@ class LoKrModel(BaseTuner):
         ...     lora_alpha=32,
         ...     target_modules=["k_proj", "q_proj", "v_proj", "out_proj", "fc1", "fc2"],
         ...     rank_dropout=0.0,
-        ...     cell_dropout=0.0,
+        ...     module_dropout=0.0,
         ...     init_weights=True,
         ... )
         >>> config_unet = LoKrConfig(
@@ -76,7 +76,7 @@ class LoKrModel(BaseTuner):
         ...         "ff.net.2",
         ...     ],
         ...     rank_dropout=0.0,
-        ...     cell_dropout=0.0,
+        ...     module_dropout=0.0,
         ...     init_weights=True,
         ...     use_effective_conv2d=True,
         ... )
@@ -153,7 +153,7 @@ class LoKrModel(BaseTuner):
                 This occurs when the target cell type does not match any of the supported cell types in the layers_mapping attribute.
         """
         # Find corresponding subtype of provided target cell
-        new_cell_cls = None
+        new_module_cls = None
         for subtype, target_cls in cls.layers_mapping.items():
             if (
                 hasattr(target, "base_layer")
@@ -161,14 +161,14 @@ class LoKrModel(BaseTuner):
                 and isinstance(target, BaseTunerLayer)
             ):
                 # nested tuner layers are allowed
-                new_cell_cls = target_cls
+                new_module_cls = target_cls
                 break
             elif isinstance(target, subtype):
-                new_cell_cls = target_cls
+                new_module_cls = target_cls
                 break
 
         # We didn't find corresponding type, so adapter for this layer is not supported
-        if new_cell_cls is None:
+        if new_module_cls is None:
             supported_cells = ", ".join(
                 layer.__name__ for layer in cls.layers_mapping.keys()
             )
@@ -183,9 +183,9 @@ class LoKrModel(BaseTuner):
             target_base_layer = target
 
         if isinstance(target_base_layer, nn.Module):
-            new_cell = new_cell_cls(target, adapter_name=adapter_name, **kwargs)
+            new_cell = new_module_cls(target, adapter_name=adapter_name, **kwargs)
         elif isinstance(target_base_layer, nn.Module):
-            new_cell = new_cell_cls(target, adapter_name=adapter_name, **kwargs)
+            new_cell = new_module_cls(target, adapter_name=adapter_name, **kwargs)
         else:
             supported_cells = ", ".join(
                 layer.__name__ for layer in cls.layers_mapping.keys()
@@ -388,7 +388,7 @@ containing the specified prefix.
         return peft_config
 
     @staticmethod
-    def _check_target_cell_exists(LoKR_config, key):
+    def _check_target_module_exists(LoKR_config, key):
         r"""
         Checks if a target cell exists in the LoKR configuration.
         
@@ -403,4 +403,4 @@ containing the specified prefix.
             This method does not raise any exceptions explicitly. However, if the target cell does not exist in the LoKR configuration, further handling may be required based on the context in which this
 method is used.
         """
-        return check_target_cell_exists(LoKR_config, key)
+        return check_target_module_exists(LoKR_config, key)

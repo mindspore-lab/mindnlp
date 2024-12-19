@@ -36,7 +36,7 @@ from mindnlp.core import nn, ops
 from ..tuners_utils import (
     BaseTuner,
     BaseTunerLayer,
-    check_target_cell_exists,
+    check_target_module_exists,
     # onload_layer,
     replicate_layers,
 )
@@ -161,7 +161,7 @@ class LoraModel(BaseTuner):
             )
 
     @staticmethod
-    def _check_target_cell_exists(lora_config, key):
+    def _check_target_module_exists(lora_config, key):
         r"""
         Checks if the target cell exists in the LoRa configuration.
         
@@ -190,7 +190,7 @@ class LoraModel(BaseTuner):
         Raises:
             None: This method does not raise any exceptions.
         """
-        return check_target_cell_exists(lora_config, key)
+        return check_target_module_exists(lora_config, key)
 
     def _prepare_model(self, peft_config: LoraConfig, model: nn.Module):
         r"""
@@ -683,23 +683,23 @@ class LoraModel(BaseTuner):
         else:
             raise ValueError(f"Invalid combination_type: {combination_type}")
 
-        target_cell_types = [type(self.peft_config[adapter].target_modules) for adapter in adapters]
-        if not target_cell_types:
+        target_module_types = [type(self.peft_config[adapter].target_modules) for adapter in adapters]
+        if not target_module_types:
             raise ValueError(f"Found no adapter matching the names in {adapters}")
-        if len(set(target_cell_types)) > 1:
+        if len(set(target_module_types)) > 1:
             raise ValueError(
                 "all adapter configs should follow the same target cells type. "
                 "Combining adapters with `target_modules` type being a mix of list/set and string is not supported."
             )
 
-        if target_cell_types[0] == str:
+        if target_module_types[0] == str:
             new_target_modules = "|".join(f"({self.peft_config[adapter].target_modules})" for adapter in adapters)
-        elif target_cell_types[0] == set:
+        elif target_module_types[0] == set:
             new_target_modules = reduce(
                 operator.or_, (self.peft_config[adapter].target_modules for adapter in adapters)
             )
         else:
-            raise TypeError(f"Invalid type {target_cell_types[0]} found in target_modules")
+            raise TypeError(f"Invalid type {target_module_types[0]} found in target_modules")
 
         return combination_type, new_rank, new_target_modules
 

@@ -37,7 +37,7 @@ from mindnlp.peft.utils import (
     ModulesToSaveWrapper,
     _get_subcells,
 )
-from ..tuners_utils import BaseTuner, BaseTunerLayer, check_target_cell_exists
+from ..tuners_utils import BaseTuner, BaseTunerLayer, check_target_module_exists
 from .layer import Conv2d, IA3Layer, Linear
 
 
@@ -192,7 +192,7 @@ class IA3Model(BaseTuner):
         return new_cell
 
     @staticmethod
-    def _check_target_cell_exists(ia3_config, key):
+    def _check_target_module_exists(ia3_config, key):
         r"""
         Checks if the target cell exists in the IA3 configuration.
         
@@ -209,7 +209,7 @@ class IA3Model(BaseTuner):
         Raises:
             None: This method does not raise any exceptions.
         """
-        return check_target_cell_exists(ia3_config, key)
+        return check_target_module_exists(ia3_config, key)
 
     def _mark_only_adapters_as_trainable(self, model: nn.Module) -> None:
         r"""
@@ -274,7 +274,7 @@ class IA3Model(BaseTuner):
                 None
             """
             current_key = optionnal_kwargs.pop('current_key')
-            is_feedforward = self._check_target_cell_feedforward(ia3_config, current_key)
+            is_feedforward = self._check_target_module_feedforward(ia3_config, current_key)
             kwargs = {'fan_in_fan_out': ia3_config.fan_in_fan_out, 'init_ia3_weights': ia3_config.init_ia3_weights, 'is_feedforward': is_feedforward}
             kwargs['loaded_in_8bit'] = optionnal_kwargs.pop('loaded_in_8bit', False)
             kwargs['loaded_in_4bit'] = optionnal_kwargs.pop('loaded_in_4bit', False)
@@ -287,7 +287,7 @@ class IA3Model(BaseTuner):
                 self._replace_cell(parent, target_name, new_cell, target)
         # check if target cell is in feedforward_cells
         current_key = optionnal_kwargs.pop("current_key")
-        is_feedforward = self._check_target_cell_feedforward(ia3_config, current_key)
+        is_feedforward = self._check_target_module_feedforward(ia3_config, current_key)
 
         kwargs = {
             "fan_in_fan_out": ia3_config.fan_in_fan_out,
@@ -309,7 +309,7 @@ class IA3Model(BaseTuner):
             self._replace_cell(parent, target_name, new_cell, target)
 
     @staticmethod
-    def _check_target_cell_feedforward(ia3_config, key) -> bool:
+    def _check_target_module_feedforward(ia3_config, key) -> bool:
         """
         A helper private method that checks if the target cell `key` matches with a feedforward cell specified in
         `ia3_config`

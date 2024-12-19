@@ -30,7 +30,7 @@ class LoKrConfig(PeftConfig):
         target_modules (`Union[List[str],str]`): The names of the cells to apply Lora to.
         lora_alpha (`float`): The alpha parameter for Lokr scaling.
         rank_dropout (`float`):The dropout probability for rank dimension during training.
-        cell_dropout (`float`): The dropout probability for LoKR layers.
+        module_dropout (`float`): The dropout probability for LoKR layers.
         use_effective_conv2d (`bool`):
             Use parameter effective decomposition for
             Conv2d with ksize > 1 ("Proposition 3" from FedPara paper).
@@ -71,7 +71,7 @@ class LoKrConfig(PeftConfig):
         default=0.0,
         metadata={"help": "The dropout probability for rank dimension during training"},
     )
-    cell_dropout: float = field(default=0.0, metadata={"help": "lokr dropout"})
+    module_dropout: float = field(default=0.0, metadata={"help": "lokr dropout"})
     use_effective_conv2d: bool = field(
         default=False,
         metadata={

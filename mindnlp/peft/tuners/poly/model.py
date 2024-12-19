@@ -24,7 +24,7 @@ from mindnlp.core import nn
 from mindnlp.peft.tuners.tuners_utils import (
     BaseTuner,
     BaseTunerLayer,
-    check_target_cell_exists,
+    check_target_module_exists,
 )
 from mindnlp.peft.utils import (
     TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING,
@@ -42,8 +42,8 @@ class PolyModel(BaseTuner):
     #     super().__init__(model, config, adapter_name)
 
     @staticmethod
-    def _check_target_cell_exists(poly_config, key):
-        return check_target_cell_exists(poly_config, key)
+    def _check_target_module_exists(poly_config, key):
+        return check_target_module_exists(poly_config, key)
 
     def _create_and_replace(
         self,

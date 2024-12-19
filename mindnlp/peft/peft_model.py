@@ -474,7 +474,7 @@ class PeftModelForSequenceClassification(PeftModel):
             self.modules_to_save.update({"classifier", "score"})
 
         for name, _ in self.base_model.cells_and_names():
-            if any(cell_name in name for cell_name in self.modules_to_save):
+            if any(module_name in name for module_name in self.modules_to_save):
                 self.cls_layer_name = name
                 break
 
@@ -956,7 +956,7 @@ class PeftModelForTokenClassification(PeftModel):
             self.modules_to_save.update({"classifier", "score"})
 
         for name, _ in self.base_model.cells_and_names():
-            if any(cell_name in name for cell_name in self.modules_to_save):
+            if any(module_name in name for module_name in self.modules_to_save):
                 self.cls_layer_name = name
                 break
 
