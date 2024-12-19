@@ -26,7 +26,7 @@ from mindnlp.peft.config import PeftConfig
 from mindnlp.peft.tuners.tuners_utils import (
     BaseTuner,
     _get_subcells,
-    check_target_cell_exists,
+    check_target_module_exists,
 )
 from mindnlp.peft.utils import (
     TRANSFORMERS_MODELS_TO_LNTUNING_TARGET_MODULES_MAPPING,
@@ -150,8 +150,8 @@ class LNTuningModel(BaseTuner):
             else:
                 p.requires_grad = True
 
-    def _check_target_cell_exists(self, peft_config: PeftConfig, key: str) -> bool:
-        return check_target_cell_exists(peft_config, key)
+    def _check_target_module_exists(self, peft_config: PeftConfig, key: str) -> bool:
+        return check_target_module_exists(peft_config, key)
 
     def _set_adapter_layers(self, enabled: bool) -> None:
         for cell in self.model.cells():

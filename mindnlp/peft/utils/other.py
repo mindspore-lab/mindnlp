@@ -59,13 +59,13 @@ original module for reference. The class includes methods for enabling and disab
     
     The class provides a flexible way to manage and switch between different modules within a neural network.
     """
-    def __init__(self, cell_to_save, adapter_name):
+    def __init__(self, module_to_save, adapter_name):
         r"""
         Initializes an instance of the ModulesToSaveWrapper class.
         
         Args:
             self (ModulesToSaveWrapper): The current instance of the class.
-            cell_to_save (Any): The cell to be saved.
+            module_to_save (Any): The cell to be saved.
             adapter_name (str): The name of the adapter.
         
         Returns:
@@ -75,7 +75,7 @@ original module for reference. The class includes methods for enabling and disab
             None.
         """
         super().__init__()
-        self.original_cell = cell_to_save
+        self.original_cell = module_to_save
         self.modules_to_save = nn.ModuleDict({})
         self._active_adapter = adapter_name
         self._disable_adapters = False
@@ -294,8 +294,8 @@ def _set_trainable(model, adapter_name):
     """
     key_list = [key for key, _ in model.cells_and_names()]  # named_modules cells_and_names
     for key in key_list:
-        target_cell_found = any(key.endswith(target_key) for target_key in model.modules_to_save)
-        if target_cell_found:
+        target_module_found = any(key.endswith(target_key) for target_key in model.modules_to_save)
+        if target_module_found:
             parent, target, target_name = _get_subcells(model, key)
 
             if isinstance(target, ModulesToSaveWrapper):
@@ -308,10 +308,10 @@ def _set_trainable(model, adapter_name):
                 setattr(parent, target_name, warp_cell)
 
                 # TODO:the implemtation of mindspore, __setitem__ is not consistent with __setattr__ here.
-                # self.cell_list is not set correctly if __setattr__'s value type is Sequential.
+                # self.module_list is not set correctly if __setattr__'s value type is Sequential.
                 # Thus we set it apparently here. This line may be removed later.
                 if isinstance(parent, nn.Sequential):
-                    parent.cell_list = list(parent._modules.values())
+                    parent.module_list = list(parent._modules.values())
 
 
 def _freeze_adapter(model, adapter_name):

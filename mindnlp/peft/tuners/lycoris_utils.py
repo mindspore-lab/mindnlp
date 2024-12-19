@@ -35,7 +35,7 @@ from .tuners_utils import (
     BaseTuner,
     BaseTunerLayer,
     check_adapters_to_merge,
-    check_target_cell_exists,
+    check_target_module_exists,
 )
 
 
@@ -213,8 +213,8 @@ class LycorisTuner(BaseTuner):
             return getattr(self.model, name)
 
     @staticmethod
-    def _check_target_cell_exists(config, key):
-        return check_target_cell_exists(config, key)
+    def _check_target_module_exists(config, key):
+        return check_target_module_exists(config, key)
 
     @abstractmethod
     def _create_and_replace(
