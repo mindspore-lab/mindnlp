@@ -54,7 +54,7 @@ class PolyRouter(Router):
         self.n_skills = poly_config.n_skills
         self.n_splits = poly_config.n_splits
 
-        self.cell_logits = Parameter(
+        self.module_logits = Parameter(
             ops.zeros(self.n_tasks, self.n_splits * self.n_skills)
         )
 
@@ -70,18 +70,18 @@ class PolyRouter(Router):
             )
 
         # move task id to input's device
-        # task_ids = task_ids.to(self.cell_logits.device)
+        # task_ids = task_ids.to(self.module_logits.device)
 
-        cell_logits = self.cell_logits[task_ids]
-        cell_logits = cell_logits.view(-1, self.n_splits, self.n_skills)
+        module_logits = self.module_logits[task_ids]
+        module_logits = module_logits.view(-1, self.n_splits, self.n_skills)
 
         if self.training:
-            cell_logits = RelaxedBernoulli(
-                temperature=1.0, logits=cell_logits
+            module_logits = RelaxedBernoulli(
+                temperature=1.0, logits=module_logits
             ).rsample()
         else:
-            cell_logits = ops.sigmoid(cell_logits)
+            module_logits = ops.sigmoid(module_logits)
 
-        cell_weights = cell_logits / (cell_logits.sum(dim=-1, keepdim=True) + EPS)
+        module_weights = module_logits / (module_logits.sum(dim=-1, keepdim=True) + EPS)
 
-        return cell_weights
+        return module_weights

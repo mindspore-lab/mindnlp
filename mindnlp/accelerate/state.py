@@ -1,17 +1,18 @@
 """accelerate state"""
-import os
 from functools import partial
 from contextlib import contextmanager
 from typing import Callable, Any
 from mindspore import communication
+
 try:
     from mindspore.communication.comm_func import barrier
 except:
     barrier = None
 
 from .utils import (
-    DistributedType, is_mindformers_available
+    is_mindformers_available
 )
+from ..accelerate.utils import accelerate_distributed_type, DistributedType
 
 SharedDict = dict
 
@@ -341,10 +342,13 @@ class PartialState:
             print(*args, **kwargs)
 
     def _prepare_backend(self):
-        # now mindformers only
-        if is_mindformers_available():
+        # now mindformers and mindspore data parallel only
+        if accelerate_distributed_type == DistributedType.MINDFORMERS and is_mindformers_available():
             self.backend = "hccl"
             self.distributed_type = DistributedType.MINDFORMERS
+        elif accelerate_distributed_type == DistributedType.MULTI_NPU:
+            self.backend = "hccl"
+            self.distributed_type = DistributedType.MULTI_NPU
 
     @num_processes.setter
     def num_processes(self, value):
@@ -366,10 +370,14 @@ class AcceleratorState:
         if PartialState._shared_state:
             PartialState(**kwargs)
         self.__dict__.update(PartialState._shared_state)
-
-        if os.environ.get("ACCELERATE_USE_MINDFORMERS", "false") == "true":
+        # set distributed_type
+        if accelerate_distributed_type == DistributedType.MULTI_NPU:
+            self.distributed_type = DistributedType.MULTI_NPU
+        elif accelerate_distributed_type == DistributedType.MINDFORMERS:
             self.distributed_type = DistributedType.MINDFORMERS
             self.mindformers_plugin = mindformers_plugin
+        else:
+            self.distributed_type = DistributedType.NO
 
         PartialState._shared_state["distributed_type"] = self.distributed_type
 

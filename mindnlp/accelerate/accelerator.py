@@ -9,11 +9,11 @@ from mindspore.communication import init
 
 from .state import AcceleratorState
 from .utils import (
-    DistributedType,
     MindFormersPlugin,
     is_mindformers_available,
     wait_for_everyone
 )
+from .utils import DistributedType,accelerate_distributed_type
 from ..utils import logging
 
 if is_mindformers_available():
@@ -45,7 +45,7 @@ class Accelerator:
         # init mindformers_plugin from env variables
         if mindformers_plugin is None:
             mindformers_plugin = (
-                MindFormersPlugin() if os.environ.get("ACCELERATE_USE_MINDFORMERS", "false") == "true" else None
+                MindFormersPlugin() if accelerate_distributed_type == DistributedType.MINDFORMERS else None
             )
         else:
             os.environ["ACCELERATE_USE_MINDFORMERS"] = "true"
@@ -104,10 +104,11 @@ class Accelerator:
         """
         result = []
 
-        # Only support mindsormers now
+        # Only support mindsormers and MULTI_NPU now
         if self.distributed_type == DistributedType.MINDFORMERS:
             result = self._prepare_mindformers(*args)
-
+        elif self.distributed_type == DistributedType.MULTI_NPU:
+            pass # nothing prepare for data parallel
         return result
 
     def _prepare_mindformers(self, *args):

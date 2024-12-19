@@ -22,13 +22,13 @@ from mindnlp.core import nn
 
 from ...utils import (
     ModulesToSaveWrapper,
-    _get_subcells,
+    _get_submodules,
 )
 
 from ..tuners_utils import (
     BaseTuner,
     BaseTunerLayer,
-    check_target_cell_exists,
+    check_target_module_exists,
 )
 from .layer import Conv2d, Dense, LoKrLayer
 from .config import LoKrConfig
@@ -39,7 +39,7 @@ class LoKrModel(BaseTuner):
     Creates Low-Rank Kronecker Product model from a pretrained model. The original method is partially described in
     https://arxiv.org/abs/2108.06098 and in https://arxiv.org/abs/2309.14859 Current implementation heavily borrows
     from
-    https://github.com/KohakuBlueleaf/LyCORIS/blob/eb460098187f752a5d66406d3affade6f0a07ece/lycoris/cells/lokr.py
+    https://github.com/KohakuBlueleaf/LyCORIS/blob/eb460098187f752a5d66406d3affade6f0a07ece/lycoris/modules/lokr.py
 
     Args:
         model (`mindspore.nn.Module`): The model to which the adapter tuner layers will be attached.
@@ -59,7 +59,7 @@ class LoKrModel(BaseTuner):
         ...     lora_alpha=32,
         ...     target_modules=["k_proj", "q_proj", "v_proj", "out_proj", "fc1", "fc2"],
         ...     rank_dropout=0.0,
-        ...     cell_dropout=0.0,
+        ...     module_dropout=0.0,
         ...     init_weights=True,
         ... )
         >>> config_unet = LoKrConfig(
@@ -76,7 +76,7 @@ class LoKrModel(BaseTuner):
         ...         "ff.net.2",
         ...     ],
         ...     rank_dropout=0.0,
-        ...     cell_dropout=0.0,
+        ...     module_dropout=0.0,
         ...     init_weights=True,
         ...     use_effective_conv2d=True,
         ... )
@@ -153,7 +153,7 @@ class LoKrModel(BaseTuner):
                 This occurs when the target cell type does not match any of the supported cell types in the layers_mapping attribute.
         """
         # Find corresponding subtype of provided target cell
-        new_cell_cls = None
+        new_module_cls = None
         for subtype, target_cls in cls.layers_mapping.items():
             if (
                 hasattr(target, "base_layer")
@@ -161,20 +161,20 @@ class LoKrModel(BaseTuner):
                 and isinstance(target, BaseTunerLayer)
             ):
                 # nested tuner layers are allowed
-                new_cell_cls = target_cls
+                new_module_cls = target_cls
                 break
             elif isinstance(target, subtype):
-                new_cell_cls = target_cls
+                new_module_cls = target_cls
                 break
 
         # We didn't find corresponding type, so adapter for this layer is not supported
-        if new_cell_cls is None:
-            supported_cells = ", ".join(
+        if new_module_cls is None:
+            supported_modules = ", ".join(
                 layer.__name__ for layer in cls.layers_mapping.keys()
             )
             raise ValueError(
                 f"Target cell of type {type(target)} not supported, "
-                f"currently only adapters for {supported_cells} are supported"
+                f"currently only adapters for {supported_modules} are supported"
             )
 
         if isinstance(target, BaseTunerLayer):
@@ -183,16 +183,16 @@ class LoKrModel(BaseTuner):
             target_base_layer = target
 
         if isinstance(target_base_layer, nn.Module):
-            new_cell = new_cell_cls(target, adapter_name=adapter_name, **kwargs)
+            new_cell = new_module_cls(target, adapter_name=adapter_name, **kwargs)
         elif isinstance(target_base_layer, nn.Module):
-            new_cell = new_cell_cls(target, adapter_name=adapter_name, **kwargs)
+            new_cell = new_module_cls(target, adapter_name=adapter_name, **kwargs)
         else:
-            supported_cells = ", ".join(
+            supported_modules = ", ".join(
                 layer.__name__ for layer in cls.layers_mapping.keys()
             )
             raise ValueError(
                 f"Target cell of type {type(target)} not supported, "
-                f"currently only adapters for {supported_cells} are supported"
+                f"currently only adapters for {supported_modules} are supported"
             )
 
         return new_cell
@@ -272,7 +272,7 @@ containing the specified prefix.
         Raises:
             None.
         """
-        for cell in self.model.cells():
+        for cell in self.model.modules():
             if isinstance(cell, (BaseTunerLayer, ModulesToSaveWrapper)):
                 cell.enable_adapters(enabled)
 
@@ -309,12 +309,12 @@ containing the specified prefix.
 
         self._unloading_checks(adapter_names)
         key_list = [
-            key for key, _ in self.model.named_cells() if self.prefix not in key
+            key for key, _ in self.model.named_modules() if self.prefix not in key
         ]
         desc = "Unloading " + ("and merging " if merge else "") + "model"
         for key in tqdm(key_list, disable=not progressbar, desc=desc):
             try:
-                parent, target, target_name = _get_subcells(self.model, key)
+                parent, target, target_name = _get_submodules(self.model, key)
             except AttributeError:
                 continue
 
@@ -325,7 +325,7 @@ containing the specified prefix.
                     parent, target_name, target.get_base_layer(), target
                 )
             elif isinstance(target, ModulesToSaveWrapper):
-                # save any additional trainable cells part of `modules_to_save`
+                # save any additional trainable modules part of `modules_to_save`
                 new_cell = target.modules_to_save[target.active_adapter]
                 if hasattr(new_cell, "base_layer"):
                     # check if the cell is itself a tuner layer
@@ -343,7 +343,7 @@ containing the specified prefix.
         Perform unloading checks for the LoKrModel class.
         
         This method checks if multiple adapters with `modules_to_save` specified can be unloaded.
-        If any of the specified adapters have cells to save, unloading multiple adapters is not allowed.
+        If any of the specified adapters have modules to save, unloading multiple adapters is not allowed.
         
         Args:
             self (LoKrModel): An instance of the LoKrModel class.
@@ -373,7 +373,7 @@ containing the specified prefix.
         
         Args:
             peft_config (object): The configuration object for PEFT.
-                It should contain information about the target cells.
+                It should contain information about the target modules.
                 Required parameter. Must not be None.
             model_config (object): The configuration object for the model.
         
@@ -388,12 +388,12 @@ containing the specified prefix.
         return peft_config
 
     @staticmethod
-    def _check_target_cell_exists(LoKR_config, key):
+    def _check_target_module_exists(LoKR_config, key):
         r"""
         Checks if a target cell exists in the LoKR configuration.
         
         Args:
-            LoKR_config (dict): The LoKR configuration dictionary containing information about the target cells.
+            LoKR_config (dict): The LoKR configuration dictionary containing information about the target modules.
             key (str): The key corresponding to the target cell to be checked.
         
         Returns:
@@ -403,4 +403,4 @@ containing the specified prefix.
             This method does not raise any exceptions explicitly. However, if the target cell does not exist in the LoKR configuration, further handling may be required based on the context in which this
 method is used.
         """
-        return check_target_cell_exists(LoKR_config, key)
+        return check_target_module_exists(LoKR_config, key)

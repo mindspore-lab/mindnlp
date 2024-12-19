@@ -28,7 +28,7 @@ from collections.abc import Mapping
 import numpy as np
 import mindspore
 
-from mindnlp.core import ops, optim
+from mindnlp.core import ops
 from mindnlp.core.nn import functional as F
 from mindnlp.configs import GENERATOR_SEED
 from mindnlp.utils import is_mindspore_available, ExplicitEnum
@@ -504,28 +504,6 @@ def speed_metrics(split, start_time, num_samples=None, num_steps=None, num_token
         tokens_per_second = num_tokens / runtime
         result[f"{split}_tokens_per_second"] = round(tokens_per_second, 3)
     return result
-
-def _get_learning_rate(self):
-    r"""
-    This function retrieves the learning rate used by the optimizer.
-    
-    Args:
-        self: An instance of the class containing the optimizer and learning rate scheduler.
-    
-    Returns:
-        The learning rate value (float) used by the optimizer.
-    
-    Raises:
-        None.
-    """
-    if isinstance(self.lr_scheduler, optim.lr_scheduler.ReduceLROnPlateau):
-        last_lr = self.optimizer.param_groups[0]["lr"]
-    else:
-        last_lr = self.lr_scheduler.get_last_lr()[0]
-    if ops.is_tensor(last_lr):
-        last_lr = last_lr.item()
-    return last_lr
-
 
 def find_batch_size(tensors):
     """
