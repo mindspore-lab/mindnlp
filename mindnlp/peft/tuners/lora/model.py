@@ -611,7 +611,7 @@ class LoraModel(BaseTuner):
         if merge:
             self._check_merge_allowed()
 
-        key_list = [key for key, _ in self.model.modules_and_names() if self.prefix not in key]
+        key_list = [key for key, _ in self.model.named_modules() if self.prefix not in key]
         desc = "Unloading " + ("and merging " if merge else "") + "model"
         for key in tqdm(key_list, disable=not progressbar, desc=desc):
             try:
@@ -773,7 +773,7 @@ class LoraModel(BaseTuner):
         # Do we really need that?
         _freeze_adapter(self.model, adapter_name)
 
-        key_list = [key for key, _ in self.model.modules_and_names() if self.prefix not in key]
+        key_list = [key for key, _ in self.model.named_modules() if self.prefix not in key]
         for key in key_list:
             _, target, _ = _get_submodules(self.model, key)
             if isinstance(target, LoraLayer):
@@ -1015,7 +1015,7 @@ class LoraModel(BaseTuner):
             raise ValueError(f"Adapter {adapter_name} does not exist")
         del self.peft_config[adapter_name]
 
-        key_list = [key for key, _ in self.model.modules_and_names() if self.prefix not in key]
+        key_list = [key for key, _ in self.model.named_modules() if self.prefix not in key]
         new_adapter = None
         for key in key_list:
             _, target, _ = _get_submodules(self.model, key)

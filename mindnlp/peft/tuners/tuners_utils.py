@@ -47,7 +47,7 @@ def onload_layer(layer):
             layer with tuners to be merged
     """
     offloaded_modules = []
-    for name, cell in layer.modules_and_names():
+    for name, module in layer.named_modules():
         if name in ["", "base_layer"]:
             continue
         # if hasattr(cell, "_hf_hook") and isinstance(cell._hf_hook, AlignDevicesHook) and cell._hf_hook.offload:
@@ -328,7 +328,7 @@ class BaseTuner(nn.Module):
         self._check_new_adapter_config(peft_config)
 
         is_target_modules_in_base_model = False
-        key_list = [key for key, _ in model.modules_and_names()]  # named_modules
+        key_list = [key for key, _ in model.named_modules()]  # named_modules
 
         model_config = getattr(model, "config", {"model_type": "custom"})
         if hasattr(model_config, "to_dict"):
