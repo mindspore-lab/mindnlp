@@ -292,7 +292,7 @@ def _set_trainable(model, adapter_name):
     """
     set trainable
     """
-    key_list = [key for key, _ in model.modules_and_names()]  # named_modules modules_and_names
+    key_list = [key for key, _ in model.named_modules()]  # named_modules
     for key in key_list:
         target_module_found = any(key.endswith(target_key) for target_key in model.modules_to_save)
         if target_module_found:

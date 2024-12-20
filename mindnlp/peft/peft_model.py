@@ -25,6 +25,7 @@ from mindspore import Tensor
 from mindspore.train.serialization import _exec_save
 
 from mindnlp.core import nn, ops
+from mindnlp.core.nn import functional as F
 from .config import PeftConfig, PromptLearningConfig
 from ..transformers import PreTrainedModel
 
@@ -473,7 +474,7 @@ class PeftModelForSequenceClassification(PeftModel):
         else:
             self.modules_to_save.update({"classifier", "score"})
 
-        for name, _ in self.base_model.modules_and_names():
+        for name, _ in self.base_model.named_modules():
             if any(module_name in name for module_name in self.modules_to_save):
                 self.cls_layer_name = name
                 break
@@ -955,7 +956,7 @@ class PeftModelForTokenClassification(PeftModel):
         else:
             self.modules_to_save.update({"classifier", "score"})
 
-        for name, _ in self.base_model.modules_and_names():
+        for name, _ in self.base_model.named_modules():
             if any(module_name in name for module_name in self.modules_to_save):
                 self.cls_layer_name = name
                 break
@@ -1085,13 +1086,13 @@ class PeftModelForTokenClassification(PeftModel):
                 raise ValueError("Model does not support past key values which are required for prefix tuning.")
             outputs = transformer_backbone_name(**kwargs)
             sequence_output = outputs[0]
-            if "dropout" in [name for name, _ in list(self.base_model.modules_and_names())]:
+            if "dropout" in [name for name, _ in list(self.base_model.named_modules())]:
                 sequence_output = self.base_model.dropout(sequence_output)
             logits = self.base_model.get_submodule(self.cls_layer_name)(sequence_output)
 
             loss = None
             if labels is not None:
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = F.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
