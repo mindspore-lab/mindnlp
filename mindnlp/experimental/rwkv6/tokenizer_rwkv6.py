@@ -16,6 +16,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+import os
+import urllib
+import tempfile
+import urllib
+
+
 class TRIE:
     __slots__ = tuple("ch,to,values,front".split(","))
     to:list
@@ -62,10 +68,12 @@ class TRIE:
 
 
 class RWKV_TOKENIZER():
-    def __init__(self, file_name):
+    def __init__(self, file_name=None):
+        vocab = file_name if file_name else self.get_vocab()
+
         self.idx2token = {}
         sorted = [] # must be already sorted
-        with open(file_name, "r", encoding="utf-8") as f:
+        with open(vocab, "r", encoding="utf-8") as f:
             lines = f.readlines()
         for l in lines:
             idx = int(l[:l.index(' ')])
@@ -83,6 +91,33 @@ class RWKV_TOKENIZER():
         self.root = TRIE()
         for t, i in self.token2idx.items():
             _ = self.root.add(t, val=(t, i))
+
+    def get_vocab(self):
+        VOCAB_NAME = "rwkv_vocab_v20230424.txt"
+        VOCAB_SRC = [
+            "https://www.modelscope.cn/models/EliwiiKeeya/RWKV-x060-World-1B6-v2.1-20240328-ctx4096/resolve/master/rwkv_vocab_v20230424.txt"
+        ]
+        temp_dir = tempfile.gettempdir()
+        temp_vocab_path = os.path.join(temp_dir, "mindnlp", "rwkv6")
+        temp_vocab = os.path.join(temp_vocab_path, VOCAB_NAME)
+
+        if os.path.exists(temp_vocab) and os.path.getsize(temp_vocab) > 0:
+            print("Use cached vocab: " + temp_vocab)
+            return temp_vocab
+        else:
+            print("Download the vocab as: " + temp_vocab)
+            if not os.path.exists(temp_vocab_path):
+                os.makedirs(temp_vocab_path)
+
+            for url in VOCAB_SRC:
+                try:
+                    urllib.request.urlretrieve(url, temp_vocab)
+                except Exception as e:
+                    print(e)
+                else:
+                    return temp_vocab
+            else:
+                raise(RuntimeError("Download failed."))
 
     def encodeBytes(self, src:bytes):
         idx:int = 0

@@ -1,4 +1,4 @@
-﻿# coding=utf-8
+# coding=utf-8
 # Copyright 2024 BlinkDL, et al.
 # Copyright 2024 yuunnn-w, et al.
 #
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     # 加载模型和分词器
     print("Loading model and tokenizer...")
     model = RWKV_RNN(args)
-    tokenizer = RWKV_TOKENIZER("rwkv_vocab_v20230424.txt")
+    tokenizer = RWKV_TOKENIZER()
     print("Done.")
 
     # 设置续写的初始字符串和参数
