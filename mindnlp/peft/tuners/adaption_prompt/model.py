@@ -16,7 +16,7 @@ from typing import Dict, List
 
 from mindnlp.core import nn
 
-from mindnlp.peft.utils import _freeze_adapter, _get_subcells
+from mindnlp.peft.utils import _freeze_adapter, _get_submodules
 
 from .config import AdaptionPromptConfig, prepare_config
 from .layer import AdaptedAttention
@@ -27,17 +27,17 @@ class AdaptionPromptModel(nn.Module):
     """
     Implements adaption prompts as described in https://arxiv.org/pdf/2303.16199.pdf.
 
-    The top L attention cells are replaced with AdaptedAttention cells that wrap the original ones, but insert
+    The top L attention modules are replaced with AdaptedAttention modules that wrap the original ones, but insert
     trainable prompts with gates (for zero init).
 
     Notes on the multi-adapter pattern:
-    - We store the states of different adapters by keeping a dictionary of AdaptedAttention cells indexed by adapter
+    - We store the states of different adapters by keeping a dictionary of AdaptedAttention modules indexed by adapter
       name.
-    - Every time we switch adapters, we remove the cells of the currently active adapter from the model, store them
-      in the dictionary, and replace them with the cells of the new adapter.
+    - Every time we switch adapters, we remove the modules of the currently active adapter from the model, store them
+      in the dictionary, and replace them with the modules of the new adapter.
     - To avoid duplicated and potentially inconsistent state, the currently active adapter is always removed from the
       dictionary.
-    - Disabling the adapter would also result in the cells being removed from the model.
+    - Disabling the adapter would also result in the modules being removed from the model.
     """
     def __init__(self, model, configs: Dict, adapter_name: str):
         r"""
@@ -80,11 +80,11 @@ class AdaptionPromptModel(nn.Module):
 
         parents = []
         # 获取模型的所有子模块及其名称
-        for name, subcell in self.model.name_cells().items():
+        for name, submodule in self.model.named_modules().items():
             if name.endswith(config.target_modules):
-                # 对每个符合条件的子模块调用 _get_subcells 函数
-                parent, target, target_name = _get_subcells(self.model, name)
-                if target == subcell:
+                # 对每个符合条件的子模块调用 _get_submodules 函数
+                parent, target, target_name = _get_submodules(self.model, name)
+                if target == submodule:
                     parents.append(parent)
 
         if len(parents) < config.adapter_layers:
@@ -118,17 +118,17 @@ class AdaptionPromptModel(nn.Module):
         self._active_adapter = adapter_name
 
     def enable_adapter_layers(self):
-        """Enable adapter layers by swapping in cached AdaptedAttention cells."""
+        """Enable adapter layers by swapping in cached AdaptedAttention modules."""
         self._enabled = True
         self._set_adapted_attentions(self._active_adapter)
 
     def disable_adapter_layers(self):
-        """Disable adapter layers by swapping out AdaptedAttention cells."""
+        """Disable adapter layers by swapping out AdaptedAttention modules."""
         self._enabled = False
         self._remove_adapted_attentions(self._active_adapter)
 
     def _create_adapted_attentions(self, config: AdaptionPromptConfig, parents: List[nn.Module]) -> None:
-        """Wrap LlamaAttention cells with newly created AdaptedAttention cells."""
+        """Wrap LlamaAttention modules with newly created AdaptedAttention modules."""
         for par in parents:
             attn = AdaptedAttention(
                 model_type=self.model.config.model_type,
@@ -138,7 +138,7 @@ class AdaptionPromptModel(nn.Module):
             setattr(par, config.target_modules, attn)
 
     def _set_adapted_attentions(self, adapter_name: str) -> None:
-        """Replace LlamaAttention cells with cached AdaptedAttention cells."""
+        """Replace LlamaAttention modules with cached AdaptedAttention modules."""
         cached = self._cached_adapters[adapter_name]
         del self._cached_adapters[adapter_name]
         config = self.peft_config[adapter_name]
@@ -146,7 +146,7 @@ class AdaptionPromptModel(nn.Module):
             setattr(par, config.target_modules, cached[i])
 
     def _remove_adapted_attentions(self, adapter_name: str) -> None:
-        """Remove AdaptedAttention cells from the model and store them in the cache."""
+        """Remove AdaptedAttention modules from the model and store them in the cache."""
         config = self.peft_config[adapter_name]
         adapted_attentions = []
         for par in self._parents[adapter_name]:

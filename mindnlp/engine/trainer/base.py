@@ -45,6 +45,8 @@ from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_
     WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from ...dataset import BaseMapFunction
 from ...utils import logging, find_labels, can_return_loss
+from ...accelerate.utils import DistributedType
+from ...accelerate.utils import accelerate_distributed_type
 from ...utils.import_utils import is_safetensors_available
 from ...transformers.modeling_utils import PreTrainedModel
 from ...transformers.configuration_utils import PretrainedConfig
@@ -124,7 +126,6 @@ class Trainer:
     """
     Trainer is a simple but feature-complete training and eval loop for MindSpore, optimized for 🤗 Transformers.
     """
-    from ..utils import _get_learning_rate
     def __init__(
         self,
         model: Union[PreTrainedModel, nn.Module] = None,
@@ -284,6 +285,30 @@ class Trainer:
         # Internal variables to help with automatic batch size reduction
         self._train_batch_size = args.train_batch_size
         self._created_lr_scheduler = False
+        self.actual_distributed_type = accelerate_distributed_type
+
+
+    def _get_learning_rate(self):
+        r"""
+        This function retrieves the learning rate used by the optimizer.
+        
+        Args:
+            self: An instance of the class containing the optimizer and learning rate scheduler.
+        
+        Returns:
+            The learning rate value (float) used by the optimizer.
+        
+        Raises:
+            None.
+        """
+        if isinstance(self.lr_scheduler, optim.lr_scheduler.ReduceLROnPlateau):
+            last_lr = self.optimizer.param_groups[0]["lr"]
+        else:
+            last_lr = self.lr_scheduler.get_last_lr()[0]
+        if ops.is_tensor(last_lr):
+            last_lr = last_lr.item()
+        return last_lr
+
 
     def _activate_neftune(self, model):
         r"""
@@ -1133,6 +1158,7 @@ MindSpore's `load_checkpoint` function.
                             model.parameters(),
                             args.max_grad_norm,
                         )
+
                     # Optimizer step
                     self.optimizer.step()
 
@@ -1351,6 +1377,20 @@ indicating whether to prefer safe tensors.
 
         return inputs
 
+
+    def update_gradient_by_distributed_type(self, model: nn.Module) -> None:
+        """update gradient by distributed_type"""
+        if accelerate_distributed_type == DistributedType.NO:
+            return
+        if accelerate_distributed_type == DistributedType.MULTI_NPU:
+            from mindspore.communication import get_group_size
+            from mindspore.communication.comm_func import all_reduce
+            rank_size = get_group_size()
+            for parameter in model.parameters():
+                new_grads_mean = all_reduce(parameter.grad) / rank_size
+                parameter.grad = new_grads_mean
+
+
     def training_step(self, model: nn.Module, inputs: Dict[str, Union[mindspore.Tensor, Any]]) -> Tuple[List[mindspore.Tensor], mindspore.Tensor]:
         """
         Perform a training step on a batch of inputs.
@@ -1382,7 +1422,7 @@ indicating whether to prefer safe tensors.
             self.grad_fn = value_and_grad(forward, weights, attach_grads=True)
 
         loss = self.grad_fn(inputs)
-
+        self.update_gradient_by_distributed_type(model)
         return loss / self.args.gradient_accumulation_steps
 
     def compute_loss(self, model, inputs, return_outputs=False):

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Parameter effcient fine tuning cells, like huggingface peft."""
+"""Parameter effcient fine tuning modules, like huggingface peft."""
 from .mapping import (
     MODEL_TYPE_TO_PEFT_MODEL_MAPPING,
     PEFT_TYPE_TO_CONFIG_MAPPING,
@@ -24,7 +24,7 @@ from .mapping import (
 from .peft_model import (
     PeftModel,
     PeftModelForCausalLM,
-    # PeftModelForFeatureExtraction,
+    PeftModelForFeatureExtraction,
     # PeftModelForQuestionAnswering,
     PeftModelForSeq2SeqLM,
     PeftModelForSequenceClassification,
