@@ -199,7 +199,6 @@ class SentenceTransformer(nn.Sequential):
         # If the class is from sentence_transformers, we can directly import it,
         # otherwise, we try to import it dynamically, and if that fails, we fall back to the default import
         if class_ref.startswith("sentence_transformers."):
-            class_ref = class_ref.replace('sentence_transformers', 'mindnlp.sentence')
             return import_from_string(class_ref)
 
         return import_from_string(class_ref)

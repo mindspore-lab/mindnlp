@@ -33,7 +33,7 @@ import math
 
 from contextlib import closing, contextmanager
 from enum import Enum
-from typing import Dict, Union, Optional, Any, OrderedDict
+from typing import Dict, Union, Optional, Any, OrderedDict, Tuple, List
 from functools import reduce
 from dataclasses import dataclass
 
@@ -46,6 +46,7 @@ import safetensors
 import safetensors.numpy
 from safetensors import deserialize
 
+from mindnlp.core import nn
 from mindnlp.core.nn import Parameter
 from mindnlp.configs import SUPPORT_BF16
 from .nn import Module
@@ -1548,3 +1549,83 @@ def load_checkpoint(ckpt_file_name):
                          "'filter_prefix' or 'specify_prefix' are set correctly.")
 
     return parameter_dict
+
+
+def save_model(
+    model: nn.Module, filename: str, metadata: Optional[Dict[str, str]] = None, force_contiguous: bool = True
+):
+    """
+    Saves a given torch model to specified filename.
+    This method exists specifically to avoid tensor sharing issues which are
+    not allowed in `safetensors`. [More information on tensor sharing](../torch_shared_tensors)
+
+    Args:
+        model (`nn.Module`):
+            The model to save on disk.
+        filename (`str`):
+            The filename location to save the file
+        metadata (`Dict[str, str]`, *optional*):
+            Extra information to save along with the file.
+            Some metadata will be added for each dropped tensors.
+            This information will not be enough to recover the entire
+            shared structure but might help understanding things
+        force_contiguous (`boolean`, *optional*, defaults to True):
+            Forcing the state_dict to be saved as contiguous tensors.
+            This has no effect on the correctness of the model, but it
+            could potentially change performance if the layout of the tensor
+            was chosen specifically for that reason.
+    """
+    state_dict = model.state_dict()
+
+    if force_contiguous:
+        state_dict = {k: v.contiguous() for k, v in state_dict.items()}
+    try:
+        safe_save_file(state_dict, filename, metadata=metadata)
+    except ValueError as e:
+        msg = str(e)
+        msg += " Or use save_model(..., force_contiguous=True), read the docs for potential caveats."
+        raise ValueError(msg)
+
+
+def load_model(
+    model: nn.Module, filename: Union[str, os.PathLike], strict: bool = True
+) -> Tuple[List[str], List[str]]:
+    """
+    Loads a given filename onto a torch model.
+    This method exists specifically to avoid tensor sharing issues which are
+    not allowed in `safetensors`. [More information on tensor sharing](../torch_shared_tensors)
+
+    Args:
+        model (`nn.Module`):
+            The model to load onto.
+        filename (`str`, or `os.PathLike`):
+            The filename location to load the file from.
+        strict (`bool`, *optional*, defaults to True):
+            Whether to fail if you're missing keys or having unexpected ones.
+            When false, the function simply returns missing and unexpected names.
+        device (`Union[str, int]`, *optional*, defaults to `cpu`):
+            The device where the tensors need to be located after load.
+            available options are all regular torch device locations.
+
+    Returns:
+        `(missing, unexpected): (List[str], List[str])`
+            `missing` are names in the model which were not modified during loading
+            `unexpected` are names that are on the file, but weren't used during
+            the load.
+    """
+    state_dict = safe_load_file(filename)
+    model_state_dict = model.state_dict()
+
+    missing, unexpected = model.load_state_dict(state_dict, strict=False)
+    missing = set(missing)
+
+    if strict and (missing or unexpected):
+        missing_keys = ", ".join([f'"{k}"' for k in sorted(missing)])
+        unexpected_keys = ", ".join([f'"{k}"' for k in sorted(unexpected)])
+        error = f"Error(s) in loading state_dict for {model.__class__.__name__}:"
+        if missing:
+            error += f"\n    Missing key(s) in state_dict: {missing_keys}"
+        if unexpected:
+            error += f"\n    Unexpected key(s) in state_dict: {unexpected_keys}"
+        raise RuntimeError(error)
+    return missing, unexpected
