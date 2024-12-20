@@ -20,13 +20,13 @@
 import time
 import mindspore
 from mindspore import ops
-from experimental.rwkv6.modeling_rwkv6 import RWKV_RNN
-from experimental.rwkv6.tokenizer_rwkv6 import RWKV_TOKENIZER
-from experimental.rwkv6.sampler_rwkv6 import sample_logits
+from mindnlp.experimental.rwkv6.modeling_rwkv6 import RWKV_RNN
+from mindnlp.experimental.rwkv6.tokenizer_rwkv6 import RWKV_TOKENIZER
+from mindnlp.experimental.rwkv6.sampler_rwkv6 import sample_logits
 
 if __name__ == '__main__':
     args = {
-        'MODEL_NAME': '', #模型文件的名字，ckpt结尾的权重文件。
+        'MODEL_NAME': 'RWKV-x060-World-1B6-v2.1-20240328-ctx4096', #模型文件的名字，ckpt结尾的权重文件。
         'vocab_size': 65536, #词表大小
         'batch_size': 3
     }
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     # 加载模型和分词器
     print("Loading model and tokenizer...")
     model = RWKV_RNN(args)
-    tokenizer = RWKV_TOKENIZER("asset/rwkv_vocab_v20230424.txt")
+    tokenizer = RWKV_TOKENIZER("rwkv_vocab_v20230424.txt")
     print("Done.")
 
     # 设置续写的初始字符串和参数
@@ -46,7 +46,7 @@ if __name__ == '__main__':
 
     # 编码初始字符串
     token = mindspore.Tensor(tokenizer.encode([initial_string] * BATCH_SIZE), dtype=mindspore.int64)
-    for t in ops.unstack(token, axis=-1):
+    for t in ops.unbind(token, dim=-1):
         out = model(t)
     else:
         token_sampled = sample_logits(out, TEMPERATURE, TOP_P).type_as(token)

@@ -18,12 +18,13 @@
 # limitations under the License.
 # ============================================================================
 import mindspore
-import mindspore.nn as nn
-import mindspore.ops as ops
+import mindnlp
+import mindnlp.core.nn as nn
+import mindnlp.core.ops as ops
 from typing import Tuple
 
 
-class RWKV_BLOCK(nn.Cell):
+class RWKV_BLOCK(nn.Module):
     """
     RWKV模型的块结构。
 
@@ -52,57 +53,52 @@ class RWKV_BLOCK(nn.Cell):
         self.state_view_time_2 = state[:, i2: i3, :]
         
         # 初始化层归一化
-        self.ln1 = nn.LayerNorm((n_embd,),
-                                gamma_init=mindspore.Parameter(block_w['ln1.weight']),
-                                beta_init=mindspore.Parameter(block_w['ln1.bias']),
-                                epsilon=1e-5)
-        self.ln2 = nn.LayerNorm((n_embd,),
-                                gamma_init=mindspore.Parameter(block_w['ln2.weight']),
-                                beta_init=mindspore.Parameter(block_w['ln2.bias']),
-                                epsilon=1e-5)
+        self.ln1 = nn.LayerNorm(n_embd)
+        self.ln1.weight = nn.Parameter(block_w['ln1.weight'])
+        self.ln1.bias = nn.Parameter(block_w['ln1.bias'])
+        self.ln2 = nn.LayerNorm(n_embd)
+        self.ln2.weight = nn.Parameter(block_w['ln2.weight'])
+        self.ln2.bias = nn.Parameter(block_w['ln2.bias'])
 
         # 初始化激活函数
         self.silu = nn.SiLU()
         
         # 初始化注意力参数
-        self.att_time_maa_x = mindspore.Parameter(block_w['att.time_maa_x'])
-        self.att_time_maa = mindspore.Parameter(ops.stack([block_w['att.time_maa_w'],
+        self.att_time_maa_x = nn.Parameter(block_w['att.time_maa_x'])
+        self.att_time_maa = nn.Parameter(ops.stack([block_w['att.time_maa_w'],
                                                            block_w['att.time_maa_k'],
                                                            block_w['att.time_maa_v'],
                                                            block_w['att.time_maa_r'],
                                                            block_w['att.time_maa_g']]))
-        self.att_time_maa_w1 = mindspore.Parameter(block_w['att.time_maa_w1'])
-        self.att_time_maa_w2 = mindspore.Parameter(block_w['att.time_maa_w2'])
-        self.att_time_decay = mindspore.Parameter(block_w['att.time_decay'])
-        self.att_time_decay_w1 = mindspore.Parameter(block_w['att.time_decay_w1'])
-        self.att_time_decay_w2 = mindspore.Parameter(block_w['att.time_decay_w2'])
-        self.att_time_faaaa = mindspore.Parameter(block_w['att.time_faaaa'])
-        self.att_receptance = nn.Dense(self.n_embd, self.n_embd, has_bias=False)
-        self.att_receptance.weight = mindspore.Parameter(block_w['att.receptance.weight'])
-        self.att_key = nn.Dense(self.n_embd, self.n_embd, has_bias=False)
-        self.att_key.weight = mindspore.Parameter(block_w['att.key.weight'])
-        self.att_value = nn.Dense(self.n_embd, self.n_embd, has_bias=False)
-        self.att_value.weight = mindspore.Parameter(block_w['att.value.weight'])
-        self.att_output = nn.Dense(self.n_embd, self.n_embd, has_bias=False)
-        self.att_output.weight = mindspore.Parameter(block_w['att.output.weight'])
-        self.att_gate = nn.Dense(self.n_embd, self.n_embd, has_bias=False)
-        self.att_gate.weight = mindspore.Parameter(block_w['att.gate.weight'])
-        self.att_group_norm = nn.GroupNorm(num_groups=n_head,
-                                            num_channels=n_embd,
-                                            eps=1e-5,
-                                            affine=True,
-                                            gamma_init=mindspore.Parameter(block_w['att.ln_x.weight']),
-                                            beta_init=mindspore.Parameter(block_w['att.ln_x.bias']))
+        self.att_time_maa_w1 = nn.Parameter(block_w['att.time_maa_w1'])
+        self.att_time_maa_w2 = nn.Parameter(block_w['att.time_maa_w2'])
+        self.att_time_decay = nn.Parameter(block_w['att.time_decay'])
+        self.att_time_decay_w1 = nn.Parameter(block_w['att.time_decay_w1'])
+        self.att_time_decay_w2 = nn.Parameter(block_w['att.time_decay_w2'])
+        self.att_time_faaaa = nn.Parameter(block_w['att.time_faaaa'])
+        self.att_receptance = nn.Linear(self.n_embd, self.n_embd, bias=False)
+        self.att_receptance.weight = nn.Parameter(block_w['att.receptance.weight'])
+        self.att_key = nn.Linear(self.n_embd, self.n_embd, bias=False)
+        self.att_key.weight = nn.Parameter(block_w['att.key.weight'])
+        self.att_value = nn.Linear(self.n_embd, self.n_embd, bias=False)
+        self.att_value.weight = nn.Parameter(block_w['att.value.weight'])
+        self.att_output = nn.Linear(self.n_embd, self.n_embd, bias=False)
+        self.att_output.weight = nn.Parameter(block_w['att.output.weight'])
+        self.att_gate = nn.Linear(self.n_embd, self.n_embd, bias=False)
+        self.att_gate.weight = nn.Parameter(block_w['att.gate.weight'])
+        self.att_group_norm = nn.GroupNorm(num_groups=n_head, num_channels=n_embd, eps=1e-5, affine=True)
+        self.att_group_norm.weight = nn.Parameter(block_w['att.ln_x.weight'])
+        self.att_group_norm.bias = nn.Parameter(block_w['att.ln_x.bias'])
             
         # 初始化前馈参数
-        self.ffn_time_maa_k = mindspore.Parameter(block_w['ffn.time_maa_k'])
-        self.ffn_time_maa_r = mindspore.Parameter(block_w['ffn.time_maa_r'])
-        self.ffn_key = nn.Dense(self.n_embd, self.n_embd, has_bias=False)
-        self.ffn_key.weight = mindspore.Parameter(block_w['ffn.key.weight'])
-        self.ffn_receptance = nn.Dense(self.n_embd, self.n_embd, has_bias=False)
-        self.ffn_receptance.weight = mindspore.Parameter(block_w['ffn.receptance.weight'])
-        self.ffn_value = nn.Dense(self.n_embd, self.n_embd, has_bias=False)
-        self.ffn_value.weight = mindspore.Parameter(block_w['ffn.value.weight'])
+        self.ffn_time_maa_k = nn.Parameter(block_w['ffn.time_maa_k'])
+        self.ffn_time_maa_r = nn.Parameter(block_w['ffn.time_maa_r'])
+        self.ffn_key = nn.Linear(self.n_embd, self.n_embd, bias=False)
+        self.ffn_key.weight = nn.Parameter(block_w['ffn.key.weight'])
+        self.ffn_receptance = nn.Linear(self.n_embd, self.n_embd, bias=False)
+        self.ffn_receptance.weight = nn.Parameter(block_w['ffn.receptance.weight'])
+        self.ffn_value = nn.Linear(self.n_embd, self.n_embd, bias=False)
+        self.ffn_value.weight = nn.Parameter(block_w['ffn.value.weight'])
 
     def channel_mixing(self, x: mindspore.Tensor) -> mindspore.Tensor:
         """
@@ -117,8 +113,8 @@ class RWKV_BLOCK(nn.Cell):
         self.state_view_channel = x
         xk = x + sx * self.ffn_time_maa_k
         xr = x + sx * self.ffn_time_maa_r
-        r = ops.sigmoid(self.ffn_receptance(xr))
-        k = ops.relu(self.ffn_key(xk)).pow(2)
+        r = nn.functional.sigmoid(self.ffn_receptance(xr))
+        k = nn.functional.relu(self.ffn_key(xk)).pow(2)
         output = r * self.ffn_value(k)
         return output
 
@@ -140,7 +136,7 @@ class RWKV_BLOCK(nn.Cell):
         xxx = ops.tanh(xxx @ self.att_time_maa_w1).view(batch_size, 5, 1, -1)
         xxx = ops.matmul(xxx, self.att_time_maa_w2).view(batch_size, 5, -1)
 
-        xw, xk, xv, xr, xg = ops.unstack(x.unsqueeze(1) + sx.unsqueeze(1) * (self.att_time_maa + xxx), axis=1)
+        xw, xk, xv, xr, xg = ops.unbind(x.unsqueeze(1) + sx.unsqueeze(1) * (self.att_time_maa + xxx), dim=1)
 
         w = (self.att_time_decay + (ops.tanh(xw @ self.att_time_decay_w1) @ self.att_time_decay_w2))
         
@@ -166,7 +162,7 @@ class RWKV_BLOCK(nn.Cell):
         # 应用输出层并返回结果
         return self.att_output(x)
 
-    def construct(self, x: mindspore.Tensor) -> mindspore.Tensor:
+    def forward(self, x: mindspore.Tensor) -> mindspore.Tensor:
         """
         模型的前向传播。
         Args:
@@ -179,7 +175,7 @@ class RWKV_BLOCK(nn.Cell):
         return x
         
 
-class RWKV_RNN(nn.Cell):
+class RWKV_RNN(nn.Module):
     """
     RWKV模型的RNN结构。
 
@@ -192,7 +188,7 @@ class RWKV_RNN(nn.Cell):
         self.set_train(False)
 
         # 加载权重
-        w = mindspore.load_checkpoint(args['MODEL_NAME'] + '.ckpt')
+        w = mindnlp.core.serialization.load(args['MODEL_NAME'] + '.pth')
         
         # 将所有权重转换为float32
         self.num_layer = 0
@@ -212,13 +208,12 @@ class RWKV_RNN(nn.Cell):
 
         print(f"state_size: {self.state_size}") # 这里打印状态的形状
         
-        # 初始化模型参数
-        self.emb = nn.Embedding(w['emb.weight'].shape[0], w['emb.weight'].shape[1], embedding_table=w['emb.weight'])
-        self.ln0 = nn.LayerNorm((self.n_embd,),
-                                gamma_init=mindspore.Parameter(w['blocks.0.ln0.weight']),
-                                beta_init=mindspore.Parameter(w['blocks.0.ln0.bias']),
-                                epsilon=1e-5)
-        self.blocks = nn.CellList()
+        # 初始化模型参数        
+        self.emb = nn.Embedding.from_pretrained(w['emb.weight'], freeze=True)
+        self.ln0 = nn.LayerNorm(self.n_embd)
+        self.ln0.weight = nn.Parameter(w['blocks.0.ln0.weight'])
+        self.ln0.bias = nn.Parameter(w['blocks.0.ln0.bias'])
+        self.blocks = nn.ModuleList()
 
         # 初始化状态
         self.state = ops.zeros([self.batch_size, *self.state_size])
@@ -230,14 +225,13 @@ class RWKV_RNN(nn.Cell):
             print(f"Loading blocks...[{i + 1}/{self.num_layer}]", end='\r')
         print()
 
-        self.ln_out = nn.LayerNorm((self.n_embd,),
-                                    gamma_init=mindspore.Parameter(w['ln_out.weight']),
-                                    beta_init=mindspore.Parameter(w['ln_out.bias']),
-                                    epsilon=1e-5)
-        self.head = nn.Dense(self.n_embd, args['vocab_size'], has_bias=False)
-        self.head.weight = mindspore.Parameter(w['head.weight'])
+        self.ln_out = nn.LayerNorm(self.n_embd)
+        self.ln_out.weight = nn.Parameter(w['ln_out.weight'])
+        self.ln_out.bias = nn.Parameter(w['ln_out.bias'])
+        self.head = nn.Linear(self.n_embd, args['vocab_size'], bias=False)
+        self.head.weight = nn.Parameter(w['head.weight'])
 
-    def construct(self, token: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
+    def forward(self, token: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
         """
         模型的前向传播。
         Args:
