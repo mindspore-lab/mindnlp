@@ -551,6 +551,12 @@ def import_from_string(dotted_path: str) -> type:
         >>> import_from_string('sentence_transformers.losses.MultipleNegativesRankingLoss')
         <class 'sentence_transformers.losses.MultipleNegativesRankingLoss.MultipleNegativesRankingLoss'>
     """
+    if 'sentence_transformers' in dotted_path:
+        dotted_path = dotted_path.replace('sentence_transformers', 'mindnlp.sentence')
+
+    if 'torch.nn' in dotted_path:
+        dotted_path = dotted_path.replace('torch.nn', 'mindnlp.core.nn')
+
     try:
         module_path, class_name = dotted_path.rsplit(".", 1)
     except ValueError:
