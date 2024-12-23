@@ -1550,11 +1550,11 @@ class BaiChuan13bModel(BaiChuanPreTrainedModel):
         if attention_mask is not None:
             if len(attention_mask.shape) == 2:
                 expanded_mask = attention_mask.to(alibi_mask.dtype)
-                expanded_mask = ops.tril(ops.gt(expanded_mask[:, :, None] * expanded_mask[:, None, :], 0)
-                                ) * ops.eq(expanded_mask[:, :, None] - expanded_mask[:, None, :], 0)
+                expanded_mask = ops.tril((ops.gt(expanded_mask[:, :, None] * expanded_mask[:, None, :], 0)
+                                ) * ops.eq(expanded_mask[:, :, None] - expanded_mask[:, None, :], 0).int()).bool()
             else:
                 expanded_mask = attention_mask
-            bsz = inputs_embeds.size(0)
+            bsz = inputs_embeds.shape[0]
             src_len, tgt_len = alibi_mask.shape[-2:]
             expanded_mask = expanded_mask.unsqueeze(1).broadcast_to((bsz, 1, src_len, tgt_len)).to(alibi_mask.dtype)
             inverted_mask = 1.0 - expanded_mask
