@@ -33,48 +33,53 @@ def from_numpy(ndarray):
 
 # zeros
 _zeros = ops.Zeros()
+has_zeros = hasattr(mindspore.mint, 'zeros')
 def zeros(*size, dtype=None):
     if dtype is None:
         dtype = get_default_dtype()
     if isinstance(size[0], (tuple, list)):
         size = size[0]
-    if use_pyboost():
+    if use_pyboost() and has_zeros:
         return mindspore.mint.zeros(size, dtype=dtype)
     size = tuple(size)
     return _zeros(size, dtype)
 
 # zeros_like
+has_zeros_like = hasattr(mindspore.mint, 'zeros_like')
 def zeros_like(input, *, dtype=None):
     if dtype is None:
         dtype = input.dtype
-    if use_pyboost():
+    if use_pyboost() and has_zeros_like:
         return mindspore.mint.zeros_like(input, dtype=dtype)
     return ops.zeros_like(input, dtype=dtype)
 
 # ones
 _ones = ops.Ones()
+has_ones = hasattr(mindspore.mint, 'ones')
 def ones(*size, dtype=None):
     if isinstance(size[0], (tuple, list)):
         size = size[0]
     if dtype is None:
         dtype = get_default_dtype()
-    if use_pyboost():
+    if use_pyboost() and has_ones:
         return mindspore.mint.ones(size, dtype=dtype)
     return _ones(size, dtype)
 
 # ones_like
+has_ones_like = hasattr(mindspore.mint, 'ones_like')
 def ones_like(input, *, dtype=None):
     if dtype is None:
         dtype = input.dtype
-    if use_pyboost():
+    if use_pyboost() and has_ones_like:
         return mindspore.mint.ones_like(input, dtype=dtype)
     return ops.ones_like(input, dtype=dtype)
 
 # arange
+has_arange = hasattr(mindspore.mint, 'arange')
 def arange(start=0, end=None, step=1, *, dtype=None):
     if ON_ORANGE_PI and dtype in (None, mindspore.int64):
         dtype = mindspore.int32
-    if use_pyboost():
+    if use_pyboost() and has_arange:
         return mindspore.mint.arange(start, end, step, dtype=dtype)
     return ops.arange(start, end, step, dtype=dtype)
 
@@ -88,10 +93,11 @@ def range(start=0, end=None, step=1, dtype=None):
     return out
 
 # linspace
+has_linspace = hasattr(mindspore.mint, 'linspace')
 def linspace(start, end, steps, *, dtype=None):
     if dtype is None:
         dtype = mindspore.float32
-    if use_pyboost():
+    if use_pyboost() and has_linspace:
         return mindspore.Tensor(np.linspace(start, end, steps)).to(dtype)
     return ops.linspace(start, end, steps).to(dtype)
 
@@ -100,8 +106,9 @@ def logspace(start, end, steps, base=10.0, *, dtype=None):
     return ops.logspace(start, end, steps, base, dtype=dtype)
 
 # eye
+has_eye = hasattr(mindspore.mint, 'eye')
 def eye(n, m=None, *, dtype=None):
-    if use_pyboost():
+    if use_pyboost() and has_eye:
         return mindspore.mint.eye(n, m, dtype)
     return ops.eye(n, m, dtype)
 
@@ -121,8 +128,9 @@ def empty(*size, dtype=None):
 
 
 # full
+has_full = hasattr(mindspore.mint, 'full')
 def full(size, fill_value, *, dtype=None):
-    if use_pyboost():
+    if use_pyboost() and has_full:
         return mindspore.mint.ones(size, dtype=dtype) * fill_value
     return ops.full(size, fill_value, dtype=dtype)
 
