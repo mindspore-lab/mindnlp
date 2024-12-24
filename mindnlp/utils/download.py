@@ -147,8 +147,10 @@ def threads_exclusive_http_get(url, storage_folder=None, md5sum=None, download_f
     pointer_path = os.path.join(storage_folder, download_file_name)
     lock_file_path = pointer_path + ".lock"
     if sys.platform != "win32":
+# pylint: disable=import-error
         import fcntl
     else:
+# pylint: disable=import-error
         import winfcntlock as fcntl
     with open(lock_file_path, 'w') as lock_file:
         fd = lock_file.fileno()
@@ -648,7 +650,7 @@ def download(
     else:
         headers = {}
     try:
-        pointer_path = threads_exclusive_http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies, headers=headers) # 单线程模式下载tokenizer,pretrained model有冲突
+        pointer_path = threads_exclusive_http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies, headers=headers)
     except Exception as exp:
         # Otherwise, our Internet connection is down.
         # etag is None
