@@ -2105,11 +2105,11 @@ class Mask2FormerPreTrainedModel(PreTrainedModel):
                     p.assign_value(initializer(XavierUniform(xavier_std), p.shape, p.dtype))
 
         elif isinstance(cell, Mask2FormerPixelLevelModule):
-            for name, subcell in cell.cells_and_names():
-                if isinstance(subcell, (nn.Conv2d, nn.Linear)):
-                    subcell.weight.assign_value(initializer(Normal(mean=0.0, sigma=std), subcell.weight.shape, subcell.weight.dtype))
-                    if subcell.bias is not None:
-                        subcell.bias.assign_value(initializer('zeros', subcell.bias.shape, subcell.bias.dtype))
+            for name, submodule in cell.cells_and_names():
+                if isinstance(submodule, (nn.Conv2d, nn.Linear)):
+                    submodule.weight.assign_value(initializer(Normal(mean=0.0, sigma=std), submodule.weight.shape, submodule.weight.dtype))
+                    if submodule.bias is not None:
+                        submodule.bias.assign_value(initializer('zeros', submodule.bias.shape, submodule.bias.dtype))
 
         elif isinstance(cell, Mask2FormerPixelDecoder):
             for _, p in cell.parameters_and_names():

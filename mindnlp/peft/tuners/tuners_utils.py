@@ -27,7 +27,7 @@ from mindspore import Tensor
 from mindnlp.core import nn
 
 from ..config import PeftConfig
-from ..utils import _get_subcells
+from ..utils import _get_submodules
 
 logger = logging.getLogger(__name__)
 
@@ -36,23 +36,23 @@ logger = logging.getLogger(__name__)
 def onload_layer(layer):
     r"""
     A utility for modifying a cell containing one or more tuners and a base layer, any of which are offloaded to the
-    CPU or disk. Moves a cell's sub-cells to the execution device before some action is performed, after that the
+    CPU or disk. Moves a cell's sub-modules to the execution device before some action is performed, after that the
     base layer state dictionary is re-assigned (if that layer was offloaded to the disk) and finally the parameters are
     offloaded.
 
-    If the cell has no offloaded sub-cells, this function does nothing.
+    If the cell has no offloaded sub-modules, this function does nothing.
 
     Args:
         layer ('mindspore.nn.Module'):
             layer with tuners to be merged
     """
-    offloaded_cells = []
-    for name, cell in layer.cells_and_names():
+    offloaded_modules = []
+    for name, module in layer.named_modules():
         if name in ["", "base_layer"]:
             continue
         # if hasattr(cell, "_hf_hook") and isinstance(cell._hf_hook, AlignDevicesHook) and cell._hf_hook.offload:
         #     cell._hf_hook.pre_forward(cell)
-        #     offloaded_cells.append(cell)
+        #     offloaded_modules.append(cell)
 
     # base_layer_offload = False
     # if hasattr(layer, "base_layer") and (
@@ -64,10 +64,10 @@ def onload_layer(layer):
     #     if torch.device("meta") in layer.base_layer._hf_hook.original_devices.values() and hasattr(
     #         layer.base_layer._hf_hook.weights_map, "dataset"
     #     ):
-    #         # find the disk-offload index (maps cells to safetensors) from the `dataset` (OffloadedWeightsLoader object)
+    #         # find the disk-offload index (maps modules to safetensors) from the `dataset` (OffloadedWeightsLoader object)
     #         index = layer.base_layer._hf_hook.weights_map.dataset.index
-    #         cell_name = list(dict(layer.base_layer._hf_hook.weights_map.dataset).keys())[0]  # any cell will do
-    #         file_name = index[cell_name]["safetensors_file"]
+    #         module_name = list(dict(layer.base_layer._hf_hook.weights_map.dataset).keys())[0]  # any cell will do
+    #         file_name = index[module_name]["safetensors_file"]
     #         base_name_arr = []
     #         # get effective dir name
     #         for i in os.path.split(file_name):
@@ -82,13 +82,13 @@ def onload_layer(layer):
 
     # yield
 
-    # for cell in offloaded_cells:
+    # for cell in offloaded_modules:
     #     cell._hf_hook.post_forward(cell, torch.tensor([]))
 
     # if base_layer_offload:
     #     # re-make weights map (must be on cpu to send params to the disk via memmap if disk offload)
     #     layer.base_layer._hf_hook.weights_map = {
-    #         name: param.to("cpu") for name, param in named_cell_tensors(layer.base_layer)
+    #         name: param.to("cpu") for name, param in named_module_tensors(layer.base_layer)
     #     }
     #     # offload weights map to disk if original device is the disk
     #     if torch.device("meta") in layer.base_layer._hf_hook.original_devices.values() and hasattr(
@@ -110,12 +110,12 @@ class BaseTuner(nn.Module):
         A private method to eventually prepare the adapter config, for example in case the field `target_modules` is
         missing.
     - **_check_new_adapter_config**:
-        A helper private method to check if the passed cell's key name matches any of the target cells in the
+        A helper private method to check if the passed cell's key name matches any of the target modules in the
         adatper_config.
     - **_create_and_replace**:
         A private method to create and replace the target cell with the adapter cell.
-    - **_check_target_cell_exists**:
-        A private helper method to check if the passed cell's key name matches any of the target cells in the
+    - **_check_target_module_exists**:
+        A private helper method to check if the passed cell's key name matches any of the target modules in the
         adatper_config.
 
     The easiest is to check what is done in the `peft.tuners.lora.LoraModel` class.
@@ -220,7 +220,7 @@ class BaseTuner(nn.Module):
     def _prepare_adapter_config(self, peft_config: PeftConfig, model_config: dict) -> PeftConfig:
         r"""
         A private method to eventually prepare the adapter config. For transformers based models, if
-        `peft_config.target_modules` is None, we can automatically infer the target cells from the
+        `peft_config.target_modules` is None, we can automatically infer the target modules from the
         `TRANSFORMERS_MODELS_TO_XXX_TARGET_MODULES_MAPPING`. This method can be further refactored in the future to
         automatically infer it for all tuner models.
 
@@ -235,9 +235,9 @@ class BaseTuner(nn.Module):
         return None
 
     @staticmethod
-    def _check_target_cell_exists(peft_config: PeftConfig, key: str) -> bool:
+    def _check_target_module_exists(peft_config: PeftConfig, key: str) -> bool:
         r"""
-        A helper private method to check if the passed cell's key name matches any of the target cells in the
+        A helper private method to check if the passed cell's key name matches any of the target modules in the
         `peft_config.target_modules` list. If it does, return `True`, else return `False`.
 
         Args:
@@ -309,7 +309,7 @@ class BaseTuner(nn.Module):
     #         _freeze_adapter(self.model, adapter_name)
     def inject_adapter(self, model: nn.Module, adapter_name: str):
         r"""
-        Creates adapter layers and replaces the target cells with the adapter layers. This method is called under the
+        Creates adapter layers and replaces the target modules with the adapter layers. This method is called under the
         hood by `peft.mapping.get_peft_model` if a non-prompt tuning adapter class is passed, e.g. LoRA.
 
         The corresponding PEFT config is directly retrieved from the `peft_config` attribute of the BaseTuner class.
@@ -328,7 +328,7 @@ class BaseTuner(nn.Module):
         self._check_new_adapter_config(peft_config)
 
         is_target_modules_in_base_model = False
-        key_list = [key for key, _ in model.cells_and_names()]  # named_cells
+        key_list = [key for key, _ in model.named_modules()]  # named_modules
 
         model_config = getattr(model, "config", {"model_type": "custom"})
         if hasattr(model_config, "to_dict"):
@@ -336,11 +336,11 @@ class BaseTuner(nn.Module):
 
         peft_config = self._prepare_adapter_config(peft_config, model_config) # pylint: disable=assignment-from-none
         for key in key_list:
-            if not self._check_target_cell_exists(peft_config, key):
+            if not self._check_target_module_exists(peft_config, key):
                 continue
 
             is_target_modules_in_base_model = True
-            parent, target, target_name = _get_subcells(model, key)
+            parent, target, target_name = _get_submodules(model, key)
 
             optionnal_kwargs = {
                 "loaded_in_8bit": getattr(model, "is_loaded_in_8bit", False),  
@@ -352,8 +352,8 @@ class BaseTuner(nn.Module):
 
         if not is_target_modules_in_base_model:
             raise ValueError(
-                f"Target cells {peft_config.target_modules} not found in the base model. "
-                f"Please check the target cells and try again."
+                f"Target modules {peft_config.target_modules} not found in the base model. "
+                f"Please check the target modules and try again."
             )
 
         self._mark_only_adapters_as_trainable(model)
@@ -367,7 +367,7 @@ class BaseTuner(nn.Module):
         """
         This method merges the LoRa layers into the base model.
         """
-        for cell in self.model.cells():
+        for cell in self.model.modules():
             if isinstance(cell, BaseTunerLayer):
                 cell.merge()
 
@@ -375,7 +375,7 @@ class BaseTuner(nn.Module):
         """
         This method unmerges the LoRa layers from the base model.
         """
-        for cell in self.model.cells():
+        for cell in self.model.modules():
             if isinstance(cell, BaseTunerLayer):
                 cell.unmerge()
 
@@ -612,8 +612,8 @@ enable_adapters method.
 
         # Deactivate grads on the inactive adapter and activate grads on the active adapter
         for layer_name in self.adapter_layer_names:
-            cell_dict = getattr(self, layer_name)
-            for key, layer in cell_dict.items():
+            module_dict = getattr(self, layer_name)
+            for key, layer in module_dict.items():
                 if key in adapter_names:
                     # Note: It is possible that not a single layer is called with requires_grad_(True) here. This may
                     # happen if a completely different adapter layer is being activated.
@@ -696,24 +696,24 @@ def check_adapters_to_merge(cell: BaseTunerLayer, adapter_names: Optional[list[s
 
     return adapter_names
 
-def check_target_cell_exists(config, key: str) -> bool | re.Match[str] | None:
-    """A helper method to check if the passed cell's key name matches any of the target cells in the adapter_config.
+def check_target_module_exists(config, key: str) -> bool | re.Match[str] | None:
+    """A helper method to check if the passed cell's key name matches any of the target modules in the adapter_config.
 
     Args:
-        config (`LoraConfig` | `LycorisConfig`): A config to match target cells from
+        config (`LoraConfig` | `LycorisConfig`): A config to match target modules from
         key (`str`): A key to search any matches in config
 
     Returns:
-        `bool` | `re.Match[str]` | `None`: True of match object if key matches any target cells from config, False or
+        `bool` | `re.Match[str]` | `None`: True of match object if key matches any target modules from config, False or
         None if no match found
     """
     if isinstance(config.target_modules, str):
-        target_cell_found = re.fullmatch(config.target_modules, key)
+        target_module_found = re.fullmatch(config.target_modules, key)
     elif key in config.target_modules:
         # this cell is specified directly in target_modules
-        target_cell_found = True
+        target_module_found = True
     else:
-        target_cell_found = any(key.endswith(f".{target_key}") for target_key in config.target_modules)
+        target_module_found = any(key.endswith(f".{target_key}") for target_key in config.target_modules)
 
         layer_indexes = getattr(config, "layers_to_transform", None)
         layers_pattern = getattr(config, "layers_pattern", None)
@@ -721,7 +721,7 @@ def check_target_cell_exists(config, key: str) -> bool | re.Match[str] | None:
         is_using_layer_indexes = layer_indexes is not None and (
             len(layer_indexes) != 0 if isinstance(layer_indexes, list) else True
         )
-        if is_using_layer_indexes and target_cell_found:
+        if is_using_layer_indexes and target_module_found:
             layer_index = None
             if layers_pattern is None or len(layers_pattern) == 0:
                 layer_index = re.match(r".*\.[^.]*\.(\d+)\.", key)
@@ -733,15 +733,15 @@ def check_target_cell_exists(config, key: str) -> bool | re.Match[str] | None:
                         break
 
             if layer_index is None:
-                target_cell_found = False
+                target_module_found = False
             else:
                 layer_index = int(layer_index.group(1))
                 if isinstance(layer_indexes, int):
-                    target_cell_found = layer_index == layer_indexes
+                    target_module_found = layer_index == layer_indexes
                 else:
-                    target_cell_found = layer_index in layer_indexes
+                    target_module_found = layer_index in layer_indexes
 
-    return target_cell_found
+    return target_module_found
 
 
 def clone_cell(cell: nn.Module, share_weights=False):
@@ -757,8 +757,8 @@ def clone_cell(cell: nn.Module, share_weights=False):
             setattr(dst, name, param)
 
     if share_weights:
-        for name, subcell in cell.parameters_and_names():
-            _share_weights(subcell, clone.get_subcell(name))
+        for name, submodule in cell.parameters_and_names():
+            _share_weights(submodule, clone.get_submodule(name))
 
     return clone
 
@@ -798,9 +798,9 @@ def replicate_layers(model: nn.Module, layer_map: list[tuple[int, int]]):
             current_idx = len(new_layers)
             new_layers.append(clone_cell(layers[i], share_weights=True))
             # This is a hack needed to work around the layer_idx introduced in HF transformers.
-            for subcell in new_layers[-1].cells():
-                if hasattr(subcell, "layer_idx"):
-                    subcell.layer_idx = current_idx
+            for submodule in new_layers[-1].modules():
+                if hasattr(submodule, "layer_idx"):
+                    submodule.layer_idx = current_idx
     layers = nn.ModuleList(new_layers)
     if model_type == "llama":
         model.layers = layers

@@ -35,9 +35,9 @@ from mindnlp.peft.utils import (
     TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING,
     TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING,
     ModulesToSaveWrapper,
-    _get_subcells,
+    _get_submodules,
 )
-from ..tuners_utils import BaseTuner, BaseTunerLayer, check_target_cell_exists
+from ..tuners_utils import BaseTuner, BaseTunerLayer, check_target_module_exists
 from .layer import Conv2d, IA3Layer, Linear
 
 
@@ -64,7 +64,7 @@ class IA3Model(BaseTuner):
         ...     peft_type="IA3",
         ...     task_type="SEQ_2_SEQ_LM",
         ...     target_modules=["k", "v", "w0"],
-        ...     feedforward_cells=["w0"],
+        ...     feedforward_modules=["w0"],
         ... )
 
         >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
@@ -192,7 +192,7 @@ class IA3Model(BaseTuner):
         return new_cell
 
     @staticmethod
-    def _check_target_cell_exists(ia3_config, key):
+    def _check_target_module_exists(ia3_config, key):
         r"""
         Checks if the target cell exists in the IA3 configuration.
         
@@ -209,7 +209,7 @@ class IA3Model(BaseTuner):
         Raises:
             None: This method does not raise any exceptions.
         """
-        return check_target_cell_exists(ia3_config, key)
+        return check_target_module_exists(ia3_config, key)
 
     def _mark_only_adapters_as_trainable(self, model: nn.Module) -> None:
         r"""
@@ -274,7 +274,7 @@ class IA3Model(BaseTuner):
                 None
             """
             current_key = optionnal_kwargs.pop('current_key')
-            is_feedforward = self._check_target_cell_feedforward(ia3_config, current_key)
+            is_feedforward = self._check_target_module_feedforward(ia3_config, current_key)
             kwargs = {'fan_in_fan_out': ia3_config.fan_in_fan_out, 'init_ia3_weights': ia3_config.init_ia3_weights, 'is_feedforward': is_feedforward}
             kwargs['loaded_in_8bit'] = optionnal_kwargs.pop('loaded_in_8bit', False)
             kwargs['loaded_in_4bit'] = optionnal_kwargs.pop('loaded_in_4bit', False)
@@ -285,9 +285,9 @@ class IA3Model(BaseTuner):
                 if adapter_name not in self.active_adapters:
                     new_cell.requires_grad = False
                 self._replace_cell(parent, target_name, new_cell, target)
-        # check if target cell is in feedforward_cells
+        # check if target cell is in feedforward_modules
         current_key = optionnal_kwargs.pop("current_key")
-        is_feedforward = self._check_target_cell_feedforward(ia3_config, current_key)
+        is_feedforward = self._check_target_module_feedforward(ia3_config, current_key)
 
         kwargs = {
             "fan_in_fan_out": ia3_config.fan_in_fan_out,
@@ -309,15 +309,15 @@ class IA3Model(BaseTuner):
             self._replace_cell(parent, target_name, new_cell, target)
 
     @staticmethod
-    def _check_target_cell_feedforward(ia3_config, key) -> bool:
+    def _check_target_module_feedforward(ia3_config, key) -> bool:
         """
         A helper private method that checks if the target cell `key` matches with a feedforward cell specified in
         `ia3_config`
         """
-        if isinstance(ia3_config.feedforward_cells, str):
-            is_feedforward = bool(re.fullmatch(ia3_config.feedforward_cells, key))
+        if isinstance(ia3_config.feedforward_modules, str):
+            is_feedforward = bool(re.fullmatch(ia3_config.feedforward_modules, key))
         else:
-            is_feedforward = any(key.endswith(target_key) for target_key in ia3_config.feedforward_cells)
+            is_feedforward = any(key.endswith(target_key) for target_key in ia3_config.feedforward_modules)
         return is_feedforward
 
     def _replace_cell(self, parent, child_name, new_cell, child):
@@ -391,10 +391,10 @@ class IA3Model(BaseTuner):
         
         Raises:
             - TypeError: If the 'enabled' parameter is not a boolean.
-            - AttributeError: If the 'IA3Model' instance does not have a 'cells' method.
-            - ValueError: If the 'IA3Model' instance's cells include a cell that is not an IA3Layer or a ModulesToSaveWrapper.
+            - AttributeError: If the 'IA3Model' instance does not have a 'modules' method.
+            - ValueError: If the 'IA3Model' instance's modules include a cell that is not an IA3Layer or a ModulesToSaveWrapper.
         """
-        for cell in self.model.cells():
+        for cell in self.model.modules():
             if isinstance(cell, (IA3Layer, ModulesToSaveWrapper)):
                 cell.enable_adapters(enabled)
 
@@ -427,7 +427,7 @@ class IA3Model(BaseTuner):
         Args:
             adapter_name (`str` or `list[str]`): Name of the adapter(s) to be activated.
         """
-        for cell in self.model.cells():
+        for cell in self.model.modules():
             if isinstance(cell, IA3Layer):
                 if cell.merged:
                     warnings.warn("Adapter cannot be set when the model is merged. Unmerging the model first.")
@@ -449,16 +449,16 @@ class IA3Model(BaseTuner):
         
         Raises:
             ValueError: If `peft_config.target_modules` is None and `model_config['model_type']` is not found in TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING.
-            ValueError: If `peft_config.feedforward_cells` is None and `model_config['model_type']` is not found in TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING.
+            ValueError: If `peft_config.feedforward_modules` is None and `model_config['model_type']` is not found in TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING.
         """
         if peft_config.target_modules is None:
             if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING:
                 raise ValueError("Please specify `target_modules` in `peft_config`")
             peft_config.target_modules = TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING[model_config["model_type"]]
-        if peft_config.feedforward_cells is None:
+        if peft_config.feedforward_modules is None:
             if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING:
-                raise ValueError("Please specify `feedforward_cells` in `peft_config`")
-            peft_config.feedforward_cells = TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING[
+                raise ValueError("Please specify `feedforward_modules` in `peft_config`")
+            peft_config.feedforward_modules = TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING[
                 model_config["model_type"]
             ]
         return peft_config
@@ -486,10 +486,10 @@ class IA3Model(BaseTuner):
             raise ValueError("Cannot merge ia3 layers when the model is loaded in 4-bit mode")
 
         self._unloading_checks(adapter_names)
-        key_list = [key for key, _ in self.model.name_cells() if self.prefix not in key]
+        key_list = [key for key, _ in self.model.named_modules() if self.prefix not in key]
         for key in key_list:
             try:
-                parent, target, target_name = _get_subcells(self.model, key)
+                parent, target, target_name = _get_submodules(self.model, key)
             except AttributeError:
                 continue
 
@@ -498,7 +498,7 @@ class IA3Model(BaseTuner):
                     target.merge(safe_merge=safe_merge, adapter_names=adapter_names)
                 self._replace_cell(parent, target_name, target.get_base_layer(), target)
             elif isinstance(target, ModulesToSaveWrapper):
-                # save any additional trainable cells part of `modules_to_save`
+                # save any additional trainable modules part of `modules_to_save`
                 new_cell = target.modules_to_save[target.active_adapter]
                 if hasattr(new_cell, "base_layer"):
                     # check if the cell is itself a tuner layer
@@ -538,7 +538,7 @@ class IA3Model(BaseTuner):
 
     def unload(self) -> nn.Module:
         """
-        Gets back the base model by removing all the IA³ cells without merging. This gives back the original base
+        Gets back the base model by removing all the IA³ modules without merging. This gives back the original base
         model.
         """
         return self._unload_and_optionally_merge(merge=False)
@@ -554,10 +554,10 @@ class IA3Model(BaseTuner):
             raise ValueError(f"Adapter {adapter_name} does not exist")
         del self.peft_config[adapter_name]
 
-        key_list = [key for key, _ in self.model.name_cells() if self.prefix not in key]
+        key_list = [key for key, _ in self.model.named_modules() if self.prefix not in key]
         new_adapter = None
         for key in key_list:
-            _, target, _ = _get_subcells(self.model, key)
+            _, target, _ = _get_submodules(self.model, key)
             if isinstance(target, IA3Layer):
                 target.delete_adapter(adapter_name)
                 if new_adapter is None:

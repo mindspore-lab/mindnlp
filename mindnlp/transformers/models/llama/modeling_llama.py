@@ -300,7 +300,7 @@ class LlamaMLP(nn.Module):
             )
             up_proj = ops.cat([F.linear(x, up_proj_slices[i]) for i in range(self.config.pretraining_tp)], dim=-1)
 
-            intermediate_states = (self.act_fn(gate_proj) * up_proj).split(slice, dim=2)
+            intermediate_states = ops.split((self.act_fn(gate_proj) * up_proj), slice, dim=2)
             down_proj = [
                 F.linear(intermediate_states[i], down_proj_slices[i]) for i in range(self.config.pretraining_tp)
             ]

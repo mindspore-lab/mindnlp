@@ -23,8 +23,6 @@ from typing import List, Optional, Tuple, Union
 from queue import Queue
 from threading import Thread
 
-
-import numpy as np
 import mindspore
 from mindspore import Tensor
 from mindspore import dtype as mstype
@@ -280,7 +278,7 @@ def _make_causal_mask(
     """
     bsz, tgt_len = input_ids_shape
     mask = ops.full(
-        (tgt_len, tgt_len), float(ops.finfo(dtype).min), dtype)
+        (tgt_len, tgt_len), float(ops.finfo(dtype).min), dtype=dtype)
     mask_cond = ops.arange(mask.shape[-1])
     mask = ops.masked_fill(mask, mask_cond < (mask_cond + 1).view(mask.shape[-1], 1), 0.)
     mask = mask.to(dtype)
@@ -309,7 +307,7 @@ def _expand_mask(mask: Tensor, dtype: mstype, tgt_len: Optional[int] = None):
 
     return inverted_mask.masked_fill(
         inverted_mask.to(mindspore.bool_),
-        ops.finfo(dtype).min)
+        float(ops.finfo(dtype).min))
 
 def _get_interleave(n):
     """
@@ -688,8 +686,7 @@ class Attention(nn.Module):
                     f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.shape}"
                 )
             attn_weights = attn_weights + attention_mask
-            attn_weights = ops.maximum(attn_weights,
-                                       Tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))
+            attn_weights = ops.maximum(attn_weights, float(ops.finfo(attn_weights.dtype).min))
 
         # upcast attention to fp32
         attn_weights = F.softmax(attn_weights, dim=-1).astype(query_states.dtype)
@@ -882,7 +879,7 @@ class BaiChuanAttention(nn.Module):
                 else:
                     attention_mask = attention_mask[:, -1:, :]
             attn_weights = attn_weights + attention_mask.astype(attn_weights.dtype)
-            attn_weights = ops.maximum(attn_weights, mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))
+            attn_weights = ops.maximum(attn_weights, float(ops.finfo(attn_weights.dtype).min))
 
         attn_weights = F.softmax(attn_weights, dim=-1)
 
@@ -1553,15 +1550,15 @@ class BaiChuan13bModel(BaiChuanPreTrainedModel):
         if attention_mask is not None:
             if len(attention_mask.shape) == 2:
                 expanded_mask = attention_mask.to(alibi_mask.dtype)
-                expanded_mask = ops.tril(ops.gt(expanded_mask[:, :, None] * expanded_mask[:, None, :], 0)
-                                ) * ops.eq(expanded_mask[:, :, None] - expanded_mask[:, None, :], 0)
+                expanded_mask = ops.tril((ops.gt(expanded_mask[:, :, None] * expanded_mask[:, None, :], 0)
+                                ) * ops.eq(expanded_mask[:, :, None] - expanded_mask[:, None, :], 0).int()).bool()
             else:
                 expanded_mask = attention_mask
-            bsz = inputs_embeds.size(0)
+            bsz = inputs_embeds.shape[0]
             src_len, tgt_len = alibi_mask.shape[-2:]
             expanded_mask = expanded_mask.unsqueeze(1).broadcast_to((bsz, 1, src_len, tgt_len)).to(alibi_mask.dtype)
             inverted_mask = 1.0 - expanded_mask
-            inverted_mask = inverted_mask.masked_fill(inverted_mask.to(mindspore.bool_), np.finfo(mindspore.dtype_to_nptype(alibi_mask.dtype)).min)
+            inverted_mask = inverted_mask.masked_fill(inverted_mask.to(mindspore.bool_), float(ops.finfo(alibi_mask.dtype).min))
             attention_mask = inverted_mask + alibi_mask.unsqueeze(0)
         else:
             attention_mask = alibi_mask
@@ -1854,7 +1851,7 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
         position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids = attention_mask.int().cumsum(-1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -1].unsqueeze(-1)

@@ -450,13 +450,13 @@ class BigBirdPegasusBlockSparseAttention(nn.Module):
             [
                 to_mask[:, :, :, : 3 * to_block_size],
                 to_mask[:, :, :, -to_block_size:],
-                ops.ones([bsz, 1, 1, n_rand_blocks * to_block_size], dtype=to_mask.dtype),
+                ops.ones((bsz, 1, 1, n_rand_blocks * to_block_size), dtype=to_mask.dtype),
             ],
             dim=3,
         )
         second_rand_pad = ops.cat(
             [
-                ops.ones([bsz, n_heads, from_block_size, 4 * to_block_size], dtype=rand_mask.dtype),
+                ops.ones((bsz, n_heads, from_block_size, 4 * to_block_size), dtype=rand_mask.dtype),
                 rand_mask[:, :, 0],
             ],
             dim=3,
@@ -584,13 +584,13 @@ class BigBirdPegasusBlockSparseAttention(nn.Module):
             [
                 to_mask[:, :, :, :to_block_size],
                 to_mask[:, :, :, -3 * to_block_size :],
-                ops.ones([bsz, 1, 1, n_rand_blocks * to_block_size], dtype=to_mask.dtype),
+                ops.ones((bsz, 1, 1, n_rand_blocks * to_block_size), dtype=to_mask.dtype),
             ],
             dim=3,
         )
         second_last_rand_pad = ops.cat(
             [
-                ops.ones([bsz, n_heads, from_block_size, 4 * to_block_size], dtype=rand_mask.dtype),
+                ops.ones((bsz, n_heads, from_block_size, 4 * to_block_size), dtype=rand_mask.dtype),
                 rand_mask[:, :, -1],
             ],
             dim=3,

@@ -31,8 +31,8 @@ class PolyConfig(PeftConfig):
 
     Args:
         r (`int`): Attention dimension of each Lora in Poly.
-        target_modules (`Union[List[str],str]`): The names of the cells to apply Poly to.
-        modules_to_save (`List[str]`): List of cells apart from Poly layers to be set as trainable
+        target_modules (`Union[List[str],str]`): The names of the modules to apply Poly to.
+        modules_to_save (`List[str]`): List of modules apart from Poly layers to be set as trainable
             and saved in the final checkpoint.
         init_weights (bool): Whether to perform initialization of Poly weights.
         poly_type (`Literal["poly"]`): The variant of the Poly cell to use. Currently, only "poly"
@@ -54,7 +54,7 @@ class PolyConfig(PeftConfig):
     modules_to_save: Optional[List[str]] = field(
         default=None,
         metadata={
-            "help": "List of cells apart from Poly layers to be set as trainable and saved in the final checkpoint. "
+            "help": "List of modules apart from Poly layers to be set as trainable and saved in the final checkpoint. "
             "For example, in Sequence Classification or Token Classification tasks, "
             "the final layer `classifier/score` are randomly initialized and as such need to be trainable and saved."
         },
@@ -71,7 +71,7 @@ class PolyConfig(PeftConfig):
     poly_type: Literal["poly"] = field(
         default="poly",
         metadata={
-            "help": 'Type of Poly cells to be used. Currently only "poly" is supported.'
+            "help": 'Type of Poly modules to be used. Currently only "poly" is supported.'
         },
     )
     n_tasks: int = field(

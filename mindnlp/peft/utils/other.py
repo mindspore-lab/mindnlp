@@ -52,20 +52,20 @@ original module for reference. The class includes methods for enabling and disab
     - disable_adapters: Toggles the enabling and disabling of adapters, managing the requires_grad flag for adapter weights.
     - active_adapter: Returns the name of the currently active adapter.
     - weight: Retrieves the weight of the original cell or the active adapter's cell if available.
-    - update: Updates the saved cells with a new adapter, creating a deep copy of the original cell.
+    - update: Updates the saved modules with a new adapter, creating a deep copy of the original cell.
     - forward: Constructs the model using the original cell or the active adapter's cell based on the adapter status.
     - enable_adapters: Toggles the enabling and disabling of adapters, managing the requires_grad flag for adapter weights.
-    - set_adapter: Sets the active adapter, making it trainable and updating the requires_grad flag for the cells.
+    - set_adapter: Sets the active adapter, making it trainable and updating the requires_grad flag for the modules.
     
     The class provides a flexible way to manage and switch between different modules within a neural network.
     """
-    def __init__(self, cell_to_save, adapter_name):
+    def __init__(self, module_to_save, adapter_name):
         r"""
         Initializes an instance of the ModulesToSaveWrapper class.
         
         Args:
             self (ModulesToSaveWrapper): The current instance of the class.
-            cell_to_save (Any): The cell to be saved.
+            module_to_save (Any): The cell to be saved.
             adapter_name (str): The name of the adapter.
         
         Returns:
@@ -75,7 +75,7 @@ original module for reference. The class includes methods for enabling and disab
             None.
         """
         super().__init__()
-        self.original_cell = cell_to_save
+        self.original_cell = module_to_save
         self.modules_to_save = nn.ModuleDict({})
         self._active_adapter = adapter_name
         self._disable_adapters = False
@@ -84,13 +84,13 @@ original module for reference. The class includes methods for enabling and disab
 
     def check_cell(self):
         """Perform some sanity checks on the cell to ensure that it works"""
-        # Try to anticipate some cells that users could try to target that would not work.
+        # Try to anticipate some modules that users could try to target that would not work.
         # Note: It's not possible to check hasattr(cell, "forward"), since that returns True for ModuleDict and
         # ModuleList, even though their forward methods cannot be called
         forbidden_classes = (nn.ModuleDict, nn.ModuleList, ParameterDict)
         if isinstance(self.original_cell, forbidden_classes):
             cls_name = self.original_cell.__class__.__name__
-            raise TypeError(f"modules_to_save cannot be applied to cells of type {cls_name}")
+            raise TypeError(f"modules_to_save cannot be applied to modules of type {cls_name}")
 
     @property
     def disable_adapters(self) -> bool:
@@ -254,9 +254,9 @@ original module for reference. The class includes methods for enabling and disab
         self._active_adapter = adapter_name
 
 
-def custom_get_subcell(model: nn.Module, target: str) -> nn.Module:
+def custom_get_submodule(model: nn.Module, target: str) -> nn.Module:
     """
-    Returns the subcell given by ``target`` if it exists, otherwise throws an error.
+    Returns the submodule given by ``target`` if it exists, otherwise throws an error.
     功能和 torch.nn.Module 相似
     """
     if target == "":
@@ -276,14 +276,14 @@ def custom_get_subcell(model: nn.Module, target: str) -> nn.Module:
 
     return mod
 
-def _get_subcells(model, key):
+def _get_submodules(model, key):
     """
-    get subcells
+    get submodules
     """
     parent_key = ".".join(key.split(".")[:-1])
-    parent = custom_get_subcell(model, parent_key)
+    parent = custom_get_submodule(model, parent_key)
     target_name = key.split(".")[-1]
-    target = custom_get_subcell(model, key)
+    target = custom_get_submodule(model, key)
 
     return parent, target, target_name
 
@@ -292,11 +292,11 @@ def _set_trainable(model, adapter_name):
     """
     set trainable
     """
-    key_list = [key for key, _ in model.cells_and_names()]  # named_modules cells_and_names
+    key_list = [key for key, _ in model.named_modules()]  # named_modules
     for key in key_list:
-        target_cell_found = any(key.endswith(target_key) for target_key in model.modules_to_save)
-        if target_cell_found:
-            parent, target, target_name = _get_subcells(model, key)
+        target_module_found = any(key.endswith(target_key) for target_key in model.modules_to_save)
+        if target_module_found:
+            parent, target, target_name = _get_submodules(model, key)
 
             if isinstance(target, ModulesToSaveWrapper):
                 target.update(adapter_name)
@@ -308,10 +308,10 @@ def _set_trainable(model, adapter_name):
                 setattr(parent, target_name, warp_cell)
 
                 # TODO:the implemtation of mindspore, __setitem__ is not consistent with __setattr__ here.
-                # self.cell_list is not set correctly if __setattr__'s value type is Sequential.
+                # self.module_list is not set correctly if __setattr__'s value type is Sequential.
                 # Thus we set it apparently here. This line may be removed later.
                 if isinstance(parent, nn.Sequential):
-                    parent.cell_list = list(parent._modules.values())
+                    parent.module_list = list(parent._modules.values())
 
 
 def _freeze_adapter(model, adapter_name):
@@ -337,7 +337,7 @@ def _set_adapter(model, adapter_name):
     Raises:
         None. This function does not raise any exceptions.
     """
-    for cell in model.cells():
+    for cell in model.modules():
         if isinstance(cell, ModulesToSaveWrapper):
             cell.active_adapter = adapter_name
 
