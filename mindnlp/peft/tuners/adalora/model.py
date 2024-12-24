@@ -23,7 +23,7 @@ from mindnlp.peft.tuners.lora import LoraConfig, LoraModel
 from mindnlp.peft.utils import (
     TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING,
     _freeze_adapter,
-    _get_subcells,
+    _get_submodules,
 )
 
 from ..tuners_utils import BaseTunerLayer
@@ -145,7 +145,7 @@ class AdaLoraModel(LoraModel):
                     if "bias" in n:
                         p.requires_grad = True
             elif bias == "lora_only":
-                for m in model.cells():
+                for m in model.modules():
                     if isinstance(m, AdaLoraLayer) and hasattr(m, "bias") and m.bias is not None:
                         m.bias.requires_grad = True
             else:
@@ -331,7 +331,7 @@ class AdaLoraModel(LoraModel):
         This method '_prepare_adapter_config' in the class 'AdaLoraModel' prepares the adapter configuration based on the provided 'peft_config' and 'model_config' parameters.
         
         Args:
-        - peft_config (dict): A dictionary containing the configuration details for the adapter. It should include information about the target cells. If 'target_modules' is not specified, it is inferred based
+        - peft_config (dict): A dictionary containing the configuration details for the adapter. It should include information about the target modules. If 'target_modules' is not specified, it is inferred based
 on the 'model_type' from the 'model_config' parameter.
         - model_config (dict): A dictionary containing the configuration details specific to the model. It is used to determine the 'model_type' which is then used to infer the 'target_modules' if not explicitly
 provided in 'peft_config'.
@@ -385,8 +385,8 @@ TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING.
             outputs.loss += orth_reg_weight * regu_loss
         return outputs
 
-    def resize_cells_by_rank_pattern(self, rank_pattern, adapter_name):
-        "resize the cells by rank pattern"
+    def resize_modules_by_rank_pattern(self, rank_pattern, adapter_name):
+        "resize the modules by rank pattern"
         lora_config = self.peft_config[adapter_name]
         for name, rank_idx in rank_pattern.items():
             if isinstance(rank_idx, list):
@@ -398,7 +398,7 @@ TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING.
             else:
                 raise ValueError("Unexpected type of rank_idx")
             key = ".".join(name.split(".")[0:-2]) if adapter_name in name else ".".join(name.split(".")[0:-1])
-            _, target, _ = _get_subcells(self.model, key)
+            _, target, _ = _get_submodules(self.model, key)
             lora_E_weights = target.lora_E[adapter_name][rank_idx]
             lora_A_weights = target.lora_A[adapter_name][rank_idx]
             lora_B_weights = target.lora_B[adapter_name][:, rank_idx]

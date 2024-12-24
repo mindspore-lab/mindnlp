@@ -19,15 +19,19 @@ def addmm(input, mat1, mat2, *, beta=1, alpha=1):
 
 
 # baddbmm
+has_baddbmm = hasattr(mindspore.mint, 'baddbmm')
 def baddbmm(input, batch1, batch2, *, beta=1, alpha=1):
+    if use_pyboost() and has_baddbmm:
+        return mindspore.mint.baddbmm(input, batch1, batch2, beta=beta, alpha=alpha)
     return ops.baddbmm(input, batch1, batch2, beta=beta, alpha=alpha)
 
 # bmm
+has_bmm = hasattr(mindspore.mint, 'bmm')
 def bmm(input, other):
     if ON_ORANGE_PI:
         input = input.to(mindspore.float16)
         other = input.to(mindspore.float16)
-    if use_pyboost():
+    if use_pyboost() and has_bmm:
         return mindspore.mint.bmm(input, other)
     return ops.bmm(input, other)
 
@@ -66,11 +70,12 @@ def dot(input, other):
 # lu_unpack
 
 # matmul
+has_matmul = hasattr(mindspore.mint, 'matmul')
 def matmul(input, other):
     if ON_ORANGE_PI:
         input = input.to(mindspore.float16)
         other = other.to(mindspore.float16)
-    if use_pyboost():
+    if use_pyboost() and has_matmul:
         return mindspore.mint.matmul(input, other)
     return ops.matmul(input, other)
 
@@ -90,7 +95,10 @@ def mm(input, other):
 # ormqr
 
 # outer
+has_outer = hasattr(mindspore.mint, 'outer')
 def outer(input, vec2):
+    if use_pyboost() and has_outer:
+        return mindspore.mint.outer(input, vec2)
     return ops.outer(input, vec2)
 
 # pinverse
