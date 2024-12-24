@@ -92,6 +92,8 @@ def ranint_like(input, low, high, *, dtype=None):
 # randn
 has_randn = hasattr(mindspore.mint, 'randn')
 def randn(*size, generator=None, dtype=None):
+    if isinstance(size[0], tuple):
+        size = size[0]
     if dtype is None:
         dtype = get_default_dtype()
     if use_pyboost() and has_randn:
