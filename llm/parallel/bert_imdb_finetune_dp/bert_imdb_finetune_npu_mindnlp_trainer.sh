@@ -20,7 +20,6 @@ echo "start training"
 
 export MULTI_NPU="true" 
 export ASCEND_SLOG_PRINT_TO_STDOUT=1
-export ASCEND_RT_VISIBLE_DEVICES=6,7 # Specify the available card numbers
 
 msrun --worker_num=2 --local_worker_num=2 --master_port=8121 \
 --log_dir=bert_imdb_finetune_cpu_mindnlp_trainer_npus_same --join=True \

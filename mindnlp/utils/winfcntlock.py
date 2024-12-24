@@ -13,12 +13,9 @@
 # limitations under the License.
 # ============================================================================
 """fcntl replacement for Windows."""
-# pylint: disable=import-error
-import win32con
-# pylint: disable=import-error
-import pywintypes
-# pylint: disable=import-error
-import win32file
+import win32con # pylint: disable=import-error
+import pywintypes # pylint: disable=import-error
+import win32file # pylint: disable=import-error
 
 
 LOCK_EX = win32con.LOCKFILE_EXCLUSIVE_LOCK
