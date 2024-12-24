@@ -23,7 +23,7 @@ import pytest
 import mindspore
 from mindnlp.core import nn, ops
 
-from mindnlp.core.modules import CRF
+from mindnlp.common.modules import CRF
 
 RANDOM_SEED = 1478754
 

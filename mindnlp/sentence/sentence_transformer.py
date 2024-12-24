@@ -43,20 +43,20 @@ __MODEL_HUB_ORGANIZATION__ = "sentence-transformers"
 class SentenceTransformer(nn.Sequential):
     def __init__(
             self,
-            model_name_or_path: str | None = None,
-            modules: Iterable[nn.Module] | None = None,
-            prompts: dict[str, str] | None = None,
-            default_prompt_name: str | None = None,
-            similarity_fn_name: str | SimilarityFunction | None = None,
-            cache_folder: str | None = None,
+            model_name_or_path: str = None,
+            modules: Iterable[nn.Module] = None,
+            prompts: dict[str, str] = None,
+            default_prompt_name: str = None,
+            similarity_fn_name: str | SimilarityFunction = None,
+            cache_folder: str = None,
             trust_remote_code: bool = False,
-            revision: str | None = None,
+            revision: str = None,
             local_files_only: bool = False,
-            token: bool | str | None = None,
-            truncate_dim: int | None = None,
-            model_kwargs: dict[str, Any] | None = None,
-            tokenizer_kwargs: dict[str, Any] | None = None,
-            config_kwargs: dict[str, Any] | None = None,
+            token: bool | str = None,
+            truncate_dim: int = None,
+            model_kwargs: dict[str, Any] = None,
+            tokenizer_kwargs: dict[str, Any] = None,
+            config_kwargs: dict[str, Any] = None,
     ):
         self.prompts = prompts or {}
         self.default_prompt_name = default_prompt_name
@@ -193,8 +193,8 @@ class SentenceTransformer(nn.Sequential):
         class_ref: str,
         model_name_or_path: str,
         trust_remote_code: bool,
-        revision: str | None,
-        model_kwargs: dict[str, Any] | None,
+        revision: str,
+        model_kwargs: dict[str, Any],
     ) -> nn.Module:
         # If the class is from sentence_transformers, we can directly import it,
         # otherwise, we try to import it dynamically, and if that fails, we fall back to the default import
@@ -206,14 +206,14 @@ class SentenceTransformer(nn.Sequential):
     def _load_sbert_model(
         self,
         model_name_or_path: str,
-        token: bool | str | None,
-        cache_folder: str | None,
-        revision: str | None = None,
+        token: bool | str,
+        cache_folder: str,
+        revision: str = None,
         trust_remote_code: bool = False,
         local_files_only: bool = False,
-        model_kwargs: dict[str, Any] | None = None,
-        tokenizer_kwargs: dict[str, Any] | None = None,
-        config_kwargs: dict[str, Any] | None = None,
+        model_kwargs: dict[str, Any] = None,
+        tokenizer_kwargs: dict[str, Any] = None,
+        config_kwargs: dict[str, Any] = None,
     ) -> dict[str, nn.Module]:
         """
         Loads a full SentenceTransformer model using the modules.json file.
@@ -385,14 +385,14 @@ class SentenceTransformer(nn.Sequential):
     def _load_auto_model(
         self,
         model_name_or_path: str,
-        token: bool | str | None,
-        cache_folder: str | None,
-        revision: str | None = None,
+        token: bool | str,
+        cache_folder: str,
+        revision: str = None,
         trust_remote_code: bool = False,
         local_files_only: bool = False,
-        model_kwargs: dict[str, Any] | None = None,
-        tokenizer_kwargs: dict[str, Any] | None = None,
-        config_kwargs: dict[str, Any] | None = None,
+        model_kwargs: dict[str, Any] = None,
+        tokenizer_kwargs: dict[str, Any] = None,
+        config_kwargs: dict[str, Any] = None,
     ) -> list[nn.Module]:
         """
         Creates a simple Transformer + Mean Pooling model and returns the modules
