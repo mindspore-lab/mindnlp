@@ -43,6 +43,9 @@ if platform.system().lower() == 'linux':
     if SOC in ('ascend910', 'ascend310b'):
         context.set_context(ascend_config={"precision_mode": "allow_mix_precision"})
 
+if version.parse(mindspore.__version__) < version.parse('2.3.0'):
+    mindspore.mint = None
+
 from mindspore import jit as ms_jit
 from mindnlp import patch
 from mindnlp import transformers

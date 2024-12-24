@@ -19,7 +19,7 @@ import numpy as np
 import mindspore
 from ddt import ddt, data
 from mindspore import Tensor
-from mindnlp.core.modules import CMRC2018Loss
+from mindnlp.common.modules import CMRC2018Loss
 from ....common import MindNLPTestCase
 
 @ddt

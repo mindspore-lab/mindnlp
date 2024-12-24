@@ -20,7 +20,7 @@ import numpy as np
 import mindspore
 from ddt import ddt, data
 from mindspore import Tensor
-from mindnlp.core.modules import RDropLoss
+from mindnlp.common.modules import RDropLoss
 from ....common import MindNLPTestCase
 
 @ddt
