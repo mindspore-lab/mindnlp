@@ -19,15 +19,17 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import mindspore as ms
+from mindspore.common.initializer import initializer, TruncatedNormal
 from mindnlp.core import nn, ops
 from mindnlp.utils import logging
+from mindnlp.core.autograd import no_grad
 from ....common.activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, SlidingWindowCache, StaticCache
 from ...modeling_attn_mask_utils import AttentionMaskConverter
 from ...modeling_outputs import BaseModelOutputWithPast
 from ...modeling_rope_utils import ROPE_INIT_FUNCTIONS
 from ...modeling_utils import PreTrainedModel, ModelOutput
-
+from ....core.autograd import no_grad
 # from ...utils import (
 #     ModelOutput,
 #     add_start_docstrings,
@@ -198,7 +200,9 @@ class MimiConv1d(nn.Module):
         """
         length = hidden_states.shape[-1]
         padding_left, padding_right = paddings
+        paddings = (int(padding_left), int(padding_right))
         if not mode == "reflect":
+            # "ConstantPadND()(input=<Tensor>, padding=<list of int, Tensor, tuple of int>, value=<Number>)".
             return nn.functional.pad(hidden_states, paddings, mode, value)
 
         max_pad = max(padding_left, padding_right)
@@ -357,7 +361,7 @@ class MimiLayerScale(nn.Module):
         super().__init__()
         channels = config.hidden_size
         initial_scale = config.layer_scale_initial_scale
-        self.scale = nn.Parameter(ops.full((channels,), initial_scale, requires_grad=True))
+        self.scale = nn.Parameter(ops.full((channels,), initial_scale), requires_grad=True)
 
     def forward(self, x: ms.Tensor):
         return self.scale * x
@@ -407,13 +411,13 @@ class MimiRotaryEmbedding(nn.Module):
         if "dynamic" in self.rope_type:
             self._dynamic_frequency_update(position_ids, device=ms.get_context('device_target'))
         # Core RoPE block
-        inv_freq_expanded = self.inv_freq[None, :, None].float().broadcast_to(position_ids.shape[0], -1, 1)
+        inv_freq_expanded = self.inv_freq[None, :, None].float().broadcast_to((position_ids.shape[0], -1, 1))
         position_ids_expanded = position_ids[:, None, :].float()
         # Force float32 (see https://github.com/huggingface/transformers/pull/29285)
         device_type = ms.get_context('device_target')
         device_type = device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
         # with torch.autocast(device_type=device_type, enabled=False):
-        freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(1, 2)
+        freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose((0, 2, 1))
         emb = ops.cat((freqs, freqs), dim=-1)
         cos = emb.cos()
         sin = emb.sin()
@@ -486,7 +490,7 @@ def repeat_kv(hidden_states: ms.Tensor, n_rep: int) -> ms.Tensor:
     batch, num_key_value_heads, slen, head_dim = hidden_states.shape
     if n_rep == 1:
         return hidden_states
-    hidden_states = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)
+    hidden_states = hidden_states[:, :, None, :, :].broadcast_to((batch, num_key_value_heads, n_rep, slen, head_dim))
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
@@ -534,21 +538,21 @@ class MimiAttention(nn.Module):
         self,
         hidden_states: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.LongTensor] = None,
+        position_ids: Optional[ms.Tensor] = None,
         past_key_value: Optional[Cache] = None,
         output_attentions: bool = False,
         use_cache: bool = False,
-        cache_position: Optional[ms.LongTensor] = None,
+        cache_position: Optional[ms.Tensor] = None,
     ) -> Tuple[ms.Tensor, Optional[ms.Tensor], Optional[Tuple[ms.Tensor]]]:
-        bsz, q_len, _ = hidden_states.size()
+        bsz, q_len, _ = hidden_states.shape
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
-        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
-        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose((0, 2, 1, 3))
+        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose((0, 2, 1, 3))
+        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose((0, 2, 1, 3))
 
         cos, sin = self.rotary_emb(value_states, position_ids)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
@@ -561,7 +565,7 @@ class MimiAttention(nn.Module):
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
-        attn_weights = ops.matmul(query_states, key_states.transpose(2, 3)) * self.scaling
+        attn_weights = ops.matmul(query_states, key_states.transpose((0, 1, 3, 2)) * self.scaling)
 
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
@@ -572,13 +576,13 @@ class MimiAttention(nn.Module):
         attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
 
-        if attn_output.size() != (bsz, self.num_heads, q_len, self.head_dim):
+        if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
             raise ValueError(
                 f"`attn_output` should be of size {(bsz, self.num_heads, q_len, self.head_dim)}, but is"
-                f" {attn_output.size()}"
+                f" {attn_output.shape}"
             )
 
-        attn_output = attn_output.transpose(1, 2).contiguous()
+        attn_output = attn_output.transpose((0, 2, 1, 3)).contiguous()
 
         attn_output = attn_output.view(bsz, q_len, -1)
         attn_output = self.o_proj(attn_output)
@@ -738,15 +742,15 @@ class MimiSdpaAttention(MimiAttention):
                 cache_position=cache_position,
             )
 
-        bsz, q_len, _ = hidden_states.size()
+        bsz, q_len, _ = hidden_states.shape
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
-        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
-        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose((0, 2, 1, 3))
+        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose((0, 2, 1, 3))
+        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose((0, 2, 1, 3))
 
         cos, sin = self.rotary_emb(value_states, position_ids)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
@@ -783,7 +787,7 @@ class MimiSdpaAttention(MimiAttention):
             is_causal=is_causal,
         )
 
-        attn_output = attn_output.transpose(1, 2).contiguous()
+        attn_output = attn_output.transpose((0, 2, 1, 3)).contiguous()
         attn_output = attn_output.view(bsz, q_len, -1)
 
         attn_output = self.o_proj(attn_output)
@@ -992,7 +996,7 @@ class MimiTransformerModel(nn.Module):
         if cache_position is None:
             past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
             cache_position = ops.arange(
-                past_seen_tokens, past_seen_tokens + hidden_states.shape[1], device=hidden_states.device
+                past_seen_tokens, past_seen_tokens + hidden_states.shape[1]
             )
 
         if position_ids is None:
@@ -1070,7 +1074,7 @@ class MimiTransformerModel(nn.Module):
     ):
         if self.config._attn_implementation == "flash_attention_2":
             if attention_mask is not None and past_key_values is not None:
-                is_padding_right = attention_mask[:, -1].sum().item() != input_tensor.size()[0]
+                is_padding_right = attention_mask[:, -1].sum().item() != input_tensor.shape[0]
                 if is_padding_right:
                     raise ValueError(
                         "You are attempting to perform batched generation with padding_side='right'"
@@ -1133,7 +1137,7 @@ class MimiTransformerModel(nn.Module):
         if (
             self.config._attn_implementation == "sdpa"
             and attention_mask is not None
-            and attention_mask.device.type == "cuda"
+            and ms.get_context('device_target') == "Ascend"
             and not output_attentions
         ):
             # Attend to all tokens in fully masked rows in the causal_mask, for example the relevant first rows when
@@ -1150,7 +1154,7 @@ class MimiTransformerModel(nn.Module):
         sequence_length: int,
         target_length: int,
         dtype: ms.dtype,
-        device: ms.device,
+        device: str,
         cache_position: ms.Tensor,
         batch_size: int,
         config: MimiConfig,
@@ -1198,7 +1202,7 @@ class MimiTransformerModel(nn.Module):
                     )
                     diagonal_attend_mask.bitwise_or_(sliding_attend_mask)
             causal_mask *= diagonal_attend_mask
-            causal_mask = causal_mask[None, None, :, :].expand(batch_size, 1, -1, -1)
+            causal_mask = causal_mask[None, None, :, :].broadcast_to((batch_size, 1, -1, -1))
             if attention_mask is not None:
                 causal_mask = causal_mask.clone()  # copy to contiguous memory for in-place edit
                 if attention_mask.shape[-1] > target_length:
@@ -1270,7 +1274,7 @@ class MimiEuclideanCodebook(nn.Module):
         # Projects each vector in `hidden_states` over the nearest centroid and return its index.
         # `hidden_states` should be `[N, D]` with `N` the number of input vectors and `D` the dimension.
         dists = ops.cdist(hidden_states[None], self.embed[None], p=2)[0]
-        embed_ind = dists.argmin(dim=-1)
+        embed_ind = dists.argmin(axis=-1)
         return embed_ind
 
     # Copied from transformers.models.encodec.modeling_encodec.EncodecEuclideanCodebook.encode
@@ -1353,8 +1357,8 @@ class MimiResidualVectorQuantizer(nn.Module):
 
     def decode(self, codes: ms.Tensor) -> ms.Tensor:
         """Decode the given codes of shape [B, K, T] to the quantized representation."""
-        quantized_out = ms.tensor(0.0, device=codes.device)
-        codes = codes.transpose(0, 1)
+        quantized_out = ms.tensor(0.0)
+        codes = codes.transpose((1, 0, 2))
         for i, indices in enumerate(codes):
             layer = self.layers[i]
             quantized = layer.decode(indices)
@@ -1442,12 +1446,13 @@ class MimiPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         """Initialize the weights"""
         if isinstance(module, nn.Linear):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            module.weight.assign_value(initializer(TruncatedNormal(sigma=self.config.initializer_range, mean=0.0), module.weight.shape, module.weight.dtype,))
             if module.bias is not None:
-                module.bias.data.zero_()
+                module.bias.assign_value(initializer("zeros", module.bias.shape, module.bias.dtype,))
+                
         elif isinstance(module, (nn.LayerNorm, nn.GroupNorm)):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
+            module.bias.assign_value(initializer("zeros", module.bias.shape, module.bias.dtype,))
+            module.weight.assign_value(initializer("ones", module.bias.shape, module.bias.dtype,))
         elif isinstance(module, nn.Conv1d):
             nn.init.kaiming_normal_(module.weight)
             if module.bias is not None:
@@ -1580,17 +1585,17 @@ class MimiModel(MimiPreTrainedModel):
         """
         embeddings = self.encoder(input_values)
         encoder_outputs = self.encoder_transformer(
-            embeddings.transpose(1, 2), past_key_values=past_key_values, return_dict=return_dict
+            embeddings.transpose((0, 2, 1)), past_key_values=past_key_values, return_dict=return_dict
         )
         if return_dict:
             past_key_values = encoder_outputs.get("past_key_values")
         elif len(encoder_outputs) > 1:
             past_key_values = encoder_outputs[1]
-        embeddings = encoder_outputs[0].transpose(1, 2)
+        embeddings = encoder_outputs[0].transpose((0, 2, 1))
         embeddings = self.downsample(embeddings)
 
         codes = self.quantizer.encode(embeddings, num_quantizers)
-        codes = codes.transpose(0, 1)
+        codes = codes.transpose((1, 0, 2))
         return codes, past_key_values
 
     def encode(
@@ -1669,13 +1674,13 @@ class MimiModel(MimiPreTrainedModel):
 
         embeddings = self.upsample(embeddings)
         decoder_outputs = self.decoder_transformer(
-            embeddings.transpose(1, 2), past_key_values=past_key_values, return_dict=return_dict
+            embeddings.transpose((0, 2, 1)), past_key_values=past_key_values, return_dict=return_dict
         )
         if return_dict:
             past_key_values = decoder_outputs.get("past_key_values")
         elif len(decoder_outputs) > 1:
             past_key_values = decoder_outputs[1]
-        embeddings = decoder_outputs[0].transpose(1, 2)
+        embeddings = decoder_outputs[0].transpose((0, 2, 1))
         outputs = self.decoder(embeddings)
         return outputs, past_key_values
 
