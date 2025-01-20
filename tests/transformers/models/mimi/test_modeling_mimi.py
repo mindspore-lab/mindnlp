@@ -24,14 +24,15 @@ from datasets import Audio, load_dataset
 from parameterized import parameterized
 from pytest import mark
 
-from mindnlp.transformers import AutoFeatureExtractor, MimiConfig
+from mindnlp.transformers import AutoFeatureExtractor
+from mindnlp.transformers.models.mimi import MimiConfig
 from mindnlp.utils.testing_utils import (
     is_flaky,
     is_mindspore_available,
     require_mindspore,
     slow,
 )
-
+from mindnlp.core.autograd import no_grad
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_tensor, ids_tensor
 
@@ -40,7 +41,7 @@ if is_mindspore_available():
     import mindspore as ms
     from mindspore import ops
 
-    from mindnlp.transformers import MimiModel
+    from mindnlp.transformers.models.mimi import MimiModel
 
 
 # Copied from transformers.tests.encodec.test_modeling_encodec.prepare_inputs_dict
@@ -118,6 +119,7 @@ class MimiModelTester:
         return config, inputs_dict
 
     def prepare_config_and_inputs_for_model_class(self, model_class):
+        import mindspore
         config, inputs_dict = self.prepare_config_and_inputs()
         inputs_dict["audio_codes"] = ids_tensor([self.batch_size, 1, self.num_channels], self.codebook_size).type(
             mindspore.int32
@@ -145,7 +147,8 @@ class MimiModelTester:
         )
 
     def create_and_check_model_forward(self, config, inputs_dict):
-        model = MimiModel(config=config).to(mindspore.get_context('device_target')).eval()
+        import mindspore
+        model = MimiModel(config=config).eval()
 
         input_values = inputs_dict["input_values"]
         result = model(input_values)
@@ -180,8 +183,10 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_config(self):
         self.config_tester.run_common_tests()
-
+    
+    @require_mindspore
     def test_model_forward(self):
+        import mindspore
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model_forward(*config_and_inputs)
 
@@ -227,7 +232,6 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init.return_dict = False
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            model.to(mindspore.get_context('device_target'))
             model.eval()
             inputs = self._prepare_for_class(inputs_dict, model_class)
 
@@ -253,10 +257,8 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                 except Exception:
                     self.fail("Couldn't load module.")
 
-            model.to(mindspore.get_context('device_target'))
             model.eval()
 
-            loaded_model.to(mindspore.get_context('device_target'))
             loaded_model.eval()
 
             model_state_dict = model.state_dict()
@@ -317,13 +319,16 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     # Copied from transformers.tests.encodec.test_modeling_encodec.MimiModelTest.test_determinism
+    @require_mindspore
     def test_determinism(self):
+        import mindspore
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def check_determinism(first, second):
+            import mindspore
             # outputs are not tensors but list (since each sequence don't have the same frame_length)
-            out_1 = first.cpu().numpy()
-            out_2 = second.cpu().numpy()
+            out_1 = first.numpy()
+            out_2 = second.numpy()
             out_1 = out_1[~np.isnan(out_1)]
             out_2 = out_2[~np.isnan(out_2)]
             max_diff = np.amax(np.abs(out_1 - out_2))
@@ -331,9 +336,8 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            model.to(mindspore.get_context('device_target'))
             model.eval()
-            with mindspore.no_grad():
+            with no_grad():
                 first = model(**self._prepare_for_class(inputs_dict, model_class))[0]
                 second = model(**self._prepare_for_class(inputs_dict, model_class))[0]
 
@@ -344,7 +348,9 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                 check_determinism(first, second)
 
     # Copied from transformers.tests.encodec.test_modeling_encodec.MimiModelTest.test_model_outputs_equivalence
+    @require_mindspore
     def test_model_outputs_equivalence(self):
+        import mindspore
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def set_nan_tensor_to_zero(t):
@@ -352,7 +358,16 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
             return t
 
         def check_equivalence(model, tuple_inputs, dict_inputs, additional_kwargs={}):
-            with mindspore.no_grad():
+            def allclose(tensor1, tensor2, rtol=1e-05, atol=1e-08):
+                """
+                Checks if all elements of two tensors are close within a tolerance.
+                """
+                tensor1 = tensor1.astype(mindspore.float32)
+                tensor2 = tensor2.astype(mindspore.float32)
+                diff = ops.abs(tensor1 - tensor2)
+                return ops.all(diff <= (atol + rtol * ops.abs(tensor2)))
+
+            with no_grad():
                 tuple_output = model(**tuple_inputs, return_dict=False, **additional_kwargs)
                 dict_output = model(**dict_inputs, return_dict=True, **additional_kwargs)
 
@@ -361,20 +376,14 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
 
                 for tuple_value, dict_value in zip(tuple_output, dict_output.values()):
                     self.assertTrue(
-                        mindspore.allclose(
+                        allclose(
                             set_nan_tensor_to_zero(tuple_value), set_nan_tensor_to_zero(dict_value), atol=1e-5
-                        ),
-                        msg=(
-                            "Tuple and dict output are not equal. Difference:"
-                            f" {mindspore.max(mindspore.abs(tuple_value - dict_value))}. Tuple has `nan`:"
-                            f" {mindspore.isnan(tuple_value).any()} and `inf`: {mindspore.isinf(tuple_value)}. Dict has"
-                            f" `nan`: {mindspore.isnan(dict_value).any()} and `inf`: {mindspore.isinf(dict_value)}."
-                        ),
+                        )
                     )
+
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            model.to(mindspore.get_context('device_target'))
             model.eval()
 
             tuple_inputs = self._prepare_for_class(inputs_dict, model_class)
@@ -397,7 +406,9 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                         )
 
     # Copied from transformers.tests.encodec.test_modeling_encodec.MimiModelTest.test_identity_shortcut
+    @require_mindspore
     def test_identity_shortcut(self):
+        import mindspore
         config, inputs_dict = self.model_tester.prepare_config_and_inputs()
         config.use_conv_shortcut = False
         self.model_tester.create_and_check_model_forward(config, inputs_dict)
@@ -418,6 +429,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @is_flaky()
+    @require_mindspore
     def test_batching_equivalence(self):
         super().test_batching_equivalence()
 
@@ -460,7 +472,7 @@ class MimiIntegrationTest(unittest.TestCase):
         ).to(mindspore.get_context('device_target'))
 
         for num_codebooks, expected_rmse in expected_rmse.items():
-            with mindspore.no_grad():
+            with no_grad():
                 # use max bandwith for best possible reconstruction
                 encoder_outputs = model.encode(inputs["input_values"], num_quantizers=int(num_codebooks))
 
@@ -480,8 +492,8 @@ class MimiIntegrationTest(unittest.TestCase):
             # make sure audios are more or less equal
             # the RMSE of two random gaussian noise vectors with ~N(0, 1) is around 1.0
             rmse = compute_rmse(
-                audio_output_concat_context.squeeze().cpu().numpy(),
-                audio_output_entire_context.squeeze().cpu().numpy(),
+                audio_output_concat_context.squeeze().numpy(),
+                audio_output_entire_context.squeeze().numpy(),
             )
             self.assertTrue(rmse < 1e-3)
 
@@ -508,15 +520,23 @@ class MimiIntegrationTest(unittest.TestCase):
             sampling_rate=processor.sampling_rate,
             return_tensors="pt",
         ).to(mindspore.get_context('device_target'))
-
+        
+        def allclose(tensor1, tensor2, rtol=1e-05, atol=1e-08):
+            """
+            Checks if all elements of two tensors are close within a tolerance.
+            """
+            diff = ops.abs(tensor1 - tensor2)
+            return ops.all(diff <= (atol + rtol * ops.abs(tensor2)))
+        
+        
         for use_cache in [False, True]:
             model = MimiModel.from_pretrained(model_id, use_cache=use_cache).to(mindspore.get_context('device_target'))
             for num_codebooks, expected_rmse in expected_rmses.items():
-                with mindspore.no_grad():
+                with no_grad():
                     # use max bandwith for best possible reconstruction
                     encoder_outputs = model.encode(inputs["input_values"], num_quantizers=int(num_codebooks))
 
-                    audio_code_sums = encoder_outputs[0].sum().cpu().item()
+                    audio_code_sums = encoder_outputs[0].sum().item()
 
                     # make sure audio encoded codes are correct
                     # assert relative difference less than a threshold, because `audio_code_sums` varies a bit
@@ -531,13 +551,13 @@ class MimiIntegrationTest(unittest.TestCase):
                     )[1]
 
                 # make sure forward and decode gives same result
-                self.assertTrue(torch.allclose(input_values_dec, input_values_enc_dec))
+                self.assertTrue(allclose(input_values_dec, input_values_enc_dec))
 
                 # make sure shape matches
                 self.assertTrue(inputs["input_values"].shape == input_values_enc_dec.shape)
 
-                arr = inputs["input_values"][0].cpu().numpy()
-                arr_enc_dec = input_values_enc_dec[0].cpu().numpy()
+                arr = inputs["input_values"][0].numpy()
+                arr_enc_dec = input_values_enc_dec[0].numpy()
 
                 # make sure audios are more or less equal
                 # the RMSE of two random gaussian noise vectors with ~N(0, 1) is around 1.0
