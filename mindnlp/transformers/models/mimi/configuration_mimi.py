@@ -18,8 +18,8 @@ import math
 
 import numpy as np
 
-from ...configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
+from ...configuration_utils import PretrainedConfig
 
 
 logger = logging.get_logger(__name__)
@@ -138,7 +138,7 @@ class MimiConfig(PretrainedConfig):
 
     model_type = "mimi"
     keys_to_ignore_at_inference = ["past_key_values"]
-    
+
     def __init__(
         self,
         sampling_rate=24_000,
@@ -186,7 +186,8 @@ class MimiConfig(PretrainedConfig):
         self.hidden_size = hidden_size
         self.num_filters = num_filters
         self.num_residual_layers = num_residual_layers
-        self.upsampling_ratios = upsampling_ratios if upsampling_ratios else [8, 6, 5, 4]
+        self.upsampling_ratios = upsampling_ratios if upsampling_ratios else [
+            8, 6, 5, 4]
         self.kernel_size = kernel_size
         self.last_kernel_size = last_kernel_size
         self.residual_kernel_size = residual_kernel_size

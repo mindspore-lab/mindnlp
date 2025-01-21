@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Mimi model."""
+"""Mindnlp Mimi model."""
 
 import math
 from dataclasses import dataclass
@@ -30,20 +30,8 @@ from ...modeling_outputs import BaseModelOutputWithPast
 from ...modeling_rope_utils import ROPE_INIT_FUNCTIONS
 from ...modeling_utils import PreTrainedModel, ModelOutput
 from ....core.autograd import no_grad
-# from ...utils import (
-#     ModelOutput,
-#     add_start_docstrings,
-#     add_start_docstrings_to_model_forward,
-#     is_flash_attn_2_available,
-#     is_flash_attn_greater_or_equal_2_10,
-#     logging,
-#     replace_return_docstrings,
-# )
 from .configuration_mimi import MimiConfig
 
-
-# if is_flash_attn_2_available():
-#     from ...modeling_flash_attention_utils import _flash_attention_forward
 
 logger = logging.get_logger(__name__)
 
@@ -201,7 +189,7 @@ class MimiConv1d(nn.Module):
         length = hidden_states.shape[-1]
         padding_left, padding_right = paddings
         paddings = (int(padding_left), int(padding_right))
-        if not mode == "reflect":
+        if mode != "reflect":
             # "ConstantPadND()(input=<Tensor>, padding=<list of int, Tensor, tuple of int>, value=<Number>)".
             return nn.functional.pad(hidden_states, paddings, mode, value)
 
@@ -407,7 +395,6 @@ class MimiRotaryEmbedding(nn.Module):
 
     @no_grad()
     def forward(self, x, position_ids):
-        
         if "dynamic" in self.rope_type:
             self._dynamic_frequency_update(position_ids, device=ms.get_context('device_target'))
         # Core RoPE block
@@ -776,7 +763,7 @@ class MimiSdpaAttention(MimiAttention):
 
         # We dispatch to SDPA's Flash Attention or Efficient kernels via this `is_causal` if statement instead of an inline conditional assignment
         # in SDPA to support both torch.compile's dynamic shapes and full graph options. An inline conditional prevents dynamic shapes from compiling.
-        is_causal = True if causal_mask is None and q_len > 1 else False
+        is_causal = causal_mask is None and q_len > 1
 
         attn_output = nn.functional.scaled_dot_product_attention(
             query_states,
@@ -1190,14 +1177,14 @@ class MimiTransformerModel(nn.Module):
         else:
             min_dtype = ops.finfo(dtype).min
             causal_mask = ops.full(
-                (sequence_length, target_length), fill_value=min_dtype, dtype=dtype, device=device
+                (sequence_length, target_length), fill_value=min_dtype, dtype=dtype
             )
-            diagonal_attend_mask = ops.arange(target_length, device=device) > cache_position.reshape(-1, 1)
+            diagonal_attend_mask = ops.arange(target_length) > cache_position.reshape(-1, 1)
             if config.sliding_window is not None:
                 # if we have sliding window, we should not attend to tokens beyond sliding window length, so we mask them out also
                 # the check is needed to verify is current checkpoint was trained with sliding window or not
                 if not isinstance(past_key_values, SlidingWindowCache) or sequence_length > target_length:
-                    sliding_attend_mask = ops.arange(target_length, device=device) <= (
+                    sliding_attend_mask = ops.arange(target_length) <= (
                         cache_position.reshape(-1, 1) - config.sliding_window
                     )
                     diagonal_attend_mask.bitwise_or_(sliding_attend_mask)
@@ -1449,7 +1436,6 @@ class MimiPreTrainedModel(PreTrainedModel):
             module.weight.assign_value(initializer(TruncatedNormal(sigma=self.config.initializer_range, mean=0.0), module.weight.shape, module.weight.dtype,))
             if module.bias is not None:
                 module.bias.assign_value(initializer("zeros", module.bias.shape, module.bias.dtype,))
-                
         elif isinstance(module, (nn.LayerNorm, nn.GroupNorm)):
             module.bias.assign_value(initializer("zeros", module.bias.shape, module.bias.dtype,))
             module.weight.assign_value(initializer("ones", module.bias.shape, module.bias.dtype,))

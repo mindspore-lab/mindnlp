@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch Mimi model."""
+"""Testing suite for the Mindnlp Mimi model."""
 
 import inspect
 import os
@@ -22,7 +22,6 @@ import unittest
 import numpy as np
 from datasets import Audio, load_dataset
 from parameterized import parameterized
-from pytest import mark
 
 from mindnlp.transformers import AutoFeatureExtractor
 from mindnlp.transformers.models.mimi import MimiConfig
@@ -38,7 +37,7 @@ from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_
 
 
 if is_mindspore_available():
-    import mindspore as ms
+    import mindspore
     from mindspore import ops
 
     from mindnlp.transformers.models.mimi import MimiModel
@@ -61,7 +60,8 @@ def prepare_inputs_dict(
     else:
         encoder_dict = {"input_values": input_values}
 
-    decoder_dict = {"decoder_input_ids": decoder_input_ids} if decoder_input_ids is not None else {}
+    decoder_dict = {
+        "decoder_input_ids": decoder_input_ids} if decoder_input_ids is not None else {}
 
     return {**encoder_dict, **decoder_dict}
 
@@ -109,7 +109,8 @@ class MimiModelTester:
         self.use_cache = use_cache
 
     def prepare_config_and_inputs(self):
-        input_values = floats_tensor([self.batch_size, self.num_channels, self.intermediate_size], scale=1.0)
+        input_values = floats_tensor(
+            [self.batch_size, self.num_channels, self.intermediate_size], scale=1.0)
         config = self.get_config()
         inputs_dict = {"input_values": input_values}
         return config, inputs_dict
@@ -147,13 +148,13 @@ class MimiModelTester:
         )
 
     def create_and_check_model_forward(self, config, inputs_dict):
-        import mindspore
         model = MimiModel(config=config).eval()
 
         input_values = inputs_dict["input_values"]
         result = model(input_values)
         self.parent.assertEqual(
-            result.audio_values.shape, (self.batch_size, self.num_channels, self.intermediate_size)
+            result.audio_values.shape, (self.batch_size,
+                                        self.num_channels, self.intermediate_size)
         )
 
 
@@ -168,7 +169,8 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
 
     def _prepare_for_class(self, inputs_dict, model_class, return_labels=False):
         # model does support returning hidden states
-        inputs_dict = super()._prepare_for_class(inputs_dict, model_class, return_labels=return_labels)
+        inputs_dict = super()._prepare_for_class(
+            inputs_dict, model_class, return_labels=return_labels)
         if "output_attentions" in inputs_dict:
             inputs_dict.pop("output_attentions")
         if "output_hidden_states" in inputs_dict:
@@ -183,10 +185,9 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_config(self):
         self.config_tester.run_common_tests()
-    
+
     @require_mindspore
     def test_model_forward(self):
-        import mindspore
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model_forward(*config_and_inputs)
 
@@ -199,8 +200,10 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
-            expected_arg_names = ["input_values", "padding_mask", "num_quantizers"]
-            self.assertListEqual(arg_names[: len(expected_arg_names)], expected_arg_names)
+            expected_arg_names = ["input_values",
+                                  "padding_mask", "num_quantizers"]
+            self.assertListEqual(
+                arg_names[: len(expected_arg_names)], expected_arg_names)
 
     @unittest.skip(reason="The MimiModel does not have `inputs_embeds` logics")
     def test_inputs_embeds(self):
@@ -224,10 +227,12 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
 
     # Copied from transformers.tests.encodec.test_modeling_encodec.MimiModelTest._create_and_check_torchscript
     def _create_and_check_torchscript(self, config, inputs_dict):
+        import mindspore
         if not self.test_torchscript:
             self.skipTest(reason="test_torchscript is set to False")
 
-        configs_no_init = _config_zero_init(config)  # To be sure we have no Nan
+        configs_no_init = _config_zero_init(
+            config)  # To be sure we have no Nan
         configs_no_init.torchscript = True
         configs_no_init.return_dict = False
         for model_class in self.all_model_classes:
@@ -273,7 +278,8 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                 key: value for key, value in loaded_model_state_dict.items() if key not in non_persistent_buffers
             }
 
-            self.assertEqual(set(model_state_dict.keys()), set(loaded_model_state_dict.keys()))
+            self.assertEqual(set(model_state_dict.keys()),
+                             set(loaded_model_state_dict.keys()))
 
             model_buffers = list(model.buffers())
             for non_persistent_buffer in non_persistent_buffers.values():
@@ -321,11 +327,9 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
     # Copied from transformers.tests.encodec.test_modeling_encodec.MimiModelTest.test_determinism
     @require_mindspore
     def test_determinism(self):
-        import mindspore
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def check_determinism(first, second):
-            import mindspore
             # outputs are not tensors but list (since each sequence don't have the same frame_length)
             out_1 = first.numpy()
             out_2 = second.numpy()
@@ -338,8 +342,10 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             model.eval()
             with no_grad():
-                first = model(**self._prepare_for_class(inputs_dict, model_class))[0]
-                second = model(**self._prepare_for_class(inputs_dict, model_class))[0]
+                first = model(
+                    **self._prepare_for_class(inputs_dict, model_class))[0]
+                second = model(
+                    **self._prepare_for_class(inputs_dict, model_class))[0]
 
             if isinstance(first, tuple) and isinstance(second, tuple):
                 for tensor1, tensor2 in zip(first, second):
@@ -368,8 +374,10 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                 return ops.all(diff <= (atol + rtol * ops.abs(tensor2)))
 
             with no_grad():
-                tuple_output = model(**tuple_inputs, return_dict=False, **additional_kwargs)
-                dict_output = model(**dict_inputs, return_dict=True, **additional_kwargs)
+                tuple_output = model(
+                    **tuple_inputs, return_dict=False, **additional_kwargs)
+                dict_output = model(
+                    **dict_inputs, return_dict=True, **additional_kwargs)
 
                 self.assertTrue(isinstance(tuple_output, tuple))
                 self.assertTrue(isinstance(dict_output, dict))
@@ -380,7 +388,6 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                             set_nan_tensor_to_zero(tuple_value), set_nan_tensor_to_zero(dict_value), atol=1e-5
                         )
                     )
-
 
         for model_class in self.all_model_classes:
             model = model_class(config)
@@ -401,14 +408,14 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                 if param.requires_grad:
                     if any(x in name for x in uniform_init_parms):
                         self.assertTrue(
-                            -1.0 <= ((param.data.mean() * 1e9).round() / 1e9).item() <= 1.0,
+                            -1.0 <= ((param.data.mean() *
+                                     1e9).round() / 1e9).item() <= 1.0,
                             msg=f"Parameter {name} of model {model_class} seems not properly initialized",
                         )
 
     # Copied from transformers.tests.encodec.test_modeling_encodec.MimiModelTest.test_identity_shortcut
     @require_mindspore
     def test_identity_shortcut(self):
-        import mindspore
         config, inputs_dict = self.model_tester.prepare_config_and_inputs()
         config.use_conv_shortcut = False
         self.model_tester.create_and_check_model_forward(config, inputs_dict)
@@ -441,28 +448,35 @@ def normalize(arr):
     return normalized_arr
 
 # Copied from transformers.tests.encodec.test_modeling_encodec.compute_rmse
+
+
 def compute_rmse(arr1, arr2):
     arr1_normalized = normalize(arr1)
     arr2_normalized = normalize(arr2)
     return np.sqrt(((arr1_normalized - arr2_normalized) ** 2).mean())
 
+
 @slow
 @require_mindspore
 class MimiIntegrationTest(unittest.TestCase):
     def test_integration_using_cache_decode(self):
+        import mindspore
         expected_rmse = {
             "8": 0.0018785292,
             "32": 0.0012330565,
         }
 
-        librispeech_dummy = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+        librispeech_dummy = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
 
         model_id = "kyutai/mimi"
 
-        model = MimiModel.from_pretrained(model_id, use_cache=True).to(mindspore.get_context('device_target'))
+        model = MimiModel.from_pretrained(model_id, use_cache=True).to(
+            mindspore.get_context('device_target'))
         processor = AutoFeatureExtractor.from_pretrained(model_id)
 
-        librispeech_dummy = librispeech_dummy.cast_column("audio", Audio(sampling_rate=processor.sampling_rate))
+        librispeech_dummy = librispeech_dummy.cast_column(
+            "audio", Audio(sampling_rate=processor.sampling_rate))
         audio_sample = librispeech_dummy[-1]["audio"]["array"]
 
         inputs = processor(
@@ -474,19 +488,22 @@ class MimiIntegrationTest(unittest.TestCase):
         for num_codebooks, expected_rmse in expected_rmse.items():
             with no_grad():
                 # use max bandwith for best possible reconstruction
-                encoder_outputs = model.encode(inputs["input_values"], num_quantizers=int(num_codebooks))
+                encoder_outputs = model.encode(
+                    inputs["input_values"], num_quantizers=int(num_codebooks))
 
                 audio_codes = encoder_outputs[0]
 
-                decoder_outputs_first_part = model.decode(audio_codes[:, :, : audio_codes.shape[2] // 2])
+                decoder_outputs_first_part = model.decode(
+                    audio_codes[:, :, : audio_codes.shape[2] // 2])
                 decoder_outputs_second_part = model.decode(
-                    audio_codes[:, :, audio_codes.shape[2] // 2 :],
+                    audio_codes[:, :, audio_codes.shape[2] // 2:],
                     decoder_past_key_values=decoder_outputs_first_part.decoder_past_key_values,
                 )
 
                 audio_output_entire_context = model.decode(audio_codes)[0]
                 audio_output_concat_context = mindspore.ops.cat(
-                    [decoder_outputs_first_part[0], decoder_outputs_second_part[0]], dim=2
+                    [decoder_outputs_first_part[0],
+                        decoder_outputs_second_part[0]]
                 )
 
             # make sure audios are more or less equal
@@ -498,6 +515,7 @@ class MimiIntegrationTest(unittest.TestCase):
             self.assertTrue(rmse < 1e-3)
 
     def test_integration(self):
+        import mindspore
         expected_rmses = {
             "8": 0.0018785292,
             "32": 0.0012330565,
@@ -506,13 +524,15 @@ class MimiIntegrationTest(unittest.TestCase):
             "8": 430423,
             "32": 1803071,
         }
-        librispeech_dummy = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+        librispeech_dummy = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
 
         model_id = "kyutai/mimi"
 
         processor = AutoFeatureExtractor.from_pretrained(model_id)
 
-        librispeech_dummy = librispeech_dummy.cast_column("audio", Audio(sampling_rate=processor.sampling_rate))
+        librispeech_dummy = librispeech_dummy.cast_column(
+            "audio", Audio(sampling_rate=processor.sampling_rate))
         audio_sample = librispeech_dummy[-1]["audio"]["array"]
 
         inputs = processor(
@@ -520,21 +540,22 @@ class MimiIntegrationTest(unittest.TestCase):
             sampling_rate=processor.sampling_rate,
             return_tensors="pt",
         ).to(mindspore.get_context('device_target'))
-        
+
         def allclose(tensor1, tensor2, rtol=1e-05, atol=1e-08):
             """
             Checks if all elements of two tensors are close within a tolerance.
             """
             diff = ops.abs(tensor1 - tensor2)
             return ops.all(diff <= (atol + rtol * ops.abs(tensor2)))
-        
-        
+
         for use_cache in [False, True]:
-            model = MimiModel.from_pretrained(model_id, use_cache=use_cache).to(mindspore.get_context('device_target'))
+            model = MimiModel.from_pretrained(model_id, use_cache=use_cache).to(
+                mindspore.get_context('device_target'))
             for num_codebooks, expected_rmse in expected_rmses.items():
                 with no_grad():
                     # use max bandwith for best possible reconstruction
-                    encoder_outputs = model.encode(inputs["input_values"], num_quantizers=int(num_codebooks))
+                    encoder_outputs = model.encode(
+                        inputs["input_values"], num_quantizers=int(num_codebooks))
 
                     audio_code_sums = encoder_outputs[0].sum().item()
 
@@ -542,19 +563,24 @@ class MimiIntegrationTest(unittest.TestCase):
                     # assert relative difference less than a threshold, because `audio_code_sums` varies a bit
                     # depending on torch version
                     self.assertTrue(
-                        np.abs(audio_code_sums - expected_codesums[num_codebooks]) <= (3e-3 * audio_code_sums)
+                        np.abs(
+                            audio_code_sums - expected_codesums[num_codebooks]) <= (3e-3 * audio_code_sums)
                     )
 
-                    input_values_dec = model.decode(encoder_outputs[0], padding_mask=inputs["padding_mask"])[0]
+                    input_values_dec = model.decode(
+                        encoder_outputs[0], padding_mask=inputs["padding_mask"])[0]
                     input_values_enc_dec = model(
-                        inputs["input_values"], inputs["padding_mask"], num_quantizers=int(num_codebooks)
+                        inputs["input_values"], inputs["padding_mask"], num_quantizers=int(
+                            num_codebooks)
                     )[1]
 
                 # make sure forward and decode gives same result
-                self.assertTrue(allclose(input_values_dec, input_values_enc_dec))
+                self.assertTrue(
+                    allclose(input_values_dec, input_values_enc_dec))
 
                 # make sure shape matches
-                self.assertTrue(inputs["input_values"].shape == input_values_enc_dec.shape)
+                self.assertTrue(
+                    inputs["input_values"].shape == input_values_enc_dec.shape)
 
                 arr = inputs["input_values"][0].numpy()
                 arr_enc_dec = input_values_enc_dec[0].numpy()
