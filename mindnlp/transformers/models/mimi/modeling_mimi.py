@@ -34,15 +34,7 @@ from ....utils import (
     ModelOutput,
     logging,
 )
-# from ....utils import (
-#     ModelOutput,
-#     add_start_docstrings,
-#     add_start_docstrings_to_model_forward,
-#     is_flash_attn_2_available,
-#     is_flash_attn_greater_or_equal_2_10,
-#     logging,
-#     replace_return_docstrings,
-# )
+
 from .configuration_mimi import MimiConfig
 
 
@@ -1783,26 +1775,26 @@ class MimiModel(MimiPreTrainedModel):
         Examples:
 
         ```python
-        >>> from mindnlp.transformers import MimiModel, MimiConfig
-        >>> from mindnlp.transformers import AutoFeatureExtractor
-        >>> # Initializing a "kyutai/mimi" style configuration
-        >>> configuration = MimiConfig()
-        >>> # Initializing a model (with random weights) from the "kyutai/mimi" style configuration
-        >>> model = MimiModel(configuration)
-        >>> # Accessing the model configuration
-        >>> configuration = model.config
-        >>> from datasets import load_dataset
-        >>> dataset = load_dataset("hf-internal-testing/ashraq-esc50-1-dog-example")
-        >>> audio_sample = dataset["train"]["audio"][0]["array"]
-        >>> model_id = "kyutai/mimi"
-        >>> model = MimiModel.from_pretrained(model_id, mirror="modelscope")
+            >>> from mindnlp.transformers import MimiModel, MimiConfig
+            >>> from mindnlp.transformers import AutoFeatureExtractor
 
-        >>> feature_extractor = AutoFeatureExtractor.from_pretrained(model_id)
-        >>> inputs = feature_extractor(raw_audio=audio_sample, return_tensors="ms")
+            >>> configuration = MimiConfig()
 
-        >>> outputs = model(**inputs)
-        >>> audio_codes = outputs.audio_codes
-        >>> audio_values = outputs.audio_values
+            >>> model = MimiModel(configuration)
+            >>> configuration = model.config
+            >>> from datasets import load_dataset
+
+
+            >>> dataset = load_dataset("hf-internal-testing/ashraq-esc50-1-dog-example")
+            >>> audio_sample = dataset["train"]["audio"][0]["array"]
+            >>> model_id = "kyutai/mimi"
+            >>> model = MimiModel.from_pretrained(model_id, mirror="modelscope")
+
+            >>> feature_extractor = AutoFeatureExtractor.from_pretrained(model_id)
+            >>> inputs = feature_extractor(raw_audio=audio_sample, return_tensors="ms")
+            >>> outputs = model(**inputs)
+            >>> audio_codes = outputs.audio_codes
+            >>> audio_values = outputs.audio_values
         ```"""
         return_dict = return_dict if return_dict is not None else self.config.return_dict
 
