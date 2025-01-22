@@ -12,14 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """Mimi model configuration"""
+# 从transformer迁移到mindnlp
 
 import math
 
 import numpy as np
 
 from ...configuration_utils import PretrainedConfig
-from ...utils import logging
+from ....utils import logging
 
 
 logger = logging.get_logger(__name__)
@@ -124,7 +126,7 @@ class MimiConfig(PretrainedConfig):
     Example:
 
     ```python
-    >>> from transformers import MimiModel, MimiConfig
+    >>> from mindnlp.transformers.models.mimi import MimiModel, MimiConfig
 
     >>> # Initializing a "kyutai/mimi" style configuration
     >>> configuration = MimiConfig()
@@ -135,7 +137,6 @@ class MimiConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-
     model_type = "mimi"
 
     def __init__(
