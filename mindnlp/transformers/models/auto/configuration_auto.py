@@ -143,6 +143,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("mbart", "MBartConfig"),
         ("mctct", "MCTCTConfig"),
         ("megatron-bert", 'MegatronBertConfig'),
+        ("mimi","MimiConfig"),
         ("minicpm", "MiniCPMConfig"),
         ("minicpm3", "MiniCPM3Config"),
         ("mistral", "MistralConfig"),
