@@ -58,9 +58,9 @@ _CONFIG_FOR_DOC = "MimiConfig"
 class MimiOutput(ModelOutput):
     """
     Args:
-        audio_codes (`ms.Tensor.long`  of shape `(batch_size, num_quantizers, codes_length)`, *optional*):
+        audio_codes (`ms.Tensor`  of shape `(batch_size, num_quantizers, codes_length)`, *optional*):
             Discret code embeddings computed using `model.encode`.
-        audio_values (`ms.Tensor.float` of shape `(batch_size, sequence_length)`, *optional*)
+        audio_values (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*)
             Decoded audio values, obtained using the decoder part of Mimi.
         encoder_past_key_values (`Cache`, *optional*):
             Pre-computed hidden-states (key and values in the self-attention blocks) that can be used to speed up sequential decoding of the encoder transformer.
@@ -80,17 +80,17 @@ class MimiOutput(ModelOutput):
             have their past key value states given to this model).
     """
 
-    audio_codes: ms.Tensor.long = None
-    audio_values: ms.Tensor.float = None
-    encoder_past_key_values: Optional[Union[Cache, List[ms.Tensor.float]]] = None
-    decoder_past_key_values: Optional[Union[Cache, List[ms.Tensor.float]]] = None
+    audio_codes: ms.Tensor = None
+    audio_values: ms.Tensor = None
+    encoder_past_key_values: Optional[Union[Cache, List[ms.Tensor]]] = None
+    decoder_past_key_values: Optional[Union[Cache, List[ms.Tensor]]] = None
 
 
 @dataclass
 class MimiEncoderOutput(ModelOutput):
     """
     Args:
-        audio_codes (`ms.Tensor.long`  of shape `(batch_size, num_quantizers, codes_length)`, *optional*):
+        audio_codes (`ms.Tensor`  of shape `(batch_size, num_quantizers, codes_length)`, *optional*):
             Discret code embeddings computed using `model.encode`.
         encoder_past_key_values (`Cache`, *optional*):
             Pre-computed hidden-states (key and values in the self-attention blocks) that can be used to speed up sequential decoding of the encoder transformer.
@@ -102,15 +102,15 @@ class MimiEncoderOutput(ModelOutput):
             have their past key value states given to this model).
     """
 
-    audio_codes: ms.Tensor.long = None
-    encoder_past_key_values: Optional[Union[Cache, List[ms.Tensor.float]]] = None
+    audio_codes: ms.Tensor = None
+    encoder_past_key_values: Optional[Union[Cache, List[ms.Tensor]]] = None
 
 
 @dataclass
 class MimiDecoderOutput(ModelOutput):
     """
     Args:
-        audio_values (`ms.Tensor.float`  of shape `(batch_size, segment_length)`, *optional*):
+        audio_values (`ms.Tensor`  of shape `(batch_size, segment_length)`, *optional*):
             Decoded audio values, obtained using the decoder part of Mimi.
         decoder_past_key_values (`Cache`, *optional*):
             Pre-computed hidden-states (key and values in the self-attention blocks) that can be used to speed up sequential decoding of the decoder transformer.
@@ -122,8 +122,8 @@ class MimiDecoderOutput(ModelOutput):
             have their past key value states given to this model).
     """
 
-    audio_values: ms.Tensor.long = None
-    decoder_past_key_values: Optional[Union[Cache, List[ms.Tensor.long]]] = None
+    audio_values: ms.Tensor = None
+    decoder_past_key_values: Optional[Union[Cache, List[ms.Tensor]]] = None
 
 
 class MimiConv1d(nn.Module):
@@ -369,7 +369,7 @@ class MimiLayerScale(nn.Module):
 
 # Copied from transformers.models.mistral.modeling_mistral.MistralRotaryEmbedding with Mistral->Mimi
 class MimiRotaryEmbedding(nn.Module):
-    def __init__(self, config: MimiConfig, device=None):
+    def __init__(self, config: MimiConfig):
         super().__init__()
         # BC: "rope_type" was originally "type"
         if hasattr(config, "rope_scaling") and config.rope_scaling is not None:
@@ -382,11 +382,11 @@ class MimiRotaryEmbedding(nn.Module):
         self.config = config
         self.rope_init_fn = ROPE_INIT_FUNCTIONS[self.rope_type]
 
-        inv_freq, self.attention_scaling = self.rope_init_fn(self.config, device)
+        inv_freq, self.attention_scaling = self.rope_init_fn(self.config)
         self.register_buffer("inv_freq", inv_freq, persistent=False)
         self.original_inv_freq = self.inv_freq
 
-    def _dynamic_frequency_update(self, position_ids, device):
+    def _dynamic_frequency_update(self, position_ids):
         """
         dynamic RoPE layers should recompute `inv_freq` in the following situations:
         1 - growing beyond the cached sequence length (allow scaling)
@@ -394,14 +394,14 @@ class MimiRotaryEmbedding(nn.Module):
         """
         seq_len = ops.max(position_ids) + 1
         if seq_len > self.max_seq_len_cached:  # growth
-            inv_freq, self.attention_scaling = self.rope_init_fn(self.config, device, seq_len=seq_len)
+            inv_freq, self.attention_scaling = self.rope_init_fn(self.config, seq_len=seq_len)
             self.register_buffer("inv_freq", inv_freq, persistent=False)  # TODO joao: may break with compilation
             self.max_seq_len_cached = seq_len
 
         if seq_len < self.original_max_seq_len and self.max_seq_len_cached > self.original_max_seq_len:  # reset
             # This .to() is needed if the model has been moved to a device after being initialized (because
             # the buffer is automatically moved, but not the original copy)
-            self.original_inv_freq = self.original_inv_freq.to(device)
+            self.original_inv_freq = self.original_inv_freq #.to(device)
             self.register_buffer("inv_freq", self.original_inv_freq, persistent=False)
             self.max_seq_len_cached = self.original_max_seq_len
 
@@ -538,13 +538,13 @@ class MimiAttention(nn.Module):
         self,
         hidden_states: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor.long] = None,
+        position_ids: Optional[ms.Tensor] = None,
         past_key_value: Optional[Cache] = None,
         output_attentions: bool = False,
         use_cache: bool = False,
-        cache_position: Optional[ms.Tensor.long] = None,
+        cache_position: Optional[ms.Tensor] = None,
     ) -> Tuple[ms.Tensor, Optional[ms.Tensor], Optional[Tuple[ms.Tensor]]]:
-        bsz, q_len, _ = hidden_states.size()
+        bsz, q_len, _ = hidden_states.shape #size()
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
@@ -582,7 +582,7 @@ class MimiAttention(nn.Module):
                 f" {attn_output.size()}"
             )
 
-        attn_output = attn_output.transpose(1, 2).contiguous()
+        attn_output = attn_output.transpose(1, 2) #.contiguous()
 
         attn_output = attn_output.view(bsz, q_len, -1)
         attn_output = self.o_proj(attn_output)
@@ -595,114 +595,114 @@ class MimiAttention(nn.Module):
 
 # NO LONGER EXIST Copied from transformers.models.gemma.modeling_gemma.GemmaFlashAttention2 with Gemma->Mimi
 # TODO cyril: modular
-class MimiFlashAttention2(MimiAttention):
-    """
-    Mimi flash attention module. This module inherits from `MimiAttention` as the weights of the module stays
-    untouched. The only required change would be on the forward pass where it needs to correctly call the public API of
-    flash attention and deal with padding tokens in case the input contains any of them.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # TODO: Should be removed once Flash Attention for RoCm is bumped to 2.1.
-        # flash_attn<2.1 generates top-left aligned causal mask, while what is needed here is bottom-right alignement, that was made default for flash_attn>=2.1. This attribute is used to handle this difference. Reference: https://github.com/Dao-AILab/flash-attention/releases/tag/v2.1.0.
-        # Beware that with flash_attn<2.1, using q_seqlen != k_seqlen (except for the case q_seqlen == 1) produces a wrong mask (top-left).
-        self._flash_attn_uses_top_left_mask = False #not is_flash_attn_greater_or_equal_2_10()
-
-    def forward(
-        self,
-        hidden_states: ms.Tensor,
-        attention_mask: Optional[ms.Tensor.long] = None,
-        position_ids: Optional[ms.Tensor.long] = None,
-        past_key_value: Optional[Cache] = None,
-        output_attentions: bool = False,
-        use_cache: bool = False,
-        cache_position: Optional[ms.Tensor.long] = None,
-    ) -> Tuple[ms.Tensor, Optional[ms.Tensor], Optional[Tuple[ms.Tensor]]]:
-        if isinstance(past_key_value, StaticCache):
-            raise ValueError(
-                "`static` cache implementation is not compatible with `attn_implementation==flash_attention_2` "
-                "make sure to use `sdpa` in the mean time, and open an issue at https://github.com/huggingface/transformers"
-            )
-
-        output_attentions = False
-
-        bsz, q_len, _ = hidden_states.size()
-
-        query_states = self.q_proj(hidden_states)
-        key_states = self.k_proj(hidden_states)
-        value_states = self.v_proj(hidden_states)
-
-        # Flash attention requires the input to have the shape
-        # batch_size x seq_length x head_dim x hidden_dim
-        # therefore we just need to keep the original shape
-        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
-        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
-        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
-
-        cos, sin = self.rotary_emb(value_states, position_ids)
-        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
-
-        if past_key_value is not None:
-            # sin and cos are specific to RoPE models; cache_position needed for the static cache
-            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
-            key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
-
-        # TODO: These transpose are quite inefficient but Flash Attention requires the layout [batch_size, sequence_length, num_heads, head_dim]. We would need to refactor the KV cache
-        # to be able to avoid many of these transpose/reshape/view.
-        query_states = query_states.transpose(1, 2)
-        key_states = key_states.transpose(1, 2)
-        value_states = value_states.transpose(1, 2)
-
-        dropout_rate = self.attention_dropout if self.training else 0.0
-
-        # In PEFT, usually we cast the layer norms in float32 for training stability reasons
-        # therefore the input hidden states gets silently casted in float32. Hence, we need
-        # cast them back in the correct dtype just to be sure everything works as expected.
-        # This might slowdown training & inference so it is recommended to not cast the LayerNorms
-        # in fp32. (MimiRMSNorm handles it correctly)
-
-        input_dtype = query_states.dtype
-        if input_dtype == ms.float32:
-            if ops.is_autocast_enabled():
-                target_dtype = ops.get_autocast_gpu_dtype()
-            # Handle the case where the model is quantized
-            elif hasattr(self.config, "_pre_quantization_dtype"):
-                target_dtype = self.config._pre_quantization_dtype
-            else:
-                target_dtype = self.q_proj.weight.dtype
-
-            logger.warning_once(
-                f"The input hidden states seems to be silently casted in float32, this might be related to"
-                f" the fact you have upcasted embedding or layer norm layers in float32. We will cast back the input in"
-                f" {target_dtype}."
-            )
-
-            query_states = query_states.to(target_dtype)
-            key_states = key_states.to(target_dtype)
-            value_states = value_states.to(target_dtype)
-
-        # attn_output = _flash_attention_forward(
-        #     query_states,
-        #     key_states,
-        #     value_states,
-        #     attention_mask,
-        #     q_len,
-        #     position_ids=position_ids,
-        #     dropout=dropout_rate,
-        #     sliding_window=getattr(self, "sliding_window", None),
-        #     is_causal=self.is_causal,
-        #     use_top_left_mask=self._flash_attn_uses_top_left_mask,
-        # )
-
-        # attn_output = attn_output.reshape(bsz, q_len, -1).contiguous()
-        # attn_output = self.o_proj(attn_output)
-
-        # if not output_attentions:
-        #     attn_weights = None
-        #
-        # return attn_output, attn_weights, past_key_value
+# class MimiFlashAttention2(MimiAttention):
+#     """
+#     Mimi flash attention module. This module inherits from `MimiAttention` as the weights of the module stays
+#     untouched. The only required change would be on the forward pass where it needs to correctly call the public API of
+#     flash attention and deal with padding tokens in case the input contains any of them.
+#     """
+#
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#
+#         # TODO: Should be removed once Flash Attention for RoCm is bumped to 2.1.
+#         # flash_attn<2.1 generates top-left aligned causal mask, while what is needed here is bottom-right alignement, that was made default for flash_attn>=2.1. This attribute is used to handle this difference. Reference: https://github.com/Dao-AILab/flash-attention/releases/tag/v2.1.0.
+#         # Beware that with flash_attn<2.1, using q_seqlen != k_seqlen (except for the case q_seqlen == 1) produces a wrong mask (top-left).
+#         self._flash_attn_uses_top_left_mask = False #not is_flash_attn_greater_or_equal_2_10()
+#
+#     def forward(
+#         self,
+#         hidden_states: ms.Tensor,
+#         attention_mask: Optional[ms.Tensor] = None,
+#         position_ids: Optional[ms.Tensor] = None,
+#         past_key_value: Optional[Cache] = None,
+#         output_attentions: bool = False,
+#         use_cache: bool = False,
+#         cache_position: Optional[ms.Tensor] = None,
+#     ) -> Tuple[ms.Tensor, Optional[ms.Tensor], Optional[Tuple[ms.Tensor]]]:
+#         if isinstance(past_key_value, StaticCache):
+#             raise ValueError(
+#                 "`static` cache implementation is not compatible with `attn_implementation==flash_attention_2` "
+#                 "make sure to use `sdpa` in the mean time, and open an issue at https://github.com/huggingface/transformers"
+#             )
+#
+#         output_attentions = False
+#
+#         bsz, q_len, _ = hidden_states.size()
+#
+#         query_states = self.q_proj(hidden_states)
+#         key_states = self.k_proj(hidden_states)
+#         value_states = self.v_proj(hidden_states)
+#
+#         # Flash attention requires the input to have the shape
+#         # batch_size x seq_length x head_dim x hidden_dim
+#         # therefore we just need to keep the original shape
+#         query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
+#         key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+#         value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+#
+#         cos, sin = self.rotary_emb(value_states, position_ids)
+#         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
+#
+#         if past_key_value is not None:
+#             # sin and cos are specific to RoPE models; cache_position needed for the static cache
+#             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
+#             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+#
+#         # TODO: These transpose are quite inefficient but Flash Attention requires the layout [batch_size, sequence_length, num_heads, head_dim]. We would need to refactor the KV cache
+#         # to be able to avoid many of these transpose/reshape/view.
+#         query_states = query_states.transpose(1, 2)
+#         key_states = key_states.transpose(1, 2)
+#         value_states = value_states.transpose(1, 2)
+#
+#         dropout_rate = self.attention_dropout if self.training else 0.0
+#
+#         # In PEFT, usually we cast the layer norms in float32 for training stability reasons
+#         # therefore the input hidden states gets silently casted in float32. Hence, we need
+#         # cast them back in the correct dtype just to be sure everything works as expected.
+#         # This might slowdown training & inference so it is recommended to not cast the LayerNorms
+#         # in fp32. (MimiRMSNorm handles it correctly)
+#
+#         input_dtype = query_states.dtype
+#         if input_dtype == ms.float32:
+#             if ops.is_autocast_enabled():
+#                 target_dtype = ops.get_autocast_gpu_dtype()
+#             # Handle the case where the model is quantized
+#             elif hasattr(self.config, "_pre_quantization_dtype"):
+#                 target_dtype = self.config._pre_quantization_dtype
+#             else:
+#                 target_dtype = self.q_proj.weight.dtype
+#
+#             logger.warning_once(
+#                 f"The input hidden states seems to be silently casted in float32, this might be related to"
+#                 f" the fact you have upcasted embedding or layer norm layers in float32. We will cast back the input in"
+#                 f" {target_dtype}."
+#             )
+#
+#             query_states = query_states.to(target_dtype)
+#             key_states = key_states.to(target_dtype)
+#             value_states = value_states.to(target_dtype)
+#
+#         attn_output = _flash_attention_forward(
+#             query_states,
+#             key_states,
+#             value_states,
+#             attention_mask,
+#             q_len,
+#             position_ids=position_ids,
+#             dropout=dropout_rate,
+#             sliding_window=getattr(self, "sliding_window", None),
+#             is_causal=self.is_causal,
+#             use_top_left_mask=self._flash_attn_uses_top_left_mask,
+#         )
+#
+#         attn_output = attn_output.reshape(bsz, q_len, -1) #.contiguous()
+#         attn_output = self.o_proj(attn_output)
+#
+#         if not output_attentions:
+#             attn_weights = None
+#
+#         return attn_output, attn_weights, past_key_value
 
 
 # NO LONGER EXIST Copied from transformers.models.gemma.modeling_gemma.GemmaSdpaAttention with Gemma->Mimi
@@ -719,11 +719,11 @@ class MimiSdpaAttention(MimiAttention):
         self,
         hidden_states: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor.long] = None,
+        position_ids: Optional[ms.Tensor] = None,
         past_key_value: Optional[Cache] = None,
         output_attentions: bool = False,
         use_cache: bool = False,
-        cache_position: Optional[ms.Tensor.long] = None,
+        cache_position: Optional[ms.Tensor] = None,
         **kwargs,
     ) -> Tuple[ms.Tensor, Optional[ms.Tensor], Optional[Tuple[ms.Tensor]]]:
         if output_attentions:
@@ -769,10 +769,10 @@ class MimiSdpaAttention(MimiAttention):
 
         # SDPA with memory-efficient backend is currently (ms==2.1.2) bugged with non-contiguous inputs with custom attn_mask,
         # Reference: https://github.com/pytorch/pytorch/issues/112577.
-        if query_states.device.type == "cuda" and causal_mask is not None:
-            query_states = query_states.contiguous()
-            key_states = key_states.contiguous()
-            value_states = value_states.contiguous()
+        # if query_states.device.type == "cuda" and causal_mask is not None:
+        #     query_states = query_states.contiguous()
+        #     key_states = key_states.contiguous()
+        #     value_states = value_states.contiguous()
 
         # We dispatch to SDPA's Flash Attention or Efficient kernels via this `is_causal` if statement instead of an inline conditional assignment
         # in SDPA to support both ms.compile's dynamic shapes and full graph options. An inline conditional prevents dynamic shapes from compiling.
@@ -787,7 +787,7 @@ class MimiSdpaAttention(MimiAttention):
             is_causal=is_causal,
         )
 
-        attn_output = attn_output.transpose(1, 2).contiguous()
+        attn_output = attn_output.transpose(1, 2) #.contiguous()
         attn_output = attn_output.view(bsz, q_len, -1)
 
         attn_output = self.o_proj(attn_output)
@@ -797,7 +797,7 @@ class MimiSdpaAttention(MimiAttention):
 
 MIMI_ATTENTION_CLASSES = {
     "eager": MimiAttention,
-    "flash_attention_2": MimiFlashAttention2,
+    # "flash_attention_2": MimiFlashAttention2, # 无实现，added by lt
     "sdpa": MimiSdpaAttention,
 }
 
@@ -819,17 +819,17 @@ class MimiTransformerLayer(nn.Module):
         self,
         hidden_states: ms.Tensor,
         attention_mask: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor.long] = None,
+        position_ids: Optional[ms.Tensor] = None,
         past_key_value: Optional[Cache] = None,
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = False,
-        cache_position: Optional[ms.Tensor.long] = None,
+        cache_position: Optional[ms.Tensor] = None,
         **kwargs,
-    ) -> Tuple[ms.Tensor.float, Optional[Tuple[ms.Tensor.float, ms.Tensor.float]]]:
+    ) -> Tuple[ms.Tensor, Optional[Tuple[ms.Tensor, ms.Tensor]]]:
         """
         Args:
-            hidden_states (`ms.Tensor.float`): input to the layer of shape `(batch, seq_len, embed_dim)`
-            attention_mask (`ms.Tensor.float`, *optional*):
+            hidden_states (`ms.Tensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
+            attention_mask (`ms.Tensor`, *optional*):
                 attention mask of size `(batch_size, sequence_length)` if flash attention is used or `(batch_size, 1,
                 query_sequence_length, key_sequence_length)` if default attention is used.
             output_attentions (`bool`, *optional*):
@@ -838,8 +838,8 @@ class MimiTransformerLayer(nn.Module):
             use_cache (`bool`, *optional*):
                 If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
                 (see `past_key_values`).
-            past_key_value (`Tuple(ms.Tensor.float)`, *optional*): cached past key and value projection states
-            cache_position (`ms.Tensor.long` of shape `(sequence_length)`, *optional*):
+            past_key_value (`Tuple(ms.Tensor)`, *optional*): cached past key and value projection states
+            cache_position (`ms.Tensor` of shape `(sequence_length)`, *optional*):
                 Indices depicting the position of the input sequence tokens in the sequence
             kwargs (`dict`, *optional*):
                 Arbitrary kwargs to be ignored, used for FSDP and other methods that injects code
@@ -900,19 +900,19 @@ class MimiTransformerModel(nn.Module):
 
     def forward(
         self,
-        hidden_states: ms.Tensor.long = None,
+        hidden_states: ms.Tensor = None,
         attention_mask: Optional[ms.Tensor] = None,
-        position_ids: Optional[ms.Tensor.long] = None,
-        past_key_values: Optional[Union[Cache, List[ms.Tensor.float]]] = None,
+        position_ids: Optional[ms.Tensor] = None,
+        past_key_values: Optional[Union[Cache, List[ms.Tensor]]] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-        cache_position: Optional[ms.Tensor.long] = None,
+        cache_position: Optional[ms.Tensor] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         """
         Args:
-            hidden_states (`ms.Tensor.float` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+            hidden_states (`ms.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
                 Embedded representation that will be contextualized by the model
             attention_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
@@ -934,19 +934,19 @@ class MimiTransformerModel(nn.Module):
 
                 - 1 indicates the head is **not masked**,
                 - 0 indicates the head is **masked**.
-            position_ids (`ms.Tensor.long` of shape `(batch_size, sequence_length)`, *optional*):
+            position_ids (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
                 Indices of positions of each input sequence tokens in the position embeddings. Selected in the range `[0,
                 config.n_positions - 1]`.
 
                 [What are position IDs?](../glossary#position-ids)
-            past_key_values (`Cache` or `tuple(tuple(ms.Tensor.float))`, *optional*):
+            past_key_values (`Cache` or `tuple(tuple(ms.Tensor))`, *optional*):
                 Pre-computed hidden-states (key and values in the self-attention blocks and in the cross-attention
                 blocks) that can be used to speed up sequential decoding. This typically consists in the `past_key_values`
                 returned by the model at a previous stage of decoding, when `use_cache=True` or `config.use_cache=True`.
 
                 Two formats are allowed:
                 - a [`~cache_utils.Cache`] instance;
-                - Tuple of `tuple(ms.Tensor.float)` of length `config.n_layers`, with each tuple having 2 tensors of
+                - Tuple of `tuple(ms.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
                 shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`). This is also known as the legacy
                 cache format.
 
@@ -996,7 +996,7 @@ class MimiTransformerModel(nn.Module):
         if cache_position is None:
             past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
             cache_position = ops.arange(
-                past_seen_tokens, past_seen_tokens + hidden_states.shape[1], device=hidden_states.device
+                past_seen_tokens, past_seen_tokens + hidden_states.shape[1] #, device=hidden_states.device
             )
 
         if position_ids is None:
@@ -1098,7 +1098,7 @@ class MimiTransformerModel(nn.Module):
             and not (using_static_cache or using_sliding_window_cache)
             and not output_attentions
         ):
-            if AttentionMaskConverter._ignore_causal_mask_sdpa(
+            if AttentionMaskConverter._ignore_causal_mask_sdpa( # 缺乏实现代码
                 attention_mask,
                 inputs_embeds=input_tensor,
                 past_key_values_length=past_seen_tokens,
@@ -1107,7 +1107,8 @@ class MimiTransformerModel(nn.Module):
             ):
                 return None
 
-        dtype, device = input_tensor.dtype, input_tensor.device
+        # dtype, device = input_tensor.dtype, input_tensor.device
+        dtype = input_tensor.dtype
         min_dtype = ops.finfo(dtype).min
         sequence_length = input_tensor.shape[1]
         # SlidingWindowCache or StaticCache
@@ -1127,7 +1128,7 @@ class MimiTransformerModel(nn.Module):
             sequence_length=sequence_length,
             target_length=target_length,
             dtype=dtype,
-            device=device,
+            # device= device, 不用该参数
             cache_position=cache_position,
             batch_size=input_tensor.shape[0],
             config=self.config,
@@ -1137,7 +1138,7 @@ class MimiTransformerModel(nn.Module):
         if (
             self.config._attn_implementation == "sdpa"
             and attention_mask is not None
-            and attention_mask.device.type == "cuda"
+            # and attention_mask.device.type == "cuda"
             and not output_attentions
         ):
             # Attend to all tokens in fully masked rows in the causal_mask, for example the relevant first rows when
@@ -1154,7 +1155,7 @@ class MimiTransformerModel(nn.Module):
         sequence_length: int,
         target_length: int,
         dtype: ms.dtype,
-        device: str,
+        # device: str,
         cache_position: ms.Tensor,
         batch_size: int,
         config: MimiConfig,
@@ -1190,14 +1191,14 @@ class MimiTransformerModel(nn.Module):
         else:
             min_dtype = ops.finfo(dtype).min
             causal_mask = ops.full(
-                (sequence_length, target_length), fill_value=min_dtype, dtype=dtype, device=device
+                (sequence_length, target_length), fill_value=min_dtype, dtype=dtype
             )
-            diagonal_attend_mask = ops.arange(target_length, device=device) > cache_position.reshape(-1, 1)
+            diagonal_attend_mask = ops.arange(target_length) > cache_position.reshape(-1, 1)
             if config.sliding_window is not None:
                 # if we have sliding window, we should not attend to tokens beyond sliding window length, so we mask them out also
                 # the check is needed to verify is current checkpoint was trained with sliding window or not
                 if not isinstance(past_key_values, SlidingWindowCache) or sequence_length > target_length:
-                    sliding_attend_mask = ops.arange(target_length, device=device) <= (
+                    sliding_attend_mask = ops.arange(target_length) <= (
                         cache_position.reshape(-1, 1) - config.sliding_window
                     )
                     diagonal_attend_mask.bitwise_or_(sliding_attend_mask)
@@ -1488,14 +1489,14 @@ MIMI_START_DOCSTRING = r"""
 
 MIMI_INPUTS_DOCSTRING = r"""
     Args:
-        input_values (`ms.Tensor.float` of shape `(batch_size, channels, sequence_length)`, *optional*):
+        input_values (`ms.Tensor` of shape `(batch_size, channels, sequence_length)`, *optional*):
             Raw audio input converted to Float.
         padding_mask (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Indicates which inputs are to be ignored due to padding, where elements are either 1 for *not masked* or 0
             for *masked*.
         num_quantizers (`int`, *optional*):
             Number of quantizers (i.e codebooks) to use. By default, all quantizers are used.
-        audio_codes (`ms.Tensor.long`  of shape `(batch_size, num_quantizers, codes_length)`, *optional*):
+        audio_codes (`ms.Tensor`  of shape `(batch_size, num_quantizers, codes_length)`, *optional*):
             Discret code embeddings computed using `model.encode`.
         encoder_past_key_values (`Cache`, *optional*):
             Pre-computed hidden-states (key and values in the self-attention blocks) that can be used to speed up sequential decoding of the encoder transformer.
@@ -1518,10 +1519,10 @@ MIMI_INPUTS_DOCSTRING = r"""
 """
 
 
-@add_start_docstrings(
-    "The Mimi neural audio codec model.",
-    MIMI_START_DOCSTRING,
-)
+# @add_start_docstrings(
+#     "The Mimi neural audio codec model.",
+#     MIMI_START_DOCSTRING,
+# )
 class MimiModel(MimiPreTrainedModel):
     def __init__(self, config: MimiConfig):
         super().__init__(config)
@@ -1576,7 +1577,7 @@ class MimiModel(MimiPreTrainedModel):
         input_values: ms.Tensor,
         num_quantizers: int,
         padding_mask: int,
-        past_key_values: Optional[Union[Cache, List[ms.Tensor.float]]] = None,
+        past_key_values: Optional[Union[Cache, List[ms.Tensor]]] = None,
         return_dict: Optional[bool] = None,
     ) -> Tuple[ms.Tensor, Optional[ms.Tensor]]:
         """
@@ -1602,7 +1603,7 @@ class MimiModel(MimiPreTrainedModel):
         input_values: ms.Tensor,
         padding_mask: ms.Tensor = None,
         num_quantizers: Optional[float] = None,
-        encoder_past_key_values: Optional[Union[Cache, List[ms.Tensor.float]]] = None,
+        encoder_past_key_values: Optional[Union[Cache, List[ms.Tensor]]] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[ms.Tensor, Optional[ms.Tensor]], MimiEncoderOutput]:
         """
@@ -1666,7 +1667,7 @@ class MimiModel(MimiPreTrainedModel):
     def _decode_frame(
         self,
         codes: ms.Tensor,
-        past_key_values: Optional[Union[Cache, List[ms.Tensor.float]]] = None,
+        past_key_values: Optional[Union[Cache, List[ms.Tensor]]] = None,
         return_dict: Optional[bool] = None,
     ) -> ms.Tensor:
         embeddings = self.quantizer.decode(codes)
@@ -1687,7 +1688,7 @@ class MimiModel(MimiPreTrainedModel):
         self,
         audio_codes: ms.Tensor,
         padding_mask: Optional[ms.Tensor] = None,
-        decoder_past_key_values: Optional[Union[Cache, List[ms.Tensor.float]]] = None,
+        decoder_past_key_values: Optional[Union[Cache, List[ms.Tensor]]] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[ms.Tensor, ms.Tensor], MimiDecoderOutput]:
         """
@@ -1697,7 +1698,7 @@ class MimiModel(MimiPreTrainedModel):
         trimmed.
 
         Args:
-            audio_codes (`ms.Tensor.long`  of shape `(batch_size, num_quantizers, codes_length)`, *optional*):
+            audio_codes (`ms.Tensor`  of shape `(batch_size, num_quantizers, codes_length)`, *optional*):
                 Discret code embeddings computed using `model.encode`.
             padding_mask (`ms.Tensor` of shape `(batch_size, channels, sequence_length)`):
                 Indicates which inputs are to be ignored due to padding, where elements are either 1 for *not masked* or 0
@@ -1731,16 +1732,16 @@ class MimiModel(MimiPreTrainedModel):
             )
         return MimiDecoderOutput(audio_values, decoder_past_key_values)
 
-    @add_start_docstrings_to_model_forward(MIMI_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=MimiOutput, config_class=_CONFIG_FOR_DOC)
+    # @add_start_docstrings_to_model_forward(MIMI_INPUTS_DOCSTRING)
+    # @replace_return_docstrings(output_type=MimiOutput, config_class=_CONFIG_FOR_DOC)
     def forward(
         self,
         input_values: ms.Tensor,
         padding_mask: Optional[ms.Tensor] = None,
         num_quantizers: Optional[int] = None,
         audio_codes: Optional[ms.Tensor] = None,
-        encoder_past_key_values: Optional[Union[Cache, List[ms.Tensor.float]]] = None,
-        decoder_past_key_values: Optional[Union[Cache, List[ms.Tensor.float]]] = None,
+        encoder_past_key_values: Optional[Union[Cache, List[ms.Tensor]]] = None,
+        decoder_past_key_values: Optional[Union[Cache, List[ms.Tensor]]] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[ms.Tensor, ms.Tensor], MimiOutput]:
         r"""
