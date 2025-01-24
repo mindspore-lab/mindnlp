@@ -24,7 +24,7 @@ from ...configuration_utils import PretrainedConfig
 from ....utils import logging
 
 MIMI_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "mimi": "https://modelscope.cn/models/kyutai/mimi/resolve/master/configuration.json"
+    "mimi": "https://hf-mirror.com/kyutai/mimi//tree/main/configuration.json"
 ,
 }
 

@@ -28,7 +28,10 @@ from pytest import mark
 from mindnlp.transformers import AutoFeatureExtractor
 from mindnlp.transformers.models.mimi import MimiConfig
 
-from mindnlp.utils import is_mindspore_available, is_vision_available
+from mindnlp.utils.testing_utils import is_mindspore_available, is_vision_available,require_mindspore,slow
+from ...generation.test_utils import GenerationTesterMixin
+from ...test_configuration_common import ConfigTester
+from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor,_config_zero_init #, sdpa_kernel
 
 
 # from transformers.testing_utils import (
@@ -46,13 +49,11 @@ from mindnlp.utils import is_mindspore_available, is_vision_available
 #     is_torch_fp16_available_on_device,
 # )
 
-from ...test_configuration_common import ConfigTester
-from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_tensor, ids_tensor#, sdpa_kernel
-
 
 if is_mindspore_available():
     import mindspore as ms
-    from mindnlp.core import nn,ops, no_grad
+    from mindspore import nn,ops
+    from mindnlp.utils import no_grad
     from mindnlp.transformers.models import MimiModel
 
 
@@ -78,7 +79,7 @@ def prepare_inputs_dict(
     return {**encoder_dict, **decoder_dict}
 
 
-# @require_torch
+@require_mindspore
 class MimiModelTester:
     def __init__(
         self,
@@ -158,7 +159,7 @@ class MimiModelTester:
         )
 
     def create_and_check_model_forward(self, config, inputs_dict):
-        model = MimiModel(config=config).eval()
+        model = MimiModel(config=config).set_train(False) #.eval()
 
         input_values = inputs_dict["input_values"]
         result = model(input_values)
@@ -168,7 +169,7 @@ class MimiModelTester:
 
 
 # @require_torch
-# @require_mindspore
+@require_mindspore
 class MimiModelTest(ModelTesterMixin, unittest.TestCase):
     all_model_classes = (MimiModel,) if is_mindspore_available() else ()
     is_encoder_decoder = True
@@ -231,6 +232,8 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
     def test_torchscript_output_hidden_state(self):
         pass
 
+
+
     # Copied from transformers.tests.encodec.test_modeling_encodec.MimiModelTest._create_and_check_torchscript
     def _create_and_check_torchscript(self, config, inputs_dict):
         if not self.test_torchscript:
@@ -242,7 +245,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
             # model.to(torch_device)
-            model.eval()
+            model.set_train(False) #eval()
             inputs = self._prepare_for_class(inputs_dict, model_class)
 
             main_input_name = model_class.main_input_name
@@ -268,10 +271,10 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                     self.fail("Couldn't load module.")
 
             # model.to(torch_device)
-            model.eval()
+            model.set_train(False) #eval()
 
             # loaded_model.to(torch_device)
-            loaded_model.eval()
+            loaded_model.set_train(False) #eval()
 
             model_state_dict = model.state_dict()
             loaded_model_state_dict = loaded_model.state_dict()
@@ -346,7 +349,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
         for model_class in self.all_model_classes:
             model = model_class(config)
             # model.to(torch_device)
-            model.eval()
+            model.set_train(False) #eval()
             with no_grad():
                 first = model(**self._prepare_for_class(inputs_dict, model_class))[0]
                 second = model(**self._prepare_for_class(inputs_dict, model_class))[0]
@@ -375,7 +378,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
 
                 for tuple_value, dict_value in zip(tuple_output, dict_output.values()):
                     self.assertTrue(
-                        ops.allclose(
+                        np.allclose(
                             set_nan_tensor_to_zero(tuple_value), set_nan_tensor_to_zero(dict_value), atol=1e-5
                         ),
                         msg=(
@@ -389,7 +392,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
         for model_class in self.all_model_classes:
             model = model_class(config)
             # model.to(torch_device)
-            model.eval()
+            model.set_train(False) #eval()
 
             tuple_inputs = self._prepare_for_class(inputs_dict, model_class)
             dict_inputs = self._prepare_for_class(inputs_dict, model_class)
@@ -488,7 +491,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmpdirname:
                 model.save_pretrained(tmpdirname)
                 model_sdpa = model_class.from_pretrained(tmpdirname, torch_dtype=torch_dtype)
-                model_sdpa = model_sdpa.eval()#.to(torch_device)
+                model_sdpa = model_sdpa.set_train(False) #eval()#.to(torch_device)
 
                 self.assertTrue(model_sdpa.config._attn_implementation == "sdpa")
 
@@ -497,7 +500,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                     torch_dtype=torch_dtype,
                     attn_implementation="eager",
                 )
-                model_eager = model_eager.eval()#.to(torch_device)
+                model_eager = model_eager.set_train(False) #eval()#.to(torch_device)
 
                 self.assertTrue(model_eager.config._attn_implementation == "eager")
 
@@ -690,7 +693,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                                         logits_eager = _logits_eager
 
                                     results = [
-                                        ops.allclose(_logits_sdpa, _logits_eager, atol=atol, rtol=rtol)
+                                        np.allclose(_logits_sdpa, _logits_eager, atol=atol, rtol=rtol)
                                         for (_logits_sdpa, _logits_eager) in zip(logits_sdpa, logits_eager)
                                     ]
                                     # If 80% batch elements have matched results, it's fine
@@ -731,7 +734,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                 logits = outputs[1]
                 logits_fa = outputs_fa[1]
 
-                assert ops.allclose(logits_fa, logits, atol=4e-2, rtol=4e-2)
+                assert np.allclose(logits_fa, logits, atol=4e-2, rtol=4e-2)
 
     @unittest.skip(reason="The MimiModel does not support right padding")
     def test_flash_attn_2_inference_equivalence_right_padding(self):
@@ -761,7 +764,7 @@ def compute_rmse(arr1, arr2):
 
 
 # @slow
-# @require_torch
+@require_mindspore
 class MimiIntegrationTest(unittest.TestCase):
     def test_integration_using_cache_decode(self):
         expected_rmse = {
@@ -857,7 +860,7 @@ class MimiIntegrationTest(unittest.TestCase):
                     )[1]
 
                 # make sure forward and decode gives same result
-                self.assertTrue(ops.allclose(input_values_dec, input_values_enc_dec))
+                self.assertTrue(np.allclose(input_values_dec, input_values_enc_dec))
 
                 # make sure shape matches
                 self.assertTrue(inputs["input_values"].shape == input_values_enc_dec.shape)
