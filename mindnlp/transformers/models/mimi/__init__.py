@@ -15,10 +15,10 @@
 """
 Mimi Model.
 """
-from . import modeling_mini, configuration_mini
-from .modeling_mini import *
-from .configuration_mini import *
+from . import modeling_mimi, configuration_mimi
+from .modeling_mimi import *
+from .configuration_mimi import *
 
 __all__ = []
-__all__.extend(modeling_mini.__all__)
-__all__.extend(configuration_mini.__all__)
+__all__.extend(modeling_mimi.__all__)
+__all__.extend(configuration_mimi.__all__)

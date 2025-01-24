@@ -21,12 +21,13 @@ from typing import List, Optional, Tuple, Union
 import mindspore
 from mindspore import nn, ops
 
-from ...activations import ACT2FN
+from ....common.activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, SlidingWindowCache, StaticCache
 from ...modeling_attn_mask_utils import AttentionMaskConverter
 from ...modeling_outputs import BaseModelOutputWithPast
 from ...modeling_rope_utils import ROPE_INIT_FUNCTIONS
 from ...modeling_utils import PreTrainedModel
+from mindnlp.core.autograd import no_grad
 from mindnlp.utils import (
     ModelOutput,
     logging,
@@ -392,7 +393,7 @@ class MimiRotaryEmbedding(nn.Cell):
             self.register_buffer("inv_freq", self.original_inv_freq, persistent=False)
             self.max_seq_len_cached = self.original_max_seq_len
 
-    @torch.no_grad()
+    @no_grad()
     def construct(self, x, position_ids):
         if "dynamic" in self.rope_type:
             self._dynamic_frequency_update(position_ids, device=x.device)
@@ -1138,8 +1139,8 @@ class MimiTransformerModel(nn.Cell):
         attention_mask: mindspore.Tensor,
         sequence_length: int,
         target_length: int,
-        dtype: torch.dtype,
-        device: torch.device,
+        dtype: mindspore.dtype,
+        device: str,
         cache_position: mindspore.Tensor,
         batch_size: int,
         config: MimiConfig,
@@ -1156,9 +1157,9 @@ class MimiTransformerModel(nn.Cell):
                 The sequence length being processed.
             target_length (`int`):
                 The target length: when generating with static cache, the mask should be as long as the static cache, to account for the 0 padding, the part of the cache that is not filled yet.
-            dtype (`torch.dtype`):
+            dtype (`ms.dtype`):
                 The dtype to use for the 4D attention mask.
-            device (`torch.device`):
+            device (`mindspore.device`):
                 The device to plcae the 4D attention mask on.
             cache_position (`mindspore.Tensor`):
                 Indices depicting the position of the input sequence tokens in the sequence.
