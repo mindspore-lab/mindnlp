@@ -23,10 +23,10 @@ import numpy as np
 from ...configuration_utils import PretrainedConfig
 from ....utils import logging
 
-MIMI_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "mimi": "https://hf-mirror.com/kyutai/mimi//tree/main/configuration.json"
-,
-}
+# MIMI_PRETRAINED_CONFIG_ARCHIVE_MAP = {
+#     "mimi": "https://hf-mirror.com/kyutai/mimi//tree/main/configuration.json"
+# ,
+# }
 
 
 logger = logging.get_logger(__name__)

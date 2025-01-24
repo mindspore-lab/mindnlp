@@ -23,6 +23,8 @@ import mindspore as ms  #ms
 # import ms.utils.checkpoint
 from mindspore import nn, ops
 from mindnlp.core import no_grad
+from mindnlp.core.nn import ConvTranspose1d
+from mindnlp.core.ops import zeros
 
 
 
@@ -152,9 +154,8 @@ class MimiConv1d(nn.Cell):
                 "MimiConv1d has been initialized with stride > 1 and dilation > 1"
                 f" (kernel_size={kernel_size} stride={stride}, dilation={dilation})."
             )
-
         self.conv = nn.Conv1d(
-            in_channels, out_channels, kernel_size, stride, dilation=dilation, groups=groups, bias=bias
+            in_channels, out_channels, kernel_size, stride, dilation=dilation, group=groups, has_bias=bias
         )
 
         kernel_size = self.conv.kernel_size[0]
@@ -246,7 +247,8 @@ class MimiConvTranspose1d(nn.Cell):
         super().__init__()
         self.causal = config.use_causal_conv
         self.trim_right_ratio = config.trim_right_ratio
-        self.conv = nn.ConvTranspose1d(in_channels, out_channels, kernel_size, stride, groups=groups, bias=bias)
+        # self.conv = nn.ConvTranspose1d(in_channels, out_channels, kernel_size, stride, groups=groups, bias=bias)
+        self.conv = ConvTranspose1d(in_channels, out_channels, kernel_size, stride, groups=groups, bias=bias)
 
         if not (self.causal or self.trim_right_ratio == 1.0):
             raise ValueError("`trim_right_ratio` != 1.0 only makes sense for causal convolutions")
@@ -307,7 +309,7 @@ class MimiResnetBlock(nn.Cell):
             out_chs = dim if i == len(kernel_sizes) - 1 else hidden
             block += [nn.ELU()]
             block += [MimiConv1d(config, in_chs, out_chs, kernel_size, dilation=dilation)]
-        self.block = nn.ModuleList(block)
+        self.block = nn.CellList(block)
 
         if config.use_conv_shortcut:
             self.shortcut = MimiConv1d(config, dim, dim, kernel_size=1)
@@ -344,7 +346,7 @@ class MimiEncoder(nn.Cell):
         model += [nn.ELU()]
         model += [MimiConv1d(config, scaling * config.num_filters, config.hidden_size, config.last_kernel_size)]
 
-        self.layers = nn.ModuleList(model)
+        self.layers = nn.CellList(model)
 
     # Copied from transformers.models.encodec.modeling_encodec.EncodecEncoder.construct
     def construct(self, hidden_states):
@@ -471,8 +473,8 @@ class MimiMLP(nn.Cell):
         super().__init__()
         self.config = config
         self.activation_fn = ACT2FN[config.hidden_act]
-        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size, bias=False)
-        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size, bias=False)
+        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size, has_bias=False)
+        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size, has_bias=False)
 
     # Copied from transformers.models.clip.modeling_clip.CLIPMLP.construct
     def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
@@ -528,10 +530,10 @@ class MimiAttention(nn.Cell):
                 f" and `num_heads`: {self.num_heads})."
             )
 
-        self.q_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, bias=config.attention_bias)
-        self.k_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
-        self.v_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
-        self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias)
+        self.q_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=config.attention_bias)
+        self.k_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=config.attention_bias)
+        self.v_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=config.attention_bias)
+        self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=config.attention_bias)
         self.rotary_emb = MimiRotaryEmbedding(config)
         self.sliding_window = config.sliding_window  # Ignore copy
 
@@ -891,7 +893,7 @@ class MimiTransformerModel(nn.Cell):
     def __init__(self, config: MimiConfig):
         super().__init__()
 
-        self.layers = nn.ModuleList(
+        self.layers = nn.CellList(
             [MimiTransformerLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
         self._attn_implementation = config._attn_implementation
@@ -1242,7 +1244,7 @@ class MimiDecoder(nn.Cell):
         # Add final layers
         model += [nn.ELU()]
         model += [MimiConv1d(config, config.num_filters, config.audio_channels, config.last_kernel_size)]
-        self.layers = nn.ModuleList(model)
+        self.layers = nn.CellList(model)
 
     # Copied from transformers.models.encodec.modeling_encodec.EncodecDecoder.construct
     def construct(self, hidden_states):
@@ -1256,7 +1258,9 @@ class MimiEuclideanCodebook(nn.Cell):
 
     def __init__(self, config: MimiConfig, epsilon: float = 1e-5):
         super().__init__()
-        embed = ops.zeros(config.codebook_size, config.codebook_dim)
+
+        # embed = ops.zeros(config.codebook_size, config.codebook_dim)
+        embed = zeros(config.codebook_size, config.codebook_dim)
 
         self.codebook_size = config.codebook_size
 
@@ -1325,16 +1329,16 @@ class MimiResidualVectorQuantizer(nn.Cell):
         self.codebook_size = config.codebook_size
         self.frame_rate = config.frame_rate
         self.num_quantizers = num_quantizers if num_quantizers is not None else config.num_quantizers
-        self.layers = nn.ModuleList([MimiVectorQuantization(config) for _ in range(self.num_quantizers)])
+        self.layers = nn.CellList([MimiVectorQuantization(config) for _ in range(self.num_quantizers)])
 
         self.input_proj = None
         self.output_proj = None
         if config.vector_quantization_hidden_dimension != config.hidden_size:
             self.input_proj = nn.Conv1d(
-                config.hidden_size, config.vector_quantization_hidden_dimension, 1, bias=False
+                config.hidden_size, config.vector_quantization_hidden_dimension, 1, has_bias=False
             )
             self.output_proj = nn.Conv1d(
-                config.vector_quantization_hidden_dimension, config.hidden_size, 1, bias=False
+                config.vector_quantization_hidden_dimension, config.hidden_size, 1, has_bias=False
             )
 
     def encode(self, embeddings: ms.Tensor, num_quantizers: Optional[int] = None) -> ms.Tensor:
@@ -1758,7 +1762,7 @@ class MimiModel(MimiPreTrainedModel):
         >>> dataset = load_dataset("hf-internal-testing/ashraq-esc50-1-dog-example")
         >>> audio_sample = dataset["train"]["audio"][0]["array"]
 
-        >>> model_id = "kyutai/mimi"
+        >>> model_id = r"kyutai/mimi"
         >>> model = MimiModel.from_pretrained(model_id)
         >>> feature_extractor = AutoFeatureExtractor.from_pretrained(model_id)
 

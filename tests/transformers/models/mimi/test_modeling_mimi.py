@@ -53,7 +53,7 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor,
 if is_mindspore_available():
     import mindspore as ms
     from mindspore import nn,ops
-    from mindnlp.utils import no_grad
+    # from mindnlp.utils import no_grad
     from mindnlp.transformers.models import MimiModel
 
 
@@ -350,9 +350,9 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
             # model.to(torch_device)
             model.set_train(False) #eval()
-            with no_grad():
-                first = model(**self._prepare_for_class(inputs_dict, model_class))[0]
-                second = model(**self._prepare_for_class(inputs_dict, model_class))[0]
+            # with no_grad():
+            first = model(**self._prepare_for_class(inputs_dict, model_class))[0]
+            second = model(**self._prepare_for_class(inputs_dict, model_class))[0]
 
             if isinstance(first, tuple) and isinstance(second, tuple):
                 for tensor1, tensor2 in zip(first, second):
@@ -369,25 +369,25 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
             return t
 
         def check_equivalence(model, tuple_inputs, dict_inputs, additional_kwargs={}):
-            with no_grad():
-                tuple_output = model(**tuple_inputs, return_dict=False, **additional_kwargs)
-                dict_output = model(**dict_inputs, return_dict=True, **additional_kwargs)
+            # with no_grad():
+            tuple_output = model(**tuple_inputs, return_dict=False, **additional_kwargs)
+            dict_output = model(**dict_inputs, return_dict=True, **additional_kwargs)
 
-                self.assertTrue(isinstance(tuple_output, tuple))
-                self.assertTrue(isinstance(dict_output, dict))
+            self.assertTrue(isinstance(tuple_output, tuple))
+            self.assertTrue(isinstance(dict_output, dict))
 
-                for tuple_value, dict_value in zip(tuple_output, dict_output.values()):
-                    self.assertTrue(
-                        np.allclose(
-                            set_nan_tensor_to_zero(tuple_value), set_nan_tensor_to_zero(dict_value), atol=1e-5
-                        ),
-                        msg=(
-                            "Tuple and dict output are not equal. Difference:"
-                            f" {ops.max(ops.abs(tuple_value - dict_value))}. Tuple has `nan`:"
-                            f" {ops.isnan(tuple_value).any()} and `inf`: {ops.isinf(tuple_value)}. Dict has"
-                            f" `nan`: {ops.isnan(dict_value).any()} and `inf`: {ops.isinf(dict_value)}."
-                        ),
-                    )
+            for tuple_value, dict_value in zip(tuple_output, dict_output.values()):
+                self.assertTrue(
+                    np.allclose(
+                        set_nan_tensor_to_zero(tuple_value), set_nan_tensor_to_zero(dict_value), atol=1e-5
+                    ),
+                    msg=(
+                        "Tuple and dict output are not equal. Difference:"
+                        f" {ops.max(ops.abs(tuple_value - dict_value))}. Tuple has `nan`:"
+                        f" {ops.isnan(tuple_value).any()} and `inf`: {ops.isinf(tuple_value)}. Dict has"
+                        f" `nan`: {ops.isnan(dict_value).any()} and `inf`: {ops.isinf(dict_value)}."
+                    ),
+                )
 
         for model_class in self.all_model_classes:
             model = model_class(config)
@@ -645,15 +645,15 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                                         processed_inputs["noise"] = ops.from_numpy(noise)
 
                                     # TODO: test gradients as well (& for FA2 as well!)
-                                    with no_grad():
+                                    # with no_grad():
                                         # with sdpa_kernel(
                                         #     enable_flash=enable_kernels,
                                         #     enable_math=True,
                                         #     enable_mem_efficient=enable_kernels,
                                         # ):
-                                            prepared_inputs = self._prepare_for_class(processed_inputs, model_class)
-                                            outputs_eager = model_eager(**prepared_inputs)
-                                            outputs_sdpa = model_sdpa(**prepared_inputs)
+                                        prepared_inputs = self._prepare_for_class(processed_inputs, model_class)
+                                        outputs_eager = model_eager(**prepared_inputs)
+                                        outputs_sdpa = model_sdpa(**prepared_inputs)
 
                                     # Ignore copy
                                     logits_eager = outputs_eager.audio_values
@@ -789,22 +789,22 @@ class MimiIntegrationTest(unittest.TestCase):
         )#.to(torch_device)
 
         for num_codebooks, expected_rmse in expected_rmse.items():
-            with no_grad():
+            # with no_grad():
                 # use max bandwith for best possible reconstruction
-                encoder_outputs = model.encode(inputs["input_values"], num_quantizers=int(num_codebooks))
+            encoder_outputs = model.encode(inputs["input_values"], num_quantizers=int(num_codebooks))
 
-                audio_codes = encoder_outputs[0]
+            audio_codes = encoder_outputs[0]
 
-                decoder_outputs_first_part = model.decode(audio_codes[:, :, : audio_codes.shape[2] // 2])
-                decoder_outputs_second_part = model.decode(
-                    audio_codes[:, :, audio_codes.shape[2] // 2 :],
-                    decoder_past_key_values=decoder_outputs_first_part.decoder_past_key_values,
-                )
+            decoder_outputs_first_part = model.decode(audio_codes[:, :, : audio_codes.shape[2] // 2])
+            decoder_outputs_second_part = model.decode(
+                audio_codes[:, :, audio_codes.shape[2] // 2 :],
+                decoder_past_key_values=decoder_outputs_first_part.decoder_past_key_values,
+            )
 
-                audio_output_entire_context = model.decode(audio_codes)[0]
-                audio_output_concat_context = ops.cat(
-                    [decoder_outputs_first_part[0], decoder_outputs_second_part[0]], dim=2
-                )
+            audio_output_entire_context = model.decode(audio_codes)[0]
+            audio_output_concat_context = ops.cat(
+                [decoder_outputs_first_part[0], decoder_outputs_second_part[0]], dim=2
+            )
 
             # make sure audios are more or less equal
             # the RMSE of two random gaussian noise vectors with ~N(0, 1) is around 1.0
@@ -841,23 +841,23 @@ class MimiIntegrationTest(unittest.TestCase):
         for use_cache in [False, True]:
             model = MimiModel.from_pretrained(model_id, use_cache=use_cache)#.to(torch_device)
             for num_codebooks, expected_rmse in expected_rmses.items():
-                with no_grad():
+                # with no_grad():
                     # use max bandwith for best possible reconstruction
-                    encoder_outputs = model.encode(inputs["input_values"], num_quantizers=int(num_codebooks))
+                encoder_outputs = model.encode(inputs["input_values"], num_quantizers=int(num_codebooks))
 
-                    audio_code_sums = encoder_outputs[0].sum().cpu().item()
+                audio_code_sums = encoder_outputs[0].sum().cpu().item()
 
-                    # make sure audio encoded codes are correct
-                    # assert relative difference less than a threshold, because `audio_code_sums` varies a bit
-                    # depending on torch version
-                    self.assertTrue(
-                        np.abs(audio_code_sums - expected_codesums[num_codebooks]) <= (3e-3 * audio_code_sums)
-                    )
+                # make sure audio encoded codes are correct
+                # assert relative difference less than a threshold, because `audio_code_sums` varies a bit
+                # depending on torch version
+                self.assertTrue(
+                    np.abs(audio_code_sums - expected_codesums[num_codebooks]) <= (3e-3 * audio_code_sums)
+                )
 
-                    input_values_dec = model.decode(encoder_outputs[0], padding_mask=inputs["padding_mask"])[0]
-                    input_values_enc_dec = model(
-                        inputs["input_values"], inputs["padding_mask"], num_quantizers=int(num_codebooks)
-                    )[1]
+                input_values_dec = model.decode(encoder_outputs[0], padding_mask=inputs["padding_mask"])[0]
+                input_values_enc_dec = model(
+                    inputs["input_values"], inputs["padding_mask"], num_quantizers=int(num_codebooks)
+                )[1]
 
                 # make sure forward and decode gives same result
                 self.assertTrue(np.allclose(input_values_dec, input_values_enc_dec))
