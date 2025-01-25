@@ -182,14 +182,13 @@ class MimiConv1d(nn.Module):
 
     @staticmethod
     # Copied from transformers.models.encodec.modeling_encodec.EncodecConv1d._pad1d
-    def _pad1d(hidden_states: ms.Tensor, paddings: Tuple[int, int], mode: str = "zero", value: float = 0.0):
-        """Tiny wrapper around mindspore.nn.functional.pad, just to allow for reflect padding on small input.
+    def _pad1d(hidden_states: ms.Tensor, paddings: Tuple[int, int], mode: str = "zero", value: float = None):
+        """Tiny wrapper around mindnlp.core.nn.functional.pad, just to allow for reflect padding on small input.
         If this is the case, we insert extra 0 padding to the right before the reflection happens.
         """
         length = hidden_states.shape[-1]
         padding_left, padding_right = paddings
-        paddings = (int(padding_left), int(padding_right))
-        if mode != "reflect":
+        if not mode == "reflect":
             # "ConstantPadND()(input=<Tensor>, padding=<list of int, Tensor, tuple of int>, value=<Number>)".
             return nn.functional.pad(hidden_states, paddings, mode, value)
 
