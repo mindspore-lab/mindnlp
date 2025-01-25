@@ -188,6 +188,7 @@ class MimiConv1d(nn.Module):
         """
         length = hidden_states.shape[-1]
         padding_left, padding_right = paddings
+        paddings = (int(padding_left), int(padding_right))
         if not mode == "reflect":
             # "ConstantPadND()(input=<Tensor>, padding=<list of int, Tensor, tuple of int>, value=<Number>)".
             return nn.functional.pad(hidden_states, paddings, mode, value)
