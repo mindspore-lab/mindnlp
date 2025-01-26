@@ -36,9 +36,7 @@ from mindnlp.common.optimization import get_polynomial_decay_schedule_with_warmu
 from mindnlp.utils import is_mindspore_available, logging
 from mindnlp.core.serialization import safe_load_file, safe_save_file, load_checkpoint
 from mindnlp.utils.testing_utils import (
-    # ENDPOINT_STAGING,
-    # TOKEN,
-    # USER,
+ 
     CaptureLogger,
     LoggingLevel,
     TestCasePlus,
