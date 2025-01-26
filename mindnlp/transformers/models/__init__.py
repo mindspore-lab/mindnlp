@@ -449,6 +449,7 @@ from .segformer import *
 from .seggpt import *
 from .sew import *
 from .sew_d import *
+from .siglip import *
 from .speech_encoder_decoder import *
 from .speech_to_text import *
 from .speech_to_text_2 import *
@@ -694,6 +695,7 @@ __all__.extend(segformer.__all__)
 __all__.extend(seggpt.__all__)
 __all__.extend(sew.__all__)
 __all__.extend(sew_d.__all__)
+__all__.extend(siglip.__all__)
 __all__.extend(speech_encoder_decoder.__all__)
 __all__.extend(speech_to_text.__all__)
 __all__.extend(speech_to_text_2.__all__)

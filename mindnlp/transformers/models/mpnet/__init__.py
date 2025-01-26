@@ -15,12 +15,14 @@
 """
 MPNet Model.
 """
-from . import configuration_mpnet, modeling_mpnet, tokenization_mpnet
+from . import configuration_mpnet, modeling_mpnet, tokenization_mpnet, tokenization_mpnet_fast
 from .configuration_mpnet import *
 from .modeling_mpnet import *
 from .tokenization_mpnet import *
+from .tokenization_mpnet_fast import *
 
 __all__ = []
 __all__.extend(configuration_mpnet.__all__)
 __all__.extend(modeling_mpnet.__all__)
 __all__.extend(tokenization_mpnet.__all__)
+__all__.extend(tokenization_mpnet_fast.__all__)
