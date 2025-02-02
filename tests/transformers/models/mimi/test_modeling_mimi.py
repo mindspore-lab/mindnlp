@@ -23,16 +23,23 @@ import numpy as np
 # import mindspore as ms
 from datasets import Audio, load_dataset
 from parameterized import parameterized
-from pytest import mark
 
 from mindnlp.transformers import AutoFeatureExtractor
 from mindnlp.transformers.models.mimi import MimiConfig
 
-from mindnlp.utils.testing_utils import is_mindspore_available, is_vision_available,require_mindspore,slow
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor,_config_zero_init #, sdpa_kernel
-
+from mindnlp.transformers.models.auto import get_values
+# from mindnlp.utils.testing_utils import slow, require_mindspore, is_mindspore_available
+from mindnlp.utils.testing_utils import (
+    is_mindspore_available,
+    # require_flash_attn,
+    require_mindspore_sdpa,
+    is_flaky,
+    require_mindspore,
+    slow,
+)
 
 # from transformers.testing_utils import (
 #     is_flaky,
@@ -52,9 +59,12 @@ from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor,
 
 if is_mindspore_available():
     import mindspore as ms
-    from mindspore import nn,ops
+    from mindspore import ops
     # from mindnlp.utils import no_grad
-    from mindnlp.transformers.models import MimiModel
+    from mindnlp.transformers import (
+    MODEL_FOR_PRETRAINING_MAPPING,
+    MimiModel,
+    )
 
 
 # Copied from transformers.tests.encodec.test_modeling_encodec.prepare_inputs_dict
@@ -339,8 +349,8 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
 
         def check_determinism(first, second):
             # outputs are not tensors but list (since each sequence don't have the same frame_length)
-            out_1 = first.cpu().numpy()
-            out_2 = second.cpu().numpy()
+            out_1 = first.asnumpy() #.cpu().numpy()
+            out_2 = second.asnumpy() #.cpu().numpy()
             out_1 = out_1[~np.isnan(out_1)]
             out_2 = out_2[~np.isnan(out_2)]
             max_diff = np.amax(np.abs(out_1 - out_2))
@@ -423,8 +433,9 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
     # TODO: Try to do this in the parent class.
     @parameterized.expand([("float16",), ("bfloat16",), ("float32",)])
     # @require_torch_sdpa
-    def test_eager_matches_sdpa_inference(self, torch_dtype: str):
-        if torch_dtype == "float16":# and torch_device == "cpu":
+    @require_mindspore_sdpa
+    def test_eager_matches_sdpa_inference(self, ms_dtype: str):
+        if ms_dtype == "float16":# and torch_device == "cpu":
             self.skipTest("`replication_pad1d` not implemented for 'Half")
 
         if not self.has_attentions:
@@ -433,21 +444,21 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
         if not self.all_model_classes[0]._supports_sdpa:
             self.skipTest(f"{self.all_model_classes[0].__name__} does not support SDPA")
 
-        # if torch_dtype == "float16" and not is_torch_fp16_available_on_device(torch_device):
+        # if ms_dtype == "float16" and not is_torch_fp16_available_on_device(torch_device):
         #     self.skipTest(f"float16 not supported on {torch_device} (on the specific device currently used)")
 
-        # if torch_dtype == "bfloat16" and not is_torch_bf16_available_on_device(torch_device):
+        # if ms_dtype == "bfloat16" and not is_torch_bf16_available_on_device(torch_device):
         #     self.skipTest(
         #         f"bfloat16 not supported on {torch_device} (on the specific device currently used, e.g. Nvidia T4 GPU)"
         #     )
 
         # Not sure whether it's fine to put torch.XXX in a decorator if torch is not available so hacking it here instead.
-        if torch_dtype == "float16":
-            torch_dtype = ms.float16
-        elif torch_dtype == "bfloat16":
-            torch_dtype = ms.bfloat16
-        elif torch_dtype == "float32":
-            torch_dtype = ms.float32
+        if ms_dtype == "float16":
+            ms_dtype = ms.float16
+        elif ms_dtype == "bfloat16":
+            ms_dtype = ms.bfloat16
+        elif ms_dtype == "float32":
+            ms_dtype = ms.float32
 
         atols = {
             ("cpu", False, ms.float32): 1e-6,
@@ -490,14 +501,14 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
 
             with tempfile.TemporaryDirectory() as tmpdirname:
                 model.save_pretrained(tmpdirname)
-                model_sdpa = model_class.from_pretrained(tmpdirname, torch_dtype=torch_dtype)
+                model_sdpa = model_class.from_pretrained(tmpdirname) #, ms_dtype=ms_dtype)
                 model_sdpa = model_sdpa.set_train(False) #eval()#.to(torch_device)
 
                 self.assertTrue(model_sdpa.config._attn_implementation == "sdpa")
 
                 model_eager = model_class.from_pretrained(
                     tmpdirname,
-                    torch_dtype=torch_dtype,
+                    # ms_dtype=ms_dtype,
                     attn_implementation="eager",
                 )
                 model_eager = model_eager.set_train(False) #eval()#.to(torch_device)
@@ -531,7 +542,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                                 dummy_input = inputs_dict[model.main_input_name]
 
                                 if dummy_input.dtype in [ms.float32, ms.bfloat16, ms.float16]:
-                                    dummy_input = dummy_input.to(torch_dtype)
+                                    dummy_input = dummy_input#.to(ms_dtype)
 
                                 dummy_input = dummy_input[:batch_size]
                                 if dummy_input.shape[0] != batch_size:
@@ -539,7 +550,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                                         extension = ms.rand(
                                             batch_size - dummy_input.shape[0],
                                             *dummy_input.shape[1:],
-                                            dtype=torch_dtype,
+                                            # dtype=ms_dtype,
                                             # device=torch_device,
                                         )
                                         dummy_input = ms.cat((dummy_input, extension), dim=0)#.to(torch_device)
@@ -661,14 +672,14 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                                     logits_sdpa = outputs_sdpa.audio_values
 
                                     # if torch_device in ["cpu", "cuda"]:
-                                    #     atol = atols[torch_device, enable_kernels, torch_dtype]
-                                    #     rtol = rtols[torch_device, enable_kernels, torch_dtype]
+                                    #     atol = atols[torch_device, enable_kernels, ms_dtype]
+                                    #     rtol = rtols[torch_device, enable_kernels, ms_dtype]
                                     # elif torch_device == "xpu":
                                     #     # As of PyTorch 2.5 XPU backend supports only torch.nn.attention.SDPBackend.MATH
                                     #     # which is implemented on PyTorch level using aten operators and is
                                     #     # device agnostic with respect to implementation of each aten operator.
-                                    #     atol = atols["cuda", False, torch_dtype]
-                                    #     rtol = rtols["cuda", False, torch_dtype]
+                                    #     atol = atols["cuda", False, ms_dtype]
+                                    #     rtol = rtols["cuda", False, ms_dtype]
                                     # else:
                                     atol = 1e-7
                                     rtol = 1e-4
@@ -708,7 +719,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
     # @require_torch_gpu
     # @mark.flash_attn_test
     # @slow
-    # @is_flaky()
+    @is_flaky()
     def test_flash_attn_2_inference_equivalence(self):
         for model_class in self.all_model_classes:
             config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -717,11 +728,15 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmpdirname:
                 model.save_pretrained(tmpdirname)
                 model_fa = model_class.from_pretrained(
-                    tmpdirname, torch_dtype=ms.bfloat16, attn_implementation="flash_attention_2"
+                    tmpdirname,
+                    ms_dtype=ms.float16, #bfloat16,
+                    attn_implementation="flash_attention_2"
                 )
                 # model_fa.to(torch_device)
 
-                model = model_class.from_pretrained(tmpdirname, torch_dtype=ms.bfloat16)
+                model = model_class.from_pretrained(tmpdirname,
+                                                    ms_dtype=ms.float16, # bfloat16
+                                                    )
                 # model.to(torch_device)
 
                 dummy_input = inputs_dict[model.main_input_name][:1]
@@ -744,7 +759,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
     def test_sdpa_can_compile_dynamic(self):
         pass
 
-    # @is_flaky()
+    @is_flaky()
     def test_batching_equivalence(self):
         super().test_batching_equivalence()
 
@@ -785,7 +800,7 @@ class MimiIntegrationTest(unittest.TestCase):
         inputs = processor(
             raw_audio=audio_sample,
             sampling_rate=processor.sampling_rate,
-            return_tensors="pt",
+            return_tensors="ms",
         )#.to(torch_device)
 
         for num_codebooks, expected_rmse in expected_rmse.items():
@@ -809,8 +824,8 @@ class MimiIntegrationTest(unittest.TestCase):
             # make sure audios are more or less equal
             # the RMSE of two random gaussian noise vectors with ~N(0, 1) is around 1.0
             rmse = compute_rmse(
-                audio_output_concat_context.squeeze().cpu().numpy(),
-                audio_output_entire_context.squeeze().cpu().numpy(),
+                audio_output_concat_context.squeeze().asnumpy(), #.cpu().numpy(),
+                audio_output_entire_context.squeeze().asnumpy(), #.cpu().numpy(),
             )
             self.assertTrue(rmse < 1e-3)
 
@@ -824,7 +839,7 @@ class MimiIntegrationTest(unittest.TestCase):
             "32": 1803071,
         }
         librispeech_dummy = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-
+        print('librisppech_dummy',librispeech_dummy)
         model_id = "kyutai/mimi"
 
         processor = AutoFeatureExtractor.from_pretrained(model_id)
@@ -845,7 +860,7 @@ class MimiIntegrationTest(unittest.TestCase):
                     # use max bandwith for best possible reconstruction
                 encoder_outputs = model.encode(inputs["input_values"], num_quantizers=int(num_codebooks))
 
-                audio_code_sums = encoder_outputs[0].sum().cpu().item()
+                audio_code_sums = encoder_outputs[0].sum().item() #.cpu().item()
 
                 # make sure audio encoded codes are correct
                 # assert relative difference less than a threshold, because `audio_code_sums` varies a bit
@@ -865,8 +880,8 @@ class MimiIntegrationTest(unittest.TestCase):
                 # make sure shape matches
                 self.assertTrue(inputs["input_values"].shape == input_values_enc_dec.shape)
 
-                arr = inputs["input_values"][0].cpu().numpy()
-                arr_enc_dec = input_values_enc_dec[0].cpu().numpy()
+                arr = inputs["input_values"][0].asnumpy() #.cpu().numpy()
+                arr_enc_dec = input_values_enc_dec[0].asnumpy() #.cpu().numpy()
 
                 # make sure audios are more or less equal
                 # the RMSE of two random gaussian noise vectors with ~N(0, 1) is around 1.0

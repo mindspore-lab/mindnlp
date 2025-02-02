@@ -23,10 +23,9 @@ import numpy as np
 from ...configuration_utils import PretrainedConfig
 from ....utils import logging
 
-# MIMI_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-#     "mimi": "https://hf-mirror.com/kyutai/mimi//tree/main/configuration.json"
-# ,
-# }
+Mimi_PRETRAINED_CONFIG_ARCHIVE_MAP = {
+    "kyutai/mimi": "https://hf-mirror.com/kyutai/mimi/blob/main/config.json",
+}
 
 
 logger = logging.get_logger(__name__)
@@ -142,7 +141,9 @@ class MimiConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-    model_type = "mimi"
+    model_type = "Mimi"
+
+
 
     def __init__(
         self,
