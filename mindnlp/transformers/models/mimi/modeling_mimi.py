@@ -1829,7 +1829,7 @@ class MimiModel(MimiPreTrainedModel):
         >>> model = MimiModel.from_pretrained(model_id)
         >>> feature_extractor = AutoFeatureExtractor.from_pretrained(model_id)
 
-        >>> inputs = feature_extractor(raw_audio=audio_sample, return_tensors="pt")
+        >>> inputs = feature_extractor(raw_audio=audio_sample, return_tensors="ms")
 
         >>> outputs = model(**inputs)
         >>> audio_codes = outputs.audio_codes

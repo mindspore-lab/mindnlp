@@ -482,7 +482,7 @@ class MimiIntegrationTest(unittest.TestCase):
         inputs = processor(
             raw_audio=audio_sample,
             sampling_rate=processor.sampling_rate,
-            return_tensors="pt",
+            return_tensors="ms",
         ).to(mindspore.get_context('device_target'))
 
         for num_codebooks, expected_rmse in expected_rmse.items():
