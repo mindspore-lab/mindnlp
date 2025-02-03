@@ -538,7 +538,7 @@ class MimiIntegrationTest(unittest.TestCase):
         inputs = processor(
             raw_audio=audio_sample,
             sampling_rate=processor.sampling_rate,
-            return_tensors="pt",
+            return_tensors="ms",
         ).to(mindspore.get_context('device_target'))
 
         def allclose(tensor1, tensor2, rtol=1e-05, atol=1e-08):
