@@ -175,8 +175,13 @@ class MimiConv1d(nn.Module):
         kernel_size = ms.tensor((kernel_size - 1) * dilation + 1, dtype=ms.int64)
 
         self.register_buffer("stride", stride, persistent=False)
+        # self.stride = stride # Parameter(stride, requires_grad=False)
+
         self.register_buffer("kernel_size",kernel_size,persistent=False)
+        # self.kernel_size = kernel_size #Parameter(kernel_size, requires_grad=False)
+
         self.register_buffer("padding_total",ms.tensor(kernel_size - stride, dtype=ms.int64),persistent=False)
+        # self.padding_total = ms.tensor(kernel_size - stride, dtype=ms.int64) #Parameter(ms.tensor(kernel_size - stride, dtype=ms.int64), requires_grad=False)
 
         # Asymmetric padding required for odd strides
         self.padding_right = self.padding_total // 2
@@ -376,7 +381,7 @@ class MimiLayerScale(nn.Module):
         super().__init__()
         channels = config.hidden_size
         initial_scale = config.layer_scale_initial_scale
-        self.scale = Parameter(ops.full((channels,), initial_scale, dtype=ms.int64)) #, requires_grad=True))
+        self.scale = Parameter(ops.full((channels,), initial_scale, dtype=ms.int64), requires_grad=True)
 
     def forward(self, x: ms.Tensor):
         return self.scale * x
@@ -398,8 +403,8 @@ class MimiRotaryEmbedding(nn.Module):
         self.rope_init_fn = ROPE_INIT_FUNCTIONS[self.rope_type]
 
         inv_freq, self.attention_scaling = self.rope_init_fn(self.config)
-        # self.register_buffer("inv_freq", inv_freq, persistent=False)
-        self.inv_freq = Parameter(inv_freq,requires_grad=False)
+        self.register_buffer("inv_freq", inv_freq, persistent=False)
+        # self.inv_freq = inv_freq #Parameter(inv_freq,requires_grad=False)
         self.original_inv_freq = self.inv_freq
 
     def _dynamic_frequency_update(self, position_ids):
@@ -412,14 +417,15 @@ class MimiRotaryEmbedding(nn.Module):
         if seq_len > self.max_seq_len_cached:  # growth
             inv_freq, self.attention_scaling = self.rope_init_fn(self.config, seq_len=seq_len)
             self.register_buffer("inv_freq",inv_freq,persistent=False)  # TODO joao: may break with compilation
+            # self.inv_freq = inv_freq # Parameter(inv_freq,requires_grad=False)
             self.max_seq_len_cached = seq_len
 
         if seq_len < self.original_max_seq_len and self.max_seq_len_cached > self.original_max_seq_len:  # reset
             # This .to() is needed if the model has been moved to a device after being initialized (because
             # the buffer is automatically moved, but not the original copy)
             self.original_inv_freq = self.original_inv_freq #.to(device)
-            # self.register_buffer("inv_freq", self.original_inv_freq, persistent=False)
-            self.inv_freq = Parameter(self.original_inv_freq, requires_grad=False)
+            self.register_buffer("inv_freq", self.original_inv_freq, persistent=False)
+            # self.inv_freq = self.original_inv_freq #self.original_inv_freq #Parameter(self.original_inv_freq, requires_grad=False)
             self.max_seq_len_cached = self.original_max_seq_len
 
     @no_grad()
@@ -435,6 +441,7 @@ class MimiRotaryEmbedding(nn.Module):
         device_type = device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
         with autocast(dtype=device_type, enabled=False):
             freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).swapaxes(1, 2)
+            # freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose((0,2,1))
             emb = ops.cat([freqs, freqs], dim=-1)
             cos = emb.cos()
             sin = emb.sin()
@@ -570,10 +577,13 @@ class MimiAttention(nn.Module):
         value_states = self.v_proj(hidden_states)
 
         query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+        # query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose((0,2,1,3))
 
         key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1, 2)
+        # key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose((0,2,1,3))
 
         value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1, 2)
+        # value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose((0,2,1,3))
 
         cos, sin = self.rotary_emb(value_states, position_ids)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
@@ -587,6 +597,7 @@ class MimiAttention(nn.Module):
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
         attn_weights = ops.matmul(query_states, key_states.swapaxes(2,3)) * self.scaling
+        # attn_weights = ops.matmul(query_states, key_states.transpose((0,1,3,2))) * self.scaling
 
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
@@ -604,6 +615,7 @@ class MimiAttention(nn.Module):
             )
 
         attn_output = attn_output.swapaxes(1,2).contiguous()
+        # attn_output = attn_output.transpose((0,2,1,3)).contiguous()
 
         attn_output = attn_output.view(bsz, q_len, -1)
         attn_output = self.o_proj(attn_output)
@@ -770,8 +782,11 @@ class MimiSdpaAttention(MimiAttention):
         value_states = self.v_proj(hidden_states)
 
         query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1,2)
+        # query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose((0,2,1,3))
         key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1,2)
+        # key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose((0,2,1,3))
         value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1,2)
+        # value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose((0,2,1,3))
 
         cos, sin = self.rotary_emb(value_states, position_ids)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
@@ -810,6 +825,7 @@ class MimiSdpaAttention(MimiAttention):
         )
 
         attn_output = attn_output.swapaxes(1,2).contiguous()
+        # attn_output = attn_output.transpose((0,2,1)).contiguous()
         attn_output = attn_output.view(bsz, q_len, -1)
 
         attn_output = self.o_proj(attn_output)
@@ -1281,12 +1297,12 @@ class MimiEuclideanCodebook(nn.Module):
 
         self.codebook_size = config.codebook_size
 
-        # self.register_buffer("initialized", ms.Tensor([True]))
-        self.initialized = Parameter(ms.Tensor([True]), requires_grad=False)
-        # self.register_buffer("cluster_usage", ops.ones(config.codebook_size))
-        self.cluster_usage = Parameter(ops.ones(config.codebook_size), requires_grad=False)
-        # self.register_buffer("embed_sum", embed)
-        self.embed_sum = Parameter(embed, requires_grad=False)
+        self.register_buffer("initialized", ms.Tensor([True]))
+        # self.initialized = ms.Tensor([True]) #Parameter(ms.Tensor([True]), requires_grad=False)
+        self.register_buffer("cluster_usage", ops.ones(config.codebook_size))
+        # self.cluster_usage = ops.ones(config.codebook_size) #Parameter(ops.ones(config.codebook_size), requires_grad=False)
+        self.register_buffer("embed_sum", embed)
+        # self.embed_sum = embed #Parameter(embed, requires_grad=False)
         self._embed = None
         self.epsilon = epsilon
 
@@ -1300,7 +1316,7 @@ class MimiEuclideanCodebook(nn.Module):
         # Projects each vector in `hidden_states` over the nearest centroid and return its index.
         # `hidden_states` should be `[N, D]` with `N` the number of input vectors and `D` the dimension.
         dists = ops.cdist(hidden_states[None], self.embed[None], p=2)[0]
-        embed_ind = dists.argmin(dim=-1)
+        embed_ind = dists.argmin(axis=-1)
         return embed_ind
 
     # Copied from transformers.models.encodec.modeling_encodec.EncodecEuclideanCodebook.encode
@@ -1385,6 +1401,7 @@ class MimiResidualVectorQuantizer(nn.Module):
         """Decode the given codes of shape [B, K, T] to the quantized representation."""
         quantized_out = ms.tensor(0.0)  # , device=codes.device)
         codes = codes.swapaxes(0, 1)
+        # codes = codes.transpose((1,0,2))
         for i, indices in enumerate(codes):
             layer = self.layers[i]
             quantized = layer.decode(indices)
@@ -1501,8 +1518,8 @@ class MimiPreTrainedModel(PreTrainedModel):
                 module.weight.assign_value(initializer(TruncatedNormal(self.config.initializer_range),
                                                        module.weight.shape, module.weight.dtype))
                 if module.padding_idx is not None:
-                    # module.weight.data[module.padding_idx].zero_()
-                    module.weight.data[module.padding_idx] = 0
+                    module.weight.data[module.padding_idx].zero_()
+                    # module.weight.data[module.padding_idx] = 0
                     # module.weight.data[module.padding_idx].assign_value(
                     #     initializer('zeros', module.weight.shape, module.weight.dtype))
 
@@ -1630,6 +1647,7 @@ class MimiModel(MimiPreTrainedModel):
         """
         embeddings = self.encoder(input_values)
         embeddings = embeddings.swapaxes(1,2)
+        # embeddings = embeddings.transpose((0,2,1))
         encoder_outputs = self.encoder_transformer(
             embeddings, past_key_values=past_key_values, return_dict=return_dict
         )
@@ -1638,10 +1656,12 @@ class MimiModel(MimiPreTrainedModel):
         elif len(encoder_outputs) > 1:
             past_key_values = encoder_outputs[1]
         embeddings = encoder_outputs[0].swapaxes(1,2)
+        # embeddings = encoder_outputs[0].transpose((0,2,1))
         embeddings = self.downsample(embeddings)
 
         codes = self.quantizer.encode(embeddings, num_quantizers)
         codes = codes.swapaxes(0,1)
+        # codes = codes.transpose((1,0,2))
         return codes, past_key_values
 
     def encode(
@@ -1721,12 +1741,14 @@ class MimiModel(MimiPreTrainedModel):
         embeddings = self.upsample(embeddings)
         decoder_outputs = self.decoder_transformer(
             embeddings.swapaxes(1, 2), past_key_values=past_key_values, return_dict=return_dict
+            # embeddings.transpose((0,2, 1)), past_key_values=past_key_values, return_dict=return_dict
         )
         if return_dict:
             past_key_values = decoder_outputs.get("past_key_values")
         elif len(decoder_outputs) > 1:
             past_key_values = decoder_outputs[1]
         embeddings = decoder_outputs[0].swapaxes(1, 2)
+        # embeddings = decoder_outputs[0].transpose((0,2,1))
         outputs = self.decoder(embeddings)
         return outputs, past_key_values
 
