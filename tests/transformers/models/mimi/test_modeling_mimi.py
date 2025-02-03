@@ -471,8 +471,7 @@ class MimiIntegrationTest(unittest.TestCase):
 
         model_id = "kyutai/mimi"
 
-        model = MimiModel.from_pretrained(model_id, use_cache=True).to(
-            mindspore.get_context('device_target'))
+        model = MimiModel.from_pretrained(model_id, use_cache=True)#.to(mindspore.get_context('device_target'))
         processor = AutoFeatureExtractor.from_pretrained(model_id)
 
         librispeech_dummy = librispeech_dummy.cast_column(
@@ -483,7 +482,7 @@ class MimiIntegrationTest(unittest.TestCase):
             raw_audio=audio_sample,
             sampling_rate=processor.sampling_rate,
             return_tensors="ms",
-        ).to(mindspore.get_context('device_target'))
+        ) #.to(mindspore.get_context('device_target'))
 
         for num_codebooks, expected_rmse in expected_rmse.items():
             with no_grad():
@@ -502,8 +501,8 @@ class MimiIntegrationTest(unittest.TestCase):
 
                 audio_output_entire_context = model.decode(audio_codes)[0]
                 audio_output_concat_context = mindspore.ops.cat(
-                    [decoder_outputs_first_part[0],
-                        decoder_outputs_second_part[0]]
+                    (decoder_outputs_first_part[0],
+                        decoder_outputs_second_part[0]),1
                 )
 
             # make sure audios are more or less equal
@@ -539,7 +538,7 @@ class MimiIntegrationTest(unittest.TestCase):
             raw_audio=audio_sample,
             sampling_rate=processor.sampling_rate,
             return_tensors="ms",
-        ).to(mindspore.get_context('device_target'))
+        )#.to(mindspore.get_context('device_target'))
 
         def allclose(tensor1, tensor2, rtol=1e-05, atol=1e-08):
             """
@@ -549,8 +548,7 @@ class MimiIntegrationTest(unittest.TestCase):
             return ops.all(diff <= (atol + rtol * ops.abs(tensor2)))
 
         for use_cache in [False, True]:
-            model = MimiModel.from_pretrained(model_id, use_cache=use_cache).to(
-                mindspore.get_context('device_target'))
+            model = MimiModel.from_pretrained(model_id, use_cache=use_cache)#.to(mindspore.get_context('device_target'))
             for num_codebooks, expected_rmse in expected_rmses.items():
                 with no_grad():
                     # use max bandwith for best possible reconstruction
