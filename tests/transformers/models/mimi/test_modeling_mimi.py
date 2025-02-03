@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Testing suite for the PyTorch Mimi model."""
+"""Testing suite for the Mindnlp Mimi model."""
 
 import inspect
 import os
@@ -20,51 +20,27 @@ import tempfile
 import unittest
 
 import numpy as np
-# import mindspore as ms
 from datasets import Audio, load_dataset
 from parameterized import parameterized
 
 from mindnlp.transformers import AutoFeatureExtractor
 from mindnlp.transformers.models.mimi import MimiConfig
-
-from ...generation.test_utils import GenerationTesterMixin
-from ...test_configuration_common import ConfigTester
-from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor,_config_zero_init #, sdpa_kernel
-from mindnlp.transformers.models.auto import get_values
-# from mindnlp.utils.testing_utils import slow, require_mindspore, is_mindspore_available
 from mindnlp.utils.testing_utils import (
-    is_mindspore_available,
-    # require_flash_attn,
-    require_mindspore_sdpa,
     is_flaky,
+    is_mindspore_available,
     require_mindspore,
     slow,
 )
-
-# from transformers.testing_utils import (
-#     is_flaky,
-#     is_torch_available,
-#     require_flash_attn,
-#     require_torch,
-#     require_torch_gpu,
-#     require_torch_sdpa,
-#     slow,
-#     torch_device,
-# )
-# from transformers.utils import (
-#     is_torch_bf16_available_on_device,
-#     is_torch_fp16_available_on_device,
-# )
+from mindnlp.core.autograd import no_grad
+from ...test_configuration_common import ConfigTester
+from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_tensor, ids_tensor
 
 
 if is_mindspore_available():
-    import mindspore as ms
+    import mindspore
     from mindspore import ops
-    # from mindnlp.utils import no_grad
-    from mindnlp.transformers import (
-    MODEL_FOR_PRETRAINING_MAPPING,
-    MimiModel,
-    )
+
+    from mindnlp.transformers.models.mimi import MimiModel
 
 
 # Copied from transformers.tests.encodec.test_modeling_encodec.prepare_inputs_dict
@@ -84,7 +60,8 @@ def prepare_inputs_dict(
     else:
         encoder_dict = {"input_values": input_values}
 
-    decoder_dict = {"decoder_input_ids": decoder_input_ids} if decoder_input_ids is not None else {}
+    decoder_dict = {
+        "decoder_input_ids": decoder_input_ids} if decoder_input_ids is not None else {}
 
     return {**encoder_dict, **decoder_dict}
 
@@ -132,7 +109,8 @@ class MimiModelTester:
         self.use_cache = use_cache
 
     def prepare_config_and_inputs(self):
-        input_values = floats_tensor([self.batch_size, self.num_channels, self.intermediate_size], scale=1.0)
+        input_values = floats_tensor(
+            [self.batch_size, self.num_channels, self.intermediate_size], scale=1.0)
         config = self.get_config()
         inputs_dict = {"input_values": input_values}
         return config, inputs_dict
@@ -142,9 +120,10 @@ class MimiModelTester:
         return config, inputs_dict
 
     def prepare_config_and_inputs_for_model_class(self, model_class):
+        import mindspore
         config, inputs_dict = self.prepare_config_and_inputs()
         inputs_dict["audio_codes"] = ids_tensor([self.batch_size, 1, self.num_channels], self.codebook_size).type(
-            ms.int32
+            mindspore.int32
         )
 
         return config, inputs_dict
@@ -169,16 +148,16 @@ class MimiModelTester:
         )
 
     def create_and_check_model_forward(self, config, inputs_dict):
-        model = MimiModel(config=config).set_train(False) #.eval()
+        model = MimiModel(config=config).eval()
 
         input_values = inputs_dict["input_values"]
         result = model(input_values)
         self.parent.assertEqual(
-            result.audio_values.shape, (self.batch_size, self.num_channels, self.intermediate_size)
+            result.audio_values.shape, (self.batch_size,
+                                        self.num_channels, self.intermediate_size)
         )
 
 
-# @require_torch
 @require_mindspore
 class MimiModelTest(ModelTesterMixin, unittest.TestCase):
     all_model_classes = (MimiModel,) if is_mindspore_available() else ()
@@ -190,7 +169,8 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
 
     def _prepare_for_class(self, inputs_dict, model_class, return_labels=False):
         # model does support returning hidden states
-        inputs_dict = super()._prepare_for_class(inputs_dict, model_class, return_labels=return_labels)
+        inputs_dict = super()._prepare_for_class(
+            inputs_dict, model_class, return_labels=return_labels)
         if "output_attentions" in inputs_dict:
             inputs_dict.pop("output_attentions")
         if "output_hidden_states" in inputs_dict:
@@ -206,6 +186,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
     def test_config(self):
         self.config_tester.run_common_tests()
 
+    @require_mindspore
     def test_model_forward(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model_forward(*config_and_inputs)
@@ -219,8 +200,10 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
             # signature.parameters is an OrderedDict => so arg_names order is deterministic
             arg_names = [*signature.parameters.keys()]
 
-            expected_arg_names = ["input_values", "padding_mask", "num_quantizers"]
-            self.assertListEqual(arg_names[: len(expected_arg_names)], expected_arg_names)
+            expected_arg_names = ["input_values",
+                                  "padding_mask", "num_quantizers"]
+            self.assertListEqual(
+                arg_names[: len(expected_arg_names)], expected_arg_names)
 
     @unittest.skip(reason="The MimiModel does not have `inputs_embeds` logics")
     def test_inputs_embeds(self):
@@ -242,20 +225,19 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
     def test_torchscript_output_hidden_state(self):
         pass
 
-
-
     # Copied from transformers.tests.encodec.test_modeling_encodec.MimiModelTest._create_and_check_torchscript
     def _create_and_check_torchscript(self, config, inputs_dict):
+        import mindspore
         if not self.test_torchscript:
             self.skipTest(reason="test_torchscript is set to False")
 
-        configs_no_init = _config_zero_init(config)  # To be sure we have no Nan
+        configs_no_init = _config_zero_init(
+            config)  # To be sure we have no Nan
         configs_no_init.torchscript = True
         configs_no_init.return_dict = False
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            # model.to(torch_device)
-            model.set_train(False) #eval()
+            model.eval()
             inputs = self._prepare_for_class(inputs_dict, model_class)
 
             main_input_name = model_class.main_input_name
@@ -263,7 +245,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
             try:
                 main_input = inputs[main_input_name]
                 model(main_input)
-                traced_model = ms.jit.trace(model, main_input)
+                traced_model = mindspore.jit.trace(model, main_input)
             except RuntimeError:
                 self.fail("Couldn't trace module.")
 
@@ -271,20 +253,18 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                 pt_file_name = os.path.join(tmp_dir_name, "traced_model.pt")
 
                 try:
-                    ms.jit.save(traced_model, pt_file_name)
+                    mindspore.jit.save(traced_model, pt_file_name)
                 except Exception:
                     self.fail("Couldn't save module.")
 
                 try:
-                    loaded_model = ms.jit.load(pt_file_name)
+                    loaded_model = mindspore.jit.load(pt_file_name)
                 except Exception:
                     self.fail("Couldn't load module.")
 
-            # model.to(torch_device)
-            model.set_train(False) #eval()
+            model.eval()
 
-            # loaded_model.to(torch_device)
-            loaded_model.set_train(False) #eval()
+            loaded_model.eval()
 
             model_state_dict = model.state_dict()
             loaded_model_state_dict = loaded_model.state_dict()
@@ -298,7 +278,8 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                 key: value for key, value in loaded_model_state_dict.items() if key not in non_persistent_buffers
             }
 
-            self.assertEqual(set(model_state_dict.keys()), set(loaded_model_state_dict.keys()))
+            self.assertEqual(set(model_state_dict.keys()),
+                             set(loaded_model_state_dict.keys()))
 
             model_buffers = list(model.buffers())
             for non_persistent_buffer in non_persistent_buffers.values():
@@ -344,13 +325,14 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     # Copied from transformers.tests.encodec.test_modeling_encodec.MimiModelTest.test_determinism
+    @require_mindspore
     def test_determinism(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def check_determinism(first, second):
             # outputs are not tensors but list (since each sequence don't have the same frame_length)
-            out_1 = first.asnumpy() #.cpu().numpy()
-            out_2 = second.asnumpy() #.cpu().numpy()
+            out_1 = first.numpy()
+            out_2 = second.numpy()
             out_1 = out_1[~np.isnan(out_1)]
             out_2 = out_2[~np.isnan(out_2)]
             max_diff = np.amax(np.abs(out_1 - out_2))
@@ -358,11 +340,12 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            # model.to(torch_device)
-            model.set_train(False) #eval()
-            # with no_grad():
-            first = model(**self._prepare_for_class(inputs_dict, model_class))[0]
-            second = model(**self._prepare_for_class(inputs_dict, model_class))[0]
+            model.eval()
+            with no_grad():
+                first = model(
+                    **self._prepare_for_class(inputs_dict, model_class))[0]
+                second = model(
+                    **self._prepare_for_class(inputs_dict, model_class))[0]
 
             if isinstance(first, tuple) and isinstance(second, tuple):
                 for tensor1, tensor2 in zip(first, second):
@@ -371,7 +354,9 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                 check_determinism(first, second)
 
     # Copied from transformers.tests.encodec.test_modeling_encodec.MimiModelTest.test_model_outputs_equivalence
+    @require_mindspore
     def test_model_outputs_equivalence(self):
+        import mindspore
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
         def set_nan_tensor_to_zero(t):
@@ -379,30 +364,34 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
             return t
 
         def check_equivalence(model, tuple_inputs, dict_inputs, additional_kwargs={}):
-            # with no_grad():
-            tuple_output = model(**tuple_inputs, return_dict=False, **additional_kwargs)
-            dict_output = model(**dict_inputs, return_dict=True, **additional_kwargs)
+            def allclose(tensor1, tensor2, rtol=1e-05, atol=1e-08):
+                """
+                Checks if all elements of two tensors are close within a tolerance.
+                """
+                tensor1 = tensor1.astype(mindspore.float32)
+                tensor2 = tensor2.astype(mindspore.float32)
+                diff = ops.abs(tensor1 - tensor2)
+                return ops.all(diff <= (atol + rtol * ops.abs(tensor2)))
 
-            self.assertTrue(isinstance(tuple_output, tuple))
-            self.assertTrue(isinstance(dict_output, dict))
+            with no_grad():
+                tuple_output = model(
+                    **tuple_inputs, return_dict=False, **additional_kwargs)
+                dict_output = model(
+                    **dict_inputs, return_dict=True, **additional_kwargs)
 
-            for tuple_value, dict_value in zip(tuple_output, dict_output.values()):
-                self.assertTrue(
-                    np.allclose(
-                        set_nan_tensor_to_zero(tuple_value), set_nan_tensor_to_zero(dict_value), atol=1e-5
-                    ),
-                    msg=(
-                        "Tuple and dict output are not equal. Difference:"
-                        f" {ops.max(ops.abs(tuple_value - dict_value))}. Tuple has `nan`:"
-                        f" {ops.isnan(tuple_value).any()} and `inf`: {ops.isinf(tuple_value)}. Dict has"
-                        f" `nan`: {ops.isnan(dict_value).any()} and `inf`: {ops.isinf(dict_value)}."
-                    ),
-                )
+                self.assertTrue(isinstance(tuple_output, tuple))
+                self.assertTrue(isinstance(dict_output, dict))
+
+                for tuple_value, dict_value in zip(tuple_output, dict_output.values()):
+                    self.assertTrue(
+                        allclose(
+                            set_nan_tensor_to_zero(tuple_value), set_nan_tensor_to_zero(dict_value), atol=1e-5
+                        )
+                    )
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            # model.to(torch_device)
-            model.set_train(False) #eval()
+            model.eval()
 
             tuple_inputs = self._prepare_for_class(inputs_dict, model_class)
             dict_inputs = self._prepare_for_class(inputs_dict, model_class)
@@ -419,11 +408,13 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
                 if param.requires_grad:
                     if any(x in name for x in uniform_init_parms):
                         self.assertTrue(
-                            -1.0 <= ((param.data.mean() * 1e9).round() / 1e9).item() <= 1.0,
+                            -1.0 <= ((param.data.mean() *
+                                     1e9).round() / 1e9).item() <= 1.0,
                             msg=f"Parameter {name} of model {model_class} seems not properly initialized",
                         )
 
     # Copied from transformers.tests.encodec.test_modeling_encodec.MimiModelTest.test_identity_shortcut
+    @require_mindspore
     def test_identity_shortcut(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs()
         config.use_conv_shortcut = False
@@ -432,325 +423,10 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
     # Overwrite to use `audio_values` as the tensors to compare.
     # TODO: Try to do this in the parent class.
     @parameterized.expand([("float16",), ("bfloat16",), ("float32",)])
-    # @require_torch_sdpa
-    @require_mindspore_sdpa
-    def test_eager_matches_sdpa_inference(self, ms_dtype: str):
-        if ms_dtype == "float16":# and torch_device == "cpu":
-            self.skipTest("`replication_pad1d` not implemented for 'Half")
-
-        if not self.has_attentions:
-            self.skipTest(reason="Model architecture does not support attentions")
-
-        if not self.all_model_classes[0]._supports_sdpa:
-            self.skipTest(f"{self.all_model_classes[0].__name__} does not support SDPA")
-
-        # if ms_dtype == "float16" and not is_torch_fp16_available_on_device(torch_device):
-        #     self.skipTest(f"float16 not supported on {torch_device} (on the specific device currently used)")
-
-        # if ms_dtype == "bfloat16" and not is_torch_bf16_available_on_device(torch_device):
-        #     self.skipTest(
-        #         f"bfloat16 not supported on {torch_device} (on the specific device currently used, e.g. Nvidia T4 GPU)"
-        #     )
-
-        # Not sure whether it's fine to put torch.XXX in a decorator if torch is not available so hacking it here instead.
-        if ms_dtype == "float16":
-            ms_dtype = ms.float16
-        elif ms_dtype == "bfloat16":
-            ms_dtype = ms.bfloat16
-        elif ms_dtype == "float32":
-            ms_dtype = ms.float32
-
-        atols = {
-            ("cpu", False, ms.float32): 1e-6,
-            ("cpu", False, ms.bfloat16): 1e-2,
-            ("cpu", True, ms.float32): 1e-6,
-            ("cpu", True, ms.bfloat16): 1e-2,
-            ("cuda", False, ms.float32): 1e-6,
-            ("cuda", False, ms.bfloat16): 1e-2,
-            ("cuda", False, ms.float16): 5e-3,
-            ("cuda", True, ms.float32): 1e-6,
-            ("cuda", True, ms.bfloat16): 1e-2,
-            ("cuda", True, ms.float16): 5e-3,
-        }
-        rtols = {
-            ("cpu", False, ms.float32): 1e-4,
-            ("cpu", False, ms.bfloat16): 1e-2,
-            ("cpu", True, ms.float32): 1e-4,
-            ("cpu", True, ms.bfloat16): 1e-2,
-            ("cuda", False, ms.float32): 1e-4,
-            ("cuda", False, ms.bfloat16): 1e-2,
-            ("cuda", False, ms.float16): 5e-3,
-            ("cuda", True, ms.float32): 1e-4,
-            ("cuda", True, ms.bfloat16): 3e-2,
-            ("cuda", True, ms.float16): 5e-3,
-        }
-
-        def get_mean_reldiff(failcase, x, ref, atol, rtol):
-            return f"{failcase}: mean relative difference: {((x - ref).abs() / (ref.abs() + 1e-12)).mean():.3e}, torch atol = {atol}, torch rtol = {rtol}"
-
-        for model_class in self.all_model_classes:
-            config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
-            model = model_class(config)
-            # FIXME: we deactivate boolean mask for models using "use_mask_token" in their constructors.
-            # These models support masking only in the case `use_mask_token=True`. Otherwise they cannot consume an input mask.
-            # This means that the class needs to be instantiated much later, after `use_mask` is set, which means a significant refactor of the code.
-            # However masking there is not done at any layers that matters (i.e self-attention), therefore we can safely deactivate it.
-            deactivate_mask = "use_mask_token" in inspect.signature(model_class).parameters
-
-            is_encoder_decoder = model.config.is_encoder_decoder
-
-            with tempfile.TemporaryDirectory() as tmpdirname:
-                model.save_pretrained(tmpdirname)
-                model_sdpa = model_class.from_pretrained(tmpdirname) #, ms_dtype=ms_dtype)
-                model_sdpa = model_sdpa.set_train(False) #eval()#.to(torch_device)
-
-                self.assertTrue(model_sdpa.config._attn_implementation == "sdpa")
-
-                model_eager = model_class.from_pretrained(
-                    tmpdirname,
-                    # ms_dtype=ms_dtype,
-                    attn_implementation="eager",
-                )
-                model_eager = model_eager.set_train(False) #eval()#.to(torch_device)
-
-                self.assertTrue(model_eager.config._attn_implementation == "eager")
-
-                for name, submodule in model_eager.named_modules():
-                    class_name = submodule.__class__.__name__
-                    if "SdpaAttention" in class_name or "SdpaSelfAttention" in class_name:
-                        raise ValueError("The eager model should not have SDPA attention layers")
-
-                has_sdpa = False
-                for name, submodule in model_sdpa.named_modules():
-                    class_name = submodule.__class__.__name__
-                    if "SdpaAttention" in class_name or "SdpaSelfAttention" in class_name:
-                        has_sdpa = True
-                        break
-                if not has_sdpa and model_sdpa.config.model_type != "falcon":
-                    raise ValueError("The SDPA model should have SDPA attention layers")
-
-                # We use these for loops instead of parameterized.expand just for the interest of avoiding loading/saving 16 times the model,
-                # but it would be nicer to have an efficient way to use parameterized.expand
-                fail_cases = []
-                for padding_side in ["left", "right"]:
-                    for use_mask in [False, True]:
-                        for output_attentions in [True, False]:
-                            can_output_attn = "output_attentions" in inspect.signature(model_sdpa.forward).parameters
-                            if not (self.has_attentions and can_output_attn) and output_attentions:
-                                continue
-                            for batch_size in [7]:
-                                dummy_input = inputs_dict[model.main_input_name]
-
-                                if dummy_input.dtype in [ms.float32, ms.bfloat16, ms.float16]:
-                                    dummy_input = dummy_input#.to(ms_dtype)
-
-                                dummy_input = dummy_input[:batch_size]
-                                if dummy_input.shape[0] != batch_size:
-                                    if dummy_input.dtype in [ms.float32, ms.bfloat16, ms.float16]:
-                                        extension = ms.rand(
-                                            batch_size - dummy_input.shape[0],
-                                            *dummy_input.shape[1:],
-                                            # dtype=ms_dtype,
-                                            # device=torch_device,
-                                        )
-                                        dummy_input = ms.cat((dummy_input, extension), dim=0)#.to(torch_device)
-                                    else:
-                                        extension = ms.randint(
-                                            high=5,
-                                            size=(batch_size - dummy_input.shape[0], *dummy_input.shape[1:]),
-                                            dtype=dummy_input.dtype,
-                                            # device=torch_device,
-                                        )
-                                        dummy_input = ops.cat((dummy_input, extension), dim=0)#.to(torch_device)
-
-                                if not use_mask:
-                                    dummy_attention_mask = None
-                                else:
-                                    dummy_attention_mask = inputs_dict.get("attention_mask", None)
-                                    if dummy_attention_mask is None:
-                                        if is_encoder_decoder:
-                                            seqlen = inputs_dict.get("decoder_input_ids", dummy_input).shape[-1]
-                                        else:
-                                            seqlen = dummy_input.shape[-1]
-                                        dummy_attention_mask = (
-                                            ops.ones(batch_size, seqlen).to(ms.int64)#.to(torch_device)
-                                        )
-
-                                    dummy_attention_mask = dummy_attention_mask[:batch_size]
-                                    if dummy_attention_mask.shape[0] != batch_size:
-                                        extension = ops.ones(
-                                            batch_size - dummy_attention_mask.shape[0],
-                                            *dummy_attention_mask.shape[1:],
-                                            dtype=dummy_attention_mask.dtype,
-                                            # device=torch_device,
-                                        )
-                                        dummy_attention_mask = ops.cat((dummy_attention_mask, extension), dim=0)
-                                        dummy_attention_mask = dummy_attention_mask#.to(torch_device)
-
-                                    dummy_attention_mask[:] = 1
-                                    if padding_side == "left":
-                                        dummy_attention_mask[-1, :2] = 0
-                                        dummy_attention_mask[-1, 2:] = 1
-                                    elif padding_side == "right":
-                                        dummy_attention_mask[-1, -2:] = 0
-                                        dummy_attention_mask[-1, :-2] = 1
-
-                                for enable_kernels in [False, True]:
-                                    failcase = f"padding_side={padding_side}, use_mask={use_mask}, batch_size={batch_size}, enable_kernels={enable_kernels}"
-                                    if is_encoder_decoder:
-                                        decoder_input_ids = inputs_dict.get("decoder_input_ids", dummy_input)[
-                                            :batch_size
-                                        ]
-                                        if decoder_input_ids.shape[0] != batch_size:
-                                            extension = ops.ones(
-                                                batch_size - decoder_input_ids.shape[0],
-                                                *decoder_input_ids.shape[1:],
-                                                dtype=decoder_input_ids.dtype,
-                                                # device=torch_device,
-                                            )
-                                            decoder_input_ids = ops.cat((decoder_input_ids, extension), dim=0)
-                                            decoder_input_ids = decoder_input_ids#.to(torch_device)
-
-                                        # TODO: never an `attention_mask` arg here?
-                                        processed_inputs = {
-                                            model.main_input_name: dummy_input,
-                                            "decoder_input_ids": decoder_input_ids,
-                                            "decoder_attention_mask": dummy_attention_mask,
-                                            "output_hidden_states": True,
-                                        }
-                                    else:
-                                        processed_inputs = {
-                                            model.main_input_name: dummy_input,
-                                            "output_hidden_states": True,
-                                        }
-
-                                        # Otherwise fails for e.g. WhisperEncoderModel
-                                        if "attention_mask" in inspect.signature(model_eager.forward).parameters:
-                                            processed_inputs["attention_mask"] = dummy_attention_mask
-
-                                        if (
-                                            self.has_attentions
-                                            and "output_attentions" in inspect.signature(model_sdpa.forward).parameters
-                                        ):
-                                            processed_inputs["output_attentions"] = output_attentions
-                                    if not deactivate_mask and (
-                                        "bool_masked_pos" in inspect.signature(model_eager.forward).parameters
-                                    ):
-                                        dummy_mask = ops.ones((self.model_tester.num_masks,))
-
-                                        # In case of additional token (like class) we define a custom `mask_length`
-                                        if hasattr(self.model_tester, "mask_length"):
-                                            mask_length = self.model_tester.mask_length - dummy_mask.size(0)
-                                        else:
-                                            mask_length = self.model_tester.seq_length - dummy_mask.size(0)
-                                        dummy_mask = ops.cat([dummy_mask, ops.zeros(mask_length)])
-                                        dummy_bool_masked_pos = dummy_mask.expand(batch_size, -1).bool()
-                                        processed_inputs["bool_masked_pos"] = dummy_bool_masked_pos#.to(torch_device)
-
-                                    if "noise" in inspect.signature(model_eager.forward).parameters:
-                                        np.random.seed(2)
-                                        num_patches = int(
-                                            (self.model_tester.image_size // self.model_tester.patch_size) ** 2
-                                        )
-                                        noise = np.random.uniform(size=(batch_size, num_patches))
-                                        processed_inputs["noise"] = ops.from_numpy(noise)
-
-                                    # TODO: test gradients as well (& for FA2 as well!)
-                                    # with no_grad():
-                                        # with sdpa_kernel(
-                                        #     enable_flash=enable_kernels,
-                                        #     enable_math=True,
-                                        #     enable_mem_efficient=enable_kernels,
-                                        # ):
-                                        prepared_inputs = self._prepare_for_class(processed_inputs, model_class)
-                                        outputs_eager = model_eager(**prepared_inputs)
-                                        outputs_sdpa = model_sdpa(**prepared_inputs)
-
-                                    # Ignore copy
-                                    logits_eager = outputs_eager.audio_values
-                                    # Ignore copy
-                                    logits_sdpa = outputs_sdpa.audio_values
-
-                                    # if torch_device in ["cpu", "cuda"]:
-                                    #     atol = atols[torch_device, enable_kernels, ms_dtype]
-                                    #     rtol = rtols[torch_device, enable_kernels, ms_dtype]
-                                    # elif torch_device == "xpu":
-                                    #     # As of PyTorch 2.5 XPU backend supports only torch.nn.attention.SDPBackend.MATH
-                                    #     # which is implemented on PyTorch level using aten operators and is
-                                    #     # device agnostic with respect to implementation of each aten operator.
-                                    #     atol = atols["cuda", False, ms_dtype]
-                                    #     rtol = rtols["cuda", False, ms_dtype]
-                                    # else:
-                                    atol = 1e-7
-                                    rtol = 1e-4
-
-                                    # Masked tokens output slightly deviates - we don't mind that.
-                                    if use_mask:
-                                        _logits_sdpa = ops.zeros_like(input=logits_sdpa)
-                                        _logits_eager = ops.zeros_like(input=logits_eager)
-
-                                        _logits_sdpa[:-1] = logits_sdpa[:-1]
-                                        _logits_eager[:-1] = logits_eager[:-1]
-
-                                        if padding_side == "left":
-                                            _logits_sdpa[-1:, 2:] = logits_sdpa[-1:, 2:]
-                                            _logits_eager[-1:, 2:] = logits_eager[-1:, 2:]
-
-                                        elif padding_side == "right":
-                                            _logits_sdpa[-1:, 2:] = logits_sdpa[-1:, :-2]
-                                            _logits_eager[-1:, 2:] = logits_eager[-1:, :-2]
-
-                                        logits_sdpa = _logits_sdpa
-                                        logits_eager = _logits_eager
-
-                                    results = [
-                                        np.allclose(_logits_sdpa, _logits_eager, atol=atol, rtol=rtol)
-                                        for (_logits_sdpa, _logits_eager) in zip(logits_sdpa, logits_eager)
-                                    ]
-                                    # If 80% batch elements have matched results, it's fine
-                                    if np.mean(results) < 0.8:
-                                        fail_cases.append(
-                                            get_mean_reldiff(failcase, logits_sdpa, logits_eager, atol, rtol)
-                                        )
-
-                self.assertTrue(len(fail_cases) == 0, "\n".join(fail_cases))
-
-    # @require_flash_attn
-    # @require_torch_gpu
-    # @mark.flash_attn_test
-    # @slow
+    @unittest.skip("no SDPA")
+    @unittest.skip("no flash_attn")
+    @slow
     @is_flaky()
-    def test_flash_attn_2_inference_equivalence(self):
-        for model_class in self.all_model_classes:
-            config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
-            model = model_class(config)
-
-            with tempfile.TemporaryDirectory() as tmpdirname:
-                model.save_pretrained(tmpdirname)
-                model_fa = model_class.from_pretrained(
-                    tmpdirname,
-                    ms_dtype=ms.float16, #bfloat16,
-                    attn_implementation="flash_attention_2"
-                )
-                # model_fa.to(torch_device)
-
-                model = model_class.from_pretrained(tmpdirname,
-                                                    ms_dtype=ms.float16, # bfloat16
-                                                    )
-                # model.to(torch_device)
-
-                dummy_input = inputs_dict[model.main_input_name][:1]
-                if dummy_input.dtype in [ms.float32, ms.float16]:
-                    dummy_input = dummy_input.to(ms.bfloat16)
-
-                outputs = model(dummy_input)
-                outputs_fa = model_fa(dummy_input)
-
-                logits = outputs[1]
-                logits_fa = outputs_fa[1]
-
-                assert np.allclose(logits_fa, logits, atol=4e-2, rtol=4e-2)
-
     @unittest.skip(reason="The MimiModel does not support right padding")
     def test_flash_attn_2_inference_equivalence_right_padding(self):
         pass
@@ -760,6 +436,7 @@ class MimiModelTest(ModelTesterMixin, unittest.TestCase):
         pass
 
     @is_flaky()
+    @require_mindspore
     def test_batching_equivalence(self):
         super().test_batching_equivalence()
 
@@ -770,8 +447,9 @@ def normalize(arr):
     normalized_arr = arr / norm
     return normalized_arr
 
-
 # Copied from transformers.tests.encodec.test_modeling_encodec.compute_rmse
+
+
 def compute_rmse(arr1, arr2):
     arr1_normalized = normalize(arr1)
     arr2_normalized = normalize(arr2)
@@ -782,54 +460,62 @@ def compute_rmse(arr1, arr2):
 @require_mindspore
 class MimiIntegrationTest(unittest.TestCase):
     def test_integration_using_cache_decode(self):
+        import mindspore
         expected_rmse = {
             "8": 0.0018785292,
             "32": 0.0012330565,
         }
 
-        librispeech_dummy = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+        librispeech_dummy = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
 
         model_id = "kyutai/mimi"
 
-        model = MimiModel.from_pretrained(model_id, use_cache=True)#.to(torch_device)
+        model = MimiModel.from_pretrained(model_id, use_cache=True).to(
+            mindspore.get_context('device_target'))
         processor = AutoFeatureExtractor.from_pretrained(model_id)
 
-        librispeech_dummy = librispeech_dummy.cast_column("audio", Audio(sampling_rate=processor.sampling_rate))
+        librispeech_dummy = librispeech_dummy.cast_column(
+            "audio", Audio(sampling_rate=processor.sampling_rate))
         audio_sample = librispeech_dummy[-1]["audio"]["array"]
 
         inputs = processor(
             raw_audio=audio_sample,
             sampling_rate=processor.sampling_rate,
-            return_tensors="ms",
-        )#.to(torch_device)
+            return_tensors="pt",
+        ).to(mindspore.get_context('device_target'))
 
         for num_codebooks, expected_rmse in expected_rmse.items():
-            # with no_grad():
+            with no_grad():
                 # use max bandwith for best possible reconstruction
-            encoder_outputs = model.encode(inputs["input_values"], num_quantizers=int(num_codebooks))
+                encoder_outputs = model.encode(
+                    inputs["input_values"], num_quantizers=int(num_codebooks))
 
-            audio_codes = encoder_outputs[0]
+                audio_codes = encoder_outputs[0]
 
-            decoder_outputs_first_part = model.decode(audio_codes[:, :, : audio_codes.shape[2] // 2])
-            decoder_outputs_second_part = model.decode(
-                audio_codes[:, :, audio_codes.shape[2] // 2 :],
-                decoder_past_key_values=decoder_outputs_first_part.decoder_past_key_values,
-            )
+                decoder_outputs_first_part = model.decode(
+                    audio_codes[:, :, : audio_codes.shape[2] // 2])
+                decoder_outputs_second_part = model.decode(
+                    audio_codes[:, :, audio_codes.shape[2] // 2:],
+                    decoder_past_key_values=decoder_outputs_first_part.decoder_past_key_values,
+                )
 
-            audio_output_entire_context = model.decode(audio_codes)[0]
-            audio_output_concat_context = ops.cat(
-                [decoder_outputs_first_part[0], decoder_outputs_second_part[0]], dim=2
-            )
+                audio_output_entire_context = model.decode(audio_codes)[0]
+                audio_output_concat_context = mindspore.ops.cat(
+                    [decoder_outputs_first_part[0],
+                        decoder_outputs_second_part[0]]
+                )
 
             # make sure audios are more or less equal
             # the RMSE of two random gaussian noise vectors with ~N(0, 1) is around 1.0
             rmse = compute_rmse(
-                audio_output_concat_context.squeeze().asnumpy(), #.cpu().numpy(),
-                audio_output_entire_context.squeeze().asnumpy(), #.cpu().numpy(),
+                audio_output_concat_context.squeeze().numpy(),
+                audio_output_entire_context.squeeze().numpy(),
             )
             self.assertTrue(rmse < 1e-3)
 
     def test_integration(self):
+        import mindspore
         expected_rmses = {
             "8": 0.0018785292,
             "32": 0.0012330565,
@@ -838,50 +524,66 @@ class MimiIntegrationTest(unittest.TestCase):
             "8": 430423,
             "32": 1803071,
         }
-        librispeech_dummy = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-        print('librisppech_dummy',librispeech_dummy)
+        librispeech_dummy = load_dataset(
+            "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+
         model_id = "kyutai/mimi"
 
         processor = AutoFeatureExtractor.from_pretrained(model_id)
 
-        librispeech_dummy = librispeech_dummy.cast_column("audio", Audio(sampling_rate=processor.sampling_rate))
+        librispeech_dummy = librispeech_dummy.cast_column(
+            "audio", Audio(sampling_rate=processor.sampling_rate))
         audio_sample = librispeech_dummy[-1]["audio"]["array"]
 
         inputs = processor(
             raw_audio=audio_sample,
             sampling_rate=processor.sampling_rate,
             return_tensors="pt",
-        )#.to(torch_device)
+        ).to(mindspore.get_context('device_target'))
+
+        def allclose(tensor1, tensor2, rtol=1e-05, atol=1e-08):
+            """
+            Checks if all elements of two tensors are close within a tolerance.
+            """
+            diff = ops.abs(tensor1 - tensor2)
+            return ops.all(diff <= (atol + rtol * ops.abs(tensor2)))
 
         for use_cache in [False, True]:
-            model = MimiModel.from_pretrained(model_id, use_cache=use_cache)#.to(torch_device)
+            model = MimiModel.from_pretrained(model_id, use_cache=use_cache).to(
+                mindspore.get_context('device_target'))
             for num_codebooks, expected_rmse in expected_rmses.items():
-                # with no_grad():
+                with no_grad():
                     # use max bandwith for best possible reconstruction
-                encoder_outputs = model.encode(inputs["input_values"], num_quantizers=int(num_codebooks))
+                    encoder_outputs = model.encode(
+                        inputs["input_values"], num_quantizers=int(num_codebooks))
 
-                audio_code_sums = encoder_outputs[0].sum().item() #.cpu().item()
+                    audio_code_sums = encoder_outputs[0].sum().item()
 
-                # make sure audio encoded codes are correct
-                # assert relative difference less than a threshold, because `audio_code_sums` varies a bit
-                # depending on torch version
-                self.assertTrue(
-                    np.abs(audio_code_sums - expected_codesums[num_codebooks]) <= (3e-3 * audio_code_sums)
-                )
+                    # make sure audio encoded codes are correct
+                    # assert relative difference less than a threshold, because `audio_code_sums` varies a bit
+                    # depending on torch version
+                    self.assertTrue(
+                        np.abs(
+                            audio_code_sums - expected_codesums[num_codebooks]) <= (3e-3 * audio_code_sums)
+                    )
 
-                input_values_dec = model.decode(encoder_outputs[0], padding_mask=inputs["padding_mask"])[0]
-                input_values_enc_dec = model(
-                    inputs["input_values"], inputs["padding_mask"], num_quantizers=int(num_codebooks)
-                )[1]
+                    input_values_dec = model.decode(
+                        encoder_outputs[0], padding_mask=inputs["padding_mask"])[0]
+                    input_values_enc_dec = model(
+                        inputs["input_values"], inputs["padding_mask"], num_quantizers=int(
+                            num_codebooks)
+                    )[1]
 
                 # make sure forward and decode gives same result
-                self.assertTrue(np.allclose(input_values_dec, input_values_enc_dec))
+                self.assertTrue(
+                    allclose(input_values_dec, input_values_enc_dec))
 
                 # make sure shape matches
-                self.assertTrue(inputs["input_values"].shape == input_values_enc_dec.shape)
+                self.assertTrue(
+                    inputs["input_values"].shape == input_values_enc_dec.shape)
 
-                arr = inputs["input_values"][0].asnumpy() #.cpu().numpy()
-                arr_enc_dec = input_values_enc_dec[0].asnumpy() #.cpu().numpy()
+                arr = inputs["input_values"][0].numpy()
+                arr_enc_dec = input_values_enc_dec[0].numpy()
 
                 # make sure audios are more or less equal
                 # the RMSE of two random gaussian noise vectors with ~N(0, 1) is around 1.0

@@ -141,9 +141,8 @@ class MimiConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-    model_type = "Mimi"
-
-
+    model_type = "mimi"
+    keys_to_ignore_at_inference = ["past_key_values"]
 
     def __init__(
         self,

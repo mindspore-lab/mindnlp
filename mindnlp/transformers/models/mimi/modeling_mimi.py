@@ -12,51 +12,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Mimi model."""
-# 从pytorch移植到mindnlp
+"""Mindnlp Mimi model."""
 
 import math
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
-import mindspore as ms  #ms
-import numpy as np
-# import ms.utils.checkpoint
-# from mindspore import nn, ops
-# from mindnlp.core import no_grad
-
-# import mindspore
-from mindspore import Tensor
-from mindspore.common.initializer import initializer, Normal
-
+import mindspore as ms
+from mindspore.common.initializer import initializer, TruncatedNormal
 from mindnlp.core import nn, ops
-from mindnlp.core.nn import Parameter
-from mindnlp.core.nn import ConvTranspose1d
-
-from mindnlp.core.nn import functional as F
-
-
+from mindnlp.utils import logging
 from ....common.activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, SlidingWindowCache, StaticCache
 from ...modeling_attn_mask_utils import AttentionMaskConverter
 from ...modeling_outputs import BaseModelOutputWithPast
 from ...modeling_rope_utils import ROPE_INIT_FUNCTIONS
-from ...modeling_utils import PreTrainedModel
-from ....amp import autocast
-from ....utils import (
-    ModelOutput,
-    # add_start_docstrings,
-    # add_start_docstrings_to_model_forward,
-    # is_flash_attn_2_available,
-    # is_flash_attn_greater_or_equal_2_10,
-    logging,
-    # replace_return_docstrings,
-)
+from ...modeling_utils import PreTrainedModel, ModelOutput
+from ....core.autograd import no_grad
 from .configuration_mimi import MimiConfig
 
-
-# if is_flash_attn_2_available():
-#     from ...modeling_flash_attention_utils import _flash_attention_forward
 
 logger = logging.get_logger(__name__)
 
@@ -162,6 +136,7 @@ class MimiConv1d(nn.Module):
                 "MimiConv1d has been initialized with stride > 1 and dilation > 1"
                 f" (kernel_size={kernel_size} stride={stride}, dilation={dilation})."
             )
+
         self.conv = nn.Conv1d(
             in_channels, out_channels, kernel_size, stride, dilation=dilation, groups=groups, bias=bias
         )
@@ -173,9 +148,9 @@ class MimiConv1d(nn.Module):
         # Effective kernel size with dilations.
         kernel_size = ms.tensor((kernel_size - 1) * dilation + 1, dtype=ms.int64)
 
-        self.stride = stride
-        self.kernel_size = kernel_size
-        self.padding_total = ms.tensor(kernel_size - stride, dtype=ms.int64)
+        self.register_buffer("stride", stride, persistent=False)
+        self.register_buffer("kernel_size", kernel_size, persistent=False)
+        self.register_buffer("padding_total", ms.tensor(kernel_size - stride, dtype=ms.int64), persistent=False)
 
         # Asymmetric padding required for odd strides
         self.padding_right = self.padding_total // 2
@@ -207,35 +182,31 @@ class MimiConv1d(nn.Module):
     @staticmethod
     # Copied from transformers.models.encodec.modeling_encodec.EncodecConv1d._pad1d
     def _pad1d(hidden_states: ms.Tensor, paddings: Tuple[int, int], mode: str = "zero", value: float = 0.0):
-        """Tiny wrapper around ms.nn.functional.pad, just to allow for reflect padding on small input.
+        """Tiny wrapper around mindspore.nn.functional.pad, just to allow for reflect padding on small input.
         If this is the case, we insert extra 0 padding to the right before the reflection happens.
         """
         length = hidden_states.shape[-1]
         padding_left, padding_right = paddings
-        print('###### padding:',paddings,padding_left,padding_right)
-        if  mode != "reflect":
-            # return ops.pad(hidden_states, paddings, mode, value)
+        paddings = (int(padding_left), int(padding_right))
+        if mode != "reflect":
+            # "ConstantPadND()(input=<Tensor>, padding=<list of int, Tensor, tuple of int>, value=<Number>)".
             return nn.functional.pad(hidden_states, paddings, mode, value)
 
         max_pad = max(padding_left, padding_right)
         extra_pad = 0
         if length <= max_pad:
             extra_pad = max_pad - length + 1
-            # hidden_states = ops.pad(hidden_states, (0, extra_pad))
             hidden_states = nn.functional.pad(hidden_states, (0, extra_pad))
-        padded = ops.pad(hidden_states, paddings, mode, value)
         padded = nn.functional.pad(hidden_states, paddings, mode, value)
         end = padded.shape[-1] - extra_pad
         return padded[..., :end]
 
     def forward(self, hidden_states):
-        extra_padding = self._get_extra_padding_for_conv1d(hidden_states).item()
-        # print('self.padding_total:',self.padding_total,extra_padding)
-        # extra_padding = Tensor(extra_padding, ms.int64)
+        extra_padding = self._get_extra_padding_for_conv1d(hidden_states)
 
         if self.causal:
             # Left padding for causal
-            hidden_states = self._pad1d(hidden_states, (self.padding_total.item(), extra_padding), mode=self.pad_mode)
+            hidden_states = self._pad1d(hidden_states, (self.padding_total, extra_padding), mode=self.pad_mode)
         else:
             hidden_states = self._pad1d(
                 hidden_states, (self.padding_left, self.padding_right + extra_padding), mode=self.pad_mode
@@ -261,8 +232,7 @@ class MimiConvTranspose1d(nn.Module):
         super().__init__()
         self.causal = config.use_causal_conv
         self.trim_right_ratio = config.trim_right_ratio
-        # self.conv = nn.ConvTranspose1d(in_channels, out_channels, kernel_size, stride, groups=groups, bias=bias)
-        self.conv = ConvTranspose1d(in_channels, out_channels, kernel_size, stride, groups=groups, bias=bias)
+        self.conv = nn.ConvTranspose1d(in_channels, out_channels, kernel_size, stride, groups=groups, bias=bias)
 
         if not (self.causal or self.trim_right_ratio == 1.0):
             raise ValueError("`trim_right_ratio` != 1.0 only makes sense for causal convolutions")
@@ -297,6 +267,7 @@ class MimiConvTranspose1d(nn.Module):
 
     def forward(self, hidden_states):
         hidden_states = self.conv(hidden_states)
+
         # unpad
         end = hidden_states.shape[-1] - self.padding_right
         hidden_states = hidden_states[..., self.padding_left : end]
@@ -377,8 +348,7 @@ class MimiLayerScale(nn.Module):
         super().__init__()
         channels = config.hidden_size
         initial_scale = config.layer_scale_initial_scale
-        # print("here:",ops.full((channels,), initial_scale, dtype=ms.int64))
-        self.scale = Parameter(ops.full((channels,), initial_scale, dtype=ms.int64)) #, requires_grad=True))
+        self.scale = nn.Parameter(ops.full((channels,), initial_scale), requires_grad=True)
 
     def forward(self, x: ms.Tensor):
         return self.scale * x
@@ -386,7 +356,7 @@ class MimiLayerScale(nn.Module):
 
 # Copied from transformers.models.mistral.modeling_mistral.MistralRotaryEmbedding with Mistral->Mimi
 class MimiRotaryEmbedding(nn.Module):
-    def __init__(self, config: MimiConfig):
+    def __init__(self, config: MimiConfig, device=None):
         super().__init__()
         # BC: "rope_type" was originally "type"
         if hasattr(config, "rope_scaling") and config.rope_scaling is not None:
@@ -399,11 +369,11 @@ class MimiRotaryEmbedding(nn.Module):
         self.config = config
         self.rope_init_fn = ROPE_INIT_FUNCTIONS[self.rope_type]
 
-        inv_freq, self.attention_scaling = self.rope_init_fn(self.config)
-        self.inv_freq = inv_freq
+        inv_freq, self.attention_scaling = self.rope_init_fn(self.config, device)
+        self.register_buffer("inv_freq", inv_freq, persistent=False)
         self.original_inv_freq = self.inv_freq
 
-    def _dynamic_frequency_update(self, position_ids):
+    def _dynamic_frequency_update(self, position_ids, device):
         """
         dynamic RoPE layers should recompute `inv_freq` in the following situations:
         1 - growing beyond the cached sequence length (allow scaling)
@@ -411,34 +381,32 @@ class MimiRotaryEmbedding(nn.Module):
         """
         seq_len = ops.max(position_ids) + 1
         if seq_len > self.max_seq_len_cached:  # growth
-            inv_freq, self.attention_scaling = self.rope_init_fn(self.config, seq_len=seq_len)
-            self.inv_freq = inv_freq  # TODO joao: may break with compilation
+            inv_freq, self.attention_scaling = self.rope_init_fn(self.config, device, seq_len=seq_len)
+            self.register_buffer("inv_freq", inv_freq, persistent=False)  # TODO joao: may break with compilation
             self.max_seq_len_cached = seq_len
 
         if seq_len < self.original_max_seq_len and self.max_seq_len_cached > self.original_max_seq_len:  # reset
             # This .to() is needed if the model has been moved to a device after being initialized (because
             # the buffer is automatically moved, but not the original copy)
-            self.original_inv_freq = self.original_inv_freq #.to(device)
-            self.inv_freq = self.original_inv_freq
+            self.original_inv_freq = self.original_inv_freq.to(device)
+            self.register_buffer("inv_freq", self.original_inv_freq, persistent=False)
             self.max_seq_len_cached = self.original_max_seq_len
 
-    # @no_grad()
+    @no_grad()
     def forward(self, x, position_ids):
         if "dynamic" in self.rope_type:
-            self._dynamic_frequency_update(position_ids) #, device=x.device)
-
+            self._dynamic_frequency_update(position_ids, device=ms.get_context('device_target'))
         # Core RoPE block
         inv_freq_expanded = self.inv_freq[None, :, None].float().broadcast_to((position_ids.shape[0], -1, 1))
         position_ids_expanded = position_ids[:, None, :].float()
         # Force float32 (see https://github.com/huggingface/transformers/pull/29285)
-        # device_type = x.device.type
-        # device_type = device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
-        dtype = x.dtype
-        with autocast(dtype=dtype, enabled=False):
-            freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).swapaxes(1, 2)
-            emb = ops.cat([freqs, freqs], dim=-1)
-            cos = emb.cos()
-            sin = emb.sin()
+        device_type = ms.get_context('device_target')
+        device_type = device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
+        # with torch.autocast(device_type=device_type, enabled=False):
+        freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose((0, 2, 1))
+        emb = ops.cat((freqs, freqs), dim=-1)
+        cos = emb.cos()
+        sin = emb.sin()
 
         # Advanced RoPE types (e.g. yarn) apply a post-processing scaling factor, equivalent to scaling attention
         cos = cos * self.attention_scaling
@@ -452,7 +420,7 @@ def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
     x2 = x[..., x.shape[-1] // 2 :]
-    return ops.cat([-x2, x1], dim=-1)
+    return ops.cat((-x2, x1), dim=-1)
 
 
 # Copied from transformers.models.llama.modeling_llama.apply_rotary_pos_emb
@@ -502,7 +470,7 @@ class MimiMLP(nn.Module):
 # Copied from transformers.models.llama.modeling_llama.repeat_kv
 def repeat_kv(hidden_states: ms.Tensor, n_rep: int) -> ms.Tensor:
     """
-    This is the equivalent of ms.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
+    This is the equivalent of mindspore.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
     num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)
     """
     batch, num_key_value_heads, slen, head_dim = hidden_states.shape
@@ -562,15 +530,15 @@ class MimiAttention(nn.Module):
         use_cache: bool = False,
         cache_position: Optional[ms.Tensor] = None,
     ) -> Tuple[ms.Tensor, Optional[ms.Tensor], Optional[Tuple[ms.Tensor]]]:
-        bsz, q_len, _ = hidden_states.shape #size()
+        bsz, q_len, _ = hidden_states.shape
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
-        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1, 2)
-        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1, 2)
+        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose((0, 2, 1, 3))
+        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose((0, 2, 1, 3))
+        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose((0, 2, 1, 3))
 
         cos, sin = self.rotary_emb(value_states, position_ids)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
@@ -583,15 +551,15 @@ class MimiAttention(nn.Module):
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
-        attn_weights = ops.matmul(query_states, key_states.swapaxes(2, 3)) * self.scaling
+        attn_weights = ops.matmul(query_states, key_states.transpose((0, 1, 3, 2)) * self.scaling)
 
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             attn_weights = attn_weights + causal_mask
 
         # upcast attention to fp32
-        attn_weights = ops.softmax(attn_weights, dim=-1, dtype=ms.float32).to(query_states.dtype)
-        attn_weights = ms.ops.dropout(attn_weights, p=self.attention_dropout, training=self.training)
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=ms.float32).to(query_states.dtype)
+        attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
 
         if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
@@ -600,7 +568,7 @@ class MimiAttention(nn.Module):
                 f" {attn_output.shape}"
             )
 
-        attn_output = attn_output.swapaxes(1, 2) #.contiguous()
+        attn_output = attn_output.transpose((0, 2, 1, 3)).contiguous()
 
         attn_output = attn_output.view(bsz, q_len, -1)
         attn_output = self.o_proj(attn_output)
@@ -619,88 +587,88 @@ class MimiAttention(nn.Module):
 #     untouched. The only required change would be on the forward pass where it needs to correctly call the public API of
 #     flash attention and deal with padding tokens in case the input contains any of them.
 #     """
-#
+
 #     def __init__(self, *args, **kwargs):
 #         super().__init__(*args, **kwargs)
-#
+
 #         # TODO: Should be removed once Flash Attention for RoCm is bumped to 2.1.
 #         # flash_attn<2.1 generates top-left aligned causal mask, while what is needed here is bottom-right alignement, that was made default for flash_attn>=2.1. This attribute is used to handle this difference. Reference: https://github.com/Dao-AILab/flash-attention/releases/tag/v2.1.0.
 #         # Beware that with flash_attn<2.1, using q_seqlen != k_seqlen (except for the case q_seqlen == 1) produces a wrong mask (top-left).
-#         self._flash_attn_uses_top_left_mask = False #not is_flash_attn_greater_or_equal_2_10()
-#
+#         self._flash_attn_uses_top_left_mask = not is_flash_attn_greater_or_equal_2_10()
+
 #     def forward(
 #         self,
-#         hidden_states: ms.Tensor,
-#         attention_mask: Optional[ms.Tensor] = None,
-#         position_ids: Optional[ms.Tensor] = None,
+#         hidden_states: torch.Tensor,
+#         attention_mask: Optional[torch.LongTensor] = None,
+#         position_ids: Optional[torch.LongTensor] = None,
 #         past_key_value: Optional[Cache] = None,
 #         output_attentions: bool = False,
 #         use_cache: bool = False,
-#         cache_position: Optional[ms.Tensor] = None,
-#     ) -> Tuple[ms.Tensor, Optional[ms.Tensor], Optional[Tuple[ms.Tensor]]]:
+#         cache_position: Optional[torch.LongTensor] = None,
+#     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
 #         if isinstance(past_key_value, StaticCache):
 #             raise ValueError(
 #                 "`static` cache implementation is not compatible with `attn_implementation==flash_attention_2` "
 #                 "make sure to use `sdpa` in the mean time, and open an issue at https://github.com/huggingface/transformers"
 #             )
-#
+
 #         output_attentions = False
-#
+
 #         bsz, q_len, _ = hidden_states.size()
-#
+
 #         query_states = self.q_proj(hidden_states)
 #         key_states = self.k_proj(hidden_states)
 #         value_states = self.v_proj(hidden_states)
-#
+
 #         # Flash attention requires the input to have the shape
 #         # batch_size x seq_length x head_dim x hidden_dim
 #         # therefore we just need to keep the original shape
-#         query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
-#         key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1, 2)
-#         value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1, 2)
-#
+#         query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
+#         key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+#         value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+
 #         cos, sin = self.rotary_emb(value_states, position_ids)
 #         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
-#
+
 #         if past_key_value is not None:
 #             # sin and cos are specific to RoPE models; cache_position needed for the static cache
 #             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
 #             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
-#
-#         # TODO: These swapaxes are quite inefficient but Flash Attention requires the layout [batch_size, sequence_length, num_heads, head_dim]. We would need to refactor the KV cache
-#         # to be able to avoid many of these swapaxes/reshape/view.
-#         query_states = query_states.swapaxes(1, 2)
-#         key_states = key_states.swapaxes(1, 2)
-#         value_states = value_states.swapaxes(1, 2)
-#
+
+#         # TODO: These transpose are quite inefficient but Flash Attention requires the layout [batch_size, sequence_length, num_heads, head_dim]. We would need to refactor the KV cache
+#         # to be able to avoid many of these transpose/reshape/view.
+#         query_states = query_states.transpose(1, 2)
+#         key_states = key_states.transpose(1, 2)
+#         value_states = value_states.transpose(1, 2)
+
 #         dropout_rate = self.attention_dropout if self.training else 0.0
-#
+
 #         # In PEFT, usually we cast the layer norms in float32 for training stability reasons
 #         # therefore the input hidden states gets silently casted in float32. Hence, we need
 #         # cast them back in the correct dtype just to be sure everything works as expected.
 #         # This might slowdown training & inference so it is recommended to not cast the LayerNorms
 #         # in fp32. (MimiRMSNorm handles it correctly)
-#
+
 #         input_dtype = query_states.dtype
-#         if input_dtype == ms.float32:
-#             if ops.is_autocast_enabled():
-#                 target_dtype = ops.get_autocast_gpu_dtype()
+#         if input_dtype == torch.float32:
+#             if torch.is_autocast_enabled():
+#                 target_dtype = torch.get_autocast_gpu_dtype()
 #             # Handle the case where the model is quantized
 #             elif hasattr(self.config, "_pre_quantization_dtype"):
 #                 target_dtype = self.config._pre_quantization_dtype
 #             else:
 #                 target_dtype = self.q_proj.weight.dtype
-#
+
 #             logger.warning_once(
 #                 f"The input hidden states seems to be silently casted in float32, this might be related to"
 #                 f" the fact you have upcasted embedding or layer norm layers in float32. We will cast back the input in"
 #                 f" {target_dtype}."
 #             )
-#
+
 #             query_states = query_states.to(target_dtype)
 #             key_states = key_states.to(target_dtype)
 #             value_states = value_states.to(target_dtype)
-#
+
 #         attn_output = _flash_attention_forward(
 #             query_states,
 #             key_states,
@@ -713,13 +681,13 @@ class MimiAttention(nn.Module):
 #             is_causal=self.is_causal,
 #             use_top_left_mask=self._flash_attn_uses_top_left_mask,
 #         )
-#
-#         attn_output = attn_output.reshape(bsz, q_len, -1) #.contiguous()
+
+#         attn_output = attn_output.reshape(bsz, q_len, -1).contiguous()
 #         attn_output = self.o_proj(attn_output)
-#
+
 #         if not output_attentions:
 #             attn_weights = None
-#
+
 #         return attn_output, attn_weights, past_key_value
 
 
@@ -727,7 +695,7 @@ class MimiAttention(nn.Module):
 # TODO cyril: modular
 class MimiSdpaAttention(MimiAttention):
     """
-    Mimi attention module using ms.nn.functional.scaled_dot_product_attention. This module inherits from
+    Mimi attention module using mindspore.nn.functional.scaled_dot_product_attention. This module inherits from
     `MimiAttention` as the weights of the module stays untouched. The only changes are on the forward pass to adapt to
     SDPA API.
     """
@@ -747,7 +715,7 @@ class MimiSdpaAttention(MimiAttention):
         if output_attentions:
             # TODO: Improve this warning with e.g. `model.config.attn_implementation = "manual"` once this is implemented.
             logger.warning_once(
-                "MimiModel is using MimiSdpaAttention, but `ms.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True`. Falling back to the manual attention implementation, "
+                "MimiModel is using MimiSdpaAttention, but `mindspore.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True`. Falling back to the manual attention implementation, "
                 'but specifying the manual implementation will be required from Transformers version v5.0.0 onwards. This warning can be removed using the argument `attn_implementation="eager"` when loading the model.'
             )
             return super().forward(
@@ -766,9 +734,9 @@ class MimiSdpaAttention(MimiAttention):
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
-        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1, 2)
-        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1, 2)
+        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose((0, 2, 1, 3))
+        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose((0, 2, 1, 3))
+        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose((0, 2, 1, 3))
 
         cos, sin = self.rotary_emb(value_states, position_ids)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
@@ -785,18 +753,18 @@ class MimiSdpaAttention(MimiAttention):
         if attention_mask is not None:
             causal_mask = causal_mask[:, :, :, : key_states.shape[-2]]
 
-        # SDPA with memory-efficient backend is currently (ms==2.1.2) bugged with non-contiguous inputs with custom attn_mask,
+        # SDPA with memory-efficient backend is currently (torch==2.1.2) bugged with non-contiguous inputs with custom attn_mask,
         # Reference: https://github.com/pytorch/pytorch/issues/112577.
-        # if query_states.device.type == "cuda" and causal_mask is not None:
-        #     query_states = query_states.contiguous()
-        #     key_states = key_states.contiguous()
-        #     value_states = value_states.contiguous()
+        if causal_mask is not None:
+            query_states = query_states.contiguous()
+            key_states = key_states.contiguous()
+            value_states = value_states.contiguous()
 
         # We dispatch to SDPA's Flash Attention or Efficient kernels via this `is_causal` if statement instead of an inline conditional assignment
-        # in SDPA to support both ms.compile's dynamic shapes and full graph options. An inline conditional prevents dynamic shapes from compiling.
-        is_causal = True if causal_mask is None and q_len > 1 else False
+        # in SDPA to support both torch.compile's dynamic shapes and full graph options. An inline conditional prevents dynamic shapes from compiling.
+        is_causal = causal_mask is None and q_len > 1
 
-        attn_output = ops.scaled_dot_product_attention(
+        attn_output = nn.functional.scaled_dot_product_attention(
             query_states,
             key_states,
             value_states,
@@ -805,7 +773,7 @@ class MimiSdpaAttention(MimiAttention):
             is_causal=is_causal,
         )
 
-        attn_output = attn_output.swapaxes(1, 2) #.contiguous()
+        attn_output = attn_output.transpose((0, 2, 1, 3)).contiguous()
         attn_output = attn_output.view(bsz, q_len, -1)
 
         attn_output = self.o_proj(attn_output)
@@ -815,7 +783,7 @@ class MimiSdpaAttention(MimiAttention):
 
 MIMI_ATTENTION_CLASSES = {
     "eager": MimiAttention,
-    # "flash_attention_2": MimiFlashAttention2, # 无实现，added by lt
+    # "flash_attention_2": MimiFlashAttention2,
     "sdpa": MimiSdpaAttention,
 }
 
@@ -828,8 +796,8 @@ class MimiTransformerLayer(nn.Module):
         self.self_attn = MIMI_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
 
         self.mlp = MimiMLP(config)
-        self.input_layernorm = nn.LayerNorm([config.hidden_size], eps=config.norm_eps)
-        self.post_attention_layernorm = nn.LayerNorm([config.hidden_size], eps=config.norm_eps)
+        self.input_layernorm = nn.LayerNorm(config.hidden_size, eps=config.norm_eps)
+        self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, eps=config.norm_eps)
         self.self_attn_layer_scale = MimiLayerScale(config)
         self.mlp_layer_scale = MimiLayerScale(config)
 
@@ -1014,7 +982,7 @@ class MimiTransformerModel(nn.Module):
         if cache_position is None:
             past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
             cache_position = ops.arange(
-                past_seen_tokens, past_seen_tokens + hidden_states.shape[1] #, device=hidden_states.device
+                past_seen_tokens, past_seen_tokens + hidden_states.shape[1]
             )
 
         if position_ids is None:
@@ -1116,7 +1084,7 @@ class MimiTransformerModel(nn.Module):
             and not (using_static_cache or using_sliding_window_cache)
             and not output_attentions
         ):
-            if AttentionMaskConverter._ignore_causal_mask_sdpa( # 缺乏实现代码
+            if AttentionMaskConverter._ignore_causal_mask_sdpa(
                 attention_mask,
                 inputs_embeds=input_tensor,
                 past_key_values_length=past_seen_tokens,
@@ -1125,8 +1093,7 @@ class MimiTransformerModel(nn.Module):
             ):
                 return None
 
-        # dtype, device = input_tensor.dtype, input_tensor.device
-        dtype = input_tensor.dtype
+        dtype, device = input_tensor.dtype, ms.get_context('device_target')
         min_dtype = ops.finfo(dtype).min
         sequence_length = input_tensor.shape[1]
         # SlidingWindowCache or StaticCache
@@ -1146,7 +1113,7 @@ class MimiTransformerModel(nn.Module):
             sequence_length=sequence_length,
             target_length=target_length,
             dtype=dtype,
-            # device= device, 不用该参数
+            device=device,
             cache_position=cache_position,
             batch_size=input_tensor.shape[0],
             config=self.config,
@@ -1156,7 +1123,7 @@ class MimiTransformerModel(nn.Module):
         if (
             self.config._attn_implementation == "sdpa"
             and attention_mask is not None
-            # and attention_mask.device.type == "cuda"
+            and ms.get_context('device_target') == "Ascend"
             and not output_attentions
         ):
             # Attend to all tokens in fully masked rows in the causal_mask, for example the relevant first rows when
@@ -1173,7 +1140,7 @@ class MimiTransformerModel(nn.Module):
         sequence_length: int,
         target_length: int,
         dtype: ms.dtype,
-        # device: str,
+        device: str,
         cache_position: ms.Tensor,
         batch_size: int,
         config: MimiConfig,
@@ -1190,9 +1157,9 @@ class MimiTransformerModel(nn.Module):
                 The sequence length being processed.
             target_length (`int`):
                 The target length: when generating with static cache, the mask should be as long as the static cache, to account for the 0 padding, the part of the cache that is not filled yet.
-            dtype (`ms.dtype`):
+            dtype (`mindspore.dtype`):
                 The dtype to use for the 4D attention mask.
-            device (`ms.device`):
+            device (`mindspore.device`):
                 The device to plcae the 4D attention mask on.
             cache_position (`ms.Tensor`):
                 Indices depicting the position of the input sequence tokens in the sequence.
@@ -1273,14 +1240,13 @@ class MimiEuclideanCodebook(nn.Module):
 
     def __init__(self, config: MimiConfig, epsilon: float = 1e-5):
         super().__init__()
-
         embed = ops.zeros(config.codebook_size, config.codebook_dim)
 
         self.codebook_size = config.codebook_size
 
-        self.initialized = ms.tensor([True], dtype=ms.float32)
-        self.cluster_usage = ops.ones(config.codebook_size)
-        self.embed_sum = embed
+        self.register_buffer("initialized", ms.Tensor([True]))
+        self.register_buffer("cluster_usage", ops.ones(config.codebook_size))
+        self.register_buffer("embed_sum", embed)
         self._embed = None
         self.epsilon = epsilon
 
@@ -1294,7 +1260,7 @@ class MimiEuclideanCodebook(nn.Module):
         # Projects each vector in `hidden_states` over the nearest centroid and return its index.
         # `hidden_states` should be `[N, D]` with `N` the number of input vectors and `D` the dimension.
         dists = ops.cdist(hidden_states[None], self.embed[None], p=2)[0]
-        embed_ind = dists.argmin(dim=-1)
+        embed_ind = dists.argmin(axis=-1)
         return embed_ind
 
     # Copied from transformers.models.encodec.modeling_encodec.EncodecEuclideanCodebook.encode
@@ -1310,8 +1276,7 @@ class MimiEuclideanCodebook(nn.Module):
 
     # Copied from transformers.models.encodec.modeling_encodec.EncodecEuclideanCodebook.decode
     def decode(self, embed_ind):
-
-        quantize = F.embedding(embed_ind, self.embed)
+        quantize = nn.functional.embedding(embed_ind, self.embed)
         return quantize
 
 
@@ -1378,8 +1343,8 @@ class MimiResidualVectorQuantizer(nn.Module):
 
     def decode(self, codes: ms.Tensor) -> ms.Tensor:
         """Decode the given codes of shape [B, K, T] to the quantized representation."""
-        quantized_out = ms.tensor(0.0) #, device=codes.device)
-        codes = codes.swapaxes(0, 1)
+        quantized_out = ms.tensor(0.0)
+        codes = codes.transpose((1, 0, 2))
         for i, indices in enumerate(codes):
             layer = self.layers[i]
             quantized = layer.decode(indices)
@@ -1464,66 +1429,30 @@ class MimiPreTrainedModel(PreTrainedModel):
     _supports_static_cache = True
 
     # Copied from transformers.models.encodec.modeling_encodec.EncodecPreTrainedModel._init_weights
-    # def _init_weights(self, cell):
-    #     """Initialize the weights"""
-    #     if isinstance(cell, nn.Linear):
-    #
-    #         cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-    #                                          cell.weight.shape,cell.weight.dtype))  #data.normal_(mean=0.0, std=self.config.initializer_range)
-    #         if cell.has_bias is not None:
-    #             cell.bias.data.zero_()
-    #     elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
-    #         cell.bias.data.zero_()
-    #         cell.weight.data.fill_(1.0)
-    #     elif isinstance(cell, nn.Conv1d):
-    #         nn.init.kaiming_normal_(cell.weight)
-    #         if cell.has_bias is not None:
-    #             k = math.sqrt(cell.groups / (cell.in_channels * cell.kernel_size[0]))
-    #             nn.init.uniform_(cell.bias, a=-k, b=k)
-    #     elif isinstance(cell, nn.Embedding):
-    #         cell.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-    #         if cell.padding_idx is not None:
-    #             cell.weight.data[cell.padding_idx].zero_()
-    #     elif isinstance(cell, nn.LSTM):
-    #         for name, param in cell.named_parameters():
-    #             if "weight" in name:
-    #                 nn.init.xavier_uniform_(param)
-    #             elif "bias" in name:
-    #                 nn.init.constant_(param, 0.0)
-
-    def _init_weights(self, cell):
+    def _init_weights(self, module):
         """Initialize the weights"""
-        if isinstance(cell, nn.Linear):
-            cell.weight.assign_value(initializer(Normal(self.config.initializer_range),
-                                                 cell.weight.shape, cell.weight.dtype))
-
-            # module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if cell.bias is not None:
-                cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-
-
-        elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
-            cell.weight.assign_value(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.assign_value(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-
-        elif isinstance(cell, nn.Conv1d):
-            nn.init.kaiming_normal_(cell.weight)
-            if cell.bias is not None:
-                k = math.sqrt(cell.groups / (cell.in_channels * cell.kernel_size[0]))
-                nn.init.uniform_(cell.bias, a=-k, b=k)
-        elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-
-            cell.weight.assign_value(Tensor(weight, cell.weight.dtype))
-        elif isinstance(cell, nn.LSTM):
-            for name, param in cell.named_parameters():
+        if isinstance(module, nn.Linear):
+            module.weight.assign_value(initializer(TruncatedNormal(sigma=self.config.initializer_range, mean=0.0), module.weight.shape, module.weight.dtype,))
+            if module.bias is not None:
+                module.bias.assign_value(initializer("zeros", module.bias.shape, module.bias.dtype,))
+        elif isinstance(module, (nn.LayerNorm, nn.GroupNorm)):
+            module.bias.assign_value(initializer("zeros", module.bias.shape, module.bias.dtype,))
+            module.weight.assign_value(initializer("ones", module.bias.shape, module.bias.dtype,))
+        elif isinstance(module, nn.Conv1d):
+            nn.init.kaiming_normal_(module.weight)
+            if module.bias is not None:
+                k = math.sqrt(module.groups / (module.in_channels * module.kernel_size[0]))
+                nn.init.uniform_(module.bias, a=-k, b=k)
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx].zero_()
+        elif isinstance(module, nn.LSTM):
+            for name, param in module.named_parameters():
                 if "weight" in name:
                     nn.init.xavier_uniform_(param)
                 elif "bias" in name:
                     nn.init.constant_(param, 0.0)
-
 
 
 MIMI_START_DOCSTRING = r"""
@@ -1531,7 +1460,7 @@ MIMI_START_DOCSTRING = r"""
     library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
     etc.)
 
-    This model is also a PyTorch [ms.nn.Module](https://pytorch.org/docs/stable/nn.html#ms.nn.Module) subclass.
+    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
     Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
     and behavior.
 
@@ -1641,17 +1570,17 @@ class MimiModel(MimiPreTrainedModel):
         """
         embeddings = self.encoder(input_values)
         encoder_outputs = self.encoder_transformer(
-            embeddings.swapaxes(1, 2), past_key_values=past_key_values, return_dict=return_dict
+            embeddings.transpose((0, 2, 1)), past_key_values=past_key_values, return_dict=return_dict
         )
         if return_dict:
             past_key_values = encoder_outputs.get("past_key_values")
         elif len(encoder_outputs) > 1:
             past_key_values = encoder_outputs[1]
-        embeddings = encoder_outputs[0].swapaxes(1, 2)
+        embeddings = encoder_outputs[0].transpose((0, 2, 1))
         embeddings = self.downsample(embeddings)
 
         codes = self.quantizer.encode(embeddings, num_quantizers)
-        codes = codes.swapaxes(0, 1)
+        codes = codes.transpose((1, 0, 2))
         return codes, past_key_values
 
     def encode(
@@ -1730,13 +1659,13 @@ class MimiModel(MimiPreTrainedModel):
 
         embeddings = self.upsample(embeddings)
         decoder_outputs = self.decoder_transformer(
-            embeddings.swapaxes(1, 2), past_key_values=past_key_values, return_dict=return_dict
+            embeddings.transpose((0, 2, 1)), past_key_values=past_key_values, return_dict=return_dict
         )
         if return_dict:
             past_key_values = decoder_outputs.get("past_key_values")
         elif len(decoder_outputs) > 1:
             past_key_values = decoder_outputs[1]
-        embeddings = decoder_outputs[0].swapaxes(1, 2)
+        embeddings = decoder_outputs[0].transpose((0, 2, 1))
         outputs = self.decoder(embeddings)
         return outputs, past_key_values
 
@@ -1807,13 +1736,12 @@ class MimiModel(MimiPreTrainedModel):
 
         ```python
         >>> from datasets import load_dataset
-        >>> from mindnlp.transformers import AutoFeatureExtractor
-        >>> from mindnlp.transformers.models.mimi import MimiModel
+        >>> from transformers import AutoFeatureExtractor, MimiModel
 
         >>> dataset = load_dataset("hf-internal-testing/ashraq-esc50-1-dog-example")
         >>> audio_sample = dataset["train"]["audio"][0]["array"]
 
-        >>> model_id = r"kyutai/mimi"
+        >>> model_id = "kyutai/mimi"
         >>> model = MimiModel.from_pretrained(model_id)
         >>> feature_extractor = AutoFeatureExtractor.from_pretrained(model_id)
 
