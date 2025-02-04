@@ -145,7 +145,7 @@ from . import (
     mctct,
     megatron_bert,
     mgp_str,
-    mimi,  # added by lt
+    mimi,  #
     minicpm,
     minicpm3,
     mistral,
