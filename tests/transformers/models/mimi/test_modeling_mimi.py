@@ -502,7 +502,7 @@ class MimiIntegrationTest(unittest.TestCase):
                 audio_output_entire_context = model.decode(audio_codes)[0]
                 audio_output_concat_context = mindspore.ops.cat(
                     (decoder_outputs_first_part[0],
-                        decoder_outputs_second_part[0]),1
+                        decoder_outputs_second_part[0]),-1 # 按最后一个维度拼接
                 )
 
             # make sure audios are more or less equal
