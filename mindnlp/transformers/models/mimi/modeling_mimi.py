@@ -218,7 +218,7 @@ class MimiConv1d(nn.Module):
         """
         length = hidden_states.shape[-1]
         padding_left, padding_right = paddings
-        print('###### padding:',paddings,padding_left,padding_right)
+        # print('###### padding:',paddings,padding_left,padding_right)
         if mode != "reflect":
             return ops.pad(hidden_states, paddings, mode, value)
 
