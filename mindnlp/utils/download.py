@@ -928,12 +928,10 @@ def build_download_url(
     if mirror in ('huggingface', 'gitee', 'modelscope', 'wisemodel', 'modelers'):
         if mirror == 'modelscope' and revision == 'main':
             revision = 'master'
-        print('download url:', MIRROR_MAP[mirror].format(repo_id,revision, filename))
         return MIRROR_MAP[mirror].format(repo_id, revision, filename)
     if revision is not None and revision != 'main':
         logger.warning(f'`revision` is not support when use "{mirror}" website. '
                     f'If you want use specific revision, please use "modelscope", "huggingface" or "gitee".')
-    print('download url:',MIRROR_MAP[mirror].format(repo_id, filename))
     return MIRROR_MAP[mirror].format(repo_id, filename)
 
 
