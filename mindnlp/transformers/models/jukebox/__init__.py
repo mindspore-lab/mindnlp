@@ -1,3 +1,4 @@
+"""Jukebox model"""
 from . import configuration_jukebox, modeling_jukebox, tokenization_jukebox
 from .configuration_jukebox import *
 from .modeling_jukebox import *
