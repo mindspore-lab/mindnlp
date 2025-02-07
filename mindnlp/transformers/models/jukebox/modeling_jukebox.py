@@ -25,7 +25,7 @@ from mindnlp.core import nn, ops, no_grad, distributions
 from mindnlp.core.nn import LayerNorm as FusedLayerNorm
 
 from ....common.activations import ACT2FN
-from ....modeling_utils import PreTrainedModel
+from ...modeling_utils import PreTrainedModel
 from ....utils import  logging
 from ....utils.logging import tqdm
 from .configuration_jukebox import ATTENTION_PATTERNS, JukeboxConfig, JukeboxPriorConfig, JukeboxVQVAEConfig
