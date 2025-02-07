@@ -463,7 +463,7 @@ class JukeboxBottleneckBlock(nn.Module):
             - 2 * ops.matmul(latent_states, codebook_weights)
             + mindspore.ops.sum(codebook_weights**2, dim=0, keepdim=True)
         )  # (batch_size * latent_states , codebook_weights)
-        min_distance, music_tokens = ops.minimum(distance,dim=-1)
+        min_distance, music_tokens = ops.min(distance,axis=-1)
         fit = ops.mean(min_distance)
         return music_tokens, fit
 
