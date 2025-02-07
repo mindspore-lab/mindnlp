@@ -463,7 +463,7 @@ class JukeboxBottleneckBlock(nn.Module):
             - 2 * ops.matmul(latent_states, codebook_weights)
             + mindspore.ops.sum(codebook_weights**2, dim=0, keepdim=True)
         )  # (batch_size * latent_states , codebook_weights)
-        min_distance, music_tokens = ops.min(distance,axis=-1)
+        min_distance, music_tokens = ops.min(distance,dim=-1)
         fit = ops.mean(min_distance)
         return music_tokens, fit
 
@@ -2257,9 +2257,6 @@ class JukeboxPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         if isinstance(module, (JukeboxPrior, JukeboxVQVAE)):
             module.apply(module._init_weights)
-
-    def __init__(self, *inputs, **kwargs):
-        super().__init__(*inputs, **kwargs)
 
 
 class JukeboxModel(JukeboxPreTrainedModel):
