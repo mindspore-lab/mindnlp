@@ -23,8 +23,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import regex
 
-from ....tokenization_utils import AddedToken, PreTrainedTokenizer
-from ....tokenization_utils_base import BatchEncoding
+from ...tokenization_utils import AddedToken, PreTrainedTokenizer
+from ...tokenization_utils_base import BatchEncoding
 from ....utils import  logging
 
 
