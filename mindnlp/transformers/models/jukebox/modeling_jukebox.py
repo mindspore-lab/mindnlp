@@ -2255,11 +2255,10 @@ class JukeboxPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = False
 
     def _init_weights(self, module):
-        if isinstance(module, JukeboxPrior) or isinstance(module, JukeboxVQVAE):
+        if isinstance(module, (JukeboxPrior, JukeboxVQVAE)):
             module.apply(module._init_weights)
 
     def __init__(self, *inputs, **kwargs):
-        super().__init__(*inputs, **kwargs)
 
 
 JUKEBOX_SAMPLING_INPUT_DOCSTRING = r"""
