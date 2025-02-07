@@ -2259,16 +2259,7 @@ class JukeboxPreTrainedModel(PreTrainedModel):
             module.apply(module._init_weights)
 
     def __init__(self, *inputs, **kwargs):
-
-
-JUKEBOX_SAMPLING_INPUT_DOCSTRING = r"""
-            labels (`List[mindspore.Tensor]` of length `n_sample`, and shape `(self.levels, self.config.max_nb_genre + lyric_sequence_length)` :
-                List of metadata such as `artist_id`, `genre_id` and the full list of lyric tokens which are used to
-                condition the generation.
-            sampling_kwargs (`Dict[Any]`):
-                Various additional sampling arguments that are used by the `_sample` function. A detail list of the
-                arguments can bee seen in the [`_sample`] function documentation.
-"""
+        super().__init__(*inputs, **kwargs)
 
 
 class JukeboxModel(JukeboxPreTrainedModel):
