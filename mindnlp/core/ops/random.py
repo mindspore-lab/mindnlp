@@ -11,11 +11,11 @@ from ..utils import get_default_dtype
 
 # bernoulli
 has_bernoulli = hasattr(mindspore.mint, 'bernoulli')
-def bernoulli(input, *, generator=None):
+def bernoulli(input, *, generator=None, p=0.5):
     if use_pyboost() and has_bernoulli:
         return mindspore.mint.bernoulli(input, generator=generator)
     random_numbers = rand(*input.shape, dtype=mindspore.float32)
-    samples = random_numbers < 0.5
+    samples = random_numbers < p
     samples = samples.int()
     return samples
 
