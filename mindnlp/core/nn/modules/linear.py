@@ -70,6 +70,11 @@ class Linear(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, input):
+        if self.weight.dtype == mindspore.float32:
+            self.weight = Parameter(self.weight.astype(mindspore.float16))
+        if self.bias is not None and self.bias.dtype == mindspore.float32:
+            self.bias = Parameter(self.bias.astype(mindspore.float16))
+        print("self.weight.dtype:", self.weight.dtype)
         contains_nan_or_inf(input, 'Linear.input ')
         return F.linear(input, self.weight, self.bias)
 

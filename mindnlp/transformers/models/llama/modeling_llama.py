@@ -104,10 +104,11 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
             print("tensor_b.shape:", tensor_b.shape)
             print("tensor_a.dtype:", tensor_a.dtype)
             print("tensor_b.dtype:", tensor_b.dtype)
-            import numpy as np 
+            import numpy as np
             np.save('aclnnAdd_a.npy', tensor_a.asnumpy())
             np.save('aclnnAdd_b.npy', tensor_b.asnumpy())
-            padding_mask = tensor_a.astype(mindspore.float16) + tensor_b.astype(mindspore.float16)
+            padding_mask = tensor_a.astype(
+                mindspore.float16) + tensor_b.astype(mindspore.float16)
             print("padding_mask.shape:", padding_mask.shape)
             print("padding_mask.dtype:", padding_mask.dtype)
             padding_mask = padding_mask == 0
@@ -490,7 +491,8 @@ class LlamaAttention(nn.Module):
             print("causal_mask.shape:", causal_mask.shape)
             print("attn_weights.dtype:", attn_weights.dtype)
             print("causal_mask.dtype:", causal_mask.dtype)
-            attn_weights = attn_weights + causal_mask
+            attn_weights = attn_weights.astype(
+                mindspore.float16) + causal_mask.astype(mindspore.float16)
             print("attn_weights.shape:", attn_weights.shape)
             print("attn_weights.dtype:", attn_weights.dtype)
             # contains_nan_or_inf(attn_weights,"attn_weights")
@@ -503,8 +505,10 @@ class LlamaAttention(nn.Module):
             # attn_weights = attn_weights.astype(mindspore.float32)
 
         # upcast attention to fp32
+        # attn_weights = nn.functional.softmax(
+        #     attn_weights, dim=-1, dtype=mindspore.float32).to(query_states.dtype)
         attn_weights = nn.functional.softmax(
-            attn_weights, dim=-1, dtype=mindspore.float32).to(query_states.dtype)
+            attn_weights, dim=-1, dtype=mindspore.float16).to(query_states.dtype)
         attn_weights = nn.functional.dropout(
             attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = ops.matmul(attn_weights, value_states)
