@@ -23,6 +23,7 @@ import re
 import json
 import types
 import functools
+import sys
 import tempfile
 import time
 from typing import Union, Optional, Dict, Any
@@ -91,7 +92,7 @@ def download_url(url, proxies=None):
     Returns:
         `str`: The location of the temporary file where the url was downloaded.
     """
-    return http_get(url, tempfile.gettempdir(), download_file_name='tmp_' + url.split('/')[-1], proxies=proxies)
+    return threads_exclusive_http_get(url, tempfile.gettempdir(), download_file_name='tmp_' + url.split('/')[-1], proxies=proxies)
 
 def copy_func(f):
     """Returns a copy of a function f."""
@@ -140,6 +141,25 @@ ca
     cache_dir = DEFAULT_ROOT
 
     return cache_dir
+
+
+def threads_exclusive_http_get(url, storage_folder=None, md5sum=None, download_file_name=None, proxies=None, headers=None):
+    pointer_path = os.path.join(storage_folder, download_file_name)
+    lock_file_path = pointer_path + ".lock"
+    if sys.platform != "win32":
+        import fcntl # pylint: disable=import-error
+    else:
+        import winfcntlock as fcntl # pylint: disable=import-error
+    with open(lock_file_path, 'w') as lock_file:
+        fd = lock_file.fileno()
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            file_path = http_get(url, path=storage_folder, download_file_name=download_file_name, proxies=proxies, headers=headers)
+            return file_path
+        except Exception as exp:
+            raise exp
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
 
 
 def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None, headers=None):
@@ -628,11 +648,11 @@ def download(
     else:
         headers = {}
     try:
-        pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies, headers=headers)
-    except Exception:
+        pointer_path = threads_exclusive_http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies, headers=headers)
+    except Exception as exp:
         # Otherwise, our Internet connection is down.
         # etag is None
-        raise
+        raise exp
 
     return pointer_path
 
@@ -723,7 +743,7 @@ def get_from_cache(
     if os.path.exists(file_path) and check_md5(file_path, md5sum):
         return file_path
     try:
-        path = http_get(url, cache_dir, md5sum, download_file_name=filename, proxies=proxies)
+        path = threads_exclusive_http_get(url, cache_dir, md5sum, download_file_name=filename, proxies=proxies)
         return path
     except (ProxyError, SSLError) as exc:
         raise exc
