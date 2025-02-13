@@ -1,12 +1,24 @@
 """linear"""
 from typing import Any
 import math
+import mindspore
 from mindspore import Tensor
+from mindspore import ops as mops
 from ..parameter import Parameter
 from .module import Module
 from .. import init
 from .. import functional as F
 from ... import ops
+
+
+def contains_nan_or_inf(tensor, info):
+    tensor = tensor.astype(mindspore.float16)
+    havenan = mops.isnan(tensor).any()
+    haveinf = mops.isinf(tensor).any()
+    if haveinf:
+        print(info+'haveinf')
+    if havenan:
+        print(info+'havenan')
 
 class Linear(Module):
     r"""Applies a linear transformation to the incoming data: :math:`y = Ax + b`
@@ -58,6 +70,7 @@ class Linear(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, input):
+        contains_nan_or_inf(input, 'Linear.input ')
         return F.linear(input, self.weight, self.bias)
 
     def __repr__(self):
