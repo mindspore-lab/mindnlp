@@ -364,7 +364,10 @@ class DynamicCache(Cache):
         # Update the number of seen tokens
         if layer_idx == 0:
             self._seen_tokens += key_states.shape[-2]
-
+        if key_states.dtype!=mindspore.float16:
+            key_states = key_states.astype(mindspore.float16)
+        if key_states.dtype!=mindspore.float16:
+            value_states = value_states.astype(mindspore.float16)
         # Update the cache
         if len(self.key_cache) <= layer_idx:
             self.key_cache.append(key_states)
@@ -375,7 +378,8 @@ class DynamicCache(Cache):
             self.key_cache[layer_idx] = key_states
             self.value_cache[layer_idx] = value_states
         else:
-            self.key_cache[layer_idx] = ops.cat([self.key_cache[layer_idx], key_states], dim=-2)
+            self.key_cache[layer_idx] = ops.cat(
+                [self.key_cache[layer_idx].astype(mindspore.float16), key_states.astype(mindspore.float16)], dim=-2)
             self.value_cache[layer_idx] = ops.cat([self.value_cache[layer_idx], value_states], dim=-2)
 
         return self.key_cache[layer_idx], self.value_cache[layer_idx]
