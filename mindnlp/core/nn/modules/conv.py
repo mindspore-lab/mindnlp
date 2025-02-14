@@ -1,6 +1,7 @@
 # coding=utf-8
 """conv"""
 import math
+import mindspore
 from typing import Optional, Tuple, Union, List
 from mindspore import Tensor, ops as mops
 from ..parameter import Parameter
@@ -267,9 +268,9 @@ class Conv2d(_ConvNd):
     def _conv_forward(self, input: Tensor, weight: Tensor, bias: Optional[Tensor]):
         if self.padding_mode != 'zeros':
             input = ops.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode)
-        output = self.conv2d(input, weight)
+        output = self.conv2d(input.astype(mindspore.float16), weight.astype(mindspore.float16))
         if bias is not None:
-            output = mops.bias_add(output, bias)
+            output = mops.bias_add(output.astype(mindspore.float16), bias.astype(mindspore.float16))
         return output
 
     def forward(self, input):
