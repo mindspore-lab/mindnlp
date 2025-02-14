@@ -62,16 +62,19 @@ class Cache(nn.Module):
         Return:
             A tuple containing the updated key and value states.
         """
-        raise NotImplementedError("Make sure to implement `update` in a subclass.")
+        raise NotImplementedError(
+            "Make sure to implement `update` in a subclass.")
 
     def get_seq_length(self, layer_idx: Optional[int] = 0) -> int:
         """Returns the sequence length of the cached states. A layer index can be optionally passed."""
         # TODO: deprecate this function in favor of `cache_position`
-        raise NotImplementedError("Make sure to implement `get_seq_length` in a subclass.")
+        raise NotImplementedError(
+            "Make sure to implement `get_seq_length` in a subclass.")
 
     def get_max_length(self) -> Optional[int]:
         """Returns the maximum sequence length of the cached states, if there is any."""
-        raise NotImplementedError("Make sure to implement `get_max_length` in a subclass.")
+        raise NotImplementedError(
+            "Make sure to implement `get_max_length` in a subclass.")
 
     def get_usable_length(self, new_seq_length: int, layer_idx: Optional[int] = 0) -> int:
         """Given the sequence length of the new inputs, returns the usable length of the cache."""
@@ -87,8 +90,10 @@ class Cache(nn.Module):
     def reorder_cache(self, beam_idx: mindspore.Tensor):
         """Reorders the cache for beam search, given the selected beam indices."""
         for layer_idx in range(len(self.key_cache)):
-            self.key_cache[layer_idx] = self.key_cache[layer_idx].index_select(0, beam_idx)
-            self.value_cache[layer_idx] = self.value_cache[layer_idx].index_select(0, beam_idx)
+            self.key_cache[layer_idx] = self.key_cache[layer_idx].index_select(
+                0, beam_idx)
+            self.value_cache[layer_idx] = self.value_cache[layer_idx].index_select(
+                0, beam_idx)
 
     @property
     def seen_tokens(self):
@@ -145,7 +150,8 @@ class CacheConfig:
         """
         with open(json_file_path, "w", encoding="utf-8") as writer:
             config_dict = self.to_dict()
-            json_string = json.dumps(config_dict, indent=2, sort_keys=True) + "\n"
+            json_string = json.dumps(
+                config_dict, indent=2, sort_keys=True) + "\n"
 
             writer.write(json_string)
 
@@ -195,7 +201,8 @@ class CacheConfig:
                 to_remove.append(key)
 
         # Remove all the attributes that were updated, without modifying the input dict
-        unused_kwargs = {key: value for key, value in kwargs.items() if key not in to_remove}
+        unused_kwargs = {key: value for key,
+                         value in kwargs.items() if key not in to_remove}
         return unused_kwargs
 
 
@@ -309,9 +316,12 @@ class DynamicCache(Cache):
             self.key_cache: List[mindspore.Tensor] = []
             self.value_cache: List[mindspore.Tensor] = []
         else:
-            self.key_cache: List[mindspore.Tensor] = [[] for _ in range(num_hidden_layers)]
-            self.value_cache: List[mindspore.Tensor] = [[] for _ in range(num_hidden_layers)]
-        self._seen_tokens = 0  # Used in `generate` to keep tally of how many tokens the cache has seen
+            self.key_cache: List[mindspore.Tensor] = [[]
+                                                      for _ in range(num_hidden_layers)]
+            self.value_cache: List[mindspore.Tensor] = [[]
+                                                        for _ in range(num_hidden_layers)]
+        # Used in `generate` to keep tally of how many tokens the cache has seen
+        self._seen_tokens = 0
 
     def __getitem__(self, layer_idx: int) -> List[Tuple[mindspore.Tensor]]:
         """
@@ -321,7 +331,8 @@ class DynamicCache(Cache):
         if layer_idx < len(self):
             return (self.key_cache[layer_idx], self.value_cache[layer_idx])
         else:
-            raise KeyError(f"Cache only has {len(self)} layers, attempted to access layer with index {layer_idx}")
+            raise KeyError(
+                f"Cache only has {len(self)} layers, attempted to access layer with index {layer_idx}")
 
     def __iter__(self):
         """
@@ -364,7 +375,10 @@ class DynamicCache(Cache):
         # Update the number of seen tokens
         if layer_idx == 0:
             self._seen_tokens += key_states.shape[-2]
-
+        if key_states.dtype!=mindspore.float16:
+            key_states = key_states.astype(mindspore.float16)
+        if key_states.dtype!=mindspore.float16:
+            value_states = value_states.astype(mindspore.float16)
         # Update the cache
         if len(self.key_cache) <= layer_idx:
             self.key_cache.append(key_states)
@@ -375,8 +389,10 @@ class DynamicCache(Cache):
             self.key_cache[layer_idx] = key_states
             self.value_cache[layer_idx] = value_states
         else:
-            self.key_cache[layer_idx] = ops.cat([self.key_cache[layer_idx], key_states], dim=-2)
-            self.value_cache[layer_idx] = ops.cat([self.value_cache[layer_idx], value_states], dim=-2)
+            self.key_cache[layer_idx] = ops.cat(
+                [self.key_cache[layer_idx].astype(mindspore.float16), key_states.astype(mindspore.float16)], dim=-2)
+            self.value_cache[layer_idx] = ops.cat(
+                [self.value_cache[layer_idx], value_states], dim=-2)
 
         return self.key_cache[layer_idx], self.value_cache[layer_idx]
 
@@ -396,7 +412,8 @@ class DynamicCache(Cache):
         backward compatibility."""
         legacy_cache = ()
         for layer_idx in range(len(self)):
-            legacy_cache += ((self.key_cache[layer_idx], self.value_cache[layer_idx]),)
+            legacy_cache += ((self.key_cache[layer_idx],
+                             self.value_cache[layer_idx]),)
         return legacy_cache
 
     @classmethod
@@ -432,8 +449,10 @@ class DynamicCache(Cache):
         for i in range(0, full_batch_size, split_size):
             current_split = DynamicCache()
             current_split._seen_tokens = self._seen_tokens
-            current_split.key_cache = [tensor[i : i + split_size] for tensor in self.key_cache]
-            current_split.value_cache = [tensor[i : i + split_size] for tensor in self.value_cache]
+            current_split.key_cache = [
+                tensor[i: i + split_size] for tensor in self.key_cache]
+            current_split.value_cache = [
+                tensor[i: i + split_size] for tensor in self.value_cache]
             out.append(current_split)
         return out
 
@@ -443,23 +462,29 @@ class DynamicCache(Cache):
         `generation.utils`"""
         cache = cls()
         for idx in range(len(splits[0])):
-            layer_keys = ops.cat([current.key_cache[idx] for current in splits], dim=0)
-            layer_values = ops.cat([current.value_cache[idx] for current in splits], dim=0)
+            layer_keys = ops.cat([current.key_cache[idx]
+                                 for current in splits], dim=0)
+            layer_values = ops.cat([current.value_cache[idx]
+                                   for current in splits], dim=0)
             cache.update(layer_keys, layer_values, idx)
         return cache
 
     def batch_repeat_interleave(self, repeats: int):
         """Repeat the cache `repeats` times in the batch dimension. Used in contrastive search."""
         for layer_idx in range(len(self)):
-            self.key_cache[layer_idx] = ops.repeat_interleave(self.key_cache[layer_idx], repeats, dim=0)
-            self.value_cache[layer_idx] = ops.repeat_interleave(self.value_cache[layer_idx], repeats, dim=0)
+            self.key_cache[layer_idx] = ops.repeat_interleave(
+                self.key_cache[layer_idx], repeats, dim=0)
+            self.value_cache[layer_idx] = ops.repeat_interleave(
+                self.value_cache[layer_idx], repeats, dim=0)
 
     def batch_select_indices(self, indices: mindspore.Tensor):
         """Only keep the `indices` in the batch dimension of the cache. Used in contrastive search."""
         for layer_idx in range(len(self)):
             if ON_ORANGE_PI:
-                self.key_cache[layer_idx] = ops.getitem(self.key_cache[layer_idx], (indices, Ellipsis))
-                self.value_cache[layer_idx] = ops.getitem(self.value_cache[layer_idx], (indices, Ellipsis))
+                self.key_cache[layer_idx] = ops.getitem(
+                    self.key_cache[layer_idx], (indices, Ellipsis))
+                self.value_cache[layer_idx] = ops.getitem(
+                    self.value_cache[layer_idx], (indices, Ellipsis))
             else:
                 self.key_cache[layer_idx] = self.key_cache[layer_idx][indices, ...]
                 self.value_cache[layer_idx] = self.value_cache[layer_idx][indices, ...]
@@ -505,16 +530,22 @@ class QuantizedCache(DynamicCache):
             self._seen_tokens += key_states.shape[-2]
 
         if len(self.key_cache) <= layer_idx:
-            self._quantized_key_cache.append(self._quantize(key_states, axis=self.axis_key))
-            self._quantized_value_cache.append(self._quantize(value_states, axis=self.axis_value))
+            self._quantized_key_cache.append(
+                self._quantize(key_states, axis=self.axis_key))
+            self._quantized_value_cache.append(
+                self._quantize(value_states, axis=self.axis_value))
             self.key_cache.append(ops.zeros(0, dtype=key_states.dtype))
             self.value_cache.append(ops.zeros(0, dtype=key_states.dtype))
             keys_to_return, values_to_return = key_states, value_states
         else:
-            dequant_key = self._dequantize(self._quantized_key_cache[layer_idx])
-            dequant_value = self._dequantize(self._quantized_value_cache[layer_idx])
-            keys_to_return = [dequant_key, self.key_cache[layer_idx], key_states]
-            values_to_return = [dequant_value, self.value_cache[layer_idx], value_states]
+            dequant_key = self._dequantize(
+                self._quantized_key_cache[layer_idx])
+            dequant_value = self._dequantize(
+                self._quantized_value_cache[layer_idx])
+            keys_to_return = [dequant_key,
+                              self.key_cache[layer_idx], key_states]
+            values_to_return = [dequant_value,
+                                self.value_cache[layer_idx], value_states]
 
             keys_to_return = ops.cat(keys_to_return, dim=-2)
             values_to_return = ops.cat(values_to_return, dim=-2)
@@ -522,15 +553,20 @@ class QuantizedCache(DynamicCache):
                 self.key_cache[layer_idx].ndim == 4
                 and self.key_cache[layer_idx].shape[-2] + 1 >= self.residual_length
             ):
-                self._quantized_key_cache[layer_idx] = self._quantize(keys_to_return, axis=self.axis_key)
+                self._quantized_key_cache[layer_idx] = self._quantize(
+                    keys_to_return, axis=self.axis_key)
                 self._quantized_value_cache[layer_idx] = self._quantize(
                     values_to_return, axis=self.axis_value
                 )
-                self.key_cache[layer_idx] = ops.zeros(0, dtype=key_states.dtype)
-                self.value_cache[layer_idx] = ops.zeros(0, dtype=key_states.dtype)
+                self.key_cache[layer_idx] = ops.zeros(
+                    0, dtype=key_states.dtype)
+                self.value_cache[layer_idx] = ops.zeros(
+                    0, dtype=key_states.dtype)
             else:
-                self.key_cache[layer_idx] = ops.cat([self.key_cache[layer_idx], key_states], dim=-2)
-                self.value_cache[layer_idx] = ops.cat([self.value_cache[layer_idx], value_states], dim=-2)
+                self.key_cache[layer_idx] = ops.cat(
+                    [self.key_cache[layer_idx], key_states], dim=-2)
+                self.value_cache[layer_idx] = ops.cat(
+                    [self.value_cache[layer_idx], value_states], dim=-2)
 
         return keys_to_return, values_to_return
 
@@ -545,11 +581,13 @@ class QuantizedCache(DynamicCache):
 
     def _quantize(self, tensor, axis):
         """Quantizes a key/value using a defined quantization method."""
-        raise NotImplementedError("Make sure to implement `_quantize` in a subclass.")
+        raise NotImplementedError(
+            "Make sure to implement `_quantize` in a subclass.")
 
     def _dequantize(self, q_tensor):
         """Dequantizes back the tensor that was quantized by `self._quantize()`"""
-        raise NotImplementedError("Make sure to implement `_dequantize` in a subclass.")
+        raise NotImplementedError(
+            "Make sure to implement `_dequantize` in a subclass.")
 
 
 class SinkCache(Cache):
@@ -577,7 +615,8 @@ class SinkCache(Cache):
         self.cos_sin_rerotation_cache = {}
         self._cos_cache = None
         self._sin_cache = None
-        self._seen_tokens = 0  # Used in `generate` to keep tally of how many tokens the cache has seen
+        # Used in `generate` to keep tally of how many tokens the cache has seen
+        self._seen_tokens = 0
 
     @staticmethod
     def _rotate_half(x):
@@ -589,7 +628,8 @@ class SinkCache(Cache):
     def _apply_key_rotary_pos_emb(
         self, key_states: mindspore.Tensor, cos: mindspore.Tensor, sin: mindspore.Tensor
     ) -> mindspore.Tensor:
-        rotated_key_states = (key_states * cos) + (self._rotate_half(key_states) * sin)
+        rotated_key_states = (key_states * cos) + \
+            (self._rotate_half(key_states) * sin)
         return rotated_key_states
 
     def _get_rerotation_cos_sin(
@@ -601,10 +641,10 @@ class SinkCache(Cache):
             sin = sin.to(mindspore.float32)
 
             # Compute the cos and sin required for back- and forward-rotating to one position earlier in the sequence
-            original_cos = cos[self.num_sink_tokens + key_states.shape[-2] :]
-            shifted_cos = cos[self.num_sink_tokens : -key_states.shape[-2]]
-            original_sin = sin[self.num_sink_tokens + key_states.shape[-2] :]
-            shifted_sin = sin[self.num_sink_tokens : -key_states.shape[-2]]
+            original_cos = cos[self.num_sink_tokens + key_states.shape[-2]:]
+            shifted_cos = cos[self.num_sink_tokens: -key_states.shape[-2]]
+            original_sin = sin[self.num_sink_tokens + key_states.shape[-2]:]
+            shifted_sin = sin[self.num_sink_tokens: -key_states.shape[-2]]
             rerotation_cos = original_cos * shifted_cos + original_sin * shifted_sin
             rerotation_sin = -original_sin * shifted_cos + original_cos * shifted_sin
 
@@ -674,8 +714,10 @@ class SinkCache(Cache):
                     self._cos_cache = cos[0, ...]
                     self._sin_cache = sin[0, ...]
                 elif self._cos_cache.shape[0] < self.window_length:
-                    self._cos_cache = ops.cat([self._cos_cache, cos[0, ...]], dim=0)
-                    self._sin_cache = ops.cat([self._sin_cache, sin[0, ...]], dim=0)
+                    self._cos_cache = ops.cat(
+                        [self._cos_cache, cos[0, ...]], dim=0)
+                    self._sin_cache = ops.cat(
+                        [self._sin_cache, sin[0, ...]], dim=0)
 
         # [bsz, num_heads, seq_len, head_dim]
         if len(self.key_cache) <= layer_idx:
@@ -685,13 +727,15 @@ class SinkCache(Cache):
 
         elif key_states.shape[-2] + self.get_seq_length(layer_idx) < self.window_length:
             # Growing cache
-            self.key_cache[layer_idx] = ops.cat([self.key_cache[layer_idx], key_states], dim=-2)
-            self.value_cache[layer_idx] = ops.cat([self.value_cache[layer_idx], value_states], dim=-2)
+            self.key_cache[layer_idx] = ops.cat(
+                [self.key_cache[layer_idx], key_states], dim=-2)
+            self.value_cache[layer_idx] = ops.cat(
+                [self.value_cache[layer_idx], value_states], dim=-2)
 
         else:
             # Shifting cache
             keys_to_keep = self.key_cache[layer_idx][
-                :, :, -self.window_length + self.num_sink_tokens + key_states.shape[-2] :
+                :, :, -self.window_length + self.num_sink_tokens + key_states.shape[-2]:
             ]
 
             # On RoPE models, we need to recompute the Key rotation as the tokens are shifted
@@ -704,19 +748,23 @@ class SinkCache(Cache):
                         keys_to_keep[..., :partial_rotation_size],
                         keys_to_keep[..., partial_rotation_size:],
                     )
-                keys_to_keep = self._apply_key_rotary_pos_emb(keys_to_keep, rerotation_cos, rerotation_sin)
+                keys_to_keep = self._apply_key_rotary_pos_emb(
+                    keys_to_keep, rerotation_cos, rerotation_sin)
                 if partial_rotation_size is not None:
                     keys_to_keep = ops.cat((keys_to_keep, keys_pass), dim=-1)
 
             # Concatenate sink tokens, shifted & rotated tokens (if needed), and new tokens
             sink_keys = self.key_cache[layer_idx][:, :, : self.num_sink_tokens]
-            self.key_cache[layer_idx] = ops.cat([sink_keys, keys_to_keep, key_states], dim=-2)
+            self.key_cache[layer_idx] = ops.cat(
+                [sink_keys, keys_to_keep, key_states], dim=-2)
 
-            sink_values = self.value_cache[layer_idx][:, :, : self.num_sink_tokens]
+            sink_values = self.value_cache[layer_idx][:,
+                                                      :, : self.num_sink_tokens]
             values_to_keep = self.value_cache[layer_idx][
-                :, :, -self.window_length + self.num_sink_tokens + value_states.shape[-2] :
+                :, :, -self.window_length + self.num_sink_tokens + value_states.shape[-2]:
             ]
-            self.value_cache[layer_idx] = ops.cat([sink_values, values_to_keep, value_states], dim=-2)
+            self.value_cache[layer_idx] = ops.cat(
+                [sink_values, values_to_keep, value_states], dim=-2)
 
         return self.key_cache[layer_idx], self.value_cache[layer_idx]
 
@@ -742,7 +790,8 @@ class StaticCache(Cache):
         self.max_cache_len = config.max_position_embeddings if max_cache_len is None else max_cache_len
         # Some model define a custom `head_dim` != config.hidden_size // config.num_attention_heads
         self.head_dim = (
-            config.head_dim if hasattr(config, "head_dim") else config.hidden_size // config.num_attention_heads
+            config.head_dim if hasattr(
+                config, "head_dim") else config.hidden_size // config.num_attention_heads
         )
 
         self.dtype = dtype if dtype is not None else mindspore.float32
@@ -753,11 +802,14 @@ class StaticCache(Cache):
         self.key_cache: List[mindspore.Tensor] = []
         self.value_cache: List[mindspore.Tensor] = []
         # Note: There will be significant perf decrease if switching to use 5D tensors instead.
-        cache_shape = (max_batch_size, self.num_key_value_heads, self.max_cache_len, self.head_dim)
+        cache_shape = (max_batch_size, self.num_key_value_heads,
+                       self.max_cache_len, self.head_dim)
         for idx in range(config.num_hidden_layers):
             # Note: `torch.export()`` requires mutations to be registered as buffers.
-            self.register_buffer(f"key_cache_{idx}", Parameter(ops.zeros(cache_shape, dtype=dtype)))
-            self.register_buffer(f"value_cache_{idx}", Parameter(ops.zeros(cache_shape, dtype=dtype)))
+            self.register_buffer(f"key_cache_{idx}", Parameter(
+                ops.zeros(cache_shape, dtype=dtype)))
+            self.register_buffer(f"value_cache_{idx}", Parameter(
+                ops.zeros(cache_shape, dtype=dtype)))
             key_cache = getattr(self, f"key_cache_{idx}")
             value_cache = getattr(self, f"value_cache_{idx}")
             # Note: `mark_static_address` is used to tag the cache as an fixed data pointer, preventing cuda graph
@@ -813,12 +865,16 @@ class StaticCache(Cache):
             # k_out[:, :, cache_position] = key_states
             # v_out[:, :, cache_position] = value_states
             if ON_ORANGE_PI:
-                k_out = ops.inplace_index_add(k_out, 2, cache_position.int(), key_states)
-                v_out = ops.inplace_index_add(v_out, 2, cache_position.int(), value_states)
+                k_out = ops.inplace_index_add(
+                    k_out, 2, cache_position.int(), key_states)
+                v_out = ops.inplace_index_add(
+                    v_out, 2, cache_position.int(), value_states)
             else:
                 # use index_add for mindspore since tensor slice is too slow and no implementation of index_copy
-                k_out = ops.index_add(k_out, 2, cache_position.int(), key_states)
-                v_out = ops.index_add(v_out, 2, cache_position.int(), value_states)
+                k_out = ops.index_add(
+                    k_out, 2, cache_position.int(), key_states)
+                v_out = ops.index_add(
+                    v_out, 2, cache_position.int(), value_states)
 
         return k_out, v_out
 
@@ -894,8 +950,8 @@ class SlidingWindowCache(StaticCache):
 
         # assume this only happens in prefill phase when prompt length > sliding_window_size (= max_cache_len)
         if cache_position.shape[0] > self.max_cache_len:
-            k_out = key_states[:, :, -self.max_cache_len :, :]
-            v_out = value_states[:, :, -self.max_cache_len :, :]
+            k_out = key_states[:, :, -self.max_cache_len:, :]
+            v_out = value_states[:, :, -self.max_cache_len:, :]
             # Assumption: caches are all zeros at this point, `+=` is equivalent to `=` but compile-friendly
             self.key_cache[layer_idx] += k_out
             self.value_cache[layer_idx] += v_out
@@ -952,7 +1008,8 @@ class EncoderDecoderCache(Cache):
 
         self.is_updated = {}
         for layer_idx in range(len(cross_attention_cache.key_cache)):
-            self.is_updated[layer_idx] = bool(cross_attention_cache.get_seq_length(layer_idx) > 0)
+            self.is_updated[layer_idx] = bool(
+                cross_attention_cache.get_seq_length(layer_idx) > 0)
 
     def __getitem__(self, layer_idx: int) -> List[Tuple[mindspore.Tensor]]:
         """
@@ -967,7 +1024,8 @@ class EncoderDecoderCache(Cache):
                 self.cross_attention_cache.key_cache[layer_idx],
             )
         else:
-            raise KeyError(f"Cache only has {len(self)} layers, attempted to access layer with index {layer_idx}")
+            raise KeyError(
+                f"Cache only has {len(self)} layers, attempted to access layer with index {layer_idx}")
 
     def __len__(self):
         """
@@ -981,7 +1039,8 @@ class EncoderDecoderCache(Cache):
         legacy_cache = ()
         if len(self.cross_attention_cache) > 0:
             for self_attn, cross_attn in zip(
-                self.self_attention_cache.to_legacy_cache(), self.cross_attention_cache.to_legacy_cache()
+                self.self_attention_cache.to_legacy_cache(
+                ), self.cross_attention_cache.to_legacy_cache()
             ):
                 legacy_cache += (self_attn + cross_attn,)
         else:
@@ -993,14 +1052,17 @@ class EncoderDecoderCache(Cache):
         cls, past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
     ) -> "EncoderDecoderCache":
         """Converts a cache in the legacy cache format into an equivalent `EncoderDecoderCache`."""
-        cache = cls(self_attention_cache=DynamicCache(), cross_attention_cache=DynamicCache())
+        cache = cls(self_attention_cache=DynamicCache(),
+                    cross_attention_cache=DynamicCache())
         if past_key_values is not None:
             for layer_idx in range(len(past_key_values)):
                 key_states, value_states = past_key_values[layer_idx][:2]
-                cache.self_attention_cache.update(key_states, value_states, layer_idx)
+                cache.self_attention_cache.update(
+                    key_states, value_states, layer_idx)
                 if len(past_key_values[layer_idx]) > 2:
                     key_states, value_states = past_key_values[layer_idx][2:]
-                    cache.cross_attention_cache.update(key_states, value_states, layer_idx)
+                    cache.cross_attention_cache.update(
+                        key_states, value_states, layer_idx)
                     cache.is_updated[layer_idx] = True
         return cache
 
@@ -1055,8 +1117,10 @@ class EncoderDecoderCache(Cache):
         """Split the current instance into a list of `DynamicCache` by the batch size. This will be used by
         `_split_model_inputs()` in `generation.utils`"""
         self.check_dynamic_cache(self.batch_split.__name__)
-        self_attention_cache = self.self_attention_cache.batch_split(full_batch_size, split_size)
-        cross_attention_cache = self.cross_attention_cache.batch_split(full_batch_size, split_size)
+        self_attention_cache = self.self_attention_cache.batch_split(
+            full_batch_size, split_size)
+        cross_attention_cache = self.cross_attention_cache.batch_split(
+            full_batch_size, split_size)
 
         out = []
         for self_attn, cross_attn in zip(self_attention_cache, cross_attention_cache):
@@ -1070,12 +1134,16 @@ class EncoderDecoderCache(Cache):
         self_attention_cache = DynamicCache()
         cross_attention_cache = DynamicCache()
         for idx in range(len(splits[0])):
-            layer_keys = ops.cat([current.self_attention_cache.key_cache[idx] for current in splits], dim=0)
-            layer_values = ops.cat([current.self_attention_cache.value_cache[idx] for current in splits], dim=0)
+            layer_keys = ops.cat(
+                [current.self_attention_cache.key_cache[idx] for current in splits], dim=0)
+            layer_values = ops.cat(
+                [current.self_attention_cache.value_cache[idx] for current in splits], dim=0)
             self_attention_cache.update(layer_keys, layer_values, idx)
 
-            layer_keys = ops.cat([current.cross_attention_cache.key_cache[idx] for current in splits], dim=0)
-            layer_values = ops.cat([current.cross_attention_cache.value_cache[idx] for current in splits], dim=0)
+            layer_keys = ops.cat(
+                [current.cross_attention_cache.key_cache[idx] for current in splits], dim=0)
+            layer_values = ops.cat(
+                [current.cross_attention_cache.value_cache[idx] for current in splits], dim=0)
             cross_attention_cache.update(layer_keys, layer_values, idx)
         return cls(self_attention_cache, cross_attention_cache)
 
@@ -1105,7 +1173,8 @@ class HybridCache(Cache):
         self.max_batch_size = max_batch_size
         # Some model define a custom `head_dim` != config.hidden_size // config.num_attention_heads
         self.head_dim = (
-            config.head_dim if hasattr(config, "head_dim") else config.hidden_size // config.num_attention_heads
+            config.head_dim if hasattr(
+                config, "head_dim") else config.hidden_size // config.num_attention_heads
         )
 
         self.dtype = dtype if dtype is not None else mindspore.float32
@@ -1117,7 +1186,8 @@ class HybridCache(Cache):
         )
         self.key_cache: List[mindspore.Tensor] = []
         self.value_cache: List[mindspore.Tensor] = []
-        global_cache_shape = (max_batch_size, self.num_key_value_heads, max_cache_len, self.head_dim)
+        global_cache_shape = (
+            max_batch_size, self.num_key_value_heads, max_cache_len, self.head_dim)
         sliding_cache_shape = (
             max_batch_size,
             self.num_key_value_heads,

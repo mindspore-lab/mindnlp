@@ -28,7 +28,7 @@ vl_gpt: MultiModalityCausalLM = AutoModelForCausalLM.from_pretrained(
 )
 print('loaded processor and ckpt ')
 question = 'describe this image'
-image = "/home/HwHiAiUser/janus-pro-mindspore/inpain_model_cat.png"
+image = "./inpain_model_cat.png"
 conversation = [
     {
         "role": "<|User|>",

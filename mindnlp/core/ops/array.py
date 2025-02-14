@@ -6,10 +6,10 @@ from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.operations._grad_ops import StridedSliceGrad
 
-from mindnlp.configs import use_pyboost, ON_ORANGE_PI
+from mindnlp.configs import use_pyboost, ON_ORANGE_PI,set_pyboost
 from .other import broadcast_tensors
 
-
+set_pyboost(False)
 # adjoint
 
 # argwhere
@@ -21,8 +21,8 @@ def argwhere(input):
 # cat
 has_cat = hasattr(mindspore.mint, 'cat')
 def cat(tensors, dim=0):
-    if use_pyboost() and has_cat:
-        return mindspore.mint.cat(tensors, dim)
+    # if use_pyboost() and has_cat:
+    #     return mindspore.mint.cat(tensors, dim)
     return ops.cat(tensors, dim)
 
 # concat
