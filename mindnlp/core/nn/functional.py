@@ -476,6 +476,10 @@ def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode
         output_1d = output_2d.squeeze(2)
         return output_1d
 
+def addcmul_cpu(input, tensor1, tensor2, value=1):
+    if not isinstance(value, mindspore.Tensor):
+        value = mindspore.Tensor(value, dtype=input.dtype)
+    return input + value*tensor1*tensor2
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if use_pyboost():
@@ -491,7 +495,10 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     affine_param_shape[1] = C
     affine_param_shape = tuple(affine_param_shape)
     if weight is not None and bias is not None:
-        out = bias.view(affine_param_shape).addcmul(out, weight.view(affine_param_shape), 1)
+        if not ON_ORANGE_PI:
+            out = bias.view(affine_param_shape).addcmul(out, weight.view(affine_param_shape), 1)
+        else:
+            out = addcmul(bias.view(affine_param_shape), out, weight.view(affine_param_shape), 1)
     elif weight is not None:
         out = out.mul(weight.view(affine_param_shape))
     elif bias is not None:
