@@ -2885,11 +2885,11 @@ class Blip2ForConditionalGeneration(Blip2PreTrainedModel):
             if getattr(self.config, "image_token_index", None) is not None:
                 start_tokens = [self.config.image_token_index] * self.config.num_query_tokens + start_tokens
             input_ids = ops.tile(mindspore.Tensor([start_tokens]), (batch_size, 1))
-        
+
         inputs_embeds = self.get_input_embeddings()(input_ids)
         if attention_mask is None:
             attention_mask = ops.ones_like(input_ids)
-        
+
         # if the model already has "image_token_index" then the input is expanded to account for image embeds
         # otherwise we expand manually by concatenating
         if getattr(self.config, "image_token_index", None) is not None:
