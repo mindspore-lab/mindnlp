@@ -20,7 +20,7 @@ from typing import List, Optional, Union
 
 from ...image_utils import ImageInput
 from ...processing_utils import ProcessorMixin
-from ...tokenization_utils_base import BatchEncoding, PaddingStrategy, PreTokenizedInput, TextInput, TruncationStrategy
+from ...tokenization_utils_base import AddedToken, BatchEncoding, PaddingStrategy, PreTokenizedInput, TextInput, TruncationStrategy
 from ....utils import TensorType
 
 
@@ -36,13 +36,16 @@ class Blip2Processor(ProcessorMixin):
             An instance of [`BlipImageProcessor`]. The image processor is a required input.
         tokenizer (`AutoTokenizer`):
             An instance of ['PreTrainedTokenizer`]. The tokenizer is a required input.
+        num_query_tokens (`int`, *optional*):
+            Number of tokens used by the Qformer as queries, should be same as in model's config.
     """
     attributes = ["image_processor", "tokenizer"]
+    valid_kwargs = ["num_query_tokens"]
     image_processor_class = "BlipImageProcessor"
     tokenizer_class = "AutoTokenizer"
 
     # Copied from transformers.models.blip.processing_blip.BlipProcessor.__init__
-    def __init__(self, image_processor, tokenizer):
+    def __init__(self, image_processor, tokenizer, num_query_tokens=None, **kwargs):
         """
         Initializes a new instance of the Blip2Processor class.
         
@@ -53,7 +56,8 @@ class Blip2Processor(ProcessorMixin):
             tokenizer: An object representing the tokenizer to be used.
                 t should have the necessary methods and attributes required for tokenization.
                 The 'return_token_type_ids' attribute of the tokenizer will be set to False.
-        
+            num_query_tokens (`int`, *optional*):
+                Number of tokens used by the Qformer as queries, should be same as in model's config.
         Returns:
             None.
         
@@ -61,8 +65,15 @@ class Blip2Processor(ProcessorMixin):
             None.
         """
         tokenizer.return_token_type_ids = False
+        self.current_processor = image_processor
+        if not hasattr(tokenizer, "image_token"):
+            self.image_token = AddedToken("<image>", normalized=False, special=True)
+            tokenizer.add_tokens([self.image_token], special_tokens=True)
+        else:
+            self.image_token = tokenizer.image_token
+        self.num_query_tokens = num_query_tokens
+
         super().__init__(image_processor, tokenizer)
-        self.current_processor = self.image_processor
 
     # Copied from transformers.models.blip.processing_blip.BlipProcessor.__call__
     def __call__(
