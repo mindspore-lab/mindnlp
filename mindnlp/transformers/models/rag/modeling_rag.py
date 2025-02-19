@@ -1064,8 +1064,7 @@ class RagTokenForGeneration(RagPreTrainedModel):
         )
         doc_logprobs = F.log_softmax(doc_scores, dim=1)
         log_prob_sum = seq_logprobs + doc_logprobs.unsqueeze(-1).unsqueeze(-1)
-        # return ops.logsumexp(log_prob_sum, dim=1)
-        return mindspore.ops.logsumexp(log_prob_sum, axis=1)
+        return ops.logsumexp(log_prob_sum, dim=1)
 
     def forward(
             self,
