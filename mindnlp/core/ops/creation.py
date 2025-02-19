@@ -1,7 +1,12 @@
 """creation ops"""
 import numpy as np
 import mindspore
-from mindspore._c_expression import Tensor as CTensor # pylint: disable=no-name-in-module, import-error
+try:
+    from mindspore._c_expression import TensorPy as CTensor # pylint: disable=no-name-in-module
+except:
+    from mindspore._c_expression import Tensor as CTensor # pylint: disable=no-name-in-module
+
+
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp.configs import use_pyboost, ON_ORANGE_PI
