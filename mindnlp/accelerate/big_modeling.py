@@ -1,6 +1,10 @@
 """big modeling"""
 from contextlib import contextmanager
-from mindspore._c_expression import Tensor as Tensor_ # pylint: disable=no-name-in-module
+try:
+    from mindspore._c_expression import TensorPy as Tensor_ # pylint: disable=no-name-in-module
+except:
+    from mindspore._c_expression import Tensor as Tensor_ # pylint: disable=no-name-in-module
+
 from mindnlp.utils.testing_utils import parse_flag_from_env
 from mindnlp.core import nn
 
