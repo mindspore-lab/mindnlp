@@ -123,7 +123,7 @@ def empty(*size, dtype=None):
         size = size[0]
     if dtype is None:
         dtype = get_default_dtype()
-    out = CTensor(dtype, size)
+    out = CTensor(dtype=dtype, shape=size)
     return mindspore.Tensor(out)
 
 # empty_like
