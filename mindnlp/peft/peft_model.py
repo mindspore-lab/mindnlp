@@ -43,6 +43,7 @@ from .tuners import (
     LoHaModel,
     PolyModel,
     LNTuningModel,
+    VeraModel
 )
 from .utils import (
     # SAFETENSORS_WEIGHTS_NAME,
@@ -71,6 +72,7 @@ PEFT_TYPE_TO_MODEL_MAPPING = {
     PeftType.LOHA: LoHaModel,
     PeftType.POLY: PolyModel,
     PeftType.LN_TUNING: LNTuningModel,
+    PeftType.VERA     :VeraModel
 }
 
 class PeftModel(nn.Module):
