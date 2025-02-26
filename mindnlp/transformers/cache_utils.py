@@ -378,8 +378,7 @@ class DynamicCache(Cache):
             self.key_cache[layer_idx] = key_states
             self.value_cache[layer_idx] = value_states
         else:
-            self.key_cache[layer_idx] = ops.cat(
-                [self.key_cache[layer_idx].astype(mindspore.float16), key_states.astype(mindspore.float16)], dim=-2)
+            self.key_cache[layer_idx] = ops.cat([self.key_cache[layer_idx].astype(mindspore.float16), key_states.astype(mindspore.float16)], dim=-2)
             self.value_cache[layer_idx] = ops.cat([self.value_cache[layer_idx], value_states], dim=-2)
 
         return self.key_cache[layer_idx], self.value_cache[layer_idx]

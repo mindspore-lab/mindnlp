@@ -10,16 +10,6 @@ from .. import init
 from .. import functional as F
 from ... import ops
 
-
-def contains_nan_or_inf(tensor, info):
-    tensor = tensor.astype(mindspore.float16)
-    havenan = mops.isnan(tensor).any()
-    haveinf = mops.isinf(tensor).any()
-    if haveinf:
-        print(info+'haveinf')
-    if havenan:
-        print(info+'havenan')
-
 class Linear(Module):
     r"""Applies a linear transformation to the incoming data: :math:`y = Ax + b`
 
