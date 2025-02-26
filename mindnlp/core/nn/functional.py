@@ -169,12 +169,16 @@ def drop_and_mask(keep_prob, seed=None):
 
 dense_ = ops.Dense()
 def linear(input, weight, bias=None):
-    input = input.to(mindspore.float16)
-    weight = weight.to(mindspore.float16)
-    if bias is not None:
-        bias = bias.to(mindspore.float16)
-        return dense_(input, weight) + bias
-    return dense_(input, weight)
+    if ON_ORANGE_PI:
+        input = input.to(mindspore.float16)
+        weight = weight.to(mindspore.float16)
+        if bias is not None:
+            bias = bias.to(mindspore.float16)
+            return dense_(input, weight) + bias
+        return dense_(input, weight)
+    if use_pyboost():
+        return mindspore.mint.nn.functional.linear(input, weight, bias)
+    return dense_(input, weight, bias)
     
 
 

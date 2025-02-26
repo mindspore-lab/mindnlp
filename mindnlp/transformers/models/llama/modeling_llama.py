@@ -100,17 +100,8 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
             tensor_a = ops.narrow(causal_mask, -1, 0, mask_length)
             tensor_b = attention_mask.view(
                 attention_mask.shape[0], 1, 1, attention_mask.shape[1])
-            print("tensor_a.shape:", tensor_a.shape)
-            print("tensor_b.shape:", tensor_b.shape)
-            print("tensor_a.dtype:", tensor_a.dtype)
-            print("tensor_b.dtype:", tensor_b.dtype)
-            import numpy as np
-            np.save('aclnnAdd_a.npy', tensor_a.asnumpy())
-            np.save('aclnnAdd_b.npy', tensor_b.asnumpy())
             padding_mask = tensor_a.astype(
                 mindspore.float16) + tensor_b.astype(mindspore.float16)
-            print("padding_mask.shape:", padding_mask.shape)
-            print("padding_mask.dtype:", padding_mask.dtype)
             padding_mask = padding_mask == 0
             # causal_mask[:, :, :, :mask_length] = ops.narrow(causal_mask, -1, 0, mask_length).masked_fill(
             #     padding_mask, min_dtype
@@ -301,14 +292,6 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
     k_embed = (k * cos) + (rotate_half(k) * sin)
     return q_embed, k_embed
 
-
-def contains_nan_or_inf(tensor, info):
-    havenan = ops.isnan(tensor).any()
-    haveinf = ops.isinf(tensor).any()
-    if haveinf:
-        print(info+'haveinf')
-    if havenan:
-        print(info+'havenan')
 
 
 class LlamaMLP(nn.Module):

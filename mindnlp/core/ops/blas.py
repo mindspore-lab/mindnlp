@@ -31,8 +31,8 @@ def bmm(input, other):
     if ON_ORANGE_PI:
         input = input.to(mindspore.float16)
         other = other.to(mindspore.float16)
-    # if use_pyboost() and has_bmm:
-    #     return mindspore.mint.bmm(input, other)
+    if use_pyboost() and has_bmm:
+        return mindspore.mint.bmm(input, other)
     return ops.bmm(input, other)
 
 # chain_matmul
