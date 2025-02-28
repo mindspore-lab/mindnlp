@@ -1,6 +1,8 @@
 import os
 import PIL.Image
 import mindspore
+from mindspore._c_expression import disable_multi_thread
+disable_multi_thread()
 import mindspore as ms
 import numpy as np
 from mindnlp.core import ops
@@ -76,7 +78,7 @@ with no_grad():
         generated_tokens = ops.zeros(parallel_size, image_token_num_per_image, dtype=ms.int32)
 
         for i in range(image_token_num_per_image): 
-            print(str(i)+'='*60)
+            print(f"generating token {i}")
             outputs = mmgpt.language_model.model(inputs_embeds=inputs_embeds, use_cache=True, past_key_values=outputs.past_key_values if i != 0 else None)
             hidden_states = outputs.last_hidden_state # (parallel_size*2, len(input_ids), 2048)
             
@@ -95,6 +97,7 @@ with no_grad():
             # print("img_embeds.shape:", img_embeds.shape)
             # print("img_embeds.dtype:", img_embeds.dtype)
             inputs_embeds = img_embeds.unsqueeze(dim=1) #(parallel_size*2, 2048)
+            print("generated one token")
 
         if image_token_num_per_image==576:
             dec = mmgpt.gen_vision_model.decode_code(generated_tokens.astype(ms.int32), shape=[parallel_size, 8, img_size//patch_size, img_size//patch_size])

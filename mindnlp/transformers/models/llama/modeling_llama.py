@@ -427,7 +427,6 @@ class LlamaAttention(nn.Module):
 
         if attention_mask is not None:  # no matter the length, we just slice it
             # causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
-            print('='*20)
             causal_mask = ops.narrow(attention_mask, 3, 0, key_states.shape[-2])
             attn_weights = attn_weights.astype(mindspore.float16) + causal_mask.astype(mindspore.float16)
 
