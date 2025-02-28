@@ -264,8 +264,8 @@ class MultiModalityCausalLM(MultiModalityPreTrainedModel):
         # replace with the image embeddings
         # 627                               576
         # inputs_embeds[images_seq_mask] = images_embeds[images_emb_mask]
-        print("inputs_embeds:", inputs_embeds.shape)
-        print("images_embeds[images_emb_mask].dtype", images_embeds[images_emb_mask].dtype)
+        # print("inputs_embeds:", inputs_embeds.shape)
+        # print("images_embeds[images_emb_mask].dtype", images_embeds[images_emb_mask].dtype)
         print("inputs_embeds.dtype", inputs_embeds.dtype)
         padding_size = images_seq_mask.shape[1] - images_emb_mask.shape[1]
         padding = Tensor(np.full((images_seq_mask.shape[0], padding_size), False), dtype=images_emb_mask.dtype)

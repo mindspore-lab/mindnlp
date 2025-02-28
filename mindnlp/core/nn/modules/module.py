@@ -1225,7 +1225,7 @@ class Module:
             Module: self
         """
         if ON_ORANGE_PI:
-            set_pyboost(not mode)
+            set_pyboost(False)
         self.training = mode
         for module in self.children():
             module.train(mode)

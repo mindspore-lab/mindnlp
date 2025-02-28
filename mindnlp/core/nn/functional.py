@@ -169,13 +169,16 @@ def drop_and_mask(keep_prob, seed=None):
 
 dense_ = ops.Dense()
 def linear(input, weight, bias=None):
-    input = input.to(mindspore.float16)
-    weight = weight.to(mindspore.float16)
-    if bias is not None:
-        bias = bias.to(mindspore.float16)
-        return dense_(input, weight) + bias
-    return dense_(input, weight)
-    
+    if ON_ORANGE_PI:
+        input = input.to(mindspore.float16)
+        weight = weight.to(mindspore.float16)
+        if bias is not None:
+            bias = bias.to(mindspore.float16)
+            return dense_(input, weight) + bias
+        return dense_(input, weight)
+    if use_pyboost():
+        return mindspore.mint.nn.functional.linear(input, weight, bias)
+    return dense_(input, weight, bias)
 
 
 def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean', pos_weight=None):
@@ -479,8 +482,8 @@ def addcmul(input, tensor1, tensor2, value=1):
     return input + value*tensor1*tensor2
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
-    # if use_pyboost():
-    #     return mindspore.mint.nn.functional.group_norm(input, num_groups, weight, bias, eps)
+    if use_pyboost():
+        return mindspore.mint.nn.functional.group_norm(input, num_groups, weight, bias, eps)
 
     input_shape = input.shape
     N = input_shape[0]
@@ -491,8 +494,6 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     affine_param_shape = [1] * input.ndim
     affine_param_shape[1] = C
     affine_param_shape = tuple(affine_param_shape)
-    print(affine_param_shape)
-    print(out.shape)
     if weight is not None and bias is not None:
         # out = bias.view(affine_param_shape).addcmul(out, weight.view(affine_param_shape), 1)
         out = addcmul(bias.view(affine_param_shape), out, weight.view(affine_param_shape), 1)

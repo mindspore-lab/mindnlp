@@ -10,16 +10,6 @@ from .. import init
 from .. import functional as F
 from ... import ops
 
-
-def contains_nan_or_inf(tensor, info):
-    tensor = tensor.astype(mindspore.float16)
-    havenan = mops.isnan(tensor).any()
-    haveinf = mops.isinf(tensor).any()
-    if haveinf:
-        print(info+'haveinf')
-    if havenan:
-        print(info+'havenan')
-
 class Linear(Module):
     r"""Applies a linear transformation to the incoming data: :math:`y = Ax + b`
 
@@ -74,8 +64,6 @@ class Linear(Module):
             self.weight = Parameter(self.weight.astype(mindspore.float16))
         if self.bias is not None and self.bias.dtype == mindspore.float32:
             self.bias = Parameter(self.bias.astype(mindspore.float16))
-        print("self.weight.dtype:", self.weight.dtype)
-        contains_nan_or_inf(input, 'Linear.input ')
         return F.linear(input, self.weight, self.bias)
 
     def __repr__(self):

@@ -1,10 +1,13 @@
 import mindspore
+from mindspore._c_expression import disable_multi_thread
+disable_multi_thread()
 from mindnlp.transformers import AutoModelForCausalLM
 from janus.models import MultiModalityCausalLM, VLChatProcessor
 from janus.utils.io import load_pil_images
 from mindnlp.configs import set_pyboost, use_pyboost
 from mindnlp.core import nn, Tensor
 from mindnlp.core import no_grad
+
 
 from mindnlp.configs import use_pyboost, set_pyboost
 print('use_pyboost:', use_pyboost())  # 这里默认是False
@@ -27,7 +30,8 @@ vl_gpt: MultiModalityCausalLM = AutoModelForCausalLM.from_pretrained(
     model_path, trust_remote_code=True, ms_dtype=mindspore.float16
 )
 print('loaded processor and ckpt ')
-question = 'describe this image'
+# question = 'describe this image'
+question = 'what is the animal in the image'
 image = "./inpain_model_cat.png"
 conversation = [
     {

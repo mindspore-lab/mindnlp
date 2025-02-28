@@ -21,8 +21,8 @@ def argwhere(input):
 # cat
 has_cat = hasattr(mindspore.mint, 'cat')
 def cat(tensors, dim=0):
-    # if use_pyboost() and has_cat:
-    #     return mindspore.mint.cat(tensors, dim)
+    if use_pyboost() and has_cat:
+        return mindspore.mint.cat(tensors, dim)
     return ops.cat(tensors, dim)
 
 # concat
