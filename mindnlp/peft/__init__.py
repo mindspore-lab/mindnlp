@@ -53,6 +53,8 @@ from .tuners import (
     PolyModel,
     LNTuningConfig,
     LNTuningModel,
+    VeraConfig,
+    VeraModel
 )
 
 from .utils import (
