@@ -13,7 +13,6 @@
 # limitations under the License.
 
 #from peft.import_utils import is_bnb_4bit_available, is_bnb_available
-from peft.utils import register_peft_method
 
 from .config import VeraConfig
 from .layer import Linear, VeraLayer
@@ -23,7 +22,7 @@ from .model import VeraModel
 __all__ = ["Linear", "VeraConfig", "VeraLayer", "VeraModel"]
 
 
-register_peft_method(name="vera", config_cls=VeraConfig, model_cls=VeraModel, prefix="vera_lambda_")
+#register_peft_method(name="vera", config_cls=VeraConfig, model_cls=VeraModel, prefix="vera_lambda_")
 
 
 # def __getattr__(name):

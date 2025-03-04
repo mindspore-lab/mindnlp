@@ -17,8 +17,8 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Optional, Union
 
-from peft.config import PeftConfig
-from peft.utils import PeftType
+from ...config import PeftConfig
+from ...utils import PeftType
 
 @dataclass
 class VeraConfig(PeftConfig):
@@ -145,7 +145,7 @@ class VeraConfig(PeftConfig):
     )
 
     def __post_init__(self):
-        super().__post_init__()
+        #super().__post_init__()
         self.peft_type = PeftType.VERA
         self.target_modules = (
             set(self.target_modules) if isinstance(self.target_modules, list) else self.target_modules

@@ -150,18 +150,18 @@ class BufferDict(nn.Module):
 
     def __call__(self, input):
         raise RuntimeError("BufferDict should not be called.")
-class MyCell(nn.module):
-    def __init__(self):
-        super(MyCell, self).__init__()
-        self.buffers = BufferDict({
-                'left': Tensor([[2, 3], [1, 2]]),
-                'right': Tensor([[2, 3, 4], [1, 2, 3]])
-        })
+# class MyCell(nn.module):
+#     def __init__(self):
+#         super(MyCell, self).__init__()
+#         self.buffers = BufferDict({
+#                 'left': Tensor([[2, 3], [1, 2]]),
+#                 'right': Tensor([[2, 3, 4], [1, 2, 3]])
+#         })
 
-    def construct(self, x, choice):
-        x = self.buffers[choice].matmul(x)
-        return x
-mindspore.set_device(device_target="CPU")
-#mindspore.context.set_context(device_target="CPU")
-cell=MyCell()
-print(cell(Tensor([[2, 3], [1, 2]]),'left'))
+#     def construct(self, x, choice):
+#         x = self.buffers[choice].matmul(x)
+#         return x
+# mindspore.set_device(device_target="CPU")
+# #mindspore.context.set_context(device_target="CPU")
+# cell=MyCell()
+# print(cell(Tensor([[2, 3], [1, 2]]),'left'))

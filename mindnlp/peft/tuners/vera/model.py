@@ -30,9 +30,8 @@ from mindspore.nn import Cell
 from tqdm import tqdm
 from ....transformers.ms_utils import Conv1D
 import mindspore
-from peft.tuners.tuners_utils import BaseTuner, BaseTunerLayer, check_target_module_exists
-from peft.utils import (
-    TRANSFORMERS_MODELS_TO_VERA_TARGET_MODULES_MAPPING,
+from ...tuners.tuners_utils import BaseTuner, BaseTunerLayer, check_target_module_exists
+from ...utils import (
     ModulesToSaveWrapper,
     _get_submodules,
 )
@@ -103,7 +102,7 @@ class VeraModel(BaseTuner):
     prefix: str = "vera_lambda_"
 
     def __init__(self, model, config, adapter_name, low_cpu_mem_usage: bool = False) -> None:
-        super().__init__(model, config, adapter_name, low_cpu_mem_usage=low_cpu_mem_usage)
+        super().__init__(model, config, adapter_name)
 
     def _find_dim(self, config) -> tuple[int, int]:
         """
@@ -410,11 +409,7 @@ class VeraModel(BaseTuner):
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
         if peft_config.target_modules is None:
-            if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_VERA_TARGET_MODULES_MAPPING:
-                raise ValueError("Please specify `target_modules` in `peft_config`")
-            peft_config.target_modules = set(
-                TRANSFORMERS_MODELS_TO_VERA_TARGET_MODULES_MAPPING[model_config["model_type"]]
-            )
+            raise ValueError("Please specify `target_modules` in `peft_config`")
         return peft_config
 
     def _unload_and_optionally_merge(
