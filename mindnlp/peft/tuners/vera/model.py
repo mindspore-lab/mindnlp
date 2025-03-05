@@ -37,7 +37,7 @@ from ...utils import (
 )
 
 from .._buffer_dict import BufferDict
-from ..tuners_utils import _maybe_include_all_linear_layers
+#from ...tuners.tuners_utils import _maybe_include_all_linear_layers
 from .config import VeraConfig
 from .layer import Linear, VeraLayer
 
@@ -102,6 +102,7 @@ class VeraModel(BaseTuner):
     prefix: str = "vera_lambda_"
 
     def __init__(self, model, config, adapter_name, low_cpu_mem_usage: bool = False) -> None:
+        #self._init_vera_A_vera_B(config, adapter_name)
         super().__init__(model, config, adapter_name)
 
     def _find_dim(self, config) -> tuple[int, int]:
@@ -110,10 +111,10 @@ class VeraModel(BaseTuner):
 
         This will be used for determining the size of the shared vera_A and vera_B matrices.
         """
-        model_config = self.get_model_config(self.model)
+        #model_config = self.get_model_config(self.model)
 
-        peft_config = self._prepare_adapter_config(config, model_config)
-        peft_config = _maybe_include_all_linear_layers(peft_config, self.model)
+        peft_config = self._prepare_adapter_config(config, {})
+        #peft_config = _maybe_include_all_linear_layers(peft_config, self.model)
 
         largest_shape = None
         for key, module in self.model.named_modules():
@@ -143,7 +144,6 @@ class VeraModel(BaseTuner):
 
     def _init_vera_A_vera_B(self, config: VeraConfig, adapter_name: str) -> None:
         linear_out_dim, linear_in_dim = self._find_dim(config)
-
         # use of persistent to exclude vera_A and vera_B from the state dict if we choose not to save them.
         self.vera_A = BufferDict({}, persistent=config.save_projection)
         self.vera_B = BufferDict({}, persistent=config.save_projection)
@@ -152,7 +152,7 @@ class VeraModel(BaseTuner):
         generator = mindspore.Generator().manual_seed(config.projection_prng_key)
         vera_A = _kaiming_init((config.r, linear_in_dim), generator=generator)
         vera_B = _kaiming_init((linear_out_dim, config.r), generator=generator)
-
+        
         self.vera_A[adapter_name] = vera_A
         self.vera_B[adapter_name] = vera_B
 

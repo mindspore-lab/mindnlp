@@ -36,6 +36,7 @@ from .tuners_utils import (
     BaseTunerLayer,
     check_adapters_to_merge,
     check_target_module_exists,
+    _maybe_include_all_linear_layers
 )
 
 

@@ -26,7 +26,7 @@ from ...utils.other import transpose
 from .._buffer_dict import BufferDict
 
 
-class VeraLayer(BaseTunerLayer):
+class VeraLayer(nn.module,BaseTunerLayer):
     # List all names of layers that may contain adapter weights
     adapter_layer_names = ("vera_lambda_b", "vera_lambda_d")
     other_param_names = ("vera_A", "vera_B")
@@ -127,7 +127,7 @@ class VeraLayer(BaseTunerLayer):
         if init_weights:
             self.reset_vera_parameters(adapter_name, d_initial=d_initial)
 
-        self._move_adapter_to_device_of_base_layer(adapter_name)
+        #self._move_adapter_to_device_of_base_layer(adapter_name)
         self.set_adapter(self.active_adapters)
 
     def reset_vera_parameters(self, adapter_name, d_initial: float = 0.1):
@@ -186,7 +186,10 @@ class Linear(nn.Linear, VeraLayer):
                 if safe_merge:
                     # Note that safe_merge will be slower than the normal merge
                     # because of the copy operation.
+                    
                     orig_weights = base_layer.weight.data.clone()
+                    #weights = base_layer.parameters()
+                    #orig_weights = [param.data.clone() for param in weights]
                     orig_weights += self.get_delta_weight(active_adapter)
                     if not ops.isfinite(orig_weights).all():
                         raise ValueError(
@@ -235,11 +238,10 @@ class Linear(nn.Linear, VeraLayer):
         #     vera_B = vera_B.float()
         #     lambda_d = lambda_d.float()
         #     lambda_b = lambda_b.float()
-
         sliced_A = vera_A[:, : self.in_features]
         sliced_B = vera_B[: self.out_features, :]
-        lambda_b = lambda_b.unsqueeze(-1)
-        lambda_d = lambda_d.unsqueeze(-1)
+        lambda_b = ops.unsqueeze(lambda_b,-1)
+        lambda_d = ops.unsqueeze(lambda_d,-1)
         output_tensor = transpose((lambda_b * sliced_B) @ (lambda_d * sliced_A), self.fan_in_fan_out)
 
         # if cast_to_fp32:
@@ -253,8 +255,6 @@ class Linear(nn.Linear, VeraLayer):
         return output_tensor
 
     def forward(self, x: mindspore.Tensor, *args, **kwargs) -> mindspore.Tensor:
-        previous_dtype = x.dtype
-
         if self.disable_adapters:
             if self.merged:
                 self.unmerge()
@@ -276,14 +276,11 @@ class Linear(nn.Linear, VeraLayer):
                 # As adapted layers may have different shapes and VeRA contains a single shared pair of A and B matrices,
                 # we initialize these matrices with the largest required size for each dimension.
                 # During the forward pass, required submatrices are sliced out from the shared vera_A and vera_B.
-                sliced_A = vera_A[:, : self.in_features].to(x.device)
-                sliced_B = vera_B[: self.out_features, :].to(x.device)
+                sliced_A = vera_A[:, : self.in_features]
+                sliced_B = vera_B[: self.out_features, :]
 
                 dropout = self.vera_dropout[active_adapter]
-                x = x.to(lambda_d.dtype)
                 result = result + lambda_b * F.linear(lambda_d * F.linear(dropout(x), sliced_A), sliced_B)
-
-        result = result.to(previous_dtype)
         return result
 
     def __repr__(self) -> str:
