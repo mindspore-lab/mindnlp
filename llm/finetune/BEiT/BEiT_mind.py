@@ -65,41 +65,46 @@ train_ds_hf.set_transform(train_transforms)
 val_ds_hf.set_transform(val_transforms)
 test_ds_hf.set_transform(val_transforms)
 
-# ???MindSpore Dataset(??????)
+# 创建 MindSpore Dataset
+
+
 def create_mindspore_dataset(hf_dataset):
     def generator():
         for example in hf_dataset:
-            # ??????????????numpy??
+            # 获取图像数据
             pixel_data = np.array(example['pixel_values'], dtype=np.float32)
-            
-            # ??:?????????
-            # print("Raw pixel_data shape:", pixel_data.shape)  # ?? (C, H, W) ? (3, 224, 224)
-            
-            # ?????,?????????
+
+            # 中间打印调试
+            # print("Raw pixel_data shape:", pixel_data.shape)  #  (C, H, W)  (3, 224, 224)
+
+            # 处理图像数据维度
             if pixel_data.ndim == 4 and pixel_data.shape[0] == 1:
-                pixel_data = pixel_data.squeeze(0)  # ? (1, C, H, W) ?? (C, H, W)
-            
+                #  (1, C, H, W)
+                pixel_data = pixel_data.squeeze(0)
+
             yield pixel_data, np.int32(example['label'])
-    
+
     return ds_GeneratorDataset(
-        generator, 
+        generator,
         column_names=['pixel_values', 'labels'],
         column_types=[mindspore.float32, mindspore.int32]
     )
 
-# ????????????
-train_ds = create_mindspore_dataset(train_ds_hf).batch(10, drop_remainder=True)  # ????????
+
+#  创建数据集
+train_ds = create_mindspore_dataset(train_ds_hf).batch(
+    10, drop_remainder=True)  # 10个样本
 val_ds = create_mindspore_dataset(val_ds_hf).batch(4, drop_remainder=True)
 test_ds = create_mindspore_dataset(test_ds_hf).batch(4, drop_remainder=True)
 
-# ??????
-#for batch in train_ds.create_tuple_iterator():
+# 中间打印调试
+# for batch in train_ds.create_tuple_iterator():
 #    pixel_batch, label_batch = batch
-#    print("Batch shape:", pixel_batch.shape)  # ??? (10, 3, 224, 224)
+#    print("Batch shape:", pixel_batch.shape)  # 格式 (10, 3, 224, 224)
 #    break
 
 # 加载模型
-# ??????,??????(????)
+# 初始化训练参数
 args = TrainingArguments(
     output_dir="checkpoints",
     save_strategy="epoch",
@@ -113,17 +118,17 @@ args = TrainingArguments(
     metric_for_best_model="accuracy",
     logging_dir='logs',
     remove_unused_columns=False,
-    max_grad_norm=0.0,  # 禁用梯度裁剪 否则 Infer type failed. 
+    max_grad_norm=0.0,  # 禁用梯度裁剪 否则 Infer type failed.
 )
 
-# ?????????????
+# 初始化模型
 model = BeitForImageClassification.from_pretrained(
     'microsoft/beit-base-patch16-224',
     num_labels=10,
     id2label=id2label,
     label2id=label2id,
     ignore_mismatched_sizes=True,
-    
+
 )
 
 # 定义评估指标
