@@ -29,7 +29,9 @@ from mindnlp.core import nn
 from mindspore.nn import Cell
 from tqdm import tqdm
 from ....transformers.ms_utils import Conv1D
+import mindspore.ops as ops_mind
 import mindspore
+from mindspore import Tensor
 from ...tuners.tuners_utils import BaseTuner, BaseTunerLayer, check_target_module_exists
 from ...utils import (
     ModulesToSaveWrapper,
@@ -66,7 +68,8 @@ def _kaiming_init(
     gain = math.sqrt(2)
     std = gain / math.sqrt(fan)
     bound = math.sqrt(3.0) * std
-    return tensor.uniform_(-bound, bound, generator=generator)
+    return ops_mind.uniform(tensor_or_shape,Tensor(-bound), Tensor(bound), generator.seed())
+    #return tensor.uniform_(-bound, bound, generator=generator)
 
 
 class VeraModel(BaseTuner):
@@ -102,7 +105,6 @@ class VeraModel(BaseTuner):
     prefix: str = "vera_lambda_"
 
     def __init__(self, model, config, adapter_name, low_cpu_mem_usage: bool = False) -> None:
-        #self._init_vera_A_vera_B(config, adapter_name)
         super().__init__(model, config, adapter_name)
 
     def _find_dim(self, config) -> tuple[int, int]:
@@ -147,12 +149,10 @@ class VeraModel(BaseTuner):
         # use of persistent to exclude vera_A and vera_B from the state dict if we choose not to save them.
         self.vera_A = BufferDict({}, persistent=config.save_projection)
         self.vera_B = BufferDict({}, persistent=config.save_projection)
-
         # deterministic init of vera_A and vera_B if we know the key
         generator = mindspore.Generator().manual_seed(config.projection_prng_key)
         vera_A = _kaiming_init((config.r, linear_in_dim), generator=generator)
         vera_B = _kaiming_init((linear_out_dim, config.r), generator=generator)
-        
         self.vera_A[adapter_name] = vera_A
         self.vera_B[adapter_name] = vera_B
 

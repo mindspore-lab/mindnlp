@@ -24,7 +24,7 @@ from typing import Any, Optional, Union
 from abc import ABC
 from contextlib import contextmanager
 from mindspore import Tensor
-from mindnlp.core import nn
+from mindnlp.core import nn,ops
 
 from ..config import PeftConfig
 from ..utils import _get_submodules

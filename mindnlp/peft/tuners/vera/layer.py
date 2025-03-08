@@ -26,7 +26,7 @@ from ...utils.other import transpose
 from .._buffer_dict import BufferDict
 
 
-class VeraLayer(nn.module,BaseTunerLayer):
+class VeraLayer(BaseTunerLayer):
     # List all names of layers that may contain adapter weights
     adapter_layer_names = ("vera_lambda_b", "vera_lambda_d")
     other_param_names = ("vera_A", "vera_B")
@@ -132,9 +132,21 @@ class VeraLayer(nn.module,BaseTunerLayer):
 
     def reset_vera_parameters(self, adapter_name, d_initial: float = 0.1):
         #可能有问题
-        if adapter_name in self.vera_lambda_d.keys():
-            nn.init.zeros_(self.vera_lambda_d[adapter_name]).fill_(d_initial)
-            nn.init.zeros_(self.vera_lambda_b[adapter_name])
+        self.vera_lambda_d[adapter_name]=ops.zeros(
+            self.vera_lambda_d[adapter_name].shape,
+            self.vera_lambda_d[adapter_name].dtype,
+        )
+        self.vera_lambda_d[adapter_name]=ops.full(
+            self.vera_lambda_d[adapter_name].shape,
+            dtype=self.vera_lambda_d[adapter_name].dtype,
+            fill_value=d_initial
+        )
+        self.vera_lambda_b[adapter_name]=ops.zeros(
+            self.vera_lambda_b[adapter_name].shape,
+            self.vera_lambda_b[adapter_name].dtype,
+        )
+        #nn.init.zeros_(self.vera_lambda_d[adapter_name]).fill_(d_initial)
+        #nn.init.zeros_(self.vera_lambda_b[adapter_name])
 
 
 class Linear(nn.Linear, VeraLayer):
