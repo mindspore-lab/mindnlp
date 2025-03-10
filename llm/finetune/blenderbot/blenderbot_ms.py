@@ -63,7 +63,7 @@ def preprocess_data(tokenizer, dataset):
     processed_dataset = dataset.map(
         process,
         batched=True,
-        batch_size=8,
+        batch_size=64,
         remove_columns=dataset.column_names
     )
     print(f"预处理后数据集大小: {len(processed_dataset)}")
@@ -84,7 +84,7 @@ def create_dynamic_dataset(tokenized_dataset):
         source=generator,
         column_names=["input_ids", "attention_mask", "labels"],
         shuffle=False
-    ).batch(1, drop_remainder=True)
+    ).batch(32, drop_remainder=True)
     print("数据集创建完成")
     return dataset
 
@@ -97,15 +97,35 @@ class DynamicBlenderbot(nn.Cell):
         self.model = BlenderbotForConditionalGeneration.from_pretrained(model_name)
         self.model.set_train(True)
 
+        # 冻结底层 Transformer 层：冻结 encoder 和 decoder 中前 3 层
+        num_layers_to_freeze = 3
+        for name, param in self.model.parameters_and_names():
+            if "encoder.layers" in name:
+                try:
+                    layer_num = int(name.split("encoder.layers.")[1].split(".")[0])
+                    if layer_num < num_layers_to_freeze:
+                        param.requires_grad = False
+                except Exception as e:
+                    pass
+            if "decoder.layers" in name:
+                try:
+                    layer_num = int(name.split("decoder.layers.")[1].split(".")[0])
+                    if layer_num < num_layers_to_freeze:
+                        param.requires_grad = False
+                except Exception as e:
+                    pass
+
         # 显式注册模型参数
         print("显式注册模型参数...")
         for name, param in self.model.parameters_and_names():
-            setattr(self, f"param_{name.replace('.', '_')}", Parameter(param, requires_grad=True))
+            # 根据冻结标志注册对应参数
+            setattr(self, f"param_{name.replace('.', '_')}", Parameter(param, requires_grad=param.requires_grad))
 
         # 检查参数加载情况
         trainable_params = self.trainable_params()
         print("检查模型参数...")
         for idx, param in enumerate(trainable_params):
+            # 这里只会包含可训练参数（未冻结部分）
             param.requires_grad = True
             if idx < 5:
                 print(f"Parameter {idx} shape: {param.shape}, requires_grad: {param.requires_grad}")
@@ -159,9 +179,9 @@ def dynamic_train(model_name="facebook/blenderbot-400M-distill"):
 
     # 执行一次虚拟前向传播以初始化参数
     print("执行虚拟前向传播...")
-    dummy_input_ids = Tensor(np.zeros((1, 128)), dtype=ms.int32)
-    dummy_attention_mask = Tensor(np.ones((1, 128)), dtype=ms.int32)
-    dummy_labels = Tensor(np.zeros((1, 128)), dtype=ms.int32)
+    dummy_input_ids = Tensor(np.zeros((16, 128)), dtype=ms.int32)
+    dummy_attention_mask = Tensor(np.ones((16, 128)), dtype=ms.int32)
+    dummy_labels = Tensor(np.zeros((16, 128)), dtype=ms.int32)
     net(dummy_input_ids, dummy_attention_mask, dummy_labels)
     print("虚拟前向传播完成")
 
@@ -169,10 +189,13 @@ def dynamic_train(model_name="facebook/blenderbot-400M-distill"):
     params = net.trainable_params()
     print(f"优化器可训练参数数量: {len(params)}")
     if not params:
-        raise ValueError(f"前向传播后仍无可训练参数！请检查模型 {model_name} 兼容性或 MindSpore 配置。")
+        raise ValueError(f"前向传播后无可训练参数！请检查模型 {model_name} 兼容性或 MindSpore 配置。")
 
-    # 创建优化器
-    optimizer = nn.Adam(params, learning_rate=2e-5)
+    # 创建学习率调度器和优化器
+    total_steps = len(train_dataset) * 3  # 3个epoch的总步数
+    lr_scheduler = nn.CosineDecayLR(min_lr=1e-6, max_lr=2e-5, decay_steps=total_steps)
+    optimizer = nn.Adam(params, learning_rate=lr_scheduler)
+
     # 包装网络为单步训练网络
     train_net = TrainOneStepCell(net, optimizer, grad_clip_value=1.0)
     train_net.set_train(True)
@@ -182,8 +205,9 @@ def dynamic_train(model_name="facebook/blenderbot-400M-distill"):
         print(f"开始第 {epoch + 1} 个 epoch...")
         for batch in train_dataset:
             loss = train_net(*batch)
+            current_lr = optimizer.learning_rate(step).asnumpy()  # 获取当前学习率
             if step % 10 == 0:
-                print(f"Step {step} Loss: {loss.asnumpy()}")
+                print(f"Step {step} Loss: {loss.asnumpy()}, Learning Rate: {current_lr}")
             if step % 100 == 0:
                 ms.save_checkpoint(net, f"{checkpoint_dir}/step_{step}.ckpt")
             step += 1
