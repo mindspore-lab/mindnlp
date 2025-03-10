@@ -1,166 +1,182 @@
 import os
+import numpy as np
 import mindspore as ms
-from mindspore import context, nn
+from mindspore import context, nn, Tensor
 from mindnlp.transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
-from mindnlp.engine import Trainer, TrainingArguments
-from mindnlp.dataset import load_dataset
+from datasets import load_dataset as hf_load_dataset
 from mindspore.dataset import GeneratorDataset
 
-# 环境配置 ==================
+# 环境配置
 context.set_context(
-    mode=context.PYNATIVE_MODE,  
+    mode=context.PYNATIVE_MODE,
     device_target="Ascend",
-    device_id=0,  # 显式指定设备ID
-    enable_graph_kernel=False,  # 动态图需禁用图算优化
+    device_id=0,
+    enable_graph_kernel=False,
     max_call_depth=3000,
-    pynative_synchronize=True  # 确保异步操作同步执行
+    pynative_synchronize=True
 )
+ms.set_auto_parallel_context(parallel_mode=ms.ParallelMode.STAND_ALONE)
+ms.set_context(reserve_class_name_in_scope=False)
 
-# 动态图专用内存优化
-#ms.set_auto_parallel_context(parallel_mode=ms.ParallelMode.STAND_ALONE)
-#ms.set_context(reserve_class_name_in_scope=False)
-
-# 数据管道 ==================
+# 数据加载和过滤
 def load_and_process_data():
-    """动态图模式数据加载需更严格的内存管理"""
-    dataset = load_dataset("databricks/databricks-dolly-15k")
-    return dataset.filter(
-        lambda x: x["instruction"] is not None and len(x["instruction"]) > 10,
-        num_parallel_workers=1  # 动态图需减少并行度
+    print("加载数据集...")
+    dataset = hf_load_dataset("databricks/databricks-dolly-15k", split="train")
+    print(f"原始数据集大小: {len(dataset)}")
+    filtered_dataset = dataset.filter(
+        lambda x: x["instruction"] is not None and len(x["instruction"]) > 10
     )
+    print(f"过滤后数据集大小: {len(filtered_dataset)}")
+    return filtered_dataset
 
+# 数据预处理
 def preprocess_data(tokenizer, dataset):
-    """动态图数据预处理需保持数据连续性"""
+    print("开始数据预处理...")
     def process(examples):
         inputs = [str(text) for text in examples["instruction"]]
         targets = [str(text) for text in examples["response"]]
-        
-        # 动态图需显式关闭并行编码
         model_inputs = tokenizer(
             inputs,
             max_length=128,
             truncation=True,
             padding="max_length",
-            return_tensors="ms",
-            num_parallel_workers=1
+            return_tensors="np"
         )
-        
         with tokenizer.as_target_tokenizer():
             labels = tokenizer(
                 targets,
                 max_length=128,
                 truncation=True,
                 padding="max_length",
-                return_tensors="ms",
-                num_parallel_workers=1
+                return_tensors="np"
             )
-        
+        # 确保 input_ids 为 int32 类型
+        input_ids = model_inputs["input_ids"].astype(np.int32)
+        attention_mask = model_inputs["attention_mask"].astype(np.int32)
+        labels_ids = labels["input_ids"].astype(np.int32)
+        print(f"预处理中 input_ids 类型: {input_ids.dtype}, 示例值: {input_ids[0][:5]}")
         return {
-            "input_ids": model_inputs["input_ids"],
-            "attention_mask": model_inputs["attention_mask"],
-            "labels": labels["input_ids"]
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "labels": labels_ids
         }
-    
-    return dataset.map(
+
+    processed_dataset = dataset.map(
         process,
         batched=True,
-        batch_size=8,  # 小批量处理避免内存峰值
-        remove_columns=dataset["train"].column_names,
-        num_parallel_workers=1
+        batch_size=8,
+        remove_columns=dataset.column_names
     )
+    print(f"预处理后数据集大小: {len(processed_dataset)}")
+    return processed_dataset
 
-# 动态图专用模型构建 ==============
+# 创建 MindSpore 数据集
+def create_dynamic_dataset(tokenized_dataset):
+    print("创建 MindSpore 数据集...")
+    def generator():
+        for item in tokenized_dataset:
+            yield (
+                ms.Tensor(item["input_ids"], dtype=ms.int32),
+                ms.Tensor(item["attention_mask"], dtype=ms.int32),
+                ms.Tensor(item["labels"], dtype=ms.int32)
+            )
+
+    dataset = GeneratorDataset(
+        source=generator,
+        column_names=["input_ids", "attention_mask", "labels"],
+        shuffle=False
+    ).batch(1, drop_remainder=True)
+    print("数据集创建完成")
+    return dataset
+
+# 模型定义
 class DynamicBlenderbot(nn.Cell):
-    """封装模型以支持动态图执行"""
     def __init__(self):
         super().__init__()
         model_name = "facebook/blenderbot-400M-distill"
+        print(f"加载模型和分词器: {model_name}")
         self.tokenizer = BlenderbotTokenizer.from_pretrained(model_name)
         self.model = BlenderbotForConditionalGeneration.from_pretrained(model_name)
-        
-        # 动态图需显式设置参数
         self.model.set_train(True)
-        self.model.requires_grad = True
         
-        # 修复动态图bias初始化
-        if not hasattr(self.model, 'final_logits_bias'):
-            self.model.final_logits_bias = ms.Parameter(
-                ms.ops.zeros((1, self.model.model.shared.vocab_size), ms.float32),
-                name='final_logits_bias',
-                requires_grad=True
-            )
-    
+        # 检查参数加载情况
+        trainable_params = []
+        print("检查模型参数...")
+        for idx, param in enumerate(self.model.get_parameters()):
+            param.requires_grad = True
+            trainable_params.append(param)
+            if idx < 5:
+                print(f"Parameter {idx} shape: {param.shape}, requires_grad: {param.requires_grad}")
+        
+        total_params = len(list(self.model.get_parameters()))
+        print(f"模型总参数数量: {total_params}")
+        print(f"可训练参数数量: {len(trainable_params)}")
+        if not trainable_params:
+            raise ValueError("模型初始化后没有可训练参数！")
+
     def construct(self, input_ids, attention_mask, labels):
+        print(f"construct: input_ids dtype: {input_ids.dtype}, shape: {input_ids.shape}, 示例值: {input_ids[0][:5]}")
+        print(f"construct: attention_mask dtype: {attention_mask.dtype}, shape: {attention_mask.shape}")
+        print(f"construct: labels dtype: {labels.dtype}, shape: {labels.shape}")
+        # 强制转换 input_ids 为 int32
+        input_ids = input_ids.astype(ms.int32)
         return self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             labels=labels
         ).loss
 
-# 动态图数据加载器 ==============
-def create_dynamic_dataset(tokenized_dataset):
-    """动态图需要持续数据流"""
-    def generator():
-        for item in tokenized_dataset["train"]:
-            yield (
-                item["input_ids"].asnumpy(),  # 动态图需转换为numpy
-                item["attention_mask"].asnumpy(),
-                item["labels"].asnumpy()
-            )
-    
-    return GeneratorDataset(
-        source=generator,
-        column_names=["input_ids", "attention_mask", "labels"],
-        shuffle=False  # 动态图需禁用shuffle避免内存泄漏
-    ).batch(1, drop_remainder=True).to_device()
-
-# 动态图训练循环 ================
+# 训练循环
 def dynamic_train():
-    """自定义训练循环以优化动态图性能"""
-    # 初始化组件
     dataset = load_and_process_data()
-    processed_data = preprocess_data(DynamicBlenderbot().tokenizer, dataset)
+    tokenizer = DynamicBlenderbot().tokenizer
+    processed_data = preprocess_data(tokenizer, dataset)
     train_dataset = create_dynamic_dataset(processed_data)
-    
-    # 构建动态图模型
+
+    print("初始化模型...")
     net = DynamicBlenderbot()
-    optimizer = nn.Adam(net.trainable_params(), learning_rate=2e-5)
     
-    # 梯度累积配置
+    # 执行一次虚拟前向传播以初始化参数
+    print("执行虚拟前向传播...")
+    dummy_input_ids = Tensor(np.zeros((1, 128)), dtype=ms.int32)
+    dummy_attention_mask = Tensor(np.ones((1, 128)), dtype=ms.int32)
+    dummy_labels = Tensor(np.zeros((1, 128)), dtype=ms.int32)
+    print(f"dummy_input_ids dtype: {dummy_input_ids.dtype}, 示例值: {dummy_input_ids[0][:5]}")
+    print(f"dummy_attention_mask dtype: {dummy_attention_mask.dtype}")
+    print(f"dummy_labels dtype: {dummy_labels.dtype}")
+    net(dummy_input_ids, dummy_attention_mask, dummy_labels)
+    print("虚拟前向传播完成")
+
+    # 获取可训练参数
+    params = net.trainable_params()
+    print(f"优化器可训练参数数量: {len(params)}")
+    if not params:
+        raise ValueError("前向传播后仍无可训练参数！")
+
+    # 创建优化器
+    optimizer = nn.Adam(params, learning_rate=2e-5)
     grad_accum_steps = 4
     loss_scaler = ms.amp.DynamicLossScaler(1024, 2, 1000)
-    
-    # 训练循环
     step = 0
+
     for epoch in range(3):
         net.set_train(True)
+        print(f"开始第 {epoch + 1} 个 epoch...")
         for batch in train_dataset:
-            # 动态图前向传播
             loss = net(*batch)
-            
-            # 混合精度缩放
             scaled_loss = loss_scaler.scale(loss)
             scaled_loss.backward()
-            
-            # 梯度累积
             if (step + 1) % grad_accum_steps == 0:
                 loss_scaler.unscale_(optimizer)
-                ms.amp.clip_grad_value_(net.trainable_params(), 1.0)
+                ms.amp.clip_grad_value_(params, 1.0)
                 optimizer.step()
                 optimizer.zero_grad()
-            
-            # 日志记录
             if step % 10 == 0:
                 print(f"Step {step} Loss: {loss.asnumpy()}")
-            
-            # 检查点保存
             if step % 100 == 0:
                 ms.save_checkpoint(net, f"./checkpoints/step_{step}.ckpt")
-            
             step += 1
 
 if __name__ == "__main__":
-    # 动态图专用环境验证
     assert context.get_context("mode") == context.PYNATIVE_MODE, "必须使用动态图模式"
     dynamic_train()
-
