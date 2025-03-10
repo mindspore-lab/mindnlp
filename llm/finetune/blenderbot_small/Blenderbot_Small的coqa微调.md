@@ -14,7 +14,7 @@ torch训练硬件资源规格：Nvidia 3090
 
 模型："facebook/blenderbot_small-90M"
 
-数据集："google/Synthetic-Persona-Chat"
+数据集："stanfordnlp/coqa"
 
 ## 训练损失
 
