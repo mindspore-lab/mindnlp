@@ -116,9 +116,6 @@ class DynamicBlenderbot(nn.Cell):
             raise ValueError(f"模型 {model_name} 初始化后没有可训练参数！请检查模型是否正确加载或兼容 MindSpore。")
 
     def construct(self, input_ids, attention_mask, labels):
-        print(f"construct: input_ids dtype: {input_ids.dtype}, shape: {input_ids.shape}, 示例值: {input_ids[0][:5]}")
-        print(f"construct: attention_mask dtype: {attention_mask.dtype}, shape: {attention_mask.shape}")
-        print(f"construct: labels dtype: {labels.dtype}, shape: {labels.shape}")
         input_ids = input_ids.astype(ms.int32)
         return self.model(
             input_ids=input_ids,
