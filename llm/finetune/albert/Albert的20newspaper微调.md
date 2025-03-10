@@ -1,4 +1,4 @@
-# Blenderbot_Small的coqa微调
+# Albert的20Newspaper微调
 
 ## 硬件
 
