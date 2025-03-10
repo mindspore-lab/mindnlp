@@ -126,6 +126,25 @@ class DynamicBlenderbot(nn.Cell):
             labels=labels
         ).loss
 
+# 定义训练单步网络
+class TrainOneStepCell(nn.Cell):
+    def __init__(self, network, optimizer, grad_clip_value=1.0):
+        super(TrainOneStepCell, self).__init__()
+        self.network = network
+        self.optimizer = optimizer
+        self.weights = ms.ParameterTuple(network.trainable_params())
+        self.grad = ms.ops.GradOperation(get_by_list=True)
+        self.grad_clip_value = grad_clip_value
+        self.clip_by_value = ms.ops.clip_by_value
+
+    def construct(self, *inputs):
+        loss = self.network(*inputs)
+        grads = self.grad(self.network, self.weights)(*inputs)
+        # 手动裁剪梯度
+        grads = tuple(self.clip_by_value(g, -self.grad_clip_value, self.grad_clip_value) for g in grads)
+        self.optimizer(grads)
+        return loss
+
 # 训练循环
 def dynamic_train(model_name="facebook/blenderbot-400M-distill"):
     # 创建检查点目录
@@ -157,22 +176,15 @@ def dynamic_train(model_name="facebook/blenderbot-400M-distill"):
 
     # 创建优化器
     optimizer = nn.Adam(params, learning_rate=2e-5)
-    grad_accum_steps = 4
-    loss_scaler = ms.amp.DynamicLossScaler(1024, 2, 1000)
-    step = 0
+    # 包装网络为单步训练网络
+    train_net = TrainOneStepCell(net, optimizer, grad_clip_value=1.0)
+    train_net.set_train(True)
 
+    step = 0
     for epoch in range(3):
-        net.set_train(True)
         print(f"开始第 {epoch + 1} 个 epoch...")
         for batch in train_dataset:
-            loss = net(*batch)
-            scaled_loss = loss_scaler.scale(loss)
-            scaled_loss.backward()
-            if (step + 1) % grad_accum_steps == 0:
-                loss_scaler.unscale_(optimizer)
-                ms.amp.clip_grad_value_(params, 1.0)
-                optimizer.step()
-                optimizer.zero_grad()
+            loss = train_net(*batch)
             if step % 10 == 0:
                 print(f"Step {step} Loss: {loss.asnumpy()}")
             if step % 100 == 0:
