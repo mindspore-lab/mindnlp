@@ -1412,8 +1412,7 @@ def safe_load_file(filename):
 
         try:
             if info['dtype'] == 'BF16' and not SUPPORT_BF16:
-                logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
-                ms_dtype = mindspore.float16
+                raise ValueError('not support bfloat16.')
             out = Tensor.convert_bytes_to_tensor(buf, tuple(shape), ms_dtype)
         except:
             array = np.frombuffer(buf, dtype=numpy_dtype).reshape(shape)
