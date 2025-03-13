@@ -1410,18 +1410,14 @@ def safe_load_file(filename):
         assert end - begin == math.prod(shape) * np.dtype(numpy_dtype).itemsize
         buf = byte_buf[begin:end]
 
-        try:
-            if info['dtype'] == 'BF16' and not SUPPORT_BF16:
-                raise ValueError('not support bfloat16.')
-            out = Tensor.convert_bytes_to_tensor(buf, tuple(shape), ms_dtype)
-        except:
-            array = np.frombuffer(buf, dtype=numpy_dtype).reshape(shape)
 
-            if array.dtype == bfloat16 and not SUPPORT_BF16:
-                logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
-                array = array.astype(np.float16)
-            array = array.astype(array.dtype)
-            out = Tensor.from_numpy(array)
+        array = np.frombuffer(buf, dtype=numpy_dtype).reshape(shape)
+
+        if array.dtype == bfloat16 and not SUPPORT_BF16:
+            logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
+            array = array.astype(np.float16)
+        array = array.astype(array.dtype)
+        out = Tensor.from_numpy(array)
         return out
 
     with open(filename, "rb") as fp:
