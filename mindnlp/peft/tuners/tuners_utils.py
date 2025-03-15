@@ -24,7 +24,7 @@ from typing import Any, Optional, Union
 from abc import ABC
 from contextlib import contextmanager
 from mindspore import Tensor
-from mindnlp.core import nn
+from mindnlp.core import nn,ops
 
 from ..config import PeftConfig
 from ..utils import _get_submodules
@@ -156,7 +156,6 @@ class BaseTuner(nn.Module):
         # self.add_adapter(adapter_name, self.peft_config[adapter_name])
 
         self.model = model
-
         # For advanced developers, if you want to attach multiple adapters to your
         # model, just add a `peft_config` dict attribute to your model.
         if not hasattr(self, "peft_config"):
@@ -175,13 +174,26 @@ class BaseTuner(nn.Module):
         # transformers models have a .config attribute, whose presence is assumed later on
         # if not hasattr(self, "config"):
         #     self.config = {"model_type": "custom"}
-
+        self._pre_injection_hook(self.model, self.peft_config[adapter_name], adapter_name)
         self.active_adapter: str | list[str] = adapter_name
         self.inject_adapter(self.model, adapter_name)
 
         # Copy the peft_config in the injected model.
         self.model.peft_config = self.peft_config
+    def _pre_injection_hook(self, model: nn.Module, config: PeftConfig, adapter_name: str) -> None:
+        r"""
+        A hook to be called before the adapter is injected into the model. This method can be overridden by child
+        classes to perform any pre-injection operations.
 
+        Args:
+            model (`nn.Module`):
+                The model to be adapted.
+            config (`PeftConfig`):
+                The adapter config.
+            adapter_name (`str`):
+                The adapter name.
+        """
+        pass
     @property
     def active_adapters(self) -> list[str]:
         r"""
@@ -812,3 +824,32 @@ def replicate_layers(model: nn.Module, layer_map: list[tuple[int, int]]):
         raise ValueError("Unexpected model type, need to handle post-processing of layers.")
     if hasattr(model.config, "num_hidden_layers"):  # Common to Llama, Bert, Falcon.
         model.config.num_hidden_layers = len(new_layers)
+def _maybe_include_all_linear_layers(peft_config: PeftConfig, model: nn.Module) -> PeftConfig:
+    """
+    Helper function to update `target_modules` to all linear/Conv1D layers if provided as 'all-linear'. Adapted from
+    the QLoRA repository: https://github.com/artidoro/qlora/blob/main/qlora.py
+    """
+    if not hasattr(peft_config, "target_modules"):
+        return peft_config
+
+    # if `target_modules` is a string, convert to lower case and check if it matches "all-linear"
+    if not (
+        isinstance(peft_config.target_modules, str)
+        and peft_config.target_modules.lower() == "all-linear"
+    ):
+        return peft_config
+
+    linear_classes = (nn.Linear, nn.Conv1D)
+    linear_module_names = set()
+    for name, module in model.named_modules():
+        # match with all linear classes.
+        if isinstance(module, linear_classes):
+            linear_module_names.add(name)
+
+    # Try to remove linear layers that should not be targeted as best as possible. We have to rely on convention as
+    # there are no hard rules to detect these modules.
+    module_names_to_exclude = set()
+
+    linear_module_names -= module_names_to_exclude
+    peft_config.target_modules = linear_module_names
+    return peft_config

@@ -46,6 +46,8 @@ from .tuners import (
     LNTuningModel,
     PrefixTuningConfig,
     PromptEncoderConfig,
+    VeraConfig,
+    VeraModel
 )
 
 MODEL_TYPE_TO_PEFT_MODEL_MAPPING = {
@@ -70,6 +72,7 @@ PEFT_TYPE_TO_CONFIG_MAPPING = {
     "LOHA": LoHaConfig,
     "POLY": PolyConfig,
     "LN_TUNING": LNTuningConfig,
+    "VERA": VeraConfig
 }
 
 PEFT_TYPE_TO_TUNER_MAPPING = {
@@ -80,6 +83,7 @@ PEFT_TYPE_TO_TUNER_MAPPING = {
     "LOHA": LoHaModel,
     "POLY": PolyModel,
     "LN_TUNING": LNTuningModel,
+    "VERA": VeraConfig
 }
 
 
