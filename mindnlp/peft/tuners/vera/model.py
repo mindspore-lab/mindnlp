@@ -19,10 +19,6 @@ import warnings
 from dataclasses import asdict
 from enum import Enum
 from typing import Optional, Union
-
-#import torch
-#import torch.nn as nn
-#from torch.nn.init import _calculate_correct_fan
 from mindnlp.core.nn.init import _calculate_correct_fan
 from mindnlp.core import ops
 from mindnlp.core import nn
@@ -39,7 +35,6 @@ from ...utils import (
 )
 
 from .._buffer_dict import BufferDict
-#from ...tuners.tuners_utils import _maybe_include_all_linear_layers
 from .config import VeraConfig
 from .layer import Linear, VeraLayer
 
@@ -68,8 +63,8 @@ def _kaiming_init(
     gain = math.sqrt(2)
     std = gain / math.sqrt(fan)
     bound = math.sqrt(3.0) * std
-    return ops_mind.uniform(tensor_or_shape,Tensor(-bound), Tensor(bound), generator.seed())
-    #return tensor.uniform_(-bound, bound, generator=generator)
+    nn.init.uniform_(tensor,-bound,bound)
+    return tensor
 
 
 class VeraModel(BaseTuner):
@@ -113,7 +108,6 @@ class VeraModel(BaseTuner):
 
         This will be used for determining the size of the shared vera_A and vera_B matrices.
         """
-        #model_config = self.get_model_config(self.model)
 
         peft_config = self._prepare_adapter_config(config, {})
         #peft_config = _maybe_include_all_linear_layers(peft_config, self.model)
@@ -259,14 +253,6 @@ class VeraModel(BaseTuner):
                 new_module.base_layer.state = child.state
             else:
                 new_module.state = child.state
-        #     new_module.to(child.weight.device)
-
-        # meta = torch.device("meta")
-        # # dispatch to correct device
-        # for name, module in new_module.cells_and_names():
-        #     if "vera_" in name:
-        #         if not any(p.device == meta for p in module.parameters()):
-        #             module.to(child.weight.device)
 
     def _mark_only_adapters_as_trainable(self, model: nn.Module) -> None:
         for n, p in model.named_parameters():
@@ -291,44 +277,12 @@ class VeraModel(BaseTuner):
 
     @staticmethod
     def _create_new_module(vera_config, vera_A, vera_B, adapter_name, target, **kwargs):
-        # avoid eager bnb import
-        # if is_bnb_available():
-        #     import bitsandbytes as bnb
-
-        #     from .bnb import Linear8bitLt
-
-        # if is_bnb_4bit_available():
-        #     from .bnb import Linear4bit
-
         bias = kwargs.pop("bias", False)
-        # loaded_in_8bit = kwargs.get("loaded_in_8bit", False)
-        # loaded_in_4bit = kwargs.get("loaded_in_4bit", False)
 
         if isinstance(target, BaseTunerLayer):
             target_base_layer = target.get_base_layer()
         else:
             target_base_layer = target
-
-        # if loaded_in_8bit and isinstance(target_base_layer, bnb.nn.Linear8bitLt):
-        #     eightbit_kwargs = kwargs.copy()
-        #     eightbit_kwargs.update(
-        #         {
-        #             "has_fp16_weights": target_base_layer.state.has_fp16_weights,
-        #             "threshold": target_base_layer.state.threshold,
-        #             "index": target_base_layer.index,
-        #         }
-        #     )
-        #     return Linear8bitLt(target, adapter_name, vera_A, vera_B, **eightbit_kwargs)
-        # elif loaded_in_4bit and isinstance(target_base_layer, bnb.nn.Linear4bit):
-        #     fourbit_kwargs = kwargs.copy()
-        #     fourbit_kwargs.update(
-        #         {
-        #             "compute_dtype": target_base_layer.compute_dtype,
-        #             "compress_statistics": target_base_layer.weight.compress_statistics,
-        #             "quant_type": target_base_layer.weight.quant_type,
-        #         }
-        #     )
-        #     return Linear4bit(target, adapter_name, vera_A, vera_B, **fourbit_kwargs)
         if isinstance(target_base_layer, nn.Linear):
             if kwargs["fan_in_fan_out"]:
                 warnings.warn(

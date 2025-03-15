@@ -3,7 +3,6 @@ from collections import OrderedDict
 import mindspore
 from mindspore import Tensor
 import mindspore.context
-#from mindspore.nn import Cell
 from mindnlp.core import nn
 class BufferDict(nn.Module):
     r"""

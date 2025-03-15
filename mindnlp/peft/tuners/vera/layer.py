@@ -233,36 +233,13 @@ class Linear(nn.Linear, VeraLayer):
         """
         vera_A = self.vera_A[adapter]
         vera_B = self.vera_B[adapter]
-        #device=mindspore.get_current_device().device_target
-        #device = vera_B.device
-        #dtype = vera_B.dtype
-
-        # In case users wants to merge the adapter weights that are in
-        # (b)float16 while being on CPU, we need to cast the weights to float32, perform the merge and then cast back to
-        # (b)float16 because some CPUs have slow bf16/fp16 matmuls.
-        #cast_to_fp32 = device.type == 'CPU' and (dtype == mindspore.float16 or dtype == mindspore.bfloat16)
-
         lambda_d = self.vera_lambda_d[adapter]
         lambda_b = self.vera_lambda_b[adapter]
-
-        # if cast_to_fp32:
-        #     vera_A = vera_A.float()
-        #     vera_B = vera_B.float()
-        #     lambda_d = lambda_d.float()
-        #     lambda_b = lambda_b.float()
         sliced_A = vera_A[:, : self.in_features]
         sliced_B = vera_B[: self.out_features, :]
         lambda_b = ops.unsqueeze(lambda_b,-1)
         lambda_d = ops.unsqueeze(lambda_d,-1)
         output_tensor = transpose((lambda_b * sliced_B) @ (lambda_d * sliced_A), self.fan_in_fan_out)
-
-        # if cast_to_fp32:
-        #     output_tensor = output_tensor.to(dtype=dtype)
-
-        #     # cast back the weights
-        #     # TODO: why?
-        #     self.vera_lambda_d[adapter].data = lambda_d.to(dtype)
-        #     self.vera_lambda_b[adapter].data = lambda_b.to(dtype)
 
         return output_tensor
 
@@ -278,16 +255,10 @@ class Linear(nn.Linear, VeraLayer):
             for active_adapter in self.active_adapters:
                 if active_adapter not in self.vera_lambda_d.keys():
                     continue
-
                 lambda_d = self.vera_lambda_d[active_adapter]
                 lambda_b = self.vera_lambda_b[active_adapter]
-
                 vera_A = self.vera_A[active_adapter]
                 vera_B = self.vera_B[active_adapter]
-
-                # As adapted layers may have different shapes and VeRA contains a single shared pair of A and B matrices,
-                # we initialize these matrices with the largest required size for each dimension.
-                # During the forward pass, required submatrices are sliced out from the shared vera_A and vera_B.
                 sliced_A = vera_A[:, : self.in_features]
                 sliced_B = vera_B[: self.out_features, :]
 
