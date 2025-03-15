@@ -45,13 +45,14 @@ with no_grad():
     generated_ids[:, seq_length] = next_token[:, 0]
 
     cache_position = mindspore.tensor([seq_length + 1])
+    s = time.time()
     for _ in range(1, NUM_TOKENS_TO_GENERATE):
-        s = time.time()
         next_token = decode_one_tokens(model, next_token, None, cache_position, past_key_values)
-        t = time.time()
-        print(t - s)
         generated_ids[:, cache_position] = next_token.int()
         cache_position += 1
+    mindspore.hal.synchronize()
+    t = time.time()
+    print((t - s) / (NUM_TOKENS_TO_GENERATE - 1))
 
 text = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
 print(text)
