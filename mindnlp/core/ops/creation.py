@@ -81,12 +81,18 @@ def ones_like(input, *, dtype=None):
 
 # arange
 has_arange = hasattr(mindspore.mint, 'arange')
+range_op = ops.Range()
 def arange(start=0, end=None, step=1, *, dtype=None):
+    if dtype is None:
+        dtype = mindspore.int64
     if ON_ORANGE_PI and dtype in (None, mindspore.int64):
         dtype = mindspore.int32
     if use_pyboost() and has_arange:
         return mindspore.mint.arange(start, end, step, dtype=dtype)
-    return ops.arange(start, end, step, dtype=dtype)
+    if end is None:
+        end = start
+        start = 0
+    return range_op(start, end, step).astype(dtype)
 
 # range
 def range(start=0, end=None, step=1, dtype=None):
@@ -125,7 +131,7 @@ def empty(*size, dtype=None, device=None):
     if dtype is None:
         dtype = get_default_dtype()
     if has_empty:
-        out = mindspore._c_expression.pyboost_empty([size, dtype, device])
+        out = mindspore._c_expression.pyboost_empty([size, dtype, device]).get_value()
     else:
         out = CTensor(dtype=dtype, shape=size)
     return mindspore.Tensor(out)

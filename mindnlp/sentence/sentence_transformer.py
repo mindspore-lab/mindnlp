@@ -47,12 +47,12 @@ class SentenceTransformer(nn.Sequential):
             modules: Iterable[nn.Module] = None,
             prompts: dict[str, str] = None,
             default_prompt_name: str = None,
-            similarity_fn_name: str | SimilarityFunction = None,
+            similarity_fn_name: str = None,
             cache_folder: str = None,
             trust_remote_code: bool = False,
             revision: str = None,
             local_files_only: bool = False,
-            token: bool | str = None,
+            token: bool = None,
             truncate_dim: int = None,
             model_kwargs: dict[str, Any] = None,
             tokenizer_kwargs: dict[str, Any] = None,
@@ -206,7 +206,7 @@ class SentenceTransformer(nn.Sequential):
     def _load_sbert_model(
         self,
         model_name_or_path: str,
-        token: bool | str,
+        token: str,
         cache_folder: str,
         revision: str = None,
         trust_remote_code: bool = False,
@@ -385,7 +385,7 @@ class SentenceTransformer(nn.Sequential):
     def _load_auto_model(
         self,
         model_name_or_path: str,
-        token: bool | str,
+        token: str,
         cache_folder: str,
         revision: str = None,
         trust_remote_code: bool = False,
@@ -432,7 +432,7 @@ class SentenceTransformer(nn.Sequential):
             config_args=config_kwargs,
         )
         pooling_model = Pooling(transformer_model.get_word_embedding_dimension(), "mean")
-        self.model_card_data.set_base_model(model_name_or_path, revision=revision)
+        # self.model_card_data.set_base_model(model_name_or_path, revision=revision)
         return [transformer_model, pooling_model]
 
     def _first_module(self):
@@ -618,7 +618,7 @@ class SentenceTransformer(nn.Sequential):
 
     @similarity_fn_name.setter
     def similarity_fn_name(
-        self, value: Literal["cosine", "dot", "euclidean", "manhattan"] | SimilarityFunction
+        self, value: Literal["cosine", "dot", "euclidean", "manhattan"]
     ) -> None:
         if isinstance(value, SimilarityFunction):
             value = value.value
