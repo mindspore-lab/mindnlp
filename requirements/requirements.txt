@@ -34,3 +34,4 @@ faiss_cpu
 phonemizer
 datamodel_code_generator
 git+https://github.com/lvyufeng/einops
+triton

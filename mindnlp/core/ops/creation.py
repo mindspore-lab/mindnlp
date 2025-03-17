@@ -118,16 +118,24 @@ def eye(n, m=None, *, dtype=None):
     return ops.eye(n, m, dtype)
 
 # empty
-def empty(*size, dtype=None):
+has_empty = hasattr(mindspore.mint, 'empty')
+def empty(*size, dtype=None, device=None):
     if isinstance(size[0], (tuple, list)):
         size = size[0]
     if dtype is None:
         dtype = get_default_dtype()
-    out = CTensor(dtype=dtype, shape=size)
+    if has_empty:
+        out = mindspore._c_expression.pyboost_empty([size, dtype, device])
+    else:
+        out = CTensor(dtype=dtype, shape=size)
     return mindspore.Tensor(out)
 
 # empty_like
-
+has_empty_like = hasattr(mindspore.mint, 'empty_like')
+def empty_like(input, *, dtype=None, device=None):
+    if has_empty_like:
+        return mindspore.mint.empty_like(input, dtype=dtype, device=device)
+    return empty(input.shape, dtype=input.dtype, device=device)
 
 # empty_strided
 
