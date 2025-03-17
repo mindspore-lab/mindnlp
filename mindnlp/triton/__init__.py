@@ -1,10 +1,13 @@
 """triton adapter for mindspore"""
 from functools import lru_cache
 import mindspore
-from triton.backends.driver import DriverBase
-from triton.backends.nvidia.driver import CudaUtils, CudaLauncher
-from triton.backends.compiler import GPUTarget
 from mindnlp.core import ops
+from mindnlp.utils import is_triton_available
+
+if is_triton_available():
+    from triton.backends.driver import DriverBase
+    from triton.backends.nvidia.driver import CudaUtils, CudaLauncher
+    from triton.backends.compiler import GPUTarget
 
 class MSDriver(DriverBase):
 

@@ -35,7 +35,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip==24.0
-        pip install -r requirements/requirements.txt
+        pip install -r requirements/pylint_requirements.txt
     - name: Install MindSpore
       shell: bash
       env:

@@ -241,7 +241,7 @@ class XLMProphetNetPreTrainedModel(PreTrainedModel):
 
         assert pad_token_id is not None, "self.model.config.pad_token_id has to be defined."
         # replace possible -100 values in labels by `pad_token_id`
-        shifted_input_ids.masked_fill_(shifted_input_ids == -100, pad_token_id)
+        shifted_input_ids = ops.masked_fill(shifted_input_ids, shifted_input_ids == -100, pad_token_id)
 
         assert ops.all(shifted_input_ids >= 0).item(), "Verify that `shifted_input_ids` has only positive values"
 

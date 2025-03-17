@@ -131,7 +131,11 @@ def empty(*size, dtype=None, device=None):
     if dtype is None:
         dtype = get_default_dtype()
     if has_empty:
-        out = mindspore._c_expression.pyboost_empty([size, dtype, device]).get_value()
+        out = mindspore._c_expression.pyboost_empty([size, dtype, device])
+        if not isinstance(out, mindspore.Tensor):
+            out = out.get_value()
+        else:
+            return out
     else:
         out = CTensor(dtype=dtype, shape=size)
     return mindspore.Tensor(out)

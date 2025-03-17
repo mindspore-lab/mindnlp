@@ -258,7 +258,7 @@ class MultiHeadAttention(nn.Module):
         q = q / math.sqrt(dim_per_head)  # (bs, n_heads, qlen, dim_per_head)
         scores = ops.matmul(q, k.swapaxes(2, 3))  # (bs, n_heads, qlen, klen)
         mask = (mask == 0).view(mask_reshape).expand_as(scores)  # (bs, n_heads, qlen, klen)
-        scores = scores.masked_fill(mask, float(ops.finfo(scores.dtype).min))  # (bs, n_heads, qlen, klen)
+        scores = ops.masked_fill(scores, mask, float(ops.finfo(scores.dtype).min))  # (bs, n_heads, qlen, klen)
 
         weights = ops.softmax(scores.float(), dim=-1).astype(scores.dtype)  # (bs, n_heads, qlen, klen)
         weights = F.dropout(weights, p=self.dropout, training=self.training)  # (bs, n_heads, qlen, klen)
