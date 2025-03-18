@@ -6,7 +6,7 @@ from mindspore import ops
 from mindspore.common.initializer import initializer
 from mindspore.ops._primitive_cache import _get_cache_prim
 
-from mindnlp.configs import use_pyboost, ON_ORANGE_PI
+from mindnlp.configs import use_pyboost, ON_ORANGE_PI, SUPPORT_BF16
 from .reduction import any
 from .comparison import eq
 
@@ -623,12 +623,12 @@ def meshgrid(*tensors, indexing=None):
 # repeat_interleave
 has_repeat_interleave = hasattr(mindspore.mint, 'repeat_interleave')
 def repeat_interleave(input, repeats, dim=None):
-    if use_pyboost() and has_repeat_interleave:
+    if use_pyboost() and has_repeat_interleave and SUPPORT_BF16:
         return mindspore.mint.repeat_interleave(input, repeats, dim=dim)
     if input.dtype == mindspore.bool_:
         input = input.int()
-        return input.repeat(repeats, dim).bool()
-    return input.repeat(repeats, dim)
+        return input.repeat_interleave(repeats, dim).bool()
+    return input.repeat_interleave(repeats, dim)
 
 # roll
 DEVICE_TARGET = mindspore.get_context('device_target')

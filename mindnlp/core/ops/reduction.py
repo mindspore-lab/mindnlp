@@ -48,9 +48,24 @@ def any(input, dim=None, keepdim=False):
 
 # max
 has_max = hasattr(mindspore.mint, 'max')
-def max(input, dim=None, keepdim=False):
+def max(*args, **kwargs):
     if use_pyboost() and has_max:
-        return mindspore.mint.max(input, dim, keepdim)
+        return mindspore.mint.max(*args, **kwargs)
+
+    input = kwargs.get('input', None)
+    dim = kwargs.get('dim', None)
+    keepdim = kwargs.get('keepdim', False)
+    if len(args) == 1:
+        input = args[0]
+    elif len(args) == 2:
+        input = args[0]
+        dim = args[1]
+    elif len(args) == 3:
+        input = args[0]
+        dim = args[1]
+        keepdim = args[2]
+    else:
+        raise RuntimeError(f'need 3 inputs but got {len(args)}')
     out = ops.max(input, dim, keepdim)
     if dim is None:
         return out[0]
@@ -58,13 +73,18 @@ def max(input, dim=None, keepdim=False):
 
 # min
 has_min = hasattr(mindspore.mint, 'min')
-def min(input, dim=None, keepdim=False):
+def min(*args, **kwargs):
     if use_pyboost() and has_min:
-        return mindspore.mint.min(input, dim, keepdim)
+        return mindspore.mint.min(*args, **kwargs)
+
+    input = kwargs.get('input', None) or args[0]
+    dim = kwargs.get('dim', None) or args[1]
+    keepdim = kwargs.get('keepdim', False) or args[2]
     out = ops.min(input, dim, keepdim)
     if dim is None:
         return out[0]
     return out
+
 
 # dist
 
