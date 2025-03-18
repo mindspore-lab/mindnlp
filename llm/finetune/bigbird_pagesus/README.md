@@ -34,3 +34,27 @@ transformers+pytorch+3090的benchmark是自己编写的，仓库位于https://gi
 | 9    | 0.2791    | 0.2519  |
 | 10   | 0.2831    | 0.2510  |
 | 11   | 0.2831    | 0.2510  |
+
+## 对话测试
+
+问题来自评估数据集的第一个问题
+
+* 问题输入：
+
+  Nice to meet you too. What are you interested in?
+
+* mindnlp未微调前的回答：
+
+  we present a new method for the detection of rare events, based on the use of time - frequency combs.<n> we show how this technique can be used to detect rare events in a broad range of time - frequency domains.<n> we also show how this technique can be used to study the evolution of the spectrum of rare events. <n> rare events ; amplitude ; phase ; amplitude ; frequency ; time - frequency combs + _ pacs : _<n> 11.30.er, 12.20.fv, 12.20.ds, 12.60.jv, 12.60.jv @xmath0 department of physics and astronomy, iowa state university, ames, ia 50011 + @xmath1 department of physics and astronomy, university of iowa, ames, ia 50011 + @xmath2 department of physics and astronomy, university of iowa, ames, ia 50011 + _ key words : _ rare events ; amplitude ; phase ; frequency ; spectrum ; time - frequency combs + _ pacs : _<n> 11.30.er 
+
+* mindnlp微调后的回答：
+
+  I'm interested in a lot of things, but I'm especially interested in history and science.
+
+* torch微调前的回答：
+
+  we present a new method for the detection of rare events , based on the use of time - frequency combs .<n> we show how this technique can be used to detect rare events in a broad range of time - frequency domains .<n> we also show how this technique can be used to study the evolution of the spectrum of rare events . <n> rare events ; amplitude ; phase ; amplitude ; frequency ; time - frequency combs + _ pacs : _<n> 11.30.er , 12.20.fv , 12.20.ds , 12.60.jv , 12.60.jv @xmath0 department of physics and astronomy , iowa state university , ames , ia 50011 + @xmath1 department of physics and astronomy , university of iowa , ames , ia 50011 + @xmath2 department of physics and astronomy , university of iowa , ames , ia 50011 + _ key words : _ rare events ; amplitude ; phase ; frequency ; spectrum ; time - frequency combs + _ pacs : _<n> 11.30.er 
+
+* torch微调后的回答：
+
+  how do you like to do for fun?
