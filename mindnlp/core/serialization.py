@@ -26,10 +26,8 @@ import pathlib
 import warnings
 import tempfile
 import operator
-import struct
 import mmap
 import json
-import math
 
 from contextlib import closing, contextmanager
 from enum import Enum
@@ -47,7 +45,6 @@ from mindspore.train.serialization import (
 
 import safetensors
 import safetensors.numpy
-from safetensors import deserialize
 
 from mindnlp.core import nn
 from mindnlp.core.nn import Parameter
@@ -65,6 +62,7 @@ logger = logging.get_logger(__name__)
 
 MAGIC_NUMBER = 0x1950A86A20F9469CFC6C
 PROTOCOL_VERSION = 1001
+MAX_HEADER_SIZE = 100 * 1000 * 1000
 
 
 @contextmanager
@@ -1433,50 +1431,148 @@ _NP_TYPES = {
 }
 
 
-def legacy_safe_load_file(filename):
-    """
-    This function safely loads a file containing state dictionary data and converts it into a dictionary of MindSpore Parameters.
+_DTYPE_SIZE = {
+    "BOOL": 1,
+    "U8": 1,
+    "I8": 1,
+    "F8_E5M2": 1,
+    "F8_E4M3": 1,
+    "I16": 2,
+    "U16": 2,
+    "I32": 4,
+    "U32": 4,
+    "I64": 8,
+    "U64": 8,
+    "F16": 2,
+    "BF16": 2,
+    "F32": 4,
+    "F64": 8,
+}
 
-    Args:
-        filename (str): The path to the file containing the state dictionary data to be loaded.
+class PySafeSlice:
+    def __init__(self, info, bufferfile, base_ptr, buffermmap):
+        self.info = info
+        self.bufferfile = bufferfile
+        self.buffermmap = buffermmap
+        self.base_ptr = base_ptr
 
-    Returns:
-        dict: A dictionary where keys are parameter names and values are MindSpore Parameters.
+        self.start = [0 for _ in self.shape]
+        self.stop = list(self.shape)
+        self.step = [1 for _ in self.shape]
 
-    Raises:
-        FileNotFoundError: If the specified file 'filename' does not exist.
-        ValueError: If the data in the file is not in the correct format to create MindSpore Parameters.
-    """
-    with open(filename, "rb") as f:
-        data = f.read()
+    @property
+    def ndim(self):
+        return len(self.shape)
 
-    safeview = deserialize(data)
+    def get(self, *args, **kwargs):
+        nbytes = int(np.prod(self.shape)) * np.dtype(self.dtype).itemsize
+        offset = self.start_offset
+        tensor = np.frombuffer(self.buffermmap, dtype=self.dtype, offset=offset,
+                               count=nbytes // np.dtype(self.dtype).itemsize)
+        tensor = tensor.reshape(self.shape)
+        if not SUPPORT_BF16 and self.info["dtype"] == 'BF16':
+            tensor = tensor.astype(np.float16)
+        tensor = Tensor.from_numpy(tensor)
+        return tensor
 
-    result = {}
-    try:
-        for k, v in safeview:
-            dtype = _MS_TYPES[v["dtype"]]
-            if (not SUPPORT_BF16 and dtype != mindspore.bfloat16) or SUPPORT_BF16:
-                arr = Tensor.convert_bytes_to_tensor(
-                    bytes(v["data"]), tuple(v["shape"]), dtype
-                )
-                result[k] = Tensor(arr)
-            else:
-                raise TypeError(
-                    "Do not support bfloat16 on current device, use numpy as convert buffer to boost load."
-                )
-        return result
+    @property
+    def start_offset(self):
+        return self.base_ptr + self.info["data_offsets"][0]
 
-    except Exception as e:
-        for k, v in safeview:
-            dtype = _NP_TYPES[v["dtype"]]
-            arr = np.frombuffer(v["data"], dtype=dtype).reshape(v["shape"])
+    def get_shape(self):
+        return self.shape
 
-            if (not SUPPORT_BF16 and dtype != bfloat16) or SUPPORT_BF16:
-                result[k] = Tensor.from_numpy(arr)
-            else:
-                result[k] = Tensor.from_numpy(arr.astype(np.float16))
-        return result
+    @property
+    def shape(self):
+        return self.info["shape"]
+
+    @property
+    def dtype(self):
+        return _NP_TYPES[self.info["dtype"]]
+
+    @property
+    def nelements(self):
+        return np.prod(self.info["shape"])
+
+    @property
+    def bits(self):
+        return _DTYPE_SIZE[self.info["dtype"]]
+
+    @property
+    def nbytes(self):
+        return self.nelements * self.bits
+
+def getSize(fileobject):
+    fileobject.seek(0, 2)  # move the cursor to the end of the file
+    size = fileobject.tell()
+    fileobject.seek(0)  # move the cursor to the start of the file
+    return size
+
+
+def metadata_validate(metadata):
+    start = 0
+    for key, info in metadata.items():
+        s, e = info["data_offsets"]
+        if s != start or e < s:
+            raise ValueError(f"SafeTensorError::InvalidOffset({key})")
+        start = e
+        nelements = np.prod(info["shape"])
+        nbytes = nelements * _DTYPE_SIZE[info["dtype"]]
+        if (e - s) != nbytes:
+            raise ValueError("SafeTensorError::TensorInvalidInfo")
+    return start
+
+def read_metadata(buffer):
+    buffer_len = getSize(buffer)
+    if buffer_len < 8:
+        raise ValueError("SafeTensorError::HeaderTooSmall")
+
+    n = np.frombuffer(buffer.read(8), dtype=np.uint64).item()
+
+    if n > MAX_HEADER_SIZE:
+        raise ValueError("SafeTensorError::HeaderTooLarge")
+
+    stop = n + 8
+    if stop > buffer_len:
+        raise ValueError("SafeTensorError::InvalidHeaderLength")
+
+    tensors = json.loads(buffer.read(n), object_pairs_hook=OrderedDict)
+
+    metadata = tensors.pop("__metadata__", None)
+    buffer_end = metadata_validate(tensors)
+
+    if buffer_end + 8 + n != buffer_len:
+        raise ValueError("SafeTensorError::MetadataIncompleteBuffer")
+
+    return stop, tensors, metadata
+
+
+class fast_safe_open:
+    def __init__(self, filename, framework=None, device="cpu"):
+        self.filename = filename
+        self.framework = framework
+        self.file = open(self.filename, "rb")
+        self.file_mmap = mmap.mmap(self.file.fileno(), 0, access=mmap.ACCESS_COPY)
+        self.base, self.tensors_decs, self.__metadata__ = read_metadata(self.file)
+        self.tensors = OrderedDict()
+        for key, info in self.tensors_decs.items():
+            self.tensors[key] = PySafeSlice(info, self.file, self.base, self.file_mmap)
+            self.tensors[key].key = key
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.file.close()
+
+    def metadata(self):
+        return self.__metadata__
+
+    def keys(self):
+        return list(self.tensors.keys())
+
+    def get_tensor(self, name):
+        return self.tensors[name].get()
 
 
 def safe_load_file(filename):
@@ -1494,39 +1590,10 @@ def safe_load_file(filename):
         ValueError: If the data in the file is not in the correct format to create MindSpore Parameters.
     """
 
-    def convert(info: dict[str, Any]):
-        numpy_dtype = _NP_TYPES[info["dtype"]]
-        ms_dtype = _MS_TYPES[info["dtype"]]
-        shape: list[int] = info["shape"]
-        begin, end = info["data_offsets"]
-        assert 0 <= begin <= end <= len(byte_buf)
-        assert end - begin == math.prod(shape) * np.dtype(numpy_dtype).itemsize
-        buf = byte_buf[begin:end]
-
-        array = np.frombuffer(buf, dtype=numpy_dtype).reshape(shape)
-
-        if array.dtype == bfloat16 and not SUPPORT_BF16:
-            logger.warning_once(
-                "MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16"
-            )
-            array = array.astype(np.float16)
-        array = array.astype(array.dtype)
-        out = Tensor.from_numpy(array)
-        return out
-
-    with open(filename, "rb") as fp:
-        (header_size,) = struct.unpack("<Q", fp.read(8))
-        header: dict[str, dict[str, Any]] = json.loads(fp.read(header_size))
-        # Use mmap for the actual data to avoid race conditions with the file offset.
-        mapped = memoryview(mmap.mmap(fp.fileno(), 0, access=mmap.ACCESS_READ))
-        byte_buf = mapped[8 + header_size :]
-
-        result = {
-            name: convert(info)
-            for (name, info) in header.items()
-            if name != "__metadata__"
-        }
-
+    result = {}
+    with fast_safe_open(filename, framework="np") as f:
+        for k in f.keys():
+            result[k] = f.get_tensor(k)
     return result
 
 

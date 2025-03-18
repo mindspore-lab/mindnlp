@@ -12,7 +12,7 @@ NUM_TOKENS_TO_GENERATE = 40
 
 model_id = 'shakechen/llama-2-7b-hf'
 tokenizer = LlamaTokenizer.from_pretrained(model_id, mirror='modelscope', pad_token="</s>", padding_side="right")
-model = LlamaForCausalLM.from_pretrained(model_id, mirror='modelscope', use_safetensors=False, ms_dtype=mindspore.float16)
+model = LlamaForCausalLM.from_pretrained(model_id, mirror='modelscope', use_safetensors=True, ms_dtype=mindspore.float16)
 inputs = tokenizer(prompts, return_tensors="ms", padding=True)
 
 def decode_one_tokens(model, cur_token, input_pos, cache_position, past_key_values):

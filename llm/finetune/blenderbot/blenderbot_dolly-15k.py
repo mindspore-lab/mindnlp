@@ -8,12 +8,8 @@ from mindspore.dataset import GeneratorDataset
 
 # 环境配置
 context.set_context(
-    mode=context.PYNATIVE_MODE,
-    device_target="Ascend",
     device_id=0,
-    enable_graph_kernel=False,
     max_call_depth=3000,
-    pynative_synchronize=True
 )
 ms.set_auto_parallel_context(parallel_mode=ms.ParallelMode.STAND_ALONE)
 ms.set_context(reserve_class_name_in_scope=False)

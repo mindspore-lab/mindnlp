@@ -98,10 +98,10 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
             #     padding_mask, min_dtype
             # )
             if mask_length >= causal_mask.shape[-1]:
-                causal_mask = causal_mask.masked_fill(padding_mask, min_dtype)
+                causal_mask = ops.masked_fill(causal_mask, padding_mask, min_dtype)
             else:
                 causal_mask = ops.cat(
-                                [ops.narrow(causal_mask, -1, 0, mask_length).masked_fill(padding_mask, min_dtype),
+                                [ops.masked_fill(ops.narrow(causal_mask, -1, 0, mask_length), padding_mask, min_dtype),
                                 ops.narrow(causal_mask, -1, mask_length, causal_mask.shape[-1] - mask_length)],
                                 dim=-1
                             )
