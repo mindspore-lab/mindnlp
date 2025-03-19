@@ -26,48 +26,6 @@ print(dataset)
 test_image = dataset['test'][0]['image']
 test_label = dataset['test'][0]['label']
 
-# 以下这个方法不好使，改用nuumpy的方法
-# print("\n=== 预处理前 ===")
-# def transform(examples):
-#     images = [img.convert("RGB") for img in examples["image"]]
-#     # 使用processor处理图像
-#     inputs = processor(
-#         images=images,
-#         return_tensors="ms",
-#         size={"height": 384, "width": 384}
-#     )
-#     # 确保数据类型为float32
-#     pixel_values = np.array(inputs["pixel_values"], dtype=np.float32)
-#     labels = np.array(examples["label"], dtype=np.int32)
-#     return {
-#         "pixel_values": pixel_values,
-#         "labels": labels
-#     }
-# encoded_dataset = dataset.map(
-#     transform,
-#     batched=True,
-#     remove_columns=["image", "label"]
-# )
-# dataset.save_to_disk("./flowers102_encoded")
-# # 将HuggingFace数据集转换为MindSpore数据集格式
-# print("\n=== 将预处理后的数据集转换为MindSpore格式 ===")
-# def tempFunc(dataset):
-#     for item in dataset:
-#         yield (
-#             np.array(item["pixel_values"], dtype=np.int32),
-#             np.array(item["labels"], dtype=np.int32)
-#         )
-# import mindspore.dataset as ds
-# def create_mindspore_dataset(dataset, shuffle=True):
-#     return ds.GeneratorDataset(
-#         source=lambda: tempFunc(dataset),  # 使用 lambda 包装生成器
-#         column_names=["pixel_values", "labels"],
-#         shuffle=shuffle,
-#         num_parallel_workers=4
-#     )
-# train_dataset = create_mindspore_dataset(encoded_dataset["train"], shuffle=True)
-# eval_dataset = create_mindspore_dataset(encoded_dataset["test"], shuffle=False)
-
 print("\n=== 训练参数 ===")
 training_args = TrainingArguments(
     output_dir="./mindNLP_bit_flowers102",
