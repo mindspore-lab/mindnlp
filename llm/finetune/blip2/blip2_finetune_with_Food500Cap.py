@@ -154,7 +154,7 @@ class Trainer:
         return vloss / step, testdatasetRES
 
 # 加载模型并设置可训练参数
-ms.set_context(device_target='Ascend', device_id=0, pynative_synchronize=True)
+ms.set_context(device_target='Ascend', device_id=0)
 processor = Blip2Processor.from_pretrained('Salesforce/blip2-opt-2.7b')
 model = Blip2ForConditionalGeneration.from_pretrained('Salesforce/blip2-opt-2.7b')
 model = freeze_blip2_backbone(model, freeze_vit=True)
