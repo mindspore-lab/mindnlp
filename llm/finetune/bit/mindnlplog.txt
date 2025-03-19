@@ -1,0 +1,69 @@
+(MindSpore) [ma-user work]$python mindNLP_Bit_flowers.py 
+Building prefix dict from the default dictionary ...
+Loading model from cache /tmp/jieba.cache
+Loading model cost 1.241 seconds.
+Prefix dict has been built successfully.
+Some weights of BitForImageClassification were not initialized from the model checkpoint at HorcruxNo13/bit-50 and are newly initialized because the shapes did not match:
+- classifier.1.weight: found shape (1000, 2048) in the checkpoint and (102, 2048) in the model instantiated
+- classifier.1.bias: found shape (1000,) in the checkpoint and (102,) in the model instantiated
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+test-00000-of-00006.parquet: 100%|█████████████████████████████████████████████████████████████████| 420M/420M [02:14<00:00, 3.12MB/s]
+test-00001-of-00006.parquet: 100%|█████████████████████████████████████████████████████████████████| 416M/416M [02:11<00:00, 3.17MB/s]
+test-00002-of-00006.parquet:   0%|                                                                         | 0.00/429M [00:00<?, ?B/s]Error while downloading from https://cdn-lfs-us-1.hf-mirror.com/repos/b0/d3/b0d3d68b388c3ee41777a414af8253d880c3bb39c69b5fb303194abceea8e81f/68bf7479a332fe74bd6cf9066509d536768603058b539d03ce49aa6b22902b83?response-content-disposition=inline%3B+filename*%3DUTF-8%27%27test-00002-of-00006.parquet%3B+filename%3D%22test-00002-of-00006.parquet%22%3B&Expires=1742347838&Policy=eyJTdGF0ZW1lbnQiOlt7IkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0MjM0NzgzOH19LCJSZXNvdXJjZSI6Imh0dHBzOi8vY2RuLWxmcy11cy0xLmhmLmNvL3JlcG9zL2IwL2QzL2IwZDNkNjhiMzg4YzNlZTQxNzc3YTQxNGFmODI1M2Q4ODBjM2JiMzljNjliNWZiMzAzMTk0YWJjZWVhOGU4MWYvNjhiZjc0NzlhMzMyZmU3NGJkNmNmOTA2NjUwOWQ1MzY3Njg2MDMwNThiNTM5ZDAzY2U0OWFhNmIyMjkwMmI4Mz9yZXNwb25zZS1jb250ZW50LWRpc3Bvc2l0aW9uPSoifV19&Signature=IfSMlxvtnSQpPGjDDIPtQDTpfZK8BcQ2k%7EkTBFk%7EPNYoXH6fJzHZ0VjINpY1zlhPxhp8G2SsD8oxcrAj-QHLA5ysWEp7OKCcyt4Fp5vGP8fpArEw2zd-oDCblRE3WVNpdM1d65-1TkmIxPRoWk%7EiVBpMjAlTagGJguLBiimPMiFHHJYH1Dohvp2D6AYv8cOiyx48hvW58xtFlMZOG0qd-ibzXK9aHoIDRs7FTixLHXDcR2W41MRiJULl18Q4bxnr3%7EpsftaA6xpJje3gS1Q8WXoxtZ5i%7EzoJNchBgvXrs2YAQ83IelrCGMl%7EsFWqPlNkBBnneNr4UBwMDIJB90H5NQ__&Key-Pair-Id=K24J24Z295AEI9: HTTPSConnectionPool(host='cdn-lfs-us-1.hf-mirror.com', port=443): Read timed out.
+Trying to resume download...
+test-00002-of-00006.parquet: 100%|█████████████████████████████████████████████████████████████████| 429M/429M [02:38<00:00, 2.71MB/s]
+test-00002-of-00006.parquet:   0%|                                                                         | 0.00/429M [02:50<?, ?B/s]
+test-00003-of-00006.parquet: 100%|█████████████████████████████████████████████████████████████████| 412M/412M [02:25<00:00, 2.83MB/s]
+test-00004-of-00006.parquet: 100%|█████████████████████████████████████████████████████████████████| 426M/426M [02:19<00:00, 3.05MB/s]
+test-00005-of-00006.parquet: 100%|█████████████████████████████████████████████████████████████████| 418M/418M [02:27<00:00, 2.83MB/s]
+validation-00000-of-00001.parquet: 100%|███████████████████████████████████████████████████████████| 416M/416M [02:26<00:00, 2.84MB/s]
+Generating train split: 100%|█████████████████████████████████████████████████████████████| 1020/1020 [00:01<00:00, 717.56 examples/s]
+Generating test split: 100%|██████████████████████████████████████████████████████████████| 6149/6149 [00:08<00:00, 710.30 examples/s]
+Generating validation split: 100%|████████████████████████████████████████████████████████| 1020/1020 [00:01<00:00, 819.73 examples/s]
+Saving the dataset (1/1 shards): 100%|██████████████████████████████████████████████████████| 816/816 [00:02<00:00, 338.37 examples/s]
+Saving the dataset (1/1 shards): 100%|██████████████████████████████████████████████████████| 204/204 [00:00<00:00, 221.10 examples/s]
+DatasetDict({
+    train: Dataset({
+        features: ['image', 'label'],
+        num_rows: 816
+    })
+    test: Dataset({
+        features: ['image', 'label'],
+        num_rows: 204
+    })
+})
+
+=== 训练参数 ===
+
+=== 先生成np数据 ===
+
+=== 将预处理后的数据集转换为MindSpore格式 ===
+
+=== 训练前测试 ===
+.真实标签: 26
+预测标签: 25
+Downloading builder script: 4.20kB [00:00, 11.8MB/s]
+
+=== 创建Trainer实例 ===
+
+=== 训练 ===
+  0%|                                                                                                         | 0/120 [00:00<?, ?it/s]  1%|▊                                                                                                | 1/120 [00:09<18:09,  9.15s/it]{'eval_loss': 3.5184175968170166, 'eval_accuracy': 0.2734375, 'eval_runtime': 1.0791, 'eval_samples_per_second': 0.927, 'eval_steps_per_second': 0.927, 'epoch': 1.0}                                                                                                       
+{'eval_loss': 1.7758612632751465, 'eval_accuracy': 0.75, 'eval_runtime': 0.998, 'eval_samples_per_second': 1.002, 'eval_steps_per_second': 1.002, 'epoch': 2.0}                                                                                                             
+{'eval_loss': 0.9314232468605042, 'eval_accuracy': 0.875, 'eval_runtime': 0.9619, 'eval_samples_per_second': 1.04, 'eval_steps_per_second': 1.04, 'epoch': 3.0}                                                                                                             
+{'eval_loss': 0.6095938682556152, 'eval_accuracy': 0.8984375, 'eval_runtime': 0.9827, 'eval_samples_per_second': 1.018, 'eval_steps_per_second': 1.018, 'epoch': 4.0}                                                                                                       
+{'loss': 1.7124, 'learning_rate': 2.916666666666667e-05, 'epoch': 4.17}                                                               
+ 42%|████████████████████████████████████████                                                        | 50/120 [09:18<11:06,  9.52s/it]{'eval_loss': 0.4878421127796173, 'eval_accuracy': 0.90625, 'eval_runtime': 0.9954, 'eval_samples_per_second': 1.005, 'eval_steps_per_second': 1.005, 'epoch': 5.0}                                                                                                         
+{'eval_loss': 0.4401741027832031, 'eval_accuracy': 0.90625, 'eval_runtime': 0.9954, 'eval_samples_per_second': 1.005, 'eval_steps_per_second': 1.005, 'epoch': 6.0}                                                                                                         
+{'eval_loss': 0.42397767305374146, 'eval_accuracy': 0.921875, 'eval_runtime': 1.0152, 'eval_samples_per_second': 0.985, 'eval_steps_per_second': 0.985, 'epoch': 7.0}                                                                                                       
+{'eval_loss': 0.4162144362926483, 'eval_accuracy': 0.921875, 'eval_runtime': 0.9384, 'eval_samples_per_second': 1.066, 'eval_steps_per_second': 1.066, 'epoch': 8.0}                                                                                                        
+{'loss': 0.0363, 'learning_rate': 8.333333333333334e-06, 'epoch': 8.33}                                                               
+{'eval_loss': 0.4113974869251251, 'eval_accuracy': 0.921875, 'eval_runtime': 0.9942, 'eval_samples_per_second': 1.006, 'eval_steps_per_second': 1.006, 'epoch': 9.0}                                                                                                        
+{'eval_loss': 0.40957605838775635, 'eval_accuracy': 0.921875, 'eval_runtime': 1.394, 'eval_samples_per_second': 0.717, 'eval_steps_per_second': 0.717, 'epoch': 10.0}                                                                                                       
+{'train_runtime': 1194.294, 'train_samples_per_second': 6.431, 'train_steps_per_second': 0.1, 'train_loss': 0.7326235515375932, 'epoch': 10.0}                                                                                                                              
+100%|███████████████████████████████████████████████████████████████████████████████████████████████| 120/120 [19:54<00:00,  9.95s/it]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00,  3.53it/s]
+Test Accuracy: 0.9219
+
+=== 训练后测试 ===
+真实标签: 26
+预测标签: 26
