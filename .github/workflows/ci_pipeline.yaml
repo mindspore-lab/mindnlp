@@ -129,8 +129,7 @@ jobs:
         OS: ubuntu-latest
         PYTHON: 3.11
       run: |
-        python .github/install_mindspore.py
-        pip install -r download.txt
+        pip install mindspore
     - name: Test with pytest
       run: |
         pytest -vs tests/transformers/models/${{ matrix.alpha }}*/test_modeling*
