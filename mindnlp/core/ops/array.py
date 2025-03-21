@@ -130,7 +130,7 @@ def narrow(input, dim, start, length):
 has_nonzero = hasattr(mindspore.mint, 'nonzero')
 def nonzero(input, *, as_tuple=False):
     if use_pyboost() and has_nonzero:
-        return mindspore.mint.nonzero(input, as_tuple)
+        return mindspore.mint.nonzero(input, as_tuple=as_tuple)
     _nonzero = _get_cache_prim(ops.NonZero)()
     out = _nonzero(input)
     if as_tuple:
