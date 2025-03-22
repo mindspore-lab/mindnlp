@@ -104,6 +104,7 @@ from . import (
     fsmt,
     gemma,
     gemma2,
+    glpn,
     git,
     openai,
     gpt2,
@@ -352,6 +353,7 @@ from .gemma2 import *
 from .git import *
 from .openai import *
 from .gptj import *
+from .glpn import *
 from .gpt_neo import *
 from .gpt_neox import *
 from .gpt_neox_japanese import *
@@ -594,6 +596,7 @@ __all__.extend(fsmt.__all__)
 __all__.extend(fastspeech2_conformer.__all__)
 __all__.extend(openai.__all__)
 __all__.extend(gptj.__all__)
+__all__.extend(glpn.__all__)
 __all__.extend(gemma.__all__)
 __all__.extend(gemma2.__all__)
 __all__.extend(git.__all__)
