@@ -147,7 +147,7 @@ class GLPNEfficientSelfAttention(nn.Cell):
         height,
         width,
         output_attentions=False,
-    ):  
+    ):
         query_layer = self.transpose_for_scores(self.query(hidden_states))
 
         if self.sr_ratio > 1:
@@ -581,16 +581,11 @@ class GLPNDecoderStage(nn.Cell):
         hidden_state = self.convolution(hidden_state)
         if residual is not None:
             hidden_state = self.fusion(hidden_state, residual)
-        
         #hidden_state=hidden_state.squeeze(0)
         hidden_state = self.upsample(hidden_state)
         #hidden_state=hidden_state.unsqueeze(0)
 
         return hidden_state
-
-        hidden_state = self.upsample(hidden_state)
-        return hidden_state
-
 
 class GLPNDecoder(nn.Cell):
     def __init__(self, config):
@@ -637,7 +632,7 @@ class SiLogLoss(nn.Cell):
 
     def construct(self, pred, target):
         valid_mask = (target > 0).detach()
-        diff_log = mindspore.log(target[valid_mask]) - mindspore.log(pred[valid_mask])
+        diff_log = mindspore.ops.log(target[valid_mask]) - mindspore.ops.log(pred[valid_mask])
         loss = mindspore.sqrt(mindspore.pow(diff_log, 2).mean() - self.lambd * mindspore.ops.pow(diff_log.mean(), 2))
 
         return loss

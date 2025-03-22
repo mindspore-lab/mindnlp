@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
 import numpy as np
 import PIL.Image
+import mindspore
 
 from ...image_processing_utils import BaseImageProcessor, BatchFeature
 from ...image_transforms import resize, to_channel_dimension_format
@@ -40,7 +41,6 @@ from ....utils import TensorType, logging, requires_backends
 
 
 
-import mindspore
 
 
 logger = logging.get_logger(__name__)
