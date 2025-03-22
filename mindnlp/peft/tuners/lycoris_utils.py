@@ -36,6 +36,7 @@ from .tuners_utils import (
     BaseTunerLayer,
     check_adapters_to_merge,
     check_target_module_exists,
+    _maybe_include_all_linear_layers
 )
 
 
@@ -291,7 +292,7 @@ class LycorisTuner(BaseTuner):
         setattr(parent, child_name, new_module)
         # It's not necessary to set requires_grad here, as that is handled by
         # _mark_only_adapters_as_trainable
-
+        
         if not hasattr(new_module, "base_layer"):
             new_module.weight = child.weight
             if hasattr(child, "bias"):

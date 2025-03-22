@@ -26,3 +26,4 @@ from .prompt_tuning import PromptEmbedding, PromptTuningConfig, PromptTuningInit
 from .multitask_prompt_tuning import MultitaskPromptEmbedding, MultitaskPromptTuningConfig, MultitaskPromptTuningInit
 from .poly import PolyConfig, PolyModel
 from .ln_tuning import LNTuningConfig, LNTuningModel
+from .vera import VeraConfig,VeraModel
