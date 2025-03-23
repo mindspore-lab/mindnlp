@@ -67,7 +67,7 @@ def create_dataset(data, batch_size=8):
 train_dataset = create_dataset(tokenized_datasets["train"])
 eval_dataset = create_dataset(tokenized_datasets["test"])
 
-# 4. 加载评估指标
+# 5. 加载评估指标
 accuracy = evaluate.load("accuracy")
 f1 = evaluate.load("f1")
 precision = evaluate.load("precision")
@@ -91,7 +91,7 @@ def compute_metrics(eval_pred):
     }
 
 
-# 5. 配置训练参数
+# 6. 配置训练参数
 training_args = TrainingArguments(
     num_train_epochs=3,
     per_device_train_batch_size=8,
@@ -108,7 +108,7 @@ training_args = TrainingArguments(
     greater_is_better=True,            # 准确率越高越好
 )
 
-# 6. 初始化并运行训练
+# 7. 初始化并运行训练
 trainer = Trainer(
     model=model,
     args=training_args,
@@ -119,7 +119,7 @@ trainer = Trainer(
 
 trainer.train()
 
-# 7. 评估模型
+# 8. 评估模型
 eval_results = trainer.evaluate(eval_dataset)
 print(f"Evaluation results: {eval_results}")
 print("\nFinal evaluation results:")
