@@ -772,7 +772,7 @@ class Module:
                         setattr(self, name, input_param)
                     else:
                         param.data_sync(True)
-                        dtype = param.dtype
+                        dtype = input_param.dtype
                         param.assign_value(input_param)
                         param.set_dtype(dtype)
                 except Exception as ex:
