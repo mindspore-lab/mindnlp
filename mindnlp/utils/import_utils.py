@@ -378,6 +378,11 @@ def is_essentia_available():
     """
     return _essentia_available
 
+def is_mamba_2_ssm_available():
+    return _is_package_available("mamba_ssm")
+
+def is_causal_conv1d_available():
+    return _is_package_available("causal_conv1d")
 
 def is_pyctcdecode_available():
     """
