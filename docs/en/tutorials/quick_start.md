@@ -25,7 +25,7 @@ MindNLP includes a `load_dataset` API that loads any dataset from the Hugging Fa
 
 
 ```python
-from mindnlp import load_dataset
+from mindnlp.dataset import load_dataset
 
 imdb_ds = load_dataset('imdb', split=['train', 'test'])
 imdb_train = imdb_ds['train']

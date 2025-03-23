@@ -94,8 +94,8 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
             mask_length = attention_mask.shape[-1]
             padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
             padding_mask = padding_mask == 0
-            causal_mask[:, :, :, :mask_length] = causal_mask[:, :, :, :mask_length].masked_fill(
-                padding_mask, min_dtype
+            causal_mask[:, :, :, :mask_length] = ops.masked_fill(
+                causal_mask[:, :, :, :mask_length], padding_mask, min_dtype
             )
 
     return causal_mask
@@ -125,7 +125,7 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     if pad_token_id is None:
         raise ValueError("self.model.config.pad_token_id has to be defined.")
     # replace possible -100 values in labels by `pad_token_id`
-    shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
+    shifted_input_ids = ops.masked_fill(shifted_input_ids, shifted_input_ids == -100, pad_token_id)
 
     return shifted_input_ids
 

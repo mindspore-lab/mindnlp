@@ -13,7 +13,7 @@ from mindnlp.configs import DEVICE_TARGET, ON_ORANGE_PI, use_pyboost
 
 def gelu(input, approximate='none'):
     if use_pyboost():
-        return mindspore.mint.nn.functional.gelu(input, approximate)
+        return mindspore.mint.nn.functional.gelu(input, approximate=approximate)
     return ops.gelu(input, approximate)
 
 def relu(input):
@@ -111,8 +111,8 @@ def avg_pool1d(input_array, pool_size, stride, padding=0, ceil_mode=False, count
     output_array = ops.zeros((N, C, output_length))
 
     # Generate the starting indices of the pooling windows
-    indices = ops.arange(output_length) * stride
-    indices = indices[:, None] + ops.arange(pool_size)
+    indices = ops.range(0, output_length, 1) * stride
+    indices = indices[:, None] + ops.range(0, pool_size, 1)
 
     # Ensure indices are within bounds
     indices = ops.minimum(indices, input_array.shape[2] - 1)
@@ -1172,7 +1172,7 @@ def make_causal_mask(
     Returns:
       A `[batch..., 1, len, len]` shaped causal mask for 1d attention.
     """
-    idxs = ops.broadcast_to(ops.arange(x.shape[-1], dtype=mindspore.int32), x.shape)
+    idxs = ops.broadcast_to(ops.range(0, x.shape[-1], 1), x.shape)
     return make_attention_mask(
         idxs,
         idxs,

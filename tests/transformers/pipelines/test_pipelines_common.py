@@ -57,13 +57,13 @@ from mindnlp.utils import logging as transformers_logging
 
 sys.path.append(str(Path(__file__).parent.parent.parent / "utils"))
 
-from ....test_module.custom_pipeline import PairClassificationPipeline  # noqa E402
+from ...test_module.custom_pipeline import PairClassificationPipeline  # noqa E402
 
 
 logger = logging.getLogger(__name__)
 
 
-PATH_TO_TRANSFORMERS = os.path.join(Path(__file__).parent.parent.parent.parent.parent, "mindnlp")
+PATH_TO_TRANSFORMERS = os.path.join(Path(__file__).parent.parent.parent.parent, "mindnlp")
 
 
 # Dynamically import the Transformers module to grab the attribute classes of the processor form their names.

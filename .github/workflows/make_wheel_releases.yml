@@ -27,7 +27,7 @@ jobs:
       run: python -m build --wheel
 
     - name: Upload file
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with: 
         name: mindnlp-whl
         path: dist/*
