@@ -98,10 +98,10 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
             #     padding_mask, min_dtype
             # )
             if mask_length >= causal_mask.shape[-1]:
-                causal_mask = causal_mask.masked_fill(padding_mask, min_dtype)
+                causal_mask = ops.masked_fill(causal_mask, padding_mask, min_dtype)
             else:
                 causal_mask = ops.cat(
-                                [ops.narrow(causal_mask, -1, 0, mask_length).masked_fill(padding_mask, min_dtype),
+                                [ops.masked_fill(ops.narrow(causal_mask, -1, 0, mask_length), padding_mask, min_dtype),
                                 ops.narrow(causal_mask, -1, mask_length, causal_mask.shape[-1] - mask_length)],
                                 dim=-1
                             )
@@ -300,7 +300,7 @@ class LlamaMLP(nn.Module):
             )
             up_proj = ops.cat([F.linear(x, up_proj_slices[i]) for i in range(self.config.pretraining_tp)], dim=-1)
 
-            intermediate_states = (self.act_fn(gate_proj) * up_proj).split(slice, dim=2)
+            intermediate_states = ops.split((self.act_fn(gate_proj) * up_proj), slice, dim=2)
             down_proj = [
                 F.linear(intermediate_states[i], down_proj_slices[i]) for i in range(self.config.pretraining_tp)
             ]
@@ -849,7 +849,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
 
         hidden_states = outputs[0]
         if self.config.pretraining_tp > 1:
-            lm_head_slices = self.lm_head.weight.split(self.vocab_size // self.config.pretraining_tp, dim=0)
+            lm_head_slices = ops.split(self.lm_head.weight,self.vocab_size // self.config.pretraining_tp, dim=0)
             logits = [F.linear(hidden_states, lm_head_slices[i]) for i in range(self.config.pretraining_tp)]
             logits = ops.cat(logits, dim=-1)
         else:

@@ -62,7 +62,6 @@ def main():
     model = AutoModelForSequenceClassification.from_pretrained('bert-base-cased', num_labels=2)
 
     from mindnlp.engine import TrainingArguments
-    
     training_args = TrainingArguments(
         output_dir="bert_imdb_finetune_cpu",
         save_strategy="epoch",
@@ -70,7 +69,7 @@ def main():
         num_train_epochs=2.0,
         learning_rate=2e-5
     )
-    training_args = training_args.set_optimizer(name="adamw", beta1=0.8) # 手动指定优化器，OptimizerNames.SGD
+    training_args = training_args.set_optimizer(name="adamw", beta1=0.8) # Manually specify the optimizer, OptimizerNames.SGD
 
     trainer = Trainer(
         model=model,

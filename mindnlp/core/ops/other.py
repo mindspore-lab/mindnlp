@@ -6,7 +6,7 @@ from mindspore import ops
 from mindspore.common.initializer import initializer
 from mindspore.ops._primitive_cache import _get_cache_prim
 
-from mindnlp.configs import use_pyboost, ON_ORANGE_PI
+from mindnlp.configs import use_pyboost, ON_ORANGE_PI, SUPPORT_BF16
 from .reduction import any
 from .comparison import eq
 
@@ -47,11 +47,12 @@ def manual_expand(tensor, shape):
     return tensor.tile(tuple(repeats))
 
 # broadcast_to
+has_broadcast_to = hasattr(mindspore.mint, 'broadcast_to')
 def broadcast_to(input, shape):
     if ON_ORANGE_PI and not use_pyboost():
         # return input.expand(mindspore.tensor(shape))
         return manual_expand(input, shape)
-    if use_pyboost():
+    if use_pyboost() and has_broadcast_to:
         return mindspore.mint.broadcast_to(input, shape)
     return ops.broadcast_to(input, shape)
 
@@ -109,6 +110,7 @@ def clone(input):
 # cumprod
 
 # cumsum
+has_cumsum = hasattr(mindspore.mint, 'cumsum')
 def cumsum(input, dim, dtype=None):
     if use_pyboost() and not ON_ORANGE_PI: # since cann8.0 community remove aclnn cumsum
         return mindspore.mint.cumsum(input, dim, dtype)
@@ -311,6 +313,7 @@ def sumproduct_pair(left_, right_, sum_dims_, keep_dim_):
 
 ELLIPSIS = 52
 
+has_einsum = hasattr(mindspore.mint, 'einsum')
 def einsum(equation, *operands):
     """
     Args:
@@ -330,6 +333,8 @@ def einsum(equation, *operands):
         AssertionError: If more operands are provided than specified in the equation.
         RuntimeError: If operands do not broadcast with remapped shapes [original->remapped].
     """
+    if use_pyboost() and has_einsum:
+        return mindspore.mint.einsum(equation, *operands)
     assert operands, "einsum(): must provide at least one operand"
     if isinstance(operands[0], tuple):
         operands = operands[0]
@@ -553,16 +558,20 @@ def einsum(equation, *operands):
 
 
 # flatten
+has_flatten = hasattr(mindspore.mint, 'flatten')
 def flatten(input, start_dim=1, end_dim=-1):
     """Flattens the input. Does not affect the batch size."""
+    if use_pyboost() and has_flatten:
+        return mindspore.mint.flatten(input, start_dim, end_dim)
     if end_dim < 0:
         end_dim = input.ndim + end_dim
     new_shape = input.shape[:start_dim] + (-1,) + input.shape[end_dim + 1:]
     return ops.reshape(input, new_shape)
 
 # flip
+has_flip = hasattr(mindspore.mint, 'flip')
 def flip(input, dims):
-    if use_pyboost():
+    if use_pyboost() and has_flip:
         return mindspore.mint.flip(input, dims)
     return ops.flip(input, dims)
 
@@ -612,24 +621,29 @@ def meshgrid(*tensors, indexing=None):
 
 
 # repeat_interleave
+has_repeat_interleave = hasattr(mindspore.mint, 'repeat_interleave')
 def repeat_interleave(input, repeats, dim=None):
+    if use_pyboost() and has_repeat_interleave and SUPPORT_BF16:
+        return mindspore.mint.repeat_interleave(input, repeats, dim=dim)
     if input.dtype == mindspore.bool_:
         input = input.int()
-        return input.repeat(repeats, dim).bool()
-    return input.repeat(repeats, dim)
+        return input.repeat_interleave(repeats, dim).bool()
+    return input.repeat_interleave(repeats, dim)
 
 # roll
 DEVICE_TARGET = mindspore.get_context('device_target')
+has_roll = hasattr(mindspore.mint, 'roll')
 def roll(input, shifts, dims=None):
-    if use_pyboost():
+    if use_pyboost() and has_roll:
         return mindspore.mint.roll(input, shifts, dims)
     if DEVICE_TARGET == 'CPU':
         return mindspore.numpy.roll(input, shifts, dims)
     return ops.roll(input, shifts, dims)
 
 # searchsorted
+has_searchsorted = hasattr(mindspore.mint, 'searchsorted')
 def searchsorted(sorted_sequence, values, *, out_int32=False, right=False, side=None, sorter=None):
-    if use_pyboost():
+    if use_pyboost() and has_searchsorted:
         return mindspore.mint.searchsorted(sorted_sequence, values, out_int32=out_int32, right=right, side=side, sorter=sorter)
     return ops.searchsorted(sorted_sequence, values, out_int32=out_int32, right=right)
 
@@ -638,13 +652,19 @@ def searchsorted(sorted_sequence, values, *, out_int32=False, right=False, side=
 # trace
 
 # tril
+has_tril = hasattr(mindspore.mint, 'tril')
 def tril(input, diagonal=0):
+    if use_pyboost() and has_tril:
+        return mindspore.mint.tril(input, diagonal)
     return ops.tril(input, diagonal)
 
 # tril_indices
 
 # triu
+has_triu = hasattr(mindspore.mint, 'triu')
 def triu(input, diagonal=0):
+    if use_pyboost() and has_triu:
+        return mindspore.mint.triu(input, diagonal)
     return ops.triu(input, diagonal)
 
 # triu_indices

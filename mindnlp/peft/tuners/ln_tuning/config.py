@@ -30,11 +30,11 @@ class LNTuningConfig(PeftConfig):
     Args:
         target_modules (`Optional[Union[List[str], str]]`):
             List of cell names or regex expression of the cell names to replace with LNTuning. For example,
-            '.*decoder.*' or '.*encoder.*'. If this is not specified, cells will be chosen according to the model
+            '.*decoder.*' or '.*encoder.*'. If this is not specified, modules will be chosen according to the model
             architecture. If the architecture is not known, an error will be raised -- in this case, you should specify
-            the target cells manually.
+            the target modules manually.
         modules_to_save (`Optional[Union[List[str], str]]`):
-            List of cells to be set as trainable and saved in the final checkpoint. For example, in Sequence
+            List of modules to be set as trainable and saved in the final checkpoint. For example, in Sequence
             Classification or Token Classification tasks, the final layer `classifier/score` are randomly initialized
             and as such need to be trainable and saved.
     """
@@ -45,15 +45,15 @@ class LNTuningConfig(PeftConfig):
             "help": (
                 "List of cell names or regex expression of the cell names to replace with LNTuning."
                 "For example, '.*decoder.*' or '.*encoder.*'. "
-                "If not specified, cells will be chosen according to the model architecture, If the architecture is "
-                "not known, an error will be raised -- in this case, you shoud specify the target cells manually."
+                "If not specified, modules will be chosen according to the model architecture, If the architecture is "
+                "not known, an error will be raised -- in this case, you shoud specify the target modules manually."
             ),
         },
     )
     modules_to_save: Optional[Union[list[str], str]] = field(
         default=None,
         metadata={
-            "help": "List of cells to be set as trainable and saved in the final checkpoint. "
+            "help": "List of modules to be set as trainable and saved in the final checkpoint. "
             "For example, in Sequence Classification or Token Classification tasks, "
             "the final layer `classifier/score` are randomly initialized and as such need to be trainable and saved."
         },

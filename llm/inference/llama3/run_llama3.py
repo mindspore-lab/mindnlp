@@ -1,5 +1,8 @@
 import mindspore
 from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
+import faulthandler
+
+faulthandler.enable()
 
 model_id = "LLM-Research/Meta-Llama-3-8B-Instruct"
 

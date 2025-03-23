@@ -8,7 +8,7 @@ echo "==========================================="
 EXEC_PATH=$(pwd)
 if [ ! -d "${EXEC_PATH}/data" ]; then
     if [ ! -f "${EXEC_PATH}/emotion_detection.tar.gz" ]; then
-        wget wget https://baidu-nlp.bj.bcebos.com/emotion_detection-dataset-1.0.0.tar.gz -O emotion_detection.tar.gz
+        wget https://baidu-nlp.bj.bcebos.com/emotion_detection-dataset-1.0.0.tar.gz -O emotion_detection.tar.gz
     fi
     tar xvf emotion_detection.tar.gz
 fi

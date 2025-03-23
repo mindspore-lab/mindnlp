@@ -23,7 +23,12 @@ import math
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import mindspore
-from mindspore._c_expression import Tensor as RawTensor # pylint: disable=no-name-in-module
+try:
+    from mindspore._c_expression import TensorPy as RawTensor # pylint: disable=no-name-in-module
+except:
+    from mindspore._c_expression import Tensor as RawTensor # pylint: disable=no-name-in-module
+
+
 import mindnlp.core.nn.functional as F
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss

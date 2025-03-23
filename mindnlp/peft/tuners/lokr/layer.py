@@ -49,7 +49,7 @@ the base layer's output. The class provides methods for creating, updating, merg
         - alpha: Dictionary storing alpha values for each adapter.
         - scaling: Dictionary storing scaling values for each adapter.
         - rank_dropout: Dictionary storing rank dropout probabilities for each adapter.
-        - cell_dropout: Dictionary storing cell dropout probabilities for each adapter.
+        - module_dropout: Dictionary storing cell dropout probabilities for each adapter.
         - _disable_adapters: Boolean flag indicating whether adapters are disabled.
         - merged_adapters: List of names of merged adapters.
     
@@ -74,7 +74,7 @@ the base layer's output. The class provides methods for creating, updating, merg
     Note:
         This class is intended for advanced neural network adaptation techniques and should be used in conjunction with PyTorch's nn.Module functionalities.
     """
-    other_param_names = ("r", "alpha", "scaling", "rank_dropout", "cell_dropout")
+    other_param_names = ("r", "alpha", "scaling", "rank_dropout", "module_dropout")
     # All names of layers that may contain adapter weights
     adapter_layer_names = (
         "lokr_w1",
@@ -132,7 +132,7 @@ the base layer's output. The class provides methods for creating, updating, merg
         self.alpha = {}
         self.scaling = {}
         self.rank_dropout = {}
-        self.cell_dropout = {}
+        self.module_dropout = {}
 
         # Tuner info
         self._disable_adapters = False
@@ -491,7 +491,7 @@ initialization.
         r: int,
         alpha: float,
         rank_dropout: float,
-        cell_dropout: float,
+        module_dropout: float,
         init_weights: bool,
         use_effective_conv2d: bool,
         decompose_both: bool,
@@ -505,7 +505,7 @@ initialization.
             r (`int`): Rank for the added adapter.
             alpha (`float`): Alpha for the added adapter.
             rank_dropout (`float`): The dropout probability for rank dimension during training
-            cell_dropout (`float`): The dropout probability for disabling adapter during training.
+            module_dropout (`float`): The dropout probability for disabling adapter during training.
             init_weights (`bool`): Whether to initialize adapter weights.
             use_effective_conv2d (`bool`): Use parameter effective decomposition for Conv2d with ksize > 1.
             decompose_both (`bool`): Perform rank decomposition of left kronecker product matrix.
@@ -520,7 +520,7 @@ initialization.
         self.alpha[adapter_name] = alpha
         self.scaling[adapter_name] = alpha / r
         self.rank_dropout[adapter_name] = rank_dropout
-        self.cell_dropout[adapter_name] = cell_dropout
+        self.module_dropout[adapter_name] = module_dropout
         base_layer = self.get_base_layer()
 
         # Determine shape of LoKr weights
@@ -589,8 +589,8 @@ initialization.
 
         # Deactivate grads on the inactive adapter and activate grads on the active adapter
         for layer_name in self.adapter_layer_names:
-            cell_dict = getattr(self, layer_name)
-            for key, layer in cell_dict.items():
+            module_dict = getattr(self, layer_name)
+            for key, layer in module_dict.items():
                 if key in adapter_names:
                     # Note: It is possible that not a single layer is called with requires_grad_(True) here. This may
                     # happen if a completely different adapter layer is being activated.
@@ -667,7 +667,7 @@ initialization.
             RuntimeError: If an error occurs during the calculation of the delta weight.
             TypeError: If the input data types are incorrect or incompatible.
         """
-        # https://github.com/KohakuBlueleaf/LyCORIS/blob/e4259b870d3354a9615a96be61cb5d07455c58ea/lycoris/cells/lokr.py#L224
+        # https://github.com/KohakuBlueleaf/LyCORIS/blob/e4259b870d3354a9615a96be61cb5d07455c58ea/lycoris/modules/lokr.py#L224
         if adapter_name in self.lokr_w1:
             w1 = self.lokr_w1[adapter_name]
         else:
@@ -729,11 +729,11 @@ initialization.
                 if active_adapter not in self._available_adapters:
                     continue
 
-                cell_dropout = self.cell_dropout[active_adapter]
+                module_dropout = self.module_dropout[active_adapter]
 
                 # Modify current execution weights
                 if (not self.training) or (
-                    self.training and ops.rand(1) > cell_dropout
+                    self.training and ops.rand(1) > module_dropout
                 ):
                     result = result + self._get_delta_activations(
                         active_adapter, x, *args, **kwargs
@@ -752,7 +752,7 @@ class Dense(LoKrLayer):
         r: int = 0,
         alpha: float = 0.0,
         rank_dropout: float = 0.0,
-        cell_dropout: float = 0.0,
+        module_dropout: float = 0.0,
         init_weights: bool = True,
         **kwargs,
     ):
@@ -766,7 +766,7 @@ class Dense(LoKrLayer):
             r (int): The value of r for adapter update. Defaults to 0.
             alpha (float): The value of alpha for adapter update. Defaults to 0.0.
             rank_dropout (float): The dropout value for rank. Defaults to 0.0.
-            cell_dropout (float): The dropout value for cell. Defaults to 0.0.
+            module_dropout (float): The dropout value for cell. Defaults to 0.0.
             init_weights (bool): A flag to initialize weights. Defaults to True.
             **kwargs: Additional keyword arguments.
         
@@ -781,7 +781,7 @@ class Dense(LoKrLayer):
         # Create adapter and set it active
         self._active_adapter = adapter_name
         self.update_layer(
-            adapter_name, r, alpha, rank_dropout, cell_dropout, init_weights, **kwargs
+            adapter_name, r, alpha, rank_dropout, module_dropout, init_weights, **kwargs
         )
 
     def _get_delta_activations(
@@ -835,7 +835,7 @@ class Conv2d(LoKrLayer):
         r: int = 0,
         alpha: float = 0.0,
         rank_dropout: float = 0.0,
-        cell_dropout: float = 0.0,
+        module_dropout: float = 0.0,
         use_effective_conv2d: bool = False,
         init_weights: bool = True,
         **kwargs,
@@ -850,7 +850,7 @@ class Conv2d(LoKrLayer):
             r (int): The value of parameter 'r'.
             alpha (float): The value of parameter 'alpha'.
             rank_dropout (float): The value of rank dropout.
-            cell_dropout (float): The value of cell dropout.
+            module_dropout (float): The value of cell dropout.
             use_effective_conv2d (bool): Flag indicating whether to use effective Conv2d.
             init_weights (bool): Flag indicating whether to initialize weights.
             **kwargs: Additional keyword arguments.
@@ -870,7 +870,7 @@ class Conv2d(LoKrLayer):
             r,
             alpha,
             rank_dropout,
-            cell_dropout,
+            module_dropout,
             init_weights,
             use_effective_conv2d,
             **kwargs,

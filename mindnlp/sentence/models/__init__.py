@@ -16,8 +16,12 @@
 
 from .transformer import Transformer
 from .pooling import Pooling
+from .normalize import Normalize
+from .dense import Dense
 
 __all__ = [
-    "transformer",
-    "pooling",
+    "Transformer",
+    "Pooling",
+    "Normalize",
+    "Dense"
 ]

@@ -108,7 +108,7 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
 
     if model.modules_to_save is not None:
         for key, value in state_dict.items():
-            if any(f"{cell_name}.modules_to_save.{adapter_name}" in key for cell_name in model.modules_to_save):
+            if any(f"{module_name}.modules_to_save.{adapter_name}" in key for module_name in model.modules_to_save):
                 to_return[key.replace("modules_to_save.", "")] = value
 
     to_return = {k.replace(f".{adapter_name}", ""): v for k, v in to_return.items()}
@@ -128,10 +128,10 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
     strict_load = False
     if model.modules_to_save is not None:
         for key, value in peft_model_state_dict.items():
-            if any(cell_name in key for cell_name in model.modules_to_save):
-                for cell_name in model.modules_to_save:
-                    if cell_name in key:
-                        key = key.replace(cell_name, f"{cell_name}.modules_to_save.{adapter_name}")
+            if any(module_name in key for module_name in model.modules_to_save):
+                for module_name in model.modules_to_save:
+                    if module_name in key:
+                        key = key.replace(module_name, f"{module_name}.modules_to_save.{adapter_name}")
                         break
             state_dict[key] = value
     else:
@@ -171,7 +171,7 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
             strict_load = True
             rank_pattern = config.rank_pattern
             if rank_pattern is not None:
-                model.resize_cells_by_rank_pattern(rank_pattern, adapter_name)
+                model.resize_modules_by_rank_pattern(rank_pattern, adapter_name)
     elif config.is_prompt_learning or config.peft_type == PeftType.ADAPTION_PROMPT:
         peft_model_state_dict = state_dict
     else:

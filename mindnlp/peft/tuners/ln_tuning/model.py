@@ -25,8 +25,8 @@ from tqdm import tqdm
 from mindnlp.peft.config import PeftConfig
 from mindnlp.peft.tuners.tuners_utils import (
     BaseTuner,
-    _get_subcells,
-    check_target_cell_exists,
+    _get_submodules,
+    check_target_module_exists,
 )
 from mindnlp.peft.utils import (
     TRANSFORMERS_MODELS_TO_LNTUNING_TARGET_MODULES_MAPPING,
@@ -150,11 +150,11 @@ class LNTuningModel(BaseTuner):
             else:
                 p.requires_grad = True
 
-    def _check_target_cell_exists(self, peft_config: PeftConfig, key: str) -> bool:
-        return check_target_cell_exists(peft_config, key)
+    def _check_target_module_exists(self, peft_config: PeftConfig, key: str) -> bool:
+        return check_target_module_exists(peft_config, key)
 
     def _set_adapter_layers(self, enabled: bool) -> None:
-        for cell in self.model.cells():
+        for cell in self.model.modules():
             if isinstance(cell, (LNTuningLayer, ModulesToSaveWrapper)):
                 cell.enable_adapters(enabled)
 
@@ -173,7 +173,7 @@ class LNTuningModel(BaseTuner):
         self._set_adapter_layers(enabled=False)
 
     def set_adapter(self, adapter_name: str) -> None:
-        for cell in self.model.cells():
+        for cell in self.model.modules():
             if isinstance(cell, LNTuningLayer):
                 if cell.merged:
                     warnings.warn(
@@ -192,13 +192,13 @@ class LNTuningModel(BaseTuner):
     ):
         self._unloading_checks(adapter_names)
         key_list = [
-            key for key, _ in self.model.named_cells() if self.prefix not in key
+            key for key, _ in self.model.named_modules() if self.prefix not in key
         ]
         desc = "Unloading adapters " + ("and merging " if merge else "") + "model"
 
         for key in tqdm(key_list, disable=not progressbar, desc=desc):
             try:
-                parent, target, target_name = _get_subcells(self.model, key)
+                parent, target, target_name = _get_submodules(self.model, key)
             except AttributeError:
                 continue
 

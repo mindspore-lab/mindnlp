@@ -17,13 +17,15 @@
 """
 MobileBert Models init
 """
-from . import configuration_mobilebert, modeling_mobilebert, tokenization_mobilebert
+from . import configuration_mobilebert, modeling_mobilebert, tokenization_mobilebert, tokenization_mobilebert_fast
 
 from .modeling_mobilebert import *
 from .configuration_mobilebert import *
 from .tokenization_mobilebert import *
+from .tokenization_mobilebert_fast import *
 
 __all__ = []
 __all__.extend(modeling_mobilebert.__all__)
 __all__.extend(configuration_mobilebert.__all__)
 __all__.extend(tokenization_mobilebert.__all__)
+__all__.extend(tokenization_mobilebert_fast.__all__)

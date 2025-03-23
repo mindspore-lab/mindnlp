@@ -1,7 +1,12 @@
 """creation ops"""
 import numpy as np
 import mindspore
-from mindspore._c_expression import Tensor as CTensor # pylint: disable=no-name-in-module, import-error
+try:
+    from mindspore._c_expression import TensorPy as CTensor # pylint: disable=no-name-in-module
+except:
+    from mindspore._c_expression import Tensor as CTensor # pylint: disable=no-name-in-module
+
+
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp.configs import use_pyboost, ON_ORANGE_PI
@@ -33,50 +38,61 @@ def from_numpy(ndarray):
 
 # zeros
 _zeros = ops.Zeros()
+has_zeros = hasattr(mindspore.mint, 'zeros')
 def zeros(*size, dtype=None):
     if dtype is None:
         dtype = get_default_dtype()
     if isinstance(size[0], (tuple, list)):
         size = size[0]
-    if use_pyboost():
+    if use_pyboost() and has_zeros:
         return mindspore.mint.zeros(size, dtype=dtype)
     size = tuple(size)
     return _zeros(size, dtype)
 
 # zeros_like
+has_zeros_like = hasattr(mindspore.mint, 'zeros_like')
 def zeros_like(input, *, dtype=None):
     if dtype is None:
         dtype = input.dtype
-    if use_pyboost():
+    if use_pyboost() and has_zeros_like:
         return mindspore.mint.zeros_like(input, dtype=dtype)
     return ops.zeros_like(input, dtype=dtype)
 
 # ones
 _ones = ops.Ones()
+has_ones = hasattr(mindspore.mint, 'ones')
 def ones(*size, dtype=None):
     if isinstance(size[0], (tuple, list)):
         size = size[0]
     if dtype is None:
         dtype = get_default_dtype()
-    if use_pyboost():
+    if use_pyboost() and has_ones:
         return mindspore.mint.ones(size, dtype=dtype)
     return _ones(size, dtype)
 
 # ones_like
+has_ones_like = hasattr(mindspore.mint, 'ones_like')
 def ones_like(input, *, dtype=None):
     if dtype is None:
         dtype = input.dtype
-    if use_pyboost():
+    if use_pyboost() and has_ones_like:
         return mindspore.mint.ones_like(input, dtype=dtype)
     return ops.ones_like(input, dtype=dtype)
 
 # arange
+has_arange = hasattr(mindspore.mint, 'arange')
+range_op = ops.Range()
 def arange(start=0, end=None, step=1, *, dtype=None):
+    if dtype is None:
+        dtype = mindspore.int64
     if ON_ORANGE_PI and dtype in (None, mindspore.int64):
         dtype = mindspore.int32
-    if use_pyboost():
+    if use_pyboost() and has_arange:
         return mindspore.mint.arange(start, end, step, dtype=dtype)
-    return ops.arange(start, end, step, dtype=dtype)
+    if end is None:
+        end = start
+        start = 0
+    return range_op(start, end, step).astype(dtype)
 
 # range
 def range(start=0, end=None, step=1, dtype=None):
@@ -88,10 +104,11 @@ def range(start=0, end=None, step=1, dtype=None):
     return out
 
 # linspace
+has_linspace = hasattr(mindspore.mint, 'linspace')
 def linspace(start, end, steps, *, dtype=None):
     if dtype is None:
         dtype = mindspore.float32
-    if use_pyboost():
+    if use_pyboost() and has_linspace:
         return mindspore.Tensor(np.linspace(start, end, steps)).to(dtype)
     return ops.linspace(start, end, steps).to(dtype)
 
@@ -100,29 +117,43 @@ def logspace(start, end, steps, base=10.0, *, dtype=None):
     return ops.logspace(start, end, steps, base, dtype=dtype)
 
 # eye
+has_eye = hasattr(mindspore.mint, 'eye')
 def eye(n, m=None, *, dtype=None):
-    if use_pyboost():
+    if use_pyboost() and has_eye:
         return mindspore.mint.eye(n, m, dtype)
     return ops.eye(n, m, dtype)
 
 # empty
-def empty(*size, dtype=None):
+has_empty = hasattr(mindspore.mint, 'empty')
+def empty(*size, dtype=None, device=None):
     if isinstance(size[0], (tuple, list)):
         size = size[0]
     if dtype is None:
         dtype = get_default_dtype()
-    out = CTensor(dtype, size)
+    if has_empty:
+        out = mindspore._c_expression.pyboost_empty([size, dtype, device])
+        if not isinstance(out, mindspore.Tensor):
+            out = out.get_value()
+        else:
+            return out
+    else:
+        out = CTensor(dtype=dtype, shape=size)
     return mindspore.Tensor(out)
 
 # empty_like
-
+has_empty_like = hasattr(mindspore.mint, 'empty_like')
+def empty_like(input, *, dtype=None, device=None):
+    if has_empty_like:
+        return mindspore.mint.empty_like(input, dtype=dtype, device=device)
+    return empty(input.shape, dtype=input.dtype, device=device)
 
 # empty_strided
 
 
 # full
+has_full = hasattr(mindspore.mint, 'full')
 def full(size, fill_value, *, dtype=None):
-    if use_pyboost():
+    if use_pyboost() and has_full:
         return mindspore.mint.ones(size, dtype=dtype) * fill_value
     return ops.full(size, fill_value, dtype=dtype)
 

@@ -36,7 +36,7 @@ from mindnlp.core import nn, ops
 from ..tuners_utils import (
     BaseTuner,
     BaseTunerLayer,
-    check_target_cell_exists,
+    check_target_module_exists,
     # onload_layer,
     replicate_layers,
 )
@@ -44,7 +44,7 @@ from ...utils import (
     TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING,
     ModulesToSaveWrapper,
     _freeze_adapter,
-    _get_subcells,
+    _get_submodules,
 )
 from ...utils.merge_utils import dare_linear, dare_ties, magnitude_prune, task_arithmetic, ties
 
@@ -161,7 +161,7 @@ class LoraModel(BaseTuner):
             )
 
     @staticmethod
-    def _check_target_cell_exists(lora_config, key):
+    def _check_target_module_exists(lora_config, key):
         r"""
         Checks if the target cell exists in the LoRa configuration.
         
@@ -190,7 +190,7 @@ class LoraModel(BaseTuner):
         Raises:
             None: This method does not raise any exceptions.
         """
-        return check_target_cell_exists(lora_config, key)
+        return check_target_module_exists(lora_config, key)
 
     def _prepare_model(self, peft_config: LoraConfig, model: nn.Module):
         r"""
@@ -227,7 +227,7 @@ class LoraModel(BaseTuner):
             current_key: The current key used for matching patterns.
         
         Returns:
-            None. The method modifies the LoraModel by creating and replacing cells.
+            None. The method modifies the LoraModel by creating and replacing modules.
         
         Raises:
             ValueError: If the current_key is None.
@@ -360,7 +360,7 @@ class LoraModel(BaseTuner):
                     if "bias" in n:
                         p.requires_grad = True
             elif bias == "lora_only":
-                for m in model.cells():
+                for m in model.modules():
                     if isinstance(m, LoraLayer) and hasattr(m, "bias") and m.bias is not None:
                         m.bias.requires_grad = True
             else:
@@ -380,7 +380,7 @@ class LoraModel(BaseTuner):
             None. Returns the newly created cell based on the specified target.
         
         Raises:
-            ValueError: If the target cell is not supported. Currently supported cells include `torch.nn.Linear`, `torch.nn.Embedding`, `torch.nn.Conv2d`, and `transformers.pytorch_utils.Conv1D`.
+            ValueError: If the target cell is not supported. Currently supported modules include `torch.nn.Linear`, `torch.nn.Embedding`, `torch.nn.Conv2d`, and `transformers.pytorch_utils.Conv1D`.
         """
         # Collect dispatcher functions to decide what backend to use for the replaced LoRA layer. The order matters,
         # because the first match is always used. Therefore, the default layers should be checked last.
@@ -395,7 +395,7 @@ class LoraModel(BaseTuner):
         if new_cell is None:
             # no cell could be matched
             raise ValueError(
-                f"Target cell {target} is not supported. Currently, only the following cells are supported: "
+                f"Target cell {target} is not supported. Currently, only the following modules are supported: "
                 "`torch.nn.Linear`, `torch.nn.Embedding`, `torch.nn.Conv2d`, `transformers.pytorch_utils.Conv1D`."
             )
 
@@ -462,7 +462,7 @@ class LoraModel(BaseTuner):
         Raises:
             None.
         """
-        for cell in self.model.cells():
+        for cell in self.model.modules():
             if isinstance(cell, (BaseTunerLayer, ModulesToSaveWrapper)):
                 cell.enable_adapters(enabled)
 
@@ -503,7 +503,7 @@ class LoraModel(BaseTuner):
         Args:
             adapter_name (`str` or `list[str]`): Name of the adapter(s) to be activated.
         """
-        for cell in self.model.cells():
+        for cell in self.model.modules():
             if isinstance(cell, LoraLayer):
                 if cell.merged:
                     warnings.warn("Adapter cannot be set when the model is merged. Unmerging the model first.")
@@ -536,7 +536,7 @@ class LoraModel(BaseTuner):
             raise ValueError("Cannot pass `adapter_names` when the model is in training mode.")
 
         hook_handles = []
-        for cell in self.cells():
+        for cell in self.modules():
             if isinstance(cell, LoraLayer):
                 pre_forward = partial(_adapter_names_pre_forward_hook, adapter_names=adapter_names)
                 handle = cell.register_forward_pre_hook(pre_forward, with_kwargs=True)
@@ -566,7 +566,7 @@ class LoraModel(BaseTuner):
         
         Args:
             peft_config (PeftConfig): The configuration for the adapter.
-                - target_modules (set): The target cells for the adapter. If not specified, it will be determined based on the model type.
+                - target_modules (set): The target modules for the adapter. If not specified, it will be determined based on the model type.
             model_config (dict): The configuration for the model.
                 - model_type (str): The type of the model.
         
@@ -611,11 +611,11 @@ class LoraModel(BaseTuner):
         if merge:
             self._check_merge_allowed()
 
-        key_list = [key for key, _ in self.model.cells_and_names() if self.prefix not in key]
+        key_list = [key for key, _ in self.model.named_modules() if self.prefix not in key]
         desc = "Unloading " + ("and merging " if merge else "") + "model"
         for key in tqdm(key_list, disable=not progressbar, desc=desc):
             try:
-                parent, target, target_name = _get_subcells(self.model, key)
+                parent, target, target_name = _get_submodules(self.model, key)
             except AttributeError:
                 continue
             # with onload_layer(target):
@@ -624,7 +624,7 @@ class LoraModel(BaseTuner):
             #             target.merge(safe_merge=safe_merge, adapter_names=adapter_names)
             #         self._replace_cell(parent, target_name, target.get_base_layer(), target)
             #     elif isinstance(target, ModulesToSaveWrapper):
-            #         # save any additional trainable cells part of `modules_to_save`
+            #         # save any additional trainable modules part of `modules_to_save`
             #         new_cell = target.modules_to_save[target.active_adapter]
             #         if hasattr(new_cell, "base_layer"):
             #             # check if the cell is itself a tuner layer
@@ -647,9 +647,9 @@ class LoraModel(BaseTuner):
                 raise ValueError(f"Adapter {adapter} does not exist")
 
         # If more than one of the adapters targets the same cell with modules_to_save, raise an error, as these
-        # cells cannot be merged. First, find the ModulesToSaveWrapper instances in the model, then check if they
-        # have cells for the adapters to be merged.
-        modules_to_save_wrappers = [cell for cell in self.cells() if isinstance(cell, ModulesToSaveWrapper)]
+        # modules cannot be merged. First, find the ModulesToSaveWrapper instances in the model, then check if they
+        # have modules for the adapters to be merged.
+        modules_to_save_wrappers = [cell for cell in self.modules() if isinstance(cell, ModulesToSaveWrapper)]
         problematic_wrappers = [
             wrapper
             for wrapper in modules_to_save_wrappers
@@ -683,23 +683,23 @@ class LoraModel(BaseTuner):
         else:
             raise ValueError(f"Invalid combination_type: {combination_type}")
 
-        target_cell_types = [type(self.peft_config[adapter].target_modules) for adapter in adapters]
-        if not target_cell_types:
+        target_module_types = [type(self.peft_config[adapter].target_modules) for adapter in adapters]
+        if not target_module_types:
             raise ValueError(f"Found no adapter matching the names in {adapters}")
-        if len(set(target_cell_types)) > 1:
+        if len(set(target_module_types)) > 1:
             raise ValueError(
-                "all adapter configs should follow the same target cells type. "
+                "all adapter configs should follow the same target modules type. "
                 "Combining adapters with `target_modules` type being a mix of list/set and string is not supported."
             )
 
-        if target_cell_types[0] == str:
+        if target_module_types[0] == str:
             new_target_modules = "|".join(f"({self.peft_config[adapter].target_modules})" for adapter in adapters)
-        elif target_cell_types[0] == set:
+        elif target_module_types[0] == set:
             new_target_modules = reduce(
                 operator.or_, (self.peft_config[adapter].target_modules for adapter in adapters)
             )
         else:
-            raise TypeError(f"Invalid type {target_cell_types[0]} found in target_modules")
+            raise TypeError(f"Invalid type {target_module_types[0]} found in target_modules")
 
         return combination_type, new_rank, new_target_modules
 
@@ -773,9 +773,9 @@ class LoraModel(BaseTuner):
         # Do we really need that?
         _freeze_adapter(self.model, adapter_name)
 
-        key_list = [key for key, _ in self.model.cells_and_names() if self.prefix not in key]
+        key_list = [key for key, _ in self.model.named_modules() if self.prefix not in key]
         for key in key_list:
-            _, target, _ = _get_subcells(self.model, key)
+            _, target, _ = _get_submodules(self.model, key)
             if isinstance(target, LoraLayer):
                 if adapter_name in target.lora_A:
                     target_lora_A = target.lora_A[adapter_name].weight
@@ -1015,10 +1015,10 @@ class LoraModel(BaseTuner):
             raise ValueError(f"Adapter {adapter_name} does not exist")
         del self.peft_config[adapter_name]
 
-        key_list = [key for key, _ in self.model.cells_and_names() if self.prefix not in key]
+        key_list = [key for key, _ in self.model.named_modules() if self.prefix not in key]
         new_adapter = None
         for key in key_list:
-            _, target, _ = _get_subcells(self.model, key)
+            _, target, _ = _get_submodules(self.model, key)
             if isinstance(target, LoraLayer):
                 target.delete_adapter(adapter_name)
                 if new_adapter is None:
@@ -1060,7 +1060,7 @@ class LoraModel(BaseTuner):
 
     def unload(self) -> nn.Module:
         """
-        Gets back the base model by removing all the lora cells without merging. This gives back the original base
+        Gets back the base model by removing all the lora modules without merging. This gives back the original base
         model.
         """
         return self._unload_and_optionally_merge(merge=False)

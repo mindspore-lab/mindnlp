@@ -64,7 +64,7 @@ class PromptEmbedding(nn.Module):
             self: Reference to the current instance of the class.
             config (object): Configuration object containing various settings.
                 - num_virtual_tokens (int): Number of virtual tokens.
-                - num_transformer_subcells (int): Number of transformer subcells.
+                - num_transformer_submodules (int): Number of transformer submodules.
                 - token_dim (int): Dimensionality of the token embeddings.
                 - prompt_tuning_init (Enum): Specifies the type of prompt tuning initialization.
                 - inference_mode (bool): Indicates if the model is in inference mode.

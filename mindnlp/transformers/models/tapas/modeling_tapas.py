@@ -1719,11 +1719,11 @@ def compute_column_logits(
     token_logits = ops.einsum("bsj,j->bs", sequence_output, column_output_weights) + column_output_bias
 
     # Next, average the logits per cell (batch_size, max_num_cols*max_num_rows)
-    cell_logits, cell_logits_index = reduce_mean(token_logits, cell_index)
+    module_logits, module_logits_index = reduce_mean(token_logits, cell_index)
 
     # Finally, average the logits per column (batch_size, max_num_cols)
-    column_index = cell_index.project_inner(cell_logits_index)
-    column_logits, out_index = reduce_sum(cell_logits * cell_mask, column_index)
+    column_index = cell_index.project_inner(module_logits_index)
+    column_logits, out_index = reduce_sum(module_logits * cell_mask, column_index)
 
     cell_count, _ = reduce_sum(cell_mask, column_index)
     column_logits /= cell_count + EPSILON_ZERO_DIVISION

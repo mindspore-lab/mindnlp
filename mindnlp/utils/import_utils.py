@@ -94,10 +94,11 @@ _sudachipy_available, _sudachipy_version = _is_package_available("sudachipy", re
 
 _librosa_available = _is_package_available("librosa")
 _scipy_available = _is_package_available("scipy")
+_triton_available = _is_package_available("triton")
 _sacremoses_available = _is_package_available("sacremoses")
 _torchaudio_available = _is_package_available("pykaldi")
 _kenlm_available = _is_package_available("kenlm")
-
+_datamodel_code_generator_availabel = _is_package_available('datamodel_code_generator')
 _pretty_midi_available = importlib.util.find_spec("pretty_midi") is not None
 try:
     _pretty_midi_version = importlib_metadata.version("pretty_midi")
@@ -126,6 +127,12 @@ except importlib.metadata.PackageNotFoundError:
         logger.debug(f"Successfully imported faiss version {_faiss_version}")
     except importlib.metadata.PackageNotFoundError:
         _faiss_available = False
+
+def is_triton_available():
+    return _triton_available
+
+def is_datamodel_code_generator_availabel():
+    return _datamodel_code_generator_availabel
 
 def is_faiss_available():
     return _faiss_available
