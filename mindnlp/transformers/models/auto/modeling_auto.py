@@ -161,6 +161,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("mega", "MegaModel"),
         ("megatron-bert", "MegatronBertModel"),
         ("mgp-str", "MgpstrForSceneTextRecognition"),
+        ("mimi", "MimiModel"),
         ('minicpm', 'MiniCPMModel'),
         ("minicpm3", "MiniCPM3Model"),
         ("mistral", "MistralModel"),
