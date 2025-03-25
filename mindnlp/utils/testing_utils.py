@@ -262,6 +262,78 @@ def require_librosa(test_case):
     """
     return unittest.skipUnless(is_librosa_available(), "test requires librosa")(test_case)
 
+################################################################################
+### update_wrapper() and wraps() decorator
+################################################################################
+
+# update_wrapper() and wraps() are tools to help write
+# wrapper functions that can handle naive introspection
+# Note from mamba2 model porting: Original mamba2 code require python 3.13+
+# so we copy the codes from python 3.13+
+WRAPPER_ASSIGNMENTS = ('__module__', '__name__', '__qualname__', '__doc__',
+                       '__annotations__', '__type_params__')
+WRAPPER_UPDATES = ('__dict__',)
+def update_wrapper(wrapper,
+                   wrapped,
+                   assigned = WRAPPER_ASSIGNMENTS,
+                   updated = WRAPPER_UPDATES):
+    """Update a wrapper function to look like the wrapped function
+
+       wrapper is the function to be updated
+       wrapped is the original function
+       assigned is a tuple naming the attributes assigned directly
+       from the wrapped function to the wrapper function (defaults to
+       functools.WRAPPER_ASSIGNMENTS)
+       updated is a tuple naming the attributes of the wrapper that
+       are updated with the corresponding attribute from the wrapped
+       function (defaults to functools.WRAPPER_UPDATES)
+    """
+    for attr in assigned:
+        try:
+            value = getattr(wrapped, attr)
+        except AttributeError:
+            pass
+        else:
+            setattr(wrapper, attr, value)
+    for attr in updated:
+        getattr(wrapper, attr).update(getattr(wrapped, attr, {}))
+    # Issue #17482: set __wrapped__ last so we don't inadvertently copy it
+    # from the wrapped function when updating __dict__
+    wrapper.__wrapped__ = wrapped
+    # Return the wrapper so this can be used as a decorator via partial()
+    return wrapper
+
+def wraps(wrapped,
+          assigned = WRAPPER_ASSIGNMENTS,
+          updated = WRAPPER_UPDATES):
+    """Decorator factory to apply update_wrapper() to a wrapper function
+
+       Returns a decorator that invokes update_wrapper() with the decorated
+       function as the wrapper argument and the arguments to wraps() as the
+       remaining arguments. Default arguments are as for update_wrapper().
+       This is a convenience function to simplify applying partial() to
+       update_wrapper().
+    """
+    return functools.partial(update_wrapper, wrapped=wrapped,
+                   assigned=assigned, updated=updated)
+
+def require_read_token(fn):
+    """
+    A decorator that loads the HF token for tests that require to load gated models.
+    """
+    token = os.getenv("HF_HUB_READ_TOKEN")
+
+    @wraps(fn)
+    def _inner(*args, **kwargs):
+        if token is not None:
+            with patch("huggingface_hub.utils._headers.get_token", return_value=token):
+                return fn(*args, **kwargs)
+        else:  # Allow running locally with the default token env variable
+            return fn(*args, **kwargs)
+
+    return _inner
+
+
 def require_essentia(test_case):
     """
     Decorator marking a test that requires essentia

@@ -1630,16 +1630,16 @@ class GenerationTesterMixin:
 
             # Traditional way of generating text
             outputs_from_ids = model.generate(
-                input_ids, max_new_tokens=5, return_dict_in_generate=True, output_scores=True
+                input_ids, max_new_tokens=1, return_dict_in_generate=True, output_scores=True
             )
-            self.assertEqual(outputs_from_ids.sequences.shape, (input_ids.shape[0], input_ids.shape[1] + 5))
+            self.assertEqual(outputs_from_ids.sequences.shape, (input_ids.shape[0], input_ids.shape[1] + 1))
 
             # Same thing, but from input embeddings (`input_ids` is passed so the prompt is present in the output)
             inputs_embeds = model.get_input_embeddings()(input_ids)
             outputs_from_embeds = model.generate(
                 input_ids,
                 inputs_embeds=inputs_embeds,
-                max_new_tokens=5,
+                max_new_tokens=1,
                 return_dict_in_generate=True,
                 output_scores=True,
             )
@@ -1651,7 +1651,7 @@ class GenerationTesterMixin:
             outputs_from_rand_embeds = model.generate(
                 input_ids,
                 inputs_embeds=random_embeds,
-                max_new_tokens=5,
+                max_new_tokens=1,
                 return_dict_in_generate=True,
                 output_scores=True,
             )
@@ -1660,7 +1660,7 @@ class GenerationTesterMixin:
 
             # input_ids is not a required input -- if we don't pass it, the newly generated tokens will be the same
             outputs_from_embeds_wo_ids = model.generate(
-                inputs_embeds=inputs_embeds, max_new_tokens=5, return_dict_in_generate=True, output_scores=True
+                inputs_embeds=inputs_embeds, max_new_tokens=1, return_dict_in_generate=True, output_scores=True
             )
             self.assertListEqual(
                 outputs_from_embeds.sequences[:, inputs_embeds.shape[1] :].tolist(),

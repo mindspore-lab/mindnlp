@@ -135,6 +135,7 @@ from . import (
     luke,
     lxmert,
     mamba,
+    mamba2,
     marian,
     markuplm,
     m2m_100,
@@ -381,6 +382,7 @@ from .luke import *
 from .lxmert import *
 from .m2m_100 import *
 from .mamba import *
+from .mamba2 import *
 from .marian import *
 from .markuplm import *
 from .maskformer import *
@@ -626,6 +628,7 @@ __all__.extend(luke.__all__)
 __all__.extend(lxmert.__all__)
 __all__.extend(m2m_100.__all__)
 __all__.extend(mamba.__all__)
+__all__.extend(mamba2.__all__)
 __all__.extend(marian.__all__)
 __all__.extend(markuplm.__all__)
 __all__.extend(maskformer.__all__)
