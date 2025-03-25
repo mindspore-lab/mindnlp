@@ -18,7 +18,6 @@ import math
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
-import numpy as np
 import mindspore
 from mindnlp.core import nn, ops, no_grad
 from mindnlp.core.nn import CrossEntropyLoss
@@ -26,7 +25,6 @@ from mindnlp.core.nn import CrossEntropyLoss
 from ....common.activations import ACT2FN
 from ...generation import GenerationMixin
 from ...modeling_utils import PreTrainedModel
-from mindspore.common.initializer import initializer, Normal
 
 from ....utils import (
     ModelOutput,
@@ -517,7 +515,7 @@ class Mamba2Mixer(nn.Module):
         # 4. Final linear projection
         contextualized_states = self.out_proj(scan_output.to(dtype))  # [batch, seq_len, hidden_size]
         return contextualized_states
-    
+
     # fmt: on
     def forward(
         self,

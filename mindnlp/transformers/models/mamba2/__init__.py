@@ -18,9 +18,6 @@ from . import modeling_mamba2, configuration_mamba2
 from .modeling_mamba2 import *
 from .configuration_mamba2 import *
 
-# Note: Do not support loading checkpoint from mamba2_ssm package.
-# from .convert_mamba2_ssm_checkpoint_to_mindspore import *
-
 __all__ = []
 __all__.extend(modeling_mamba2.__all__)
 __all__.extend(configuration_mamba2.__all__)
