@@ -311,7 +311,7 @@ class PretrainedConfig:
             if is_mindspore_available():
                 import mindspore
 
-                self.ms_dtype = getattr(mindspore, self.ms_dtype)
+                self.ms_dtype = getattr(mindspore, self.ms_dtype.split('.')[-1])
 
         # Tokenizer arguments TODO: eventually tokenizer and models should share the same config
         self.tokenizer_class = kwargs.pop("tokenizer_class", None)
