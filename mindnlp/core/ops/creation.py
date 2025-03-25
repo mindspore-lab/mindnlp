@@ -1,7 +1,12 @@
 """creation ops"""
 import numpy as np
 import mindspore
-from mindspore._c_expression import Tensor as CTensor # pylint: disable=no-name-in-module, import-error
+try:
+    from mindspore._c_expression import TensorPy as CTensor # pylint: disable=no-name-in-module
+except:
+    from mindspore._c_expression import Tensor as CTensor # pylint: disable=no-name-in-module
+
+
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp.configs import use_pyboost, ON_ORANGE_PI
@@ -76,12 +81,18 @@ def ones_like(input, *, dtype=None):
 
 # arange
 has_arange = hasattr(mindspore.mint, 'arange')
+range_op = ops.Range()
 def arange(start=0, end=None, step=1, *, dtype=None):
+    if dtype is None:
+        dtype = mindspore.int64
     if ON_ORANGE_PI and dtype in (None, mindspore.int64):
         dtype = mindspore.int32
     if use_pyboost() and has_arange:
         return mindspore.mint.arange(start, end, step, dtype=dtype)
-    return ops.arange(start, end, step, dtype=dtype)
+    if end is None:
+        end = start
+        start = 0
+    return range_op(start, end, step).astype(dtype)
 
 # range
 def range(start=0, end=None, step=1, dtype=None):
@@ -113,16 +124,28 @@ def eye(n, m=None, *, dtype=None):
     return ops.eye(n, m, dtype)
 
 # empty
-def empty(*size, dtype=None):
+has_empty = hasattr(mindspore.mint, 'empty')
+def empty(*size, dtype=None, device=None):
     if isinstance(size[0], (tuple, list)):
         size = size[0]
     if dtype is None:
         dtype = get_default_dtype()
-    out = CTensor(dtype, size)
+    if has_empty:
+        out = mindspore._c_expression.pyboost_empty([size, dtype, device])
+        if not isinstance(out, mindspore.Tensor):
+            out = out.get_value()
+        else:
+            return out
+    else:
+        out = CTensor(dtype=dtype, shape=size)
     return mindspore.Tensor(out)
 
 # empty_like
-
+has_empty_like = hasattr(mindspore.mint, 'empty_like')
+def empty_like(input, *, dtype=None, device=None):
+    if has_empty_like:
+        return mindspore.mint.empty_like(input, dtype=dtype, device=device)
+    return empty(input.shape, dtype=input.dtype, device=device)
 
 # empty_strided
 

@@ -1,9 +1,13 @@
 """communication functional api."""
 from mindspore import ops, Tensor
-from mindspore._c_expression import Tensor as Tensor_ # pylint: disable=no-name-in-module
 from mindspore.ops.operations._inner_ops import Send, Receive
 from mindspore.communication import GlobalComm, get_group_rank_from_world_rank
 from mindspore.ops._primitive_cache import _get_cache_prim
+try:
+    from mindspore._c_expression import TensorPy as Tensor_ # pylint: disable=no-name-in-module
+except:
+    from mindspore._c_expression import Tensor as Tensor_ # pylint: disable=no-name-in-module
+
 
 def isend(tensor, dst=0, group=GlobalComm.WORLD_COMM_GROUP, tag=0):
     """

@@ -360,7 +360,8 @@ class MultiHeadSelfAttention(nn.Module):
         q = q / math.sqrt(dim_per_head)  # (bs, n_heads, q_length, dim_per_head)
         scores = ops.matmul(q, k.swapaxes(2, 3))  # (bs, n_heads, q_length, k_length)
         mask = (mask == 0).view(mask_reshp).expand_as(scores)  # (bs, n_heads, q_length, k_length)
-        scores = scores.masked_fill(
+        scores = ops.masked_fill(
+            scores,
             mask, float(ops.finfo(scores.dtype).min)
         )  # (bs, n_heads, q_length, k_length)
 
