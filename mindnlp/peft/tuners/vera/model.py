@@ -1,3 +1,4 @@
+"""vera model"""
 # Copyright 2023-present the HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,15 +20,12 @@ import warnings
 from dataclasses import asdict
 from enum import Enum
 from typing import Optional, Union
-from mindnlp.core.nn.init import _calculate_correct_fan
-from mindnlp.core import ops
-from mindnlp.core import nn
-from mindspore.nn import Cell
 from tqdm import tqdm
-from ....transformers.ms_utils import Conv1D
-import mindspore.ops as ops_mind
 import mindspore
-from mindspore import Tensor
+from mindspore.nn import Cell
+from mindnlp.core.nn.init import _calculate_correct_fan
+from mindnlp.core import ops,nn
+from ....transformers.ms_utils import Conv1D
 from ...tuners.tuners_utils import BaseTuner, BaseTunerLayer, check_target_module_exists
 from ...utils import (
     ModulesToSaveWrapper,
@@ -324,12 +322,10 @@ class VeraModel(BaseTuner):
             return getattr(self.model, name)
 
     def get_peft_config_as_dict(self, inference: bool = False):
-        config_dict = {}
         for key, value in self.peft_config.items():
             config = {k: v.value if isinstance(v, Enum) else v for k, v in asdict(value).items()}
             if inference:
                 config["inference_mode"] = True
-        config_dict[key] = config
         return config
 
     def _set_adapter_layers(self, enabled=True):

@@ -24,7 +24,7 @@ from typing import Any, Optional, Union
 from abc import ABC
 from contextlib import contextmanager
 from mindspore import Tensor
-from mindnlp.core import nn,ops
+from mindnlp.core import nn
 
 from ..config import PeftConfig
 from ..utils import _get_submodules
@@ -824,32 +824,3 @@ def replicate_layers(model: nn.Module, layer_map: list[tuple[int, int]]):
         raise ValueError("Unexpected model type, need to handle post-processing of layers.")
     if hasattr(model.config, "num_hidden_layers"):  # Common to Llama, Bert, Falcon.
         model.config.num_hidden_layers = len(new_layers)
-def _maybe_include_all_linear_layers(peft_config: PeftConfig, model: nn.Module) -> PeftConfig:
-    """
-    Helper function to update `target_modules` to all linear/Conv1D layers if provided as 'all-linear'. Adapted from
-    the QLoRA repository: https://github.com/artidoro/qlora/blob/main/qlora.py
-    """
-    if not hasattr(peft_config, "target_modules"):
-        return peft_config
-
-    # if `target_modules` is a string, convert to lower case and check if it matches "all-linear"
-    if not (
-        isinstance(peft_config.target_modules, str)
-        and peft_config.target_modules.lower() == "all-linear"
-    ):
-        return peft_config
-
-    linear_classes = (nn.Linear, nn.Conv1D)
-    linear_module_names = set()
-    for name, module in model.named_modules():
-        # match with all linear classes.
-        if isinstance(module, linear_classes):
-            linear_module_names.add(name)
-
-    # Try to remove linear layers that should not be targeted as best as possible. We have to rely on convention as
-    # there are no hard rules to detect these modules.
-    module_names_to_exclude = set()
-
-    linear_module_names -= module_names_to_exclude
-    peft_config.target_modules = linear_module_names
-    return peft_config

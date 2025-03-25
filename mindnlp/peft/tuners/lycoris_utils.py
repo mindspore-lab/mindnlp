@@ -1,3 +1,6 @@
+"""
+LycorisConfig and LycorisLayer class for LyCORIS like adapters.
+"""
 # Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,9 +14,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-LycorisConfig and LycorisLayer class for LyCORIS like adapters.
-"""
 from __future__ import annotations
 from abc import abstractmethod
 from dataclasses import dataclass, field
@@ -36,7 +36,6 @@ from .tuners_utils import (
     BaseTunerLayer,
     check_adapters_to_merge,
     check_target_module_exists,
-    _maybe_include_all_linear_layers
 )
 
 
@@ -86,7 +85,8 @@ class LycorisLayer(BaseTunerLayer):
 
     @property
     @abstractmethod
-    def _available_adapters(self) -> set[str]: ...
+    def _available_adapters(self) -> set[str]:
+        ...
 
     def _init_empty_weights(self, cls, *args, **kwargs) -> None:
         # A helper method that allows to initialize the layer of the given class without spending time to initialize the
@@ -99,7 +99,8 @@ class LycorisLayer(BaseTunerLayer):
         cls.__init__(self, *args, device="meta", **kwargs)
 
     @abstractmethod
-    def create_adapter_parameters(self, adapter_name: str, r: int, **kwargs): ...
+    def create_adapter_parameters(self, adapter_name: str, r: int, **kwargs):
+        ...
 
     # TODO: refactor LoRA to use the same approach
     @abstractmethod
@@ -108,7 +109,8 @@ class LycorisLayer(BaseTunerLayer):
     ) -> mindspore.Tensor:
         """Activations added on top of the base layer output (i.e. after the base layer forward pass)"""
     @abstractmethod
-    def get_delta_weight(self, adapter_name: str) -> mindspore.Tensor: ...
+    def get_delta_weight(self, adapter_name: str) -> mindspore.Tensor:
+        ...
 
     def merge(
         self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None
@@ -148,7 +150,8 @@ class LycorisLayer(BaseTunerLayer):
                 self.merged_adapters.append(active_adapter)
 
     @abstractmethod
-    def reset_adapter_parameters(self, adapter_name: str): ...
+    def reset_adapter_parameters(self, adapter_name: str):
+        ...
 
     def set_scale(self, adapter, scale):
         if adapter not in self._available_adapters:
@@ -193,7 +196,8 @@ class LycorisLayer(BaseTunerLayer):
                 self.scaling[active_adapter] /= scale
 
     @abstractmethod
-    def update_layer(self, adapter_name: str, r: int, alpha: float, **kwargs): ...
+    def update_layer(self, adapter_name: str, r: int, alpha: float, **kwargs):
+        ...
 
 
 class LycorisTuner(BaseTuner):
@@ -292,7 +296,6 @@ class LycorisTuner(BaseTuner):
         setattr(parent, child_name, new_module)
         # It's not necessary to set requires_grad here, as that is handled by
         # _mark_only_adapters_as_trainable
-        
         if not hasattr(new_module, "base_layer"):
             new_module.weight = child.weight
             if hasattr(child, "bias"):

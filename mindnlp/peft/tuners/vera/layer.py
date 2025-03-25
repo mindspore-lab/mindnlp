@@ -1,3 +1,4 @@
+"""vera layer"""
 # Copyright 2023-present the HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,10 +16,8 @@
 import warnings
 from typing import List, Optional
 import mindspore
-from mindnlp.core import nn,ops
-from mindspore import ParameterTuple,Parameter
-from mindspore.common.parameter import Parameter
 import mindspore.mint.nn.functional as F
+from mindnlp.core import nn,ops
 from ....transformers.ms_utils import Conv1D
 from ...tuners.tuners_utils import BaseTunerLayer, check_adapters_to_merge
 from ...utils.other import transpose
@@ -198,7 +197,6 @@ class Linear(nn.Linear, VeraLayer):
                 if safe_merge:
                     # Note that safe_merge will be slower than the normal merge
                     # because of the copy operation.
-                    
                     orig_weights = base_layer.weight.data.clone()
                     #weights = base_layer.parameters()
                     #orig_weights = [param.data.clone() for param in weights]

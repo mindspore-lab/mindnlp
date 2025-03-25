@@ -1,3 +1,4 @@
+"""vera config."""
 # Copyright 2023-present the HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +20,6 @@ from typing import Optional, Union
 
 from ...config import PeftConfig
 from ...utils import PeftType
-
 @dataclass
 class VeraConfig(PeftConfig):
     """

@@ -1,7 +1,6 @@
+"""buffer dict"""
 import collections
 from collections import OrderedDict
-import mindspore
-from mindspore import Tensor
 import mindspore.context
 from mindnlp.core import nn
 class BufferDict(nn.Module):
