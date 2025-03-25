@@ -78,7 +78,7 @@ with no_grad():
 
         generated_tokens = ops.zeros(parallel_size, image_token_num_per_image, dtype=ms.int32)
 
-        print()
+        print("Generating tokens: ")
         for i in range(image_token_num_per_image): 
             outputs = mmgpt.language_model.model(inputs_embeds=inputs_embeds, use_cache=True, past_key_values=outputs.past_key_values if i != 0 else None)
             hidden_states = outputs.last_hidden_state # (parallel_size*2, len(input_ids), 2048)
