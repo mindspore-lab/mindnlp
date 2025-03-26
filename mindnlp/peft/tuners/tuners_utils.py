@@ -156,7 +156,6 @@ class BaseTuner(nn.Module):
         # self.add_adapter(adapter_name, self.peft_config[adapter_name])
 
         self.model = model
-
         # For advanced developers, if you want to attach multiple adapters to your
         # model, just add a `peft_config` dict attribute to your model.
         if not hasattr(self, "peft_config"):
@@ -175,13 +174,26 @@ class BaseTuner(nn.Module):
         # transformers models have a .config attribute, whose presence is assumed later on
         # if not hasattr(self, "config"):
         #     self.config = {"model_type": "custom"}
-
+        self._pre_injection_hook(self.model, self.peft_config[adapter_name], adapter_name)
         self.active_adapter: str | list[str] = adapter_name
         self.inject_adapter(self.model, adapter_name)
 
         # Copy the peft_config in the injected model.
         self.model.peft_config = self.peft_config
+    def _pre_injection_hook(self, model: nn.Module, config: PeftConfig, adapter_name: str) -> None:
+        r"""
+        A hook to be called before the adapter is injected into the model. This method can be overridden by child
+        classes to perform any pre-injection operations.
 
+        Args:
+            model (`nn.Module`):
+                The model to be adapted.
+            config (`PeftConfig`):
+                The adapter config.
+            adapter_name (`str`):
+                The adapter name.
+        """
+        pass
     @property
     def active_adapters(self) -> list[str]:
         r"""
