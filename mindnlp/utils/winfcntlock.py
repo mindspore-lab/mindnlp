@@ -21,12 +21,13 @@ import win32file # pylint: disable=import-error
 LOCK_EX = win32con.LOCKFILE_EXCLUSIVE_LOCK
 LOCK_SH = 0  # The default value
 LOCK_NB = win32con.LOCKFILE_FAIL_IMMEDIATELY
+LOCK_UN = 0x08
 __overlapped = pywintypes.OVERLAPPED()
 
-def lock(file, flags):
-    hfile = win32file._get_osfhandle(file.fileno())
+def flock(file, flags):
+    hfile = win32file._get_osfhandle(file)
     win32file.LockFileEx(hfile, flags, 0, 0xffff0000, __overlapped)
 
 def unlock(file):
-    hfile = win32file._get_osfhandle(file.fileno())
+    hfile = win32file._get_osfhandle(file)
     win32file.UnlockFileEx(hfile, 0, 0xffff0000, __overlapped)
