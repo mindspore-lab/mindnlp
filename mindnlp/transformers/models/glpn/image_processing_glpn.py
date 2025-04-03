@@ -13,13 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Image processor class for GLPN."""
-
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
-
-
-if TYPE_CHECKING:
-    from ...modeling_outputs import DepthEstimatorOutput
-
 import numpy as np
 import PIL.Image
 import mindspore
@@ -38,6 +31,9 @@ from ...image_utils import (
     validate_preprocess_arguments,
 )
 from ....utils import TensorType, logging, requires_backends
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+if TYPE_CHECKING:
+    from ...modeling_outputs import DepthEstimatorOutput
 
 
 
