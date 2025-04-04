@@ -146,6 +146,7 @@ from . import (
     mctct,
     megatron_bert,
     mgp_str,
+    mimi,
     minicpm,
     minicpm3,
     mistral,
@@ -392,6 +393,7 @@ from .mbart50 import *
 from .mctct import *
 from .megatron_bert import *
 from .mgp_str import *
+from .mimi import *
 from .minicpm import *
 from .minicpm3 import *
 from .mistral import *
@@ -637,6 +639,7 @@ __all__.extend(mbart.__all__)
 __all__.extend(mbart50.__all__)
 __all__.extend(mctct.__all__)
 __all__.extend(megatron_bert.__all__)
+__all__.extend(mimi.__all__)
 __all__.extend(mgp_str.__all__)
 __all__.extend(minicpm.__all__)
 __all__.extend(minicpm3.__all__)
