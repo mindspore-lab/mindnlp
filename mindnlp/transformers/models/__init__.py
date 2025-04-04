@@ -146,6 +146,7 @@ from . import (
     mctct,
     megatron_bert,
     mgp_str,
+    mimi,
     minicpm,
     minicpm3,
     mistral,
