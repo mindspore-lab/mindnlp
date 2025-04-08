@@ -1,5 +1,4 @@
-# coding=utf-8
-# Copyright 2024 The Fairseq Authors and the HuggingFace Inc. team. All rights reserved.
+# Copyright 2024 the HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,23 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+"""This module provides utilities for flash attention in Transformers models."""
 
+
+import os
 import inspect
-import mindspore
 from typing import Optional, Tuple
+import mindspore
 from mindnlp.core import ops
 from ..utils import logging
-
-logger = logging.get_logger(__name__)
-flash_attn_func = None
-
 from .integrations.npu_flash_attention import index_first_axis, pad_input, unpad_input
 from .integrations.npu_flash_attention import npu_flash_attn_func as flash_attn_func
 from .integrations.npu_flash_attention import npu_flash_attn_varlen_func as flash_attn_varlen_func
 
 
-if flash_attn_func:
+logger = logging.get_logger(__name__)
+
+
+if flash_attn_func is not None:
     _flash_supports_window_size = "window_size" in list(inspect.signature(flash_attn_func).parameters)
 
 
@@ -285,7 +285,7 @@ def _flash_attention_forward(
     else:
         # TODO: Remove the `query_length != 1` check once Flash Attention for RoCm is bumped to 2.1.
         causal = is_causal and query_length != 1
-    
+
     # Assuming 4D tensors, key_states.shape[1] is the key/value sequence length (source length).
     use_sliding_windows = (
         _flash_supports_window_size and sliding_window is not None and key_states.shape[1] > sliding_window
@@ -299,7 +299,7 @@ def _flash_attention_forward(
 
     if softcap is not None:
         flash_kwargs["softcap"] = softcap
-    
+
     # PEFT possibly silently casts tensors to fp32, this potentially reconverts to correct dtype or is a no op
     query_states, key_states, value_states = fa_peft_integration_check(
         query_states, key_states, value_states, target_dtype
@@ -312,7 +312,7 @@ def _flash_attention_forward(
         )
         cu_seqlens_q, cu_seqlens_k = cu_seq_lens
         max_seqlen_in_batch_q, max_seqlen_in_batch_k = max_seq_lens
-        
+
         attn_output_unpad = flash_attn_varlen_func(
             query_states,
             key_states,
@@ -327,7 +327,7 @@ def _flash_attention_forward(
             **flash_kwargs,
         )
         attn_output = pad_input(attn_output_unpad, indices_q, batch_size, query_length)
-    
+
     # If position_ids is provided and check all examples do not contain only 1 sequence, If tensor in increasing
     # then we probably have one sequence, otherwise it is packed. Additionally check we are in pre-fill/training stage.
     # Use `flash_attn_varlen_func` to prevent cross-example attention and also allow padding free approach

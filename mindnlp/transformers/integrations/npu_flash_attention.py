@@ -1,3 +1,5 @@
+# Copyright 2024 The HuggingFace Inc. team. All rights reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,13 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+FlashAttention2 is supported on Ascend NPU with down-right aligned causal mask by default.
+Set environment variable `NPU_FA2_SPARSE_MODE` to 2 when using top-left aligned causal mask.
+"""
+
+
 import os
 
 import math
+from typing import Optional, Tuple
 import mindspore
 from mindspore.ops import flash_attention_score
 from mindspore import nn
-from typing import Optional, Tuple
 from mindnlp.core import ops
 
 
@@ -25,7 +33,7 @@ from mindnlp.core import ops
 TOP_LEFT_ALIGNED_CAUSAL_MASK_MODE = 2
 DOWN_RIGHT_ALIGNED_CAUSAL_MASK_MODE = 3
 
-SPARSE_MODE = int(os.getenv("NPU_FA2_SPARSE_MODE", default=DOWN_RIGHT_ALIGNED_CAUSAL_MASK_MODE))
+SPARSE_MODE = int(os.getenv("NPU_FA2_SPARSE_MODE", default=str(DOWN_RIGHT_ALIGNED_CAUSAL_MASK_MODE)))
 if SPARSE_MODE not in [TOP_LEFT_ALIGNED_CAUSAL_MASK_MODE, DOWN_RIGHT_ALIGNED_CAUSAL_MASK_MODE]:
     raise ValueError(
         "Environment variable `NPU_FA2_SPARSE_MODE` can only be set as 2 (top-left aligned causal mask) "
@@ -55,15 +63,15 @@ class IndexFirstAxis(nn.Cell):
         assert dout.ndim >= 2
         other_shape = dout.shape[1:]
         grad_output = dout
-        
+
         grad_flat = grad_output.reshape(grad_output.shape[0], -1)
         grad_shape = (input.shape[0], grad_flat.shape[1])
         grad_input = ops.zeros(grad_shape, grad_flat.dtype)
-        
+
         indices_expanded = ops.expand_dims(indices, -1)
         indices_expanded = ops.broadcast_to(indices_expanded, (-1, grad_flat.shape[1]))
         grad_input.scatter_(0, indices_expanded, grad_flat)
-        
+
         return grad_input.reshape(input.shape[0], *other_shape), None
 
 
