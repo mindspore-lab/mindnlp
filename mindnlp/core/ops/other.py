@@ -556,6 +556,13 @@ def einsum(equation, *operands):
     return result
 
 
+# expand_dims
+has_expand_dims = hasattr(mindspore.mint, 'expand_dims')
+def expand_dims(input, axis):
+    if use_pyboost() and has_expand_dims:
+        return mindspore.mint.expand_dims(input, axis)
+    return ops.expand_dims(input, axis)
+
 
 # flatten
 has_flatten = hasattr(mindspore.mint, 'flatten')
