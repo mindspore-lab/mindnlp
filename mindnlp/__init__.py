@@ -46,11 +46,8 @@ if platform.system().lower() == 'linux':
 if version.parse(mindspore.__version__) < version.parse('2.3.0'):
     mindspore.mint = None
 
-from mindspore import jit as ms_jit
-from mindnlp import patch
-from mindnlp import transformers
-from mindnlp import dataset
-from mindnlp import evaluate
-from mindnlp import core
+from . import safetensors
+from . import transformers
+from . import evaluate
 
-__all__ = ['ms_jit', 'transformers']
+__all__ = ['transformers', 'evaluate', 'core']

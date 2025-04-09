@@ -138,8 +138,6 @@ ge*.json
 download.txt
 *.whl
 *.tar.gz
-*hf*.py
-*torch*.py
 cmp/
 *.zip
 
