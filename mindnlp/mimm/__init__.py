@@ -1,1 +1,0 @@
-"""mindspore image models"""
