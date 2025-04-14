@@ -20,6 +20,7 @@ import os
 import sys
 import platform
 from packaging import version
+import importlib
 
 if os.environ.get('HF_ENDPOINT', None) is None:
     os.environ["HF_ENDPOINT"] = 'https://hf-mirror.com'
@@ -47,14 +48,9 @@ if platform.system().lower() == 'linux':
 if version.parse(mindspore.__version__) < version.parse('2.3.0'):
     mindspore.mint = None
 
-from . import integrations
+# from . import integrations
+from . import transformers
+from . import evaluate
+from . import peft
 
-import transformers
-import evaluate
-import mindtorch
-
-sys.modules["mindnlp.transformers"] = transformers
-sys.modules["mindnlp.evaluate"] = evaluate
-sys.modules["mindnlp.core"] = mindtorch
-
-__all__ = ['transformers', 'evaluate', 'core']
+__all__ = ['transformers', 'evaluate']
