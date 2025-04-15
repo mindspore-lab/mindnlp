@@ -512,7 +512,7 @@ class TopPLogitsWarper(LogitsWarper):
         # to a 3D tensor of shape (batch_size, vocab_size, 2) containing the original score coordinate, from which we
         # can scatter (i.e. `scatter_indices[row, col, :]` is a tensor containing `[row, topk_indices[row, col]]`)
         scatter_rows = ops.tile(ops.unsqueeze(ops.range(topk_indices.shape[0]), dim=-1), (1, topk_indices.shape[-1]))
-        scatter_indices = ops.stack((scatter_rows, topk_indices), dim=-1)
+        scatter_indices = ops.stack((scatter_rows.to(topk_indices.dtype), topk_indices), dim=-1)
         next_scores = ops.tf_scatter_nd(scatter_indices, topk_next_scores, shape=topk_next_scores.shape)
 
         return next_scores
