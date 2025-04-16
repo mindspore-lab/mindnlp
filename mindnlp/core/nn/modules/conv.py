@@ -3,6 +3,8 @@
 import math
 from typing import Optional, Tuple, Union, List
 from mindspore import Tensor, ops as mops
+from mindspore.ops.auto_generate.gen_ops_prim import conv1d_ext_op, conv1d_padding_op
+from mindspore.ops.function.nn_func import pad_ext
 from ..parameter import Parameter
 from .module import Module
 from ..common_types import _size_2_t, _size_1_t
@@ -182,43 +184,18 @@ class Conv1d(_ConvNd):
         super().__init__(
             in_channels, out_channels, kernel_size_, stride_, padding_, dilation_,
             False, _single(0), groups, bias, padding_mode, **factory_kwargs)
-
-        pad_mode = 'valid'
-        pad = padding
-        if isinstance(padding, tuple):
-            if padding[0] != 0:
-                pad_mode = 'pad'
-            pad = (0, 0, padding[0], padding[0])
-        elif isinstance(padding, int):
-            if padding != 0:
-                pad_mode = 'pad'
-            pad = (0, 0) + (padding,) * 2
-        if not isinstance(padding, (int, tuple)):
-            pad_mode = padding
-            pad = (0,) * 4
-
-        if self.padding_mode != 'zeros':
-            pad_mode = 'valid'
-            pad = (0,) * 4
-        self.conv2d = mops.Conv2D(out_channel=self.out_channels,
-                                kernel_size=(1,) + self.kernel_size,
-                                mode=1,
-                                pad_mode=pad_mode,
-                                pad=pad,
-                                stride=(1,) + self.stride,
-                                dilation=(1,) + self.dilation,
-                                group=self.groups)
+        
+        if isinstance(padding, str) and padding_mode == "zeros":
+            self.conv1d = conv1d_padding_op
+        else:
+            self.conv1d = conv1d_ext_op
 
     def forward(self, input):
-        if self.padding_mode != 'zeros':
-            input = F.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode)
-        input = input.expand_dims(2)
-        output = self.conv2d(input, self.weight.expand_dims(2))
-
-        if self.bias is not None:
-            output = mops.bias_add(output, self.bias)
-
-        output = output.squeeze(2)
+        if self.padding_mode != "zeros":
+            output = self.conv1d(pad_ext(input, self._reversed_padding, mode=self.padding_mode), self.weight,
+                                 self.bias, self.stride, (0,), self.dilation, self.groups)
+        else:
+            output = self.conv1d(input, self.weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
         return output
 
 
