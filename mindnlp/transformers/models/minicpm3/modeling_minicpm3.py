@@ -30,6 +30,7 @@ from mindnlp.utils import logging
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from mindnlp.configs import ON_ORANGE_PI
 from ....common.activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache
 from ...modeling_attn_mask_utils import (
@@ -265,7 +266,10 @@ class MiniCPM3MLP(nn.Module):
         self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
         self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
         self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
-        self.act_fn = ACT2FN[config.hidden_act]
+        if ON_ORANGE_PI:
+            self.act_fn = mindspore.ops.silu
+        else:
+            self.act_fn = ACT2FN[config.hidden_act]
 
     def forward(self, x):
         if self.config.pretraining_tp > 1:
@@ -450,12 +454,16 @@ class MiniCPM3Attention(nn.Module):
         q_pe, k_pe = apply_rotary_pos_emb(q_pe, k_pe, cos, sin, position_ids)
 
         query_states = ops.zeros((bsz, self.num_heads, q_len, self.q_head_dim), dtype=q_pe.dtype)
-        query_states[:, :, :, : self.qk_nope_head_dim] = q_nope
-        query_states[:, :, :, self.qk_nope_head_dim :] = q_pe
+        # query_states[:, :, :, : self.qk_nope_head_dim] = q_nope
+        # query_states[:, :, :, self.qk_nope_head_dim :] = q_pe
+        query_states = ops.cat([q_nope, q_pe], dim=-1)
 
         key_states = ops.zeros((bsz, self.num_heads, q_len, self.q_head_dim), dtype=k_pe.dtype)
-        key_states[:, :, :, : self.qk_nope_head_dim] = k_nope
-        key_states[:, :, :, self.qk_nope_head_dim :] = k_pe
+        # key_states[:, :, :, : self.qk_nope_head_dim] = k_nope
+        # key_states[:, :, :, self.qk_nope_head_dim :] = k_pe
+        k_pe = ops.broadcast_to(k_pe, (bsz, self.num_heads, q_len, self.qk_rope_head_dim))
+        key_states = ops.cat([k_nope, k_pe], dim=-1)
+
         if past_key_value is not None:
             cache_kwargs = {"sin": sin, "cos": cos}  # Specific to RoPE models
             key_states, value_states = past_key_value.update(
@@ -932,7 +940,8 @@ class MiniCPM3ForCausalLM(MiniCPM3PreTrainedModel):
         position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.int().cumsum(-1) - 1
+            # position_ids = attention_mask.int().cumsum(-1) - 1
+            position_ids = ops.cumsum(attention_mask.int(), -1) - 1
             position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
