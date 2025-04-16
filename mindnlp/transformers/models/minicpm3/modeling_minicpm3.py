@@ -30,6 +30,7 @@ from mindnlp.utils import logging
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from mindnlp.configs import ON_ORANGE_PI
 from ....common.activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache
 from ...modeling_attn_mask_utils import (
@@ -265,8 +266,10 @@ class MiniCPM3MLP(nn.Module):
         self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
         self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
         self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
-        # self.act_fn = ACT2FN[config.hidden_act]
-        self.act_fn = mindspore.ops.silu
+        if ON_ORANGE_PI:
+            self.act_fn = mindspore.ops.silu
+        else:
+            self.act_fn = ACT2FN[config.hidden_act]
 
     def forward(self, x):
         if self.config.pretraining_tp > 1:
