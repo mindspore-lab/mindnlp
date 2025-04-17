@@ -1496,7 +1496,7 @@ class GenerationTesterMixin:
         def _prepare_model_kwargs(input_ids, attention_mask, signature):
             model_kwargs = {"input_ids": input_ids, "attention_mask": attention_mask}
             if "position_ids" in signature:
-                position_ids = ops.cumsum(attention_mask, dim=-1) - 1
+                position_ids = ops.cumsum(attention_mask.int(), dim=-1) - 1
                 position_ids = position_ids.masked_fill(attention_mask == 0, 1)
                 model_kwargs["position_ids"] = position_ids
             if "cache_position" in signature:

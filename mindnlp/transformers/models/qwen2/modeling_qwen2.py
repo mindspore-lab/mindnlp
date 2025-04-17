@@ -27,7 +27,7 @@ from mindnlp.core import nn, ops, get_default_dtype
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindnlp.core.nn import functional as F
 
-from ....common.activations import ACT2FN
+from ...activations import ACT2FN
 from ...cache_utils import Cache, DynamicCache, StaticCache
 from ...modeling_attn_mask_utils import AttentionMaskConverter
 from ...modeling_outputs import (
@@ -37,8 +37,7 @@ from ...modeling_outputs import (
     TokenClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from ....utils import logging
-from ....configs import SUPPORT_VIEW, use_pyboost, ON_ORANGE_PI
+from  mindnlp.utils import logging
 from .configuration_qwen2 import Qwen2Config
 
 
@@ -49,6 +48,7 @@ _CHECKPOINT_FOR_DOC = "Qwen/Qwen2-7B-beta"
 _CONFIG_FOR_DOC = "Qwen2Config"
 
 
+# Copied from transformers.models.llama.modeling_llama._prepare_4d_causal_attention_mask_with_cache_position
 def _prepare_4d_causal_attention_mask_with_cache_position(
     attention_mask: mindspore.Tensor,
     sequence_length: int,
@@ -69,6 +69,8 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
             The sequence length being processed.
         target_length (`int`):
             The target length: when generating with static cache, the mask should be as long as the static cache, to account for the 0 padding, the part of the cache that is not filled yet.
+        dtype (`torch.dtype`):
+            The dtype to use for the 4D attention mask.
         min_dtype (`float`):
             The minimum value representable with the dtype `dtype`.
         cache_position (`mindspore.Tensor`):
@@ -86,10 +88,10 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
         causal_mask *= ops.arange(target_length) > cache_position.reshape(-1, 1)
         causal_mask = causal_mask[None, None, :, :].broadcast_to((batch_size, 1, -1, -1))
         if attention_mask is not None:
-            if SUPPORT_VIEW:
-                causal_mask = causal_mask.contiguous()  # copy to contiguous memory for in-place edit
-            else:
-                causal_mask = causal_mask.copy()
+            # if SUPPORT_VIEW:
+            #     causal_mask = causal_mask.contiguous()  # copy to contiguous memory for in-place edit
+            # else:
+            #     causal_mask = causal_mask.copy()
             mask_length = attention_mask.shape[-1]
             # padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
             padding_mask = ops.narrow(causal_mask, -1, 0, mask_length) + attention_mask[:, None, None, :]
@@ -105,8 +107,8 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
                                 ops.narrow(causal_mask, -1, mask_length, causal_mask.shape[-1] - mask_length)],
                                 dim=-1
                             )
-
     return causal_mask
+
 
 # Copied from transformers.models.llama.modeling_llama.LlamaRMSNorm with Llama->Qwen2
 class Qwen2RMSNorm(nn.Module):
@@ -119,16 +121,18 @@ class Qwen2RMSNorm(nn.Module):
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
-        if not self.training and use_pyboost() and not ON_ORANGE_PI:
-            return F.rms_norm(hidden_states, self.weight, self.variance_epsilon)
+        # if not self.training and use_pyboost() and not ON_ORANGE_PI:
+        #     return F.rms_norm(hidden_states, self.weight, self.variance_epsilon)
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(mindspore.float32)
-        variance = ops.mean(hidden_states.pow(2), -1, keepdim=True)
+        variance = hidden_states.pow(2).mean(-1, keepdim=True)
+        # variance = ops.mean(hidden_states.pow(2), -1, keepdim=True)
         hidden_states = hidden_states * ops.rsqrt(variance + self.variance_epsilon)
         return self.weight * hidden_states.to(input_dtype)
 
     def extra_repr(self):
         return f"{tuple(self.weight.shape)}, eps={self.variance_epsilon}"
+
 
 # Copied from transformers.models.mixtral.modeling_mixtral.MixtralRotaryEmbedding with Mixtral->Qwen2
 class Qwen2RotaryEmbedding(nn.Module):
@@ -170,10 +174,10 @@ class Qwen2RotaryEmbedding(nn.Module):
 # Copied from transformers.models.llama.modeling_llama.rotate_half
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
-    # x1 = x[..., : x.shape[-1] // 2]
-    # x2 = x[..., x.shape[-1] // 2 :]
-    x1, x2 = ops.split(x, x.shape[-1] // 2, dim=-1)
+    x1 = x[..., : x.shape[-1] // 2]
+    x2 = x[..., x.shape[-1] // 2 :]
     return ops.cat((-x2, x1), dim=-1)
+
 
 # Copied from transformers.models.mixtral.modeling_mixtral.apply_rotary_pos_emb
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
@@ -197,9 +201,8 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     Returns:
         `tuple(mindspore.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
-    position_ids = (position_ids + cos.shape[0]) % cos.shape[0]
-    cos = F.embedding(position_ids, cos).unsqueeze(unsqueeze_dim)
-    sin = F.embedding(position_ids, sin).unsqueeze(unsqueeze_dim)
+    cos = cos[position_ids].unsqueeze(unsqueeze_dim)
+    sin = sin[position_ids].unsqueeze(unsqueeze_dim)
     q_embed = (q * cos) + (rotate_half(q) * sin)
     k_embed = (k * cos) + (rotate_half(k) * sin)
     return q_embed, k_embed
@@ -351,7 +354,7 @@ class Qwen2Attention(nn.Module):
 
 
 QWEN2_ATTENTION_CLASSES = {
-    "eager": Qwen2Attention,
+    "eager": Qwen2Attention
 }
 
 
@@ -433,7 +436,6 @@ class Qwen2DecoderLayer(nn.Module):
 
         return outputs
 
-
 class Qwen2PreTrainedModel(PreTrainedModel):
     config_class = Qwen2Config
     base_model_prefix = "model"
@@ -452,7 +454,6 @@ class Qwen2PreTrainedModel(PreTrainedModel):
             nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.padding_idx is not None:
                 module.weight.data[module.padding_idx] = 0
-
 
 class Qwen2Model(Qwen2PreTrainedModel):
     """
@@ -522,8 +523,8 @@ class Qwen2Model(Qwen2PreTrainedModel):
             use_legacy_cache = True
             past_key_values = DynamicCache.from_legacy_cache(past_key_values)
             logger.warning_once(
-                "We detected that you are passing `past_key_values` as a tuple and this is deprecated.43. "
-                "Please use an appropriate `Cache` class"
+                "We detected that you are passing `past_key_values` as a tuple and this is deprecated and will be removed in v4.43. "
+                "Please use an appropriate `Cache` class (https://huggingface.co/docs/transformers/v4.41.3/en/internal/generation_utils#transformers.Cache)"
             )
 
         if inputs_embeds is None:
@@ -610,6 +611,10 @@ class Qwen2Model(Qwen2PreTrainedModel):
         past_key_values: Cache,
         output_attentions: bool,
     ):
+        # TODO: As of torch==2.2.0, the `attention_mask` passed to the model in `generate` is 2D and of dynamic length even when the static
+        # KV cache is used. This is an issue for torch.compile which then recaptures cudagraphs at each decode steps due to the dynamic shapes.
+        # (`recording cudagraph tree for symint key 13`, etc.), which is VERY slow. A workaround is `@torch.compiler.disable`, but this prevents using
+        # `fullgraph=True`. See more context in https://github.com/huggingface/transformers/pull/29114
 
         if self.config._attn_implementation == "flash_attention_2":
             if attention_mask is not None and 0.0 in attention_mask:
@@ -633,7 +638,11 @@ class Qwen2Model(Qwen2PreTrainedModel):
                 return None
 
         dtype = input_tensor.dtype
+        print("dtype******", dtype)
+        print("ops.finfo(dtype).min**********", ops.finfo(dtype).min)
+        print("ops.finfo(dtype).max**********", type(ops.finfo(dtype).min))
         min_dtype = float(ops.finfo(dtype).min)
+        print("min_dtype**********", type(min_dtype))
         sequence_length = input_tensor.shape[1]
         if using_static_cache:
             target_length = past_key_values.get_max_length()
@@ -654,6 +663,16 @@ class Qwen2Model(Qwen2PreTrainedModel):
             cache_position=cache_position,
             batch_size=input_tensor.shape[0],
         )
+
+        if (
+            self.config._attn_implementation == "sdpa"
+            and attention_mask is not None
+            and not output_attentions
+        ):
+            # Attend to all tokens in fully masked rows in the causal_mask, for example the relevant first rows when
+            # using left padding. This is required by F.scaled_dot_product_attention memory-efficient attention path.
+            # Details: https://github.com/pytorch/pytorch/issues/110213
+            causal_mask = AttentionMaskConverter._unmask_unattended(causal_mask, min_dtype)
 
         return causal_mask
 
@@ -720,7 +739,7 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
 
         >>> prompt = "Hey, are you conscious? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="ms")
+        >>> inputs = tokenizer(prompt, return_tensors="pt")
 
         >>> # Generate
         >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
@@ -758,11 +777,12 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
             shift_logits = logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss_fct = CrossEntropyLoss()
+            loss_fct = mindspore.ops.SoftmaxCrossEntropyWithLogits()
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
-            shift_labels = shift_labels.view(-1)
+            shift_labels = nn.functional.one_hot(shift_labels.view(-1), self.config.vocab_size)
             # Enable model parallelism
-            loss = loss_fct(shift_logits, shift_labels)
+            loss, _ = loss_fct(shift_logits, shift_labels.to(shift_logits.dtype))
+            loss = loss.mean()
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -793,32 +813,42 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
         # Exception 2: some generation methods do special slicing of input_ids, so we don't need to do it here
         if past_key_values is not None:
             if inputs_embeds is not None:  # Exception 1
+                print("input_ids***********", input_ids)
+                print("input_ids.shape*********", input_ids.shape)
                 if 0 not in input_ids.shape:
                     input_ids = input_ids[:, -cache_position.shape[0] :]
             elif input_ids.shape[1] != cache_position.shape[0]:  # Default case (the "else", a no op, is Exception 2)
-                input_ids = ops.index_select(input_ids, -1, cache_position)
+                input_ids = input_ids[:, cache_position]
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.int().cumsum(-1) - 1
+            position_ids = ops.cumsum(attention_mask.int(), -1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
 
+                # This `clone` call is needed to avoid recapturing cuda graphs with `torch.compile`'s  `mode="reduce-overhead`, as otherwise the input `position_ids` would have various stride during the decoding. Here, simply using `.contiguous()` is not sufficient as in the batch size = 1 case, `position_ids` is already contiguous but with varying stride which retriggers a capture.
+                # position_ids = position_ids.clone()
+
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
         if inputs_embeds is not None and cache_position[0] == 0:
-            model_inputs = {"inputs_embeds": inputs_embeds}
+            model_inputs = {"inputs_embeds": inputs_embeds, "input_ids": None}
         else:
-            model_inputs = {"input_ids": input_ids}
+            # The clone here is for the same reason as for `position_ids`.
+            model_inputs = {"input_ids": input_ids, "inputs_embeds": None}
 
         if isinstance(past_key_values, StaticCache) and attention_mask.ndim == 2:
-            if inputs_embeds is not None:
-                batch_size, sequence_length = inputs_embeds.shape
+            if model_inputs["inputs_embeds"] is not None:
+                batch_size, sequence_length, _ = model_inputs["inputs_embeds"].shape
             else:
-                batch_size, sequence_length = input_ids.shape
+                batch_size, sequence_length = model_inputs["input_ids"].shape
 
             dtype = self.lm_head.weight.dtype
+            print("dtype******", dtype)
+            print("ops.finfo(dtype).min**********", ops.finfo(dtype).min)
+            print("ops.finfo(dtype).max**********", type(ops.finfo(dtype).min))
             min_dtype = float(ops.finfo(dtype).min)
+            print("min_dtype******", type(min_dtype))
 
             attention_mask = _prepare_4d_causal_attention_mask_with_cache_position(
                 attention_mask,
@@ -840,8 +870,7 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
             }
         )
         return model_inputs
-
-
+    
 class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -910,19 +939,14 @@ class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
             else:
                 sequence_lengths = -1
 
-        if ON_ORANGE_PI:
-            if isinstance(sequence_lengths, mindspore.Tensor):
-                sequence_lengths = sequence_lengths.to(mindspore.int32)
-            pooled_logits = ops.getitem(logits, (ops.arange(batch_size), sequence_lengths))
-        else:
-            pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
+        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
 
         loss = None
         if labels is not None:
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
+                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -934,8 +958,12 @@ class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
                 else:
                     loss = loss_fct(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                # loss_fct = CrossEntropyLoss()
+                loss_fct = mindspore.ops.SoftmaxCrossEntropyWithLogits()
+                labels = nn.functional.one_hot(labels.view(-1), self.num_labels)
+                loss, _ = loss_fct(pooled_logits.view(-1, self.num_labels), labels.to(pooled_logits.dtype))
+                loss = loss.mean()
+
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(pooled_logits, labels)
@@ -950,7 +978,6 @@ class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
             hidden_states=transformer_outputs.hidden_states,
             attentions=transformer_outputs.attentions,
         )
-
 
 # Copied from transformers.models.llama.modeling_llama.LlamaForTokenClassification with Llama->Qwen2, LLAMA->QWEN2
 class Qwen2ForTokenClassification(Qwen2PreTrainedModel):
@@ -1014,8 +1041,10 @@ class Qwen2ForTokenClassification(Qwen2PreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            loss_fct = mindspore.ops.SoftmaxCrossEntropyWithLogits()
+            labels = nn.functional.one_hot(labels.view(-1), self.num_labels)
+            loss, _= loss_fct(logits.view(-1, self.num_labels), labels.to(logits.dtype))
+            loss = loss.mean()
 
         if not return_dict:
             output = (logits,) + outputs[2:]

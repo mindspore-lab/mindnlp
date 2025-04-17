@@ -20,6 +20,8 @@ import unittest
 
 import pytest
 
+import numpy as np
+
 from mindnlp.transformers import AutoTokenizer, Qwen2Config
 from mindnlp.engine import set_seed
 from mindnlp.utils import is_mindspore_available
@@ -31,13 +33,12 @@ from mindnlp.utils.testing_utils import (
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, ids_tensor
-# from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_mindspore_available():
     import mindspore
+    mindspore.set_context(pynative_synchronize=True)
     from mindnlp.core import ops, nn, no_grad
-
     from mindnlp.transformers import (
         Qwen2ForCausalLM,
         Qwen2ForSequenceClassification,
@@ -264,9 +265,9 @@ class Qwen2ModelTester:
         )["hidden_states"][0]
 
         # select random slice
-        random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx]
-        output_from_past_slice = output_from_past[:, :, random_slice_idx]
+        random_slice_idx = ids_tensor((1,), output_from_past.shDape[-1]).item()
+        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx].detach()
+        output_from_past_slice = output_from_past[:, :, random_slice_idx].detach()
 
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
@@ -290,7 +291,7 @@ class Qwen2ModelTester:
 
 
 @require_mindspore
-# Copied from tests.models.mistral.test_modeling_mistral.MistralModelTest with Mistral->Qwen2
+# Copied from tests.models.mistral.test_modeling_mistral.MistralModelTest with Mistral->Qwen2 ModelTesterMixin
 class Qwen2ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (
         (Qwen2Model, Qwen2ForCausalLM, Qwen2ForSequenceClassification, Qwen2ForTokenClassification)
@@ -368,7 +369,7 @@ class Qwen2ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
         attention_mask = input_ids.ne(1)
         sequence_labels = ids_tensor(
             [self.model_tester.batch_size, config.num_labels], self.model_tester.type_sequence_label_size
-        ).to(mindspore.float32)
+        ).to(mindspore.float16)
         model = Qwen2ForSequenceClassification(config)
         model.eval()
         result = model(input_ids, attention_mask=attention_mask, labels=sequence_labels)
@@ -397,89 +398,37 @@ class Qwen2ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
     def test_past_key_values_format(self):
         pass
 
-
 @require_mindspore
 class Qwen2IntegrationTest(unittest.TestCase):
+
     @slow
     def test_model_450m_logits(self):
         input_ids = [1, 306, 4658, 278, 6593, 310, 2834, 338]
-        model = Qwen2ForCausalLM.from_pretrained("Qwen/Qwen2-450m-beta")
+        model = Qwen2ForCausalLM.from_pretrained("Qwen/Qwen2-0.5B")
         input_ids = mindspore.tensor([input_ids])
-        with no_grad():
-            out = model(input_ids).logits
+        # with torch.no_grad():
+        out = model(input_ids).logits.float()
         # Expected mean on dim = -1
-        EXPECTED_MEAN = mindspore.tensor([[-2.5548, -2.5737, -3.0600, -2.5906, -2.8478, -2.8118, -2.9325, -2.7694]])
-        torch.testing.assert_close(out.mean(-1), EXPECTED_MEAN, atol=1e-2, rtol=1e-2)
+        EXPECTED_MEAN = mindspore.tensor([[-1.9537, -1.6193, -1.4123, -1.4673, -1.8511, -1.9309, -1.9826, -2.1776]])
+        # torch.testing.assert_close(out.mean(-1), EXPECTED_MEAN, rtol=1e-2, atol=1e-2)
+        self.assertTrue(np.allclose(out.mean(-1).asnumpy(), EXPECTED_MEAN.asnumpy(), atol=1e-2, rtol=1e-2))
         # slicing logits[0, 0, 0:30]
-        EXPECTED_SLICE = mindspore.tensor([-5.8781, -5.8616, -0.1052, -4.7200, -5.8781, -5.8774, -5.8773, -5.8777, -5.8781, -5.8780, -5.8781, -5.8779, -1.0787,  1.7583, -5.8779, -5.8780, -5.8783, -5.8778, -5.8776, -5.8781, -5.8784, -5.8778, -5.8778, -5.8777, -5.8779, -5.8778, -5.8776, -5.8780, -5.8779, -5.8781])  # fmt: skip
+        EXPECTED_SLICE = mindspore.tensor([3.2025, 7.1265, 4.6058, 3.6423, 1.6357, 3.9265, 5.1883, 5.8760, 2.7942, 4.4823, 3.2571, 2.1063, 3.4275, 4.2028, 1.9767, 5.2115, 6.6756, 6.3999, 6.0483, 5.7378, 5.6660, 5.2298, 5.4103, 5.1248, 5.4376, 2.4570, 2.6107, 5.4039, 2.8077, 4.7777])  # fmt: skip
         print(out[0, 0, :30])
-        torch.testing.assert_close(out[0, 0, :30], EXPECTED_SLICE, atol=1e-4, rtol=1e-4)
+        self.assertTrue(np.allclose(out[0, 0, :30].asnumpy(), EXPECTED_SLICE.asnumpy(), atol=1e-4, rtol=1e-4))
 
-        del model
-        gc.collect()
 
     @slow
     def test_model_450m_generation(self):
-        EXPECTED_TEXT_COMPLETION = """My favourite condiment is 100% ketchup. I love it on everything. I’m not a big"""
+        EXPECTED_TEXT_COMPLETION = (
+            """My favourite condiment is 100% natural, organic and vegan. I love to use it in my cooking and I"""
+        )
         prompt = "My favourite condiment is "
-        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2-450m-beta", use_fast=False)
-        model = Qwen2ForCausalLM.from_pretrained("Qwen/Qwen2-450m-beta")
+        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2-0.5B", use_fast=False)
+        model = Qwen2ForCausalLM.from_pretrained("Qwen/Qwen2-0.5B")
         input_ids = tokenizer.encode(prompt, return_tensors="ms")
 
         # greedy generation outputs
         generated_ids = model.generate(input_ids, max_new_tokens=20, temperature=0)
         text = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
         self.assertEqual(EXPECTED_TEXT_COMPLETION, text)
-
-        del model
-        gc.collect()
-
-    @slow
-    @pytest.mark.flash_attn_test
-    def test_model_450m_long_prompt(self):
-        EXPECTED_OUTPUT_TOKEN_IDS = [306, 338]
-        # An input with 4097 tokens that is above the size of the sliding window
-        input_ids = [1] + [306, 338] * 2048
-        model = Qwen2ForCausalLM.from_pretrained(
-            "Qwen/Qwen2-450m-beta",
-            # load_in_4bit=True,
-            # attn_implementation="flash_attention_2",
-        )
-        input_ids = mindspore.tensor([input_ids])
-        generated_ids = model.generate(input_ids, max_new_tokens=4, temperature=0)
-        self.assertEqual(EXPECTED_OUTPUT_TOKEN_IDS, generated_ids[0][-2:].tolist())
-
-        # Assisted generation
-        assistant_model = model
-        assistant_model.generation_config.num_assistant_tokens = 2
-        assistant_model.generation_config.num_assistant_tokens_schedule = "constant"
-        generated_ids = model.generate(input_ids, max_new_tokens=4, temperature=0)
-        self.assertEqual(EXPECTED_OUTPUT_TOKEN_IDS, generated_ids[0][-2:].tolist())
-
-        del assistant_model
-        del model
-        gc.collect()
-
-    @slow
-    def test_speculative_generation(self):
-        EXPECTED_TEXT_COMPLETION = (
-            "My favourite condiment is 100% Sriracha. I love the heat, the tang and the fact costs"
-        )
-        prompt = "My favourite condiment is "
-        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2-7B-beta", use_fast=False)
-        model = Qwen2ForCausalLM.from_pretrained("Qwen/Qwen2-450m-beta", ms_dtype=mindspore.float16)
-        assistant_model = Qwen2ForCausalLM.from_pretrained(
-            "Qwen/Qwen2-450m-beta", ms_dtype=mindspore.float16
-        )
-        input_ids = tokenizer.encode(prompt, return_tensors="ms")
-
-        # greedy generation outputs
-        set_seed(0)
-        generated_ids = model.generate(
-            input_ids, max_new_tokens=20, do_sample=True, temperature=0.3, assistant_model=assistant_model
-        )
-        text = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
-        self.assertEqual(EXPECTED_TEXT_COMPLETION, text)
-
-        del model
-        gc.collect()

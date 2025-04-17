@@ -22,7 +22,6 @@ import numpy as np
 import mindspore
 from mindnlp.core import ops, nn, no_grad
 from mindnlp.configs import ON_ORANGE_PI
-from mindnlp.transformers.ms_utils import isin_friendly
 
 from ...utils.logging import get_logger
 
@@ -512,7 +511,9 @@ class TopPLogitsWarper(LogitsWarper):
         # to a 3D tensor of shape (batch_size, vocab_size, 2) containing the original score coordinate, from which we
         # can scatter (i.e. `scatter_indices[row, col, :]` is a tensor containing `[row, topk_indices[row, col]]`)
         scatter_rows = ops.tile(ops.unsqueeze(ops.range(topk_indices.shape[0]), dim=-1), (1, topk_indices.shape[-1]))
-        scatter_indices = ops.stack((scatter_rows.to(topk_indices.dtype), topk_indices), dim=-1)
+        scatter_indices = ops.stack((scatter_rows, topk_indices), dim=-1)
+        #scatter_indices = ops.stack((scatter_rows.to(topk_indices.dtype), topk_indices), dim=-1)
+
         next_scores = ops.tf_scatter_nd(scatter_indices, topk_next_scores, shape=topk_next_scores.shape)
 
         return next_scores
@@ -1883,7 +1884,7 @@ class SuppressTokensLogitsProcessor(LogitsProcessor):
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         vocab_tensor = ops.arange(scores.shape[-1])
-        suppress_token_mask = isin_friendly(vocab_tensor, self.suppress_tokens)
+        suppress_token_mask = ops.isin(vocab_tensor, self.suppress_tokens)
         scores = ops.where(suppress_token_mask, -float("inf"), scores)
         return scores
 
@@ -2021,8 +2022,8 @@ class WhisperTimeStampLogitsProcessor(LogitsProcessor):
                 else:  # cannot be normal text tokens
                     scores_processed[k, : self.eos_token_id] = float(ops.finfo(scores.dtype).min)
 
-            timestamps = sampled_tokens[ops.ge(sampled_tokens, self.timestamp_begin)]
-            # timestamps = ops.masked_select(sampled_tokens, ops.ge(sampled_tokens, self.timestamp_begin))
+            # timestamps = sampled_tokens[ops.ge(sampled_tokens, self.timestamp_begin)]
+            timestamps = ops.masked_select(sampled_tokens, ops.ge(sampled_tokens, self.timestamp_begin))
             if timestamps.numel() > 0:
                 # `timestamps` shouldn't decrease; forbid timestamp tokens smaller than the last
                 # The following lines of code are copied from: https://github.com/openai/whisper/pull/914/files#r1137085090

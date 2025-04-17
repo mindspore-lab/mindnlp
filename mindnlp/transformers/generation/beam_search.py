@@ -289,12 +289,19 @@ class BeamSearchScorer(BeamScorer):
         for i in range(batch_size):
             beam_hyps_in_batch = self._beam_hyps[i * self.num_beam_groups : (i + 1) * self.num_beam_groups]
             candidate_beams = [beam for beam_hyp in beam_hyps_in_batch for beam in beam_hyp.beams]
+            print("candidate_beams********", candidate_beams)
+            print("candidate_beams.type********", type(candidate_beams))
             sorted_hyps = sorted(candidate_beams, key=lambda x: x[0])
             for j in range(self.num_beam_hyps_to_keep):
                 best_hyp_tuple = sorted_hyps.pop()
+                print("best_hyp_tuple********", best_hyp_tuple)
+                print("best_hyp_tuple.type********", type(best_hyp_tuple))
                 best_score = best_hyp_tuple[0]
                 best_hyp = best_hyp_tuple[1]
+                print("best_hyp***************", type(best_hyp))
                 best_index = best_hyp_tuple[2]
+                print("best_index***************", type(best_index))
+                
                 sent_lengths[self.num_beam_hyps_to_keep * i + j] = len(best_hyp)
 
                 # append hyp to lists
@@ -329,7 +336,8 @@ class BeamSearchScorer(BeamScorer):
             decoded[i, : sent_lengths[i]] = hypo
 
             if indices is not None:
-                indices[i, : len(best_idx)] = best_idx
+                # indices[i, : len(best_idx)] = best_idx
+                indices[i, : len(best_idx)] = mindspore.Tensor(best_idx, dtype=indices.dtype)
 
             if sent_lengths[i] < sent_max_len:
                 # inserting only the first eos_token_id
@@ -832,7 +840,8 @@ class ConstrainedBeamSearchScorer(BeamScorer):
             decoded[i, : sent_lengths[i]] = hypo
 
             if indices is not None:
-                indices[i, : len(best_idx)] = best_idx
+                # indices[i, : len(best_idx)] = best_idx
+                indices[i, : len(best_idx)] = mindspore.Tensor(best_idx, dtype=indices.dtype)
 
             if sent_lengths[i] < sent_max_len:
                 # inserting only the first eos_token_id
