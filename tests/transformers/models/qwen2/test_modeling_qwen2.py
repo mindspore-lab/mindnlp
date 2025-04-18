@@ -37,7 +37,6 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 if is_mindspore_available():
     import mindspore
     from mindnlp.core import ops, nn, no_grad
-
     from mindnlp.transformers import (
         Qwen2ForCausalLM,
         Qwen2ForSequenceClassification,

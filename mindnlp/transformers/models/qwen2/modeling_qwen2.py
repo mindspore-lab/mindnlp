@@ -758,11 +758,12 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
             shift_logits = logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss_fct = CrossEntropyLoss()
+            loss_fct = mindspore.ops.SoftmaxCrossEntropyWithLogits()
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
-            shift_labels = shift_labels.view(-1)
+            shift_labels = nn.functional.one_hot(shift_labels.view(-1), self.config.vocab_size)
             # Enable model parallelism
-            loss = loss_fct(shift_logits, shift_labels)
+            loss, _ = loss_fct(shift_logits, shift_labels.to(shift_logits.dtype))
+            loss = loss.mean()
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -934,8 +935,10 @@ class Qwen2ForSequenceClassification(Qwen2PreTrainedModel):
                 else:
                     loss = loss_fct(pooled_logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+                loss_fct = mindspore.ops.SoftmaxCrossEntropyWithLogits()
+                labels = nn.functional.one_hot(labels.view(-1), self.num_labels)
+                loss, _ = loss_fct(pooled_logits.view(-1, self.num_labels), labels.to(pooled_logits.dtype))
+                loss = loss.mean()
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(pooled_logits, labels)
@@ -1014,8 +1017,10 @@ class Qwen2ForTokenClassification(Qwen2PreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            loss_fct = mindspore.ops.SoftmaxCrossEntropyWithLogits()
+            labels = nn.functional.one_hot(labels.view(-1), self.num_labels)
+            loss, _= loss_fct(logits.view(-1, self.num_labels), labels.to(logits.dtype))
+            loss = loss.mean()
 
         if not return_dict:
             output = (logits,) + outputs[2:]
