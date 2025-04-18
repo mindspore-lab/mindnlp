@@ -329,7 +329,7 @@ class BeamSearchScorer(BeamScorer):
             decoded[i, : sent_lengths[i]] = hypo
 
             if indices is not None:
-                indices[i, : len(best_idx)] = best_idx
+                indices[i, : len(best_idx)] = mindspore.Tensor(best_idx, dtype=indices.dtype)
 
             if sent_lengths[i] < sent_max_len:
                 # inserting only the first eos_token_id
@@ -832,7 +832,7 @@ class ConstrainedBeamSearchScorer(BeamScorer):
             decoded[i, : sent_lengths[i]] = hypo
 
             if indices is not None:
-                indices[i, : len(best_idx)] = best_idx
+                indices[i, : len(best_idx)] = mindspore.Tensor(best_idx, dtype=indices.dtype)
 
             if sent_lengths[i] < sent_max_len:
                 # inserting only the first eos_token_id

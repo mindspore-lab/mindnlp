@@ -533,7 +533,7 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
                 updates = moveaxis(
                     updates, range_(batch_start, batch_size), range(batch_size)
                 )
-            tensor = ops.tensor_scatter_update(tensor, stacked_indices, updates)
+            tensor = ops.tensor_scatter_update(tensor, stacked_indices, updates.to(tensor.dtype))
             if range(len(dims)) != dims:
                 tensor = moveaxis(tensor, range(len(dims)), dims)
             return strided_slice_update(
