@@ -18,8 +18,10 @@ from collections import OrderedDict
 
 import mindspore
 
+from mindnlp.core.serialization import safe_load_file
+
 from .peft_types import PeftType
-from .constants import WEIGHTS_NAME
+from .constants import WEIGHTS_NAME, SAFETENSORS_WEIGHTS_NAME
 
 def get_data_list(param_dict):
     """Get state dict of the Peft model for saving."""
@@ -198,11 +200,15 @@ def load_peft_weights(model_id: str,) -> dict:
     """
     path = model_id
 
-    filename = os.path.join(path, WEIGHTS_NAME)
-    if not os.path.exists(filename):
-        # TODO: add download logic later
-        raise ValueError(f"load peft model failed, peft model file: {filename} not exists.")
+    safe_filename = os.path.join(path, SAFETENSORS_WEIGHTS_NAME)
+    ckpt_filename = os.path.join(path, WEIGHTS_NAME)
 
-    adapters_weights = mindspore.load_checkpoint(filename)
+    if os.path.exists(safe_filename):
+        adapters_weights = safe_load_file(safe_filename)
+    elif os.path.exists(ckpt_filename):
+        adapters_weights = mindspore.load_checkpoint(ckpt_filename)
+    else:
+        # TODO: add download logic later
+        raise ValueError(f"load peft model failed, peft model file: neither {ckpt_filename} nor {safe_filename} was found.")
 
     return adapters_weights

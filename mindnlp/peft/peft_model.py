@@ -23,6 +23,7 @@ from typing import Dict, Optional
 import mindspore
 from mindspore import Tensor
 from mindspore.train.serialization import _exec_save
+from mindnlp.core.serialization import safe_save_file
 
 from mindnlp.core import nn, ops
 from mindnlp.core.nn import functional as F
@@ -45,7 +46,7 @@ from .tuners import (
     LNTuningModel,
 )
 from .utils import (
-    # SAFETENSORS_WEIGHTS_NAME,
+    SAFETENSORS_WEIGHTS_NAME,
     TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING,
     WEIGHTS_NAME,
     PeftType,
@@ -124,7 +125,7 @@ class PeftModel(nn.Module):
         # if hasattr(self.base_model, "config") and hasattr(self.base_model.config, "pretraining_tp"):
         #     self.base_model.config.pretraining_tp = 1
 
-    def save_pretrained(self, save_directory, **kwargs):
+    def save_pretrained(self, save_directory, safe_serialization=False, **kwargs):
         r"""
         This function saves the adapter model and the adapter configuration files to a directory, so that it can be
         reloaded using the [`LoraModel.from_pretrained`] class method, and also used by the [`LoraModel.push_to_hub`]
@@ -144,10 +145,17 @@ class PeftModel(nn.Module):
             output_dir = os.path.join(save_directory, adapter_name) if adapter_name != "default" else save_directory
             os.makedirs(output_dir, exist_ok=True)
 
-            _exec_save(
-                ckpt_file_name=os.path.join(output_dir, WEIGHTS_NAME),
-                data_list=output_state_dict,
-            )
+            if safe_serialization:
+                safe_output_state_dict = {k : Tensor(v[2]).reshape(v[0]) for k, v in output_state_dict.items()}
+                safe_save_file(
+                    safe_output_state_dict,
+                    os.path.join(output_dir, SAFETENSORS_WEIGHTS_NAME),
+                )
+            else:
+                _exec_save(
+                    ckpt_file_name=os.path.join(output_dir, WEIGHTS_NAME),
+                    data_list=output_state_dict,
+                )
 
             # save the config and change the inference mode to `True`
             if peft_config.base_model_name_or_path is None:
