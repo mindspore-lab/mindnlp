@@ -801,7 +801,7 @@ class Qwen2ForCausalLM(Qwen2PreTrainedModel):
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.int().cumsum(-1) - 1
+            position_ids = ops.cumsum(attention_mask.int(), -1) - 1
             position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
