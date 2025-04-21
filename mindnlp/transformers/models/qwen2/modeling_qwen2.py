@@ -23,7 +23,7 @@ import math
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindnlp.core import nn, ops, get_default_dtype
+from mindnlp.core import nn, ops, get_default_dtype, no_grad
 from mindnlp.core.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindnlp.core.nn import functional as F
 
@@ -36,6 +36,7 @@ from ...modeling_outputs import (
     SequenceClassifierOutputWithPast,
     TokenClassifierOutput,
 )
+from ...modeling_rope_utils import ROPE_INIT_FUNCTIONS
 from ...modeling_utils import PreTrainedModel
 from ....utils import logging
 from ....configs import SUPPORT_VIEW, use_pyboost, ON_ORANGE_PI
@@ -132,39 +133,86 @@ class Qwen2RMSNorm(nn.Module):
 
 # Copied from transformers.models.mixtral.modeling_mixtral.MixtralRotaryEmbedding with Mixtral->Qwen2
 class Qwen2RotaryEmbedding(nn.Module):
-    def __init__(self, dim, max_position_embeddings=2048, base=10000):
+    def __init__(
+        self,
+        dim=None,
+        max_position_embeddings=2048,
+        base=10000,
+        scaling_factor=1.0,
+        rope_type="default",
+        config: Optional[Qwen2Config] = None,
+    ):
         super().__init__()
+        # TODO (joao): remove the `if` below, only used for BC
+        self.rope_kwargs = {}
+        if config is None:
+            logger.warning_once(
+                "`Qwen2RotaryEmbedding` can now be fully parameterized by passing the model config through the "
+                "`config` argument. All other arguments will be removed"
+            )
+            self.rope_kwargs = {
+                "rope_type": rope_type,
+                "factor": scaling_factor,
+                "dim": dim,
+                "base": base,
+                "max_position_embeddings": max_position_embeddings,
+            }
+            self.rope_type = rope_type
+            self.max_seq_len_cached = max_position_embeddings
+            self.original_max_seq_len = max_position_embeddings
+        else:
+            # BC: "rope_type" was originally "type"
+            if config.rope_scaling is not None:
+                self.rope_type = config.rope_scaling.get("rope_type", config.rope_scaling.get("type"))
+            else:
+                self.rope_type = "default"
+            self.max_seq_len_cached = config.max_position_embeddings
+            self.original_max_seq_len = config.max_position_embeddings
 
-        self.dim = dim
-        self.max_position_embeddings = max_position_embeddings
-        self.base = base
-        inv_freq = 1.0 / (self.base ** (ops.arange(0, self.dim, 2, dtype=mindspore.int64).float() / self.dim))
+        self.config = config
+        self.rope_init_fn = ROPE_INIT_FUNCTIONS[self.rope_type]
+
+        inv_freq, self.attention_scaling = self.rope_init_fn(self.config, **self.rope_kwargs)
         self.register_buffer("inv_freq", inv_freq, persistent=False)
+        self.original_inv_freq = self.inv_freq
 
-        # Build here to make `torch.jit.trace` work.
-        self._set_cos_sin_cache(
-            seq_len=max_position_embeddings, dtype=get_default_dtype()
-        )
+    def _dynamic_frequency_update(self, position_ids):
+        """
+        dynamic RoPE layers should recompute `inv_freq` in the following situations:
+        1 - growing beyond the cached sequence length (allow scaling)
+        2 - the current sequence length is in the original scale (avoid losing precision with small sequences)
+        """
+        seq_len = ops.max(position_ids) + 1
+        if seq_len > self.max_seq_len_cached:  # growth
+            inv_freq, self.attention_scaling = self.rope_init_fn(
+                self.config, seq_len=seq_len, **self.rope_kwargs
+            )
+            self.register_buffer("inv_freq", inv_freq, persistent=False)  # TODO joao: may break with compilation
+            self.max_seq_len_cached = seq_len
 
-    def _set_cos_sin_cache(self, seq_len, dtype):
-        self.max_seq_len_cached = seq_len
-        t = ops.arange(self.max_seq_len_cached, dtype=mindspore.int64).type_as(self.inv_freq)
+        if seq_len < self.original_max_seq_len and self.max_seq_len_cached > self.original_max_seq_len:  # reset
+            self.register_buffer("inv_freq", self.original_inv_freq, persistent=False)
+            self.max_seq_len_cached = self.original_max_seq_len
 
-        freqs = ops.outer(t, self.inv_freq)
-        # Different from paper, but it uses a different permutation in order to obtain the same calculation
+    @no_grad()
+    def forward(self, x, position_ids):
+        if "dynamic" in self.rope_type:
+            self._dynamic_frequency_update(position_ids)
+
+        # Core RoPE block
+        inv_freq_expanded = ops.broadcast_to(self.inv_freq.view(1, -1, 1).float(), (position_ids.shape[0], -1, 1))
+        position_ids_expanded = ops.unsqueeze(position_ids, 1).float()
+        # Force float32 (see https://github.com/huggingface/transformers/pull/29285)
+        freqs = ops.transpose(ops.matmul(inv_freq_expanded.float(), position_ids_expanded.float()), 1, 2)
         emb = ops.cat((freqs, freqs), dim=-1)
-        self.register_buffer("cos_cached", emb.cos().to(dtype), persistent=False)
-        self.register_buffer("sin_cached", emb.sin().to(dtype), persistent=False)
+        cos = emb.cos()
+        sin = emb.sin()
 
-    def forward(self, x, seq_len=None):
-        # x: [bs, num_attention_heads, seq_len, head_size]
-        if seq_len > self.max_seq_len_cached:
-            self._set_cos_sin_cache(seq_len=seq_len, dtype=x.dtype)
+        # Advanced RoPE types (e.g. yarn) apply a post-processing scaling factor, equivalent to scaling attention
+        cos = cos * self.attention_scaling
+        sin = sin * self.attention_scaling
 
-        return (
-            self.cos_cached[:seq_len].to(dtype=x.dtype),
-            self.sin_cached[:seq_len].to(dtype=x.dtype),
-        )
+        return cos.to(dtype=x.dtype), sin.to(dtype=x.dtype)
 
 
 # Copied from transformers.models.llama.modeling_llama.rotate_half
@@ -176,7 +224,7 @@ def rotate_half(x):
     return ops.cat((-x2, x1), dim=-1)
 
 # Copied from transformers.models.mixtral.modeling_mixtral.apply_rotary_pos_emb
-def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
+def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
     """Applies Rotary Position Embedding to the query and key tensors.
 
     Args:
@@ -197,9 +245,8 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     Returns:
         `tuple(mindspore.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
-    position_ids = (position_ids + cos.shape[0]) % cos.shape[0]
-    cos = F.embedding(position_ids, cos).unsqueeze(unsqueeze_dim)
-    sin = F.embedding(position_ids, sin).unsqueeze(unsqueeze_dim)
+    cos = cos.unsqueeze(unsqueeze_dim)
+    sin = sin.unsqueeze(unsqueeze_dim)
     q_embed = (q * cos) + (rotate_half(q) * sin)
     k_embed = (k * cos) + (rotate_half(k) * sin)
     return q_embed, k_embed
@@ -270,11 +317,12 @@ class Qwen2Attention(nn.Module):
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=True)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
 
-        self.rotary_emb = Qwen2RotaryEmbedding(
-            self.head_dim,
-            max_position_embeddings=self.max_position_embeddings,
-            base=self.rope_theta,
-        )
+        self.rotary_emb = Qwen2RotaryEmbedding(config=self.config)
+        # self.rotary_emb = Qwen2RotaryEmbedding(
+        #     self.head_dim,
+        #     max_position_embeddings=self.max_position_embeddings,
+        #     base=self.rope_theta,
+        # )
 
     def forward(
         self,
@@ -285,6 +333,7 @@ class Qwen2Attention(nn.Module):
         output_attentions: bool = False,
         use_cache: bool = False,
         cache_position: Optional[mindspore.Tensor] = None,
+        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         bsz, q_len, _ = hidden_states.shape
 
@@ -296,16 +345,25 @@ class Qwen2Attention(nn.Module):
         key_states = ops.transpose(key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim), 1, 2)
         value_states = ops.transpose(value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim), 1, 2)
 
-        kv_seq_len = key_states.shape[-2]
-        if past_key_value is not None:
-            if self.layer_idx is None:
-                raise ValueError(
-                    f"The cache structure has changed since version v4.36. If you are using {self.__class__.__name__} "
-                    "for auto-regressive decoding with k/v caching, please make sure to initialize the attention class "
-                    "with a layer index."
-                )
-            kv_seq_len += past_key_value.get_usable_length(kv_seq_len, self.layer_idx)
-        cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
+        # kv_seq_len = key_states.shape[-2]
+        # if past_key_value is not None:
+        #     if self.layer_idx is None:
+        #         raise ValueError(
+        #             f"The cache structure has changed since version v4.36. If you are using {self.__class__.__name__} "
+        #             "for auto-regressive decoding with k/v caching, please make sure to initialize the attention class "
+        #             "with a layer index."
+        #         )
+        #     kv_seq_len += past_key_value.get_usable_length(kv_seq_len, self.layer_idx)
+        # cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
+        if position_embeddings is None:
+            logger.warning_once(
+                "The attention layers in this model are transitioning from computing the RoPE embeddings internally "
+                "through `position_ids` (2D tensor with the indexes of the tokens), to using externally computed "
+                "`position_embeddings` (Tuple of tensors, containing cos and sin)."
+            )
+            cos, sin = self.rotary_emb(value_states, position_ids)
+        else:
+            cos, sin = position_embeddings
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
 
         if past_key_value is not None:
@@ -318,11 +376,11 @@ class Qwen2Attention(nn.Module):
 
         attn_weights = ops.matmul(query_states, ops.transpose(key_states, 2, 3)) / math.sqrt(self.head_dim)
 
-        if attn_weights.shape != (bsz, self.num_heads, q_len, kv_seq_len):
-            raise ValueError(
-                f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"
-                f" {attn_weights.shape}"
-            )
+        # if attn_weights.shape != (bsz, self.num_heads, q_len, kv_seq_len):
+        #     raise ValueError(
+        #         f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"
+        #         f" {attn_weights.shape}"
+        #     )
 
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
@@ -380,6 +438,7 @@ class Qwen2DecoderLayer(nn.Module):
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = False,
         cache_position: Optional[mindspore.Tensor] = None,
+        position_embeddings: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,
         **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """
@@ -414,6 +473,7 @@ class Qwen2DecoderLayer(nn.Module):
             output_attentions=output_attentions,
             use_cache=use_cache,
             cache_position=cache_position,
+            position_embeddings=position_embeddings,
         )
         hidden_states = residual + hidden_states
 
@@ -441,6 +501,8 @@ class Qwen2PreTrainedModel(PreTrainedModel):
     _no_split_modules = ["Qwen2DecoderLayer"]
     _skip_keys_device_placement = "past_key_values"
     _supports_cache_class = True
+    # _supports_quantized_cache = True
+    _supports_static_cache = True
 
     def _init_weights(self, module):
         std = self.config.initializer_range
@@ -473,8 +535,9 @@ class Qwen2Model(Qwen2PreTrainedModel):
         )
         self._attn_implementation = config._attn_implementation
         self.norm = Qwen2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-
+        self.rotary_emb = Qwen2RotaryEmbedding(config=config)
         self.gradient_checkpointing = False
+
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -505,29 +568,31 @@ class Qwen2Model(Qwen2PreTrainedModel):
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        if (input_ids is None) ^ (inputs_embeds is not None):
-            raise ValueError(
-                "You cannot specify both input_ids and inputs_embeds at the same time, and must specify either one"
-            )
-
-        if self.gradient_checkpointing and self.training:
-            if use_cache:
-                logger.warning_once(
-                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
+        if not self.skip_syntax:
+            if (input_ids is None) ^ (inputs_embeds is not None):
+                raise ValueError(
+                    "You cannot specify both input_ids and inputs_embeds at the same time, and must specify either one"
                 )
-                use_cache = False
 
-        use_legacy_cache = False
-        if use_cache and not isinstance(past_key_values, Cache) and not self.training:
-            use_legacy_cache = True
-            past_key_values = DynamicCache.from_legacy_cache(past_key_values)
+        if self.gradient_checkpointing and self.training and use_cache:
             logger.warning_once(
-                "We detected that you are passing `past_key_values` as a tuple and this is deprecated.43. "
-                "Please use an appropriate `Cache` class"
+                "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`."
             )
+            use_cache = False
 
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
+
+        return_legacy_cache = False
+        if (
+            use_cache and not isinstance(past_key_values, Cache) and not self.training
+        ):  # kept for BC (non `Cache` `past_key_values` inputs)
+            return_legacy_cache = True
+            past_key_values = DynamicCache.from_legacy_cache(past_key_values)
+            logger.warning_once(
+                "We detected that you are passing `past_key_values` as a tuple and this is deprecated. "
+                "Please use an appropriate `Cache` class"
+            )
 
         if cache_position is None:
             past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
@@ -540,15 +605,17 @@ class Qwen2Model(Qwen2PreTrainedModel):
         causal_mask = self._update_causal_mask(
             attention_mask, inputs_embeds, cache_position, past_key_values, output_attentions
         )
-
         hidden_states = inputs_embeds
+
+        # create position embeddings to be shared across the decoder layers
+        position_embeddings = self.rotary_emb(hidden_states, position_ids)
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
 
-        for decoder_layer in self.layers:
+        for decoder_layer in self.layers._modules.values():
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
@@ -562,6 +629,7 @@ class Qwen2Model(Qwen2PreTrainedModel):
                     output_attentions,
                     use_cache,
                     cache_position,
+                    position_embeddings,
                 )
             else:
                 layer_outputs = decoder_layer(
@@ -572,6 +640,7 @@ class Qwen2Model(Qwen2PreTrainedModel):
                     output_attentions=output_attentions,
                     use_cache=use_cache,
                     cache_position=cache_position,
+                    position_embeddings=position_embeddings,
                 )
 
             hidden_states = layer_outputs[0]
@@ -588,9 +657,9 @@ class Qwen2Model(Qwen2PreTrainedModel):
         if output_hidden_states:
             all_hidden_states += (hidden_states,)
 
-        next_cache = None
-        if use_cache:
-            next_cache = next_decoder_cache.to_legacy_cache() if use_legacy_cache else next_decoder_cache
+        next_cache = next_decoder_cache if use_cache else None
+        if return_legacy_cache:
+            next_cache = next_cache.to_legacy_cache()
 
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
