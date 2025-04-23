@@ -15,6 +15,7 @@
 """ Qwen2 model configuration"""
 
 from mindnlp.utils import logging
+from ...modeling_rope_utils import rope_config_validation
 from ...configuration_utils import PretrainedConfig
 
 
@@ -112,6 +113,7 @@ class Qwen2Config(PretrainedConfig):
         use_cache=True,
         tie_word_embeddings=False,
         rope_theta=10000.0,
+        rope_scaling=None,
         use_sliding_window=False,
         sliding_window=4096,
         max_window_layers=28,
@@ -169,7 +171,13 @@ class Qwen2Config(PretrainedConfig):
         self.rms_norm_eps = rms_norm_eps
         self.use_cache = use_cache
         self.rope_theta = rope_theta
+        self.rope_scaling = rope_scaling
         self.attention_dropout = attention_dropout
+        # Validate the correctness of rotary position embeddings parameters
+        # BC: if there is a 'type' field, move it to 'rope_type'.
+        if self.rope_scaling is not None and "type" in self.rope_scaling:
+            self.rope_scaling["rope_type"] = self.rope_scaling["type"]
+        rope_config_validation(self)
 
         super().__init__(
             tie_word_embeddings=tie_word_embeddings,
