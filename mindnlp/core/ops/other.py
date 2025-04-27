@@ -10,6 +10,9 @@ from mindnlp.configs import use_pyboost, ON_ORANGE_PI, SUPPORT_BF16
 from .reduction import any
 from .comparison import eq
 
+from mindspore._c_expression import typing
+from mindspore._c_expression.typing import Type
+
 # atleast_2d
 
 
@@ -698,8 +701,89 @@ def masked_fill(input, mask, value):
     masked_fill_ = _get_cache_prim(ops.MaskedFill)()
     return masked_fill_(input, mask, mindspore.tensor(value, dtype=input.dtype))
 
-def finfo(dtype):
-    return np.finfo(mindspore.dtype_to_nptype(dtype))
+def is_complex(weight):
+    return weight.dtype in (mindspore.complex64, mindspore.complex128)
+
+dtype = Type
+float16 = typing.kFloat16
+float32 = typing.kFloat32
+bfloat16 = typing.kBFloat16
+
+bits_map = {
+
+}
+
+min_map = {
+    float32: -3.40282e+38,
+    float16: -65504,
+    bfloat16: -3.38953e+38
+}
+
+max_map = {
+    float32: 3.40282e+38,
+    float16: 65504,
+    bfloat16: 3.38953e+38
+}
+
+eps_map = {
+    float32: 1.19209e-07,
+    float16: 0.000976562,
+    bfloat16: 0.0078125
+}
+
+tiny_map = {
+    float32: 1.17549e-38,
+    float16: 6.10352e-05,
+    bfloat16: 1.17549e-38
+}
+
+smallest_normal_map = {
+    float32: 1.17549e-38,
+    float16: 6.10352e-05,
+    bfloat16: 1.17549e-38
+}
+
+resolution_map = {
+    float32: 1e-06,
+    float16: 0.001,
+    bfloat16: 0.01
+}
+
+class finfo:
+    def __init__(self, dtype):
+        self._dtype = dtype
+
+    @property
+    def bits(self):
+        return bits_map[self._dtype]
+
+    @property
+    def min(self):
+        return min_map[self._dtype]
+
+    @property
+    def max(self):
+        return max_map[self._dtype]
+
+    @property
+    def eps(self):
+        return eps_map[self._dtype]
+
+    @property
+    def tiny(self):
+        return tiny_map[self._dtype]
+
+    @property
+    def smallest_normal(self):
+        return smallest_normal_map[self._dtype]
+
+    @property
+    def resolution(self):
+        return resolution_map[self._dtype]
+
+    @property
+    def dtype(self):
+        return str(self._dtype)
 
 def iinfo(dtype):
     return np.iinfo(mindspore.dtype_to_nptype(dtype))
