@@ -38,9 +38,9 @@ def generate_global_variables(file_path):
     new_lines = lines[:]
     offset = 0
     for func_name, line_no in sorted(function_positions.items(), key=lambda x: x[1]):
-        # Test if the function exists in mindspore.mint
+    
         if hasattr(mindspore.mint, func_name):
-            # Insert global variable if not already present
+          
             variable_declaration = f"has_{func_name} = hasattr(mindspore.mint, '{func_name}')"
             if variable_declaration not in existing_globals:
                 new_lines.insert(line_no + offset, variable_declaration + "\n")
