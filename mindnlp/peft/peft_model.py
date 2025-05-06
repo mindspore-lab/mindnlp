@@ -125,7 +125,7 @@ class PeftModel(nn.Module):
         # if hasattr(self.base_model, "config") and hasattr(self.base_model.config, "pretraining_tp"):
         #     self.base_model.config.pretraining_tp = 1
 
-    def save_pretrained(self, save_directory, safe_serialization=False, **kwargs):
+    def save_pretrained(self, save_directory, safe_serialization=True, **kwargs):
         r"""
         This function saves the adapter model and the adapter configuration files to a directory, so that it can be
         reloaded using the [`LoraModel.from_pretrained`] class method, and also used by the [`LoraModel.push_to_hub`]
