@@ -74,7 +74,10 @@ def isinf(input):
 # isneginf
 
 # isnan
+has_isnan = hasattr(mindspore.mint, 'isnan')
 def isnan(input):
+    if use_pyboost() and has_isnan:
+        return mindspore.mint.isnan(input)
     if input.dtype in (mindspore.int32, mindspore.int64):
         input = input.to(mindspore.float32)
     return ops.isnan(input)
