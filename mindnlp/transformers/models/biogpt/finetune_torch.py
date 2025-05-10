@@ -8,6 +8,7 @@ import numpy as np
 import os
 import json
 from datetime import datetime
+from sklearn.metrics import accuracy_score
 import re
 
 # 设置超参数
@@ -22,29 +23,39 @@ output_dir = f"outputs/{current_time}"
 
 # 加载 BioGPT 模型和 Tokenizer
 peft_config = PrefixTuningConfig(task_type=TaskType.CAUSAL_LM, inference_mode=False, num_virtual_tokens=9)
-model_path = '/tmp/pretrainmodel/biogpt'
-model = BioGptForCausalLM.from_pretrained(model_path)
+local_model_path = "/tmp/pretrainmodel/biogpt"
+model = BioGptForCausalLM.from_pretrained(local_model_path, local_files_only=True)
+# print(model)
+tokenizer = BioGptTokenizer.from_pretrained(local_model_path, local_files_only=True)
 model = get_peft_model(model, peft_config)
-model.print_trainable_parameters()
-tokenizer = BioGptTokenizer.from_pretrained(model_path)
 
 # 数据加载和预处理
-def process_func(question, context, label, tokenizer, max_len=max_length):
+def process_func(question, context, long_answer, label, tokenizer, max_len=max_length):
     context = ' '.join(sen.strip() for sen in context)
     context = re.sub(r'\n', ' ', context)
+    # remove duplicate spaces
     context = re.sub(r'\s+', ' ', context)
-    texts = "question: {} context: {} ".format(question.strip(), context.strip())
+    texts = "question: {}.context: {}.answer:{}.".format(question.strip(), context.strip(), long_answer.strip())
     labels = 'the answer to the question given the context is ' + label.strip() + '.'
     
     # 使用 tokenizer 对文本进行编码
-    text_encoding = tokenizer(texts, return_tensors='pt', max_length=max_len, padding='max_length', truncation=True)
-    labels_encoding = tokenizer(labels, return_tensors='pt', max_length=max_len, padding='max_length', truncation=True)
-    
-    input_ids = text_encoding["input_ids"].flatten()
-    attention_mask = text_encoding["attention_mask"].flatten()
-    labels = labels_encoding["input_ids"].flatten()
-    
-    return {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
+    text_encoding = tokenizer(texts)
+    labels_encoding = tokenizer(labels)
+    input_ids = text_encoding["input_ids"] + labels_encoding["input_ids"]
+    attention_mask = text_encoding["attention_mask"] + labels_encoding["attention_mask"]
+    labels = [-100] * len(text_encoding["input_ids"]) + labels_encoding["input_ids"]
+    if len(input_ids) >  max_len:  # 做一个截断
+        input_ids = input_ids[: max_len]
+        attention_mask = attention_mask[: max_len]
+        labels = labels[: max_len]
+    else:
+        pad_lenth = max_len - len(input_ids)
+        input_ids +=[tokenizer.pad_token_id]*pad_lenth
+        attention_mask +=[0]*pad_lenth
+        labels += [tokenizer.pad_token_id]*pad_lenth
+
+    return {'input_ids':input_ids, 'attention_mask':attention_mask, 'labels':labels}
+
 
 # 加载数据集
 dataset_path = 'PubMedQA'
@@ -56,9 +67,9 @@ with open(os.path.join(dataset_path, 'test_set.json'), 'r') as file:
     test_set = json.load(file)
 
 # 处理训练、验证和测试数据
-processed_train_data = [process_func(item['QUESTION'], item['CONTEXTS'], item['final_decision'], tokenizer) for item in train_set.values()]
-processed_val_data = [process_func(item['QUESTION'], item['CONTEXTS'], item['final_decision'], tokenizer) for item in val_set.values()]
-processed_test_data = [process_func(item['QUESTION'], item['CONTEXTS'], item['final_decision'], tokenizer) for item in test_set.values()]
+processed_train_data = [process_func(item['QUESTION'], item['CONTEXTS'], item['LONG_ANSWER'], item['final_decision'], tokenizer) for item in train_set.values()]
+processed_val_data = [process_func(item['QUESTION'], item['CONTEXTS'], item['LONG_ANSWER'], item['final_decision'], tokenizer) for item in val_set.values()]
+processed_test_data = [process_func(item['QUESTION'], item['CONTEXTS'], item['LONG_ANSWER'], item['final_decision'], tokenizer) for item in test_set.values()]
 
 # 创建 PyTorch Dataset
 class PubMedQADataset(Dataset):
@@ -93,9 +104,12 @@ for epoch in range(num_epochs):
     model.train()
     total_loss = 0
     for batch in tqdm(train_dataloader, desc=f"Training Epoch {epoch}"):
-        input_ids = batch['input_ids'].to(device)
-        attention_mask = batch['attention_mask'].to(device)
-        labels = batch['labels'].to(device)
+        input_ids=torch.stack(batch['input_ids'], dim=1)
+        attention_mask = torch.stack(batch["attention_mask"], dim=1)
+        labels = torch.stack(batch["labels"], dim=1)
+        input_ids = input_ids.to(device)
+        attention_mask = attention_mask.to(device)
+        labels = labels.to(device)
         
         optimizer.zero_grad()
         outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
@@ -112,9 +126,12 @@ for epoch in range(num_epochs):
     eval_loss = 0
     with torch.no_grad():
         for batch in tqdm(eval_dataloader, desc=f"Evaluating Epoch {epoch}"):
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
-            labels = batch['labels'].to(device)
+            input_ids=torch.stack(batch['input_ids'], dim=1)
+            attention_mask = torch.stack(batch["attention_mask"], dim=1)
+            labels = torch.stack(batch["labels"], dim=1)
+            input_ids = input_ids.to(device)
+            attention_mask = attention_mask.to(device)
+            labels = labels.to(device)
             
             outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
             loss = outputs.loss
