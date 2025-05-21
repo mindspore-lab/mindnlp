@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# from . import configuration_qwen3_moe, modeling_qwen3_moe
-# from .configuration_qwen3_moe import *
-# from .modeling_qwen3_moe import *
+from . import configuration_qwen3_moe, modeling_qwen3_moe
+from .configuration_qwen3_moe import *
+from .modeling_qwen3_moe import *
 __all__ = []
-# __all__.extend(configuration_qwen3_moe.__all__)
-# __all__.extend(modeling_qwen3_moe.__all__)
+__all__.extend(configuration_qwen3_moe.__all__)
+__all__.extend(modeling_qwen3_moe.__all__)
