@@ -433,6 +433,7 @@ from .qdqbert import *
 from .qwen2 import *
 from .qwen2_moe import *
 from .qwen2_vl import *
+from .qwen3 import *
 from .rag import *
 from .realm import *
 from .reformer import *
@@ -678,6 +679,7 @@ __all__.extend(qdqbert.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
 __all__.extend(qwen2_vl.__all__)
+__all__.extend(qwen3.__all__)
 __all__.extend(rag.__all__)
 __all__.extend(realm.__all__)
 __all__.extend(reformer.__all__)
