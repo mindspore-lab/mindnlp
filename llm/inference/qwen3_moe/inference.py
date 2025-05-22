@@ -1,20 +1,17 @@
 import mindspore as ms
 from mindspore.communication import init
-from mindnlp.transformers import Qwen3MoeConfig, Qwen3MoeForCausalLM, Qwen3MoeForCausalLM
 from mindnlp.transformers import AutoModelForCausalLM, AutoTokenizer, Qwen2TokenizerFast
 init()
-ms.set_context(
-    mode=ms.PYNATIVE_MODE,
-    pynative_synchronize=True,)
-# model_name = "Qwen/Qwen3-30B-A3B"
-model_name = "/mnt/data/zqh/llm/Qwen3-30B-A3B"
+# ms.set_context(
+#     mode=ms.PYNATIVE_MODE,
+#     pynative_synchronize=True) # synchronize for debug convenience
+model_name = "Qwen/Qwen3-30B-A3B"
 
-# load the tokenizer and the model
-tokenizer = Qwen2TokenizerFast.from_pretrained("/mnt/data/zqh/llm/Qwen2.5-0.5B-Instruct")
-# tokenizer = Qwen2TokenizerFast.from_pretrained("/mnt/data/zqh/llm/Qwen3-30B-A3B")
+
+tokenizer = Qwen2TokenizerFast.from_pretrained("Qwen/Qwen2.5-0.5B-Instruct")
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
-    ms_dtype=ms.float16,
+    ms_dtype=ms.bfloat16, # on Atlas A2
     device_map='auto'
 )
 
@@ -27,7 +24,8 @@ text = tokenizer.apply_chat_template(
     messages,
     tokenize=False,
     add_generation_prompt=True,
-    enable_thinking=True # Switches between thinking and non-thinking modes. Default is True.
+    enable_thinking=True, # Switches between thinking and non-thinking modes. Default is True.
+    do_sample=False
 )
 model_inputs = tokenizer([text], return_tensors="ms")
 # conduct text completion
@@ -49,3 +47,4 @@ content = tokenizer.decode(output_ids[index:], skip_special_tokens=True).strip("
 
 print("thinking content:", thinking_content)
 print("content:", content)
+# Usage: msrun --worker_num=2 --local_worker_num=2  --master_port 9989 --log_dir=msrun_log --join=True  inference.py
