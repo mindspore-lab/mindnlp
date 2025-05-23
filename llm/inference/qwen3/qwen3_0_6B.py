@@ -9,7 +9,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_name,
                                           use_fast=False)
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
-    ms_dtype=mindspore.float16,
+    ms_dtype=mindspore.bfloat16,
 )
 
 # prepare the model input
