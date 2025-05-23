@@ -703,7 +703,6 @@ class DeepseekAttention(nn.Module):
                 "Passing `padding_mask` is deprecated and will be removed in v4.37. Please make sure use `attention_mask` instead.`"
             )
         bsz, q_len, _ = hidden_states.shape
-        hidden_states = hidden_states.to(mindspore.float16)
 
         if self.config.pretraining_tp > 1:
             key_value_slicing = (self.num_key_value_heads * self.head_dim) // self.config.pretraining_tp
@@ -1177,7 +1176,7 @@ class DeepseekForCausalLM(DeepseekPreTrainedModel):
         )
 
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
-        
+
         outputs = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
