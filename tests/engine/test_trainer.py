@@ -164,7 +164,7 @@ class DynamicShapesDataset:
         return self.xs[i], self.ys[i]
 
 
-class AlmostAccuracy:
+class Almost:
     def __init__(self, thresh=0.25):
         self.thresh = thresh
 

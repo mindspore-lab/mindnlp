@@ -149,7 +149,7 @@ def threads_exclusive_http_get(url, storage_folder=None, md5sum=None, download_f
     if sys.platform != "win32":
         import fcntl # pylint: disable=import-error
     else:
-        import winfcntlock as fcntl # pylint: disable=import-error
+        from . import winfcntlock as fcntl # pylint: disable=import-error
     with open(lock_file_path, 'w') as lock_file:
         fd = lock_file.fileno()
         try:
