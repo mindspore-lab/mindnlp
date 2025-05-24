@@ -408,7 +408,10 @@ def normalize(input, p=2.0, dim=1, eps=1e-6):
     The Lp norm is defined as the p-th root of the sum of the absolute values raised to the power of 'p'.
     The resulting tensor will have the same shape as the input tensor.
     """
-    return input / ops.norm(input, ord=p, dim=dim, keepdim=True)
+    if ON_ORANGE_PI:
+        return input / ops.norm(input, ord=p, dim=dim, keepdim=True)
+    else:
+        return input / mindspore.mint.norm(input, p, dim, keepdim=True)
 
 def batch_norm(input, running_mean, running_var, weight=None, bias=None, training=False, momentum=0.1, eps=1e-05):
 
@@ -476,6 +479,10 @@ def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode
         output_1d = output_2d.squeeze(2)
         return output_1d
 
+def addcmul_cpu(input, tensor1, tensor2, value=1):
+    if not isinstance(value, mindspore.Tensor):
+        value = mindspore.Tensor(value, dtype=input.dtype)
+    return input + value*tensor1*tensor2
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if use_pyboost():
@@ -491,7 +498,10 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     affine_param_shape[1] = C
     affine_param_shape = tuple(affine_param_shape)
     if weight is not None and bias is not None:
-        out = bias.view(affine_param_shape).addcmul(out, weight.view(affine_param_shape), 1)
+        if not ON_ORANGE_PI:
+            out = bias.view(affine_param_shape).addcmul(out, weight.view(affine_param_shape), 1)
+        else:
+            out = addcmul(bias.view(affine_param_shape), out, weight.view(affine_param_shape), 1)
     elif weight is not None:
         out = out.mul(weight.view(affine_param_shape))
     elif bias is not None:

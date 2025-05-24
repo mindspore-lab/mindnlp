@@ -127,7 +127,7 @@ class AttentionMaskConverter:
         expanded_attn_mask = self._expand_mask(attention_mask_2d, dtype, tgt_len=input_shape[-1])
 
         if causal_4d_mask is not None:
-            expanded_attn_mask = causal_4d_mask.masked_fill(expanded_attn_mask.bool(), float(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
+            expanded_attn_mask = causal_4d_mask.masked_fill(expanded_attn_mask.bool(), float(ops.finfo(dtype).min))
 
         # expanded_attn_mask + causal_4d_mask can cause some overflow
         expanded_4d_mask = expanded_attn_mask
@@ -145,7 +145,7 @@ class AttentionMaskConverter:
         Make causal mask used for bi-directional self-attention.
         """
         bsz, tgt_len = input_ids_shape
-        mask = ops.full((tgt_len, tgt_len), mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min), dtype=dtype)
+        mask = ops.full((tgt_len, tgt_len), mindspore.tensor(ops.finfo(dtype).min), dtype=dtype)
         mask_cond = ops.arange(mask.shape[-1])
         mask = mask.masked_fill(mask_cond < (mask_cond + 1).view(mask.shape[-1], 1), 0)
 
@@ -159,7 +159,7 @@ class AttentionMaskConverter:
             diagonal = past_key_values_length - sliding_window + 1
 
             context_mask = 1 - ops.triu(ops.ones_like(mask, dtype=mindspore.int32), diagonal=diagonal)
-            mask = mask.masked_fill(context_mask.bool(), mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
+            mask = mask.masked_fill(context_mask.bool(), mindspore.tensor(ops.finfo(dtype).min))
 
         return mask[None, None, :, :].broadcast_to((bsz, 1, tgt_len, tgt_len + past_key_values_length))
 
@@ -175,7 +175,7 @@ class AttentionMaskConverter:
 
         inverted_mask = 1.0 - expanded_mask
 
-        return inverted_mask.masked_fill(inverted_mask.to(mindspore.bool_), mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
+        return inverted_mask.masked_fill(inverted_mask.to(mindspore.bool_), mindspore.tensor(ops.finfo(dtype).min))
 
     @staticmethod
     def _unmask_unattended(
