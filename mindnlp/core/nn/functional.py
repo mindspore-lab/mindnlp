@@ -408,7 +408,10 @@ def normalize(input, p=2.0, dim=1, eps=1e-6):
     The Lp norm is defined as the p-th root of the sum of the absolute values raised to the power of 'p'.
     The resulting tensor will have the same shape as the input tensor.
     """
-    return input / ops.norm(input, ord=p, dim=dim, keepdim=True)
+    if ON_ORANGE_PI:
+        return input / ops.norm(input, ord=p, dim=dim, keepdim=True)
+    else:
+        return input / mindspore.mint.norm(input, p, dim, keepdim=True)
 
 def batch_norm(input, running_mean, running_var, weight=None, bias=None, training=False, momentum=0.1, eps=1e-05):
 

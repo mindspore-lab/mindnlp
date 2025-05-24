@@ -21,6 +21,7 @@
 from dataclasses import dataclass, field
 from typing import List
 
+from mindnlp.configs import ON_ORANGE_PI
 import mindspore
 # import mindspore.ops as ops
 import mindnlp.core.ops as ops
@@ -303,7 +304,7 @@ class VectorQuantizer(nn.Module):
         # shape = (batch, channel, height, width) if channel_first else (batch, height, width, channel)
         if self.l2_norm:
             print("self.embedding.weight.dtype:", self.embedding.weight.dtype)
-            embedding = F.normalize(self.embedding.weight.astype(mindspore.float16), p=2, dim=-1)
+            embedding = F.normalize(self.embedding.weight, p=2, dim=-1)
             # embedding = normalize_np(self.embedding.weight, p=2, dim=-1)
         else:
             embedding = self.embedding.weight
@@ -412,7 +413,7 @@ class AttnBlock(nn.Module):
         h_ = h_.reshape(b, c, h, w)
         print("h_.dtype:",h_.dtype)
 
-        h_ = self.proj_out(h_.astype(mindspore.float16))
+        h_ = self.proj_out(h_)
 
         return x + h_
 
@@ -444,10 +445,12 @@ class Upsample(nn.Module):
 
     def forward(self, x):
         if x.dtype != mindspore.float32:
-            x = F.interpolate(x.astype(mstype.float32), scale_factor=2.0, mode="nearest", recompute_scale_factor=True).astype(mstype.float16)
+            if ON_ORANGE_PI:
+                x = F.interpolate(x.astype(mstype.float32), scale_factor=2.0, mode="nearest", recompute_scale_factor=True).astype(mstype.float16)
+            else: # On A2
+                x = F.interpolate(x.astype(mstype.float32), scale_factor=2.0, mode="nearest", recompute_scale_factor=True).astype(mstype.bfloat16)
         else:
             x = F.interpolate(x, scale_factor=2.0, mode="nearest", recompute_scale_factor=True)
-
         if self.with_conv:
             x = self.conv(x)
         return x

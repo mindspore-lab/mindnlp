@@ -223,7 +223,7 @@ class MultiModalityCausalLM(MultiModalityPreTrainedModel):
     def prepare_inputs_embeds(
         self,
         input_ids: mindspore.int64,
-        pixel_values: mindspore.float32,
+        pixel_values,
         images_seq_mask: mindspore.int64,
         images_emb_mask: mindspore.int64,
         **kwargs,
@@ -277,11 +277,11 @@ class MultiModalityCausalLM(MultiModalityPreTrainedModel):
         last_true = images_seq_mask.nonzero().squeeze()[-1][1] # 42
         print("first_true:",first_true)
         print("last_true:",last_true)
-        left = inputs_embeds[:,:first_true].astype(mindspore.float32)
+        left = inputs_embeds[:,:first_true]
         print(left.shape)
-        right = inputs_embeds[:, last_true+1:].astype(mindspore.float32)
+        right = inputs_embeds[:, last_true+1:]
         print(right.shape)
-        inputs_embeds = ops.cat((left, images_embeds.astype(mindspore.float32), right),1)
+        inputs_embeds = ops.cat((left, images_embeds, right),1)
         print("inputs_embeds.shape:",inputs_embeds.shape)
         print("inputs_embeds.dtype:",inputs_embeds.dtype)
 

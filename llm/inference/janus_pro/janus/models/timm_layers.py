@@ -15,8 +15,6 @@ from mindnlp.core.nn import Module
 from mindnlp.core import ops
 import mindnlp.core.nn.functional as F
 import numpy as np
-from mindnlp.configs import set_pyboost
-set_pyboost(False)
 # ============ Mlp ======================
 class Mlp(nn.Module):
     """ MLP as used in Vision Transformer, MLP-Mixer and related networks

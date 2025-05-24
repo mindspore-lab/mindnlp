@@ -2,12 +2,11 @@ import mindspore
 from mindnlp.transformers import AutoModelForCausalLM
 from janus.models import MultiModalityCausalLM, VLChatProcessor
 from janus.utils.io import load_pil_images
-from mindnlp.configs import set_pyboost, use_pyboost
-from mindnlp.core import nn, Tensor
+from mindnlp.configs import use_pyboost
 from mindnlp.core import no_grad
 
-from mindnlp.configs import use_pyboost, set_pyboost
-print('use_pyboost:', use_pyboost())  # 这里默认是False
+from mindnlp.configs import use_pyboost, ON_ORANGE_PI
+print('use_pyboost:', use_pyboost()) 
 mindspore.set_context(
     mode=mindspore.PYNATIVE_MODE,
     pynative_synchronize=True,
@@ -15,20 +14,19 @@ mindspore.set_context(
     # mode=mindspore.GRAPH_MODE,
     # jit_config={"jit_level":"O2"},
     ascend_config={"precision_mode": "allow_mix_precision"})
-print(mindspore.get_context("mode"))
 # specify the path to the model
-model_path = "/home/HwHiAiUser/Janus-Pro-1B"
+model_path = "/mnt/data/zqh/llm/Janus-Pro-7B"
 print('start load processor')
 vl_chat_processor: VLChatProcessor = VLChatProcessor.from_pretrained(
     model_path)
 tokenizer = vl_chat_processor.tokenizer
 print('loaded processor')
 vl_gpt: MultiModalityCausalLM = AutoModelForCausalLM.from_pretrained(
-    model_path, trust_remote_code=True, ms_dtype=mindspore.float16
+    model_path, trust_remote_code=True, ms_dtype=mindspore.bfloat16
 )
 print('loaded processor and ckpt ')
 question = 'describe this image'
-image = "/home/HwHiAiUser/janus-pro-mindspore/inpain_model_cat.png"
+image = "/mnt/data/zqh/mindnlp/llm/inference/janus_pro/inpain_model_cat.png"
 conversation = [
     {
         "role": "<|User|>",
@@ -45,8 +43,11 @@ prepare_inputs = vl_chat_processor(
 )
 print('process inputs')
 # # run image encoder to get the image embeddings
+if ON_ORANGE_PI:
+    prepare_inputs.pixel_values = prepare_inputs.pixel_values.astype(mindspore.float16)
+else:
+    prepare_inputs.pixel_values = prepare_inputs.pixel_values.astype(mindspore.bfloat16)
 inputs_embeds = vl_gpt.prepare_inputs_embeds(**prepare_inputs)
-print('prepare inputs')
 with no_grad():
     # # run the model to get the response
     outputs = vl_gpt.language_model.generate(
