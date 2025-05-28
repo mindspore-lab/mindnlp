@@ -13,20 +13,77 @@
 # limitations under the License.
 # ============================================================================
 """fcntl replacement for Windows."""
-import win32con # pylint: disable=import-error
-import pywintypes # pylint: disable=import-error
-import win32file # pylint: disable=import-error
+import msvcrt
+import os
+import errno
 
 
-LOCK_EX = win32con.LOCKFILE_EXCLUSIVE_LOCK
-LOCK_SH = 0  # The default value
-LOCK_NB = win32con.LOCKFILE_FAIL_IMMEDIATELY
-__overlapped = pywintypes.OVERLAPPED()
+# fcntl-style operation flags (subset).
+LOCK_SH = 0x01  # Shared lock (mapped to read lock)
+LOCK_EX = 0x02  # Exclusive lock
+LOCK_NB = 0x04  # Non-blocking
+LOCK_UN = 0x08  # Unlock
 
-def lock(file, flags):
-    hfile = win32file._get_osfhandle(file.fileno())
-    win32file.LockFileEx(hfile, flags, 0, 0xffff0000, __overlapped)
+__all__ = [
+    "flock",
+    "LOCK_SH",
+    "LOCK_EX",
+    "LOCK_NB",
+    "LOCK_UN",
+]
 
-def unlock(file):
-    hfile = win32file._get_osfhandle(file.fileno())
-    win32file.UnlockFileEx(hfile, 0, 0xffff0000, __overlapped)
+
+def _get_fd(fd_or_fileobj):
+    """Return an OS-level file descriptor from int or file object."""
+    if isinstance(fd_or_fileobj, int):
+        return fd_or_fileobj
+    if hasattr(fd_or_fileobj, "fileno"):
+        return fd_or_fileobj.fileno()
+    raise TypeError("flock: fd must be int or file object with fileno().")
+
+
+_def_rlck = hasattr(msvcrt, "LK_RLCK")  # Not available on very old runtimes.
+
+
+def flock(fd, operation):
+    """A minimal replacement for *nix fcntl.flock* based on *msvcrt.locking*.
+
+    Only the patterns used inside mindnlp are implemented (exclusive lock
+    and unlock, optionally combined with LOCK_NB). Shared locks are
+    mapped to the *read lock* variant where the runtime provides it, or
+    to an exclusive lock otherwise.
+    """
+    fd_int = _get_fd(fd)
+
+    if operation & LOCK_UN:
+        # Release the (single-byte) lock.
+        msvcrt.locking(fd_int, msvcrt.LK_UNLCK, 1)
+        return
+
+    non_block = bool(operation & LOCK_NB)
+
+    # Determine requested lock mode.
+    if operation & LOCK_EX:
+        mode = msvcrt.LK_NBLCK if non_block else msvcrt.LK_LOCK
+    elif operation & LOCK_SH:
+        if _def_rlck:
+            mode = msvcrt.LK_NBRLCK if non_block else msvcrt.LK_RLCK
+        else:
+            mode = msvcrt.LK_NBLCK if non_block else msvcrt.LK_LOCK
+    else:
+        raise ValueError("flock(): must specify LOCK_EX or LOCK_SH")
+
+    try:
+        msvcrt.locking(fd_int, mode, 1)
+    except OSError as e:
+        # Translate resource conflicts into BlockingIOError for parity
+        # with Unix semantics when non-blocking.
+        if non_block and e.errno in (errno.EACCES, errno.EAGAIN):
+            raise BlockingIOError from e
+        raise
+
+# Provide aliases expected by download.py (if any).
+flock.LOCK_EX = LOCK_EX  # type: ignore
+flock.LOCK_SH = LOCK_SH  # type: ignore
+flock.LOCK_NB = LOCK_NB  # type: ignore
+flock.LOCK_UN = LOCK_UN  # type: ignore
