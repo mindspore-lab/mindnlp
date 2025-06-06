@@ -12,6 +12,7 @@ class Parameter(Tensor):
         self.param_info.name = str(uuid.uuid4())
         self.param_info.parameter_shape = self.shape
         self.param_info.requires_grad = requires_grad
+        self.grad = None
         self.requires_grad = requires_grad
 
     def __deepcopy__(self, memodict):
