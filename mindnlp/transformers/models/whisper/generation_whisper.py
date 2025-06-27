@@ -1451,7 +1451,7 @@ class WhisperGenerationMixin(GenerationMixin):
 
         logits[:, non_lang_mask] = -np.inf
 
-        lang_ids = logits.argmax(-1)
+        lang_ids = ops.argmax(logits, -1)
 
         return lang_ids
 

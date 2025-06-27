@@ -12,6 +12,15 @@ from .. import functional as F
 from ... import ops
 
 
+has_new_conv1d = False
+try:
+    from mindspore.ops.function.nn_func import pad_ext
+    from mindspore.ops.auto_generate.gen_ops_prim import conv1d_ext_op, conv1d_padding_op
+    has_new_conv1d = True
+except ImportError:
+    pass
+
+
 class _ConvNd(Module):
 
     __constants__ = ['stride', 'padding', 'dilation', 'groups',
@@ -182,9 +191,29 @@ class Conv1d(_ConvNd):
         super().__init__(
             in_channels, out_channels, kernel_size_, stride_, padding_, dilation_,
             False, _single(0), groups, bias, padding_mode, **factory_kwargs)
-
+        
+        if has_new_conv1d:
+            if isinstance(padding, str) and padding_mode == "zeros":
+                self.conv1d = conv1d_padding_op
+            else:
+                self.conv1d = conv1d_ext_op
+        else:
+            pad_mode, pad = self._get_2d_padding(padding)
+            self.conv2d = mops.Conv2D(out_channel=self.out_channels,
+                                    kernel_size=(1,) + self.kernel_size,
+                                    mode=1,
+                                    pad_mode=pad_mode,
+                                    pad=pad,
+                                    stride=(1,) + self.stride,
+                                    dilation=(1,) + self.dilation,
+                                    group=self.groups)
+    
+    def _get_2d_padding(self, padding):
+        if self.padding_mode != 'zeros':
+            return 'valid', (0,) * 4
+        if not isinstance(padding, (int, tuple)):
+            return padding, (0,) * 4
         pad_mode = 'valid'
-        pad = padding
         if isinstance(padding, tuple):
             if padding[0] != 0:
                 pad_mode = 'pad'
@@ -193,23 +222,9 @@ class Conv1d(_ConvNd):
             if padding != 0:
                 pad_mode = 'pad'
             pad = (0, 0) + (padding,) * 2
-        if not isinstance(padding, (int, tuple)):
-            pad_mode = padding
-            pad = (0,) * 4
-
-        if self.padding_mode != 'zeros':
-            pad_mode = 'valid'
-            pad = (0,) * 4
-        self.conv2d = mops.Conv2D(out_channel=self.out_channels,
-                                kernel_size=(1,) + self.kernel_size,
-                                mode=1,
-                                pad_mode=pad_mode,
-                                pad=pad,
-                                stride=(1,) + self.stride,
-                                dilation=(1,) + self.dilation,
-                                group=self.groups)
-
-    def forward(self, input):
+        return pad_mode, pad
+    
+    def _apply_old_conv1d(self, input):
         if self.padding_mode != 'zeros':
             input = F.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode)
         input = input.expand_dims(2)
@@ -220,6 +235,16 @@ class Conv1d(_ConvNd):
 
         output = output.squeeze(2)
         return output
+        
+    def forward(self, input):
+        if has_new_conv1d:
+            if self.padding_mode != "zeros":
+                output = self.conv1d(pad_ext(input, self._reversed_padding_repeated_twice, mode=self.padding_mode), self.weight,
+                                    self.bias, self.stride, (0,), self.dilation, self.groups)
+            else:
+                output = self.conv1d(input, self.weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
+            return output
+        return self._apply_old_conv1d(input)
 
 
 class Conv2d(_ConvNd):
