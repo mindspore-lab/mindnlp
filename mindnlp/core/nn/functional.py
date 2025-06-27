@@ -14,6 +14,8 @@ from mindnlp.configs import DEVICE_TARGET, ON_ORANGE_PI, use_pyboost
 def gelu(input, approximate='none'):
     if use_pyboost():
         return mindspore.mint.nn.functional.gelu(input, approximate=approximate)
+    if ON_ORANGE_PI:
+        return mindspore.mint.nn.functional.gelu(input, approximate=approximate)
     return ops.gelu(input, approximate)
 
 def relu(input):
