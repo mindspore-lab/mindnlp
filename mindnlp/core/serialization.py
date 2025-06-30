@@ -45,6 +45,7 @@ from mindspore.train.serialization import (
 
 import safetensors
 import safetensors.numpy
+from safetensors import deserialize
 
 from mindnlp.core import nn
 from mindnlp.core.nn import Parameter
@@ -1575,6 +1576,48 @@ class fast_safe_open:
         return self.tensors[name].get()
 
 
+def legacy_safe_load_file(filename):
+    """
+    This function safely loads a file containing state dictionary data and converts it into a dictionary of MindSpore Parameters.
+    
+    Args:
+        filename (str): The path to the file containing the state dictionary data to be loaded.
+    
+    Returns:
+        dict: A dictionary where keys are parameter names and values are MindSpore Parameters.
+    
+    Raises:
+        FileNotFoundError: If the specified file 'filename' does not exist.
+        ValueError: If the data in the file is not in the correct format to create MindSpore Parameters.
+    """
+    with open(filename, "rb") as f:
+        data = f.read()
+
+    safeview = deserialize(data)
+
+    result = {}
+    try:
+        for k, v in safeview:
+            dtype = _MS_TYPES[v["dtype"]]
+            if (not SUPPORT_BF16 and dtype != mindspore.bfloat16) or SUPPORT_BF16:
+                arr = Tensor.convert_bytes_to_tensor(bytes(v["data"]), tuple(v["shape"]), dtype)
+                result[k] = Tensor(arr)
+            else:
+                raise TypeError('Do not support bfloat16 on current device, use numpy as convert buffer to boost load.')
+        return result
+
+    except Exception as e:
+        for k, v in safeview:
+            dtype = _NP_TYPES[v["dtype"]]
+            arr = np.frombuffer(v["data"], dtype=dtype).reshape(v["shape"])
+
+            if (not SUPPORT_BF16 and dtype != bfloat16) or SUPPORT_BF16:
+                result[k] = Tensor.from_numpy(arr)
+            else:
+                result[k] = Tensor.from_numpy(arr.astype(np.float16))
+        return result
+
+
 def safe_load_file(filename):
     """
     This function safely loads a file containing state dictionary data and converts it into a dictionary of MindSpore Parameters.
@@ -1591,9 +1634,12 @@ def safe_load_file(filename):
     """
 
     result = {}
-    with fast_safe_open(filename, framework="np") as f:
-        for k in f.keys():
-            result[k] = f.get_tensor(k)
+    try:
+        with fast_safe_open(filename, framework="np") as f:
+            for k in f.keys():
+                result[k] = f.get_tensor(k)
+    except Exception as e:
+        result = legacy_safe_load_file(filename)
     return result
 
 
