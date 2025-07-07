@@ -26,10 +26,9 @@ def relu(input, inplace=False):
     return execute('relu', input)
 
 def tanh(input, inplace=False):
-    if inplace:
-        execute('inplace_tanh', input)
-        return input
-    return execute('tanh', input)
+    if use_pyboost():
+        return mint.nn.functional.tanh(input)
+    return ops.tanh(input)
 
 
 def sigmoid(input):
