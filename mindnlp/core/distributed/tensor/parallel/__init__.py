@@ -1,0 +1,2 @@
+ColwiseParallel = None
+RowwiseParallel = None

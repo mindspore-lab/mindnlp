@@ -20,23 +20,20 @@ import os
 import sys
 import platform
 from packaging import version
-import importlib
 
+# huggingface env
 if os.environ.get('HF_ENDPOINT', None) is None:
     os.environ["HF_ENDPOINT"] = 'https://hf-mirror.com'
-os.environ["MS_DEV_FORCE_ACL"] = '1'
-os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+
+# for huawei cloud modelarts
 if 'RANK_TABLE_FILE' in os.environ:
     del os.environ['RANK_TABLE_FILE']
-DEVICE_TARGET = os.environ.get('DEVICE_TARGET', None)
 
 import mindspore
 from mindspore import context
 from mindspore._c_expression import MSContext # pylint: disable=no-name-in-module, import-error
 
-if DEVICE_TARGET is not None and DEVICE_TARGET in ('CPU', 'GPU', 'Ascend'):
-    context.set_context(device_target=DEVICE_TARGET)
-
+# for different ascend devices
 if platform.system().lower() == 'linux':
     SOC = MSContext.get_instance().get_ascend_soc_version()
     if ('910b' not in SOC and '310' not in SOC) or version.parse(mindspore.__version__) < version.parse('2.4.0'):
@@ -45,12 +42,15 @@ if platform.system().lower() == 'linux':
     if SOC in ('ascend910', 'ascend310b'):
         context.set_context(ascend_config={"precision_mode": "allow_mix_precision"})
 
-if version.parse(mindspore.__version__) < version.parse('2.3.0'):
-    mindspore.mint = None
+# set mindnlp.core to torch
+from .utils.torch_proxy import initialize_torch_proxy, setup_metadata_patch
+from .utils.safetensors_patch import setup_safetensors_patch
+from .core._tensor import enable_mindspore_patch
 
-# from . import integrations
+enable_mindspore_patch()
+initialize_torch_proxy()
+setup_metadata_patch()
+setup_safetensors_patch()
+
+from . import core
 from . import transformers
-from . import evaluate
-from . import peft
-
-__all__ = ['transformers', 'evaluate']

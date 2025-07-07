@@ -171,7 +171,6 @@ setup(
         'pyctcdecode',
         'pytest==7.2.0',
         'pillow>=10.0.0',
-        'mindtorch@git+https://openi.pcl.ac.cn/lvyufeng/mindtorch.git'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License'

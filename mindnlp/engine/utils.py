@@ -29,7 +29,7 @@ import numpy as np
 import mindspore
 
 from mindnlp.core import ops
-from mindnlp.core.nn import functional as F
+from core.nn import functional as F
 from mindnlp.configs import GENERATOR_SEED
 from mindnlp.utils import is_mindspore_available, ExplicitEnum
 

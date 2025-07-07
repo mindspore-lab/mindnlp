@@ -33,7 +33,7 @@ from bitsandbytes.utils import (
 )
 
 from mindnlp.core import nn
-from mindnlp.core.nn import Parameter
+from core.nn import Parameter
 
 
 def empty(*size, dtype=None):
