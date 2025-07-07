@@ -22,7 +22,7 @@ from bitsandbytes.nn.modules import Int8Params
 import bitsandbytes as bnb
 
 from mindnlp.core import nn
-from mindnlp.core.nn import Parameter
+from core.nn import Parameter
 
 logger = logging.getLogger(__name__)
 

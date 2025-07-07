@@ -15,14 +15,53 @@
 setup packpage
 """
 import os
+import sys
 import stat
 import shlex
 import shutil
 import subprocess
+import sysconfig
 from setuptools import find_packages
 from setuptools import setup
 from setuptools.command.egg_info import egg_info
 from setuptools.command.build_py import build_py
+from setuptools.command.install import install
+
+def _create_namespace_links():
+    # 获取目标路径 (site-packages/mindnlp/transformers)
+    install_lib = sysconfig.get_path("purelib")  # 兼容虚拟环境
+    target_dir = os.path.join(install_lib, "mindnlp", "transformers")
+
+    print('target_dir', target_dir)
+    # 获取源路径 (site-packages/transformers)
+    try:
+        import transformers
+        source_path = os.path.dirname(transformers.__file__)
+    except ImportError:
+        # 如果 transformers 未安装则自动安装
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "transformers"])
+        import transformers
+        source_path = os.path.dirname(transformers.__file__)
+
+    # 清理旧链接
+    if os.path.exists(target_dir):
+        if os.path.islink(target_dir) or sys.platform == "win32":
+            os.remove(target_dir)
+        else:
+            shutil.rmtree(target_dir)
+
+    # 创建符号链接
+    if sys.platform == "win32":
+        # Windows 需管理员权限或开发者模式
+        subprocess.check_call(f'mklink /J "{target_dir}" "{source_path}"', shell=True)
+    else:
+        os.symlink(source_path, target_dir, target_is_directory=True)
+
+class CustomInstall(install):
+    def run(self):
+        super().run()
+        if "install" in sys.argv:
+            _create_namespace_links()  # 安装后创建链接
 
 
 version = '0.5.0'
@@ -114,6 +153,7 @@ setup(
     cmdclass={
         'egg_info': EggInfo,
         'build_py': BuildPy,
+        "install": CustomInstall,
     },
     install_requires=[
         'mindspore>=2.5.0',
@@ -131,7 +171,6 @@ setup(
         'pyctcdecode',
         'pytest==7.2.0',
         'pillow>=10.0.0',
-        'mindtorch@git+https://openi.pcl.ac.cn/lvyufeng/mindtorch.git'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License'

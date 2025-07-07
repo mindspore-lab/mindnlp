@@ -23,9 +23,6 @@ from datasets import Dataset, IterableDataset, Split, Features, \
     DownloadConfig, DownloadMode, VerificationMode, Version
 from mindspore.dataset import GeneratorDataset
 from mindspore.communication import get_rank, get_group_size
-from mindnlp.configs import DEFAULT_ROOT
-from ..accelerate import DistributedType
-from ..accelerate.utils import accelerate_distributed_type
 
 
 class TransferIterableDataset():
@@ -301,8 +298,6 @@ def load_dataset(
     ```
     """
     shuffle = config_kwargs.get('shuffle', False)
-    if cache_dir is None:
-        cache_dir = os.path.join(DEFAULT_ROOT, "datasets", path)
 
     ds_ret = hf_load(path,
                      name=name,
@@ -335,19 +330,12 @@ def load_dataset(
         column_names = list(raw_ds.features.keys())
         source = TransferDataset(raw_ds, column_names) if isinstance(raw_ds, Dataset) \
             else TransferIterableDataset(raw_ds, column_names)
-        if accelerate_distributed_type == DistributedType.MULTI_NPU:
-            ms_ds = GeneratorDataset(source=source,
-            column_names=column_names,
-            shuffle=shuffle,
-            num_parallel_workers=num_proc if num_proc else 1,
-            num_shards=get_group_size(), shard_id=get_rank())
-            datasets_dict[key] = ms_ds
-        else:
-            ms_ds = GeneratorDataset(source=source,
-            column_names=column_names,
-            shuffle=shuffle,
-            num_parallel_workers=num_proc if num_proc else 1)
-            datasets_dict[key] = ms_ds
+
+        ms_ds = GeneratorDataset(source=source,
+        column_names=column_names,
+        shuffle=shuffle,
+        num_parallel_workers=num_proc if num_proc else 1)
+        datasets_dict[key] = ms_ds
 
     if len(datasets_dict) == 1:
         return datasets_dict.popitem()[1]

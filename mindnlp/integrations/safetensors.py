@@ -5,9 +5,9 @@ import numpy as np
 
 import safetensors
 
-import mindtorch
+from mindnlp import core
 
-from mindtorch.configs import SUPPORT_BF16
+from core.configs import SUPPORT_BF16
 
 if SUPPORT_BF16:
     from mindspore.common.np_dtype import bfloat16  # pylint: disable=import-error
@@ -20,19 +20,19 @@ MAX_HEADER_SIZE = 100 * 1000 * 1000
 
 
 _MS_TYPES = {
-    "F64": mindtorch.float64,
-    "F32": mindtorch.float32,
-    "F16": mindtorch.float16,
-    "BF16": mindtorch.bfloat16,
-    "I64": mindtorch.int64,
-    "U64": mindtorch.uint64,
-    "I32": mindtorch.int32,
-    "U32": mindtorch.uint32,
-    "I16": mindtorch.int16,
-    "U16": mindtorch.uint16,
-    "I8": mindtorch.int8,
-    "U8": mindtorch.uint8,
-    "BOOL": mindtorch.bool,
+    "F64": core.float64,
+    "F32": core.float32,
+    "F16": core.float16,
+    "BF16": core.bfloat16,
+    "I64": core.int64,
+    "U64": core.uint64,
+    "I32": core.int32,
+    "U32": core.uint32,
+    "I16": core.int16,
+    "U16": core.uint16,
+    "I8": core.int8,
+    "U8": core.uint8,
+    "BOOL": core.bool,
 }
 
 _NP_TYPES = {
@@ -93,7 +93,7 @@ class PySafeSlice:
         tensor = tensor.reshape(self.shape)
         if not SUPPORT_BF16 and self.info["dtype"] == 'BF16':
             tensor = tensor.astype(np.float16)
-        tensor = mindtorch.from_numpy(tensor)
+        tensor = core.from_numpy(tensor)
         return tensor
 
     @property
