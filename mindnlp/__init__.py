@@ -20,7 +20,6 @@ import os
 import sys
 import platform
 from packaging import version
-import importlib
 
 # huggingface env
 if os.environ.get('HF_ENDPOINT', None) is None:
