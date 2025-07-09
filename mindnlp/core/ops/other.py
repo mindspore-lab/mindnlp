@@ -7,7 +7,7 @@ from mindspore import ops
 from mindspore.common.initializer import initializer
 from mindspore.ops._primitive_cache import _get_cache_prim
 
-from ..configs import use_pyboost, ON_ORANGE_PI
+from ..configs import use_pyboost, ON_ORANGE_PI, ON_A1
 from .reduction import any
 from .comparison import eq
 from ._inner import call_ms_func
@@ -710,19 +710,20 @@ def meshgrid(*tensors, indexing=None):
 
 
 # repeat_interleave
-has_repeat_interleave = hasattr(mindspore.mint, "repeat_interleave")
-
-
-def repeat_interleave(*args, **kwargs):
-    if use_pyboost() and has_repeat_interleave:
-        return mindspore.mint.repeat_interleave(*args, **kwargs)
-
-    input, repeats, dim = args.get("input"), args.get("repeats"), args.get("dim")
+has_repeat_interleave = hasattr(mindspore.mint, 'repeat_interleave')
+def repeat_interleave(input, repeats, dim=None):
+    if use_pyboost() and has_repeat_interleave and not ON_A1:
+        return mindspore.mint.repeat_interleave(input, repeats, dim=dim)
     if input.dtype == mindspore.bool_:
         input = input.int()
-        return input.repeat(repeats, dim).bool()
-    return input.repeat(repeats, dim)
+    new_shape = list(input.shape)
+    new_shape.insert(dim+1, repeats)
+    expanded = input.unsqueeze(dim+1).expand(new_shape)
 
+    final_shape = new_shape.copy()
+    final_shape[dim] *= final_shape[dim+1]
+    del final_shape[dim+1]
+    return expanded.reshape(final_shape)
 
 # roll
 DEVICE_TARGET = mindspore.get_context("device_target")

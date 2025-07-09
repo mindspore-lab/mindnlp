@@ -1235,11 +1235,11 @@ def _load(zip_file, pickle_module, overall_storage=None, pickle_file='data.pkl',
         # Lets us override the imports that pickle uses when unpickling an object.
         # This is useful for maintaining BC if we change a module path that tensor instantiation relies on.
         def find_class(self, mod_name, name):
-            if mod_name == 'core._utils':
+            if mod_name == 'torch._utils':
                 return eval(name)
             if mod_name == 'torch':
                 return str(name)
-            if mod_name == 'core._tensor':
+            if mod_name == 'torch._tensor':
                 return eval(name)
             mod_name = load_module_mapping.get(mod_name, mod_name)
             return super().find_class(mod_name, name)

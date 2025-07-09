@@ -16,3 +16,4 @@
 from . import utils, functional, init
 from .modules import *
 from .parameter import Parameter
+from .parallel import DataParallel as DataParallel

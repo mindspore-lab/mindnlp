@@ -9,6 +9,7 @@ from mindspore.ops.operations._grad_ops import StridedSliceGrad
 from ..configs import use_pyboost, ON_ORANGE_PI
 from .other import broadcast_tensors
 from ._inner import call_ms_func
+from .creation import arange
 
 # adjoint
 
@@ -20,7 +21,10 @@ def argwhere(input):
 
 # cat
 has_cat = hasattr(mindspore.mint, 'cat')
-def cat(tensors, dim=0, *, out=None):
+def cat(tensors, dim=0, *, out=None, **kwargs):
+    axis = kwargs.get('axis', None)
+    if axis is not None:
+        dim = axis
     if use_pyboost() and has_cat:
         return call_ms_func(mindspore.mint.cat, tensors, dim, out=out)
     return call_ms_func(ops.cat, tensors, dim, out=out)
@@ -223,7 +227,7 @@ def split(tensor, split_size_or_sections, dim=0):
 
 # squeeze
 has_squeeze = hasattr(mindspore.mint, 'squeeze')
-def squeeze(input, dim=None):
+def squeeze(input, *dim):
     if use_pyboost() and has_squeeze:
         return mindspore.mint.squeeze(input, dim)
     return ops.squeeze(input, dim)
@@ -253,15 +257,58 @@ def take(input, index):
         return tf_gather(input, index, 0).view(index_shape)
     return gather(input, 0, index).view(index_shape)
 
-# take_along_dim
+def infer_size_impl(a, b):
+    lenA = len(a)
+    lenB = len(b)
+    ndim = max(lenA, lenB)
+    expanded_sizes = [0] * ndim
 
+    for i in range(ndim - 1, -1, -1):
+        offset = ndim - 1 - i
+        dimA = lenA - 1 - offset
+        dimB = lenB - 1 - offset
+        
+        sizeA = a[dimA] if dimA >= 0 else 1
+        sizeB = b[dimB] if dimB >= 0 else 1
+
+        # 检查维度兼容性
+        if not (sizeA == sizeB or sizeA == 1 or sizeB == 1):
+            raise RuntimeError(
+                f"The size of tensor a ({sizeA}) must match the size of tensor b ({sizeB}) "
+                f"at non-singleton dimension {i}"
+            )
+
+        # 应用广播规则：优先选择非1的维度大小
+        expanded_sizes[i] = sizeB if sizeA == 1 else sizeA
+
+    return expanded_sizes
+
+
+def _take_along_dim_helper(self, indices, dim):
+    assert self.dim() == indices.dim(), f"torch.take_along_dim(): input and indices should have the same number of dimensions, " \
+        f"but got {self.dim()} dimensions for input, and {indices.dim()} dimensions for indices"
+    dim = self.dim() + dim if dim < 0 else dim
+    self_sizes = list(self.shape)
+    self_sizes[dim] = indices.size(dim)
+    broadcast_shape = infer_size_impl(self_sizes, indices.shape)
+    indices_broadcasted = indices.broadcast_to(broadcast_shape)
+
+    indices_sizes = list(indices.shape)
+    indices_sizes[dim] = self.size(dim)
+    broadcast_shape = infer_size_impl(indices_sizes, self.shape)
+    self_broadcasted = self.broadcast_to(broadcast_shape)
+
+    return self_broadcasted, indices_broadcasted, dim
+
+# take_along_dim
+def take_along_dim(input, indices, dim=None, *, out=None):
+    if dim:
+        self_broadcasted, indices_broadcasted, dim = _take_along_dim_helper(input, indices, dim)
+        return self_broadcasted.gather(dim, indices_broadcasted)
+    return input.view(-1).gather(0, indices.view(-1))
 
 # tensor_split
 def tensor_split(input, indices_or_sections, dim=0):
-    if isinstance(indices_or_sections, mindspore.Tensor):
-        indices_or_sections = indices_or_sections.tolist()
-    else:
-        indices_or_sections = tuple([get_item(t) for t in indices_or_sections])
     return ops.tensor_split(input, indices_or_sections, dim)
 
 # tile
@@ -710,7 +757,7 @@ __all__ = [
     'swapaxes',
     'swapdims',
     'take',
-    # take_along_dim
+    'take_along_dim',
     'tensor_split',
     'tile',
     'transpose',

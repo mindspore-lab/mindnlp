@@ -10,7 +10,7 @@ from mindspore.ops._primitive_cache import _get_cache_prim
 
 from mindnlp import core
 from mindnlp.core.executor import execute
-from ..configs import DEVICE_TARGET, ON_ORANGE_PI, use_pyboost
+from ..configs import DEVICE_TARGET, ON_ORANGE_PI, use_pyboost, ON_A1
 
 generator_step_ = 12
 
@@ -152,15 +152,12 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
 
     return ops.avg_pool2d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
-def dropout(input, p=0.5, training=True, inplace=False):
-    if not training:
+def dropout(input, p=0.5, training=True):
+    if not training or p == 0:
         return input
-    seed, offset = default_generator._step(generator_step_)  # pylint: disable=protected-access
-    out, _ = execute('dropout_ext', input, p, seed, offset)
-    if inplace:
-        input.copy_(out)
-        return input
-    return out
+    if use_pyboost() and not ON_ORANGE_PI:
+        return mint.nn.functional.dropout(input, p, training)
+    return ops.dropout(input, p, training)
 
 def dropout2d(input, p=0.5, training=False):
     return ops.dropout2d(input, p, training)
@@ -211,11 +208,15 @@ def gumbel_softmax(logits: core.Tensor, tau: float = 1, hard: bool = False, eps:
         ret = y_soft
     return ret
 
-def log_softmax(input, dim=-1, dtype=None):
-    if input.device.type == 'cpu':
-        return execute('log_softmax', input, dim)
-    return execute('log_softmax_ext', input, dim,
-                   dtype if dtype is None else dtype_to_type_id('LogSoftmaxExt', 'dtype', dtype))
+def log_softmax(input, dim=None, dtype=None):
+    if use_pyboost():
+        return mint.nn.functional.log_softmax(input, dim=dim, dtype=dtype)
+    if dim is None:
+        dim = -1
+    out = ops.log_softmax(input, dim)
+    if dtype is not None:
+        out = out.to(dtype)
+    return out
 
 def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0, scale_grad_by_freq=False):
     if use_pyboost():
@@ -259,24 +260,15 @@ def _replication_pad(input, pad):
     return out
 
 def pad(input, pad, mode='constant', value=0.0):
-    out = input
-    if (isinstance(pad, tuple) and not pad):
-        return out
-    if mode == "constant":
-        value = 0 if value is None else value
-        out = execute('constant_pad_nd', input, pad, value)
-    else:
-        if value is not None and value != 0:
-            raise ValueError(f"Padding mode {mode} doesn\'t take in value argument.")
-        if mode == "circular":
-            out = _circular_pad(input, pad)
-        elif mode == "reflect":
-            out = _reflection_pad(input, pad)
-        elif mode == "replicate":
-            out = _replication_pad(input, pad)
-        else:
-            raise ValueError(f"Pad filling mode must be 'constant' 'circular' 'reflect' or 'replicate'.")
-    return out
+    if sum(pad) == 0:
+        return input
+    if isinstance(pad, tuple):
+        pad = tuple(p if isinstance(p, int) else p.item() for p in pad)
+    if use_pyboost() and not ON_A1:
+        return mint.nn.functional.pad(input, pad, mode, value)
+    if mode in ['reflect', 'circular']:
+        return ops.pad(input, pad, mode)
+    return ops.pad(input, pad, mode, value)
 
 def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     return _inner_nll_loss(input, target, weight, ignore_index, reduction, label_smoothing)
@@ -338,7 +330,7 @@ def _nll_loss(inputs, target, target_dim=-1, weight=None, ignore_index=None, red
     if target.ndim == inputs.ndim - 1:
         target = target.unsqueeze(target_dim)
     if ignore_index is not None:
-        non_pad_mask = core.equal(target, ignore_index)
+        non_pad_mask = core.eq(target, ignore_index)
         target = target.masked_fill(non_pad_mask, 0)
     else:
         non_pad_mask = target

@@ -3,7 +3,7 @@ import numpy as np
 import mindspore
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
-from ..configs import use_pyboost, DEVICE_TARGET
+from ..configs import use_pyboost, DEVICE_TARGET, ON_A1
 from .other import cumsum, searchsorted
 from .comparison import topk
 from .pointwise import div, log
@@ -27,7 +27,7 @@ def bernoulli(input, *, generator=None, out=None):
 has_multinomial = hasattr(mindspore.mint, 'multinomial')
 def multinomial(input, num_samples, replacement=False, *, generator=None):
     """custom multinomial"""
-    if use_pyboost() and has_multinomial:
+    if use_pyboost() and has_multinomial and not ON_A1:
         return mindspore.mint.multinomial(input, num_samples, replacement=replacement, generator=generator)
     if replacement:
         # with replacement

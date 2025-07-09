@@ -32,7 +32,7 @@ class Embedding(Module):
     def __init__(self, num_embeddings: int, embedding_dim: int, padding_idx: Optional[int] = None,
                  max_norm: Optional[float] = None, norm_type: float = 2., scale_grad_by_freq: bool = False,
                  sparse: bool = False, _weight: Optional[Tensor] = None, _freeze: bool = False,
-                 dtype=None) -> None:
+                 dtype=None, device=None) -> None:
         factory_kwargs = {'dtype': dtype}
         super().__init__()
         self.num_embeddings = num_embeddings
@@ -107,10 +107,10 @@ class Embedding(Module):
         Examples::
 
             >>> # FloatTensor containing pretrained weights
-            >>> weight = core.FloatTensor([[1, 2.3, 3], [4, 5.1, 6.3]])
+            >>> weight = torch.FloatTensor([[1, 2.3, 3], [4, 5.1, 6.3]])
             >>> embedding = nn.Embedding.from_pretrained(weight)
             >>> # Get embeddings for index 1
-            >>> input = core.LongTensor([1])
+            >>> input = torch.LongTensor([1])
             >>> # xdoctest: +IGNORE_WANT("non-deterministic")
             >>> embedding(input)
             tensor([[ 4.0000,  5.1000,  6.3000]])

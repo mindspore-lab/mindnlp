@@ -1,4 +1,4 @@
 Replicate = None
-DTensor = None
+class DTensor(): pass
 Placement = None
 Shard = None

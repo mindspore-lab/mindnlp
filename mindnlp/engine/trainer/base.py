@@ -41,13 +41,12 @@ from mindnlp.core import nn, ops, optim
 from ...core.autograd import value_and_grad
 from ...core.serialization import safe_load_file, safe_save_file, save, save_checkpoint, load, load_checkpoint
 from ...peft import PeftModel
-from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_SAFE_WEIGHTS_NAME, \
-    WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from ...dataset import BaseMapFunction
 from ...utils import logging, find_labels, can_return_loss
 from ...accelerate.utils import DistributedType
-from ...accelerate.utils import accelerate_distributed_type
 from ...utils.import_utils import is_safetensors_available
+from ...transformers.utils import WEIGHTS_NAME, CONFIG_NAME, WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME, \
+    ADAPTER_WEIGHTS_NAME, ADAPTER_SAFE_WEIGHTS_NAME
 from ...transformers.modeling_utils import PreTrainedModel
 from ...transformers.configuration_utils import PretrainedConfig
 from ...transformers.tokenization_utils_base import PreTrainedTokenizerBase
@@ -285,7 +284,6 @@ class Trainer:
         # Internal variables to help with automatic batch size reduction
         self._train_batch_size = args.train_batch_size
         self._created_lr_scheduler = False
-        self.actual_distributed_type = accelerate_distributed_type
 
 
     def _get_learning_rate(self):
@@ -1377,20 +1375,6 @@ indicating whether to prefer safe tensors.
 
         return inputs
 
-
-    def update_gradient_by_distributed_type(self, model: nn.Module) -> None:
-        """update gradient by distributed_type"""
-        if accelerate_distributed_type == DistributedType.NO:
-            return
-        if accelerate_distributed_type == DistributedType.MULTI_NPU:
-            from mindspore.communication import get_group_size
-            from mindspore.communication.comm_func import all_reduce
-            rank_size = get_group_size()
-            for parameter in model.parameters():
-                new_grads_mean = all_reduce(parameter.grad) / rank_size
-                parameter.grad = new_grads_mean
-
-
     def training_step(self, model: nn.Module, inputs: Dict[str, Union[mindspore.Tensor, Any]]) -> Tuple[List[mindspore.Tensor], mindspore.Tensor]:
         """
         Perform a training step on a batch of inputs.
@@ -1422,7 +1406,6 @@ indicating whether to prefer safe tensors.
             self.grad_fn = value_and_grad(forward, weights, attach_grads=True)
 
         loss = self.grad_fn(inputs)
-        self.update_gradient_by_distributed_type(model)
         return loss / self.args.gradient_accumulation_steps
 
     def compute_loss(self, model, inputs, return_outputs=False):

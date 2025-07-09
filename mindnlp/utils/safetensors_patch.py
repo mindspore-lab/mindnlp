@@ -6,6 +6,7 @@ import mindspore
 from mindspore import Tensor
 
 from mindnlp.core.configs import SUPPORT_BF16
+import safetensors
 
 if SUPPORT_BF16:
     from mindspore.common.np_dtype import bfloat16  # pylint: disable=import-error
@@ -98,6 +99,7 @@ class PySafeSlice:
         return self.base_ptr + self.info["data_offsets"][0]
 
     def get_shape(self):
+        print('get_shape', self.shape)
         return self.shape
 
     def get_dtype(self):
@@ -190,7 +192,9 @@ class fast_safe_open:
         self.file.close()
 
     def metadata(self):
-        return self.__metadata__
+        meta =  self.__metadata__
+        meta['format'] = 'pt'
+        return meta
 
     def keys(self):
         return list(self.tensors.keys())
@@ -201,6 +205,27 @@ class fast_safe_open:
     def get_slice(self, name):
         return self.tensors[name]
 
+def safe_save_file(tensor_dict, filename, metadata=None):
+    """
+    Function to safely save a dictionary of tensors to a file.
+    
+    Args:
+        tensor_dict (dict): A dictionary where keys are strings and values are numpy arrays representing tensors.
+        filename (str): The name of the file where the tensor data will be saved.
+        metadata (optional): Additional metadata to be saved along with the tensor data. Default is None.
+    
+    Returns:
+        None. The function does not return any value explicitly.
+    
+    Raises:
+        ValueError: If the input tensor_dict is not in the expected format.
+        IOError: If there are issues with writing the data to the specified file.
+        Exception: Any other unexpected error that may occur during the process.
+    """
+    tensor_dict = {k: v.asnumpy() for k, v in tensor_dict.items()}
+    return safetensors.numpy.save_file(tensor_dict, filename, metadata)
+
 def setup_safetensors_patch():
-    import safetensors
     safetensors.safe_open = fast_safe_open
+    from safetensors import torch
+    torch.save_file = safe_save_file

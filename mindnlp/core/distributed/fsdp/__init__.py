@@ -1,1 +1,2 @@
-FullyShardedDataParallel = None
+class FullyShardedDataParallel:
+    pass

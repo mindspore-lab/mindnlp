@@ -16,13 +16,11 @@
 """
 load
 """
-import os
 from typing import Union, Optional, Dict, Sequence, Mapping
 from datasets import load_dataset as hf_load
 from datasets import Dataset, IterableDataset, Split, Features, \
     DownloadConfig, DownloadMode, VerificationMode, Version
 from mindspore.dataset import GeneratorDataset
-from mindspore.communication import get_rank, get_group_size
 
 
 class TransferIterableDataset():

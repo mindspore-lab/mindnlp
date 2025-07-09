@@ -47,7 +47,6 @@ from mindnlp.core.configs import SUPPORT_BF16
 
 from transformers.utils.import_utils import (
     is_pytest_available,
-    is_mindspore_available,
     is_essentia_available,
     is_librosa_available,
     is_pretty_midi_available,
@@ -55,7 +54,6 @@ from transformers.utils.import_utils import (
     is_pyctcdecode_available,
     is_safetensors_available,
     is_sentencepiece_available,
-    is_soundfile_availble,
     is_tokenizers_available,
     is_pytesseract_available,
     is_vision_available,
@@ -65,6 +63,10 @@ from transformers.utils.import_utils import (
     is_ftfy_available
 )
 from transformers.utils.generic import strtobool
+from .import_utils import (
+    is_mindspore_available,
+    is_soundfile_availble,
+)
 
 if is_pytest_available():
     from _pytest.doctest import (
