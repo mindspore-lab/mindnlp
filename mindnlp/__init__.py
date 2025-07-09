@@ -17,7 +17,6 @@
 MindNLP library.
 """
 import os
-import sys
 import platform
 from packaging import version
 
@@ -51,6 +50,3 @@ enable_mindspore_patch()
 initialize_torch_proxy()
 setup_metadata_patch()
 setup_safetensors_patch()
-
-from . import core
-from . import transformers

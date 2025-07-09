@@ -80,3 +80,30 @@ class UninitializedParameter(Parameter):
 
 def is_lazy(param):
     return False
+
+
+class Buffer(Tensor):
+    r"""A kind of Tensor that should not be considered a model
+    parameter. For example, BatchNorm's ``running_mean`` is not a parameter, but is part of the module's state.
+
+    Buffers are :class:`~torch.Tensor` subclasses, that have a
+    very special property when used with :class:`Module` s -- when they're
+    assigned as Module attributes they are automatically added to the list of
+    its buffers, and will appear e.g. in :meth:`~torch.nn.Module.buffers` iterator.
+    Assigning a Tensor doesn't have such effect. One can still assign a Tensor as explicitly by using
+    the :meth:`~torch.nn.Module.register_buffer` function.
+
+    Args:
+        data (Tensor): buffer tensor.
+        persistent (bool, optional): whether the buffer is part of the module's
+            :attr:`state_dict`. Default: ``True``
+    """
+
+    def __new__(cls, data=None, *, persistent=True):
+        if data is None:
+            data = core.empty(0)
+
+        t = data.detach().requires_grad_(data.requires_grad)
+        t.persistent = persistent
+        t._is_buffer = True
+        return t

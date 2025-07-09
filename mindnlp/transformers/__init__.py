@@ -4111,3 +4111,4 @@ sys.modules[__name__] = _LazyModule(
     extra_objects={"__version__": transformers.__version__},
 )
 
+transformers.utils.import_utils._torch_fx_available = False

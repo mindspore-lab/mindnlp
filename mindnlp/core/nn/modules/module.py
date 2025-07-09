@@ -15,7 +15,7 @@ except:
 from mindnlp import core
 from mindnlp.core import device, dtype, Tensor
 
-from ..parameter import Parameter
+from ..parameter import Parameter, Buffer
 from ...utils import hooks
 from ...utils.hooks import RemovableHandle
 
@@ -544,21 +544,37 @@ class Module:
                     param = output
             self._parameters[name] = param
 
-    def add_module(self, name, module):
-        """Adds a child module to the current module.
+    def add_module(self, name: str, module: Optional["Module"]) -> None:
+        r"""Add a child module to the current module.
 
         The module can be accessed as an attribute using the given name.
 
         Args:
-            name (string): name of the child module. The child module can be
+            name (str): name of the child module. The child module can be
                 accessed from this module using the given name
-            parameter (Module): child module to be added to the module.
+            module (Module): child module to be added to the module.
         """
         if not isinstance(module, Module) and module is not None:
-            raise TypeError("{} is not a Module subclass".format(type(module)))
-        if hasattr(self, name) and name not in self._modules:
-            raise KeyError("attribute '{}' already exists".format(name))
+            raise TypeError(f"{torch.typename(module)} is not a Module subclass")
+        elif not isinstance(name, str):
+            raise TypeError(
+                f"module name should be a string. Got {torch.typename(name)}"
+            )
+        elif hasattr(self, name) and name not in self._modules:
+            raise KeyError(f"attribute '{name}' already exists")
+        elif "." in name:
+            raise KeyError(f'module name can\'t contain ".", got: {name}')
+        elif name == "":
+            raise KeyError('module name can\'t be empty string ""')
+        for hook in _global_module_registration_hooks.values():
+            output = hook(self, name, module)
+            if output is not None:
+                module = output
         self._modules[name] = module
+
+    def register_module(self, name: str, module: Optional["Module"]) -> None:
+        r"""Alias for :func:`add_module`."""
+        self.add_module(name, module)
 
     def get_parameter(self, target: str) -> "Parameter":
         """Return the parameter given by ``target`` if it exists, otherwise throw an error.
@@ -984,7 +1000,7 @@ class Module:
                 return modules[name]
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
-    def __setattr__(self, name: str, value: Union[Tensor, 'Module']) -> None:
+    def __setattr__(self, name: str, value: Union[Tensor, "Module"]) -> None:
         def remove_from(*dicts_or_sets):
             for d in dicts_or_sets:
                 if name in d:
@@ -993,54 +1009,97 @@ class Module:
                     else:
                         d.discard(name)
 
-        params = self.__dict__.get('_parameters')
-
+        params = self.__dict__.get("_parameters")
         if isinstance(value, Parameter):
             if params is None:
                 raise AttributeError(
-                    "cannot assign parameters before Module.__init__() call")
-            remove_from(self.__dict__, self._buffers, self._modules, self._non_persistent_buffers_set)
+                    "cannot assign parameters before Module.__init__() call"
+                )
+            remove_from(
+                self.__dict__,
+                self._buffers,
+                self._modules,
+                self._non_persistent_buffers_set,
+            )
             self.register_parameter(name, value)
         elif params is not None and name in params:
             if value is not None:
-                raise TypeError(f"cannot assign '{type(value)}' as parameter '{name}' "
-                                "(core.nn.Parameter or None expected)"
-                                )
+                raise TypeError(
+                    f"cannot assign '{core.typename(value)}' as parameter '{name}' "
+                    "(torch.nn.Parameter or None expected)"
+                )
             self.register_parameter(name, value)
         else:
-            modules = self.__dict__.get('_modules')
-            if isinstance(value, Module):
+            modules = self.__dict__.get("_modules")
+            if isinstance(value, core.nn.Module):
                 if modules is None:
                     raise AttributeError(
-                        "cannot assign module before Module.__init__() call")
-                remove_from(self.__dict__, self._parameters, self._buffers, self._non_persistent_buffers_set)
+                        "cannot assign module before Module.__init__() call"
+                    )
+                remove_from(
+                    self.__dict__,
+                    self._parameters,
+                    self._buffers,
+                    self._non_persistent_buffers_set,
+                )
                 for hook in _global_module_registration_hooks.values():
                     output = hook(self, name, value)
                     if output is not None:
                         value = output
                 modules[name] = value
+
             elif modules is not None and name in modules:
                 if value is not None:
-                    raise TypeError(f"cannot assign '{type(value)}' as child module '{name}' "
-                                    "(nn.Module or None expected)"
-                                    )
+                    raise TypeError(
+                        f"cannot assign '{core.typename(value)}' as child module '{name}' "
+                        "(torch.nn.Module or None expected)"
+                    )
                 for hook in _global_module_registration_hooks.values():
                     output = hook(self, name, value)
                     if output is not None:
                         value = output
                 modules[name] = value
             else:
-                buffers = self.__dict__.get('_buffers')
-                if buffers is not None and name in buffers:
-                    if value is not None and not isinstance(value, Tensor):
-                        raise TypeError(f"cannot assign '{type(value)}' as buffer '{name}' "
-                                        "(core.Tensor or None expected)"
-                                        )
-                    for hook in _global_buffer_registration_hooks.values():
-                        output = hook(self, name, value)
-                        if output is not None:
-                            value = output
-                    buffers[name] = value
+                buffers = self.__dict__.get("_buffers")
+                if isinstance(value, Buffer) or buffers is not None and name in buffers:
+                    if value is not None and not isinstance(value, core.Tensor):
+                        raise TypeError(
+                            f"cannot assign '{core.typename(value)}' as buffer '{name}' "
+                            "(torch.nn.Buffer, torch.Tensor or None expected)"
+                        )
+                    if isinstance(value, Buffer):
+                        persistent = value.persistent
+                    else:
+                        persistent = name not in self._non_persistent_buffers_set
+                    # === HACK ===
+                    # This whole block below should just be:
+                    # self.register_buffer(name, value, persistent)
+
+                    # But to support subclasses of nn.Module that (wrongfully) implement a
+                    # register_buffer() method that doesn't have the "persistent"
+                    # argument. Only pass it in if it is accepted otherwise assume
+                    # it is always true
+                    if (
+                        getattr(self.register_buffer, "__func__", None)
+                        is Module.register_buffer
+                    ):
+                        self.register_buffer(name, value, persistent)
+                    else:
+                        sign = inspect.signature(self.register_buffer)
+                        if "persistent" in sign.parameters:
+                            self.register_buffer(name, value, persistent)
+                        else:
+                            if not persistent:
+                                raise RuntimeError(
+                                    "Registering a non-persistent buffer "
+                                    "on a Module subclass that implements "
+                                    "register_buffer() without the persistent "
+                                    "argument is not allowed."
+                                )
+                            # Assume that the implementation without the argument has the
+                            # behavior from before the argument was added: persistent=True
+                            self.register_buffer(name, value)
+                    # === HACK END ===
                 else:
                     super().__setattr__(name, value)
 
@@ -1394,10 +1453,16 @@ class Module:
         return _IncompatibleKeys(missing_keys, unexpected_keys)
 
 
-    def _named_members(self, get_members_fn, prefix='', recurse=True, remove_duplicate: bool = True):
+    def _named_members(
+        self, get_members_fn, prefix="", recurse=True, remove_duplicate: bool = True
+    ):
         r"""Help yield various names + members of modules."""
         memo = set()
-        modules = self.named_modules(prefix=prefix, remove_duplicate=remove_duplicate) if recurse else [(prefix, self)]
+        modules = (
+            self.named_modules(prefix=prefix, remove_duplicate=remove_duplicate)
+            if recurse
+            else [(prefix, self)]
+        )
         for module_prefix, module in modules:
             members = get_members_fn(module)
             for k, v in members:
@@ -1405,7 +1470,7 @@ class Module:
                     continue
                 if remove_duplicate:
                     memo.add(v)
-                name = module_prefix + ('.' if module_prefix else '') + k
+                name = module_prefix + ("." if module_prefix else "") + k
                 yield name, v
 
     def parameters(self, recurse: bool = True) -> Iterator[Parameter]:
@@ -1500,7 +1565,7 @@ class Module:
 
             mod = getattr(mod, item)
 
-            if not isinstance(mod, Module):
+            if not isinstance(mod, core.nn.Module):
                 raise AttributeError("`" + item + "` is not "
                                      "an nn.Module")
 
@@ -1696,9 +1761,6 @@ class Module:
                     continue
                 submodule_prefix = prefix + ('.' if prefix else '') + name
                 yield from module.named_modules(memo, submodule_prefix, remove_duplicate)
-
-    def cells_and_names(self, cells=None, name_prefix=''):
-        return self.named_modules(cells, name_prefix)
 
     def jit(self, mode=True):
         self.__ms_class__ = mode

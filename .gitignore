@@ -165,3 +165,5 @@ xiyouji.txt
 *.safetensors
 *.jit
 flagged/
+
+huggingface_transformers/

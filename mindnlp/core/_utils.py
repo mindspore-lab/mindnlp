@@ -1,8 +1,16 @@
 import sys
 import traceback
+from functools import reduce
+import operator
 
-
+import numpy as np
 from mindnlp import core
+from .configs import SUPPORT_BF16
+
+if SUPPORT_BF16:
+    from mindspore.common.np_dtype import bfloat16 # pylint: disable=import-error
+else:
+    from ml_dtypes import bfloat16
 
 element_size_map = {
     core.float16: 2,
@@ -62,16 +70,47 @@ def _unflatten_dense_tensors(flat, tensors):
             offset += numel
     return outputs
 
-def _rebuild_tensor_v2(
-    storage,
-    storage_offset,
-    size,
-    stride,
-    requires_grad,
-    backward_hooks,
-    metadata=None,
-):
-    return core.Tensor(storage)
+def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, backward_hooks=None, metadata=None):
+    '''Rebuilds a tensor based on the provided parameters.
+    
+    Args:
+        storage (ndarray): The storage array from which the tensor is created.
+        storage_offset (int): The offset in the storage array from where the tensor data starts.
+        size (tuple): The size of the tensor.
+        stride (tuple or None): The stride of the tensor, or None if not applicable.
+        requires_grad (bool): Indicates if the tensor requires gradient computation.
+        backward_hooks (list): A list of backward hooks for the tensor.
+        metadata (Any, optional): Additional metadata associated with the tensor.
+    
+    Returns:
+        None: This function does not have a return value.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    '''
+    if size == ():
+        num_elemets = 1
+    else:
+        num_elemets = reduce(operator.mul, size)
+    array = storage[storage_offset: storage_offset + num_elemets]
+
+    if array.dtype == bfloat16 and not SUPPORT_BF16:
+        array = array.astype(np.float16)
+
+    if stride is not None and len(stride) > 1 and stride[0] == 1:
+        # stride = tuple((s * 4 for s in stride))
+        # # stride = tuple((s * 4 if s != 1 else s for s in stride))
+        # array = np.lib.stride_tricks.as_strided(array, size, stride)
+        order = "F"
+        array = array.reshape(size, order=order)
+    else:
+        order = "C"
+        array = array.reshape(size, order=order)
+    
+    if isinstance(array, np.memmap):
+        array = array.copy()
+    param = core.from_numpy(array)
+    return param
 
 class KeyErrorMessage(str):
     r"""str subclass that returns itself in repr"""
