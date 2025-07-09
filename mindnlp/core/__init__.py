@@ -36,7 +36,7 @@ nan = float("nan")
 from ._C import *
 from ._dtype import *
 from ._tensor import Tensor, tensor, is_tensor, \
-    LongTensor, FloatTensor, BoolTensor, HalfTensor, BFloat16Tensor
+    LongTensor, FloatTensor, BoolTensor, HalfTensor, BFloat16Tensor, IntTensor
 from .types import device
 from ._C.size import Size
 from .types import device
@@ -46,9 +46,11 @@ from .serialization import load, save
 from ._bind import get_default_dtype, set_default_dtype
 
 from . import profiler, cuda, optim, amp, compiler, jit, version, __future__, overrides, \
-    return_types, linalg
+    return_types, linalg, fx
 
 from ._lowrank import svd_lowrank
+from .random import get_rng_state, initial_seed, manual_seed, seed, set_rng_state
+
 
 def _has_compatible_shallow_copy_type(tensor, other):
     """
@@ -71,3 +73,10 @@ def _has_compatible_shallow_copy_type(tensor, other):
 
     # Compatibility confirmed
     return True
+
+def compile(fn=None, *args, **kwargs):
+    def wrap_func(fn):
+        return fn
+    if fn is not None:
+        return wrap_func(fn)
+    return wrap_func

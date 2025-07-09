@@ -41,7 +41,11 @@ from dataclasses import dataclass
 import numpy as np
 import mindspore
 
-from mindspore._c_expression import Tensor as MSTensor
+try:
+    from mindspore._c_expression import TensorPy as Tensor_
+except:
+    from mindspore._c_expression import Tensor as Tensor_
+
 from mindspore.train.serialization import _exec_save, _parse_ckpt_proto, tensor_to_np_type, tensor_to_ms_type
 
 import safetensors
@@ -774,45 +778,6 @@ def _rebuild_parameter(data, requires_grad, backward_hooks):
     # OrderedDict.  See Note [Don't serialize hooks]
     return param
 
-def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, backward_hooks, metadata=None):
-    '''Rebuilds a tensor based on the provided parameters.
-    
-    Args:
-        storage (ndarray): The storage array from which the tensor is created.
-        storage_offset (int): The offset in the storage array from where the tensor data starts.
-        size (tuple): The size of the tensor.
-        stride (tuple or None): The stride of the tensor, or None if not applicable.
-        requires_grad (bool): Indicates if the tensor requires gradient computation.
-        backward_hooks (list): A list of backward hooks for the tensor.
-        metadata (Any, optional): Additional metadata associated with the tensor.
-    
-    Returns:
-        None: This function does not have a return value.
-    
-    Raises:
-        None: This function does not raise any exceptions.
-    '''
-    if size == ():
-        num_elemets = 1
-    else:
-        num_elemets = reduce(operator.mul, size)
-    array = storage[storage_offset: storage_offset + num_elemets]
-
-    if array.dtype == bfloat16 and not SUPPORT_BF16:
-        array = array.astype(np.float16)
-
-    if stride is not None and len(stride) > 1 and stride[0] == 1:
-        # stride = tuple((s * 4 for s in stride))
-        # # stride = tuple((s * 4 if s != 1 else s for s in stride))
-        # array = np.lib.stride_tricks.as_strided(array, size, stride)
-        order = "F"
-        array = array.reshape(size, order=order)
-    else:
-        order = "C"
-        array = array.reshape(size, order=order)
-    param = core.from_numpy(array)
-    return param
-
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
     return ret
@@ -1038,7 +1003,7 @@ def _legacy_load(f, pickle_module, **pickle_load_args):
         def find_class(self, mod_name, name):
             if name == '_rebuild_tensor_v2':
                 name = '_rebuild_tensor_legacy'
-            if mod_name == 'core._utils':
+            if mod_name == 'torch._utils':
                 return eval(name)
             if mod_name == 'torch':
                 return str(name)
@@ -1224,7 +1189,7 @@ def _load(zip_file, pickle_module, overall_storage=None, pickle_file='data.pkl',
 
     load_module_mapping: Dict[str, str] = {
         # See https://github.com/pytorch/pytorch/pull/51633
-        'core.tensor': 'core._tensor'
+        'torch.tensor': 'torch._tensor'
     }
 
     # Need to subclass Unpickler instead of directly monkey-patching the find_class method
@@ -1235,12 +1200,8 @@ def _load(zip_file, pickle_module, overall_storage=None, pickle_file='data.pkl',
         # Lets us override the imports that pickle uses when unpickling an object.
         # This is useful for maintaining BC if we change a module path that tensor instantiation relies on.
         def find_class(self, mod_name, name):
-            if mod_name == 'torch._utils':
-                return eval(name)
             if mod_name == 'torch':
                 return str(name)
-            if mod_name == 'torch._tensor':
-                return eval(name)
             mod_name = load_module_mapping.get(mod_name, mod_name)
             return super().find_class(mod_name, name)
 
@@ -1306,7 +1267,8 @@ def _check_save_filelike(f):
             "expected 'f' to be string, path, or a file-like object with "
             "a 'write' attribute")
 
-def save(obj, f, pickle_module = pickle, pickle_protocol = 2, _disable_byteorder_record: bool = False):
+def save(obj, f, pickle_module = pickle, pickle_protocol = 2, _disable_byteorder_record: bool = False,
+         _use_new_zipfile_serialization=False):
     _check_save_filelike(f)
     with _open_zipfile_writer(f) as opened_zipfile:
         _save(
@@ -1341,7 +1303,7 @@ def _save(
         # https://docs.python.org/2/library/pickle.html#pickling-and-unpickling-external-objects
         # https://github.com/python/cpython/blob/master/Lib/pickle.py#L527-L537
 
-        if isinstance(obj, MSTensor):
+        if isinstance(obj, Tensor_) and not isinstance(obj, mindspore.Tensor):
             storage_type = storage_map[obj.dtype]
             storage_numel = obj._size
             storage_key = id_map.setdefault(id(obj), str(len(id_map)))

@@ -99,7 +99,6 @@ class PySafeSlice:
         return self.base_ptr + self.info["data_offsets"][0]
 
     def get_shape(self):
-        print('get_shape', self.shape)
         return self.shape
 
     def get_dtype(self):

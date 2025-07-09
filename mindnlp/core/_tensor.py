@@ -9,11 +9,17 @@ try:
 except:
     class StubTensor: pass
 
+try:
+    from mindspore._c_expression import TensorPy as Tensor_
+except:
+    from mindspore._c_expression import Tensor as Tensor_
+
 from . import ops, _dtype
 from ._dtype import dtype2np
 from ._bind import get_default_device, device_
 from .configs import use_pyboost, ON_A1
 from .storage import UntypedStorage
+from ._utils import _rebuild_tensor_v2
 
 DTYPE_ELEMENT_SIZE_MAP = {
     mindspore.float64: 8,
@@ -30,6 +36,11 @@ class TypedTensorMeta(_TensorMeta):
         if not isinstance(instance, Tensor):
             return False
         return instance.dtype == self.dtype
+
+class IntTensor(Tensor, metaclass=TypedTensorMeta):
+    dtype = _dtype.int
+    def __init__(self, data, device=None):
+        super().__init__(data, dtype=_dtype.int)
 
 class LongTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.long
@@ -77,6 +88,22 @@ def is_tensor(x):
     return isinstance(x, Tensor)
 
 def enable_mindspore_patch():
+    def __reduce_ex__(self, protocol):
+        if isinstance(self, StubTensor):
+            data = Tensor_(self.stub_sync())
+        else:
+            data = Tensor_(self)
+        storage_offset = 0
+        size = data._shape
+        stride = data.stride()
+        requires_grad = False
+        args = (data, storage_offset, size, stride, requires_grad, None, None)
+        return (
+            _rebuild_from_type_v2, (_rebuild_tensor_v2, type(self), args, None))
+
+    Tensor.__reduce_ex__ = __reduce_ex__
+    StubTensor.__reduce_ex__ = __reduce_ex__
+
     def to_(self, *args, **kwargs):
         dtype_to = None
         if len(args) == 1:
@@ -260,3 +287,29 @@ def enable_mindspore_patch():
 
     Tensor.unfold = unfold
     StubTensor.unfold = unfold
+
+    def new(self, data=None):
+        if data is None:
+            return Tensor([], dtype=self.dtype)
+        return Tensor(data, dtype=self.dtype)
+
+    Tensor.new = new
+    StubTensor.new = new
+
+    def view(self, *args):
+        if isinstance(args[0], (tuple, list)):
+            args = args[0]
+        return self.reshape(*args)
+    
+    Tensor.view = view
+    StubTensor.view = view
+
+    def cpu(self):
+        return self
+
+    Tensor.cpu = cpu
+    StubTensor.cpu = cpu
+
+def _rebuild_from_type_v2(func, new_type, args, state):
+    ret = func(*args)
+    return ret

@@ -132,7 +132,9 @@ jobs:
         pip install mindspore
     - name: Test with pytest
       run: |
-        pytest -vs tests/transformers/models/${{ matrix.alpha }}*/test_modeling*
+        pip install transformers==4.51.2
+        git clone -b 4.51.2 https://gitee.com/mirrors/huggingface_transformers
+        python tests/run_test.py -vs huggingface_transformers/tests/models/${{ matrix.alpha }}*/test_modeling*
 
   kaggle-gpu-test:
     needs: pylint-check
