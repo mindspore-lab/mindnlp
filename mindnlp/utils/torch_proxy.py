@@ -57,7 +57,7 @@ def initialize_torch_proxy():
     sys.modules["torch"] = torch_proxy
 
     # 设置必要的元数据
-    torch_proxy.__version__ = "1.13.1+mindnlp"
+    torch_proxy.__version__ = "2.1.1"
 
     return torch_proxy
 
@@ -71,9 +71,9 @@ def setup_metadata_patch():
     def patched_distribution(dist_name):
         if dist_name == "torch":
             return types.SimpleNamespace(
-                version="1.13.1+mindnlp",
-                metadata={"Name": "torch", "Version": "1.13.1+mindnlp"},
-                read_text=lambda f: f"Name: torch\nVersion: 1.13.1+mindnlp" if f == "METADATA" else None
+                version="2.1.1",
+                metadata={"Name": "torch", "Version": "2.1.1"},
+                read_text=lambda f: f"Name: torch\nVersion: 2.1.1" if f == "METADATA" else None
             )
         return orig_distribution(dist_name)
     
@@ -82,10 +82,12 @@ def setup_metadata_patch():
         dists = list(orig_distributions(**kwargs))
         dists.append(types.SimpleNamespace(
             name="torch",
-            version="1.13.1+mindnlp",
-            metadata={"Name": "torch", "Version": "1.13.1+mindnlp"},
+            version="2.1.1",
+            metadata={"Name": "torch", "Version": "2.1.1"},
             files=[],
-            locate_file=lambda p: None
+            locate_file=lambda p: None,
+            _normalized_name='torch',
+            entry_points=[]
         ))
         return dists
     

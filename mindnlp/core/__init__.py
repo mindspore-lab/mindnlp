@@ -46,5 +46,28 @@ from .serialization import load, save
 from ._bind import get_default_dtype, set_default_dtype
 
 from . import profiler, cuda, optim, amp, compiler, jit, version, __future__, overrides, \
-    return_types
+    return_types, linalg
 
+from ._lowrank import svd_lowrank
+
+def _has_compatible_shallow_copy_type(tensor, other):
+    """
+    Mimics the behavior of mindtorch._has_compatible_shallow_copy_type.
+
+    Args:
+        tensor (mindtorch.Tensor): The source tensor.
+        other (mindtorch.Tensor): The target tensor to check compatibility.
+
+    Returns:
+        bool: True if `tensor` and `other` have compatible types for shallow copy.
+    """
+    # Check if both tensors have the same type
+    if not is_tensor(tensor) or not is_tensor(other):
+        return False
+
+    # Check if both tensors are on the same device
+    if tensor.shape != other.shape:
+        return False
+
+    # Compatibility confirmed
+    return True

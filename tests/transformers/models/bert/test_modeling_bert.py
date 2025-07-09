@@ -49,6 +49,7 @@ if is_mindspore_available():
         logging,
     )
 
+mindspore.set_context(pynative_synchronize=True)
 class BertModelTester:
     def __init__(
         self,
@@ -660,7 +661,7 @@ class BertModelIntegrationTest(unittest.TestCase):
             pkv.append([ops.rand(1, num_heads, 3, head_dim), ops.rand(1, num_heads, 3, head_dim)])
 
         tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-BertModel")
-        inp = tokenizer("I am in Paris and", return_tensors="ms")
+        inp = tokenizer("I am in Paris and", return_tensors="pt")
 
         del inp["attention_mask"]
 

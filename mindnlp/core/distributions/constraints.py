@@ -33,7 +33,7 @@ The following constraints are implemented:
 """
 
 import mindspore
-from .. import ops
+from mindnlp import core
 
 
 __all__ = [
@@ -452,7 +452,7 @@ class _Simplex(Constraint):
     event_dim = 1
 
     def check(self, value):
-        return ops.all(value >= 0, dim=-1) & ((value.sum(-1) - 1).abs() < 1e-6)
+        return core.all(value >= 0, dim=-1) & ((value.sum(-1) - 1).abs() < 1e-6)
 
 
 class _Multinomial(Constraint):
@@ -528,7 +528,7 @@ class _Square(Constraint):
     event_dim = 2
 
     def check(self, value):
-        return ops.full(
+        return core.full(
             size=value.shape[:-2],
             fill_value=(value.shape[-2] == value.shape[-1]),
             dtype=mindspore.bool_,
@@ -544,7 +544,7 @@ class _Symmetric(_Square):
         square_check = super().check(value)
         if not square_check.all():
             return square_check
-        return ops.isclose(value, value.mT, atol=1e-6).all(-2).all(-1)
+        return core.isclose(value, value.mT, atol=1e-6).all(-2).all(-1)
 
 
 class _PositiveSemidefinite(_Symmetric):
@@ -568,7 +568,7 @@ class _PositiveDefinite(_Symmetric):
         sym_check = super().check(value)
         if not sym_check.all():
             return sym_check
-        return ops.linalg.cholesky_ex(value).info.eq(0)
+        return core.linalg.cholesky_ex(value).info.eq(0)
 
 
 class _Cat(Constraint):

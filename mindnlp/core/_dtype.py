@@ -9,6 +9,7 @@ def is_floating_point(self):
     return isinstance(self, (typing.Float, typing.BFloat16))
 
 Type.is_floating_point = is_floating_point
+Type.__str__ = Type.__repr__
 
 half = float16
 float = float32
@@ -19,6 +20,7 @@ int = int32
 bool = bool_
 
 float8_e4m3fn = None # TODO: not support fp8 for now
+float8_e5m2 = None
 
 np2dtype = {
     np.bool_: bool,

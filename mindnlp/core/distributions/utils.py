@@ -58,7 +58,7 @@ def broadcast_all(*values):
     return ops.broadcast_tensors(*values)
 
 
-def _standard_normal(shape, dtype):
+def _standard_normal(shape, dtype, device=None):
     return ops.normal(size = shape).to(dtype)
 
 

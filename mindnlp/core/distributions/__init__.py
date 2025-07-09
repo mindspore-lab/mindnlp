@@ -10,3 +10,4 @@ from .transformed_distribution import TransformedDistribution
 from .transforms import *
 from .relaxed_categorical import *
 from .relaxed_bernoulli import *
+from .multivariate_normal import *

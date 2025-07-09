@@ -1,6 +1,7 @@
-
 from mindspore.common.generator import default_generator
+from mindspore.ops.auto_generate.gen_ops_prim import inplace_normal_op
 
+from mindnlp import core
 
 generator_step_ = 12
 
@@ -39,10 +40,11 @@ def inplace_normal(input, mean=0, std=1, *, generator=None):
     if generator is None:
         generator = default_generator
     seed, offset = generator._step(generator_step_)
-    if input.device.type == 'npu':
-        execute('inplace_normal', input, mean, std, seed, offset)
-    elif input.device.type == 'cpu':
-        core.normal(mean, std, size=input.size, generator=generator, out=input)
+    if isinstance(mean, core.Tensor):
+        mean = mean.item()
+    if isinstance(std, core.Tensor):
+        std = std.item()
+    inplace_normal_op(input, mean, std, seed, offset)
 
     return input
 

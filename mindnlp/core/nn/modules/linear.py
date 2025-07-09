@@ -29,13 +29,13 @@ class Linear(Module):
     Examples::
 
         >>> m = nn.Linear(20, 30)
-        >>> input = autograd.Variable(core.randn(128, 20))
+        >>> input = autograd.Variable(torch.randn(128, 20))
         >>> output = m(input)
         >>> print(output.size())
     """
 
-    def __init__(self, in_features, out_features, bias=True, dtype=None) -> None:
-        factory_kwargs = {'dtype': dtype}
+    def __init__(self, in_features, out_features, bias=True, dtype=None, device=None) -> None:
+        factory_kwargs = {'dtype': dtype, 'device': device}
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -80,10 +80,10 @@ class Identity(Module):
     Examples::
 
         >>> m = nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
-        >>> input = core.randn(128, 20)
+        >>> input = torch.randn(128, 20)
         >>> output = m(input)
         >>> print(output.size())
-        core.Size([128, 20])
+        torch.Size([128, 20])
 
     """
 

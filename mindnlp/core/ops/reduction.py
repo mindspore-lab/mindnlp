@@ -42,7 +42,14 @@ def aminmax(input, *, dim=None, keepdim=False):
 
 # all
 has_all = hasattr(mindspore.mint, 'all')
-def all(input, dim=None, keepdim=False, *, dtype=None):
+def all(input, dim=None, keepdim=False, *, dtype=None, **kwargs):
+    axis = kwargs.get('axis', None)
+    keepdims = kwargs.get('keepdims', None)
+    if axis is not None:
+        dim = axis
+    if keepdims:
+        keepdim = keepdims
+
     if use_pyboost() and has_all:
         return mindspore.mint.all(input, dim, keepdim).to(input.dtype)
     return ops.all(input, dim, keepdim).to(input.dtype)
@@ -79,7 +86,10 @@ def logsumexp(input, dim, keepdim=False):
 
 # mean
 has_mean = hasattr(mindspore.mint, 'mean')
-def mean(input, dim=None, keepdim=False, *, dtype=None):
+def mean(input, dim=None, keepdim=False, *, dtype=None, **kwargs):
+    axis = kwargs.get('axis', None)
+    if axis is not None:
+        dim = axis
     if use_pyboost() and has_mean:
         return mindspore.mint.mean(input, dim, keepdim, dtype=dtype)
     out = ops.mean(input, dim, keepdim)
@@ -135,7 +145,10 @@ def nanquantile(input, q, dim=None, keepdim=False, *, interpolation='linear'):
 
 # std
 has_std = hasattr(mindspore.mint, 'std')
-def std(input, dim=None, *, correction=1, keepdim=False):
+def std(input, dim=None, *, correction=1, keepdim=False, **kwargs):
+    axis = kwargs.get('axis', None)
+    if axis is not None:
+        dim = axis
     if use_pyboost() and has_std:
         return mindspore.mint.std(input, dim=dim, correction=correction, keepdim=keepdim)
     if DEVICE_TARGET == 'GPU':

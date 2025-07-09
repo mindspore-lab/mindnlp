@@ -12,12 +12,12 @@ from typing import Any, cast, Optional as _Optional, TYPE_CHECKING, TypeVar, Uni
 from typing_extensions import Self
 
 from mindnlp import core
-from core._utils import _to, _type
-from core.types import _bool, _int, Storage
+from ._utils import _to, _type
+from .types import _bool, _int, Storage
 
 
 if TYPE_CHECKING:
-    from core._prims_common import DeviceLikeType
+    from ._prims_common import DeviceLikeType
 
 
 __all__ = ["TypedStorage", "UntypedStorage"]
@@ -525,7 +525,10 @@ class UntypedStorage(_StorageBase):
         return super()._share_filename_cpu_(*args, **kwargs)
 
     def data_ptr(self):
-        return self.data.ctypes.data
+        if isinstance(self.data, np.ndarray):
+            return self.data.ctypes.data
+        else:
+            return self.data.data_ptr()
 
     def nbytes(self):
         return self.data.nbytes
