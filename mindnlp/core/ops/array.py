@@ -7,9 +7,8 @@ from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.operations._grad_ops import StridedSliceGrad
 
 from ..configs import use_pyboost, ON_ORANGE_PI
-from .other import broadcast_tensors
+from .other import broadcast_tensors, finfo
 from ._inner import call_ms_func
-from .creation import arange
 
 # adjoint
 
@@ -31,7 +30,11 @@ def cat(tensors, dim=0, *, out=None, **kwargs):
 
 # concat
 has_concat = hasattr(mindspore.mint, 'concat')
-def concat(tensors, dim=0, *, out=None):
+def concat(tensors, dim=0, *, out=None, **kwargs):
+    axis = kwargs.get('axis', None)
+    if axis:
+        assert dim == 0, "Can not set `axis` and `dim` at same time."
+        dim = axis
     return cat(tensors, dim, out=out)
 
 # concatenate
@@ -372,6 +375,11 @@ def where(condition, *args, out=None):
         return nonzero(condition, as_tuple=True)
     assert len(args) == 2
     input, other = args
+    if isinstance(input, float) and input == -float("inf"):
+        input = finfo(other.dtype).min
+    if isinstance(other, float) and other == -float("inf"):
+        other = finfo(input.dtype).min
+
     output = mindspore.mint.where(condition, input, other)
     if out is not None:
         out.assign_value(output)

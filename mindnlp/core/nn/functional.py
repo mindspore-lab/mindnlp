@@ -3,6 +3,7 @@ import math
 import warnings
 from typing import Optional, Tuple, List
 import numpy as np
+import mindspore
 from mindspore import ops, mint
 from mindspore.ops._primitive_cache import _get_cache_prim
 
@@ -11,16 +12,15 @@ from ..configs import DEVICE_TARGET, ON_ORANGE_PI, use_pyboost, ON_A1
 
 generator_step_ = 12
 
-def gelu(input, approximate='none'):
-    if approximate == 'tanh':
-        return execute('gelu', input)
-    return input * 0.5 * (1.0 + core.erf(input / math.sqrt(2.0)))
+def gelu(input, *, approximate='none'):
+    if use_pyboost():
+        return mint.nn.functional.gelu(input, approximate=approximate)
+    return ops.gelu(input, approximate)
 
 def relu(input, inplace=False):
-    if inplace:
-        execute('inplace_relu', input)
-        return input
-    return execute('relu', input)
+    if use_pyboost():
+        return mint.nn.functional.relu(input)
+    return ops.relu(input)
 
 def tanh(input, inplace=False):
     if use_pyboost():
@@ -29,10 +29,16 @@ def tanh(input, inplace=False):
 
 
 def sigmoid(input):
-    return execute('sigmoid', input)
+    if use_pyboost() and not ON_ORANGE_PI:
+        return mint.nn.functional.sigmoid(input)
+    return ops.sigmoid(input)
 
-def silu(input):
-    return execute('silu', input)
+def silu(input, inplace=False):
+    if DEVICE_TARGET == 'CPU' or ON_ORANGE_PI:
+        return input * sigmoid(input)
+    if use_pyboost():
+        return mint.nn.functional.silu(input)
+    return ops.silu(input)
 
 def mish(input):
     return ops.mish(input)
@@ -54,7 +60,10 @@ def softplus(input, beta=1, threshold=20):
     return ops.softplus(input, beta, threshold)
 
 def logsigmoid(input):
-    return execute('logsigmoid', input)
+    if use_pyboost():
+        return mint.nn.functional.logsigmoid(input)
+    return ops.logsigmoid(input)
+
 
 def leaky_relu(input, alpha=0.2):
     if use_pyboost():
@@ -221,13 +230,13 @@ def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0, sca
     return ops.gather(weight, input, 0)
 
 def rms_norm(input, normalized_shape, weight, eps=1e-5):
-    return execute('rms_norm', input, weight, eps)[0]
+    return ops.rms_norm(input, weight, eps)[0]
 
 def fast_gelu(x):
     return ops.fast_gelu(x)
 
 def swiglu(x, dim=-1):
-    return execute('swiglu', x, dim)
+    return ops.swiglu(x, dim)
 
 def apply_rotary_pos_emb(query, key, cos, sin, position_ids, cos_format=0):
     return mindspore.ops.auto_generate.gen_ops_def.apply_rotary_pos_emb_(
@@ -361,8 +370,8 @@ def l1_loss(input, target, reduction='mean'):
     return ops.l1_loss(input, target, reduction)
 
 def smooth_l1_loss(input, target, beta=1.0, reduction='none'):
-    input = input.to(mindspore.float32)
-    target = target.to(mindspore.float32)
+    input = input.to(core.float32)
+    target = target.to(core.float32)
     return ops.smooth_l1_loss(input, target, beta, reduction)
 
 def kl_div(logits, labels, reduction='mean', log_target=False):
@@ -634,25 +643,32 @@ def _in_projection_packed(
             b_q, b_k, b_v = b.chunk(3)
         return linear(q, w_q, b_q), linear(k, w_k, b_k), linear(v, w_v, b_v)
 
-def scaled_dot_product_attention(query, key, value, attn_mask, dropout_p, is_causal):
-    embed_size = query.shape[-1]
-    scaling_factor = ops.sqrt(ops.sqrt(core.Tensor(embed_size, dtype=query.dtype)))
-    query = query / scaling_factor
-
+def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0,
+        is_causal=False, scale=None, enable_gqa=False) -> core.Tensor:
+    L, S = query.size(-2), key.size(-2)
+    scale_factor = 1 / math.sqrt(query.size(-1)) if scale is None else scale
+    attn_bias = core.zeros(L, S, dtype=query.dtype, device=query.device)
     if is_causal:
-        L = query.shape[-2]
-        S = key.shape[-2]
-        attn_mask = ops.ones((L, S), core.bool_).tril()
+        assert attn_mask is None
+        temp_mask = core.ones(L, S, dtype=core.bool).tril(diagonal=0)
+        attn_bias = attn_bias.masked_fill_(temp_mask.logical_not(), core.finfo(attn_bias.dtype).min)
+        attn_bias.to(query.dtype)
 
-    attn = ops.matmul(query, key.swapaxes(-2, -1) / scaling_factor)
     if attn_mask is not None:
-        attn = attn + attn_mask
-    attn = softmax(attn, -1)
-    if dropout_p > 0.:
-        attn = ops.dropout(attn, dropout_p)
-    output = ops.matmul(attn, value)
+        if attn_mask.dtype == core.bool:
+            attn_bias = attn_bias.masked_fill_(attn_mask.logical_not(), core.finfo(attn_bias.dtype).min)
+        else:
+            attn_bias = attn_mask + attn_bias
 
-    return output
+    if enable_gqa:
+        key = key.repeat_interleave(query.size(-3) // key.size(-3), -3)
+        value = value.repeat_interleave(query.size(-3) // value.size(-3), -3)
+
+    attn_weight = query @ key.transpose(-2, -1) * scale_factor
+    attn_weight += attn_bias
+    attn_weight = softmax(attn_weight, dim=-1)
+    attn_weight = dropout(attn_weight, dropout_p, training=True)
+    return attn_weight @ value
 
 
 def _mha_shape_check(query, key, value, key_padding_mask, attn_mask, num_heads):
@@ -1197,4 +1213,4 @@ def make_causal_mask(
     )
 
 def rotary_position_embedding(x, cos, sin, mode=0):
-    return execute('rotary_position_embedding', x, cos, sin, mode)
+    return ops.rotary_position_embedding(x, cos, sin, mode)

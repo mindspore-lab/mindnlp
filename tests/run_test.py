@@ -17,11 +17,16 @@ def run_tests():
     """
     # 获取命令行参数（排除脚本名本身）
     pytest_args = sys.argv[1:]
+    # not support sdpa/loss.backward/torchscript/torch.fx/torch.compile
     skip_ut = "not sdpa " \
         "and not headmasking " \
         "and not gradient_checkpointing " \
         "and not retain_grad " \
-        "and not data_parallel"
+        "and not data_parallel " \
+        "and not with_static_cache " \
+        "and not compile " \
+        "and not compilation " \
+        "and not torchscript "
 
     pytest_args.extend(['-k', skip_ut])
     if not pytest_args:

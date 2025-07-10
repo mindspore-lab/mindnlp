@@ -31,6 +31,12 @@ DTYPE_ELEMENT_SIZE_MAP = {
     mindspore.float16: 2,
 }
 
+DEVICE_MAP = {
+    'GPU': 'cuda',
+    'Ascend': 'npu',
+    'CPU': 'cpu'
+}
+
 class TypedTensorMeta(_TensorMeta):
     def __isinstancecheck__(self, instance):
         if not isinstance(instance, Tensor):
@@ -77,11 +83,13 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False):
     if device is None:
         device = get_default_device()
 
-    data_np = np.array(data, order='C') # must be C for mindspore Tensor
     if dtype is not None:
-        data_np = data_np.astype(dtype2np[dtype])
+        tensor = Tensor(data, dtype=dtype)
+    else:
+        tensor = Tensor(data)
 
-    tensor = Tensor(data_np).to(device)
+    tensor = tensor.to(device)
+    tensor.requires_grad_(requires_grad)
     return tensor
 
 def is_tensor(x):
@@ -144,8 +152,8 @@ def enable_mindspore_patch():
     Tensor.data_ptr = data_ptr
     StubTensor.data_ptr = data_ptr
 
-    Tensor.device = device_('not support yet.')
-    StubTensor.device = device_('not support yet.')
+    Tensor.device = device_(DEVICE_MAP[mindspore.get_context('device_target')])
+    StubTensor.device = device_(DEVICE_MAP[mindspore.get_context('device_target')])
 
     def _expand(self, *size):
         if len(size) == 1:
@@ -206,6 +214,25 @@ def enable_mindspore_patch():
 
     Tensor.__getitem__ = __getitem__
     StubTensor.__getitem__ = __getitem__
+
+    origin_setitem = Tensor.__setitem__
+    def __setitem__(self, slices, value):
+        if isinstance(value, float):
+            if value == float('inf'):
+                value = ops.finfo(self.dtype).max
+            elif value == -float('inf'):
+                value = ops.finfo(self.dtype).min
+        # if isinstance(slices, tuple):
+        #     new_slices = ()
+        #     for s in slices:
+        #         if isinstance(s, range):
+        #             s = list(s)
+        #         new_slices += (s,)
+        #     slices = new_slices
+        return origin_setitem(self, slices, value)
+
+    Tensor.__setitem__ = __setitem__
+    StubTensor.__setitem__ = __setitem__
 
     def numel(self):
         return math.prod(self.shape)
@@ -337,6 +364,20 @@ def enable_mindspore_patch():
 
     Tensor.narrow = ops.narrow
     StubTensor.narrow = ops.narrow
+
+    def bitwise_or_(self, other):
+        out = ops.bitwise_or(self, other)
+        self.copy_(out)
+        return self
+    
+    Tensor.bitwise_or_ = bitwise_or_
+    StubTensor.bitwise_or_ = bitwise_or_
+
+    # fix TypeError: unhashable type: 'StubTensor'
+    StubTensor.__hash__ = Tensor.__hash__
+
+    Tensor.masked_fill = ops.masked_fill
+    StubTensor.masked_fill = ops.masked_fill
 
 
 def _rebuild_from_type_v2(func, new_type, args, state):
