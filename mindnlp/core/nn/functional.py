@@ -4,12 +4,9 @@ import warnings
 from typing import Optional, Tuple, List
 import numpy as np
 from mindspore import ops, mint
-from mindspore.ops.auto_generate.gen_arg_handler import dtype_to_type_id
-from mindspore.common.generator import default_generator
 from mindspore.ops._primitive_cache import _get_cache_prim
 
 from mindnlp import core
-from mindnlp.core.executor import execute
 from ..configs import DEVICE_TARGET, ON_ORANGE_PI, use_pyboost, ON_A1
 
 generator_step_ = 12
@@ -237,28 +234,6 @@ def apply_rotary_pos_emb(query, key, cos, sin, position_ids, cos_format=0):
         query, key, cos, sin, position_ids, cos_format
     )
 
-def _reflection_pad(input, pad):
-    """reflection pad"""
-    out = input
-    if len(pad) == 2:
-        out = execute('reflection_pad_1d', input, pad)
-    elif len(pad) == 4:
-        out = execute('reflection_pad_2d', input, pad)
-    else:
-        out = execute('reflection_pad_3d', input, pad)
-    return out
-
-def _replication_pad(input, pad):
-    """replication pad"""
-    out = input
-    if len(pad) == 2:
-        out = execute('replication_pad_1d', input, pad)
-    elif len(pad) == 4:
-        out = execute('replication_pad_2d', input, pad)
-    else:
-        out = execute('replication_pad_3d', input, pad)
-    return out
-
 def pad(input, pad, mode='constant', value=0.0):
     if sum(pad) == 0:
         return input
@@ -268,7 +243,16 @@ def pad(input, pad, mode='constant', value=0.0):
         return mint.nn.functional.pad(input, pad, mode, value)
     if mode in ['reflect', 'circular']:
         return ops.pad(input, pad, mode)
-    return ops.pad(input, pad, mode, value)
+    new_pad = ()
+    for idx, pad_v in enumerate(pad):
+        if pad_v < 0:
+            dim = idx // 2
+            input = input.narrow(dim, 0, input.shape[dim] + pad_v)
+            pad_v = 0
+        new_pad += (pad_v,)
+    if sum(new_pad) == 0:
+        return input
+    return ops.pad(input, new_pad, mode, value)
 
 def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     return _inner_nll_loss(input, target, weight, ignore_index, reduction, label_smoothing)
@@ -656,8 +640,9 @@ def scaled_dot_product_attention(query, key, value, attn_mask, dropout_p, is_cau
     query = query / scaling_factor
 
     if is_causal:
-        L = query.shape[-2], S = key.shape[-2]
-        attn_mask = ops.ones((L, S), mindspore.bool_).tril()
+        L = query.shape[-2]
+        S = key.shape[-2]
+        attn_mask = ops.ones((L, S), core.bool_).tril()
 
     attn = ops.matmul(query, key.swapaxes(-2, -1) / scaling_factor)
     if attn_mask is not None:
