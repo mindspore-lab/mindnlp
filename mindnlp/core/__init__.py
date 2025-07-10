@@ -44,6 +44,7 @@ from .autograd import *
 from .ops import *
 from .serialization import load, save
 from ._bind import get_default_dtype, set_default_dtype
+from .amp import autocast, GradScaler
 
 from . import profiler, cuda, optim, amp, compiler, jit, version, __future__, overrides, \
     return_types, linalg, fx, backends, testing
@@ -80,3 +81,17 @@ def compile(fn=None, *args, **kwargs):
     if fn is not None:
         return wrap_func(fn)
     return wrap_func
+
+AUTO_CAST_DTYE = {
+    'cuda': float16,
+    'cpu': float16,
+    'npu': float16,
+    'Ascend': float16
+}
+
+def set_autocast_dtype(device_type, dtype):
+    assert device_type in AUTO_CAST_DTYE.keys(), f'{device_type} is not in {AUTO_CAST_DTYE.keys()}'
+    AUTO_CAST_DTYE[device_type] = dtype
+
+def get_autocast_dtype(device_type):
+    return AUTO_CAST_DTYE[device_type]

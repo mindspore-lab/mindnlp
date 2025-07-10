@@ -31,7 +31,11 @@ def cat(tensors, dim=0, *, out=None, **kwargs):
 
 # concat
 has_concat = hasattr(mindspore.mint, 'concat')
-def concat(tensors, dim=0, *, out=None):
+def concat(tensors, dim=0, *, out=None, **kwargs):
+    axis = kwargs.get('axis', None)
+    if axis:
+        assert dim == 0, "Can not set `axis` and `dim` at same time."
+        dim = axis
     return cat(tensors, dim, out=out)
 
 # concatenate

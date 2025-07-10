@@ -8,7 +8,11 @@ dtype = Type
 def is_floating_point(self):
     return isinstance(self, (typing.Float, typing.BFloat16))
 
+def is_complex(self):
+    return isinstance(self, typing.Complex)
+
 Type.is_floating_point = is_floating_point
+Type.is_complex = is_complex
 Type.__str__ = Type.__repr__
 
 @property

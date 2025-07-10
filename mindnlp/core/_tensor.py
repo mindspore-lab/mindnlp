@@ -31,6 +31,12 @@ DTYPE_ELEMENT_SIZE_MAP = {
     mindspore.float16: 2,
 }
 
+DEVICE_MAP = {
+    'GPU': 'cuda',
+    'Ascend': 'npu',
+    'CPU': 'cpu'
+}
+
 class TypedTensorMeta(_TensorMeta):
     def __isinstancecheck__(self, instance):
         if not isinstance(instance, Tensor):
@@ -77,11 +83,13 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False):
     if device is None:
         device = get_default_device()
 
-    data_np = np.array(data, order='C') # must be C for mindspore Tensor
     if dtype is not None:
-        data_np = data_np.astype(dtype2np[dtype])
+        tensor = Tensor(data, dtype=dtype)
+    else:
+        tensor = Tensor(data)
 
-    tensor = Tensor(data_np).to(device)
+    tensor = tensor.to(device)
+    tensor.requires_grad_(requires_grad)
     return tensor
 
 def is_tensor(x):
@@ -144,8 +152,8 @@ def enable_mindspore_patch():
     Tensor.data_ptr = data_ptr
     StubTensor.data_ptr = data_ptr
 
-    Tensor.device = device_('not support yet.')
-    StubTensor.device = device_('not support yet.')
+    Tensor.device = device_(DEVICE_MAP[mindspore.get_context('device_target')])
+    StubTensor.device = device_(DEVICE_MAP[mindspore.get_context('device_target')])
 
     def _expand(self, *size):
         if len(size) == 1:
