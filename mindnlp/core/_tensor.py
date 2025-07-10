@@ -199,7 +199,7 @@ def enable_mindspore_patch():
             new_slices = ()
             for s in slices:
                 if isinstance(s, range):
-                    s = slice(s.start, s.stop, s.step)
+                    s = list(s)
                 new_slices += (s,)
             slices = new_slices
         return origin_getitem(self, slices)
@@ -288,10 +288,8 @@ def enable_mindspore_patch():
     Tensor.unfold = unfold
     StubTensor.unfold = unfold
 
-    def new(self, data=None):
-        if data is None:
-            return Tensor([], dtype=self.dtype)
-        return Tensor(data, dtype=self.dtype)
+    def new(self, *shape):
+        return ops.empty(*shape, dtype=self.dtype)
 
     Tensor.new = new
     StubTensor.new = new
@@ -309,6 +307,33 @@ def enable_mindspore_patch():
 
     Tensor.cpu = cpu
     StubTensor.cpu = cpu
+
+    Tensor.take = ops.take
+    StubTensor.take = ops.take
+
+    Tensor.sort = ops.sort
+    StubTensor.sort = ops.sort
+
+    def requires_grad_(self, requires_grad=True):
+        self.requires_grad = requires_grad
+        return self
+
+    Tensor.requires_grad_ = requires_grad_
+    StubTensor.requires_grad_ = requires_grad_
+
+    @property
+    def data(self):
+        return Tensor(self)
+
+    @data.setter
+    def data(self, new_value):
+        if isinstance(self, StubTensor) and isinstance(new_value, StubTensor):
+            self.stub = new_value.stub
+        else:
+            self.assign_value(new_value)
+
+    Tensor.data = data
+    StubTensor.data = data
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)

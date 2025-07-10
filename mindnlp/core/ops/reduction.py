@@ -1,4 +1,5 @@
 """reduction op"""
+from collections import namedtuple
 import mindspore
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
@@ -6,6 +7,7 @@ from ..configs import use_pyboost, DEVICE_TARGET
 
 from ._inner import call_ms_func
 
+max_out = namedtuple('max_out', ['values', 'indices'])
 # argmax
 has_argmax = hasattr(mindspore.mint, 'argmax')
 def argmax(input, dim=None, keepdim=False):
@@ -67,7 +69,10 @@ def any(input, dim=None, keepdim=False, *, out=None):
 # max
 has_max = hasattr(mindspore.mint, 'max')
 def max(*args, **kwargs):
-    return mindspore.mint.max(*args, **kwargs)
+    out = mindspore.mint.max(*args, **kwargs)
+    if isinstance(out, tuple):
+        return max_out(values=out[0], indices=out[1])
+    return out
 
 # min
 has_min = hasattr(mindspore.mint, 'min')

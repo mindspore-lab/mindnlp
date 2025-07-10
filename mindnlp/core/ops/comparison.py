@@ -1,4 +1,5 @@
 """comparison op"""
+from collections import namedtuple
 import numpy as np
 import mindspore
 from mindspore import ops
@@ -6,6 +7,7 @@ from ..configs import use_pyboost
 
 from ._inner import call_ms_func
 
+sort_out = namedtuple('stor_out', ['sorted', 'indices'])
 # allclose
 has_allclose = hasattr(mindspore.mint, 'allclose')
 def allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
@@ -167,8 +169,9 @@ def not_equal(input, other):
 has_sort = hasattr(mindspore.mint, 'sort')
 def sort(input, *, dim=-1, descending=False, stable=False):
     if use_pyboost() and has_sort:
-        return mindspore.mint.sort(input, dim=dim, descending=descending, stable=stable)
-    return ops.sort(input, dim, descending)
+        out = mindspore.mint.sort(input, dim=dim, descending=descending, stable=stable)
+    out = ops.sort(input, dim, descending)
+    return sort_out(sorted=out[0], indices=out[1])
 
 # topk
 has_topk = hasattr(mindspore.mint, 'topk')

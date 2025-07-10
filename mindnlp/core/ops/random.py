@@ -88,6 +88,7 @@ def rand_like(input, *, dtype=None):
 # randint
 has_randint = hasattr(mindspore.mint, 'randint')
 def randint(*args, **kwargs):
+    device = kwargs.pop('device', None)
     if use_pyboost() and has_randint:
         return mindspore.mint.randint(*args, **kwargs)
     return ops.randint(*args, **kwargs)

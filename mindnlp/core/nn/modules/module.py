@@ -1031,7 +1031,7 @@ class Module:
             self.register_parameter(name, value)
         else:
             modules = self.__dict__.get("_modules")
-            if isinstance(value, core.nn.Module):
+            if isinstance(value, Module):
                 if modules is None:
                     raise AttributeError(
                         "cannot assign module before Module.__init__() call"
@@ -1565,7 +1565,7 @@ class Module:
 
             mod = getattr(mod, item)
 
-            if not isinstance(mod, core.nn.Module):
+            if not isinstance(mod, Module):
                 raise AttributeError("`" + item + "` is not "
                                      "an nn.Module")
 
