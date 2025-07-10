@@ -11,6 +11,12 @@ def is_floating_point(self):
 Type.is_floating_point = is_floating_point
 Type.__str__ = Type.__repr__
 
+@property
+def itemsize(self):
+    return ITEM_SIZE[self]
+
+Type.itemsize = itemsize
+
 half = float16
 float = float32
 double = float64
@@ -21,6 +27,22 @@ bool = bool_
 
 float8_e4m3fn = None # TODO: not support fp8 for now
 float8_e5m2 = None
+
+ITEM_SIZE = {
+    bool    : 1,
+    int8    : 1,
+    int16   : 2,
+    int32   : 4,
+    int64   : 8,
+    uint8   : 1,
+    uint16  : 2,
+    uint32  : 4,
+    uint64  : 8,
+    float16 : 2,
+    bfloat16 : 2,
+    float32 : 4,
+    float64 : 8,
+}
 
 np2dtype = {
     np.bool_: bool,

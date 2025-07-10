@@ -4111,4 +4111,8 @@ sys.modules[__name__] = _LazyModule(
     extra_objects={"__version__": transformers.__version__},
 )
 
+def not_supported():
+    return False
+
 transformers.utils.import_utils._torch_fx_available = False
+transformers.utils.import_utils.is_torch_sdpa_available = not_supported

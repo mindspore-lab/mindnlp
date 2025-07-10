@@ -2,44 +2,85 @@ import sys
 import types
 import importlib
 import importlib.metadata
+from collections import defaultdict
 
 class TorchProxyModule(types.ModuleType):
-    def __init__(self):
-        super().__init__("torch")
-        # 保存真实模块的引用
-        self._real_module = None
+    """递归代理模块，支持任意深度的模块路径"""
     
-    def _load_real_module(self):
-        """按需加载真实模块"""
-        if self._real_module is None:
-            # 尝试直接导入mindnlp.core作为torch
-            self._real_module = importlib.import_module("mindnlp.core")
-            # 添加必要的元数据属性
-            self._real_module.__name__ = "torch"
-            self._real_module.__package__ = "torch"
-            self._real_module.__file__ = "<mindnlp-torch-proxy>"
+    # 缓存已创建的代理模块
+    _proxy_cache = defaultdict(dict)
+    
+    def __new__(cls, real_module, proxy_name):
+        """使用缓存避免重复创建代理"""
+        # 生成缓存键：真实模块ID + 代理名称
+        cache_key = (id(real_module), proxy_name)
         
-        return self._real_module
+        # 如果已存在缓存，直接返回
+        if cache_key in cls._proxy_cache[real_module]:
+            return cls._proxy_cache[real_module][cache_key]
+        
+        # 创建新实例并缓存
+        instance = super().__new__(cls, proxy_name)
+        cls._proxy_cache[real_module][cache_key] = instance
+        return instance
     
+    def __init__(self, real_module, proxy_name):
+        """初始化代理模块"""
+        super().__init__(proxy_name)
+        self._real_module = real_module
+        self._proxy_name = proxy_name
+        self._submodule_proxies = {}
+        
+        # 设置关键元数据
+        self.__name__ = proxy_name
+        self.__package__ = proxy_name
+        self.__file__ = "<mindnlp-torch-proxy>"
+        
     def __getattr__(self, name):
-        """任何属性访问都重定向到真实模块"""
-        # 处理特殊元数据属性
-        if name in {"__name__", "__package__", "__file__"}:
-            return getattr(self._load_real_module(), name)
+        """动态获取属性并创建子模块代理"""
+        # 1. 尝试从真实模块获取属性
+        try:
+            real_attr = getattr(self._real_module, name)
+        except AttributeError:
+            raise AttributeError(
+                f"module '{self._proxy_name}' has no attribute '{name}'"
+            )
+
+        # 2. 如果是模块类型，创建递归代理
+        if isinstance(real_attr, types.ModuleType):
+            # 构建子模块的代理名称
+            sub_proxy_name = f"{self._proxy_name}.{name}"
             
-        return getattr(self._load_real_module(), name)
+            # 创建或获取子模块代理
+            if name not in self._submodule_proxies:
+                self._submodule_proxies[name] = TorchProxyModule(
+                    real_attr, 
+                    sub_proxy_name
+                )
+
+            return self._submodule_proxies[name]
+        
+        # 4. 其他类型直接返回
+        return real_attr
     
     def __setattr__(self, name, value):
-        """属性设置也重定向到真实模块"""
-        # 跳过自身内部属性
-        if name in {"_real_module", "__name__", "__package__", "__file__"}:
+        """处理属性设置"""
+        # 内部属性直接设置
+        if name in {"_real_module", "_proxy_name", "_submodule_proxies"}:
             super().__setattr__(name, value)
-        else:
-            setattr(self._load_real_module(), name, value)
-    
+            return
+
+        # 其他属性设置到真实模块
+        if name not in self._submodule_proxies:
+            setattr(self._real_module, name, value)
+
     def __dir__(self):
         """返回真实模块的属性列表"""
-        return dir(self._load_real_module())
+        return dir(self._real_module)
+    
+    def __repr__(self):
+        """友好的代理模块表示"""
+        return f"<proxy module '{self._proxy_name}' from '{self._real_module.__name__}'>"
 
     def __getattribute__(self, name):
         """特殊处理元数据相关属性"""
@@ -52,8 +93,8 @@ class TorchProxyModule(types.ModuleType):
         return super().__getattribute__(name)
 
 def initialize_torch_proxy():
-
-    torch_proxy = TorchProxyModule()
+    import mindnlp
+    torch_proxy = TorchProxyModule(mindnlp.core, 'torch')
     sys.modules["torch"] = torch_proxy
 
     # 设置必要的元数据

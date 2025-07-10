@@ -50,6 +50,15 @@ class device():
     def __hash__(self):
         return hash(self.type) ^ hash(self.index)
 
+    def __enter__(self):
+        # self.prev_idx = torch.cuda._exchange_device(self.idx)
+        pass
+
+    def __exit__(self, type: Any, value: Any, traceback: Any):
+        # self.idx = torch.cuda._maybe_exchange_device(self.prev_idx)
+        return False
+
+
 # Meta-type for "numeric" things; matches our docs
 Number: TypeAlias = Union[int, float, bool]
 # tuple for isinstance(x, Number) checks.

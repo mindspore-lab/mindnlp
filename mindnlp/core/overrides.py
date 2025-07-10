@@ -35,7 +35,7 @@ def is_tensor_like(inp):
     >>> is_tensor_like(TensorLike())
     True
     """
-    return type(inp) is core.Tensor or hasattr(inp, "__torch_function__")
+    return isinstance(inp, core.Tensor) or hasattr(inp, "__torch_function__")
 
 def handle_torch_function(
     public_api: Callable,

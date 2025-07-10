@@ -227,7 +227,8 @@ def split(tensor, split_size_or_sections, dim=0):
 
 # squeeze
 has_squeeze = hasattr(mindspore.mint, 'squeeze')
-def squeeze(input, *dim):
+def squeeze(input, *dim, **kwargs):
+    dim = kwargs.get('dim', dim)
     if use_pyboost() and has_squeeze:
         return mindspore.mint.squeeze(input, dim)
     return ops.squeeze(input, dim)
@@ -255,6 +256,8 @@ def take(input, index):
     index = index.view(-1)
     if ON_ORANGE_PI:
         return tf_gather(input, index, 0).view(index_shape)
+    if index_shape == ():
+        return gather(input, 0, index)[0]
     return gather(input, 0, index).view(index_shape)
 
 def infer_size_impl(a, b):
