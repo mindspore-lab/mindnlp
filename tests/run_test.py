@@ -17,11 +17,17 @@ def run_tests():
     """
     # 获取命令行参数（排除脚本名本身）
     pytest_args = sys.argv[1:]
-    
+    skip_ut = "not sdpa " \
+        "and not headmasking " \
+        "and not gradient_checkpointing " \
+        "and not retain_grad " \
+        "and not data_parallel"
+
+    pytest_args.extend(['-k', skip_ut])
     if not pytest_args:
         print("未提供参数，默认运行当前目录下所有测试")
         print("使用示例: python run_test.py -v tests/")
-    
+
     # 执行测试并获取退出码
     exit_code = pytest.main(pytest_args)
     

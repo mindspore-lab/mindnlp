@@ -3,9 +3,6 @@ from mindnlp.core import Tensor
 from typing import List, Optional, Dict, Any
 from enum import Enum
 
-from mindnlp.core.executor import execute
-
-
 class BackendType(Enum):
     UNDEFINED = 0
     GLOO = 1
