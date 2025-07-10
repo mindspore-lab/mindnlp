@@ -215,6 +215,25 @@ def enable_mindspore_patch():
     Tensor.__getitem__ = __getitem__
     StubTensor.__getitem__ = __getitem__
 
+    origin_setitem = Tensor.__setitem__
+    def __setitem__(self, slices, value):
+        if isinstance(value, float):
+            if value == float('inf'):
+                value = ops.finfo(self.dtype).max
+            elif value == -float('inf'):
+                value = ops.finfo(self.dtype).min
+        # if isinstance(slices, tuple):
+        #     new_slices = ()
+        #     for s in slices:
+        #         if isinstance(s, range):
+        #             s = list(s)
+        #         new_slices += (s,)
+        #     slices = new_slices
+        return origin_setitem(self, slices, value)
+
+    Tensor.__setitem__ = __setitem__
+    StubTensor.__setitem__ = __setitem__
+
     def numel(self):
         return math.prod(self.shape)
 
@@ -345,6 +364,20 @@ def enable_mindspore_patch():
 
     Tensor.narrow = ops.narrow
     StubTensor.narrow = ops.narrow
+
+    def bitwise_or_(self, other):
+        out = ops.bitwise_or(self, other)
+        self.copy_(out)
+        return self
+    
+    Tensor.bitwise_or_ = bitwise_or_
+    StubTensor.bitwise_or_ = bitwise_or_
+
+    # fix TypeError: unhashable type: 'StubTensor'
+    StubTensor.__hash__ = Tensor.__hash__
+
+    Tensor.masked_fill = ops.masked_fill
+    StubTensor.masked_fill = ops.masked_fill
 
 
 def _rebuild_from_type_v2(func, new_type, args, state):

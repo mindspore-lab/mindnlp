@@ -651,12 +651,12 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
     if is_causal:
         assert attn_mask is None
         temp_mask = core.ones(L, S, dtype=core.bool).tril(diagonal=0)
-        attn_bias.masked_fill_(temp_mask.logical_not(), float("-inf"))
+        attn_bias = attn_bias.masked_fill_(temp_mask.logical_not(), core.finfo(attn_bias.dtype).min)
         attn_bias.to(query.dtype)
 
     if attn_mask is not None:
         if attn_mask.dtype == core.bool:
-            attn_bias.masked_fill_(attn_mask.logical_not(), float("-inf"))
+            attn_bias = attn_bias.masked_fill_(attn_mask.logical_not(), core.finfo(attn_bias.dtype).min)
         else:
             attn_bias = attn_mask + attn_bias
 

@@ -791,8 +791,6 @@ def tril(input, diagonal=0, *, out=None):
 
 # triu
 has_triu = hasattr(mindspore.mint, "triu")
-
-
 def triu(input, diagonal=0, *, out=None):
     if use_pyboost() and has_triu:
         return call_ms_func(mindspore.mint.triu, input, diagonal, out=out)
@@ -821,8 +819,16 @@ def unflatten(x, dim, sizes):
 
 # resolve_neg
 
-
+has_masked_fill = hasattr(mindspore.mint, "masked_fill")
 def masked_fill(input, mask, value):
+    if isinstance(value, float):
+        if value == -float('inf'):
+            value = finfo(input.dtype).min
+        if value == float('inf'):
+            value = finfo(input.dtype).max
+
+    if has_masked_fill:
+        return mindspore.mint.masked_fill(input, mask, value)
     masked_fill_ = _get_cache_prim(ops.MaskedFill)()
     return masked_fill_(input, mask, mindspore.tensor(value, dtype=input.dtype))
 
