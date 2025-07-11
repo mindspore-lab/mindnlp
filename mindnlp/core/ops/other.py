@@ -714,16 +714,37 @@ has_repeat_interleave = hasattr(mindspore.mint, 'repeat_interleave')
 def repeat_interleave(input, repeats, dim=None):
     if use_pyboost() and has_repeat_interleave and not ON_A1:
         return mindspore.mint.repeat_interleave(input, repeats, dim=dim)
-    if input.dtype == mindspore.bool_:
-        input = input.int()
-    new_shape = list(input.shape)
-    new_shape.insert(dim+1, repeats)
-    expanded = input.unsqueeze(dim+1).expand(new_shape)
+    
+    if isinstance(repeats, mindspore.Tensor):
+        repeats = repeats.tolist()
+    if not isinstance(repeats, (tuple, list)):
+        repeats = (repeats,)
+    for index, element in enumerate(repeats):
+        if not isinstance(element, int):
+            raise TypeError(f"For 'Tensor.repeat', each element in {repeats} should be int, but got "
+                            f"{type(element)} at index {index}.")
+    if dim is None:
+        input = input.ravel()
+        dim = 0
 
-    final_shape = new_shape.copy()
-    final_shape[dim] *= final_shape[dim+1]
-    del final_shape[dim+1]
-    return expanded.reshape(final_shape)
+    dim = dim + input.ndim if dim < 0 else dim
+
+    if len(repeats) == 1:
+        repeats = repeats[0]
+        if repeats == 0:
+            return Tensor_(input.dtype, (0,))
+        return ops.repeat_elements(input, repeats, dim)
+    size = input.shape[dim]
+    if len(repeats) != size:
+        raise ValueError(f"For 'Tensor.repeat', the length of 'repeats' must be the same as the shape of the "
+                            f"original tensor in the 'axis' dimension, but got the length of 'repeats' "
+                            f"{len(repeats)}, the shape of the original tensor in the 'axis' dimension {size}.")
+    subs = ops.tensor_split(input, size, dim)
+    repeated_subs = []
+    for sub, rep in zip(subs, repeats):
+        if rep != 0:
+            repeated_subs.append(ops.repeat_elements(sub, rep, dim))
+    return ops.concat(repeated_subs, dim)
 
 # roll
 DEVICE_TARGET = mindspore.get_context("device_target")

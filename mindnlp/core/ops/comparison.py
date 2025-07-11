@@ -19,7 +19,7 @@ def allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
 has_argsort = hasattr(mindspore.mint, 'argsort')
 def argsort(input, dim=-1, descending=False, stable=False):
     if use_pyboost() and has_argsort:
-        return mindspore.mint.argsort(input, dim=dim, descending=descending, stable=stable)
+        return mindspore.mint.argsort(input, dim=dim, descending=descending)
     return sort(input, dim=dim, descending=descending, stable=stable)[1]
 
 # eq

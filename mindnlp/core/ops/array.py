@@ -24,6 +24,8 @@ def cat(tensors, dim=0, *, out=None, **kwargs):
     axis = kwargs.get('axis', None)
     if axis is not None:
         dim = axis
+    max_dtype = max([x.dtype for x in tensors])
+    tensors = [x.to(max_dtype) for x in tensors]
     if use_pyboost() and has_cat:
         return call_ms_func(mindspore.mint.cat, tensors, dim, out=out)
     return call_ms_func(ops.cat, tensors, dim, out=out)
@@ -31,11 +33,7 @@ def cat(tensors, dim=0, *, out=None, **kwargs):
 # concat
 has_concat = hasattr(mindspore.mint, 'concat')
 def concat(tensors, dim=0, *, out=None, **kwargs):
-    axis = kwargs.get('axis', None)
-    if axis:
-        assert dim == 0, "Can not set `axis` and `dim` at same time."
-        dim = axis
-    return cat(tensors, dim, out=out)
+    return cat(tensors, dim, out=out, **kwargs)
 
 # concatenate
 def concatenate(tensors, dim=0, out=None):
@@ -155,10 +153,17 @@ def permute(input, dims):
 
 # reshape
 has_reshape = hasattr(mindspore.mint, 'reshape')
-def reshape(input, shape):
+def reshape(input, *shape):
+    if isinstance(shape[0], (tuple, list)):
+        shape = shape[0]
+    new_shape = ()
+    for s in shape:
+        if not isinstance(s, int):
+            s = s.item()
+        new_shape += (s,)
     if use_pyboost() and has_reshape:
-        return mindspore.mint.reshape(input, shape)
-    return ops.reshape(input, shape)
+        return mindspore.mint.reshape(input, new_shape)
+    return ops.reshape(input, new_shape)
 
 def view(input, *shape):
     # if use_pyboost():
@@ -223,7 +228,13 @@ def scatter_update(input, indices, updates):
 # split
 has_split = hasattr(mindspore.mint, 'split')
 def split(tensor, split_size_or_sections, dim=0):
-    # FIXME: mint.split accuracy issue
+    if isinstance(split_size_or_sections, (tuple, list)):
+        new_split_size_or_sections = ()
+        for s in split_size_or_sections:
+            if not isinstance(s, int):
+                s = s.item()
+            new_split_size_or_sections += (s,)
+        split_size_or_sections = new_split_size_or_sections
     if use_pyboost() and has_split:
         return mindspore.mint.split(tensor, split_size_or_sections, dim)
     return ops.split(tensor, split_size_or_sections, dim)

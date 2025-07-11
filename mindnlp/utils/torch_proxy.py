@@ -50,14 +50,23 @@ class TorchProxyModule(types.ModuleType):
         if isinstance(real_attr, types.ModuleType):
             # 构建子模块的代理名称
             sub_proxy_name = f"{self._proxy_name}.{name}"
-            
-            # 创建或获取子模块代理
-            if name not in self._submodule_proxies:
-                self._submodule_proxies[name] = TorchProxyModule(
-                    real_attr, 
-                    sub_proxy_name
-                )
 
+            if name in self._submodule_proxies:
+                return self._submodule_proxies[name]
+
+            # 创建或获取子模块代理
+            proxy_sub = TorchProxyModule(
+                real_attr, 
+                sub_proxy_name
+            )
+
+            self._submodule_proxies[name] = proxy_sub
+            # 缓存子模块代理
+            self._submodule_proxies[name] = proxy_sub
+            # 注册到sys.modules
+            sys.modules[sub_proxy_name] = proxy_sub
+            # 注册到父模块
+            setattr(self, name, proxy_sub)
             return self._submodule_proxies[name]
         
         # 4. 其他类型直接返回

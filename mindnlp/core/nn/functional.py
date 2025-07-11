@@ -88,7 +88,7 @@ def hardswish(input: core.Tensor, inplace: bool = False) -> core.Tensor:
 def hardshrink(input, lambd=0.5):
     return execute('hard_shrink', input, lambd)
 
-def avg_pool1d(input_array, pool_size, stride, padding=0, ceil_mode=False, count_include_pad=True):
+def avg_pool1d(input, kernel_size, stride, padding=0, ceil_mode=False, count_include_pad=True):
     """
     Perform 1D average pooling on the input array of shape (N, C, L) without using explicit for loops.
 
@@ -103,6 +103,9 @@ def avg_pool1d(input_array, pool_size, stride, padding=0, ceil_mode=False, count
     Returns:
     - numpy array: The result of the average pooling operation.
     """
+    if use_pyboost():
+        return mint.nn.functional.avg_pool1d(input, kernel_size, stride, padding, ceil_mode, count_include_pad)
+
     N, C, L = input_array.shape
 
     # Add padding to the input array
@@ -468,12 +471,83 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None, trainin
         eps
     )
 
+has_conv1d = hasattr(mint.nn.functional, 'conv1d')
+def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+    if use_pyboost() and has_conv1d:
+        return mint.nn.functional.conv1d(input, weight, bias, stride, padding, dilation, groups)
+    pad_mode = 'pad'
+    pad = padding
+    if isinstance(padding, tuple):
+        pad = (0, 0, padding[0], padding[0])
+    elif isinstance(padding, int):
+        pad = (0, 0) + (padding,) * 2
+    if not isinstance(padding, (int, tuple)):
+        pad_mode = padding
+        pad = (0,) * 4
+
+    _conv2d = _get_cache_prim(ops.Conv2D)(out_channel=weight.shape[0] * groups,
+                                        kernel_size=(1, weight.shape[-1]),
+                                        mode=1,
+                                        pad_mode=pad_mode,
+                                        pad=pad,
+                                        stride=(1, stride) if isinstance(stride, int) else (1, *stride),
+                                        dilation=(1, dilation) if isinstance(dilation, int) else (1, *dilation),
+                                        group=groups)
+
+    input = input.expand_dims(2)
+    output = _conv2d(input, weight.expand_dims(2))
+
+    if bias is not None:
+        output = ops.bias_add(output, bias)
+
+    output = output.squeeze(2)
+    return output
+
+
 def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+    if use_pyboost():
+        return mint.nn.functional.conv2d(input, weight, bias, stride, padding, dilation, groups)
+
     pad_mode = 'pad'
     if not isinstance(padding, (int, tuple)):
         pad_mode = padding
 
     return ops.conv2d(input, weight, bias=bias, stride=stride, pad_mode=pad_mode, padding=padding, dilation=dilation, groups=groups)
+
+def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+    if use_pyboost():
+        return mint.nn.functional.conv3d(input, weight, bias, stride, padding, dilation, groups)
+    """
+        pad_mode = 'pad'
+        pad = padding
+        if isinstance(padding, tuple):
+            pad = (padding[0], padding[0], padding[1], padding[1])
+        elif isinstance(padding, int):
+            pad = (padding,) * 6
+        if not isinstance(padding, (int, tuple)):
+            pad_mode = padding
+            pad = (0,) * 6
+
+        self.conv3d = mops.Conv3D(out_channel=self.out_channels,
+                                kernel_size=self.kernel_size,
+                                mode=1,
+                                pad_mode=pad_mode,
+                                pad=pad,
+                                stride=self.stride,
+                                dilation=self.dilation,
+                                group=self.groups)
+        if self.padding_mode != 'zeros':
+            input = ops.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode)
+        output = self.conv3d(input, self.weight)
+
+                                
+        if self.bias is not None:
+            output = mops.bias_add(output, self.bias)
+
+
+    """
+    raise ValueError("Requires mindspore >= 2.3.0 by default, or set into pyboost mode by calling torch.config.set_byboost(True).")
+
 
 def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):
     if use_pyboost():
@@ -656,6 +730,8 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
 
     if attn_mask is not None:
         if attn_mask.dtype == core.bool:
+            if attn_mask.ndim == 3:
+                attn_mask = attn_mask.squeeze(0)
             attn_bias = attn_bias.masked_fill_(attn_mask.logical_not(), core.finfo(attn_bias.dtype).min)
         else:
             attn_bias = attn_mask + attn_bias
@@ -1087,35 +1163,6 @@ def fold(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
     if use_pyboost():
         return mint.nn.functional.fold(input, output_size, kernel_size, dilation, padding, stride)
     return ops.fold(input, output_size, kernel_size, dilation, padding, stride)
-
-def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    pad_mode = 'pad'
-    pad = padding
-    if isinstance(padding, tuple):
-        pad = (0, 0, padding[0], padding[0])
-    elif isinstance(padding, int):
-        pad = (0, 0) + (padding,) * 2
-    if not isinstance(padding, (int, tuple)):
-        pad_mode = padding
-        pad = (0,) * 4
-
-    _conv2d = _get_cache_prim(ops.Conv2D)(out_channel=weight.shape[0] * groups,
-                                        kernel_size=(1, weight.shape[-1]),
-                                        mode=1,
-                                        pad_mode=pad_mode,
-                                        pad=pad,
-                                        stride=(1, stride),
-                                        dilation=(1, dilation),
-                                        group=groups)
-
-    input = input.expand_dims(2)
-    output = _conv2d(input, weight.expand_dims(2))
-
-    if bias is not None:
-        output = ops.bias_add(output, bias)
-
-    output = output.squeeze(2)
-    return output
 
 def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0, reduction='mean', zero_infinity=False):
     ctc_loss_op = _get_cache_prim(nn_ops.CTCLossV2)(blank=blank, reduction="none", zero_infinity=zero_infinity)

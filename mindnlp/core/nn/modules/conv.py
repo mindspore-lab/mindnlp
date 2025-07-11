@@ -7,7 +7,7 @@ from mindnlp.core import Tensor
 from ..parameter import Parameter
 from .module import Module
 from ..common_types import _size_2_t, _size_1_t
-from ._utils import _single, _pair, _reverse_repeat_tuple
+from ._utils import _single, _pair, _reverse_repeat_tuple, _triple
 from .. import init
 from .. import functional as F
 from ... import ops
@@ -49,8 +49,9 @@ class _ConvNd(Module):
                  groups: int,
                  bias: bool,
                  padding_mode: str,
-                 dtype=None) -> None:
-        factory_kwargs = {'dtype': dtype}
+                 dtype=None,
+                 device=None) -> None:
+        factory_kwargs = {'dtype': dtype, 'device': device}
         super().__init__()
         if groups <= 0:
             raise ValueError('groups must be a positive integer')
@@ -170,10 +171,11 @@ class Conv1d(_ConvNd):
         dilation: _size_1_t = 1,
         groups: int = 1,
         bias: bool = True,
-        padding_mode: str = 'zeros',  # TODO: refine this type
-        dtype=None
+        padding_mode: str = "zeros",  # TODO: refine this type
+        device=None,
+        dtype=None,
     ) -> None:
-        factory_kwargs = {'dtype': dtype}
+        factory_kwargs = {"device": device, "dtype": dtype}
         # we create new variables below to make mypy happy since kernel_size has
         # type Union[int, Tuple[int]] and kernel_size_ has type Tuple[int]
         kernel_size_ = _single(kernel_size)
@@ -181,46 +183,39 @@ class Conv1d(_ConvNd):
         padding_ = padding if isinstance(padding, str) else _single(padding)
         dilation_ = _single(dilation)
         super().__init__(
-            in_channels, out_channels, kernel_size_, stride_, padding_, dilation_,
-            False, _single(0), groups, bias, padding_mode, **factory_kwargs)
+            in_channels,
+            out_channels,
+            kernel_size_,
+            stride_,
+            padding_,
+            dilation_,
+            False,
+            _single(0),
+            groups,
+            bias,
+            padding_mode,
+            **factory_kwargs,
+        )
 
-        pad_mode = 'valid'
-        pad = padding
-        if isinstance(padding, tuple):
-            if padding[0] != 0:
-                pad_mode = 'pad'
-            pad = (0, 0, padding[0], padding[0])
-        elif isinstance(padding, int):
-            if padding != 0:
-                pad_mode = 'pad'
-            pad = (0, 0) + (padding,) * 2
-        if not isinstance(padding, (int, tuple)):
-            pad_mode = padding
-            pad = (0,) * 4
+    def _conv_forward(self, input: Tensor, weight: Tensor, bias: Optional[Tensor]):
+        if self.padding_mode != "zeros":
+            return F.conv1d(
+                F.pad(
+                    input, self._reversed_padding_repeated_twice, mode=self.padding_mode
+                ),
+                weight,
+                bias,
+                self.stride,
+                _single(0),
+                self.dilation,
+                self.groups,
+            )
+        return F.conv1d(
+            input, weight, bias, self.stride, self.padding, self.dilation, self.groups
+        )
 
-        if self.padding_mode != 'zeros':
-            pad_mode = 'valid'
-            pad = (0,) * 4
-        self.conv2d = mops.Conv2D(out_channel=self.out_channels,
-                                kernel_size=(1,) + self.kernel_size,
-                                mode=1,
-                                pad_mode=pad_mode,
-                                pad=pad,
-                                stride=(1,) + self.stride,
-                                dilation=(1,) + self.dilation,
-                                group=self.groups)
-
-    def forward(self, input):
-        if self.padding_mode != 'zeros':
-            input = F.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode)
-        input = input.expand_dims(2)
-        output = self.conv2d(input, self.weight.expand_dims(2))
-
-        if self.bias is not None:
-            output = mops.bias_add(output, self.bias)
-
-        output = output.squeeze(2)
-        return output
+    def forward(self, input: Tensor) -> Tensor:
+        return self._conv_forward(input, self.weight, self.bias)
 
 
 class Conv2d(_ConvNd):
@@ -235,51 +230,52 @@ class Conv2d(_ConvNd):
         dilation: _size_2_t = 1,
         groups: int = 1,
         bias: bool = True,
-        padding_mode: str = 'zeros',
-        dtype=None
+        padding_mode: str = "zeros",  # TODO: refine this type
+        device=None,
+        dtype=None,
     ) -> None:
-        factory_kwargs = {'dtype': dtype}
+        factory_kwargs = {"device": device, "dtype": dtype}
         kernel_size_ = _pair(kernel_size)
         stride_ = _pair(stride)
         padding_ = padding if isinstance(padding, str) else _pair(padding)
         dilation_ = _pair(dilation)
         super().__init__(
-            in_channels, out_channels, kernel_size_, stride_, padding_, dilation_,
-            False, _pair(0), groups, bias, padding_mode, **factory_kwargs)
+            in_channels,
+            out_channels,
+            kernel_size_,
+            stride_,
+            padding_,
+            dilation_,
+            False,
+            _pair(0),
+            groups,
+            bias,
+            padding_mode,
+            **factory_kwargs,
+        )
 
-        pad_mode = 'pad'
-        pad = padding
-        if isinstance(padding, tuple):
-            pad = (padding[0], padding[0], padding[1], padding[1])
-        elif isinstance(padding, int):
-            pad = (padding,) * 4
-        if not isinstance(padding, (int, tuple)):
-            pad_mode = padding
-            pad = (0,) * 4
-
-        self.conv2d = mops.Conv2D(out_channel=self.out_channels,
-                                kernel_size=self.kernel_size,
-                                mode=1,
-                                pad_mode=pad_mode,
-                                pad=pad,
-                                stride=self.stride,
-                                dilation=self.dilation,
-                                group=self.groups)
     def _conv_forward(self, input: Tensor, weight: Tensor, bias: Optional[Tensor]):
-        if self.padding_mode != 'zeros':
-            input = ops.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode)
-        output = self.conv2d(input, weight)
-        if bias is not None:
-            output = mops.bias_add(output, bias)
-        return output
+        if self.padding_mode != "zeros":
+            return F.conv2d(
+                F.pad(
+                    input, self._reversed_padding_repeated_twice, mode=self.padding_mode
+                ),
+                weight,
+                bias,
+                self.stride,
+                _pair(0),
+                self.dilation,
+                self.groups,
+            )
+        return F.conv2d(
+            input, weight, bias, self.stride, self.padding, self.dilation, self.groups
+        )
 
-    def forward(self, input):
+    def forward(self, input: Tensor) -> Tensor:
         return self._conv_forward(input, self.weight, self.bias)
 
 
-
 class Conv3d(_ConvNd):
-
     def __init__(
         self,
         in_channels: int,
@@ -294,135 +290,33 @@ class Conv3d(_ConvNd):
         dtype=None
     ) -> None:
         factory_kwargs = {'dtype': dtype}
-        kernel_size_ = _pair(kernel_size)
-        stride_ = _pair(stride)
-        padding_ = padding if isinstance(padding, str) else _pair(padding)
-        dilation_ = dilation
+        kernel_size_ = _triple(kernel_size)
+        stride_ = _triple(stride)
+        padding_ = padding if isinstance(padding, str) else _triple(padding)
+        dilation_ = _triple(dilation)
         super().__init__(
             in_channels, out_channels, kernel_size_, stride_, padding_, dilation_,
-            False, _pair(0), groups, bias, padding_mode, **factory_kwargs)
+            False, _triple(0), groups, bias, padding_mode, **factory_kwargs)
 
-        pad_mode = 'pad'
-        pad = padding
-        if isinstance(padding, tuple):
-            pad = (padding[0], padding[0], padding[1], padding[1])
-        elif isinstance(padding, int):
-            pad = (padding,) * 6
-        if not isinstance(padding, (int, tuple)):
-            pad_mode = padding
-            pad = (0,) * 6
+    def _conv_forward(self, input: Tensor, weight: Tensor, bias: Optional[Tensor]):
+        if self.padding_mode != "zeros":
+            return F.conv3d(
+                F.pad(
+                    input, self._reversed_padding_repeated_twice, mode=self.padding_mode
+                ),
+                weight,
+                bias,
+                self.stride,
+                _triple(0),
+                self.dilation,
+                self.groups,
+            )
+        return F.conv3d(
+            input, weight, bias, self.stride, self.padding, self.dilation, self.groups
+        )
 
-        self.conv3d = mops.Conv3D(out_channel=self.out_channels,
-                                kernel_size=self.kernel_size,
-                                mode=1,
-                                pad_mode=pad_mode,
-                                pad=pad,
-                                stride=self.stride,
-                                dilation=self.dilation,
-                                group=self.groups)
-
-    def forward(self, input):
-        if self.padding_mode != 'zeros':
-            input = ops.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode)
-        output = self.conv3d(input, self.weight)
-        if self.bias is not None:
-            output = mops.bias_add(output, self.bias)
-        return output
-
-# class Conv3d(_ConvNd):
-#     r"""Applies a 3D convolution over an input signal composed of several input
-#     planes.
-
-#     In the simplest case, the output value of the layer with input size :math:`(N, C_{in}, D, H, W)`
-#     and output :math:`(N, C_{out}, D_{out}, H_{out}, W_{out})` can be precisely described as:
-
-#     .. math::
-
-#         \begin{array}{ll}
-#         out(N_i, C_{out_j})  = bias(C_{out_j})
-#                        + \sum_{{k}=0}^{C_{in}-1} weight(C_{out_j}, k)  \star input(N_i, k)
-#         \end{array}
-
-#     where :math:`\star` is the valid 3D `cross-correlation`_ operator
-
-#     | :attr:`stride` controls the stride for the cross-correlation.
-#     | If :attr:`padding` is non-zero, then the input is implicitly zero-padded on both sides
-#       for :attr:`padding` number of points.
-#     | :attr:`dilation` controls the spacing between the kernel points; also known as the à trous algorithm.
-#       It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
-#     | :attr:`groups` controls the connections between inputs and outputs. `in_channels` and `out_channels`
-#       must both be divisible by `groups`.
-#     |       At groups=1, all inputs are convolved to all outputs.
-#     |       At groups=2, the operation becomes equivalent to having two conv layers
-#                  side by side, each seeing half the input channels,
-#                  and producing half the output channels, and both subsequently concatenated.
-#             At groups=`in_channels`, each input channel is convolved with its own set of filters
-#                  (of size `out_channels // in_channels`).
-
-#     The parameters :attr:`kernel_size`, :attr:`stride`, :attr:`padding`, :attr:`dilation` can either be:
-
-#         - a single ``int`` -- in which case the same value is used for the depth, height and width dimension
-#         - a ``tuple`` of three ints -- in which case, the first `int` is used for the depth dimension,
-#           the second `int` for the height dimension and the third `int` for the width dimension
-
-#     .. note::
-
-#          Depending of the size of your kernel, several (of the last)
-#          columns of the input might be lost, because it is a valid `cross-correlation`_,
-#          and not a full `cross-correlation`_.
-#          It is up to the user to add proper padding.
-
-#     Args:
-#         in_channels (int): Number of channels in the input image
-#         out_channels (int): Number of channels produced by the convolution
-#         kernel_size (int or tuple): Size of the convolving kernel
-#         stride (int or tuple, optional): Stride of the convolution
-#         padding (int or tuple, optional): Zero-padding added to both sides of the input
-#         dilation (int or tuple, optional): Spacing between kernel elements
-#         groups (int, optional): Number of blocked connections from input channels to output channels
-#         bias (bool, optional): If True, adds a learnable bias to the output
-
-#     Shape:
-#         - Input: :math:`(N, C_{in}, D_{in}, H_{in}, W_{in})`
-#         - Output: :math:`(N, C_{out}, D_{out}, H_{out}, W_{out})` where
-#           :math:`D_{out} = floor((D_{in}  + 2 * padding[0] - dilation[0] * (kernel\_size[0] - 1) - 1) / stride[0] + 1)`
-#           :math:`H_{out} = floor((H_{in}  + 2 * padding[1] - dilation[1] * (kernel\_size[1] - 1) - 1) / stride[1] + 1)`
-#           :math:`W_{out} = floor((W_{in}  + 2 * padding[2] - dilation[2] * (kernel\_size[2] - 1) - 1) / stride[2] + 1)`
-
-#     Attributes:
-#         weight (Tensor): the learnable weights of the module of shape
-#                          (out_channels, in_channels, kernel_size[0], kernel_size[1], kernel_size[2])
-#         bias (Tensor):   the learnable bias of the module of shape (out_channels)
-
-#     Examples::
-
-#         >>> # With square kernels and equal stride
-#         >>> m = nn.Conv3d(16, 33, 3, stride=2)
-#         >>> # non-square kernels and unequal stride and with padding
-#         >>> m = nn.Conv3d(16, 33, (3, 5, 2), stride=(2, 1, 1), padding=(4, 2, 0))
-#         >>> input = autograd.Variable(core.randn(20, 16, 10, 50, 100))
-#         >>> output = m(input)
-
-#     .. _cross-correlation:
-#         https://en.wikipedia.org/wiki/Cross-correlation
-
-#     .. _link:
-#         https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
-#     """
-
-#     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
-#                  padding=0, dilation=1, groups=1, bias=True):
-#         kernel_size = _triple(kernel_size)
-#         stride = _triple(stride)
-#         padding = _triple(padding)
-#         dilation = _triple(dilation)
-#         super(Conv3d, self).__init__(
-#             in_channels, out_channels, kernel_size, stride, padding, dilation,
-#             False, _triple(0), groups, bias)
-
-#     def forward(self, input):
-#         return ops.conv3d(input, self.weight, self.bias, self.stride,
-#                         self.padding, self.dilation, self.groups)
+    def forward(self, input: Tensor) -> Tensor:
+        return self._conv_forward(input, self.weight, self.bias)
 
 
 class _ConvTransposeNd(_ConvNd):
