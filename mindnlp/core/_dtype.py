@@ -21,6 +21,11 @@ def itemsize(self):
 
 Type.itemsize = itemsize
 
+def __gt__(self, other):
+    return self.itemsize > other.itemsize
+
+Type.__gt__ = __gt__
+
 half = float16
 float = float32
 double = float64

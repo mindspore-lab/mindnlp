@@ -2,6 +2,7 @@ import ctypes
 from typing import Any
 from ._dtype import *
 from .types import device as device_
+from .configs import ON_A1
 
 DEFAULT_DTYPE, DEFAULT_DEVICE = float32, device_('cpu')
 
@@ -21,6 +22,8 @@ def get_autocast_dtype(device_type):
 def set_default_dtype(dtype):
     """set default dtype"""
     global DEFAULT_DTYPE
+    if ON_A1 and dtype == bfloat16:
+        dtype = float16
     DEFAULT_DTYPE = dtype
 
 def get_default_dtype():

@@ -158,7 +158,12 @@ def enable_mindspore_patch():
     def _expand(self, *size):
         if len(size) == 1:
             size = size[0]
-        return self.broadcast_to(size)
+        new_size = ()
+        for s in size:
+            if isinstance(s, Tensor):
+                s = s.item()
+            new_size += (s,)
+        return self.broadcast_to(new_size)
 
     Tensor.expand = _expand
     StubTensor.expand = _expand
@@ -172,7 +177,13 @@ def enable_mindspore_patch():
     def _repeat(self, *sizes):
         if len(sizes) == 1 and isinstance(sizes[0], (list, tuple)):
             sizes = sizes[0]
-        return ops.tile(self, tuple(sizes))
+        new_sizes = ()
+        for s in sizes:
+            if not isinstance(s, int):
+                s = s.item()
+            new_sizes += (s,)
+
+        return ops.tile(self, new_sizes)
 
     Tensor.repeat = _repeat
     StubTensor.repeat = _repeat
@@ -322,8 +333,6 @@ def enable_mindspore_patch():
     StubTensor.new = new
 
     def view(self, *args):
-        if isinstance(args[0], (tuple, list)):
-            args = args[0]
         return self.reshape(*args)
     
     Tensor.view = view
@@ -379,6 +388,16 @@ def enable_mindspore_patch():
     Tensor.masked_fill = ops.masked_fill
     StubTensor.masked_fill = ops.masked_fill
 
+    Tensor.reshape = ops.reshape
+    StubTensor.reshape = ops.reshape
+
+    def __rmul__(self, other):
+        if isinstance(other, str):
+            return self.item() * other
+        return self.__mul__(other)
+
+    Tensor.__rmul__ = __rmul__
+    StubTensor.__rmul__ = __rmul__
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
