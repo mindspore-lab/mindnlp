@@ -85,13 +85,15 @@ class PySafeSlice:
 
     def get(self, *args, **kwargs):
         nbytes = int(np.prod(self.shape)) * np.dtype(self.dtype).itemsize
-        offset = self.start_offset
-        tensor = np.frombuffer(self.buffermmap, dtype=self.dtype, offset=offset,
-                               count=nbytes // np.dtype(self.dtype).itemsize)
+        buffer = bytearray(nbytes)
+        self.bufferfile.seek(self.start_offset)
+        self.bufferfile.readinto(buffer)
+        tensor = np.frombuffer(buffer, dtype=self.dtype).reshape(self.shape)
         tensor = tensor.reshape(self.shape)
         if not SUPPORT_BF16 and self.info["dtype"] == 'BF16':
             tensor = tensor.astype(np.float16)
         tensor = Tensor.from_numpy(tensor)
+
         return tensor
 
     @property
@@ -135,17 +137,18 @@ def getSize(fileobject):
 
 
 def metadata_validate(metadata):
-    start = 0
+    end = 0
     for key, info in metadata.items():
         s, e = info["data_offsets"]
-        if s != start or e < s:
+        if e < s:
             raise ValueError(f"SafeTensorError::InvalidOffset({key})")
-        start = e
+        if e > end:
+            end = e
         nelements = np.prod(info["shape"])
         nbytes = nelements * _DTYPE_SIZE[info["dtype"]]
         if (e - s) != nbytes:
             raise ValueError("SafeTensorError::TensorInvalidInfo")
-    return start
+    return end
 
 def read_metadata(buffer):
     buffer_len = getSize(buffer)

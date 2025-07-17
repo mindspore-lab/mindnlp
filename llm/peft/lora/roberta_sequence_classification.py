@@ -1,36 +1,49 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
 import argparse
 import os
 
-import mindtorch
-from mindtorch.optim import AdamW
-from mindtorch.utils.data import DataLoader
-# import mindnlp
+import mindspore
+from mindspore.common.api import _no_grad
 
-from peft import (
-    get_peft_config,
+from tqdm import tqdm
+from mindnlp.core.optim import AdamW
+from mindnlp import evaluate
+from mindnlp.dataset import load_dataset
+from mindnlp.transformers import AutoModelForSequenceClassification, AutoTokenizer
+from mindnlp.transformers.optimization import get_linear_schedule_with_warmup
+from mindnlp.peft import (
     get_peft_model,
-    get_peft_model_state_dict,
-    set_peft_model_state_dict,
-    LoraConfig,
     PeftType,
-    PrefixTuningConfig,
-    PromptEncoderConfig,
+    LoraConfig,
 )
 
-import evaluate
-from datasets import load_dataset
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, get_linear_schedule_with_warmup, set_seed
-from tqdm import tqdm
+import faulthandler
+faulthandler.enable()
+
+# mindspore.set_context(pynative_synchronize=True)
+# In[2]:
 
 batch_size = 32
 model_name_or_path = "roberta-large"
 task = "mrpc"
-peft_type = PeftType.LORA
-device = "npu" # "cuda"
+peft_type = PeftType.PROMPT_TUNING
 num_epochs = 20
+
+
+# In[3]:
+
 
 peft_config = LoraConfig(task_type="SEQ_CLS", inference_mode=False, r=8, lora_alpha=16, lora_dropout=0.1)
 lr = 3e-4
+
+
+# In[4]:
+
 
 if any(k in model_name_or_path for k in ("gpt", "opt", "bloom")):
     padding_side = "left"
@@ -41,38 +54,108 @@ tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, padding_side=paddi
 if getattr(tokenizer, "pad_token_id") is None:
     tokenizer.pad_token_id = tokenizer.eos_token_id
 
+
+# In[5]:
+
+
 datasets = load_dataset("glue", task)
+print(next(datasets['train'].create_dict_iterator()))
+
+
+# In[6]:
+
+
+from mindnlp.dataset import BaseMapFunction
+
+class MapFunc(BaseMapFunction):
+    def __call__(self, sentence1, sentence2, label, idx):
+        outputs = tokenizer(str(sentence1), str(sentence2), truncation=True, max_length=None)
+        return outputs['input_ids'], outputs['attention_mask'], label
+
+
+def get_dataset(dataset, tokenizer):
+    input_colums=['sentence1', 'sentence2', 'label', 'idx']
+    output_columns=['input_ids', 'attention_mask', 'labels']
+    dataset = dataset.map(MapFunc(input_colums, output_columns),
+                          input_colums, output_columns)
+    dataset = dataset.padded_batch(batch_size, pad_info={'input_ids': (None, tokenizer.pad_token_id),
+                                                         'attention_mask': (None, 0)})
+    return dataset
+
+train_dataset = get_dataset(datasets['train'], tokenizer)
+eval_dataset = get_dataset(datasets['validation'], tokenizer)
+
+
+# In[7]:
+
+
+print(next(train_dataset.create_dict_iterator()))
+
+
+# In[8]:
+
+
 metric = evaluate.load("glue", task)
 
 
-def tokenize_function(examples):
-    # max_length=None => use the model max length (it's actually the default)
-    outputs = tokenizer(examples["sentence1"], examples["sentence2"], truncation=True, max_length=None)
-    return outputs
+# In[9]:
 
-
-tokenized_datasets = datasets.map(
-    tokenize_function,
-    batched=True,
-    remove_columns=["idx", "sentence1", "sentence2"],
-)
-
-# We also rename the 'label' column to 'labels' which is the expected name for labels by the models of the
-# transformers library
-tokenized_datasets = tokenized_datasets.rename_column("label", "labels")
-
-
-def collate_fn(examples):
-    return tokenizer.pad(examples, padding="longest", return_tensors="pt")
-
-
-# Instantiate dataloaders.
-train_dataloader = DataLoader(tokenized_datasets["train"], shuffle=True, collate_fn=collate_fn, batch_size=batch_size)
-eval_dataloader = DataLoader(
-    tokenized_datasets["validation"], shuffle=False, collate_fn=collate_fn, batch_size=batch_size
-)
-
-model = AutoModelForSequenceClassification.from_pretrained(model_name_or_path, return_dict=True)
+model = AutoModelForSequenceClassification.from_pretrained(model_name_or_path, return_dict=True, attn_implementation='eager')
 model = get_peft_model(model, peft_config)
 model.print_trainable_parameters()
-model
+
+
+# In[10]:
+
+
+optimizer = AdamW(params=tuple(param for param in model.parameters() if param.requires_grad), lr=lr)
+
+# Instantiate scheduler
+lr_scheduler = get_linear_schedule_with_warmup(
+    optimizer=optimizer,
+    num_warmup_steps=0.06 * (len(train_dataset) * num_epochs),
+    num_training_steps=(len(train_dataset) * num_epochs),
+)
+
+
+# In[ ]:
+
+
+from mindnlp.core import value_and_grad
+def forward_fn(**batch):
+    outputs = model(**batch)
+    loss = outputs.loss
+    return loss
+
+grad_fn = value_and_grad(forward_fn, tuple(param for param in model.parameters() if param.requires_grad))
+
+for epoch in range(num_epochs):
+    model.set_train()
+    train_total_size = train_dataset.get_dataset_size()
+    for step, batch in enumerate(tqdm(train_dataset.create_dict_iterator(), total=train_total_size)):
+        optimizer.zero_grad()
+        loss = grad_fn(**batch)
+        optimizer.step()
+        lr_scheduler.step()
+
+    model.set_train(False)
+    eval_total_size = eval_dataset.get_dataset_size()
+    for step, batch in enumerate(tqdm(eval_dataset.create_dict_iterator(), total=eval_total_size)):
+        with _no_grad():
+            outputs = model(**batch)
+        predictions = outputs.logits.argmax(axis=-1)
+        predictions, references = predictions, batch["labels"]
+        metric.add_batch(
+            predictions=predictions,
+            references=references,
+        )
+
+    eval_metric = metric.compute()
+    print(f"epoch {epoch}:", eval_metric)
+
+
+# In[ ]:
+
+
+
+

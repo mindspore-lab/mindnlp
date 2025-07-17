@@ -47,6 +47,7 @@ def value_and_grad(fn, params_or_argnums, has_aux=False, attach_grads=True):
         if kwargs:
             run_args = args + tuple(kwargs.values())
 
+        grads = _pynative_executor.check_run(grad_, fn_, params_or_argnums, None, *run_args)
         grads = _pynative_executor.grad(fn_, grad_, params_or_argnums, None, *run_args)
         grads = tuple(mindspore.Tensor(grad) for grad in grads)
         if attach_grads:
