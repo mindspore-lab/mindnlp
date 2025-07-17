@@ -47,7 +47,7 @@ from ._bind import get_default_dtype, set_default_dtype
 from .amp import autocast, GradScaler
 
 from . import profiler, cuda, optim, amp, compiler, jit, version, __future__, overrides, \
-    return_types, linalg, fx, backends, testing, nn
+    return_types, linalg, fx, backends, testing, nn, fft
 
 from ._lowrank import svd_lowrank
 from .random import get_rng_state, initial_seed, manual_seed, seed, set_rng_state

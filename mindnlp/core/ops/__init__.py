@@ -10,7 +10,6 @@ from .random import *
 from .reduction import *
 from .other import *
 from .tensor import *
-# from .fft_op import *
 # from .spectral import *
 from ._inner import *
 from .optim import *
@@ -27,7 +26,6 @@ __all__.extend(array.__all__)
 __all__.extend(blas.__all__)
 __all__.extend(comparison.__all__)
 __all__.extend(creation.__all__)
-# __all__.extend(fft_op.__all__)
 __all__.extend(pointwise.__all__)
 __all__.extend(random.__all__)
 __all__.extend(reduction.__all__)

@@ -1,5 +1,6 @@
 import math
 import numpy as np
+from functools import partial
 import mindspore
 from mindspore import Tensor
 from mindspore.common.tensor import _TensorMeta
@@ -226,8 +227,42 @@ def enable_mindspore_patch():
     Tensor.__getitem__ = __getitem__
     StubTensor.__getitem__ = __getitem__
 
+    def _convert_numpy_slices(self, key):
+        """递归转换 key 中的 NumPy 整数为内置 int"""
+        # 处理元组：遍历所有元素并递归转换
+        if isinstance(key, tuple):
+            return tuple(self._convert_numpy_slices(k) for k in key)
+        
+        # 处理 slice 对象：转换 start/stop/step
+        elif isinstance(key, slice):
+            start = key.start
+            stop = key.stop
+            step = key.step
+            
+            # 转换 NumPy 整数为 Python int
+            if isinstance(start, np.integer):
+                start = int(start)
+            if isinstance(stop, np.integer):
+                stop = int(stop)
+            if isinstance(step, np.integer):
+                step = int(step)
+            
+            return slice(start, stop, step)
+        
+        # 转换单个 NumPy 索引值
+        elif isinstance(key, np.integer):
+            return int(key)
+        
+        # 其他类型（如 int、None）直接返回
+        else:
+            return key
+
+    Tensor._convert_numpy_slices = _convert_numpy_slices
+    StubTensor._convert_numpy_slices = _convert_numpy_slices
+
     origin_setitem = Tensor.__setitem__
     def __setitem__(self, slices, value):
+        slices = self._convert_numpy_slices(slices)
         if isinstance(value, float):
             if value == float('inf'):
                 value = ops.finfo(self.dtype).max
@@ -398,6 +433,14 @@ def enable_mindspore_patch():
 
     Tensor.__rmul__ = __rmul__
     StubTensor.__rmul__ = __rmul__
+
+    Tensor.norm = ops.norm
+    StubTensor.norm = ops.norm
+
+    def clamp_min(self, value):
+        return ops.clamp(self, value)
+    Tensor.clamp_min = clamp_min
+    StubTensor.clamp_min = clamp_min
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)

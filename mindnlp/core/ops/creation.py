@@ -142,7 +142,7 @@ def empty(*size, dtype=None, device=None, requires_grad=False, pin_memory=False,
     if device is None:
         device= get_default_device()
 
-    if isinstance(size[0], (tuple, list)):
+    if len(size) > 0 and isinstance(size[0], (tuple, list)):
         size = size[0]
 
     if dtype is None:

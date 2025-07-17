@@ -246,6 +246,40 @@ def apply_rotary_pos_emb(query, key, cos, sin, position_ids, cos_format=0):
         query, key, cos, sin, position_ids, cos_format
     )
 
+def custom_circular_pad(x, pad):
+    """手动实现 torch.nn.functional.pad 的 circular 模式。
+    
+    参数:
+        x: 输入张量，形状为 (B, C, D1, D2, ...)
+        pad: 填充参数，格式为 (left_N, right_N, left_{N-1}, right_{N-1}, ..., left_1, right_1)
+              表示从最后维度开始向前定义填充大小
+    
+    返回:
+        循环填充后的张量
+    """
+    ndim = x.dim()
+    n_pad_dims = len(pad) // 2
+    assert n_pad_dims <= ndim, "填充参数超过了张量的维度"
+    
+    # 按从最后维度向前处理填充
+    for dim in range(ndim-1, ndim-1-n_pad_dims, -1):
+        # 当前维度的左右填充量
+        idx = 2 * (ndim - 1 - dim)  # 在pad元组中的起始位置
+        left_pad = pad[idx]
+        right_pad = pad[idx + 1]
+        
+        if left_pad == 0 and right_pad == 0:
+            continue  # 跳过该维度
+            
+        size = x.shape[dim]  # 当前维度的原始长度
+        new_size = left_pad + size + right_pad
+        
+        # 生成循环索引: (index - left_pad) mod size
+        index = (core.arange(new_size) - left_pad) % size
+        x = core.index_select(x, dim, index)
+
+    return x
+
 def pad(input, pad, mode='constant', value=0.0):
     if sum(pad) == 0:
         return input
@@ -253,8 +287,10 @@ def pad(input, pad, mode='constant', value=0.0):
         pad = tuple(p if isinstance(p, int) else p.item() for p in pad)
     if use_pyboost() and not ON_A1:
         return mint.nn.functional.pad(input, pad, mode, value)
-    if mode in ['reflect', 'circular']:
+    if mode == 'reflect':
         return ops.pad(input, pad, mode)
+    if mode == 'circular':
+        return custom_circular_pad(input, pad)
     new_pad = ()
     for idx, pad_v in enumerate(pad):
         if pad_v < 0:
