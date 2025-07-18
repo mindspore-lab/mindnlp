@@ -15,12 +15,15 @@
 """RNN operators module, include RNN, GRU."""
 import math
 import warnings
+from mindspore import context
+from mindspore import ops as P
 
-from ..parameter import Parameter
+from mindnlp import core
 from .module import Module
 from .dropout import Dropout
-from ... import ops
+from ..parameter import Parameter
 from .. import init
+from ... import ops
 
 
 __all__ = ['LSTM', 'GRU', 'RNN']
@@ -272,7 +275,7 @@ class _DynamicLSTMAscend(Module):
 
     def __init__(self):
         super().__init__()
-        self.lstm = DynamicRNN()
+        self.lstm = P.DynamicRNN()
 
     def forward(self, x, h_0, seq_length, w_ih, w_hh, b_ih, b_hh):
         '''Dynamic LSTM module on Ascend'''
@@ -324,7 +327,7 @@ class _RNNBase(Module):
                            "recurrent layer, so non-zero dropout expects "
                            "num_layers greater than 1, but got dropout={} and "
                            "num_layers={}".format(dropout, num_layers))
-
+        is_ascend = context.get_context("device_target") == "Ascend"
         if mode == "LSTM":
             gate_size = 4 * hidden_size
             self.rnn = _DynamicLSTMAscend() if is_ascend else _DynamicLSTMCPUGPU()
@@ -344,8 +347,8 @@ class _RNNBase(Module):
             raise ValueError(f"For '{self.cls_name}', the 'mode' must be in ['RNN_RELU', 'RNN_TANH', 'LSTM', 'GRU'], "
                              f"but got {mode}.")
 
-        self.reverse = ReverseV2([0])
-        self.reverse_sequence = ReverseSequence(0, 1)
+        self.reverse = P.ReverseV2([0])
+        self.reverse_sequence = P.ReverseSequence(0, 1)
         self.hidden_size = hidden_size
         self.batch_first = batch_first
         self.num_layers = num_layers

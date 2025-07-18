@@ -6,10 +6,13 @@ try:
     from mindspore._c_expression import Tensor as CTensor # pylint: disable=no-name-in-module, import-error
 except:
     from mindspore._c_expression import TensorPy as CTensor # pylint: disable=no-name-in-module, import-error
+
+from mindspore._c_expression.typing import Type
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 from ..configs import use_pyboost, ON_ORANGE_PI
 from .._bind import get_default_dtype, get_default_device
+from .utils import py2dtype
 
 def as_strided(self, size, stride, storage_offset=None):
     if len(size) != len(stride):
@@ -56,7 +59,7 @@ def zeros(*size, dtype=None, device=None, requires_grad=False, **kwargs):
 
 # zeros_like
 has_zeros_like = hasattr(mindspore.mint, 'zeros_like')
-def zeros_like(input, *, dtype=None, memory_format=None):
+def zeros_like(input, *, dtype=None, memory_format=None, **kwargs):
     if dtype is None:
         dtype = input.dtype
     if use_pyboost() and has_zeros_like:
@@ -71,8 +74,8 @@ def ones(*size, dtype=None, device=None):
         size = size[0]
     if dtype is None:
         dtype = get_default_dtype()
-    if dtype == bool:
-        dtype = mindspore.bool_
+    if not isinstance(dtype, Type):
+        dtype = py2dtype[dtype]
     if use_pyboost() and has_ones:
         return mindspore.mint.ones(size, dtype=dtype)
     return _ones(size, dtype)

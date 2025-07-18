@@ -30,6 +30,7 @@ DTYPE_ELEMENT_SIZE_MAP = {
     mindspore.int16: 2,
     mindspore.bfloat16: 2,
     mindspore.float16: 2,
+    mindspore.bool_: 1
 }
 
 DEVICE_MAP = {
@@ -449,6 +450,18 @@ def enable_mindspore_patch():
 
     Tensor.index_copy_ = ops.inplace_index_copy
     StubTensor.index_copy_ = ops.inplace_index_copy
+
+    Tensor.max = ops.max
+    StubTensor.max = ops.max
+
+    Tensor.min = ops.min
+    StubTensor.min = ops.min
+
+    Tensor.squeeze_ = ops.inplace_squeeze
+    StubTensor.squeeze_ = ops.inplace_squeeze
+
+    Tensor.unsqueeze_ = ops.inplace_unsqueeze
+    StubTensor.unsqueeze_ = ops.inplace_unsqueeze
 
 
 def _rebuild_from_type_v2(func, new_type, args, state):

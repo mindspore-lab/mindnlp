@@ -20,3 +20,6 @@ from .decorators import (
 )
 
 from . import eval_frame
+
+def reset():
+    pass

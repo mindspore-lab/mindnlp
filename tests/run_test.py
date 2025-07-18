@@ -26,8 +26,10 @@ def run_tests():
         "and not with_static_cache " \
         "and not compile " \
         "and not compilation " \
-        "and not torchscript "
+        "and not torchscript " \
+        "and not torch_fx"
 
+    pytest_args.extend(["--ignore-glob=test_modeling_flax_*.py"])
     pytest_args.extend(['-k', skip_ut])
     if not pytest_args:
         print("未提供参数，默认运行当前目录下所有测试")

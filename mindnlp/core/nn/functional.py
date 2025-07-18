@@ -300,7 +300,7 @@ def pad(input, pad, mode='constant', value=0.0):
     new_pad = ()
     for idx, pad_v in enumerate(pad):
         if pad_v < 0:
-            dim = idx // 2
+            dim = input.ndim - 1 - idx // 2
             input = input.narrow(dim, 0, input.shape[dim] + pad_v)
             pad_v = 0
         new_pad += (pad_v,)
@@ -530,7 +530,7 @@ def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
         pad_mode = padding
         pad = (0,) * 4
 
-    _conv2d = _get_cache_prim(ops.Conv2D)(out_channel=weight.shape[0] * groups,
+    _conv2d = _get_cache_prim(ops.Conv2D)(out_channel=weight.shape[0],
                                         kernel_size=(1, weight.shape[-1]),
                                         mode=1,
                                         pad_mode=pad_mode,
@@ -593,6 +593,12 @@ def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     """
     raise ValueError("Requires mindspore >= 2.3.0 by default, or set into pyboost mode by calling torch.config.set_byboost(True).")
 
+def conv_transpose1d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
+    return mint.nn.functional.conv_transpose1d(input, weight, bias, stride, padding, output_padding, groups, dilation)
+
+
+def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
+    return mint.nn.functional.conv_transpose2d(input, weight, bias, stride, padding, output_padding, groups, dilation)
 
 def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):
     if use_pyboost():

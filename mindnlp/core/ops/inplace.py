@@ -5,6 +5,8 @@ from mindspore.common.generator import default_generator
 from mindspore.ops.auto_generate.gen_ops_prim import inplace_normal_op
 
 from mindnlp import core
+from ..configs import use_pyboost
+from ._inner import assign
 
 generator_step_ = 12
 
@@ -97,6 +99,25 @@ def inplace_index_add(input, dim, index, source):
     _inplace = _get_cache_prim(ops.InplaceIndexAdd)(dim)
     return _inplace(input, index, source)
 
+has_squeeze = hasattr(mindspore.mint, 'squeeze')
+def inplace_squeeze(input, *dim, **kwargs):
+    dim = kwargs.get('dim', dim)
+    if use_pyboost() and has_squeeze:
+        out = mindspore.mint.squeeze(input, dim)
+    else:
+        out = ops.squeeze(input, dim)
+    input.assign_value(out)
+    return input
+
+
+has_unsqueeze = hasattr(mindspore.mint, 'unsqueeze')
+def inplace_unsqueeze(input, dim=None):
+    if use_pyboost() and has_unsqueeze:
+        out = mindspore.mint.unsqueeze(input, dim)
+    out = ops.expand_dims(input, dim)
+    input.assign_value(out)
+    return input
+
 __all__ = [
     'inplace_copy',
     'inplace_zero',
@@ -106,5 +127,7 @@ __all__ = [
     'inplace_add',
     'inplace_scatter',
     'inplace_index_copy',
-    'inplace_index_add'
+    'inplace_index_add',
+    'inplace_squeeze',
+    'inplace_unsqueeze'
 ]

@@ -390,6 +390,8 @@ def einsum(equation, *operands):
         AssertionError: If more operands are provided than specified in the equation.
         RuntimeError: If operands do not broadcast with remapped shapes [original->remapped].
     """
+    if isinstance(operands[0], (tuple, list)):
+        operands = operands[0]
     if use_pyboost() and has_einsum:
         return mindspore.mint.einsum(equation, *operands)
     assert operands, "einsum(): must provide at least one operand"
