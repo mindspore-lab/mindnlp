@@ -1,0 +1,2 @@
+class OptimizedModule:
+    pass

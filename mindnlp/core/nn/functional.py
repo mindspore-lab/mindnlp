@@ -141,7 +141,7 @@ def avg_pool1d(input, kernel_size, stride, padding=0, ceil_mode=False, count_inc
 
     return output_array
 
-def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=0):
+def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=None):
     """
     Perform 2D average pooling on the input array.
 
@@ -156,10 +156,16 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
     Returns:
     - numpy array: The result of the average pooling operation.
     """
+    print(kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
     if use_pyboost():
-        return mindspore.ops.function.nn_func.avg_pool2d_ext(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
+        return mint.nn.functional.avg_pool2d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
     return ops.avg_pool2d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
+
+def adaptive_avg_pool2d(input, output_size):
+    if use_pyboost():
+        return mint.nn.functional.adaptive_avg_pool2d(input, output_size)
+    return ops.adaptive_avg_pool2d(input, output_size)
 
 def dropout(input, p=0.5, training=True):
     if not training or p == 0:
@@ -300,6 +306,9 @@ def pad(input, pad, mode='constant', value=0.0):
         new_pad += (pad_v,)
     if sum(new_pad) == 0:
         return input
+    if input.dtype == mindspore.bool_:
+        input = input.to(mindspore.int32)
+        return ops.pad(input, new_pad, mode, value).to(mindspore.bool_)
     return ops.pad(input, new_pad, mode, value)
 
 def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):

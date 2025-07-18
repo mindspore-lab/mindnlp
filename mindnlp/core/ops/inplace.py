@@ -1,3 +1,6 @@
+import mindspore
+from mindspore import ops
+from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.common.generator import default_generator
 from mindspore.ops.auto_generate.gen_ops_prim import inplace_normal_op
 
@@ -84,6 +87,15 @@ def inplace_scatter(input, dim, index, src):
         return execute('inplace_scatter_value', input, dim, index, src)
     return execute('inplace_scatter', input, dim, index, src)
 
+def inplace_index_copy(input, dim, index, tensor):
+    selected = input.index_select(dim, index)
+    input.index_add_(dim, index, -selected)
+    input.index_add_(dim, index, tensor)
+    return input
+
+def inplace_index_add(input, dim, index, source):
+    _inplace = _get_cache_prim(ops.InplaceIndexAdd)(dim)
+    return _inplace(input, index, source)
 
 __all__ = [
     'inplace_copy',
@@ -92,5 +104,7 @@ __all__ = [
     'inplace_fill',
     'inplace_uniform',
     'inplace_add',
-    'inplace_scatter'
+    'inplace_scatter',
+    'inplace_index_copy',
+    'inplace_index_add'
 ]

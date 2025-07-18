@@ -148,6 +148,10 @@ def enable_mindspore_patch():
     StubTensor.is_meta = is_meta
 
     def data_ptr(self):
+        ptr = self._data_ptr()
+        if ptr != 0:
+            return ptr
+        self + 1
         return self._data_ptr()
     
     Tensor.data_ptr = data_ptr
@@ -439,8 +443,13 @@ def enable_mindspore_patch():
 
     def clamp_min(self, value):
         return ops.clamp(self, value)
+
     Tensor.clamp_min = clamp_min
     StubTensor.clamp_min = clamp_min
+
+    Tensor.index_copy_ = ops.inplace_index_copy
+    StubTensor.index_copy_ = ops.inplace_index_copy
+
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
