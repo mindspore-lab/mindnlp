@@ -95,6 +95,13 @@ def broadcast_shapes(*shapes):
 
 
 # bucketize
+def bucketize(input, boundaries, *, out_int32=False, right=False, out=None):
+    if isinstance(boundaries, mindspore.Tensor):
+        boundaries = boundaries.tolist()
+    out = ops.bucketize(input, boundaries, right=right)
+    if not out_int32:
+        out = out.to(mindspore.int64)
+    return out
 
 # cartesian_prod
 
@@ -733,6 +740,10 @@ def repeat_interleave(input, repeats, dim=None):
         repeats = repeats[0]
         if repeats == 0:
             return Tensor_(input.dtype, (0,))
+        if input.dtype == mindspore.bool_:
+            input = input.to(mindspore.int32)
+            out = ops.repeat_elements(input, repeats, dim)
+            return out.to(mindspore.bool_)
         return ops.repeat_elements(input, repeats, dim)
     size = input.shape[dim]
     if len(repeats) != size:
@@ -992,6 +1003,7 @@ __all__ = [
     "broadcast_shapes",
     "broadcast_tensors",
     "broadcast_to",
+    "bucketize",
     "cdist",
     "clone",
     "contains",

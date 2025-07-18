@@ -91,10 +91,6 @@ def index_add(input, dim, index, source, *, alpha=1):
         return mindspore.mint.index_add(input, dim, index, source, alpha=alpha)
     return ops.index_add(input, index, source, dim)
 
-def inplace_index_add(input, dim, index, source):
-    _inplace = _get_cache_prim(ops.InplaceIndexAdd)(dim)
-    return _inplace(input, index, source)
-
 # index_copy
 
 
@@ -748,7 +744,6 @@ __all__ = [
     'hstack',
     'index_fill',
     'index_add',
-    'inplace_index_add',
     # index_copy
     # index_reduce
     'index_select',

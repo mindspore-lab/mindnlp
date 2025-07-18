@@ -286,7 +286,7 @@ class AdaptiveAvgPool2d(_AdaptiveAvgPoolNd):
     output_size: _size_2_opt_t
 
     def forward(self, input: Tensor) -> Tensor:
-        return ops.adaptive_avg_pool2d(input, self.output_size)
+        return F.adaptive_avg_pool2d(input, self.output_size)
 
 class AdaptiveAvgPool1d(_AdaptiveAvgPoolNd):
     r"""Applies a 1D adaptive average pooling over an input signal composed of several input planes.
@@ -479,7 +479,7 @@ class AvgPool2d(_AvgPoolNd):
         self.padding = padding
         self.ceil_mode = ceil_mode
         self.count_include_pad = count_include_pad
-        self.divisor_override = divisor_override if divisor_override is not None else 0
+        self.divisor_override = divisor_override
 
     def forward(self, input: Tensor) -> Tensor:
         return F.avg_pool2d(input, self.kernel_size, self.stride,

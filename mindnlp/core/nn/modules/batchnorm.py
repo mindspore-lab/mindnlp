@@ -1,6 +1,7 @@
 """batch norm"""
 from typing import Optional
 from mindnlp.core import Tensor
+from mindnlp import core
 from ..parameter import Parameter
 
 from .module import Module

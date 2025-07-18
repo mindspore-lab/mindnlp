@@ -88,12 +88,12 @@ class PySafeSlice:
         buffer = bytearray(nbytes)
         self.bufferfile.seek(self.start_offset)
         self.bufferfile.readinto(buffer)
-        tensor = np.frombuffer(buffer, dtype=self.dtype).reshape(self.shape)
-        tensor = tensor.reshape(self.shape)
+        array = np.frombuffer(buffer, dtype=self.dtype).reshape(self.shape)
+        array = array.reshape(self.shape)
         if not SUPPORT_BF16 and self.info["dtype"] == 'BF16':
-            tensor = tensor.astype(np.float16)
-        tensor = Tensor.from_numpy(tensor)
-
+            array = array.astype(np.float16)
+        tensor = Tensor.from_numpy(array)
+        tensor._ptr = array.ctypes.data
         return tensor
 
     @property
