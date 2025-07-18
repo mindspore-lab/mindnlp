@@ -1,3 +1,5 @@
+from .. import _dtype
+
 def sum_to(x, shape):
     """Sum elements along axes to output an array of a given shape.
 
@@ -19,3 +21,9 @@ def sum_to(x, shape):
     if lead > 0:
         y = y.squeeze(lead_axis)
     return y
+
+py2dtype = {
+    bool: _dtype.bool,
+    int: _dtype.int64,
+    float: _dtype.float32,
+}

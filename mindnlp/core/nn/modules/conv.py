@@ -322,11 +322,11 @@ class Conv3d(_ConvNd):
 class _ConvTransposeNd(_ConvNd):
     def __init__(self, in_channels, out_channels, kernel_size, stride,
                  padding, dilation, transposed, output_padding,
-                 groups, bias, padding_mode, dtype=None) -> None:
+                 groups, bias, padding_mode, dtype=None, device=None) -> None:
         if padding_mode != 'zeros':
             raise ValueError(f'Only "zeros" padding mode is supported for {self.__class__.__name__}')
 
-        factory_kwargs = {'dtype': dtype}
+        factory_kwargs = {'dtype': dtype, 'device': device}
         super().__init__(
             in_channels, out_channels, kernel_size, stride,
             padding, dilation, transposed, output_padding,
@@ -426,62 +426,71 @@ class ConvTranspose1d(_ConvTransposeNd):
         bias (Tensor):   the learnable bias of the module of shape (out_channels)
     """
 
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1,
-                 padding=0, output_padding=0, groups=1, bias=True, dilation=1, padding_mode: str = 'zeros'):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: _size_1_t,
+        stride: _size_1_t = 1,
+        padding: _size_1_t = 0,
+        output_padding: _size_1_t = 0,
+        groups: int = 1,
+        bias: bool = True,
+        dilation: _size_1_t = 1,
+        padding_mode: str = "zeros",
+        device=None,
+        dtype=None,
+    ) -> None:
+        factory_kwargs = {"device": device, "dtype": dtype}
         kernel_size = _single(kernel_size)
         stride = _single(stride)
         padding = _single(padding)
         dilation = _single(dilation)
         output_padding = _single(output_padding)
-        super(ConvTranspose1d, self).__init__(
-            in_channels, out_channels, kernel_size, stride, padding, dilation,
-            True, output_padding, groups, bias, padding_mode)
+        super().__init__(
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride,
+            padding,
+            dilation,
+            True,
+            output_padding,
+            groups,
+            bias,
+            padding_mode,
+            **factory_kwargs,
+        )
 
-        pad_mode = 'pad'
-        pad = padding
-        if isinstance(padding, tuple):
-            pad = (0, 0, padding[0], padding[0])
-        elif isinstance(padding, int):
-            pad = (0, 0) + (padding,) * 2
-        if not isinstance(padding, (int, tuple)):
-            pad_mode = padding
-            pad = (0,) * 4
-
-        # cause Conv2DTranspose's out_channel refers to Conv2D's out_channel.
-        self.conv2d_transpose = mops.Conv2DTranspose(out_channel=self.out_channels,
-                                                    kernel_size=(1,) + self.kernel_size,
-                                                    mode=1,
-                                                    pad_mode=pad_mode,
-                                                    pad=pad,
-                                                    stride=(1,) + self.stride,
-                                                    dilation=(1,) + self.dilation,
-                                                    group=self.groups)
-        self.h_add = _deconv_output_length(pad_mode, 1, 1, 1, pad[0] + pad[1])
-        self.w_add = _deconv_output_length(pad_mode, kernel_size[0], stride[0], dilation[0], pad[2] + pad[3])
-
-    def forward(self, input, output_size=None):
-        if self.padding_mode != 'zeros':
-            raise ValueError('Only `zeros` padding mode is supported for ConvTranspose2d')
+    def forward(self, input: Tensor, output_size: Optional[list[int]] = None) -> Tensor:
+        if self.padding_mode != "zeros":
+            raise ValueError(
+                "Only `zeros` padding mode is supported for ConvTranspose1d"
+            )
 
         assert isinstance(self.padding, tuple)
         # One cannot replace List by Tuple or Sequence in "_output_padding" because
         # TorchScript does not support `Sequence[T]` or `Tuple[T, ...]`.
         num_spatial_dims = 1
         output_padding = self._output_padding(
-            input, output_size, self.stride, self.padding, self.kernel_size,  # type: ignore[arg-type]
-            num_spatial_dims, self.dilation)  # type: ignore[arg-type]
-        input = mops.expand_dims(input, 2)
-        n, _, h, w = input.shape
-        conv2d_trans_ret = self.conv2d_transpose(input, self.weight.expand_dims(2),
-                                                 (n, self.out_channels,
-                                                  h + self.h_add,
-                                                  w * self.stride[0] + self.w_add))
-        if self.bias is not None:
-            conv2d_trans_ret = mops.bias_add(conv2d_trans_ret, self.bias)
-
-        conv2d_trans_ret = conv2d_trans_ret.squeeze(2)
-        conv2d_trans_ret = ops.pad(conv2d_trans_ret, (0,) + output_padding, value=0.)
-        return conv2d_trans_ret
+            input,
+            output_size,
+            self.stride,  # type: ignore[arg-type]
+            self.padding,  # type: ignore[arg-type]
+            self.kernel_size,  # type: ignore[arg-type]
+            num_spatial_dims,
+            self.dilation,  # type: ignore[arg-type]
+        )
+        return F.conv_transpose1d(
+            input,
+            self.weight,
+            self.bias,
+            self.stride,
+            self.padding,
+            output_padding,
+            self.groups,
+            self.dilation,
+        )
 
 
 def _deconv_output_length(pad_mode, filter_size, stride_size, dilation_size, padding):
@@ -582,66 +591,80 @@ class ConvTranspose2d(_ConvTransposeNd):
         https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
     """
 
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1,
-                 padding=0, output_padding=0, groups=1, bias=True, dilation=1,
-                 padding_mode='zeros', dtype=None):
-        factory_kwargs = {'dtype': dtype}
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: _size_2_t,
+        stride: _size_2_t = 1,
+        padding: _size_2_t = 0,
+        output_padding: _size_2_t = 0,
+        groups: int = 1,
+        bias: bool = True,
+        dilation: _size_2_t = 1,
+        padding_mode: str = "zeros",
+        device=None,
+        dtype=None,
+    ) -> None:
+        factory_kwargs = {"device": device, "dtype": dtype}
         kernel_size = _pair(kernel_size)
         stride = _pair(stride)
         padding = _pair(padding)
         dilation = _pair(dilation)
         output_padding = _pair(output_padding)
         super().__init__(
-            in_channels, out_channels, kernel_size, stride, padding, dilation,
-            True, output_padding, groups, bias, padding_mode, **factory_kwargs)
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride,
+            padding,
+            dilation,
+            True,
+            output_padding,
+            groups,
+            bias,
+            padding_mode,
+            **factory_kwargs,
+        )
 
-        pad_mode = 'pad'
-        pad = padding
-        if isinstance(padding, tuple):
-            pad = (padding[0], padding[0], padding[1], padding[1])
-        elif isinstance(padding, int):
-            pad = (padding,) * 4
-        if not isinstance(padding, (int, tuple)):
-            pad_mode = padding
-            pad = (0,) * 4
+    def forward(self, input: Tensor, output_size: Optional[list[int]] = None) -> Tensor:
+        """
+        Performs the forward pass.
 
-        # cause Conv2DTranspose's out_channel refers to Conv2D's out_channel.
-        self.conv2d_transpose = mops.Conv2DTranspose(out_channel=in_channels,
-                                                    kernel_size=kernel_size,
-                                                    mode=1,
-                                                    pad_mode=pad_mode,
-                                                    pad=pad,
-                                                    stride=stride,
-                                                    dilation=dilation,
-                                                    group=groups)
-
-        self.h_add = _deconv_output_length(pad_mode, kernel_size[0], stride[0], dilation[0], pad[0] + pad[1])
-        self.w_add = _deconv_output_length(pad_mode, kernel_size[1], stride[1], dilation[1], pad[2] + pad[3])
-
-    def forward(self, input, output_size=None):
-        if self.padding_mode != 'zeros':
-            raise ValueError('Only `zeros` padding mode is supported for ConvTranspose2d')
+        Attributes:
+            input (Tensor): The input tensor.
+            output_size (list[int], optional): A list of integers representing
+                the size of the output tensor. Default is None.
+        """
+        if self.padding_mode != "zeros":
+            raise ValueError(
+                "Only `zeros` padding mode is supported for ConvTranspose2d"
+            )
 
         assert isinstance(self.padding, tuple)
         # One cannot replace List by Tuple or Sequence in "_output_padding" because
         # TorchScript does not support `Sequence[T]` or `Tuple[T, ...]`.
         num_spatial_dims = 2
         output_padding = self._output_padding(
-            input, output_size, self.stride, self.padding, self.kernel_size,  # type: ignore[arg-type]
-            num_spatial_dims, self.dilation)  # type: ignore[arg-type]
+            input,
+            output_size,
+            self.stride,  # type: ignore[arg-type]
+            self.padding,  # type: ignore[arg-type]
+            self.kernel_size,  # type: ignore[arg-type]
+            num_spatial_dims,
+            self.dilation,  # type: ignore[arg-type]
+        )
 
-        n, _, h, w = input.shape
-        conv2d_trans_ret = self.conv2d_transpose(input, self.weight,
-                                                 (n, self.out_channels,
-                                                  h * self.stride[0] + self.h_add,
-                                                  w * self.stride[1] + self.w_add))
-        if self.bias is not None:
-            conv2d_trans_ret = mops.bias_add(conv2d_trans_ret, self.bias)
-
-        conv2d_trans_ret = ops.pad(conv2d_trans_ret, output_padding, value=0.)
-
-        return conv2d_trans_ret
-
+        return F.conv_transpose2d(
+            input,
+            self.weight,
+            self.bias,
+            self.stride,
+            self.padding,
+            output_padding,
+            self.groups,
+            self.dilation,
+        )
 
 # class ConvTranspose3d(_ConvTransposeNd):
 #     r"""Applies a 3D transposed convolution operator over an input image composed of several input

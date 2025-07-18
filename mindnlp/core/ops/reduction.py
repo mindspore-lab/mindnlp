@@ -8,6 +8,8 @@ from ..configs import use_pyboost, DEVICE_TARGET
 from ._inner import call_ms_func
 
 max_out = namedtuple('max_out', ['values', 'indices'])
+min_out = namedtuple('min_out', ['values', 'indices'])
+
 # argmax
 has_argmax = hasattr(mindspore.mint, 'argmax')
 def argmax(input, dim=None, keepdim=False):
@@ -77,8 +79,10 @@ def max(*args, **kwargs):
 # min
 has_min = hasattr(mindspore.mint, 'min')
 def min(*args, **kwargs):
-    return mindspore.mint.min(*args, **kwargs)
-
+    out = mindspore.mint.min(*args, **kwargs)
+    if isinstance(out, tuple):
+        return min_out(values=out[0], indices=out[1])
+    return out
 # dist
 
 
