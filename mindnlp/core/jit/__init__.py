@@ -9,7 +9,7 @@ from .._jit_internal import (
     # _overload,
     # _overload_method,
     # export,
-    # Final,
+    Final,
     # Future,
     # ignore,
     # is_scripting,

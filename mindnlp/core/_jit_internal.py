@@ -1,3 +1,18 @@
+from typing import (  # noqa: UP035, F401  # (Dict, List, Tuple) imported by torch.jit.annotations
+    Any,
+    Callable,
+    Dict,
+    Final,
+    ForwardRef,
+    get_args,
+    get_origin,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
+
 class FunctionModifiers:
     """
     Used to denote the behavior of a function in TorchScript. See export() and

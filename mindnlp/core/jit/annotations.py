@@ -1,4 +1,4 @@
-from core._jit_internal import (  # type: ignore[attr-defined]
+from .._jit_internal import (  # type: ignore[attr-defined]
     # _Await,
     # _qualified_name,
     # Any,
@@ -15,7 +15,7 @@ from core._jit_internal import (  # type: ignore[attr-defined]
     # is_optional,
     # is_tuple,
     # is_union,
-    # List,
+    List,
     # Optional,
     # Tuple,
     # Union,

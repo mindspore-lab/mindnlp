@@ -1,5 +1,5 @@
 from collections import namedtuple
-from mindspore import ops
+from mindspore import ops, mint
 from mindspore.ops._primitive_cache import _get_cache_prim
 
 from mindnlp import core
@@ -21,3 +21,5 @@ def cholesky_ex(A, *, upper=False, check_errors=False, out=None):
     return linalg_cholesky_ex(out, info)
 
 
+def norm(A, ord=None, dim=None, keepdim=False, *, out=None, dtype=None):
+    return mint.norm(A, ord, dim, keepdim, dtype=dtype)
