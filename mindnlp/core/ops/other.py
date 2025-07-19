@@ -111,6 +111,8 @@ has_cdist = hasattr(mindspore.mint, "cdist")
 
 
 def cdist(x1, x2, p=2.0, compute_mode="use_mm_for_euclid_dist_if_necessary"):
+    if isinstance(p, int):
+        p = float(p)
     if use_pyboost() and has_cdist:
         return mindspore.mint.cdist(x1, x2, p, compute_mode)
     return ops.cdist(x1, x2, float(p))
@@ -696,8 +698,10 @@ has_meshgrid = hasattr(mindspore.mint, "meshgrid")
 
 
 def meshgrid(*tensors, indexing=None):
+    if isinstance(tensors[0], (tuple, list)):
+        tensors = tensors[0]
     if use_pyboost() and has_meshgrid:
-        return mindspore.mint.meshgrid(*tensors, indexing)
+        return mindspore.mint.meshgrid(*tensors, indexing=indexing)
     if isinstance(tensors[0], (list, tuple)):
         tensors = tensors[0]
     if len(tensors) == 1:

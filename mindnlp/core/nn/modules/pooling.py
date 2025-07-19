@@ -313,16 +313,8 @@ class AdaptiveAvgPool1d(_AdaptiveAvgPoolNd):
     output_size: _size_1_t
 
     def forward(self, input: Tensor) -> Tensor:
-        # Add a dimension to make it 2D
-        input_2d = input.unsqueeze(2)
+        return F.adaptive_avg_pool1d(input, self.output_size)
 
-        # Perform adaptive average pooling
-        output_2d = ops.adaptive_avg_pool2d(input_2d, (self.output_size, 1))
-
-        # Remove the added dimension to make it back to 1D
-        output_1d = output_2d.squeeze(2)
-
-        return output_1d
 
 class _AvgPoolNd(Module):
     __constants__ = ['kernel_size', 'stride', 'padding', 'ceil_mode', 'count_include_pad']

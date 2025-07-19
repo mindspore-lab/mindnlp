@@ -463,6 +463,11 @@ def enable_mindspore_patch():
     Tensor.unsqueeze_ = ops.inplace_unsqueeze
     StubTensor.unsqueeze_ = ops.inplace_unsqueeze
 
+    def pin_memory(self, *args, **kwargs):
+        return self
+    
+    Tensor.pin_memory = pin_memory
+    StubTensor.pin_memory = pin_memory
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)

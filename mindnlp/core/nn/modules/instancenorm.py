@@ -2,8 +2,8 @@
 
 import warnings
 
-from mindnlp import core.nn.functional as F
 from mindnlp.core import Tensor
+from .. import functional as F
 
 from .batchnorm import _NormBase
 

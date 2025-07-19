@@ -162,6 +162,11 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
 
     return ops.avg_pool2d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
+def adaptive_avg_pool1d(input, output_size):
+    if use_pyboost():
+        return mint.nn.functional.adaptive_avg_pool1d(input, output_size)
+    return ops.adaptive_avg_pool1d(input, output_size)
+
 def adaptive_avg_pool2d(input, output_size):
     if use_pyboost():
         return mint.nn.functional.adaptive_avg_pool2d(input, output_size)
@@ -1206,7 +1211,7 @@ def _none_or_dtype(input: Optional[core.Tensor]) -> Optional[int]:
     raise RuntimeError("input to _none_or_dtype() must be None or core.Tensor")
 
 def unfold(input, kernel_size, dilation=1, padding=0, stride=1):
-    if use_pyboost():
+    if use_pyboost() and not ON_A1:
         return mint.nn.functional.unfold(input, kernel_size, dilation, padding, stride)
     return ops.unfold(input, kernel_size, dilation, padding, stride)
 

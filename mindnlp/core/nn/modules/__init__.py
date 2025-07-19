@@ -8,7 +8,7 @@ from .dropout import Dropout, Dropout2d
 from .activation import *
 from .conv import Conv3d, Conv2d, Conv1d, ConvTranspose2d, ConvTranspose1d
 from .padding import ZeroPad2d, ConstantPad2d, ConstantPad1d, ConstantPad3d
-from .batchnorm import BatchNorm2d, BatchNorm1d
+from .batchnorm import BatchNorm2d, BatchNorm1d, SyncBatchNorm
 from .pooling import AdaptiveAvgPool2d, AvgPool1d, MaxPool2d, MaxPool1d, AdaptiveAvgPool1d, AvgPool2d
 from .flatten import Unflatten, Flatten
 from .rnn_cell import RNNCell, GRUCell, LSTMCell

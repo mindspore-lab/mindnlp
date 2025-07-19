@@ -13,6 +13,7 @@ from mindspore.ops._primitive_cache import _get_cache_prim
 from ..configs import use_pyboost, ON_ORANGE_PI
 from .._bind import get_default_dtype, get_default_device
 from .utils import py2dtype
+from .other import finfo
 
 def as_strided(self, size, stride, storage_offset=None):
     if len(size) != len(stride):
@@ -69,7 +70,12 @@ def zeros_like(input, *, dtype=None, memory_format=None, **kwargs):
 # ones
 _ones = ops.Ones()
 has_ones = hasattr(mindspore.mint, 'ones')
-def ones(*size, dtype=None, device=None):
+def ones(*size, dtype=None, device=None, **kwargs):
+    if len(size) == 0:
+        size = kwargs.get('size', None)
+        if size == () or size == []:
+            size = ((),)
+
     if isinstance(size[0], (tuple, list)):
         size = size[0]
     if dtype is None:
@@ -247,8 +253,15 @@ def frombuffer(buffer, *, dtype=None, count=-1, offset=0, requires_grad=False):
     return mindspore.Tensor(output, dtype=dtype)
 
 
+def scalar_tensor(value, dtype, device=None):
+    if value == float("-inf"):
+        value = finfo(dtype).min
+    if value == float("inf"):
+        value = finfo(dtype).max
+    return mindspore.Tensor(value, dtype=dtype)
+
 __all__ = ['arange', 'as_strided', 'complex', 'empty', 'empty_like',
            'eye', 'from_numpy', 'full', 'full_like', 'frombuffer',
            'heaviside', 'linspace', 'logspace', 'ones', 'ones_like',
-           'polar', 'range', 'zeros', 'zeros_like'
+           'polar', 'range', 'zeros', 'zeros_like', 'scalar_tensor'
 ]
