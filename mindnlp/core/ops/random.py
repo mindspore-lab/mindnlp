@@ -54,7 +54,7 @@ def multinomial(input, num_samples, replacement=False, *, generator=None):
 has_normal = hasattr(mindspore.mint, 'normal')
 def normal(mean=0.0, std=1.0, size=None, *, generator=None, out=None):
     if use_pyboost() and has_normal:
-        return call_ms_func(mindspore.mint.normal, mean, std, size, generator, out=out)
+        return call_ms_func(mindspore.mint.normal, float(mean), float(std), size, generator, out=out)
     if size is None:
         if isinstance(mean, mindspore.Tensor):
             size = mean.shape

@@ -1,1 +1,1 @@
-from . import cuda, mps
+from . import cuda, mps, cudnn

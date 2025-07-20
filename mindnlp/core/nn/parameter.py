@@ -8,6 +8,7 @@ from mindspore.common._stub_tensor import StubTensor
 class Parameter(Tensor):
     grad = None
     requires_grad = False
+    _grad_fn = None
 
     def __init__(self, input_data=None, requires_grad=True, **kwargs):
         super().__init__(input_data)
@@ -17,8 +18,6 @@ class Parameter(Tensor):
         self.param_info.parameter_shape = self._shape
         self.param_info.requires_grad = requires_grad
         self._requires_grad = requires_grad
-        if self._requires_grad:
-            self.retain_grad()
 
     def __deepcopy__(self, memodict):
         new_obj = Parameter(self)

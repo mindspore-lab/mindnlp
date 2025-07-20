@@ -235,6 +235,24 @@ def split(tensor, split_size_or_sections, dim=0):
         return mindspore.mint.split(tensor, split_size_or_sections, dim)
     return ops.split(tensor, split_size_or_sections, dim)
 
+def split_with_sizes(input, split_sizes, dim=0):
+    assert input.dim() != 0, "split expects at least a 1-dimensional tensor"
+    dim_size = input.size(dim)
+    num_splits = len(split_sizes)
+    start_idx = 0
+
+    splits = []
+    for i in range(num_splits):
+        length = split_sizes[i]
+        assert length >= 0, f"split_with_sizes expects split_sizes have only non-negative entries, but got split_sizes={split_sizes}"
+        splits.append(
+            narrow(input, dim, start_idx, length)
+        )
+        start_idx += length
+
+    return splits
+
+
 # squeeze
 has_squeeze = hasattr(mindspore.mint, 'squeeze')
 def squeeze(input, *dim, **kwargs):
@@ -769,6 +787,7 @@ __all__ = [
     'scatter_nd_update',
     'scatter_update',
     'split',
+    'split_with_sizes',
     'squeeze',
     'stack',
     'swapaxes',

@@ -52,8 +52,8 @@ def zeros(*size, dtype=None, device=None, requires_grad=False, **kwargs):
     if isinstance(size[0], (tuple, list)):
         size = size[0]
     if use_pyboost() and has_zeros:
-        if device == 'cpu':
-            return mindspore.Tensor(np.zeros(size), dtype=dtype)
+        # if device == 'cpu':
+        #     return mindspore.Tensor(np.zeros(size), dtype=dtype)
         return mindspore.mint.zeros(size, dtype=dtype)
     size = tuple(size)
     return _zeros(size, dtype)
@@ -126,7 +126,7 @@ def range(start=0, end=None, step=1, dtype=None):
 
 # linspace
 has_linspace = hasattr(mindspore.mint, 'linspace')
-def linspace(start, end, steps, *, dtype=None):
+def linspace(start, end, steps, *, dtype=None, **kwargs):
     if dtype is None:
         dtype = mindspore.float32
     if use_pyboost() and has_linspace:

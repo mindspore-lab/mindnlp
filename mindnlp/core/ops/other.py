@@ -7,6 +7,7 @@ from mindspore import ops
 from mindspore.common.initializer import initializer
 from mindspore.ops._primitive_cache import _get_cache_prim
 
+from mindnlp import core
 from ..configs import use_pyboost, ON_ORANGE_PI, ON_A1
 from .reduction import any
 from .comparison import eq
@@ -868,7 +869,7 @@ def masked_fill(input, mask, value):
     if has_masked_fill:
         return mindspore.mint.masked_fill(input, mask, value)
     masked_fill_ = _get_cache_prim(ops.MaskedFill)()
-    return masked_fill_(input, mask, mindspore.tensor(value, dtype=input.dtype))
+    return masked_fill_(input, mask, core.tensor(value, dtype=input.dtype))
 
 
 class finfo:
