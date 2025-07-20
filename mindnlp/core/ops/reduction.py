@@ -181,7 +181,10 @@ def std_mean(input, dim=None, *, correction=1, keepdim=False):
 
 # sum
 has_sum = hasattr(mindspore.mint, 'sum')
-def sum(input, dim=None, keepdim=False, *, dtype=None):
+def sum(input, dim=None, keepdim=False, *, dtype=None, **kwargs):
+    keepdims = kwargs.pop('keepdims', None)
+    if keepdims is not None:
+        keepdim = keepdims
     if 0 in input.shape:
         return mindspore.tensor(0, dtype=dtype)
     if use_pyboost() and has_sum:

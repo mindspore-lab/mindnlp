@@ -118,6 +118,19 @@ def inplace_unsqueeze(input, dim=None):
     input.assign_value(out)
     return input
 
+def inplace_fill_diagonal(input, fill_value, wrap=False):
+    fill_diagnoal_ = _get_cache_prim(ops.FillDiagonal)(float(fill_value), wrap)
+    out = fill_diagnoal_(input)
+    input.assign_value(out)
+    return input
+
+def inplace_triu(input, diagonal=0):
+    out = ops.triu(input, diagonal)
+    input.assign_value(out)
+    return input
+
+
+
 __all__ = [
     'inplace_copy',
     'inplace_zero',
@@ -129,5 +142,7 @@ __all__ = [
     'inplace_index_copy',
     'inplace_index_add',
     'inplace_squeeze',
-    'inplace_unsqueeze'
+    'inplace_unsqueeze',
+    'inplace_fill_diagonal',
+    'inplace_triu'
 ]
