@@ -3,7 +3,7 @@ from .module import Module
 from .container import ModuleList, ParameterList, Sequential, ParameterDict, ModuleDict
 from .linear import Linear, Identity
 from .sparse import Embedding
-from .normalization import LayerNorm, GroupNorm
+from .normalization import LayerNorm, GroupNorm, RMSNorm
 from .dropout import Dropout, Dropout2d
 from .activation import *
 from .conv import Conv3d, Conv2d, Conv1d, ConvTranspose2d, ConvTranspose1d

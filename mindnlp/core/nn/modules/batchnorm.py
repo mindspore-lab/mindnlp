@@ -45,8 +45,14 @@ class _NormBase(Module):
             self.register_buffer('running_var', ops.ones(num_features,))
             self.running_mean: Optional[Tensor]
             self.running_var: Optional[Tensor]
-            self.register_buffer('num_batches_tracked',
-                                 Tensor(0, dtype=core.int64))
+            self.register_buffer(
+                "num_batches_tracked",
+                core.tensor(
+                    0,
+                    dtype=core.long,
+                    **{k: v for k, v in factory_kwargs.items() if k != "dtype"},
+                ),
+            )
             self.num_batches_tracked: Optional[Tensor]
         else:
             self.register_buffer("running_mean", None)

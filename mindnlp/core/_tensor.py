@@ -6,7 +6,7 @@ from mindspore import Tensor
 from mindspore.common.tensor import _TensorMeta
 from mindspore._c_expression.typing import Type
 try:
-    from mindspore.common._stub_tensor import StubTensor
+    from mindspore.common._stub_tensor import StubTensor, _stub_method
 except:
     class StubTensor: pass
 
@@ -17,7 +17,7 @@ except:
 
 from . import ops, _dtype
 from ._dtype import dtype2np
-from ._bind import get_default_device, device_
+from ._bind import get_default_device, device_, get_default_dtype
 from .configs import use_pyboost, ON_A1
 from .storage import UntypedStorage
 from ._utils import _rebuild_tensor_v2
@@ -98,6 +98,16 @@ def is_tensor(x):
     return isinstance(x, Tensor)
 
 def enable_mindspore_patch():
+    old_init = Tensor.__init__
+    def __init__(self, *args, **kwargs):
+        if len(args) > 1 and all([isinstance(arg, int) for arg in args]):
+            tensor = Tensor_(shape=args, dtype=get_default_dtype())
+            old_init(self, tensor, internal=True)
+        else:
+            old_init(self, *args, **kwargs)
+
+    Tensor.__init__ = __init__
+
     def __reduce_ex__(self, protocol):
         if isinstance(self, StubTensor):
             data = Tensor_(self.stub_sync())
@@ -280,6 +290,8 @@ def enable_mindspore_patch():
         #             s = list(s)
         #         new_slices += (s,)
         #     slices = new_slices
+        if not isinstance(value, Tensor):
+            value = tensor(value, dtype=self.dtype)
         return origin_setitem(self, slices, value)
 
     Tensor.__setitem__ = __setitem__
@@ -468,6 +480,36 @@ def enable_mindspore_patch():
     
     Tensor.pin_memory = pin_memory
     StubTensor.pin_memory = pin_memory
+
+    def __deepcopy__(self, memodict):
+        new_obj = Tensor(self)
+        return new_obj
+
+    Tensor.__deepcopy__ = __deepcopy__
+    StubTensor.__deepcopy__ = __deepcopy__
+
+    def asnumpy(self):
+        return Tensor_.asnumpy(self)
+
+    Tensor.asnumpy = asnumpy
+    StubTensor.asnumpy = _stub_method(asnumpy)
+
+    def backward(self, *args, **kwargs):
+        pass
+
+    Tensor.backward = backward
+    StubTensor.backward = backward
+
+    def __repr__(self):
+        Tensor_.data_sync(self, True)
+        return Tensor_.__repr__(self)
+
+    Tensor.__repr__ = __repr__
+    StubTensor.__repr__ = _stub_method(__repr__)
+
+
+    def detach_(self):
+        return ops.stop_gradient(self)
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
