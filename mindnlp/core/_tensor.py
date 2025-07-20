@@ -283,13 +283,13 @@ def enable_mindspore_patch():
                 value = ops.finfo(self.dtype).max
             elif value == -float('inf'):
                 value = ops.finfo(self.dtype).min
-        # if isinstance(slices, tuple):
-        #     new_slices = ()
-        #     for s in slices:
-        #         if isinstance(s, range):
-        #             s = list(s)
-        #         new_slices += (s,)
-        #     slices = new_slices
+        if isinstance(slices, tuple):
+            new_slices = ()
+            for s in slices:
+                if isinstance(s, range):
+                    s = list(s)
+                new_slices += (s,)
+            slices = new_slices
         if not isinstance(value, Tensor):
             value = tensor(value, dtype=self.dtype)
         return origin_setitem(self, slices, value)
@@ -507,9 +507,39 @@ def enable_mindspore_patch():
     Tensor.__repr__ = __repr__
     StubTensor.__repr__ = _stub_method(__repr__)
 
-
     def detach_(self):
         return ops.stop_gradient(self)
+
+    Tensor.detach_ = detach_
+    StubTensor.detach_ = detach_
+
+    def new_full(self, size, fill_value, *, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False):
+        return ops.full(size, fill_value, dtype=dtype if dtype is not None else self.dtype)
+
+    Tensor.new_full = new_full
+    StubTensor.new_full = new_full
+
+    def new_zeros(self, *size, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False):
+        return ops.zeros(*size, dtype=dtype if dtype is not None else self.dtype)
+
+    Tensor.new_zeros = new_zeros
+    StubTensor.new_zeros = new_zeros
+
+    Tensor.sum = ops.sum
+    StubTensor.sum = ops.sum
+
+    def new_tensor(self, data, *, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False):
+        return tensor(data, dtype=dtype if dtype is not None else self.dtype)
+
+    Tensor.new_tensor = new_tensor
+    StubTensor.new_tensor = new_tensor
+
+    Tensor.fill_diagonal_ = ops.inplace_fill_diagonal
+    StubTensor.fill_diagonal_ = ops.inplace_fill_diagonal
+
+    Tensor.triu_ = ops.inplace_triu
+    StubTensor.triu_ = ops.inplace_triu
+
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)

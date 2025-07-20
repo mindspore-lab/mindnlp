@@ -96,4 +96,10 @@ def set_autocast_dtype(device_type, dtype):
 def get_autocast_dtype(device_type):
     return AUTO_CAST_DTYE[device_type]
 
+def get_autocast_gpu_dtype():
+    return AUTO_CAST_DTYE['cuda']
+
+def is_autocast_enabled():
+    return True
+
 __version__ = 'test_version_no_value'
