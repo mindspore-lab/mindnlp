@@ -2,7 +2,7 @@
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 from ..configs import use_pyboost
-from ..ops import narrow
+from ..ops import narrow, roll
 from ..nn import functional as F
 
 def rfft(input, n=None, dim=-1, norm="backward"):
@@ -34,5 +34,14 @@ def fftn(input, s=None, dim=None, norm=None):
 
 def fft(input, s=None, dim=-1, norm=None):
     return ops.fft(input, s, dim, norm)
+
+def fftshift(x, dim=None):
+    return ops.fftshift(x, dim)
+
+def ifftn(input, s=None, dim=None, norm=None, *, out=None):
+    return ops.ifftn(input, s, dim, norm)
+
+def ifftshift(input, dim=None):
+    return ops.ifftshift(input, dim)
 
 __all__ = ['fft', 'fftn', 'irfft', 'rfft']

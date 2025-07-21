@@ -538,10 +538,33 @@ def enable_mindspore_patch():
     StubTensor.new_full = new_full
 
     def new_zeros(self, *size, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False):
-        return ops.zeros(*size, dtype=dtype if dtype is not None else self.dtype)
+        if isinstance(size[0], (tuple, list)):
+            size = size[0]
+
+        new_size = ()
+        for s in size:
+            if isinstance(s, Tensor):
+                s = s.item()
+            new_size += (s,)
+        return ops.zeros(*new_size, dtype=dtype if dtype is not None else self.dtype)
 
     Tensor.new_zeros = new_zeros
     StubTensor.new_zeros = new_zeros
+
+    def new_ones(self, *size, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False, **kwargs):
+        size = kwargs.get('size', size)
+        if isinstance(size[0], (tuple, list)):
+            size = size[0]
+
+        new_size = ()
+        for s in size:
+            if isinstance(s, Tensor):
+                s = s.item()
+            new_size += (s,)
+        return ops.ones(*new_size, dtype=dtype if dtype is not None else self.dtype)
+
+    Tensor.new_ones = new_ones
+    StubTensor.new_ones = new_ones
 
     Tensor.sum = ops.sum
     StubTensor.sum = ops.sum
@@ -597,6 +620,12 @@ def enable_mindspore_patch():
 
     Tensor.mean = ops.mean
     StubTensor.mean = ops.mean
+
+    Tensor.amax = ops.amax
+    StubTensor.amax = ops.amax
+
+    Tensor.as_strided = ops.as_strided
+    StubTensor.as_strided = ops.as_strided
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)

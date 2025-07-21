@@ -26,6 +26,8 @@ from typing import (
     Union as _Union,
 )
 
+from mindspore.runtime import Stream
+
 strided = None
 contiguous_format = None
 preserve_format = None
