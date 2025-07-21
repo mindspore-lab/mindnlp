@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from functools import partial
+import warnings
 import mindspore
 from mindspore import Tensor
 from mindspore.common.tensor import _TensorMeta
@@ -379,6 +379,8 @@ def enable_mindspore_patch():
     StubTensor.unfold = unfold
 
     def new(self, *shape):
+        if not isinstance(shape[0], int):
+            return tensor(shape[0], dtype=self.dtype)
         return ops.empty(*shape, dtype=self.dtype)
 
     Tensor.new = new
@@ -540,6 +542,21 @@ def enable_mindspore_patch():
     Tensor.triu_ = ops.inplace_triu
     StubTensor.triu_ = ops.inplace_triu
 
+    @property
+    def real(self):
+        return ops.real(self)
+    
+    Tensor.real = real
+    StubTensor.real = real
+
+    def bfloat16(self):
+        if ON_A1:
+            warnings.warn('910A do not support bfloat16, use float16 instead.')
+            return self.to(_dtype.float16)
+        return self.to(_dtype.bfloat16)
+
+    Tensor.bfloat16 = bfloat16
+    StubTensor.bfloat16 = bfloat16
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)

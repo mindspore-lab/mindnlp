@@ -166,7 +166,6 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
     Returns:
     - numpy array: The result of the average pooling operation.
     """
-    print(kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
     if use_pyboost():
         return mint.nn.functional.avg_pool2d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
