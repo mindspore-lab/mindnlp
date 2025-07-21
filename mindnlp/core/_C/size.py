@@ -20,3 +20,9 @@ class Size(tuple):
 
     def __repr__(self):
         return "core.Size(" + str(list(self)) + ")"
+
+    def __getitem__(self, slice):
+        out = super().__getitem__(slice)
+        if isinstance(out, tuple):
+            return Size(out)
+        return out

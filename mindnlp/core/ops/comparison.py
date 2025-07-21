@@ -11,6 +11,8 @@ sort_out = namedtuple('stor_out', ['sorted', 'indices'])
 # allclose
 has_allclose = hasattr(mindspore.mint, 'allclose')
 def allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
+    rtol = rtol.item() if isinstance(rtol, mindspore.Tensor) else rtol
+    atol = atol.item() if isinstance(atol, mindspore.Tensor) else atol
     if use_pyboost() and has_allclose:
         return mindspore.mint.allclose(input, other, rtol=rtol, atol=atol, equal_nan=equal_nan)
     return np.allclose(input.numpy(), other.numpy(), rtol, atol, equal_nan)

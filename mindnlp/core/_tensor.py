@@ -21,6 +21,7 @@ from ._bind import get_default_device, device_, get_default_dtype
 from .configs import use_pyboost, ON_A1
 from .storage import UntypedStorage
 from ._utils import _rebuild_tensor_v2
+from ._C.size import Size
 
 DTYPE_ELEMENT_SIZE_MAP = {
     mindspore.float64: 8,
@@ -152,6 +153,19 @@ def enable_mindspore_patch():
     StubTensor.size = size
 
     @property
+    def shape(self):
+        if isinstance(self, StubTensor):
+            if self.stub is not None:
+                stub_shape = self.stub.get_shape()
+            else:
+                stub_shape = self.tensor.shape
+            return Size(stub_shape)
+        return Size(self._shape)
+
+    Tensor.shape = shape
+    StubTensor.shape = shape
+
+    @property
     def is_meta(self):
         return False
 
@@ -172,7 +186,7 @@ def enable_mindspore_patch():
     StubTensor.device = device_(DEVICE_MAP[mindspore.get_context('device_target')])
 
     def _expand(self, *size):
-        if len(size) == 1:
+        if len(size) == 1 and isinstance(size[0], (tuple, list)):
             size = size[0]
         new_size = ()
         for s in size:
@@ -292,6 +306,8 @@ def enable_mindspore_patch():
             slices = new_slices
         if not isinstance(value, Tensor):
             value = tensor(value, dtype=self.dtype)
+        else:
+            value = value.to(self.dtype)
         return origin_setitem(self, slices, value)
 
     Tensor.__setitem__ = __setitem__
@@ -571,13 +587,16 @@ def enable_mindspore_patch():
     StubTensor.scatter_ = ops.inplace_scatter
 
     def __contains__(self, item):
-        return ops.equal(self, item).any()
+        return ops.eq(self, item).any()
 
     Tensor.__contains__ = __contains__
     StubTensor.__contains__ = __contains__
 
     Tensor.tile = ops.tile
     StubTensor.tile = ops.tile
+
+    Tensor.mean = ops.mean
+    StubTensor.mean = ops.mean
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)

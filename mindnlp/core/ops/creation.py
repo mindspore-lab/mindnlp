@@ -192,11 +192,16 @@ def empty_like(input, *, dtype=None, layout=None, device=None, requires_grad=Fal
 # full
 has_full = hasattr(mindspore.mint, 'full')
 def full(size, fill_value, *, dtype=None, device=None):
+    new_size = ()
+    for s in size:
+        if isinstance(s, mindspore.Tensor):
+            s = s.item()
+        new_size += (s,)
     if isinstance(fill_value, np.generic):
         fill_value = fill_value.item()
     if use_pyboost() and has_full:
-        return mindspore.mint.full(size, fill_value, dtype=dtype)
-    return ops.full(size, fill_value, dtype=dtype)
+        return mindspore.mint.full(new_size, fill_value, dtype=dtype)
+    return ops.full(new_size, fill_value, dtype=dtype)
 
 # full_like
 has_full_like = hasattr(mindspore.mint, 'full_like')
