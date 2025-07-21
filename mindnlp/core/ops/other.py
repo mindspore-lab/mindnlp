@@ -99,6 +99,9 @@ def broadcast_shapes(*shapes):
 def bucketize(input, boundaries, *, out_int32=False, right=False, out=None):
     if isinstance(boundaries, mindspore.Tensor):
         boundaries = boundaries.tolist()
+
+    if not boundaries:
+        return input
     out = ops.bucketize(input, boundaries, right=right)
     if not out_int32:
         out = out.to(mindspore.int64)

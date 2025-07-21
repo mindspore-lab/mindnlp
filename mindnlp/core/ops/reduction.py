@@ -71,6 +71,9 @@ def any(input, dim=None, keepdim=False, *, out=None):
 # max
 has_max = hasattr(mindspore.mint, 'max')
 def max(*args, **kwargs):
+    out = kwargs.pop('out', None)
+    if 'dim' in kwargs and 'keepdim' not in kwargs:
+        kwargs['keepdim'] = False
     out = mindspore.mint.max(*args, **kwargs)
     if isinstance(out, tuple):
         return max_out(values=out[0], indices=out[1])
@@ -79,10 +82,14 @@ def max(*args, **kwargs):
 # min
 has_min = hasattr(mindspore.mint, 'min')
 def min(*args, **kwargs):
+    out = kwargs.pop('out', None)
+    if 'dim' in kwargs and 'keepdim' not in kwargs:
+        kwargs['keepdim'] = False
     out = mindspore.mint.min(*args, **kwargs)
     if isinstance(out, tuple):
         return min_out(values=out[0], indices=out[1])
     return out
+
 # dist
 
 

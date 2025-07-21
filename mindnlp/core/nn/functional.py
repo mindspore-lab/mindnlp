@@ -247,7 +247,7 @@ def log_softmax(input, dim=None, dtype=None):
         out = out.to(dtype)
     return out
 
-def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0, scale_grad_by_freq=False):
+def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0, scale_grad_by_freq=False, *args, **kwargs):
     if use_pyboost():
         return mint.nn.functional.embedding(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq)
     return ops.gather(weight, input, 0)
@@ -537,7 +537,7 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corne
 
     # "area" mode always requires an explicit size rather than scale factor.
     # Re-use the recompute_scale_factor code path.
-    if mode in ["area", "bilinear"] and output_size is None:
+    if mode in ["area", "bilinear", "bicubic"] and output_size is None:
         recompute_scale_factor = True
 
     if recompute_scale_factor is not None and recompute_scale_factor:
