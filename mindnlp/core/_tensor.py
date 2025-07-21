@@ -570,6 +570,15 @@ def enable_mindspore_patch():
     Tensor.scatter_ = ops.inplace_scatter
     StubTensor.scatter_ = ops.inplace_scatter
 
+    def __contains__(self, item):
+        return ops.equal(self, item).any()
+
+    Tensor.__contains__ = __contains__
+    StubTensor.__contains__ = __contains__
+
+    Tensor.tile = ops.tile
+    StubTensor.tile = ops.tile
+
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
     return ret
