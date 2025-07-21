@@ -344,7 +344,9 @@ def tensor_split(input, indices_or_sections, dim=0):
 
 # tile
 has_tile = hasattr(mindspore.mint, 'tile')
-def tile(input, dims):
+def tile(input, *dims):
+    if isinstance(dims[0], tuple):
+        dims = dims[0]
     if use_pyboost() and has_tile:
         return mindspore.mint.tile(input, dims)
     return ops.tile(input, dims)
