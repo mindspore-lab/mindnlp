@@ -151,6 +151,9 @@ has_cumsum = hasattr(mindspore.mint, "cumsum")
 
 
 def cumsum(input, dim, dtype=None, out=None):
+    input_dtype = input.dtype
+    if input_dtype == mindspore.int64:
+        input = input.to(mindspore.int32)
     if (
         use_pyboost() and has_cumsum and not ON_ORANGE_PI
     ):  # since cann8.0 community remove aclnn cumsum
@@ -161,6 +164,8 @@ def cumsum(input, dim, dtype=None, out=None):
         output = ops.cumsum(input, dim, dtype)
     if out is not None:
         out.assign_value(output)
+        return out
+    output = output.to(input_dtype)
     return output
 
 

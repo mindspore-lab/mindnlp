@@ -2,7 +2,7 @@ import mindspore
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.common.generator import default_generator
-from mindspore.ops.auto_generate.gen_ops_prim import inplace_normal_op
+from mindspore.ops.auto_generate.gen_ops_prim import inplace_normal_op, inplace_scatter_value_op
 
 from mindnlp import core
 from ..configs import use_pyboost
@@ -85,9 +85,7 @@ def inplace_add(input, other, alpha):
     return input
 
 def inplace_scatter(input, dim, index, src):
-    if not isinstance(src, core.Tensor):
-        return execute('inplace_scatter_value', input, dim, index, src)
-    return execute('inplace_scatter', input, dim, index, src)
+    return inplace_scatter_value_op(input, dim, index, src)
 
 def inplace_index_copy(input, dim, index, tensor):
     selected = input.index_select(dim, index)
