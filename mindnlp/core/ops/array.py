@@ -120,6 +120,7 @@ def masked_select(input, mask, *, out=None):
 # narrow
 has_narrow = hasattr(mindspore.mint, 'narrow')
 def narrow(input, dim, start, length):
+    length = length.item() if isinstance(length, mindspore.Tensor) else length
     if use_pyboost() and has_narrow:
         return mindspore.mint.narrow(input, dim, start, length)
     return ops.narrow(input, dim, start, length)

@@ -152,8 +152,8 @@ def clone(input):
 # cumsum
 has_cumsum = hasattr(mindspore.mint, "cumsum")
 
-
-def cumsum(input, dim, dtype=None, out=None):
+def cumsum(input, dim=None, dtype=None, out=None, **kwargs):
+    dim = kwargs.pop('axis', dim)
     input_dtype = input.dtype
     if input_dtype == mindspore.int64:
         input = input.to(mindspore.int32)

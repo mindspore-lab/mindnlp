@@ -191,7 +191,7 @@ def empty_like(input, *, dtype=None, layout=None, device=None, requires_grad=Fal
 
 # full
 has_full = hasattr(mindspore.mint, 'full')
-def full(size, fill_value, *, dtype=None, device=None):
+def full(size, fill_value, *, dtype=None, device=None, **kwargs):
     new_size = ()
     for s in size:
         if isinstance(s, mindspore.Tensor):
