@@ -558,6 +558,18 @@ def enable_mindspore_patch():
     Tensor.bfloat16 = bfloat16
     StubTensor.bfloat16 = bfloat16
 
+    def sort(self, dim=-1, descending=False):
+        return ops.sort(self, dim=dim, descending=descending)
+
+    Tensor.sort = sort
+    StubTensor.sort = sort
+
+    Tensor.cumsum = ops.cumsum
+    StubTensor.cumsum = ops.cumsum
+
+    Tensor.scatter_ = ops.inplace_scatter
+    StubTensor.scatter_ = ops.inplace_scatter
+
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
     return ret

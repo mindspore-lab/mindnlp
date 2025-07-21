@@ -29,6 +29,7 @@ from typing import (
 strided = None
 contiguous_format = None
 preserve_format = None
+legacy_contiguous_format = None
 
 inf = float("inf")
 nan = float("nan")
