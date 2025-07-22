@@ -173,6 +173,16 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
 
     return ops.avg_pool2d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
+has_avg_pool3d = hasattr(mint.nn.functional, 'avg_pool3d')
+def avg_pool3d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=None):
+    if use_pyboost() and has_avg_pool3d:
+        return mint.nn.functional.avg_pool3d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
+
+    if divisor_override is None:
+        divisor_override = 0
+    return ops.avg_pool3d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
+
+
 def adaptive_avg_pool1d(input, output_size):
     if use_pyboost():
         return mint.nn.functional.adaptive_avg_pool1d(input, output_size)
@@ -1020,7 +1030,9 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
         is_causal=False, scale=None, enable_gqa=False) -> core.Tensor:
     L, S = query.size(-2), key.size(-2)
     scale_factor = 1 / math.sqrt(query.size(-1)) if scale is None else scale
-    attn_bias = core.zeros(L, S, dtype=query.dtype, device=query.device)
+
+    attn_bias_shape = (L, S) if attn_mask is None else attn_mask.shape
+    attn_bias = core.zeros(attn_bias_shape, dtype=query.dtype, device=query.device)
     if is_causal:
         assert attn_mask is None
         temp_mask = core.ones(L, S, dtype=core.bool).tril(diagonal=0)

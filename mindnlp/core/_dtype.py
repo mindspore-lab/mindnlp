@@ -58,6 +58,7 @@ ITEM_SIZE = {
     bfloat16 : 2,
     float32 : 4,
     float64 : 8,
+    complex64: 8
 }
 
 np2dtype = {
