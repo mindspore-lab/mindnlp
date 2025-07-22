@@ -903,6 +903,7 @@ def _maybe_decode_ascii(bytes_str: Union[bytes, str]) -> str:
 
 
 dtype_map = {
+    "DoubleStorage": np.float64,
     "HalfStorage": np.float16,
     "FloatStorage": np.float32,
     'BFloat16Storage': bfloat16,
@@ -912,6 +913,7 @@ dtype_map = {
 }
 
 storage_map = {
+    mindspore.float64: "DoubleStorage",
     mindspore.float16: "HalfStorage",
     mindspore.float32: "FloatStorage",
     mindspore.bfloat16: 'BFloat16Storage',

@@ -30,6 +30,7 @@ class device():
                 _target = type.type
                 _id = type.index
             else:
+                print(type)
                 raise TypeError("core.device(): `type` must be type of 'str' or 'core.device'.")
         else:
             raise ValueError("core.device(): `type` can not be None")
