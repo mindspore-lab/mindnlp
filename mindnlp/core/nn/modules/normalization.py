@@ -64,8 +64,8 @@ class LayerNorm(Module):
 
     .. _`Layer Normalization`: https://arxiv.org/abs/1607.06450
     """
-    def __init__(self, normalized_shape, eps=1e-5, elementwise_affine=True, bias: bool = True,dtype=None):
-        factory_kwargs = {'dtype': dtype}
+    def __init__(self, normalized_shape, eps=1e-5, elementwise_affine=True, bias: bool = True, dtype=None, device=None):
+        factory_kwargs = {'dtype': dtype, 'device': device}
         super(LayerNorm, self).__init__()
         if isinstance(normalized_shape, numbers.Integral):
             normalized_shape = (normalized_shape,)

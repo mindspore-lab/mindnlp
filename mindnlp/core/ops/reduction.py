@@ -74,6 +74,8 @@ def max(*args, **kwargs):
     out = kwargs.pop('out', None)
     if 'dim' in kwargs and 'keepdim' not in kwargs:
         kwargs['keepdim'] = False
+    if 'axis' in kwargs:
+        kwargs['dim'] = kwargs.pop('axis')
     out = mindspore.mint.max(*args, **kwargs)
     if isinstance(out, tuple):
         return max_out(values=out[0], indices=out[1])

@@ -1,7 +1,14 @@
+import warnings
 import numpy as np
 from mindspore.common.dtype import *
 from mindspore._c_expression import typing
 from mindspore._c_expression.typing import Type
+
+from .configs import ON_A1
+
+if ON_A1:
+    warnings.warn('910A do not support bfloat16, use float16 instead.')
+    bfloat16 = float16
 
 dtype = Type
 

@@ -403,9 +403,12 @@ def where(condition, *args, out=None):
         return nonzero(condition, as_tuple=True)
     assert len(args) == 2
     input, other = args
+
     if isinstance(input, float) and input == -float("inf"):
         input = finfo(other.dtype).min
     if isinstance(other, float) and other == -float("inf"):
+        if isinstance(input, numbers.Number):
+            input = mindspore.tensor(input, dtype=mindspore.float32)
         other = finfo(input.dtype).min
 
     output = mindspore.mint.where(condition, input, other)

@@ -184,7 +184,7 @@ def adaptive_avg_pool2d(input, output_size):
     return ops.adaptive_avg_pool2d(input, output_size)
 
 def dropout(input, p=0.5, training=True):
-    if not training or p == 0:
+    if not training or p == 0 or 0 in input.shape:
         return input
     if use_pyboost() and not ON_ORANGE_PI:
         return mint.nn.functional.dropout(input, p, training)
@@ -548,6 +548,7 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corne
             scale_factors = scale_factor
         else:
             scale_factors = [scale_factor for _ in range(dim)]
+        scale_factors = [float(scale_factor) for scale_factor in scale_factors]
     else:
         raise ValueError("either size or scale_factor should be defined")
 
@@ -562,7 +563,7 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corne
 
     # "area" mode always requires an explicit size rather than scale factor.
     # Re-use the recompute_scale_factor code path.
-    if mode in ["area", "bilinear", "bicubic"] and output_size is None:
+    if mode in ["area", "bilinear", "bicubic", "nearest-exact"] and output_size is None:
         recompute_scale_factor = True
 
     if recompute_scale_factor is not None and recompute_scale_factor:
@@ -595,7 +596,10 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corne
     if input.dim() == 3 and mode == "nearest-exact":
         return torch._C._nn._upsample_nearest_exact1d(input, output_size, scale_factors)
     if input.dim() == 4 and mode == "nearest-exact":
-        return torch._C._nn._upsample_nearest_exact2d(input, output_size, scale_factors)
+        nearest_exact = _get_cache_prim(ops.ResizeNearestNeighborV2)(
+            align_corners=False,
+            half_pixel_centers=True)
+        return nearest_exact(input, output_size)
     if input.dim() == 5 and mode == "nearest-exact":
         return torch._C._nn._upsample_nearest_exact3d(input, output_size, scale_factors)
 
@@ -814,7 +818,34 @@ def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_paddi
     return mint.nn.functional.conv_transpose2d(input, weight, bias, stride, padding, output_padding, groups, dilation)
 
 def conv_transpose3d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
-    return mint.nn.functional.conv_transpose3d(input, weight, bias, stride, padding, output_padding, groups, dilation)
+    in_channel, out_channel = weight.shape[0], weight.shape[1]
+    kernel_size = weight.shape[2:]
+    conv_transpose3d_op = ops.Conv3DTranspose(
+        in_channel,
+        out_channel,
+        kernel_size,
+        mode=1,
+        pad_mode='valid',
+        pad=padding,
+        stride=stride,
+        dilation=dilation,
+        group=1,
+        output_padding=output_padding,
+        data_format="NCDHW"
+    )
+    if groups > 1:
+        outputs = ()
+        for i in range(groups):
+            output = conv_transpose3d_op(input.half(), weight.half())            
+            if bias is not None:
+                output = output + bias
+            outputs = outputs + (output,)
+        out = ops.concat(outputs, 1)
+    else:
+        out = conv_transpose3d_op(input, weight)
+        if bias is not None:
+            out = out + bias
+    return out
 
 
 def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):
