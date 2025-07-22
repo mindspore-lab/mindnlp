@@ -11,3 +11,4 @@ from .transforms import *
 from .relaxed_categorical import *
 from .relaxed_bernoulli import *
 from .multivariate_normal import *
+from .gumbel import *

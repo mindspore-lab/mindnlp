@@ -737,7 +737,7 @@ def meshgrid(*tensors, indexing=None):
 
 # repeat_interleave
 has_repeat_interleave = hasattr(mindspore.mint, 'repeat_interleave')
-def repeat_interleave(input, repeats, dim=None):
+def repeat_interleave(input, repeats, dim=None, *, output_size=None):
     if use_pyboost() and has_repeat_interleave and not ON_A1:
         return mindspore.mint.repeat_interleave(input, repeats, dim=dim)
     

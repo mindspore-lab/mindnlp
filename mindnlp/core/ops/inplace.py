@@ -127,6 +127,11 @@ def inplace_triu(input, diagonal=0):
     input.assign_value(out)
     return input
 
+def inplace_round(input, decimals=0):
+    out = ops.round(input, decimals=decimals)
+    input.assign_value(out)
+    return input
+
 
 
 __all__ = [
@@ -142,5 +147,6 @@ __all__ = [
     'inplace_squeeze',
     'inplace_unsqueeze',
     'inplace_fill_diagonal',
-    'inplace_triu'
+    'inplace_triu',
+    'inplace_round'
 ]

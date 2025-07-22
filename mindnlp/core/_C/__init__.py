@@ -1,4 +1,4 @@
-from mindspore import default_generator, Generator as msGenerator
+from mindspore import Generator as msGenerator
 
 from . import _nn
 from ..types import device as device_
@@ -36,6 +36,10 @@ class Generator(msGenerator):
 
     @property
     def device(self):
-        return self._device
+        if hasattr(self, '_device'):
+            return self._device
+        return device_('cpu')
+
+default_generator = Generator()
 
 class Tag: pass

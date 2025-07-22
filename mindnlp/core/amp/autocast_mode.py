@@ -82,11 +82,38 @@ class autocast:
     def __call__(self, func):
         return autocast_decorator(self, func)
 
+def _cast(value, device_type: str, dtype):
+    if isinstance(value, core.Tensor):
+        is_eligible = (
+            value.is_floating_point()
+            and value.device.type == device_type
+            and (value.dtype is not core.float64)
+        )
+        return value.to(dtype) if is_eligible else value
+    elif isinstance(value, (str, bytes)):
+        return value
+    elif HAS_NUMPY and isinstance(value, np.ndarray):
+        return value
+    elif isinstance(value, collections.abc.Mapping):
+        return {
+            _cast(k, device_type, dtype): _cast(v, device_type, dtype)
+            for k, v in value.items()
+        }
+    elif isinstance(value, collections.abc.Iterable):
+        iterable = (_cast(v, device_type, dtype) for v in value)
+        if isinstance(value, (list, tuple)):
+            return type(value)(iterable)
+        else:
+            return iterable
+    else:
+        return value
+
+
 def custom_fwd(
     fwd=None,
     *,
     device_type: str,
-    cast_inputs: Optional[_dtype] = None,
+    cast_inputs = None,
 ):
     """
     Create a helper decorator for ``forward`` methods of custom autograd functions.

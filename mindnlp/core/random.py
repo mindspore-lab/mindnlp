@@ -4,7 +4,9 @@ import warnings
 from typing import Generator
 
 from mindnlp import core
-from mindspore import default_generator, set_seed
+# from mindspore import default_generator, set_seed
+
+default_generator = core._C.default_generator
 
 def get_rng_state():
     """
