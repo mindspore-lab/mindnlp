@@ -14,7 +14,7 @@
 # ============================================================================
 """core module"""
 import os
-import platform
+import math
 from typing import (
     Any as _Any,
     Callable as _Callable,
@@ -26,8 +26,11 @@ from typing import (
     Union as _Union,
 )
 
+import mindspore
 from mindspore.runtime import Stream
+from mindspore.common.api import _pynative_executor
 
+pi = math.pi
 strided = None
 contiguous_format = None
 preserve_format = None
@@ -104,5 +107,14 @@ def get_autocast_gpu_dtype():
 
 def is_autocast_enabled():
     return True
+
+def use_deterministic_algorithms(mode, *, warn_only=False):
+    mindspore.set_context(deterministic='ON' if mode else 'OFF')
+
+def is_grad_enabled():
+    return _pynative_executor.enable_grad()
+
+def set_grad_enabled(enable_grad):
+    return _pynative_executor.set_enable_grad(enable_grad)
 
 __version__ = 'test_version_no_value'

@@ -148,6 +148,8 @@ def clone(input):
 # cummin
 
 # cumprod
+def cumprod(input, dim, *, dtype=None, out=None):
+    return ops.cumprod(input, dim, dtype=dtype)
 
 # cumsum
 has_cumsum = hasattr(mindspore.mint, "cumsum")
@@ -664,6 +666,8 @@ has_flip = hasattr(mindspore.mint, "flip")
 
 
 def flip(input, dims):
+    if not isinstance(dims, (list, tuple)):
+        dims = (dims,)
     if use_pyboost() and has_flip:
         return mindspore.mint.flip(input, dims)
     return ops.flip(input, dims)
@@ -849,7 +853,7 @@ def triu(input, diagonal=0, *, out=None):
 
 # unflatten
 def unflatten(x, dim, sizes):
-    new_shape = x.shape[:dim] + sizes
+    new_shape = x.shape[:dim] + sizes + x.shape[dim+1:]
     return ops.reshape(x, new_shape)
 
 
@@ -1023,6 +1027,7 @@ __all__ = [
     "clone",
     "contains",
     "cumsum",
+    "cumprod",
     "diag",
     "dim_list_to_bitset",
     "einsum",

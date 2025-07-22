@@ -1,8 +1,10 @@
 """pointwise op"""
 import mindspore
 from mindspore import ops
-from ..configs import use_pyboost
+from ..configs import use_pyboost, ON_A1
 from ._inner import call_ms_func
+
+from mindnlp import core
 
 # abs
 has_abs = hasattr(mindspore.mint, 'abs')
@@ -431,9 +433,38 @@ def mvlgamma(input, p):
 # nan_to_num
 has_nan_to_num = hasattr(mindspore.mint, 'nan_to_num')
 def nan_to_num(input, nan=0.0, posinf=None, neginf=None, *, out=None):
-    if use_pyboost() and has_nan_to_num:
+    if use_pyboost() and has_nan_to_num and not ON_A1:
         return call_ms_func(mindspore.mint.nan_to_num, input, nan, posinf, neginf, out=out)
-    return call_ms_func(ops.nan_to_num, input, nan, posinf, neginf, out=out)
+
+    # 创建输入张量的副本
+    output = input.clone()
+    print(output.shape)
+    # 获取数据类型信息
+    if output.is_floating_point():
+        dtype = output.dtype
+        # 获取默认替换值
+        f_info = core.finfo(dtype)
+        default_posinf = f_info.max if posinf is None else posinf
+        default_neginf = f_info.min if neginf is None else neginf
+    else:
+        # 对于整数类型，使用给定值或默认值
+        default_posinf = core.iinfo(dtype).max if posinf is None else posinf
+        default_neginf = core.iinfo(dtype).min if neginf is None else neginf
+    
+    # 替换 NaN
+    if core.isnan(output).any():
+        output = core.where(core.isnan(output), core.tensor(nan, dtype=output.dtype, device=output.device), output)
+    
+    # 替换正无穷大
+    if core.isinf(output).any() and (posinf is not None or output.is_floating_point()):
+        output = core.where((output == float('inf')) & core.isinf(output), core.tensor(default_posinf, dtype=output.dtype, device=output.device), output)
+    
+    # 替换负无穷大
+    if core.isinf(output).any() and (neginf is not None or output.is_floating_point()):
+        output = core.where((output == float('-inf')) & core.isinf(output),
+                            core.tensor(default_neginf, dtype=output.dtype, device=output.device), output)
+    
+    return output
 
 # neg
 has_neg = hasattr(mindspore.mint, 'neg')
