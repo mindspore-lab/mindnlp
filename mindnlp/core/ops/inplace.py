@@ -2,7 +2,7 @@ import mindspore
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.common.generator import default_generator
-from mindspore.ops.auto_generate.gen_ops_prim import inplace_normal_op, inplace_scatter_value_op
+from mindspore.ops.auto_generate.gen_ops_prim import inplace_normal_op, inplace_scatter_value_op, inplace_scatter_src_reduce_op
 
 from mindnlp import core
 from ..configs import use_pyboost
@@ -132,7 +132,10 @@ def inplace_round(input, decimals=0):
     input.assign_value(out)
     return input
 
-
+def inplace_scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
+    if reduce == 'sum':
+        reduce = "add"
+    return inplace_scatter_src_reduce_op(input, dim, index, src, reduce)
 
 __all__ = [
     'inplace_copy',
@@ -148,5 +151,6 @@ __all__ = [
     'inplace_unsqueeze',
     'inplace_fill_diagonal',
     'inplace_triu',
-    'inplace_round'
+    'inplace_round',
+    'inplace_scatter_reduce'
 ]

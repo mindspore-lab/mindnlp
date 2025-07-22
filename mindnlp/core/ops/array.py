@@ -62,8 +62,16 @@ def chunk(input, chunks, dim=0):
 # gather
 has_gather = hasattr(mindspore.mint, 'gather')
 def gather(input, dim, index):
+    is_complex = input.dtype == mindspore.complex64
+    if is_complex:
+        real_part = mindspore.mint.gather(input.real, dim, index)
+        imag_part = mindspore.mint.gather(input.imag, dim, index)
+        _complex = _get_cache_prim(ops.Complex)()
+        return _complex(real_part, imag_part)
+
     if use_pyboost() and has_gather:
         return mindspore.mint.gather(input, dim, index)
+
     index = ops.where(index < input.shape[dim], index, index - input.shape[dim])
     return ops.gather_elements(input, dim, index)
 
@@ -150,7 +158,8 @@ def permute(input, dims):
 
 # reshape
 has_reshape = hasattr(mindspore.mint, 'reshape')
-def reshape(input, *shape):
+def reshape(input, *shape, **kwargs):
+    shape = kwargs.pop('shape', shape)
     if isinstance(shape[0], (tuple, list)):
         shape = shape[0]
     new_shape = ()

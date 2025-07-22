@@ -67,7 +67,8 @@ def normal(mean=0.0, std=1.0, size=None, *, generator=None, out=None):
 
 # rand
 has_rand = hasattr(mindspore.mint, 'rand')
-def rand(*size, generator=None, out=None, dtype=None, device=None, pin_memory=False):
+def rand(*size, generator=None, out=None, dtype=None, device=None, pin_memory=False, **kwargs):
+    size = kwargs.pop('size', size)
     if size[0] == []:
         size = ()
     elif isinstance(size[0], (tuple, list)):
@@ -110,6 +111,7 @@ def randint_like(*args, **kwargs):
 # randn
 has_randn = hasattr(mindspore.mint, 'randn')
 def randn(*size, generator=None, dtype=None, **kwargs):
+    size = kwargs.pop('size', size)
     if dtype is None:
         dtype = get_default_dtype()
     if use_pyboost() and has_randn:

@@ -853,7 +853,10 @@ def triu(input, diagonal=0, *, out=None):
 
 # unflatten
 def unflatten(x, dim, sizes):
-    new_shape = x.shape[:dim] + sizes + x.shape[dim+1:]
+    if dim < 0:
+        dim = x.ndim + dim
+    front_part = x.shape[:dim] if dim != 0 else ()
+    new_shape = front_part + sizes + x.shape[dim+1:]
     return ops.reshape(x, new_shape)
 
 
@@ -861,8 +864,16 @@ def unflatten(x, dim, sizes):
 
 
 # view_as_real
+def view_as_real(input):
+    real_part = input.real.expand_dims(-1)
+    imag_part = input.imag.expand_dims(-1)
+    return core.concat((real_part, imag_part), -1)
 
 # view_as_complex
+def view_as_complex(input):
+    _complex = _get_cache_prim(ops.Complex)()
+    real_part, imag_part = input.tensor_split(2, -1)
+    return _complex(real_part.squeeze(-1), imag_part.squeeze(-1))
 
 
 # resolve_conj
@@ -1051,4 +1062,6 @@ __all__ = [
     "unflatten",
     "unfold",
     "histc",
+    "view_as_complex",
+    "view_as_real"
 ]

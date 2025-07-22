@@ -43,3 +43,6 @@ class Generator(msGenerator):
 default_generator = Generator()
 
 class Tag: pass
+
+def _log_api_usage_once(*args):
+    pass

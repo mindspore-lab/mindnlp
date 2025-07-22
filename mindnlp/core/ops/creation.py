@@ -45,6 +45,8 @@ has_zeros = hasattr(mindspore.mint, 'zeros')
 def zeros(*size, dtype=None, device=None, requires_grad=False, **kwargs):
     if dtype is None:
         dtype = get_default_dtype()
+    if not isinstance(dtype, Type):
+        dtype = py2dtype[dtype]
     if len(size) == 0:
         size = kwargs.get('size', None)
         if size == () or size == []:
@@ -88,7 +90,7 @@ def ones(*size, dtype=None, device=None, **kwargs):
 
 # ones_like
 has_ones_like = hasattr(mindspore.mint, 'ones_like')
-def ones_like(input, *, dtype=None, device=None):
+def ones_like(input, *, dtype=None, device=None, **kwargs):
     if dtype is None:
         dtype = input.dtype
     if use_pyboost() and has_ones_like:

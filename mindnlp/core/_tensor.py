@@ -242,6 +242,7 @@ def enable_mindspore_patch():
 
     origin_getitem = Tensor.__getitem__
     def __getitem__(self, slices):
+        slices = self._convert_numpy_slices(slices)
         # if 0 in self.shape:
         #     return self
         if isinstance(slices, tuple):
@@ -308,6 +309,8 @@ def enable_mindspore_patch():
             value = tensor(value, dtype=self.dtype)
         else:
             value = value.to(self.dtype)
+        if 1 in value.shape and self[slices].ndim != value.ndim:
+            value = value.squeeze()
         return origin_setitem(self, slices, value)
 
     Tensor.__setitem__ = __setitem__
@@ -588,6 +591,13 @@ def enable_mindspore_patch():
     Tensor.real = real
     StubTensor.real = real
 
+    @property
+    def imag(self):
+        return ops.imag(self)
+
+    Tensor.imag = imag
+    StubTensor.imag = imag
+
     def bfloat16(self):
         return self.to(_dtype.bfloat16)
 
@@ -635,6 +645,12 @@ def enable_mindspore_patch():
 
     Tensor.round_ = ops.inplace_round
     StubTensor.round_ = ops.inplace_round
+
+    Tensor.split_with_sizes = ops.split_with_sizes
+    StubTensor.split_with_sizes = ops.split_with_sizes
+
+    Tensor.scatter_reduce_ = ops.inplace_scatter_reduce
+    StubTensor.scatter_reduce_ = ops.inplace_scatter_reduce
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
