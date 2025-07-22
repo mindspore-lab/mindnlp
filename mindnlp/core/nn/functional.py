@@ -350,7 +350,7 @@ def _nllloss_nd(input, target, weight=None, ingore_index=-100, reduction='mean')
         raise ValueError(f"input bacth_size should be equal to target batch_size, but got {input.shape[0]} and "
                          f"{target.shape[0]}")
     if input_dim == 1 or input_dim == 2:
-        return nllloss_impl(input, target, weight, reduction, ingore_index)[0]
+        return nllloss_impl(input.float(), target, weight.float(), reduction, ingore_index)[0]
     if input_dim == 4:
         return nllloss_2d_op(input, target, weight, reduction, ingore_index)[0]
     # input_dim==3 or input_dim>4
@@ -1490,7 +1490,7 @@ def pixel_shuffle(input, upscale_factor):
     return ops.pixel_shuffle(input, upscale_factor)
 
 def pixel_unshuffle(input, downscale_factor):
-    return ops.pixel_shuffle(input, downscale_factor)
+    return ops.pixel_unshuffle(input, downscale_factor)
 
 def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corners=False):
     if use_pyboost():
