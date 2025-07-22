@@ -15,6 +15,8 @@ from mindspore.ops.auto_generate import (reflection_pad_1d_op, reflection_pad_2d
                                          upsample_trilinear3d_impl, fill_scalar_op, floor_op, nllloss_2d_op,
                                          masked_fill_op, masked_select, ones, flatten_ext, conv_transpose2d)
 
+from mindspore.ops.auto_generate.pyboost_inner_prim import nllloss_impl
+
 
 
 from mindnlp import core
@@ -304,14 +306,16 @@ def custom_circular_pad(x, pad):
 
     return x
 
-def pad(input, pad, mode='constant', value=0.0):
+def pad(input, pad, mode='constant', value=None):
     if sum(pad) == 0:
         return input
     if isinstance(pad, tuple):
         pad = tuple(p if isinstance(p, int) else p.item() for p in pad)
     if use_pyboost() and not ON_A1:
         return mint.nn.functional.pad(input, pad, mode, value)
-    if mode == 'reflect':
+    if mode in ['reflect', 'replicate']:
+        if mode == 'reflect' and input.ndim > 4:
+            return reflection_pad_3d_op(input, pad)
         return ops.pad(input, pad, mode)
     if mode == 'circular':
         return custom_circular_pad(input, pad)
@@ -329,105 +333,126 @@ def pad(input, pad, mode='constant', value=0.0):
         return ops.pad(input, new_pad, mode, value).to(mindspore.bool_)
     return ops.pad(input, new_pad, mode, value)
 
-def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
-    return _inner_nll_loss(input, target, weight, ignore_index, reduction, label_smoothing)
+def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean'):
+    return _nllloss_nd(input, target, weight, ignore_index, reduction)
+
+
+def _nllloss_nd(input, target, weight=None, ingore_index=-100, reduction='mean'):
+    """nllloss_nd inner function"""
+    input_dim = input.ndim
+    class_dim = 0 if input_dim == 1 else 1
+    n_classes = input.shape[class_dim]
+    if weight is None:
+        weight = ones(n_classes, input.dtype)
+    if input_dim < 1:
+        raise ValueError(f"input dim should be less than 1, but got {input_dim}")
+    if input_dim != 1 and input.shape[0] != target.shape[0]:
+        raise ValueError(f"input bacth_size should be equal to target batch_size, but got {input.shape[0]} and "
+                         f"{target.shape[0]}")
+    if input_dim == 1 or input_dim == 2:
+        return nllloss_impl(input, target, weight, reduction, ingore_index)[0]
+    if input_dim == 4:
+        return nllloss_2d_op(input, target, weight, reduction, ingore_index)[0]
+    # input_dim==3 or input_dim>4
+    n = input.shape[0]
+    c = input.shape[1]
+    out_size = (n,) + input.shape[2:]
+    if input.numel() > 0:
+        input = input.view((n, c, 1, -1))
+    else:
+        input = input.view((n, c, 0, 0))
+    if target.numel() > 0:
+        target = target.view((n, 1, -1))
+    else:
+        target = target.view((n, 0, 0))
+    if reduction != 'none':
+        return nllloss_2d_op(input, target, weight, reduction, ingore_index)[0]
+    ret = nllloss_2d_op(input, target, weight, reduction, ingore_index)[0]
+    return ret.view(out_size)
 
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
-    input = input.to(core.float32)
+    if label_smoothing < 0.0 or label_smoothing > 1.0:
+        raise ValueError(f"For cross_entropy, label_smoothing must in [0, 1]")
+    if input.ndim == 0 or input.shape[0] == 0:
+        raise ValueError(f"For cross_entropy, input don't support 0-dim and shape[0].")
     class_dim = 0 if input.ndim == 1 else 1
-    if target.dtype in [core.float32, core.float16]:
-        return _cross_entropy(input, target, class_dim, weight, reduction, label_smoothing)
-    return nll_loss(log_softmax(input, class_dim), target, weight, ignore_index, reduction, label_smoothing)
+    n_classes = input.shape[class_dim]
+    input = log_softmax(input, class_dim, dtype=input.dtype)
+    # for probabilities
+    target_dtype = target.dtype
+    if target_dtype in [mindspore.float32, mindspore.float16, mindspore.bfloat16]:
+        return _cross_entropy_for_probabilities(input, target, weight, reduction, label_smoothing, class_dim,
+                                                n_classes)
+    # for class indices
+    return _cross_entropy_for_class_indices(input, target, weight, ignore_index, reduction, label_smoothing,
+                                            class_dim, n_classes)
 
-
-def _cross_entropy(inputs, target, target_dim, weight=None, reduction='mean', label_smoothing=0.0):
-    """cross entropy inner function"""
-    class_dim = 0 if inputs.ndim == 1 else 1
-    n_classes = inputs.shape[class_dim]
-    inputs = log_softmax(inputs, class_dim)
+def _cross_entropy_for_probabilities(input, target, weight, reduction, label_smoothing, class_dim, n_classes):
+    """cross_entropy inner function for class probabilities"""
+    if input.shape != target.shape:
+        raise ValueError("For cross_entropy that target is probabilities, input shape should equal to target shape.")
     if label_smoothing > 0.0:
         target = target * (1 - label_smoothing) + label_smoothing / n_classes
-
-    if weight is None:
-        weight = core.ones_like(inputs)
-    elif inputs.ndim != 1:
-        broadcast_shape = [1 for _ in range(inputs.ndim)]
-        broadcast_shape[1] = weight.shape[0]
-        weight = weight.reshape(broadcast_shape)
-
-    if reduction == 'mean':
-        return -(inputs * target * weight).sum() / (inputs.size / n_classes)
-    if reduction == 'sum':
-        return -(inputs * target * weight).sum()
-    return -(inputs * target * weight).sum(class_dim)
-
-
-def _inner_nll_loss(inputs, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
-    ndim = inputs.ndim
-    if ndim == 2:
-        ret = _nll_loss(inputs, target, -1, weight, ignore_index, reduction, label_smoothing)
-    elif ndim == 4:
-        ret = _nll_loss(inputs, target, 1, weight, ignore_index, reduction, label_smoothing)
-    elif ndim == 1:
-        ret = _nll_loss(inputs, target, 0, weight, ignore_index, reduction, label_smoothing)
-    else:
-        n = inputs.shape[0]
-        c = inputs.shape[1]
-        out_size = (n,) + inputs.shape[2:]
-        inputs = inputs.view((n, c, 1, -1))
-        target = target.view((n, 1, -1))
-        if reduction != 'none':
-            ret = _nll_loss(inputs, target, 1, weight, ignore_index, reduction, label_smoothing)
-        else:
-            ret = _nll_loss(inputs, target, 1, weight, ignore_index, label_smoothing=label_smoothing)
-            ret = ret.view(out_size)
-    return ret
-
-
-def _nll_loss(inputs, target, target_dim=-1, weight=None, ignore_index=None, reduction='none', label_smoothing=0.0):
-    """nll loss inner function"""
-    if target.ndim == inputs.ndim - 1:
-        target = target.unsqueeze(target_dim)
-    if ignore_index is not None:
-        non_pad_mask = core.eq(target, ignore_index)
-        target = target.masked_fill(non_pad_mask, 0)
-    else:
-        non_pad_mask = target
+    loss = input * target
     if weight is not None:
-        loss_weights = core.gather(weight, 0, target)
-        orig_shape = inputs.shape
-        if inputs.ndim != 2:
-            inputs = inputs.view(orig_shape[:2] + (-1,))
-            weight = weight.view(weight.shape + (1,))
-        weighted_inputs = inputs * weight
-        weighted_inputs = weighted_inputs.view(orig_shape)
-        loss = core.neg(core.gather(weighted_inputs, target_dim, target))
-        smooth_loss = core.neg(weighted_inputs.sum(dim=target_dim, keepdim=True))
-    else:
-        loss = core.neg(core.gather(inputs, target_dim, target))
-        smooth_loss = core.neg(inputs.sum(dim=target_dim, keepdim=True))
-        loss_weights = core.ones_like(loss)
+        weight_ = weight
+        ori_shape = loss.shape
+        if input.ndim > 2:
+            loss = loss.view(ori_shape[:2] + (-1,))
+            weight_ = weight_.view(1, -1, 1)
+        loss = loss * weight_
+        loss = loss.view(ori_shape)
+    if reduction == "mean":
+        return -mint.div(loss.sum(), (input.size / n_classes))
+    if reduction == "sum":
+        return -loss.sum()
+    if reduction == "none":
+        return -loss.sum(class_dim)
+    raise ValueError(f"redution value {reduction} not valid.")
 
-    if ignore_index is not None:
-        loss = loss.masked_fill(non_pad_mask, 0.)
-        loss_weights = loss_weights.masked_fill(non_pad_mask, 0.)
-        smooth_loss = smooth_loss.masked_fill(non_pad_mask, 0.)
 
-    loss = loss.squeeze(target_dim)
-    smooth_loss = smooth_loss.squeeze(target_dim)
+def _cross_entropy_for_class_indices(input, target, weight, ingore_index, reduction, label_smoothing, class_dim,
+                                     n_classes):
+    """cross_entropy inner function for class indices"""
+    nllloss = _nllloss_nd(input, target, weight, ingore_index, reduction)
+    if label_smoothing > 0.0:
+        if weight is not None:
+            weight_ = weight
+            input_ = input
+            ori_shape = input.shape
+            if input.ndim > 2:
+                input_ = input.view(ori_shape[:2] + (-1,))
+                weight_ = weight_.view(1, -1, 1)
+            loss = input_ * weight_
+            loss = loss.view(ori_shape)
+            smooth_loss = -loss.sum(class_dim)
+        else:
+            smooth_loss = -input.sum(class_dim)
+        ignore_mask = ops.eq(target, ingore_index)
+        smooth_loss = masked_fill_op(smooth_loss, ignore_mask, 0)
+        if reduction == "mean":
+            true_mask = ~ignore_mask
+            if weight is not None:
+                weight_sum = mint.gather(weight, 0, mint.masked_select(masked_select(target, true_mask))).sum()
+                if weight_sum == 0:
+                    ret = smooth_loss.sum()
+                else:
+                    ret = smooth_loss.sum() / weight_sum
+            else:
+                weight_sum = true_mask.sum()
+                if weight_sum == 0:
+                    ret = smooth_loss.sum()
+                else:
+                    ret = smooth_loss.sum() / weight_sum
+        elif reduction == "sum":
+            ret = smooth_loss.sum()
+        elif reduction == "none":
+            ret = smooth_loss
+        else:
+            raise ValueError(f"redution value {reduction} not valid.")
+        return (1 - label_smoothing) * nllloss + ret * (label_smoothing / n_classes)
+    return nllloss
 
-    if reduction == 'sum':
-        loss = loss.sum()
-        smooth_loss = smooth_loss.sum()
-    if reduction == 'mean':
-        loss = loss.sum() / loss_weights.sum()
-        smooth_loss = smooth_loss.sum() / loss_weights.sum()
-
-    eps_i = label_smoothing / inputs.shape[target_dim]
-    if label_smoothing != 0:
-        loss = (1. - label_smoothing) * loss + eps_i * smooth_loss
-
-    return loss
 
 def mse_loss(input, target, reduction='mean'):
     return ops.mse_loss(input, target, reduction)
@@ -462,12 +487,12 @@ def softmax(input, dim=-1, *, dtype=None):
     return softmax_(input)
 
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
+    if use_pyboost():
+        return mint.nn.functional.layer_norm(input, normalized_shape, weight, bias, eps)
     if weight is None:
         weight = ops.ones(normalized_shape, dtype=input.dtype)
     if bias is None:
         bias = ops.zeros(normalized_shape, dtype=input.dtype)
-    if use_pyboost():
-        return mint.nn.functional.layer_norm(input, normalized_shape, weight, bias, eps)
     if weight is not None:
         begin_axis = input.ndim - weight.ndim
     else:
@@ -779,14 +804,18 @@ def conv_transpose1d(input, weight, bias=None, stride=1, padding=0, output_paddi
         stride=(1,) + stride,
         padding=(0,) + padding,
         output_padding=(0,) + output_padding,
+        groups=groups,
         dilation=(1,) + dilation
     )  # 输出形状: (batch, out_channels, 1, L_out)
-    
     # 4. 移除高度维度恢复一维
     return output_2d.squeeze(2)
 
 def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
     return mint.nn.functional.conv_transpose2d(input, weight, bias, stride, padding, output_padding, groups, dilation)
+
+def conv_transpose3d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
+    return mint.nn.functional.conv_transpose3d(input, weight, bias, stride, padding, output_padding, groups, dilation)
+
 
 def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):
     if use_pyboost():

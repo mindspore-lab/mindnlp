@@ -137,6 +137,9 @@ def enable_mindspore_patch():
         else:
             dtype_to = kwargs.get("dtype", None)
         if dtype_to is not None:
+            if ON_A1 and dtype_to == _dtype.bfloat16:
+                warnings.warn('910A do not support bfloat16, use float16 instead.')
+                return mindspore.ops.cast(self, _dtype.float16)
             return mindspore.ops.cast(self, dtype_to)
         return self
 
@@ -408,7 +411,7 @@ def enable_mindspore_patch():
     Tensor.view = view
     StubTensor.view = view
 
-    def cpu(self):
+    def cpu(self, *args, **kwargs):
         return self
 
     Tensor.cpu = cpu
@@ -626,6 +629,15 @@ def enable_mindspore_patch():
 
     Tensor.as_strided = ops.as_strided
     StubTensor.as_strided = ops.as_strided
+
+    Tensor.split = ops.split
+    StubTensor.split = ops.split
+
+    Tensor.flip = ops.flip
+    StubTensor.flip = ops.flip
+
+    Tensor.unflatten = ops.unflatten
+    StubTensor.unflatten = ops.unflatten
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)

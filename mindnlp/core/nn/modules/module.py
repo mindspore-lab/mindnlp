@@ -1185,6 +1185,10 @@ class Module:
     def npu(self: T, device: Optional[Union[int, device]] = None) -> T:
         return self._apply(lambda t: t.npu(device))
 
+    def cpu(self: T, device: Optional[Union[int, device]] = None) -> T:
+        return self._apply(lambda t: t.cpu(device))
+
+
     def _load_from_state_dict(
         self,
         state_dict,

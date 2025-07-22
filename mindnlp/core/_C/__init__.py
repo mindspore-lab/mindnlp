@@ -1,6 +1,7 @@
 from mindspore import default_generator, Generator as msGenerator
 
 from . import _nn
+from ..types import device as device_
 
 def _jit_set_profiling_executor(mode):
     pass
@@ -31,3 +32,10 @@ DisableTorchFunctionSubclass = None
 class Generator(msGenerator):
     def __init__(self, device='cpu'):
         super().__init__()
+        self._device = device_(device) if isinstance(device, str) else device
+
+    @property
+    def device(self):
+        return self._device
+
+class Tag: pass
