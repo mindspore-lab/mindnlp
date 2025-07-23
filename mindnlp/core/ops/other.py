@@ -64,7 +64,7 @@ has_broadcast_to = hasattr(mindspore.mint, "broadcast_to")
 
 
 def broadcast_to(input, *shape):
-    if isinstance(shape[0], tuple):
+    if isinstance(shape[0], (list, tuple)):
         shape = shape[0]
     if ON_ORANGE_PI and not use_pyboost():
         # return input.expand(mindspore.tensor(shape))

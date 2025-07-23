@@ -36,8 +36,8 @@ def concat(tensors, dim=0, *, out=None, **kwargs):
     return cat(tensors, dim, out=out, **kwargs)
 
 # concatenate
-def concatenate(tensors, dim=0, out=None):
-    return cat(tensors, dim, out=out)
+def concatenate(tensors, dim=0, out=None, **kwargs):
+    return cat(tensors, dim, out=out, **kwargs)
 
 # conj
 def conj(input):

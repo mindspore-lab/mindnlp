@@ -137,6 +137,26 @@ def inplace_scatter_reduce(input, dim, index, src, reduce, *, include_self=True)
         reduce = "add"
     return inplace_scatter_src_reduce_op(input, dim, index, src, reduce)
 
+def inplace_exponential(tensor, lambd=1.0):
+    """
+    原地操作的指数分布采样 (类似Tensor.exponential_)
+    :param tensor: 要填充的目标张量
+    :param lambd: 率参数 (λ > 0)
+    :return: 修改后的张量 (原张量被覆盖)
+    """
+    assert lambd > 0, "lambd 必须大于0"
+    
+    # 生成与目标张量形状相同的均匀分布随机数
+    u = core.rand_like(tensor)
+    
+    # 数值保护
+    u = u.clamp(min=core.finfo(u.dtype).eps, max=1.0)
+    
+    # 逆变换法赋值
+    tensor.data = -core.log(1 - u) / lambd
+
+    return tensor
+
 __all__ = [
     'inplace_copy',
     'inplace_zero',
@@ -152,5 +172,6 @@ __all__ = [
     'inplace_fill_diagonal',
     'inplace_triu',
     'inplace_round',
-    'inplace_scatter_reduce'
+    'inplace_scatter_reduce',
+    'inplace_exponential'
 ]

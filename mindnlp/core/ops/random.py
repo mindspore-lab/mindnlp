@@ -47,14 +47,16 @@ def multinomial(input, num_samples, replacement=False, *, generator=None):
 
         vals = div(log(random_uniform), input + 1e-10)
         _, samples = topk(vals, num_samples)
-
+ 
     return samples.astype(mindspore.int64)
 
 # normal
 has_normal = hasattr(mindspore.mint, 'normal')
 def normal(mean=0.0, std=1.0, size=None, *, generator=None, out=None):
     if use_pyboost() and has_normal:
-        return call_ms_func(mindspore.mint.normal, float(mean), float(std), size, generator, out=out)
+        mean = float(mean) if isinstance(mean, int) else mean
+        mean = float(std) if isinstance(std, int) else std
+        return call_ms_func(mindspore.mint.normal, mean, std, size, generator, out=out)
     if size is None:
         if isinstance(mean, mindspore.Tensor):
             size = mean.shape
@@ -90,8 +92,11 @@ def rand_like(input, *, dtype=None):
 has_randint = hasattr(mindspore.mint, 'randint')
 def randint(*args, **kwargs):
     device = kwargs.pop('device', None)
+    low = kwargs.pop('low', None)
     high = kwargs.pop('high', None)
     size = kwargs.pop('size', None)
+    if low is not None:
+        args += (low,)
     if high is not None:
         args += (high,)
     
@@ -112,11 +117,16 @@ def randint_like(*args, **kwargs):
 has_randn = hasattr(mindspore.mint, 'randn')
 def randn(*size, generator=None, dtype=None, **kwargs):
     size = kwargs.pop('size', size)
+    new_size = ()
+    for s in size:
+        if isinstance(s, np.integer):
+            s = s.item()
+        new_size += (s,)
     if dtype is None:
         dtype = get_default_dtype()
     if use_pyboost() and has_randn:
-        return mindspore.mint.randn(*size, generator=generator, dtype=dtype)
-    return ops.randn(*size, dtype=dtype)
+        return mindspore.mint.randn(*new_size, generator=generator, dtype=dtype)
+    return ops.randn(*new_size, dtype=dtype)
 
 # randn_like
 has_randn_like = hasattr(mindspore.mint, 'randn_like')

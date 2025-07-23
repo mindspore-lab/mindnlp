@@ -655,6 +655,9 @@ def enable_mindspore_patch():
     Tensor.scatter_reduce_ = ops.inplace_scatter_reduce
     StubTensor.scatter_reduce_ = ops.inplace_scatter_reduce
 
+    Tensor.exponential_ = ops.inplace_exponential
+    StubTensor.exponential_ = ops.inplace_exponential
+
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
     return ret
