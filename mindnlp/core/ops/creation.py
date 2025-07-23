@@ -104,9 +104,9 @@ def arange(start=0, end=None, step=1, *, dtype=None, device=None):
     if ON_ORANGE_PI and dtype in (None, mindspore.int64):
         dtype = mindspore.int32
     if use_pyboost() and has_arange:
-        start = start.item() if isinstance(start, mindspore.Tensor) else start
-        end = end.item() if isinstance(end, mindspore.Tensor) else end
-        step = step.item() if isinstance(step, mindspore.Tensor) else step
+        start = start.item() if isinstance(start, (mindspore.Tensor, np.integer)) else start
+        end = end.item() if isinstance(end, (mindspore.Tensor, np.integer)) else end
+        step = step.item() if isinstance(step, (mindspore.Tensor, np.integer)) else step
         return mindspore.mint.arange(start, end, step, dtype=dtype)
 
     start = mindspore.Tensor(start) if not isinstance(start, mindspore.Tensor) else start

@@ -11,3 +11,5 @@ def disable(fn=None, recursive=True, *, reason=None):
     if fn is not None:
         return wrap_func(fn)
     return wrap_func
+
+def reset(): pass
