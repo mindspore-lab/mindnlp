@@ -198,6 +198,9 @@ def enable_mindspore_patch():
     Tensor.expand = _expand
     StubTensor.expand = _expand
 
+    Tensor.broadcast_to = ops.broadcast_to
+    StubTensor.broadcast_to = ops.broadcast_to
+
     def clone(self, *args, **kwargs):
         return self.copy()
     

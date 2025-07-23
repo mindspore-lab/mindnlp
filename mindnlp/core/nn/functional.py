@@ -341,6 +341,13 @@ def pad(input, pad, mode='constant', value=None):
     if input.dtype == mindspore.bool_:
         input = input.to(mindspore.int32)
         return ops.pad(input, new_pad, mode, value).to(mindspore.bool_)
+    if input.ndim > 5 and mode == 'constant':
+        paddings = ()
+        for i in range(0, len(new_pad), 2):
+            paddings += (new_pad[i: i+2],)
+        
+        paddings = ((0, 0),) * (input.ndim - len(paddings)) + tuple(reversed(paddings))
+        return _get_cache_prim(ops.Pad)(paddings)(input)
     return ops.pad(input, new_pad, mode, value)
 
 def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean'):

@@ -1114,6 +1114,24 @@ class Module:
         else:
             super().__delattr__(name)
 
+    def _register_state_dict_hook(self, hook):
+        r"""Register a post-hook for the :meth:`~torch.nn.Module.state_dict` method.
+
+        It should have the following signature::
+            hook(module, state_dict, prefix, local_metadata) -> None or state_dict
+
+        The registered hooks can modify the ``state_dict`` inplace or return a new one.
+        If a new ``state_dict`` is returned, it will only be respected if it is the root
+        module that :meth:`~nn.Module.state_dict` is called from.
+        """
+        if getattr(hook, "_from_public_api", False):
+            raise RuntimeError(
+                "Cannot register the same function as the state dict post hook that was "
+                "previously registered via register_state_dict_post_hook"
+            )
+        handle = RemovableHandle(self._state_dict_hooks)
+        self._state_dict_hooks[handle.id] = hook
+        return handle
 
     def extra_repr(self) -> str:
         r"""Set the extra representation of the module.
