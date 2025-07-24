@@ -312,8 +312,10 @@ def enable_mindspore_patch():
             value = tensor(value, dtype=self.dtype)
         else:
             value = value.to(self.dtype)
+
         if 1 in value.shape and self[slices].ndim != value.ndim:
             value = value.squeeze()
+        
         return origin_setitem(self, slices, value)
 
     Tensor.__setitem__ = __setitem__
@@ -657,6 +659,21 @@ def enable_mindspore_patch():
 
     Tensor.exponential_ = ops.inplace_exponential
     StubTensor.exponential_ = ops.inplace_exponential
+
+    Tensor.log_ = ops.inplace_log
+    StubTensor.log_ = ops.inplace_log
+
+    Tensor.mul_ = ops.inplace_mul
+    StubTensor.mul_ = ops.inplace_mul
+
+    Tensor.neg_ = ops.inplace_neg
+    StubTensor.neg_ = ops.inplace_neg
+
+    Tensor.exp_ = ops.inplace_exp
+    StubTensor.exp_ = ops.inplace_exp
+
+    Tensor.sub_ = ops.inplace_sub
+    StubTensor.sub_ = ops.inplace_sub
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)

@@ -1,8 +1,10 @@
+import numbers
 import mindspore
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.common.generator import default_generator
-from mindspore.ops.auto_generate.gen_ops_prim import inplace_normal_op, inplace_scatter_value_op, inplace_scatter_src_reduce_op
+from mindspore.ops.auto_generate.gen_ops_prim import inplace_normal_op, inplace_scatter_value_op, inplace_scatter_src_reduce_op, \
+    inplace_scatter_src_op
 
 from mindnlp import core
 from ..configs import use_pyboost
@@ -85,6 +87,8 @@ def inplace_add(input, other, alpha):
     return input
 
 def inplace_scatter(input, dim, index, src):
+    if not isinstance(src, numbers.Number):
+        return inplace_scatter_src_op(input, dim, index, src)
     return inplace_scatter_value_op(input, dim, index, src)
 
 def inplace_index_copy(input, dim, index, tensor):
@@ -157,6 +161,26 @@ def inplace_exponential(tensor, lambd=1.0):
 
     return tensor
 
+def inplace_log(self):
+    self.data = core.log(self)
+    return self
+
+def inplace_mul(self, other):
+    self.data = core.mul(self, other)
+    return self
+
+def inplace_neg(self):
+    self.data = core.neg(self)
+    return self
+
+def inplace_exp(self):
+    self.data = core.exp(self)
+    return self
+
+def inplace_sub(self, other):
+    self.data = core.sub(self, other)
+    return self
+
 __all__ = [
     'inplace_copy',
     'inplace_zero',
@@ -173,5 +197,10 @@ __all__ = [
     'inplace_triu',
     'inplace_round',
     'inplace_scatter_reduce',
-    'inplace_exponential'
+    'inplace_exponential',
+    'inplace_log',
+    'inplace_mul',
+    'inplace_neg',
+    'inplace_exp',
+    'inplace_sub'
 ]
