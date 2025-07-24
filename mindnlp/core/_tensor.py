@@ -126,7 +126,7 @@ def enable_mindspore_patch():
     StubTensor.__reduce_ex__ = __reduce_ex__
 
     def to_(self, *args, **kwargs):
-        dtype_to = None
+        dtype_to = kwargs.get("dtype", None)
         if len(args) == 1:
             if isinstance(args[0], Type):
                 dtype_to = args[0]
@@ -674,6 +674,10 @@ def enable_mindspore_patch():
 
     Tensor.sub_ = ops.inplace_sub
     StubTensor.sub_ = ops.inplace_sub
+
+    Tensor.roll = ops.roll
+    StubTensor.roll = ops.roll
+
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)

@@ -139,8 +139,13 @@ def linspace(start, end, steps, *, dtype=None, **kwargs):
     return ops.linspace(start, end, steps).to(dtype)
 
 # logspace
-def logspace(start, end, steps, base=10.0, *, dtype=None):
-    return ops.logspace(start, end, steps, base, dtype=dtype)
+has_logspace = hasattr(mindspore.mint, 'logspace')
+def logspace(start, end, steps, base=10.0, *, dtype=None, **kwargs):
+    if dtype is None:
+        dtype = get_default_dtype()
+    if use_pyboost() and has_logspace:
+        return mindspore.mint.logspace(start, end, steps, base, dtype=dtype)
+    return ops.logspace(float(start), float(end), steps, int(base), dtype=dtype)
 
 # eye
 has_eye = hasattr(mindspore.mint, 'eye')

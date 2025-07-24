@@ -273,7 +273,8 @@ def squeeze(input, *dim, **kwargs):
 
 # stack
 has_stack = hasattr(mindspore.mint, 'stack')
-def stack(tensors, dim=0, *, out=None):
+def stack(tensors, dim=0, *, out=None, **kwargs):
+    dim = kwargs.pop('axis', dim)
     if use_pyboost() and has_stack:
         return call_ms_func(mindspore.mint.stack, tensors, dim, out=out)
     return call_ms_func(ops.stack, tensors, dim, out=out)
