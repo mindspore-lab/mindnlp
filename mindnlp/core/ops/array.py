@@ -5,6 +5,7 @@ import mindspore
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.operations._grad_ops import StridedSliceGrad
+from mindspore.ops.auto_generate.gen_ops_prim import inplace_scatter_src_reduce_op
 
 from ..configs import use_pyboost, ON_ORANGE_PI
 from .other import broadcast_tensors, finfo
@@ -220,8 +221,15 @@ def scatter_add(input, dim, index, src):
         return mindspore.mint.scatter_add(input, dim, index, src)
     return ops.tensor_scatter_elements(input, index, src, dim, 'add')
 
+scatter_reduce_dict = {
+    'sum': 'add',
+    'amax': 'max',
+    'amin': 'min',
+    'mean': 'mean'
+}
 # scatter_reduce
-
+def scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
+    return inplace_scatter_src_reduce_op(input.clone(), dim, index, src, scatter_reduce_dict[reduce])
 
 # scatter_nd_update
 def scatter_nd_update(input, indices, update):
@@ -799,7 +807,7 @@ __all__ = [
     # select_scatter
     # slice_scatter
     'scatter_add',
-    # scatter_reduce
+    'scatter_reduce',
     'scatter_nd_update',
     'scatter_update',
     'split',
