@@ -1,5 +1,6 @@
 """nn functional"""
 import math
+import numbers
 import warnings
 from typing import Optional, Tuple, List
 import numpy as np
@@ -547,7 +548,7 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corne
                     "Please provide input tensor in (N, C, d1, d2, ...,dK) format and "
                     "output size in (o1, o2, ...,oK) format."
                 )
-            output_size = size
+            output_size = [s.item() if not isinstance(s, numbers.Number) else s for s in size]
         else:
             output_size = [size for _ in range(dim)]
     elif scale_factor is not None:
@@ -637,10 +638,10 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corne
         )
     if input.dim() == 4 and mode == "bilinear":
         assert align_corners is not None
-        if antialias:
-            return torch._C._nn._upsample_bilinear2d_aa(
-                input, output_size, align_corners, scale_factors
-            )
+        # if antialias:
+        #     return torch._C._nn._upsample_bilinear2d_aa(
+        #         input, output_size, align_corners, scale_factors
+        #     )
         return upsample_bilinear2d_op(
             input, output_size, scale_factors, align_corners
         )
@@ -867,7 +868,13 @@ def conv_transpose3d(input, weight, bias=None, stride=1, padding=0, output_paddi
 
 def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):
     if use_pyboost():
-        return mint.nn.functional.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
+        input_ndim = input.ndim
+        if input_ndim == 3:
+            input = input.unsqueeze(1)
+        out = mint.nn.functional.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
+        if input_ndim == 3:
+            out = out.squeeze(1)
+        return out
     return ops.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
 
 def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):

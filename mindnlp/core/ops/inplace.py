@@ -181,6 +181,10 @@ def inplace_sub(self, other):
     self.data = core.sub(self, other)
     return self
 
+def inplace_bernoulli(self, p=0.5, *, generator=None):
+    self.data = core.bernoulli(self, generator=generator, p=p)
+    return self
+
 __all__ = [
     'inplace_copy',
     'inplace_zero',
@@ -202,5 +206,6 @@ __all__ = [
     'inplace_mul',
     'inplace_neg',
     'inplace_exp',
-    'inplace_sub'
+    'inplace_sub',
+    'inplace_bernoulli'
 ]
