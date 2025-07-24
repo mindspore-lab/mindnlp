@@ -681,6 +681,8 @@ def enable_mindspore_patch():
     Tensor.bernoulli_ = ops.inplace_bernoulli
     StubTensor.bernoulli_ = ops.inplace_bernoulli
 
+    Tensor.scatter_reduce = ops.scatter_reduce
+    StubTensor.scatter_reduce = ops.scatter_reduce
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)

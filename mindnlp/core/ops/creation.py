@@ -53,12 +53,18 @@ def zeros(*size, dtype=None, device=None, requires_grad=False, **kwargs):
             size = ((),)
     if isinstance(size[0], (tuple, list)):
         size = size[0]
+
+    new_size = ()
+    for s in size:
+        if not isinstance(s, int):
+            s = s.item()
+        new_size += (s,)
     if use_pyboost() and has_zeros:
         # if device == 'cpu':
         #     return mindspore.Tensor(np.zeros(size), dtype=dtype)
-        return mindspore.mint.zeros(size, dtype=dtype)
+        return mindspore.mint.zeros(new_size, dtype=dtype)
     size = tuple(size)
-    return _zeros(size, dtype)
+    return _zeros(new_size, dtype)
 
 # zeros_like
 has_zeros_like = hasattr(mindspore.mint, 'zeros_like')
