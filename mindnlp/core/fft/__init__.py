@@ -44,4 +44,10 @@ def ifftn(input, s=None, dim=None, norm=None, *, out=None):
 def ifftshift(input, dim=None):
     return ops.ifftshift(input, dim)
 
+def fft2(input, s=None, dim=(-2, -1), norm=None):
+    return ops.fft2(input, s, dim, norm)
+
+def ifft2(input, s=None, dim=(-2, -1), norm=None):
+    return ops.ifft2(input, s, dim, norm)
+
 __all__ = ['fft', 'fftn', 'irfft', 'rfft']
