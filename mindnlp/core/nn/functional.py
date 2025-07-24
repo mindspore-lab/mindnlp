@@ -867,7 +867,13 @@ def conv_transpose3d(input, weight, bias=None, stride=1, padding=0, output_paddi
 
 def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):
     if use_pyboost():
-        return mint.nn.functional.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
+        input_ndim = input.ndim
+        if input_ndim == 3:
+            input = input.unsqueeze(1)
+        out = mint.nn.functional.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
+        if input_ndim == 3:
+            out = out.squeeze(1)
+        return out
     return ops.max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
 
 def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):
