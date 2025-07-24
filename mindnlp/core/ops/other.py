@@ -178,12 +178,10 @@ def cumsum(input, dim=None, dtype=None, out=None, **kwargs):
 
 # diag
 has_diag = hasattr(mindspore.mint, "diag")
-
-
 def diag(input, diagonal=0):
     if use_pyboost() and has_diag:
         return mindspore.mint.diag(input, diagonal)
-    return ops.diag(input)
+    return mindspore.numpy.diag(input, diagonal)
 
 
 # diag_embed
@@ -806,6 +804,8 @@ def searchsorted(
     sorter=None,
 ):
     if use_pyboost() and has_searchsorted:
+        if not isinstance(values, core.Tensor):
+            values = core.tensor(values)
         return call_ms_func(
             mindspore.mint.searchsorted,
             sorted_sequence,
@@ -1030,12 +1030,26 @@ def unfold(input, dimension, size, step):
     return output
 
 
+def cartesian_prod(*tensors):
+    """
+    手动实现 torch.cartesian_prod
+    :param tensors: 一个或多个一维张量
+    :return: 笛卡尔积结果的二维张量 (每行一个组合)
+    """
+    # 生成网格坐标
+    grids = core.meshgrid(*tensors, indexing='ij')
+    
+    # 展平每个网格张量并堆叠
+    return core.stack([g.reshape(-1) for g in grids], dim=1)
+
+
 __all__ = [
     "bincount",
     "broadcast_shapes",
     "broadcast_tensors",
     "broadcast_to",
     "bucketize",
+    "cartesian_prod",
     "cdist",
     "clone",
     "contains",
