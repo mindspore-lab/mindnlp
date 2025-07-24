@@ -12,11 +12,12 @@ from ._inner import call_ms_func
 
 # bernoulli
 has_bernoulli = hasattr(mindspore.mint, 'bernoulli')
-def bernoulli(input, *, generator=None, out=None):
+def bernoulli(input, *, generator=None, out=None, **kwargs):
+    p = kwargs.pop('p', 0.5)
     if use_pyboost() and has_bernoulli:
         return call_ms_func(mindspore.mint.bernoulli, input, generator=generator, out=out)
     random_numbers = rand(*input.shape, dtype=mindspore.float32)
-    samples = random_numbers < 0.5
+    samples = random_numbers < p
     samples = samples.int()
     if out is None:
         return samples

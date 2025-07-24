@@ -678,6 +678,9 @@ def enable_mindspore_patch():
     Tensor.roll = ops.roll
     StubTensor.roll = ops.roll
 
+    Tensor.bernoulli_ = ops.inplace_bernoulli
+    StubTensor.bernoulli_ = ops.inplace_bernoulli
+
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
