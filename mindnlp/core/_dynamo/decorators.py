@@ -15,3 +15,27 @@ def mark_static_address(t: Any, guard: bool = True) -> None:
     # else:
     #     t._dynamo_static_input_type = "unguarded"  # type: ignore[attr-defined]
     pass
+
+def allow_in_graph(fn):
+    """
+    Customize which functions TorchDynamo will include in the generated
+    graph. Similar to `torch.fx.wrap()`.
+    ::
+
+        torch._dynamo.allow_in_graph(my_custom_function)
+
+        @torch._dynamo.optimize(...)
+        def fn(a):
+            x = torch.add(x, 1)
+            x = my_custom_function(x)
+            x = torch.add(x, 1)
+            return x
+
+        fn(...)
+
+    Will capture a single graph containing `my_custom_function()`.
+    """
+    if isinstance(fn, (list, tuple)):
+        return [allow_in_graph(x) for x in fn]
+    assert callable(fn), "allow_in_graph expects a callable"
+    return fn

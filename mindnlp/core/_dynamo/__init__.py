@@ -1,5 +1,5 @@
 from .decorators import (
-    # allow_in_graph,
+    allow_in_graph,
     # assume_constant_result,
     # disable,
     # disallow_in_graph,
