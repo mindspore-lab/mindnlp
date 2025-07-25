@@ -28,7 +28,7 @@ def argmin(input, dim=None, keepdim=False):
 
 # amax
 has_amax = hasattr(mindspore.mint, 'amax')
-def amax(input, dim, keepdim=False):
+def amax(input, dim=(), keepdim=False):
     if use_pyboost() and has_amax:
         return mindspore.mint.amax(input, dim, keepdim)
     return ops.amax(input, dim, keepdim)

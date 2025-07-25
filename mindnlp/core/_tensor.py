@@ -386,6 +386,16 @@ def enable_mindspore_patch():
     Tensor.__add__ = __add__
     StubTensor.__add__ = __add__
 
+    def __sub__(self, other):
+        # if 0 in self.shape:
+        #     return self
+        if isinstance(other, np.ndarray):
+            return self.numpy() - other
+        return ops.sub(self, other)
+    
+    Tensor.__sub__ = __sub__
+    StubTensor.__sub__ = __sub__
+
     Tensor.repeat_interleave = ops.repeat_interleave
     StubTensor.repeat_interleave = ops.repeat_interleave
 
