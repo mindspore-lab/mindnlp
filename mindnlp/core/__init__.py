@@ -35,6 +35,7 @@ strided = None
 contiguous_format = None
 preserve_format = None
 legacy_contiguous_format = None
+channels_last_3d = None
 
 inf = float("inf")
 nan = float("nan")
