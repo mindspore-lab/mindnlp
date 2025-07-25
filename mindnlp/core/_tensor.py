@@ -711,6 +711,27 @@ def enable_mindspore_patch():
     Tensor.var = ops.var
     StubTensor.var = ops.var
 
+    Tensor.logsumexp = ops.logsumexp
+    StubTensor.logsumexp = ops.logsumexp
+
+    def __bool__(self):
+        if self.ndim > 0:
+            return True
+        return bool(self._item())
+
+    Tensor.__bool__ = __bool__
+    StubTensor.__bool__ = __bool__
+
+    def __iter__(self):
+        if self.ndim == 0:
+            yield self
+        else:
+            for i in range(len(self)):
+                yield self[i]
+
+    Tensor.__iter__ = __iter__
+    StubTensor.__iter__ = __iter__
+
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
     return ret
