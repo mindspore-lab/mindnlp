@@ -394,7 +394,8 @@ def unique_consecutive(input, return_inverse=False, return_counts=False, dim=Non
 
 # var
 has_var = hasattr(mindspore.mint, 'var')
-def var(input, dim=None, *, correction=1, keepdim=False):
+def var(input, dim=None, *, correction=1, keepdim=False, **kwargs):
+    correction = int(kwargs.pop('unbiased', correction))
     if use_pyboost and has_var:
         return mindspore.mint.var(input, dim=dim, correction=correction, keepdim=keepdim)
     return pow(std(input, dim, correction=correction, keepdim=keepdim), 2)

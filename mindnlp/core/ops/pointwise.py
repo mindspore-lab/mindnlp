@@ -234,6 +234,9 @@ def clamp(input, min=None, max=None, *, out=None):
     return call_ms_func(ops.clamp, input, min, max, out=out)
 
 
+def clamp_min(input, min):
+    return clamp(input, min)
+
 # clip
 has_clip = hasattr(mindspore.mint, "clip")
 
@@ -918,6 +921,7 @@ __all__ = [
     "bitwise_xor",
     "ceil",
     "clamp",
+    "clamp_min",
     "clip",
     "cos",
     "cosh",
