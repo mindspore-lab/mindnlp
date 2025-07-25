@@ -791,8 +791,6 @@ def roll(input, shifts, dims=None):
 
 # searchsorted
 has_searchsorted = hasattr(mindspore.mint, "searchsorted")
-
-
 def searchsorted(
     sorted_sequence,
     values,
@@ -1043,6 +1041,9 @@ def cartesian_prod(*tensors):
     return core.stack([g.reshape(-1) for g in grids], dim=1)
 
 
+def detach(input):
+    return ops.stop_gradient(input)
+
 __all__ = [
     "bincount",
     "broadcast_shapes",
@@ -1079,5 +1080,6 @@ __all__ = [
     "unfold",
     "histc",
     "view_as_complex",
-    "view_as_real"
+    "view_as_real",
+    "detach"
 ]

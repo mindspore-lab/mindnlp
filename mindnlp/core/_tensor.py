@@ -389,12 +389,24 @@ def enable_mindspore_patch():
     def __sub__(self, other):
         # if 0 in self.shape:
         #     return self
-        if isinstance(other, np.ndarray):
-            return self.numpy() - other
+        if isinstance(other, (np.ndarray, np.integer)):
+            other = tensor(other)
         return ops.sub(self, other)
     
     Tensor.__sub__ = __sub__
     StubTensor.__sub__ = __sub__
+
+
+    def __mul__(self, other):
+        # if 0 in self.shape:
+        #     return self
+        if isinstance(other, (np.ndarray, np.integer)):
+            other = tensor(other)
+        return ops.mul(self, other)
+    
+    Tensor.__mul__ = __mul__
+    StubTensor.__mul__ = __mul__
+
 
     Tensor.repeat_interleave = ops.repeat_interleave
     StubTensor.repeat_interleave = ops.repeat_interleave
@@ -695,6 +707,9 @@ def enable_mindspore_patch():
 
     Tensor.tril_ = ops.inplace_tril
     StubTensor.tril_ = ops.inplace_tril
+
+    Tensor.var = ops.var
+    StubTensor.var = ops.var
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
