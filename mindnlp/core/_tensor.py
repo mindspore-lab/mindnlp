@@ -48,35 +48,34 @@ class TypedTensorMeta(_TensorMeta):
 
 class IntTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.int
-    def __init__(self, data, device=None):
-        super().__init__(data, dtype=_dtype.int)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, dtype=_dtype.int, **kwargs)
 
 class LongTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.long
-    def __init__(self, data, device=None):
-        super().__init__(data, dtype=_dtype.long)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, dtype=_dtype.long, **kwargs)
 
 class FloatTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.float32
-    def __init__(self, data, device=None):
-        super().__init__(data, dtype=_dtype.float32)
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, dtype=_dtype.float32, **kwargs)
 
 class HalfTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.float16
-    def __init__(self, data, device=None):
-        super().__init__(data, dtype=_dtype.float16)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, dtype=_dtype.float16, **kwargs)
 
 class BFloat16Tensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.float16
-    def __init__(self, data, device=None):
-        super().__init__(data, dtype=_dtype.bfloat16)
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, dtype=_dtype.bfloat16, **kwargs)
 
 class BoolTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.bool
-    def __init__(self, data, device=None):
-        super().__init__(data, dtype=_dtype.bool)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, dtype=_dtype.bool, **kwargs)
+
 
 def tensor(data, *, dtype=None, device=None, requires_grad=False):
     if isinstance(data, Tensor):
