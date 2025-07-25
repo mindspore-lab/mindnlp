@@ -2002,6 +2002,24 @@ class Module:
         """
         return self._apply(lambda t: t.bfloat16() if t.is_floating_point() else t)
 
+    def to_empty(
+        self, *, device, recurse: bool = True
+    ):
+        r"""Move the parameters and buffers to the specified device without copying storage.
+
+        Args:
+            device (:class:`torch.device`): The desired device of the parameters
+                and buffers in this module.
+            recurse (bool): Whether parameters and buffers of submodules should
+                be recursively moved to the specified device.
+
+        Returns:
+            Module: self
+        """
+        return self._apply(
+            lambda t: core.empty_like(t, device=device), recurse=recurse
+        )
+
     def float(self: T) -> T:
         r"""Casts all floating point parameters and buffers to ``float`` datatype.
 
