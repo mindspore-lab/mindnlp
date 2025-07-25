@@ -41,3 +41,5 @@ class device:
 
     def __exit__(self, type: Any, value: Any, traceback: Any):
         return False
+
+OutOfMemoryError = RuntimeError

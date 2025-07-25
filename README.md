@@ -41,21 +41,48 @@
 
 * 🔥 **Latest Features**
 
-  * 🤗 **250+** Pretrained models support ***huggingface transformers-like apis***.
-    You can use them easily by following code snippet:
+  * **Fully compatible with 🤗HuggingFace**, it enables seamless execution of any Transformers/Diffusers models on MindSpore across all hardware platforms (GPU/Ascend/CPU).
+    
+    You may still invoke models through MindNLP as shown in the example code below:
+
     ```python
-    from mindnlp.transformers import AutoModel
+    from mindnlp.transformers import AutoTokenizer, AutoModel
 
-    model = AutoModel.from_pretrained('bert-base-cased')
+    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+    model = AutoModel.from_pretrained("bert-base-uncased")
+
+    inputs = tokenizer("Hello world!")
+    outputs = model(**inputs)
     ```
-  * **Full Platform Support**: Comprehensive support for `Ascend 910 series`, `Ascend 310B (Orange Pi)`, `GPU`, and `CPU`. (Note: Currently the only AI development kit available on Orange Pi.)
-  * **Distributed Parallel Inference**: Multi-device, multi-process parallel inference support for models exceeding 10B parameters.
-  * **Quantization Algorithm Support**: SmoothQuant available for Orange Pi; bitsandbytes-like int8 quantization supported on GPU.
-  * **Sentence Transformer Support**: Enables efficient RAG (Retrieval-Augmented Generation) development.
-  * **Dynamic Graph Performance Optimization**: Achieves PyTorch+GPU-level inference speeds for dynamic graphs on Ascend hardware (tested Llama performance at **85ms/token**).
-  * **True Static and Dynamic Graph Unification**: One-line switching to graph mode with `mindspore.jit`, fully compatible with ***Hugging Face code style*** for both ease of use and rapid performance improvement. Tested Llama performance on Ascend hardware reaches 2x dynamic graph speed (**45ms/token**), consistent with other MindSpore static graph-based suites.
-  * **Extensive LLM Application Updates**: Includes `Text information extraction`, `Chatbots`, `Speech recognition`, `ChatPDF`, `Music generation`, `Code generation`, `Voice clone`, etc. With increased model support, even more exciting applications await development!
 
+    You can also directly use the native HuggingFace library(like transformers, diffusers, etc.) via the following approach as demonstrated in the example code:
+
+    ```python
+    # for huggingface transformers
+    import mindspore
+    import mindnlp
+    from transformers import pipeline
+
+    chat = [
+        {"role": "system", "content": "You are a sassy, wise-cracking robot as imagined by Hollywood circa 1986."},
+        {"role": "user", "content": "Hey, can you tell me any fun things to do in New York?"}
+    ]
+
+    pipeline = pipeline(task="text-generation", model="meta-llama/Meta-Llama-3-8B-Instruct", ms_dtype=mindspore.bfloat16, device_map="auto")
+    response = pipeline(chat, max_new_tokens=512)
+    print(response[0]["generated_text"][-1]["content"])
+    ```
+
+    ```python
+    import mindspore
+    import mindnlp
+    from diffusers import DiffusionPipeline
+
+    pipeline = DiffusionPipeline.from_pretrained("stable-diffusion-v1-5/stable-diffusion-v1-5", ms_dtype=mindspore.float16)
+    pipeline("An image of a squirrel in Picasso style").images[0]
+    ```
+
+Notice ⚠️: Due to differences in autograd and parallel execution mechanisms, any training or distributed execution code must utilize the interfaces provided by MindNLP.
 
 ## Installation
 
