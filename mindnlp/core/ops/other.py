@@ -1044,6 +1044,9 @@ def cartesian_prod(*tensors):
 def detach(input):
     return ops.stop_gradient(input)
 
+def cosine_similarity(*args, **kwargs):
+    return core.nn.functional.cosine_similarity(*args, **kwargs)
+
 __all__ = [
     "bincount",
     "broadcast_shapes",
@@ -1081,5 +1084,6 @@ __all__ = [
     "histc",
     "view_as_complex",
     "view_as_real",
-    "detach"
+    "detach",
+    "cosine_similarity"
 ]
