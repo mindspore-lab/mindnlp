@@ -684,6 +684,9 @@ def enable_mindspore_patch():
     Tensor.scatter_reduce = ops.scatter_reduce
     StubTensor.scatter_reduce = ops.scatter_reduce
 
+    Tensor.tril_ = ops.inplace_tril
+    StubTensor.tril_ = ops.inplace_tril
+
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
     return ret

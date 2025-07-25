@@ -185,6 +185,10 @@ def inplace_bernoulli(self, p=0.5, *, generator=None):
     self.data = core.bernoulli(self, generator=generator, p=p)
     return self
 
+def inplace_tril(self, diagonal=0):
+    self.data = core.tril(self, diagonal)
+    return self
+
 __all__ = [
     'inplace_copy',
     'inplace_zero',
@@ -207,5 +211,6 @@ __all__ = [
     'inplace_neg',
     'inplace_exp',
     'inplace_sub',
-    'inplace_bernoulli'
+    'inplace_bernoulli',
+    'inplace_tril'
 ]
