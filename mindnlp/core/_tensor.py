@@ -491,7 +491,7 @@ def enable_mindspore_patch():
     StubTensor.reshape = ops.reshape
 
     def __rmul__(self, other):
-        if isinstance(other, str):
+        if isinstance(other, (str, list)):
             return self.item() * other
         return self.__mul__(other)
 

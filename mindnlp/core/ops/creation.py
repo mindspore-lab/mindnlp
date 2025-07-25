@@ -90,9 +90,15 @@ def ones(*size, dtype=None, device=None, **kwargs):
         dtype = get_default_dtype()
     if not isinstance(dtype, Type):
         dtype = py2dtype[dtype]
+
+    new_size = ()
+    for s in size:
+        if not isinstance(s, int):
+            s = s.item()
+        new_size += (s,)
     if use_pyboost() and has_ones:
-        return mindspore.mint.ones(size, dtype=dtype)
-    return _ones(size, dtype)
+        return mindspore.mint.ones(new_size, dtype=dtype)
+    return _ones(new_size, dtype)
 
 # ones_like
 has_ones_like = hasattr(mindspore.mint, 'ones_like')
