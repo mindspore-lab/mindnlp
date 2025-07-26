@@ -50,3 +50,5 @@ enable_mindspore_patch()
 initialize_torch_proxy()
 setup_metadata_patch()
 setup_safetensors_patch()
+
+from . import transformers

@@ -39,9 +39,7 @@
 
 ## News 📢
 
-* 🔥 **Latest Features**
-
-  * **Fully compatible with 🤗HuggingFace**, it enables seamless execution of any Transformers/Diffusers models on MindSpore across all hardware platforms (GPU/Ascend/CPU).
+* 🔥 **Fully compatible with 🤗HuggingFace**, it enables seamless execution of any Transformers/Diffusers models on MindSpore across all hardware platforms (GPU/Ascend/CPU).
     
     You may still invoke models through MindNLP as shown in the example code below:
 
@@ -57,8 +55,9 @@
 
     You can also directly use the native HuggingFace library(like transformers, diffusers, etc.) via the following approach as demonstrated in the example code:
 
+    - For huggingface transformers:
+
     ```python
-    # for huggingface transformers
     import mindspore
     import mindnlp
     from transformers import pipeline
@@ -68,10 +67,12 @@
         {"role": "user", "content": "Hey, can you tell me any fun things to do in New York?"}
     ]
 
-    pipeline = pipeline(task="text-generation", model="meta-llama/Meta-Llama-3-8B-Instruct", ms_dtype=mindspore.bfloat16, device_map="auto")
+    pipeline = pipeline(task="text-generation", model="Qwen/Qwen3-8B", ms_dtype=mindspore.bfloat16, device_map="auto")
     response = pipeline(chat, max_new_tokens=512)
     print(response[0]["generated_text"][-1]["content"])
     ```
+
+    - For huggingface diffuers:
 
     ```python
     import mindspore

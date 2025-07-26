@@ -98,6 +98,12 @@ def is_tensor(x):
     return isinstance(x, Tensor)
 
 def enable_mindspore_patch():
+
+    def tensor_meta_str(self):
+        return "<class 'torch.Tensor'>"
+
+    _TensorMeta.__str__ = tensor_meta_str
+
     old_init = Tensor.__init__
     def __init__(self, *args, **kwargs):
         if len(args) > 1 and all([isinstance(arg, int) for arg in args]):
@@ -713,14 +719,6 @@ def enable_mindspore_patch():
 
     Tensor.logsumexp = ops.logsumexp
     StubTensor.logsumexp = ops.logsumexp
-
-    def __bool__(self):
-        if self.ndim > 0:
-            return True
-        return bool(self._item())
-
-    Tensor.__bool__ = __bool__
-    StubTensor.__bool__ = __bool__
 
     def __iter__(self):
         if self.ndim == 0:
