@@ -22,6 +22,7 @@ Type.is_floating_point = is_floating_point
 Type.is_complex = is_complex
 Type.__str__ = Type.__repr__
 
+
 @property
 def itemsize(self):
     return ITEM_SIZE[self]

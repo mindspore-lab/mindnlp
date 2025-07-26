@@ -4116,3 +4116,18 @@ def not_supported():
 
 transformers.utils.import_utils._torch_fx_available = False
 transformers.utils.import_utils.is_torch_sdpa_available = not_supported
+
+def dtype_wrapper(fn):
+    print('dtype_wrapper')
+    def wrapper(*args, **kwargs):
+        ms_dtype = kwargs.pop('ms_dtype', None)
+        print('ms_dtype', ms_dtype)
+        if ms_dtype is not None:
+            kwargs['torch_dtype'] = ms_dtype
+        return fn(*args, **kwargs)
+    return wrapper
+
+transformers.AutoModel.from_pretrained = dtype_wrapper(transformers.AutoModel.from_pretrained)
+
+_original_pipeline = transformers.pipeline
+transformers.pipeline = dtype_wrapper(_original_pipeline)
