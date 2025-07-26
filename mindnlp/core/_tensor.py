@@ -82,6 +82,14 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False):
         UserWarning("To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than core.tensor(sourceTensor).")
         return Tensor(data)
 
+    if isinstance(data, list):
+        new_data = []
+        for d in data:
+            if isinstance(d, Tensor):
+                d = d.item()
+            new_data.append(d)
+        data = new_data
+
     if device is None:
         device = get_default_device()
 
@@ -729,6 +737,13 @@ def enable_mindspore_patch():
 
     Tensor.__iter__ = __iter__
     StubTensor.__iter__ = __iter__
+
+    def __float__(self):
+        out = self.item()
+        return round(float(out), 5)
+
+    Tensor.__float__ = __float__
+    StubTensor.__float__ = __float__
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
