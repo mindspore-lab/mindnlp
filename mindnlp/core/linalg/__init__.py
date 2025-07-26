@@ -1,4 +1,6 @@
 from collections import namedtuple
+import numpy as np
+
 from mindspore import ops, mint
 from mindspore.ops._primitive_cache import _get_cache_prim
 
@@ -26,3 +28,6 @@ def norm(A, ord=None, dim=None, keepdim=False, *, out=None, dtype=None):
 
 def vector_norm(x, ord=2, dim=None, keepdim=False, *, dtype=None, out=None):
     return mint.linalg.vector_norm(x, ord, dim, keepdim, dtype=dtype)
+
+def solve(A, B, *, left=True, out=None):
+    return core.tensor(np.linalg.solve(A.numpy(), B.numpy()))
