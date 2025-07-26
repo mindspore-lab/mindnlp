@@ -619,7 +619,8 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corne
             half_pixel_centers=True)
         return nearest_exact(input, output_size)
     if input.dim() == 5 and mode == "nearest-exact":
-        return torch._C._nn._upsample_nearest_exact3d(input, output_size, scale_factors)
+        warnings.warn('interpolate do not support `nearest-exact` for 5-D input, use `nearest` instead.')
+        return upsample_nearest3d_op(input, output_size, scale_factors)
 
     if input.dim() == 3 and mode == "area":
         assert output_size is not None
