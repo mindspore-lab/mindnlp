@@ -50,7 +50,7 @@ class Parameter(Tensor):
 
     @data.setter
     def data(self, new_value):
-        if isinstance(new_value, StubTensor):
+        if isinstance(new_value, StubTensor) and new_value.stub is not None:
             new_value = new_value.stub.get_value()
         self.assign_value(new_value)
 
