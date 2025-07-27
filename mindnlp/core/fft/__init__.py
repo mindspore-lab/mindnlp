@@ -50,4 +50,7 @@ def fft2(input, s=None, dim=(-2, -1), norm=None):
 def ifft2(input, s=None, dim=(-2, -1), norm=None):
     return ops.ifft2(input, s, dim, norm)
 
+def ifft(input, s=None, dim=-1, norm=None):
+    return ops.ifft(input, s, dim, norm)
+
 __all__ = ['fft', 'fftn', 'irfft', 'rfft']

@@ -7,6 +7,7 @@ from mindspore import Tensor
 
 from mindnlp.core.configs import SUPPORT_BF16
 import safetensors
+from safetensors import SafetensorError
 
 if SUPPORT_BF16:
     from mindspore.common.np_dtype import bfloat16  # pylint: disable=import-error
@@ -158,11 +159,11 @@ def read_metadata(buffer):
     n = np.frombuffer(buffer.read(8), dtype=np.uint64).item()
 
     if n > MAX_HEADER_SIZE:
-        raise ValueError("SafeTensorError::HeaderTooLarge")
+        raise SafetensorError("SafeTensorError::HeaderTooLarge")
 
     stop = n + 8
     if stop > buffer_len:
-        raise ValueError("SafeTensorError::InvalidHeaderLength")
+        raise SafetensorError("SafeTensorError::InvalidHeaderLength")
 
     tensors = json.loads(buffer.read(n), object_pairs_hook=OrderedDict)
 
@@ -227,7 +228,11 @@ def safe_save_file(tensor_dict, filename, metadata=None):
     tensor_dict = {k: v.asnumpy() for k, v in tensor_dict.items()}
     return safetensors.numpy.save_file(tensor_dict, filename, metadata)
 
+def _tobytes(tensor, name):
+    return tensor.tobytes()
+
 def setup_safetensors_patch():
     safetensors.safe_open = fast_safe_open
     from safetensors import torch
     torch.save_file = safe_save_file
+    torch._tobytes = _tobytes

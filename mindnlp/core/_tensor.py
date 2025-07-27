@@ -400,6 +400,13 @@ def enable_mindspore_patch():
     Tensor.__add__ = __add__
     StubTensor.__add__ = __add__
 
+    def __iadd__(self, other):
+        self.data = ops.add(self, other)
+        return self
+
+    Tensor.__iadd__ = __iadd__
+    StubTensor.__iadd__ = __iadd__
+
     def __sub__(self, other):
         # if 0 in self.shape:
         #     return self
@@ -421,6 +428,16 @@ def enable_mindspore_patch():
     Tensor.__mul__ = __mul__
     StubTensor.__mul__ = __mul__
 
+
+    def __div__(self, other):
+        # if 0 in self.shape:
+        #     return self
+        if isinstance(other, (np.ndarray, np.integer)):
+            other = tensor(other)
+        return ops.div(self, other)
+    
+    Tensor.__truediv__ = __div__
+    StubTensor.__truediv__ = __div__
 
     Tensor.repeat_interleave = ops.repeat_interleave
     StubTensor.repeat_interleave = ops.repeat_interleave
@@ -744,6 +761,21 @@ def enable_mindspore_patch():
 
     Tensor.__float__ = __float__
     StubTensor.__float__ = __float__
+
+    Tensor.__matmul__ = ops.matmul
+    StubTensor.__matmul__ = ops.matmul
+
+    Tensor.expm1 = ops.expm1
+    StubTensor.expm1 = ops.expm1
+
+    Tensor.__eq__ = ops.eq
+    StubTensor.__eq__ = ops.eq
+
+    def tobytes(self):
+        return self.get_bytes()
+    
+    Tensor.tobytes = tobytes
+    StubTensor.tobytes = tobytes
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)

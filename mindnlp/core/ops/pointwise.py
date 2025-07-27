@@ -1,5 +1,5 @@
 """pointwise op"""
-
+import numpy as np
 import mindspore
 from mindspore import ops
 from ..configs import use_pyboost, ON_A1
@@ -281,6 +281,12 @@ has_div = hasattr(mindspore.mint, "div")
 
 
 def div(input, other, *, rounding_mode=None, out=None):
+    if isinstance(other, mindspore.Tensor):
+        other = other.to(input.dtype)
+
+    if isinstance(other, np.number):
+        other = other.item()
+
     if use_pyboost() and has_div:
         return call_ms_func(
             mindspore.mint.div, input, other, rounding_mode=rounding_mode, out=out
@@ -381,6 +387,8 @@ has_expm1 = hasattr(mindspore.mint, "expm1")
 
 
 def expm1(input, *, out=None):
+    if input.dtype == mindspore.float64:
+        return expm1(input.float(), out=out).double()
     if use_pyboost() and has_expm1:
         return call_ms_func(mindspore.mint.expm1, input, out=out)
     return call_ms_func(ops.expm1, input, out=out)
@@ -573,9 +581,14 @@ has_mul = hasattr(mindspore.mint, "mul")
 
 def mul(input, other, *, out=None):
     if use_pyboost() and has_mul:
-        return call_ms_func(mindspore.mint.mul, input, other, out=out)
-    return call_ms_func(ops.mul, input, other, out=out)
+        out = call_ms_func(mindspore.mint.mul, input, other, out=out)
+    else:
+        out = call_ms_func(ops.mul, input, other, out=out)
 
+    if isinstance(other, mindspore.Tensor):
+        out_dtype = min(input.dtype, other.dtype)
+        return out.to(out_dtype)
+    return out
 
 # multiply
 def multiply(input, other):
@@ -599,7 +612,6 @@ def nan_to_num(input, nan=0.0, posinf=None, neginf=None, *, out=None):
 
     # 创建输入张量的副本
     output = input.clone()
-    print(output.shape)
     # 获取数据类型信息
     if output.is_floating_point():
         dtype = output.dtype
@@ -831,6 +843,8 @@ has_sub = hasattr(mindspore.mint, "sub")
 
 
 def sub(input, other, *, alpha=1, out=None):
+    if isinstance(other, mindspore.Tensor):
+        other = other.to(input.dtype)
     if use_pyboost() and has_sub:
         return call_ms_func(mindspore.mint.sub, input, other, alpha=alpha, out=out)
     return call_ms_func(ops.sub, input, other, out=out)
