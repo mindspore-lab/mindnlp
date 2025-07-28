@@ -2,9 +2,14 @@ from typing import Any
 
 import mindspore
 from mindspore import get_rng_state, set_rng_state, manual_seed
-from mindspore.hal import *
+from mindspore.runtime import memory_reserved as ms_memory_reserved, \
+    memory_allocated as ms_memory_allocated, StreamCtx as StreamContext, Stream, empty_cache, \
+    reset_peak_memory_stats, reset_max_memory_allocated, max_memory_allocated, synchronize, \
+    current_stream
+from mindspore.device_context.ascend import device_count 
 
 from mindnlp import core
+from ..configs import SUPPORT_BF16
 
 FloatTensor = core.FloatTensor
 HalfTensor = core.FloatTensor
@@ -27,6 +32,15 @@ def set_device(device):
 
 def _lazy_call(callable, **kwargs):
     callable()
+
+def is_bf16_supported():
+    return SUPPORT_BF16
+
+def memory_allocated(device=None):
+    return ms_memory_allocated()
+
+def memory_reserved(device=None):
+    return ms_memory_reserved()
 
 class device:
     r"""Context-manager that changes the selected device.

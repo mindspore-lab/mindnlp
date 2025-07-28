@@ -71,11 +71,13 @@ def gather(input, dim, index):
         _complex = _get_cache_prim(ops.Complex)()
         return _complex(real_part, imag_part)
 
-    if use_pyboost() and has_gather:
+    if use_pyboost() and has_gather and not ON_ORANGE_PI:
         return mindspore.mint.gather(input, dim, index)
 
-    index = ops.where(index < input.shape[dim], index, index - input.shape[dim])
-    return ops.gather_elements(input, dim, index)
+    index = core.where(index < input.shape[dim], index, index - input.shape[dim])
+    if not ON_ORANGE_PI:
+        return ops.gather_elements(input, dim, index)
+    return tf_gather(input, index, dim, batch_dims=dim)
 
 def gather_nd(input, indices):
     return ops.gather_nd(input, indices)
@@ -195,10 +197,12 @@ def select(input, dim, index):
 # scatter
 has_scatter = hasattr(mindspore.mint, 'scatter')
 def scatter(input, dim, index, src):
-    if use_pyboost() and has_scatter:
+    if use_pyboost() and has_scatter and not ON_ORANGE_PI:
         return mindspore.mint.scatter(input, dim, index, src)
     if not isinstance(src, mindspore.Tensor):
         src = ops.full(index.shape, src, dtype=input.dtype)
+    if input.dtype == mindspore.bool_:
+        return ops.tensor_scatter_elements(input.int(), index, src.int(), dim).bool()
     return ops.tensor_scatter_elements(input, index, src, dim)
 
 def tf_scatter_nd_update(input, indices, updates):
@@ -352,7 +356,7 @@ def _take_along_dim_helper(self, indices, dim):
 def take_along_dim(input, indices, dim=None, *, out=None):
     if dim:
         self_broadcasted, indices_broadcasted, dim = _take_along_dim_helper(input, indices, dim)
-        return self_broadcasted.gather(dim, indices_broadcasted)
+        return gather(self_broadcasted, dim, indices_broadcasted)
     return input.view(-1).gather(0, indices.view(-1))
 
 # tensor_split
@@ -427,7 +431,7 @@ def where(condition, *args, out=None):
             input = mindspore.tensor(input, dtype=mindspore.float32)
         other = finfo(input.dtype).min
 
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         output = mindspore.mint.where(condition, input, other)
     else:
         output = condition * input + (~condition) * other

@@ -62,6 +62,8 @@ class RedirectLoader(importlib.abc.Loader):
         class ProxyModule(type(module)):
             def __getattr__(_, name):
                 # 动态导入实际模块中的属性
+                if DEVICE_TARGET == 'Ascend':
+                    name = name.replace('cuda', 'npu')
                 try:
                     target_module = importlib.import_module(self.target_name)
                 except ImportError as e:
