@@ -777,6 +777,9 @@ def enable_mindspore_patch():
     Tensor.tobytes = tobytes
     StubTensor.tobytes = tobytes
 
+    Tensor.cuda = cpu
+    StubTensor.cuda = cpu
+
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
     return ret
