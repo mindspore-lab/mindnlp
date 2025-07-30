@@ -1,7 +1,10 @@
 import sys
+import mindspore
+
 import transformers
 from transformers.utils import OptionalDependencyNotAvailable, _LazyModule
 from transformers.utils.import_utils import *
+from ..core.configs import ON_A1
 
 # Base objects, independent of any specific backend
 _import_structure = {
@@ -4118,16 +4121,16 @@ transformers.utils.import_utils._torch_fx_available = False
 transformers.utils.import_utils.is_torch_sdpa_available = not_supported
 
 def dtype_wrapper(fn):
-    print('dtype_wrapper')
     def wrapper(*args, **kwargs):
         ms_dtype = kwargs.pop('ms_dtype', None)
-        print('ms_dtype', ms_dtype)
+        ms_dtype = kwargs.pop('mindspore_dtype', ms_dtype)
+        if ON_A1 and ms_dtype == mindspore.bfloat16:
+            warnings.warn('910A do not support bfloat16, use float16 for `ms_dtype`.')
+            ms_dtype = mindspore.float16
         if ms_dtype is not None:
             kwargs['torch_dtype'] = ms_dtype
         return fn(*args, **kwargs)
     return wrapper
 
 transformers.AutoModel.from_pretrained = dtype_wrapper(transformers.AutoModel.from_pretrained)
-
-_original_pipeline = transformers.pipeline
-transformers.pipeline = dtype_wrapper(_original_pipeline)
+transformers.pipelines.pipeline = dtype_wrapper(transformers.pipelines.pipeline)
