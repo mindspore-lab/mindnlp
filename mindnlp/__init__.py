@@ -52,3 +52,5 @@ setup_metadata_patch()
 setup_safetensors_patch()
 
 from . import transformers
+from . import diffusers
+
