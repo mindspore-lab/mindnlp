@@ -168,3 +168,4 @@ flagged/
 
 huggingface_transformers/
 diffusers/
+!mindnlp/diffusers/
