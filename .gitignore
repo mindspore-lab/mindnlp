@@ -154,6 +154,7 @@ RuntimeProfiler*
 checkpoint-*/
 data*/
 !mindnlp/data/
+!mindnlp/core/utils/data/
 !mindnlp/dataset/
 !docs/api/data/
 !data2vec/
