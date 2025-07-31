@@ -121,6 +121,9 @@ def arange(start=0, end=None, step=1, *, dtype=None, device=None):
         step = step.item() if isinstance(step, (mindspore.Tensor, np.integer)) else step
         return mindspore.mint.arange(start, end, step, dtype=dtype)
 
+    if end is None:
+        end = start
+        start = 0
     start = mindspore.Tensor(start) if not isinstance(start, mindspore.Tensor) else start
     end = mindspore.Tensor(end) if not isinstance(start, mindspore.Tensor) else end
     step = mindspore.Tensor(step) if not isinstance(start, mindspore.Tensor) else step
@@ -183,18 +186,17 @@ def empty(*size, dtype=None, device=None, requires_grad=False, pin_memory=False,
         if not isinstance(device, str) and hasattr(device, "type"):
             device = device.type
         if device.lower() == 'cpu':
-            device = device.upper()
-        elif device.lower() in ['cuda', 'npu']:
+            device = 'CPU'
+        elif device.lower() == 'npu':
             device = 'Ascend'
         else:
-            device = 'CPU'
+            device = 'GPU'
 
     # To avoid the problem in irecv and recv of using empty.
-
-    if has_empty:
+    if has_empty and use_pyboost():
         out = mindspore.mint.empty(size, dtype=dtype, device=device)
     else:
-        out = CTensor(dtype, size)
+        out = CTensor(dtype=dtype, shape=size)
         out = mindspore.Tensor(out)
     if requires_grad:
         out.requires_grad = True

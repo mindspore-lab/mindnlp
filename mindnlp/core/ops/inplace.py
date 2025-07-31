@@ -1,10 +1,13 @@
 import numbers
 import mindspore
 from mindspore import ops
+from mindspore._c_expression import typing
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.common.generator import default_generator
 from mindspore.ops.auto_generate.gen_ops_prim import inplace_normal_op, inplace_scatter_value_op, inplace_scatter_src_reduce_op, \
-    inplace_scatter_src_op
+    inplace_scatter_src_op, inplace_fill_tensor_op, inplace_fill_scalar_op, inplace_zero_op, inplace_uniform_op, \
+    inplace_masked_fill_scalar_op, inplace_masked_fill_tensor_op, inplace_random_op, inplace_clamp_scalar_op, \
+    inplace_clamp_tensor_op, inplace_copy_op
 
 from mindnlp import core
 from ..configs import use_pyboost
@@ -13,34 +16,27 @@ from ._inner import assign
 generator_step_ = 12
 
 def inplace_copy(self, other):
-    if self.device != other.device:
-        other = other.to(self.device)
-    if self.device.type == 'cpu':
-        # execute('assign', self, other)
-        # # self._data.assign_value_cpp(other._data)
-        self.data = other
+    if self.device.type == 'npu':
+        inplace_copy_op(self, other)
     else:
-        execute('inplace_copy', self, other)
+        self.data = other
     return self
 
 def inplace_zero(input):
-    device = input.device
     if input.device == 'npu':
-        execute('inplace_zero', input)
-    elif input.device.type == 'cpu':
-        out = execute('zeros', input.shape, input.dtype, device=device)
-        input.data = out
+        inplace_zero_op(input)
+    else:
+        input.data = ops.zeros(input.shape, dtype=input.dtype)
     return input
 
 def inplace_fill(input, value):
-    device = input.device
-    if input.device == 'npu':
+    if input.device.type == 'npu':
         if isinstance(value, (int, float, bool)):
-            execute('inplace_fill_scalar', input, value)
-        execute('inplace_fill_tensor', input, value)
-    elif input.device.type == 'cpu':
-        out = execute('full', input.shape, value, device=device)
-        input.data = out
+            inplace_fill_scalar_op(input, value)
+        else:
+            inplace_fill_tensor_op(input, value)
+    else:
+        input.data = ops.full(input.shape, value, dtype=input.dtype)
     return input
 
 def inplace_normal(input, mean=0, std=1, *, generator=None):
@@ -51,8 +47,10 @@ def inplace_normal(input, mean=0, std=1, *, generator=None):
         mean = mean.item()
     if isinstance(std, core.Tensor):
         std = std.item()
-    inplace_normal_op(input, mean, std, seed, offset)
-
+    if input.device.type == 'npu':
+        inplace_normal_op(input, mean, std, seed, offset)
+    else:
+        input.data = ops.normal(input.shape, mean, std)
     return input
 
 # uniform_
@@ -77,8 +75,8 @@ def inplace_uniform(input, *args, **kwargs):
         generator_ = default_generator
     seed, offset = generator_._step(generator_step_)
     if input.device.type == 'npu':
-        execute("inplace_uniform", input, from_, to_, seed, offset)
-    elif input.device.type == 'cpu':
+        inplace_uniform_op(input, from_, to_, seed, offset)
+    else:
         input.data = core.rand(input.shape, generator=generator_, dtype=input.dtype) * (to_ - from_) + from_
     return input
 
@@ -189,6 +187,42 @@ def inplace_tril(self, diagonal=0):
     self.data = core.tril(self, diagonal)
     return self
 
+def inplace_masked_fill(self, mask, value):
+    if self.device.type == 'npu':
+        if isinstance(value, (int, float, bool)):
+            inplace_masked_fill_scalar_op(self, mask, value)
+        else:
+            inplace_masked_fill_tensor_op(self, mask, value)
+    else:
+        self.data = ops.masked_fill(self, mask, value)
+    return self
+
+def inplace_random(self, from_=0, to=None, *, generator=None):
+    if self.device.type == 'npu':
+        if not generator:
+            generator = default_generator
+        seed, offset = generator._step(  # pylint: disable=protected-access
+            generator_step_)
+        return inplace_random_op(input, from_, to, seed, offset)
+    else:
+        if isinstance(self.dtype, typing.Float):
+            self.uniform_(from_, to, generator=generator)
+        elif isinstance(self.dtype, typing.Int):
+            if to is None:
+                to = core.iinfo(mindspore.int32).max
+            self.data = core.randint(from_, to, size=self.shape, dtype=self.dtype)
+    return self
+
+def inplace_clamp(self, min=None, max=None):
+    if self.device.type == 'npu':
+        if isinstance(min, (int, float, bool)) or isinstance(max, (int, float, bool)):
+            inplace_clamp_scalar_op(self, min, max)
+        else:
+            inplace_clamp_tensor_op(self, min, max)
+    else:
+        self.data = ops.clamp(self, min, max)
+    return self
+
 __all__ = [
     'inplace_copy',
     'inplace_zero',
@@ -212,5 +246,8 @@ __all__ = [
     'inplace_exp',
     'inplace_sub',
     'inplace_bernoulli',
-    'inplace_tril'
+    'inplace_tril',
+    'inplace_masked_fill',
+    'inplace_random',
+    'inplace_clamp'
 ]

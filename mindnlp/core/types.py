@@ -6,10 +6,17 @@ from builtins import (  # noqa: F401
     int as _int,
     str as _str,
 )
+import mindspore
 from typing import Any, IO, TYPE_CHECKING, Union, Dict
 from typing_extensions import Self, TypeAlias
 
 from ._dtype import dtype
+
+DEVICE_MAP = {
+    'GPU': 'cuda',
+    'Ascend': 'npu',
+    'CPU': 'cpu'
+}
 
 class device():
     def __init__(self, type=None, index=None):
@@ -29,6 +36,9 @@ class device():
                     raise ValueError("core.device(): When input is core.device, `index` can not be set.")
                 _target = type.type
                 _id = type.index
+            elif isinstance(type, int):
+                _id = type
+                _target = DEVICE_MAP[mindspore.get_current_device().device_target]
             else:
                 print(type)
                 raise TypeError("core.device(): `type` must be type of 'str' or 'core.device'.")

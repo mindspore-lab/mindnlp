@@ -7,7 +7,7 @@ from ..configs import use_pyboost
 
 from ._inner import call_ms_func
 
-sort_out = namedtuple('sort_out', ['sorted', 'indices'])
+sort_out = namedtuple('sort_out', ['values', 'indices'])
 topk_out = namedtuple('topk_out', ['values', 'indices'])
 # allclose
 has_allclose = hasattr(mindspore.mint, 'allclose')
@@ -30,6 +30,8 @@ has_eq = hasattr(mindspore.mint, 'eq')
 def eq(input, other, *, out=None):
     if use_pyboost() and has_eq:
         return call_ms_func(mindspore.mint.eq, input, other, out=out)
+    if isinstance(other, str):
+        return False
     return call_ms_func(ops.eq, input, other, out=out)
 
 # equal
@@ -176,7 +178,7 @@ def sort(input, *, dim=-1, descending=False, stable=False):
         out = mindspore.mint.sort(input, dim=dim, descending=descending, stable=stable)
     else:
         out = ops.sort(input, dim, descending)
-    return sort_out(sorted=out[0], indices=out[1])
+    return sort_out(values=out[0], indices=out[1])
 
 # topk
 has_topk = hasattr(mindspore.mint, 'topk')

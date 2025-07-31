@@ -7,7 +7,7 @@ from mindspore._c_expression.typing import Type
 from .configs import ON_A1
 
 if ON_A1:
-    warnings.warn('910A do not support bfloat16, use float16 instead.')
+    warnings.warn('MindSpore on GPU/910A do not support bfloat16, use float16 instead.')
     bfloat16 = float16
 
 dtype = Type
@@ -44,6 +44,14 @@ bool = bool_
 
 float8_e4m3fn = None # TODO: not support fp8 for now
 float8_e5m2 = None
+
+uint1 = None
+uint2 = None
+uint3 = None
+uint4 = None
+uint5 = None
+uint6 = None
+uint7 = None
 
 ITEM_SIZE = {
     bool    : 1,

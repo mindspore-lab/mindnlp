@@ -164,6 +164,7 @@ setup(
         'evaluate', # hf dependency
         'tokenizers', # hf dependency
         'safetensors', # hf dependency
+        'diffusers', # hf dependency
         'sentencepiece',
         'regex',
         'addict',
