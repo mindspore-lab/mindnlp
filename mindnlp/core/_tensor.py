@@ -607,6 +607,8 @@ def enable_mindspore_patch():
             if isinstance(s, Tensor):
                 s = s.item()
             new_size += (s,)
+        if new_size == new_size:
+            new_size = (new_size,)
         return ops.ones(*new_size, dtype=dtype if dtype is not None else self.dtype)
 
     Tensor.new_ones = new_ones
@@ -791,6 +793,9 @@ def enable_mindspore_patch():
 
     Tensor.copy_ = ops.inplace_copy
     StubTensor.copy_ = ops.inplace_copy
+
+    Tensor.index_add_ = ops.inplace_index_add
+    StubTensor.index_add_ = ops.inplace_index_add
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
