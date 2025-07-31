@@ -3,6 +3,8 @@ from typing import Any
 import mindspore
 from mindspore import get_rng_state, set_rng_state, manual_seed
 from mindspore.hal import *
+from mindspore.runtime import memory_reserved as ms_memory_reserved, \
+    memory_allocated as ms_memory_allocated
 
 from mindnlp import core
 
@@ -43,3 +45,15 @@ class device:
         return False
 
 OutOfMemoryError = RuntimeError
+
+def is_bf16_supported():
+    return False
+
+def mem_get_info(index):
+    return (1024, 1024)
+
+def memory_reserved(device=None):
+    return ms_memory_reserved()
+
+def memory_allocated(device=None):
+    return ms_memory_allocated()

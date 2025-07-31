@@ -12,6 +12,11 @@ from types import CodeType, FunctionType, ModuleType
 from typing import Any, Callable, NamedTuple, Optional, Union
 
 _wrapped_fns_to_patch: dict[tuple[int, str], dict] = {}
+_is_fx_tracing_flag = False
+
+
+def is_fx_tracing():
+    return _is_fx_tracing_flag
 
 def wrap(fn_or_name: Union[str, Callable]):
     """

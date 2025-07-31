@@ -6,6 +6,8 @@ import importlib.abc
 import importlib.machinery
 from types import ModuleType
 
+TORCH_VERSION = '2.7.1+dev'
+
 class RedirectFinder(importlib.abc.MetaPathFinder):
     def __init__(self, redirect_map):
         # 重定向规则：被代理模块 -> 实际模块
@@ -97,7 +99,7 @@ REDIRECT_MAP = {
 def initialize_torch_proxy():
     sys.meta_path.insert(0, RedirectFinder(REDIRECT_MAP))
     import torch
-    torch.__version__ = "2.1.1+dev"
+    torch.__version__ = TORCH_VERSION
 
 
 def setup_metadata_patch():
@@ -110,10 +112,10 @@ def setup_metadata_patch():
     def patched_distribution(dist_name):
         if dist_name == "torch":
             return types.SimpleNamespace(
-                version="2.1.1+dev",
-                metadata={"Name": "torch", "Version": "2.1.1+dev"},
+                version=TORCH_VERSION,
+                metadata={"Name": "torch", "Version": TORCH_VERSION},
                 read_text=lambda f: (
-                    f"Name: torch\nVersion: 2.1.1+dev" if f == "METADATA" else None
+                    f"Name: torch\nVersion: {TORCH_VERSION}" if f == "METADATA" else None
                 ),
             )
         return orig_distribution(dist_name)
@@ -124,8 +126,8 @@ def setup_metadata_patch():
         dists.append(
             types.SimpleNamespace(
                 name="torch",
-                version="2.1.1+dev",
-                metadata={"Name": "torch", "Version": "2.1.1+dev"},
+                version=TORCH_VERSION,
+                metadata={"Name": "torch", "Version": TORCH_VERSION},
                 files=[],
                 locate_file=lambda p: None,
                 _normalized_name="torch",

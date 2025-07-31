@@ -352,8 +352,75 @@ def pad(input, pad, mode='constant', value=None):
     return ops.pad(input, new_pad, mode, value)
 
 def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean'):
-    return _nllloss_nd(input, target, weight, ignore_index, reduction)
+    if input.device.type == 'npu':
+        return _nllloss_nd(input, target, weight, ignore_index, reduction)
+    return _inner_nll_loss(input, target, weight, ignore_index, reduction)
 
+def _inner_nll_loss(inputs, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
+    ndim = inputs.ndim
+    if ndim == 2:
+        ret = _nll_loss(inputs, target, -1, weight, ignore_index, reduction, label_smoothing)
+    elif ndim == 4:
+        ret = _nll_loss(inputs, target, 1, weight, ignore_index, reduction, label_smoothing)
+    elif ndim == 1:
+        ret = _nll_loss(inputs, target, 0, weight, ignore_index, reduction, label_smoothing)
+    else:
+        n = inputs.shape[0]
+        c = inputs.shape[1]
+        out_size = (n,) + inputs.shape[2:]
+        inputs = inputs.view((n, c, 1, -1))
+        target = target.view((n, 1, -1))
+        if reduction != 'none':
+            ret = _nll_loss(inputs, target, 1, weight, ignore_index, reduction, label_smoothing)
+        else:
+            ret = _nll_loss(inputs, target, 1, weight, ignore_index, label_smoothing=label_smoothing)
+            ret = ret.view(out_size)
+    return ret
+
+def _nll_loss(inputs, target, target_dim=-1, weight=None, ignore_index=None, reduction='none', label_smoothing=0.0):
+    """nll loss inner function"""
+    if target.ndim == inputs.ndim - 1:
+        target = target.expand_dims(target_dim)
+    if ignore_index is not None:
+        non_pad_mask = ops.equal(target, ignore_index)
+        target = target.masked_fill(non_pad_mask, ops.cast(0, target.dtype))
+    else:
+        non_pad_mask = target
+    if weight is not None:
+        loss_weights = ops.gather(weight, target, 0)
+        orig_shape = inputs.shape
+        if inputs.ndim != 2:
+            inputs = inputs.view(orig_shape[:2] + (-1,))
+            weight = weight.view(weight.shape + (1,))
+        weighted_inputs = inputs * weight
+        weighted_inputs = weighted_inputs.view(orig_shape)
+        loss = ops.neg(ops.gather_d(weighted_inputs, target_dim, target))
+        smooth_loss = ops.neg(weighted_inputs.sum(axis=target_dim, keepdims=True))
+    else:
+        loss = ops.neg(ops.gather_d(inputs, target_dim, target))
+        smooth_loss = ops.neg(inputs.sum(axis=target_dim, keepdims=True))
+        loss_weights = ops.ones_like(loss)
+
+    if ignore_index is not None:
+        loss = loss.masked_fill(non_pad_mask, ops.cast(0, loss.dtype))
+        loss_weights = loss_weights.masked_fill(non_pad_mask, ops.cast(0, loss_weights.dtype))
+        smooth_loss = smooth_loss.masked_fill(non_pad_mask, ops.cast(0, smooth_loss.dtype))
+
+    loss = loss.squeeze(target_dim)
+    smooth_loss = smooth_loss.squeeze(target_dim)
+
+    if reduction == 'sum':
+        loss = loss.sum()
+        smooth_loss = smooth_loss.sum()
+    if reduction == 'mean':
+        loss = loss.sum() / loss_weights.sum()
+        smooth_loss = smooth_loss.sum() / loss_weights.sum()
+
+    eps_i = label_smoothing / inputs.shape[target_dim]
+    if label_smoothing != 0:
+        loss = (1. - label_smoothing) * loss + eps_i * smooth_loss
+
+    return loss
 
 def _nllloss_nd(input, target, weight=None, ingore_index=-100, reduction='mean'):
     """nllloss_nd inner function"""
@@ -402,8 +469,11 @@ def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean
         return _cross_entropy_for_probabilities(input, target, weight, reduction, label_smoothing, class_dim,
                                                 n_classes)
     # for class indices
-    return _cross_entropy_for_class_indices(input, target, weight, ignore_index, reduction, label_smoothing,
-                                            class_dim, n_classes)
+    if input.device.type == 'npu':
+        return _cross_entropy_for_class_indices(input, target, weight, ignore_index, reduction, label_smoothing,
+                                                class_dim, n_classes)
+    return _inner_nll_loss(log_softmax(input, class_dim), target, weight, ignore_index, reduction, label_smoothing)
+
 
 def _cross_entropy_for_probabilities(input, target, weight, reduction, label_smoothing, class_dim, n_classes):
     """cross_entropy inner function for class probabilities"""

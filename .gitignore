@@ -171,3 +171,5 @@ huggingface_transformers/
 diffusers/
 !mindnlp/diffusers/
 .gradio/
+transformers/
+!mindnlp/transformers/

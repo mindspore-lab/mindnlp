@@ -68,7 +68,7 @@ def any(input, dim=None, keepdim=False, *, out=None):
             return call_ms_func(mindspore.mint.any, input, out=out)
         else:
             return call_ms_func(mindspore.mint.any, input, dim, keepdim, out=out)
-    return call_ms_func(ops.any, input, dim, out=out)
+    return ops.any(input, dim, keepdim)
 
 # max
 has_max = hasattr(mindspore.mint, 'max')
@@ -139,7 +139,9 @@ has_norm = hasattr(mindspore.mint, 'norm')
 def norm(input, p='fro', dim=None, keepdim=False, out=None, dtype=None):
     if use_pyboost() and has_norm:
         return call_ms_func(mindspore.mint.norm, input, p, dim, keepdim, out=out, dtype=dtype)
-    return call_ms_func(ops.norm, input, p, dim, keepdim, out=out, dtype=dtype)
+    if p == 'fro':
+        p = None
+    return ops.norm(input, p, dim, keepdim, dtype=dtype)
 
 # nansum
 has_nansum = hasattr(mindspore.mint, 'nansum')

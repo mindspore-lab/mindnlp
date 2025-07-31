@@ -64,6 +64,8 @@ def add(input, other, *, alpha=1, out=None):
         return call_ms_func(mindspore.mint.add, input, other, alpha=alpha, out=out)
     if alpha != 1:
         other = mul(alpha, other)
+    if input.dtype == mindspore.bool_:
+        return ops.add(input.int(), other.int()).bool()
     return call_ms_func(ops.add, input, other, out=out)
 
 
@@ -581,9 +583,15 @@ has_mul = hasattr(mindspore.mint, "mul")
 
 def mul(input, other, *, out=None):
     if use_pyboost() and has_mul:
-        out = call_ms_func(mindspore.mint.mul, input, other, out=out)
+        out = mindspore.mint.mul(input, other)
     else:
-        out = call_ms_func(ops.mul, input, other, out=out)
+        if input.dtype == mindspore.bool_:
+            if isinstance(other, bool):
+                out = ops.bitwise_and(input, other)
+            else:
+                out = ops.mul(input.int(), other).bool()
+        else:
+            out = ops.mul(input, other)
 
     if isinstance(other, mindspore.Tensor):
         out_dtype = min(input.dtype, other.dtype)

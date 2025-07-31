@@ -72,6 +72,8 @@ class Parameter(Tensor):
                 self.handle.remove()
                 delattr(self, 'handle')
 
+    def retain_grad(self):
+        pass
 
 class UninitializedParameter(Parameter):
     def __init__(self, input_data=None, requires_grad=True):

@@ -1,6 +1,5 @@
 import math
 import numpy as np
-import warnings
 import mindspore
 from mindspore import Tensor
 from mindspore.common.tensor import _TensorMeta
@@ -16,12 +15,11 @@ except:
     from mindspore._c_expression import Tensor as Tensor_
 
 from . import ops, _dtype
-from ._dtype import dtype2np
 from ._bind import get_default_device, device_, get_default_dtype
-from .configs import use_pyboost, ON_A1
 from .storage import UntypedStorage
 from ._utils import _rebuild_tensor_v2
 from ._C.size import Size
+from .types import DEVICE_MAP
 
 DTYPE_ELEMENT_SIZE_MAP = {
     mindspore.float64: 8,
@@ -32,12 +30,6 @@ DTYPE_ELEMENT_SIZE_MAP = {
     mindspore.bfloat16: 2,
     mindspore.float16: 2,
     mindspore.bool_: 1
-}
-
-DEVICE_MAP = {
-    'GPU': 'cuda',
-    'Ascend': 'npu',
-    'CPU': 'cpu'
 }
 
 class TypedTensorMeta(_TensorMeta):
@@ -266,6 +258,8 @@ def enable_mindspore_patch():
             for s in slices:
                 if isinstance(s, range):
                     s = list(s)
+                if isinstance(s, np.ndarray):
+                    s = tensor(s)
                 new_slices += (s,)
             slices = new_slices
         return origin_getitem(self, slices)
@@ -298,7 +292,7 @@ def enable_mindspore_patch():
         # 转换单个 NumPy 索引值
         elif isinstance(key, np.integer):
             return int(key)
-        
+
         # 其他类型（如 int、None）直接返回
         else:
             return key
@@ -328,7 +322,7 @@ def enable_mindspore_patch():
 
         if 1 in value.shape and self[slices].ndim != value.ndim:
             value = value.squeeze()
-        
+
         return origin_setitem(self, slices, value)
 
     Tensor.__setitem__ = __setitem__
@@ -362,16 +356,8 @@ def enable_mindspore_patch():
     Tensor.unsqueeze = ops.unsqueeze
     StubTensor.unsqueeze = ops.unsqueeze
 
-    def log_softmax(self, dim=-1, dtype=None):
-        if use_pyboost():
-            return mindspore.mint.nn.functional.log_softmax(self, dim=dim, dtype=dtype)
-        out = mindspore.ops.log_softmax(self, dim)
-        if dtype is not None:
-            out = out.to(dtype)
-        return out
-
-    Tensor.log_softmax = log_softmax
-    StubTensor.log_softmax = log_softmax
+    Tensor.log_softmax = ops.log_softmax
+    StubTensor.log_softmax = ops.log_softmax
 
     def untyped_storage(self):
         return UntypedStorage(self)
@@ -457,7 +443,7 @@ def enable_mindspore_patch():
     def new(self, *shape):
         if not isinstance(shape[0], int):
             return tensor(shape[0], dtype=self.dtype)
-        return ops.empty(*shape, dtype=self.dtype)
+        return ops.empty(*shape, dtype=self.dtype, device=self.device)
 
     Tensor.new = new
     StubTensor.new = new
@@ -638,8 +624,25 @@ def enable_mindspore_patch():
     Tensor.fill_diagonal_ = ops.inplace_fill_diagonal
     StubTensor.fill_diagonal_ = ops.inplace_fill_diagonal
 
+    Tensor.fill_ = ops.inplace_fill
+    StubTensor.fill_ = ops.inplace_fill
+
+    Tensor.zero_ = ops.inplace_zero
+    StubTensor.zero_ = ops.inplace_zero
+
+    Tensor.uniform_ = ops.inplace_uniform
+    StubTensor.uniform_ = ops.inplace_uniform
+
+    Tensor.random_ = ops.inplace_random
+    StubTensor.random_ = ops.inplace_random
+
+
     Tensor.triu_ = ops.inplace_triu
     StubTensor.triu_ = ops.inplace_triu
+
+    Tensor.masked_fill_ = ops.inplace_masked_fill
+    StubTensor.masked_fill_ = ops.inplace_masked_fill
+
 
     @property
     def real(self):
@@ -779,6 +782,15 @@ def enable_mindspore_patch():
 
     Tensor.cuda = cpu
     StubTensor.cuda = cpu
+
+    Tensor.nonzero = ops.nonzero
+    StubTensor.nonzero = ops.nonzero
+
+    Tensor.clamp_ = ops.inplace_clamp
+    StubTensor.clamp_ = ops.inplace_clamp
+
+    Tensor.copy_ = ops.inplace_copy
+    StubTensor.copy_ = ops.inplace_copy
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)

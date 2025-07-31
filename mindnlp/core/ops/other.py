@@ -26,8 +26,17 @@ has_bincount = hasattr(mindspore.mint, "bincount")
 def bincount(input, weights=None, minlength=0):
     if use_pyboost() and has_bincount:
         return mindspore.mint.bincount(input, weights, minlength)
-    return ops.bincount(input, weights, minlength)
-
+    if input.max() > minlength - 1:
+        length = (input.max() + 1)
+    else:
+        length = core.tensor(minlength)
+    idx = core.arange(length).unsqueeze(-1)
+    idx_mapping = core.eq(input, idx)
+    if weights is not None:
+        if input.shape != weights.shape:
+            raise ValueError('for bincount `input` and `weights` must have the same length')
+        idx_mapping = weights * idx_mapping
+    return core.sum(idx_mapping, 1).ravel()
 
 # block_diag
 
@@ -906,6 +915,13 @@ class finfo:
         self.resolution = resolution
         self.dtype = dtype
 
+class iinfo:
+    def __init__(self, bits, min, max, dtype):
+        self.bits = bits
+        self.min = min
+        self.max = max
+        self.dtype = dtype
+
 
 finfo_dtype = {
     mindspore.bfloat16: finfo(
@@ -955,8 +971,13 @@ def finfo(dtype):
     return finfo_dtype[dtype]
 
 
+iinfo_dtype = {
+    mindspore.int64: iinfo(bits=64, min=-9223372036854775808, max=9223372036854775807, dtype='int64'),
+    mindspore.int32: iinfo(bits=32, min=-2147483648, max=2147483647, dtype='int32')
+}
+
 def iinfo(dtype):
-    return np.iinfo(mindspore.dtype_to_nptype(dtype))
+    return iinfo_dtype[dtype]
 
 
 def contains(self, key):
