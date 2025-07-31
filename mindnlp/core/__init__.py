@@ -52,6 +52,7 @@ from .ops import *
 from .serialization import load, save
 from ._bind import get_default_dtype, set_default_dtype, get_default_device
 from .amp import autocast, GradScaler
+from .func import vmap
 
 from . import profiler, cuda, optim, amp, compiler, jit, version, __future__, overrides, \
     return_types, linalg, fx, backends, testing, nn, fft, _jit_internal, utils

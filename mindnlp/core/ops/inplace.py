@@ -7,7 +7,7 @@ from mindspore.common.generator import default_generator
 from mindspore.ops.auto_generate.gen_ops_prim import inplace_normal_op, inplace_scatter_value_op, inplace_scatter_src_reduce_op, \
     inplace_scatter_src_op, inplace_fill_tensor_op, inplace_fill_scalar_op, inplace_zero_op, inplace_uniform_op, \
     inplace_masked_fill_scalar_op, inplace_masked_fill_tensor_op, inplace_random_op, inplace_clamp_scalar_op, \
-    inplace_clamp_tensor_op, inplace_copy_op
+    inplace_clamp_tensor_op, inplace_copy_op, inplace_index_add_op
 
 from mindnlp import core
 from ..configs import use_pyboost
@@ -96,8 +96,12 @@ def inplace_index_copy(input, dim, index, tensor):
     return input
 
 def inplace_index_add(input, dim, index, source):
-    _inplace = _get_cache_prim(ops.InplaceIndexAdd)(dim)
-    return _inplace(input, index, source)
+    if input.device == 'npu':
+        inplace_index_add_op(input, dim, index, source)
+    else:
+        _inplace = _get_cache_prim(ops.IndexAdd)(dim)
+        input.data = _inplace(input, index.int(), source)
+    return input
 
 has_squeeze = hasattr(mindspore.mint, 'squeeze')
 def inplace_squeeze(input, *dim, **kwargs):

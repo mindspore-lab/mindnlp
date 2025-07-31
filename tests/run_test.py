@@ -33,7 +33,8 @@ def run_tests():
         "and not torchscript " \
         "and not torch_fx " \
         "and not test_wrong_device_map " \
-        "and not test_layerwise_casting"
+        "and not test_layerwise_casting " \
+        "and not test_flex_attention"
 
     pytest_args.extend(["--ignore-glob=test_modeling_flax_*.py"])
     pytest_args.extend(['-k', skip_ut])

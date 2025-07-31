@@ -202,7 +202,10 @@ def diag(input, diagonal=0):
 # diagonal
 
 # diff
-
+def diff(input, n=1, dim=-1, prepend=None, append=None):
+    if use_pyboost():
+        return mindspore.mint.diff(input, n, dim, prepend, append)
+    return ops.diff(input, n, dim, prepend, append)
 
 # einsum
 
@@ -1081,6 +1084,7 @@ __all__ = [
     "cumsum",
     "cumprod",
     "diag",
+    "diff",
     "dim_list_to_bitset",
     "einsum",
     "einsum_label_to_index",

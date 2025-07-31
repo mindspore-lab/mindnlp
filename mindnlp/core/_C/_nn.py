@@ -21,7 +21,7 @@ def _parse_to(*args, **kwargs):
         elif isinstance(args[0], core.device):  # device only
             device = args[0]
             dtype = None
-        elif isinstance(args[0], str):
+        elif isinstance(args[0], (str, int)):
             device = device_(args[0])
             dtype = None
         else:
