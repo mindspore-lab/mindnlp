@@ -426,7 +426,11 @@ def where(condition, *args, out=None):
             input = mindspore.tensor(input, dtype=mindspore.float32)
         other = finfo(input.dtype).min
 
-    output = mindspore.mint.where(condition, input, other)
+    if use_pyboost():
+        output = mindspore.mint.where(condition, input, other)
+    else:
+        output = condition * input + (~condition) * other
+
     if out is not None:
         out.assign_value(output)
     return output
