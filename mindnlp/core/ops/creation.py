@@ -12,6 +12,7 @@ from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 from ..configs import use_pyboost, ON_ORANGE_PI
 from .._bind import get_default_dtype, get_default_device
+from .._dtype import dtype2np
 from .utils import py2dtype
 from .other import finfo
 
@@ -195,11 +196,15 @@ def empty(*size, dtype=None, device=None, requires_grad=False, pin_memory=False,
             device = 'meta'
 
     # To avoid the problem in irecv and recv of using empty.
-    if device != 'meta':
+    if device not in ['meta', 'GPU']:
         out = mindspore.mint.empty(size, dtype=dtype, device=device)
     else:
         out = CTensor(dtype=dtype, shape=size)
         out = mindspore.Tensor(out)
+    # else:
+    #     out = np.empty(size, dtype=dtype2np[dtype])
+    #     out = mindspore.Tensor(out)
+
     if requires_grad:
         out.requires_grad = True
     return out

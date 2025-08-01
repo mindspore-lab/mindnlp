@@ -127,7 +127,8 @@ def randn(*size, generator=None, dtype=None, **kwargs):
         dtype = get_default_dtype()
     if use_pyboost() and has_randn:
         return mindspore.mint.randn(*new_size, generator=generator, dtype=dtype)
-    return ops.randn(*new_size, dtype=dtype)
+    # return ops.randn(*new_size, dtype=dtype)
+    return mindspore.Tensor(np.random.randn(*new_size), dtype=dtype)
 
 # randn_like
 has_randn_like = hasattr(mindspore.mint, 'randn_like')
