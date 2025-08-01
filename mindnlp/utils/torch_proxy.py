@@ -6,6 +6,8 @@ import importlib.abc
 import importlib.machinery
 from types import ModuleType
 
+from mindnlp.core.configs import DEVICE_TARGET
+
 TORCH_VERSION = '2.7.1+dev'
 
 class RedirectFinder(importlib.abc.MetaPathFinder):
@@ -19,6 +21,8 @@ class RedirectFinder(importlib.abc.MetaPathFinder):
             if fullname == proxy_prefix or fullname.startswith(proxy_prefix + "."):
                 # 计算实际模块名
                 target_name = fullname.replace(proxy_prefix, target_prefix, 1)
+                if DEVICE_TARGET == 'Ascend':
+                    target_name = target_name.replace('cuda', 'npu')
                 try:
                     importlib.import_module(target_name)
                 except Exception as e:

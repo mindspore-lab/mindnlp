@@ -189,11 +189,13 @@ def empty(*size, dtype=None, device=None, requires_grad=False, pin_memory=False,
             device = 'CPU'
         elif device.lower() == 'npu':
             device = 'Ascend'
-        else:
+        elif device.lower() == 'cuda':
             device = 'GPU'
+        else:
+            device = 'meta'
 
     # To avoid the problem in irecv and recv of using empty.
-    if has_empty and use_pyboost():
+    if device != 'meta':
         out = mindspore.mint.empty(size, dtype=dtype, device=device)
     else:
         out = CTensor(dtype=dtype, shape=size)
