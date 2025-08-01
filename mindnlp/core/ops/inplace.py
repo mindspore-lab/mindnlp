@@ -1,4 +1,5 @@
 import numbers
+import numpy as np
 import mindspore
 from mindspore import ops
 from mindspore._c_expression import typing
@@ -7,7 +8,7 @@ from mindspore.common.generator import default_generator
 from mindspore.ops.auto_generate.gen_ops_prim import inplace_normal_op, inplace_scatter_value_op, inplace_scatter_src_reduce_op, \
     inplace_scatter_src_op, inplace_fill_tensor_op, inplace_fill_scalar_op, inplace_zero_op, inplace_uniform_op, \
     inplace_masked_fill_scalar_op, inplace_masked_fill_tensor_op, inplace_random_op, inplace_clamp_scalar_op, \
-    inplace_clamp_tensor_op, inplace_copy_op, inplace_index_add_op
+    inplace_clamp_tensor_op, inplace_copy_op, inplace_index_add_op, inplace_erfinv_op
 
 from mindnlp import core
 from ..configs import use_pyboost
@@ -50,7 +51,7 @@ def inplace_normal(input, mean=0, std=1, *, generator=None):
     if input.device.type == 'npu':
         inplace_normal_op(input, mean, std, seed, offset)
     else:
-        input.data = ops.normal(input.shape, mean, std)
+        input.data = core.tensor(np.random.normal(mean, std, input.shape), dtype=input.dtype)
     return input
 
 # uniform_
@@ -77,7 +78,8 @@ def inplace_uniform(input, *args, **kwargs):
     if input.device.type == 'npu':
         inplace_uniform_op(input, from_, to_, seed, offset)
     else:
-        input.data = core.rand(input.shape, generator=generator_, dtype=input.dtype) * (to_ - from_) + from_
+        input.data = core.tensor(np.random.uniform(from_, to_, input.shape), dtype=input.dtype)
+        # core.rand(input.shape, generator=generator_, dtype=input.dtype) * (to_ - from_) + from_
     return input
 
 def inplace_add(input, other, alpha):
@@ -227,6 +229,13 @@ def inplace_clamp(self, min=None, max=None):
         self.data = ops.clamp(self, min, max)
     return self
 
+def inplace_erfinv(self):
+    if self.device.type == 'npu':
+        inplace_erfinv_op(self)
+    else:
+        self.data = core.erfinv(self)
+    return self
+
 __all__ = [
     'inplace_copy',
     'inplace_zero',
@@ -253,5 +262,6 @@ __all__ = [
     'inplace_tril',
     'inplace_masked_fill',
     'inplace_random',
-    'inplace_clamp'
+    'inplace_clamp',
+    'inplace_erfinv'
 ]

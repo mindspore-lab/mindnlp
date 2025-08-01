@@ -797,6 +797,9 @@ def enable_mindspore_patch():
     Tensor.index_add_ = ops.inplace_index_add
     StubTensor.index_add_ = ops.inplace_index_add
 
+    Tensor.erfinv_ = ops.inplace_erfinv
+    StubTensor.erfinv_ = ops.inplace_erfinv
+
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
     return ret
