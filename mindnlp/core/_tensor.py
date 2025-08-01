@@ -800,6 +800,18 @@ def enable_mindspore_patch():
     Tensor.erfinv_ = ops.inplace_erfinv
     StubTensor.erfinv_ = ops.inplace_erfinv
 
+    def is_pinned(self):
+        return False
+    
+    Tensor.is_pinned = is_pinned
+    StubTensor.is_pinned = is_pinned
+
+    def record_stream(self, stream):
+        pass
+
+    Tensor.record_stream = record_stream
+    StubTensor.record_stream = record_stream
+
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
     return ret

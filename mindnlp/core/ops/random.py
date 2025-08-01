@@ -9,6 +9,7 @@ from .comparison import topk
 from .pointwise import div, log
 from .._bind import get_default_dtype
 from ._inner import call_ms_func
+from .._C import default_generator
 
 # bernoulli
 has_bernoulli = hasattr(mindspore.mint, 'bernoulli')
@@ -117,6 +118,8 @@ def randint_like(*args, **kwargs):
 # randn
 has_randn = hasattr(mindspore.mint, 'randn')
 def randn(*size, generator=None, dtype=None, **kwargs):
+    if isinstance(size[0], tuple):
+        size = size[0]
     size = kwargs.pop('size', size)
     new_size = ()
     for s in size:
@@ -128,7 +131,11 @@ def randn(*size, generator=None, dtype=None, **kwargs):
     if use_pyboost() and has_randn:
         return mindspore.mint.randn(*new_size, generator=generator, dtype=dtype)
     # return ops.randn(*new_size, dtype=dtype)
-    return mindspore.Tensor(np.random.randn(*new_size), dtype=dtype)
+    if not generator:
+        generator = default_generator
+    seed, _ = generator._step(12)
+    rng = np.random.default_rng(seed.item())
+    return mindspore.Tensor(rng.standard_normal(new_size), dtype=dtype)
 
 # randn_like
 has_randn_like = hasattr(mindspore.mint, 'randn_like')
