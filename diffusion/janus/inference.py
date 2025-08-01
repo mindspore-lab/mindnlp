@@ -52,9 +52,9 @@ prepare_inputs = vl_chat_processor(
     conversations=conversation, images=pil_images, force_batchify=True
 ).to(vl_gpt.device)
 
+
 # # run image encoder to get the image embeddings
 inputs_embeds = vl_gpt.prepare_inputs_embeds(**prepare_inputs)
-
 # # run the model to get the response
 outputs = vl_gpt.language_model.generate(
     inputs_embeds=inputs_embeds,

@@ -280,11 +280,11 @@ def enable_mindspore_patch():
             step = key.step
             
             # 转换 NumPy 整数为 Python int
-            if isinstance(start, np.integer):
+            if isinstance(start, (np.integer, Tensor)):
                 start = int(start)
-            if isinstance(stop, np.integer):
+            if isinstance(stop, (np.integer, Tensor)):
                 stop = int(stop)
-            if isinstance(step, np.integer):
+            if isinstance(step, (np.integer, Tensor)):
                 step = int(step)
             
             return slice(start, stop, step)

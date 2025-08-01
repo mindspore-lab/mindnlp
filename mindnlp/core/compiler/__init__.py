@@ -13,3 +13,6 @@ def disable(fn=None, recursive=True, *, reason=None):
     return wrap_func
 
 def reset(): pass
+
+def is_compiling():
+    return False
