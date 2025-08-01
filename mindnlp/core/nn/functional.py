@@ -119,40 +119,7 @@ def avg_pool1d(input, kernel_size, stride, padding=0, ceil_mode=False, count_inc
     if use_pyboost():
         return mint.nn.functional.avg_pool1d(input, kernel_size, stride, padding, ceil_mode, count_include_pad)
 
-    N, C, L = input_array.shape
-
-    # Add padding to the input array
-    if padding > 0:
-        input_array = ops.pad(input_array, ((0, 0), (0, 0), (padding, padding)), mode='constant', value=(0, 0))
-
-    # Calculate the output length
-    if ceil_mode:
-        output_length = int(np.ceil((L + 2 * padding - pool_size) / stride).astype(int) + 1)
-    else:
-        output_length = int(np.floor((L + 2 * padding - pool_size) / stride).astype(int) + 1)
-
-    # Initialize the output array
-    output_array = ops.zeros((N, C, output_length))
-
-    # Generate the starting indices of the pooling windows
-    indices = ops.arange(output_length) * stride
-    indices = indices[:, None] + ops.arange(pool_size)
-
-    # Ensure indices are within bounds
-    indices = ops.minimum(indices, input_array.shape[2] - 1)
-
-    # Use advanced indexing to extract the pooling windows
-    windows = input_array[:, :, indices]
-
-    # Calculate the mean along the pooling window dimension
-    if count_include_pad:
-        output_array = ops.mean(windows, axis=-1)
-    else:
-        valid_counts = ops.sum(windows != 0, dim=-1)
-        valid_counts = ops.maximum(valid_counts, 1)  # Avoid division by zero
-        output_array = ops.sum(windows, dim=-1) / valid_counts
-
-    return output_array
+    return ops.avg_pool1d(input, kernel_size, stride, padding, ceil_mode, count_include_pad)
 
 def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=None):
     """
@@ -172,6 +139,8 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
     if use_pyboost():
         return mint.nn.functional.avg_pool2d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
+    if divisor_override is None:
+        divisor_override = 0
     return ops.avg_pool2d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
 has_avg_pool3d = hasattr(mint.nn.functional, 'avg_pool3d')
@@ -318,6 +287,16 @@ def custom_circular_pad(x, pad):
     return x
 
 def pad(input, pad, mode='constant', value=None):
+    if input.device.type != 'npu':
+        if mode == 'reflect' and input.ndim > 4:
+            paddings = [[0, 0]]
+            for i in range(0, len(pad), 2):
+                paddings.append([pad[i], pad[i+1]])
+            old_shape = input.shape
+            shape = (-1, *old_shape[-3:])
+            out = ops.MirrorPad()(input.reshape(shape), mindspore.Tensor(paddings))
+            return out.reshape(*old_shape[:-3], *out.shape[-3:])
+        return ops.pad(input, pad, mode, value)
     if sum(pad) == 0:
         return input
     if isinstance(pad, tuple):
@@ -852,36 +831,34 @@ def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
 def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     if use_pyboost():
         return mint.nn.functional.conv3d(input, weight, bias, stride, padding, dilation, groups)
-    """
-        pad_mode = 'pad'
-        pad = padding
-        if isinstance(padding, tuple):
-            pad = (padding[0], padding[0], padding[1], padding[1])
-        elif isinstance(padding, int):
-            pad = (padding,) * 6
-        if not isinstance(padding, (int, tuple)):
-            pad_mode = padding
-            pad = (0,) * 6
 
-        self.conv3d = mops.Conv3D(out_channel=self.out_channels,
-                                kernel_size=self.kernel_size,
-                                mode=1,
-                                pad_mode=pad_mode,
-                                pad=pad,
-                                stride=self.stride,
-                                dilation=self.dilation,
-                                group=self.groups)
-        if self.padding_mode != 'zeros':
-            input = ops.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode)
-        output = self.conv3d(input, self.weight)
+    pad_mode = 'pad'
+    pad = padding
+    if isinstance(padding, (tuple, list)):
+        pad = (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2])
+    elif isinstance(padding, int):
+        pad = (padding,) * 6
+    if not isinstance(padding, (int, tuple, list)):
+        pad_mode = padding
+        pad = (0,) * 6
 
-                                
-        if self.bias is not None:
-            output = mops.bias_add(output, self.bias)
+    out_channels = weight.shape[0]
+    kernel_size = weight.shape[2:]
+    conv3d_op = ops.Conv3D(out_channels,
+                            kernel_size,
+                            mode=1,
+                            pad_mode=pad_mode,
+                            pad=pad,
+                            stride=stride,
+                            dilation=dilation,
+                            group=groups)
+    output = conv3d_op(input, weight)
+                            
+    if bias is not None:
+        output = ops.bias_add(output, bias)
+    return output
 
 
-    """
-    raise ValueError("Requires mindspore >= 2.3.0 by default, or set into pyboost mode by calling torch.config.set_byboost(True).")
 
 def conv_transpose1d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
     x_2d = input.unsqueeze(2)  # (batch, in_channels, 1, L_in)
@@ -903,38 +880,104 @@ def conv_transpose1d(input, weight, bias=None, stride=1, padding=0, output_paddi
     # 4. 移除高度维度恢复一维
     return output_2d.squeeze(2)
 
+def _deconv_output_length(pad_mode, filter_size, stride_size, dilation_size, padding):
+    """Calculate the width and height of output."""
+    length = 0
+    filter_size = filter_size + (filter_size - 1) * (dilation_size - 1)
+    if pad_mode == 'valid':
+        if filter_size - stride_size > 0:
+            length = filter_size - stride_size
+    elif pad_mode == 'pad':
+        length = - padding + filter_size - stride_size
+
+    return length
+
 def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
-    return mint.nn.functional.conv_transpose2d(input, weight, bias, stride, padding, output_padding, groups, dilation)
+    if use_pyboost():
+        return mint.nn.functional.conv_transpose2d(input, weight, bias, stride, padding, output_padding, groups, dilation)
+
+    pad_mode = 'pad'
+    pad = padding
+    if isinstance(padding, tuple):
+        pad = (0, 0, padding[0], padding[0])
+    elif isinstance(padding, int):
+        pad = (0, 0) + (padding,) * 2
+    if not isinstance(padding, (int, tuple)):
+        pad_mode = padding
+        pad = (0,) * 4
+
+    in_channel, out_channels = weight.shape[0], weight.shape[1] * groups
+    kernel_size = weight.shape[2:]
+
+    conv2d_transpose_op = ops.Conv2DTranspose(out_channel=out_channels,
+                                                kernel_size=kernel_size,
+                                                mode=1,
+                                                pad_mode=pad_mode,
+                                                pad=pad,
+                                                stride=stride,
+                                                dilation=dilation,
+                                                group=groups)
+    n, _, h, w = input.shape
+    h_add = _deconv_output_length(pad_mode, kernel_size[0], stride[0], dilation[0], pad[0] + pad[1])
+    w_add = _deconv_output_length(pad_mode, kernel_size[1], stride[1], dilation[1], pad[2] + pad[3])
+
+    out = conv2d_transpose_op(input, weight,
+                              (n, out_channels, h * stride[0] + h_add, w * stride[1] + w_add))
+    if bias is not None:
+        out = ops.bias_add(out, bias)
+    return out
 
 def conv_transpose3d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
-    in_channel, out_channel = weight.shape[0], weight.shape[1]
-    kernel_size = weight.shape[2:]
-    conv_transpose3d_op = ops.Conv3DTranspose(
-        in_channel,
-        out_channel,
-        kernel_size,
-        mode=1,
-        pad_mode='valid',
-        pad=padding,
-        stride=stride,
-        dilation=dilation,
-        group=1,
-        output_padding=output_padding,
-        data_format="NCDHW"
-    )
-    if groups > 1:
-        outputs = ()
-        for i in range(groups):
-            output = conv_transpose3d_op(input.half(), weight.half())            
+    if input.device.type == 'npu':
+        in_channel, out_channel = weight.shape[0], weight.shape[1]
+        kernel_size = weight.shape[2:]
+        conv_transpose3d_op = ops.Conv3DTranspose(
+            in_channel,
+            out_channel,
+            kernel_size,
+            mode=1,
+            pad_mode='valid',
+            pad=padding,
+            stride=stride,
+            dilation=dilation,
+            group=1,
+            output_padding=output_padding,
+            data_format="NCDHW"
+        )
+        if groups > 1:
+            outputs = ()
+            for i in range(groups):
+                output = conv_transpose3d_op(input.half(), weight.half())            
+                if bias is not None:
+                    output = output + bias
+                outputs = outputs + (output,)
+            out = ops.concat(outputs, 1)
+        else:
+            out = conv_transpose3d_op(input, weight)
             if bias is not None:
-                output = output + bias
-            outputs = outputs + (output,)
-        out = ops.concat(outputs, 1)
+                out = out + bias
+        return out
     else:
+        in_channel, out_channel = weight.shape[0], weight.shape[1] * groups
+        kernel_size = weight.shape[2:]
+        conv_transpose3d_op = ops.Conv3DTranspose(
+            in_channel,
+            out_channel,
+            kernel_size,
+            mode=1,
+            pad_mode='valid',
+            pad=padding,
+            stride=stride,
+            dilation=dilation,
+            group=groups,
+            output_padding=output_padding,
+            data_format="NCDHW"
+        )
+
         out = conv_transpose3d_op(input, weight)
         if bias is not None:
             out = out + bias
-    return out
+        return out
 
 
 def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):

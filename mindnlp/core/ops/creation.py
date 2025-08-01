@@ -212,7 +212,9 @@ def empty(*size, dtype=None, device=None, requires_grad=False, pin_memory=False,
 # empty_like
 has_empty_like = hasattr(mindspore.mint, 'empty_like')
 def empty_like(input, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=None):
-    return mindspore.mint.empty_like(input, dtype=dtype, device=device)
+    if use_pyboost():
+        return mindspore.mint.empty_like(input, dtype=dtype, device=device)
+    return mindspore.Tensor(np.empty(input.shape, dtype=dtype2np[input.dtype]))
 
 # empty_strided
 

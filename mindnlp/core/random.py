@@ -3,6 +3,7 @@ import contextlib
 import warnings
 from typing import Generator
 
+import mindspore
 from mindnlp import core
 # from mindspore import default_generator, set_seed
 
@@ -53,6 +54,7 @@ def manual_seed(seed):
             is raised. Negative inputs are remapped to positive values with the formula
             `0xffff_ffff_ffff_ffff + seed`.
     """
+    mindspore.set_seed(seed)
     seed = int(seed)
     # set_seed(seed)
     return default_generator.manual_seed(seed)

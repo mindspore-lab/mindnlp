@@ -1,10 +1,12 @@
-from typing import Any
+from typing import Any, Optional
 
 import mindspore
 from mindspore import get_rng_state, set_rng_state, manual_seed
-from mindspore.hal import *
 from mindspore.runtime import memory_reserved as ms_memory_reserved, \
-    memory_allocated as ms_memory_allocated
+    memory_allocated as ms_memory_allocated, StreamCtx as StreamContext, Stream, empty_cache, \
+    reset_peak_memory_stats, reset_max_memory_allocated, max_memory_allocated, synchronize, \
+    current_stream
+from mindspore.device_context.gpu import device_count 
 
 from mindnlp import core
 
@@ -57,3 +59,15 @@ def memory_reserved(device=None):
 
 def memory_allocated(device=None):
     return ms_memory_allocated()
+
+def stream(stream: Optional["torch.cuda.Stream"]) -> StreamContext:
+    r"""Wrap around the Context-manager StreamContext that selects a given stream.
+
+    Arguments:
+        stream (Stream): selected stream. This manager is a no-op if it's
+            ``None``.
+    .. note::
+        In eager mode stream is of type Stream class while in JIT it is
+        an object of the custom class ``torch.classes.cuda.Stream``.
+    """
+    return StreamContext(stream)
