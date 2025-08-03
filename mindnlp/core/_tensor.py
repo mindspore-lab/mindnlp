@@ -265,7 +265,7 @@ def enable_mindspore_patch():
         return origin_getitem(self, slices)
 
     Tensor.__getitem__ = __getitem__
-    StubTensor.__getitem__ = __getitem__
+    StubTensor.__getitem__ = _stub_method(__getitem__)
 
     def _convert_numpy_slices(self, key):
         """递归转换 key 中的 NumPy 整数为内置 int"""
