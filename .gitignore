@@ -167,9 +167,6 @@ xiyouji.txt
 *.jit
 flagged/
 
-huggingface_transformers/
-diffusers/
-!mindnlp/diffusers/
+tests/diffusers/
+tests/transformers/
 .gradio/
-transformers/
-!mindnlp/transformers/

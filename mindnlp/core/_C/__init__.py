@@ -2,6 +2,7 @@ from mindspore import Generator as msGenerator
 
 from . import _nn
 from ..types import device as device_
+from ..configs import DEVICE_TARGET
 
 def _jit_set_profiling_executor(mode):
     pass
@@ -32,6 +33,8 @@ DisableTorchFunctionSubclass = None
 class Generator(msGenerator):
     def __init__(self, device='cpu'):
         super().__init__()
+        if device == 'cuda' and DEVICE_TARGET == 'Ascend':
+            device = 'npu'
         self._device = device_(device) if isinstance(device, str) else device
 
     @property
