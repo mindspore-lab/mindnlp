@@ -4103,6 +4103,7 @@ else:
 
 
 from . import ms_utils
+from .masking_utils import create_causal_mask
 
 sys.modules[__name__] = _LazyModule(
     'transformers',
@@ -4126,3 +4127,5 @@ patch_dtype_wrapper(transformers.modeling_utils.PreTrainedModel, 'from_pretraine
                     [transformers.modeling_utils.restore_default_torch_dtype]
                     )
 transformers.pipelines.pipeline = dtype_wrapper(transformers.pipelines.pipeline)
+
+transformers.masking_utils.create_causal_mask = create_causal_mask
