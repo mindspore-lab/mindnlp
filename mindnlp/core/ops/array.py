@@ -122,7 +122,8 @@ def masked_select(input, mask, *, out=None):
     return call_ms_func(ops.masked_select, input, mask, out=out)
 
 # movedim
-
+def movedim(input, source, destination):
+    return ops.movedim(input, source, destination)
 
 # moveaxis
 
@@ -791,7 +792,7 @@ __all__ = [
     # index_reduce
     'index_select',
     'masked_select',
-    # movedim
+    'movedim',
     # moveaxis
     'narrow',
     # narrow_copy
