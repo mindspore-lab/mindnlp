@@ -1,5 +1,0 @@
-mindspore==2.3.1
-mindnlp==0.4.1
-tqdm==latest
-pandas==latest
-numpy==1.26.4
