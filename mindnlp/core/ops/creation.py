@@ -183,24 +183,24 @@ def empty(*size, dtype=None, device=None, requires_grad=False, pin_memory=False,
     if dtype is None:
         dtype = get_default_dtype()
 
-    if device:
-        if not isinstance(device, str) and hasattr(device, "type"):
-            device = device.type
-        if device.lower() == 'cpu':
-            device = 'CPU'
-        elif device.lower() == 'npu':
-            device = 'Ascend'
-        elif device.lower() == 'cuda':
-            device = 'GPU'
-        else:
-            device = 'meta'
+    # if device:
+    #     if not isinstance(device, str) and hasattr(device, "type"):
+    #         device = device.type
+    #     if device.lower() == 'cpu':
+    #         device = 'CPU'
+    #     elif device.lower() == 'npu':
+    #         device = 'Ascend'
+    #     elif device.lower() == 'cuda':
+    #         device = 'GPU'
+    #     else:
+    #         device = 'meta'
 
-    # To avoid the problem in irecv and recv of using empty.
-    if device not in ['meta', 'GPU']:
-        out = mindspore.mint.empty(size, dtype=dtype, device=device)
-    else:
-        out = CTensor(dtype=dtype, shape=size)
-        out = mindspore.Tensor(out)
+    # # To avoid the problem in irecv and recv of using empty.
+    # if device not in ['meta', 'GPU']:
+    #     out = mindspore.mint.empty(size, dtype=dtype, device=device)
+    # else:
+    out = CTensor(dtype=dtype, shape=size)
+    out = mindspore.Tensor(out)
     # else:
     #     out = np.empty(size, dtype=dtype2np[dtype])
     #     out = mindspore.Tensor(out)

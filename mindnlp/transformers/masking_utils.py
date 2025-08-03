@@ -198,7 +198,7 @@ def _ignore_causal_mask_sdpa(
     allowing to dispatch to the flash attention kernel (that can otherwise not be used if a custom `attn_mask` is
     passed).
     """
-    is_tracing = core.jit.is_tracing() or isinstance(padding_mask, core.fx.Proxy) or is_torchdynamo_compiling()
+    is_tracing = core.jit.is_tracing() or isinstance(padding_mask, core.fx.Proxy)
     if padding_mask is not None and padding_mask.shape[-1] > kv_length:
         mask_indices = core.arange(kv_length, device=padding_mask.device)
         mask_indices += kv_offset
