@@ -589,9 +589,10 @@ def mul(input, other, *, out=None):
             if isinstance(other, bool):
                 out = ops.bitwise_and(input, other)
             else:
-                out = ops.mul(input.int(), other).bool()
+                out = ops.mul(input.int(), other)
         else:
             out = ops.mul(input, other)
+        return out
 
     if isinstance(other, mindspore.Tensor):
         out_dtype = min(input.dtype, other.dtype)
