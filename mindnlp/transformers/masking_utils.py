@@ -283,7 +283,8 @@ def sdpa_mask_older_torch(
     # as vmap cannot handle slicing a tensor from scalar tensor (it internally calls `.item()` which vmap does not allow
     # However, in more recent version of Pytorch, a trick was introduced to handle it - which is the reason we have
     # `sdpa_mask_recent_torch`, as it allows more general `mask_function`
-    causal_mask = _vmap_for_bhqkv(mask_function, bh_indices=False)(None, None, cache_position, kv_arange)
+    causal_mask = mask_function(None, None, cache_position.reshape(cache_position.shape[0], 1), kv_arange.reshape(1, kv_arange.shape[0]))
+    # causal_mask = _vmap_for_bhqkv(mask_function, bh_indices=False)(None, None, cache_position, kv_arange)
     causal_mask = causal_mask[None, None, :, :].expand(batch_size, -1, -1, -1)
     if padding_mask is not None:
         causal_mask = causal_mask * padding_mask[:, None, None, :]
