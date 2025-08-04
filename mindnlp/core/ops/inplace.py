@@ -209,7 +209,7 @@ def inplace_random(self, from_=0, to=None, *, generator=None):
             generator = default_generator
         seed, offset = generator._step(  # pylint: disable=protected-access
             generator_step_)
-        return inplace_random_op(input, from_, to, seed, offset)
+        return inplace_random_op(self, from_, to, seed, offset)
     else:
         if isinstance(self.dtype, typing.Float):
             self.uniform_(from_, to, generator=generator)

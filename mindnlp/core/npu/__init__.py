@@ -58,3 +58,9 @@ class device:
 
     def __exit__(self, type: Any, value: Any, traceback: Any):
         return False
+
+def mem_get_info(index):
+    return (1024, 1024)
+
+def current_device():
+    return core.device('npu', 0)

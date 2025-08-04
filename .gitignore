@@ -169,4 +169,5 @@ flagged/
 
 tests/diffusers/
 tests/transformers/
+tests/huggingface_transformers/
 .gradio/

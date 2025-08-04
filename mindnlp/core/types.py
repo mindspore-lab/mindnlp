@@ -38,7 +38,11 @@ class device():
                 _id = type.index
             elif isinstance(type, int):
                 _id = type
-                _target = DEVICE_MAP[mindspore.get_current_device().device_target]
+                try:
+                    device_target = mindspore.get_current_device().device_target
+                except:
+                    device_target = mindspore.get_context('device_target')
+                _target = DEVICE_MAP[device_target]
             else:
                 print(type)
                 raise TypeError("core.device(): `type` must be type of 'str' or 'core.device'.")
