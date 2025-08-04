@@ -14,7 +14,7 @@ has_allclose = hasattr(mindspore.mint, 'allclose')
 def allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
     rtol = rtol.item() if isinstance(rtol, mindspore.Tensor) else rtol
     atol = atol.item() if isinstance(atol, mindspore.Tensor) else atol
-    if use_pyboost() and has_allclose:
+    if use_pyboost() and has_allclose and not ON_ORANGE_PI:
         return mindspore.mint.allclose(input, other, rtol=rtol, atol=atol, equal_nan=equal_nan)
     return np.allclose(input.numpy(), other.numpy(), rtol, atol, equal_nan)
 
@@ -37,7 +37,7 @@ def eq(input, other, *, out=None):
 # equal
 has_equal = hasattr(mindspore.mint, 'equal')
 def equal(input, other):
-    if use_pyboost() and has_equal:
+    if use_pyboost() and has_equal and not ON_ORANGE_PI:
         return mindspore.mint.equal(input, other)
     if input.shape != other.shape:
         return False

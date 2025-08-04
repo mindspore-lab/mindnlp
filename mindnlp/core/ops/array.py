@@ -77,13 +77,41 @@ def gather(input, dim, index):
     index = core.where(index < input.shape[dim], index, index - input.shape[dim])
     if not ON_ORANGE_PI:
         return ops.gather_elements(input, dim, index)
-    return tf_gather(input, index, dim, batch_dims=dim)
+
+    return torch_gather(input, index, dim)
 
 def gather_nd(input, indices):
     return ops.gather_nd(input, indices)
 
 def tf_gather(input, indices, axis, batch_dims=0):
     return ops.gather(input, indices, axis, batch_dims)
+
+def torch_gather(x, indices, axis=1):
+    # 这个实现模拟了 torch.gather 的行为
+    if axis < 0:
+        axis = len(x.shape) + axis
+    
+    # 创建索引数组，其他维度保持原样
+    all_indices = []
+    for dim in range(len(x.shape)):
+        if dim == axis:
+            # 使用提供的索引
+            all_indices.append(indices.to(mindspore.int32))
+        else:
+            # 创建该维度的原始索引
+            shape = [1] * len(x.shape)
+            shape[dim] = x.shape[dim]
+            dim_indices = core.arange(x.shape[dim], dtype=mindspore.int32)
+            dim_indices = core.reshape(dim_indices, shape)
+            # 广播到 indices 的形状
+            dim_indices = core.broadcast_to(dim_indices, indices.shape)
+            all_indices.append(dim_indices)
+    
+    # 组合所有维度的索引
+    multi_indices = core.stack(all_indices, axis=-1)
+    
+    # 使用 tf.gather_nd 收集元素
+    return gather_nd(x, multi_indices)
 
 # hsplit
 
