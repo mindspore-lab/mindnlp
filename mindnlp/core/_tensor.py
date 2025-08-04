@@ -815,6 +815,15 @@ def enable_mindspore_patch():
     Tensor.scatter = ops.scatter
     StubTensor.scatter = ops.scatter
 
+    Tensor.mul = ops.mul
+    StubTensor.mul = ops.mul
+
+    Tensor.index_select = ops.index_select
+    StubTensor.index_select = ops.index_select
+
+    Tensor.gather = ops.gather
+    StubTensor.gather = ops.gather
+
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
     return ret
