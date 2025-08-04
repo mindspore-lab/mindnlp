@@ -2,7 +2,7 @@
 import numpy as np
 import mindspore
 from mindspore import ops
-from ..configs import use_pyboost, ON_A1
+from ..configs import use_pyboost, ON_A1, ON_ORANGE_PI
 from ._inner import call_ms_func
 
 from mindnlp import core
@@ -582,7 +582,7 @@ has_mul = hasattr(mindspore.mint, "mul")
 
 
 def mul(input, other, *, out=None):
-    if use_pyboost() and has_mul:
+    if use_pyboost() and has_mul and not ON_ORANGE_PI:
         out = mindspore.mint.mul(input, other)
     else:
         if input.dtype == mindspore.bool_:

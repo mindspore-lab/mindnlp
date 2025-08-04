@@ -3,7 +3,7 @@ from collections import namedtuple
 import numpy as np
 import mindspore
 from mindspore import ops
-from ..configs import use_pyboost
+from ..configs import use_pyboost, ON_ORANGE_PI
 
 from ._inner import call_ms_func
 
@@ -64,7 +64,7 @@ def greater(input, other, *, out=None):
 # isclose
 has_isclose = hasattr(mindspore.mint, 'isclose')
 def isclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
-    if use_pyboost() and has_isclose:
+    if use_pyboost() and has_isclose and not ON_ORANGE_PI:
         return mindspore.mint.isclose(input, other, rtol, atol, equal_nan)
     return mindspore.tensor(np.isclose(input.numpy(), other.numpy(), rtol, atol, equal_nan))
 
@@ -174,7 +174,7 @@ def not_equal(input, other):
 # sort
 has_sort = hasattr(mindspore.mint, 'sort')
 def sort(input, *, dim=-1, descending=False, stable=False):
-    if use_pyboost() and has_sort:
+    if use_pyboost() and has_sort and not ON_ORANGE_PI:
         out = mindspore.mint.sort(input, dim=dim, descending=descending, stable=stable)
     else:
         out = ops.sort(input, dim, descending)

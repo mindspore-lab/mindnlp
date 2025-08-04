@@ -812,6 +812,9 @@ def enable_mindspore_patch():
     Tensor.record_stream = record_stream
     StubTensor.record_stream = record_stream
 
+    Tensor.scatter = ops.scatter
+    StubTensor.scatter = ops.scatter
+
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
     return ret
