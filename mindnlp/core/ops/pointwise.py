@@ -587,7 +587,10 @@ def mul(input, other, *, out=None):
     else:
         if input.dtype == mindspore.bool_:
             if isinstance(other, bool):
-                out = ops.bitwise_and(input, other)
+                if ON_ORANGE_PI:
+                    out = ops.bitwise_and(input.int(), other).bool()
+                else:
+                    out = ops.bitwise_and(input, other)
             else:
                 out = ops.mul(input.int(), other)
         else:

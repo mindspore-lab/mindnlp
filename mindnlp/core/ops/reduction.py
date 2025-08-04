@@ -4,7 +4,7 @@ from collections import namedtuple
 import mindspore
 from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
-from ..configs import use_pyboost, DEVICE_TARGET
+from ..configs import use_pyboost, DEVICE_TARGET, ON_ORANGE_PI
 
 from ._inner import call_ms_func
 from mindnlp import core
@@ -137,7 +137,7 @@ def nanmedian(input, dim=-1, keepdim=False):
 # norm
 has_norm = hasattr(mindspore.mint, 'norm')
 def norm(input, p='fro', dim=None, keepdim=False, out=None, dtype=None):
-    if use_pyboost() and has_norm:
+    if use_pyboost() and has_norm and not ON_ORANGE_PI:
         return call_ms_func(mindspore.mint.norm, input, p, dim, keepdim, out=out, dtype=dtype)
     if p == 'fro':
         p = None
@@ -339,7 +339,7 @@ def std(input, dim=None, *, correction=1, keepdim=False, **kwargs):
     axis = kwargs.get('axis', None)
     if axis is not None:
         dim = axis
-    if use_pyboost() and has_std:
+    if use_pyboost() and has_std and not ON_ORANGE_PI:
         return mindspore.mint.std(input, dim=dim, correction=correction, keepdim=keepdim)
     if DEVICE_TARGET == 'GPU':
         unbiased = bool(correction)
