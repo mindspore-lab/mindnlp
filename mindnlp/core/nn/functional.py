@@ -763,7 +763,7 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None, trainin
     if bias is None:
         bias = ops.zeros(input.shape[1])
 
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return mint.nn.functional.batch_norm(
             input,
             running_mean,
@@ -787,7 +787,7 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None, trainin
 
 has_conv1d = hasattr(mint.nn.functional, 'conv1d')
 def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    if use_pyboost() and has_conv1d:
+    if use_pyboost() and has_conv1d and not ON_ORANGE_PI:
         return mint.nn.functional.conv1d(input, weight, bias, stride, padding, dilation, groups)
     pad_mode = 'pad'
     pad = padding
@@ -819,7 +819,7 @@ def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
 
 
 def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return mint.nn.functional.conv2d(input, weight, bias, stride, padding, dilation, groups)
 
     pad_mode = 'pad'
@@ -829,7 +829,7 @@ def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     return ops.conv2d(input, weight, bias=bias, stride=stride, pad_mode=pad_mode, padding=padding, dilation=dilation, groups=groups)
 
 def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return mint.nn.functional.conv3d(input, weight, bias, stride, padding, dilation, groups)
 
     pad_mode = 'pad'
@@ -1014,7 +1014,7 @@ def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode
 
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return mint.nn.functional.group_norm(input, num_groups, weight, bias, eps)
 
     input_shape = input.shape
@@ -1027,7 +1027,11 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     affine_param_shape[1] = C
     affine_param_shape = tuple(affine_param_shape)
     if weight is not None and bias is not None:
-        out = bias.view(affine_param_shape).addcmul(out, weight.view(affine_param_shape), 1)
+        if not ON_ORANGE_PI:
+            out = bias.view(affine_param_shape).addcmul(out, weight.view(affine_param_shape), 1)
+        else:
+            out = core.addcmul(bias.view(affine_param_shape), out, weight.view(affine_param_shape), value=1)
+
     elif weight is not None:
         out = out.mul(weight.view(affine_param_shape))
     elif bias is not None:

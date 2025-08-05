@@ -150,7 +150,7 @@ def linspace(start, end, steps, *, dtype=None, **kwargs):
     start = start.item() if isinstance(start, mindspore.Tensor) else start
     end = end.item() if isinstance(end, mindspore.Tensor) else end
     steps = steps.item() if isinstance(steps, mindspore.Tensor) else steps
-    if use_pyboost() and has_linspace:
+    if use_pyboost() and has_linspace and not ON_ORANGE_PI:
         return mindspore.mint.linspace(start, end, steps, dtype=dtype)
     return ops.linspace(start, end, steps).to(dtype)
 

@@ -11,7 +11,7 @@ from mindspore.ops.auto_generate.gen_ops_prim import inplace_normal_op, inplace_
     inplace_clamp_tensor_op, inplace_copy_op, inplace_index_add_op, inplace_erfinv_op
 
 from mindnlp import core
-from ..configs import use_pyboost
+from ..configs import use_pyboost, ON_ORANGE_PI
 from ._inner import assign
 
 generator_step_ = 12
@@ -230,7 +230,7 @@ def inplace_clamp(self, min=None, max=None):
     return self
 
 def inplace_erfinv(self):
-    if self.device.type == 'npu':
+    if self.device.type == 'npu' and not ON_ORANGE_PI:
         inplace_erfinv_op(self)
     else:
         self.data = core.erfinv(self)
