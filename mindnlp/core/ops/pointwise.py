@@ -60,7 +60,7 @@ has_add = hasattr(mindspore.mint, "add")
 
 
 def add(input, other, *, alpha=1, out=None):
-    if use_pyboost() and has_add:
+    if use_pyboost() and has_add and not ON_ORANGE_PI:
         return call_ms_func(mindspore.mint.add, input, other, alpha=alpha, out=out)
     if alpha != 1:
         other = mul(alpha, other)
@@ -335,9 +335,44 @@ has_erfinv = hasattr(mindspore.mint, "erfinv")
 
 def erfinv(input, *, out=None):
     if use_pyboost() and has_erfinv:
+        if ON_ORANGE_PI:
+            return erfinv_torch(input)
         return call_ms_func(mindspore.mint.erfinv, input, out=out)
     return call_ms_func(ops.erfinv, input, out=out)
 
+def erfinv_torch(x):
+    """
+    使用有理函数近似实现erfinv，适用于PyTorch张量
+    """
+    # # 检查输入范围
+    # if core.any((x < -1) | (x > 1)):
+    #     raise ValueError("erfinv(x) is only defined for x in [-1, 1]")
+    
+    # 处理边界情况
+    sign = core.where(x > 0, 1.0, -1.0)
+    x = core.abs(x)
+    
+    # Cody的有理函数近似
+    mask = x <= 0.7
+    x_sq = x * x
+    
+    # 对于x <= 0.7的情况
+    p1 = 0.426170613044 + x_sq * (-0.304570194263 + x_sq * 0.152645863430)
+    q1 = 1.0 + x_sq * (-0.733058978416 + x_sq * 0.546875000000)
+    result1 = x * (p1 / q1)
+    
+    # 对于x > 0.7的情况
+    t = core.sqrt(-core.log((1.0 - x)/2.0))
+    p2 = -0.322232431088 + t * (-1.00002368368 + t * (-0.342242088547 + 
+         t * (-0.0204231210245 + t * (-0.0000453642210148))))
+    q2 = 0.460398842078 + t * (0.588581570495 + t * (0.531103462366 + 
+         t * (0.103537752850 + t * 0.0038560700634)))
+    result2 = p2 / q2
+    
+    # 合并结果
+    result = core.where(mask, result1, result2)
+    
+    return sign * result
 
 # exp
 has_exp = hasattr(mindspore.mint, "exp")

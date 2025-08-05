@@ -31,7 +31,10 @@ if 'RANK_TABLE_FILE' in os.environ:
 import mindspore
 from mindspore import context
 from mindspore._c_expression import MSContext # pylint: disable=no-name-in-module, import-error
-
+try:
+    from mindspore._c_expression import disable_multi_thread
+except:
+    disable_multi_thread = None
 # for different ascend devices
 if platform.system().lower() == 'linux':
     SOC = MSContext.get_instance().get_ascend_soc_version()
@@ -40,6 +43,9 @@ if platform.system().lower() == 'linux':
 
     if SOC in ('ascend910', 'ascend310b'):
         context.set_context(ascend_config={"precision_mode": "allow_mix_precision"})
+
+    if SOC == 'ascend310b' and disable_multi_thread is not None:
+        disable_multi_thread()
 
 # set mindnlp.core to torch
 from .utils.torch_proxy import initialize_torch_proxy, setup_metadata_patch
