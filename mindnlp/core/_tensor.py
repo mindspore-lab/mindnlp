@@ -20,6 +20,7 @@ from .storage import UntypedStorage
 from ._utils import _rebuild_tensor_v2
 from ._C.size import Size
 from .types import DEVICE_MAP
+from .configs import DEVICE_TARGET
 
 DTYPE_ELEMENT_SIZE_MAP = {
     mindspore.float64: 8,
@@ -823,6 +824,18 @@ def enable_mindspore_patch():
 
     Tensor.gather = ops.gather
     StubTensor.gather = ops.gather
+
+    def is_cuda(self):
+        device_type = 'cuda'
+        if DEVICE_TARGET == 'Ascend':
+            device_type = 'npu'
+        return self.device.type == device_type
+
+    Tensor.is_cuda = is_cuda
+    StubTensor.is_cuda = is_cuda
+
+    Tensor.__rshift__ = ops.bitwise_right_shift
+    StubTensor.__rshift__ = ops.bitwise_right_shift
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)

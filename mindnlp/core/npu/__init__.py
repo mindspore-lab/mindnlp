@@ -64,3 +64,6 @@ def mem_get_info(index):
 
 def current_device():
     return core.device('npu', 0)
+
+def get_device_capability(device=None):
+    return 10, 0

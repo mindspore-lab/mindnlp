@@ -494,7 +494,12 @@ def imag(input):
 
 
 # ldexp
-
+def ldexp(input, other, out=None):
+    output = ops.ldexp(input, other)
+    if out is not None:
+        out.data = output
+        return out
+    return output
 
 # lerp
 has_lerp = hasattr(mindspore.mint, "lerp")
@@ -1005,6 +1010,7 @@ __all__ = [
     "igamma",
     "igammac",
     "imag",
+    "ldexp",
     "lerp",
     "lgamma",
     "log",

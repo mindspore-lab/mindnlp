@@ -196,7 +196,8 @@ class fast_safe_open:
 
     def metadata(self):
         meta =  self.__metadata__
-        meta['format'] = 'pt'
+        if meta is not None:
+            meta['format'] = 'pt'
         return meta
 
     def keys(self):
