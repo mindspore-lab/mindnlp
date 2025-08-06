@@ -183,7 +183,7 @@ def sort(input, *, dim=-1, descending=False, stable=False):
 # topk
 has_topk = hasattr(mindspore.mint, 'topk')
 def topk(input, k, dim=-1, largest=True, sorted=True):
-    if use_pyboost() and has_topk:
+    if use_pyboost() and has_topk and not ON_ORANGE_PI:
         out = mindspore.mint.topk(input, int(k), dim, largest, sorted)
     else:
         out = ops.topk(input, k, dim, largest, sorted)

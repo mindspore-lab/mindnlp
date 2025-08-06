@@ -849,7 +849,7 @@ def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
                             mode=1,
                             pad_mode=pad_mode,
                             pad=pad,
-                            stride=stride,
+                            stride=tuple(stride),
                             dilation=dilation,
                             group=groups)
     output = conv3d_op(input, weight)
