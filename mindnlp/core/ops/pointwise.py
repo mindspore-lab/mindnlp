@@ -334,9 +334,9 @@ has_erfinv = hasattr(mindspore.mint, "erfinv")
 
 
 def erfinv(input, *, out=None):
+    if ON_ORANGE_PI:
+        return erfinv_torch(input)
     if use_pyboost() and has_erfinv:
-        if ON_ORANGE_PI:
-            return erfinv_torch(input)
         return call_ms_func(mindspore.mint.erfinv, input, out=out)
     return call_ms_func(ops.erfinv, input, out=out)
 
