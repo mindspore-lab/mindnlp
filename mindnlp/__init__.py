@@ -35,17 +35,16 @@ try:
     from mindspore._c_expression import disable_multi_thread
 except:
     disable_multi_thread = None
-# for different ascend devices
-    context.set_context(device_target='CPU')
 
+# for different ascend devices
 if platform.system().lower() == 'linux':
     SOC = MSContext.get_instance().get_ascend_soc_version()
     if ('910b' not in SOC and '310' not in SOC) or version.parse(mindspore.__version__) < version.parse('2.4.0'):
         os.environ["MS_ALLOC_CONF"] = 'enable_vmm:True,vmm_align_size:2MB'
 
     if SOC in ('ascend910', 'ascend310b'):
-        context.set_context(ascend_config={"precision_mode": "allow_mix_precision"})
-
+        # context.set_context(ascend_config={"precision_mode": "allow_mix_precision"})
+        mindspore.device_context.ascend.op_precision.precision_mode('allow_mix_precision')
     if SOC == 'ascend310b' and disable_multi_thread is not None:
         disable_multi_thread()
 
