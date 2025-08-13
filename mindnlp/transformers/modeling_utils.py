@@ -23,7 +23,7 @@ def send_forward(self, *args, **kwargs):
 
 def receive_forward(self, *args, **kwargs):
     hidden_states = args[0]
-    dist.recv(hidden_states, src=self.src)
+    dist.irecv(hidden_states, src=self.src)
     output = self._forward(*((hidden_states,) + args[1:]), **kwargs)
     return output
 
@@ -171,6 +171,7 @@ def _load_pretrained_model_wrapper(fn):
 
                 for target_rank in range(world_size):
                     if rank == target_rank:
+
                         model = fn(
                             cls,
                             model,
@@ -211,7 +212,6 @@ def _load_pretrained_model_wrapper(fn):
                 key_mapping,
                 weights_only,
             )
-    return wrapper
 
 def _get_resolved_checkpoint_files_wrapper(fn):
     def wrapper(*args, **kwargs):

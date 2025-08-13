@@ -4106,6 +4106,7 @@ from .masking_utils import create_causal_mask, create_sliding_window_causal_mask
 from .modeling_utils import construct_pipeline_parallel_model, _load_pretrained_model_wrapper, \
     _get_resolved_checkpoint_files_wrapper
 
+
 # redirect mindnlp.transformers to transformers
 import transformers
 sys.modules[__name__] = _LazyModule(
