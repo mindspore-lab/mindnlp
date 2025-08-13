@@ -468,3 +468,38 @@ def masked_fill(input, mask, value):
     return core.Tensor.from_numpy(out)
 
 __all__.append('masked_fill')
+
+def logical_not(input):
+    out = np.logical_not(input.numpy())
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+
+    return core.Tensor.from_numpy(out)
+
+__all__.append('logical_not')
+
+def not_equal(input, other):
+    if not isinstance(input, numbers.Number):
+        input = input.numpy()
+    elif not isinstance(other, numbers.Number):
+        other = other.numpy()
+    out = np.not_equal(input, other)
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('not_equal')
+
+def less_equal(input, other):
+    if not isinstance(input, numbers.Number):
+        input = input.numpy()
+    if not isinstance(other, numbers.Number):
+        other = other.numpy()
+    
+    out = input <= other
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+
+    return core.Tensor.from_numpy(out)
+
+__all__.append('less_equal')

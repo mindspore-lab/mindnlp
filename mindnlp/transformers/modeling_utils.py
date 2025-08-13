@@ -2,6 +2,7 @@
 import types
 
 from mindspore.communication import GlobalComm
+from mindspore import runtime
 from ..core import nn, ops, distributed as dist
 from ..utils import logging
 
@@ -29,6 +30,7 @@ def receive_forward(self, *args, **kwargs):
 def broadcast_forward(self, *args, **kwargs):
     output = self._forward(*args, **kwargs)
     dist.broadcast(output, src=self.src)
+    dist.barrier()
     return output
 
 class DecoderLayerIdentity(nn.Module):
@@ -49,7 +51,7 @@ class DecoderLayerIdentity(nn.Module):
                 ops.empty(bs, self.num_key_value_heads, seq_len, 0, dtype=hidden_states.dtype, device='meta'),
                 self.layer_idx)
 
-        return hidden_states
+        return ops.empty(*hidden_states.shape, dtype=hidden_states.dtype, device='meta')
 
 
 class EmbeddingIndentity(nn.Module):
@@ -166,10 +168,10 @@ def _load_pretrained_model_wrapper(fn):
                 world_size = dist.get_world_size()
                 
                 dist.barrier()
-                
+
                 for target_rank in range(world_size):
                     if rank == target_rank:
-                        print(f'rebuild model ont rank {rank}')
+
                         model = fn(
                             cls,
                             model,
@@ -210,4 +212,28 @@ def _load_pretrained_model_wrapper(fn):
                 key_mapping,
                 weights_only,
             )
+
+def _get_resolved_checkpoint_files_wrapper(fn):
+    def wrapper(*args, **kwargs):
+        if GlobalComm.INITED and dist.get_world_size() > 1:
+            rank = dist.get_rank()
+
+            dist.barrier()
+
+            if rank == 0:
+                outs = fn(*args, **kwargs)
+            else:
+                outs = None
+
+            dist.barrier()
+
+            if rank != 0:
+                outs = fn(*args, **kwargs)
+
+            dist.barrier()
+            return outs
+
+        else:
+            return fn(*args, **kwargs)
+
     return wrapper
