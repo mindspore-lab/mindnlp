@@ -3,7 +3,7 @@ code from https://github.com/mit-han-lab/smoothquant/
 '''
 from mindnlp.core import ops, nn, no_grad
 
-from mindnlp.transformers.models.llama.modeling_llama import LlamaDecoderLayer, LlamaRMSNorm
+from transformers.models.llama.modeling_llama import LlamaDecoderLayer, LlamaRMSNorm
 
 @no_grad()
 def smooth_ln_fcs_llama_like(ln, fcs, act_scales, alpha=0.5):

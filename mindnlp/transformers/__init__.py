@@ -4105,7 +4105,7 @@ from . import ms_utils
 from .masking_utils import create_causal_mask, create_sliding_window_causal_mask
 from .modeling_utils import construct_pipeline_parallel_model, _load_pretrained_model_wrapper, \
     _get_resolved_checkpoint_files_wrapper
-
+from .tokenization_utils import apply_chat_template_wrapper
 
 # redirect mindnlp.transformers to transformers
 import transformers
@@ -4140,6 +4140,10 @@ patch_wrappers(transformers.modeling_utils.PreTrainedModel, '_load_pretrained_mo
 
 transformers.modeling_utils._get_resolved_checkpoint_files = _get_resolved_checkpoint_files_wrapper(
     transformers.modeling_utils._get_resolved_checkpoint_files
+)
+
+transformers.tokenization_utils_base.PreTrainedTokenizerBase.apply_chat_template = apply_chat_template_wrapper(
+    transformers.tokenization_utils_base.PreTrainedTokenizerBase.apply_chat_template
 )
 
 transformers.pipelines.pipeline = dtype_wrapper(transformers.pipelines.pipeline)

@@ -1,7 +1,7 @@
 from mindnlp import core
 from .types import device as device_
-from ._prims import ascend, cpu, numpy, meta
-from .configs import DEVICE_TARGET, CPU_USE_NUMPY_OP
+from ._prims import ascend, cpu, numpy, meta, ascend_310b
+from .configs import DEVICE_TARGET, CPU_USE_NUMPY_OP, SOC
 
 device_map = {"cpu": "CPU", "npu": "Ascend", "cuda": "GPU"}
 
@@ -63,8 +63,12 @@ class Dispatcher(metaclass=SingletonMeta):
 
 
 dispatcher = Dispatcher()
-for func_name in ascend.__all__:
-    dispatcher.register(func_name, "npu", getattr(ascend, func_name))
+if SOC == 'ascend310b':
+    for func_name in ascend_310b.__all__:
+        dispatcher.register(func_name, "npu", getattr(ascend_310b, func_name))
+else:
+    for func_name in ascend.__all__:
+        dispatcher.register(func_name, "npu", getattr(ascend, func_name))
 
 for func_name in cpu.__all__:
     dispatcher.register(func_name, "cpu", getattr(cpu, func_name))

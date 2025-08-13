@@ -5,7 +5,7 @@ from mindspore._c_expression import MSContext # pylint: disable=no-name-in-modul
 SOC = MSContext.get_instance().get_ascend_soc_version()
 DEVICE_TARGET = mindspore.get_context('device_target')
 SUPPORT_BF16 = DEVICE_TARGET == 'Ascend' and SOC not in ['ascend910', 'ascend310b']
-ON_A1 = not SUPPORT_BF16
+ON_A1 = SOC == 'ascend910'
 ON_ORANGE_PI = '310b' in SOC
 USE_PYBOOST = DEVICE_TARGET == 'Ascend'
 DEFAULT_DTYPE = mindspore.float32

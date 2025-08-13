@@ -156,8 +156,8 @@ def _load_pretrained_model_wrapper(fn):
     ):
         # if device_map is not None and not initialize distribute module, raise Error.
         if device_map is not None:
-            if all([isinstance(d, int) for d in device_map.values()]):
-                if len(set(device_map.values())) > 1 and not GlobalComm.INITED:
+            if all([isinstance(d, int) for d in device_map.values()]) and len(set(device_map.values())) > 1:
+                if not GlobalComm.INITED:
                     raise RuntimeError(f'to use transformers with multi-gpu/npu, please use `msrun/mpirun` ' \
                                     f'with {len(set(device_map.values()))} devices to launch multiprocess.')
 

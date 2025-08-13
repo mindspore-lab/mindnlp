@@ -4,8 +4,8 @@ import mindspore
 from mindspore import Tensor
 from mindspore.ops.primitive import PrimitiveWithInfer, prim_attr_register
 from mindnlp.core import nn, ops
-from core.serialization import load
-from mindnlp.configs import ON_ORANGE_PI
+from mindnlp.core.serialization import load
+from mindnlp.core.configs import ON_ORANGE_PI
 
 from .smooth import smooth_lm
 
