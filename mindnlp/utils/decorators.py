@@ -16,9 +16,11 @@ def dtype_wrapper(fn):
     return wrapper
 
 def patch_dtype_wrapper(cls, method_name, other_decorators=None):
+    patch_wrappers(cls, method_name, [dtype_wrapper])
+
+def patch_wrappers(cls, method_name, other_decorators=None):
     original_method = getattr(cls, method_name)
-    
-    wrapped_func = dtype_wrapper(original_method.__func__)
+    wrapped_func = original_method.__func__
     
     if other_decorators is not None:
         for dec in other_decorators:

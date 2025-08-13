@@ -16,9 +16,9 @@ def cholesky_ex(A, *, upper=False, check_errors=False, out=None):
     try:
         out = cholesky(A, upper=upper, out=out)
         out + 1
-        info = core.Tensor(0)
+        info = core.tensor(0, device=A.device)
     except:
-        info = core.Tensor(1)
+        info = core.tensor(1, device=A.device)
         out = A
     return linalg_cholesky_ex(out, info)
 

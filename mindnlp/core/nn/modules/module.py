@@ -2,6 +2,7 @@
 import warnings
 import weakref
 import functools
+import inspect
 from typing import Dict, Optional, Callable, Set, overload, TypeVar, Any, Iterator, Tuple, Union, \
     Mapping, List
 import itertools
@@ -555,10 +556,10 @@ class Module:
             module (Module): child module to be added to the module.
         """
         if not isinstance(module, Module) and module is not None:
-            raise TypeError(f"{torch.typename(module)} is not a Module subclass")
+            raise TypeError(f"{core.typename(module)} is not a Module subclass")
         elif not isinstance(name, str):
             raise TypeError(
-                f"module name should be a string. Got {torch.typename(name)}"
+                f"module name should be a string. Got {core.typename(name)}"
             )
         elif hasattr(self, name) and name not in self._modules:
             raise KeyError(f"attribute '{name}' already exists")
@@ -589,7 +590,7 @@ class Module:
                 fully-qualified string.)
 
         Returns:
-            torch.nn.Parameter: The Parameter referenced by ``target``
+            core.nn.Parameter: The Parameter referenced by ``target``
 
         Raises:
             AttributeError: If the target string references an invalid
@@ -625,7 +626,7 @@ class Module:
                 fully-qualified string.)
 
         Returns:
-            torch.Tensor: The buffer referenced by ``target``
+            core.Tensor: The buffer referenced by ``target``
 
         Raises:
             AttributeError: If the target string references an invalid
@@ -701,11 +702,13 @@ class Module:
                 # `core.__future__.get_overwrite_module_params_on_conversion()`
                 # global flag to let the user control whether they want the future
                 # behavior of overwriting the existing tensor or not.
-                return True
+                return not core.__future__.get_overwrite_module_params_on_conversion()
             else:
                 return False
 
-        should_use_swap_tensors = False
+        should_use_swap_tensors = (
+            core.__future__.get_swap_module_params_on_conversion()
+        )
 
         for key, param in self._parameters.items():
             if param is None:
@@ -718,10 +721,7 @@ class Module:
             p_should_use_set_data = compute_should_use_set_data(param, param_applied)
 
             # subclasses may have multiple child tensors so we need to use swap_tensors
-            # p_should_use_swap_tensors = (
-            #     should_use_swap_tensors or is_traceable_wrapper_subclass(param_applied)
-            # )
-            p_should_use_swap_tensors = False
+            p_should_use_swap_tensors = should_use_swap_tensors
 
             param_grad = param.grad
             if p_should_use_swap_tensors:
@@ -730,7 +730,7 @@ class Module:
                         # Accessing param.grad makes its at::Tensor's use_count 2, which will prevent swapping.
                         # Decrement use count of the gradient by setting to None
                         param.grad = None
-                    param_applied = core.nn.Parameter(
+                    param_applied = Parameter(
                         param_applied, requires_grad=param.requires_grad
                     )
                     core.utils.swap_tensors(param, param_applied)
@@ -1026,7 +1026,7 @@ class Module:
             if value is not None:
                 raise TypeError(
                     f"cannot assign '{core.typename(value)}' as parameter '{name}' "
-                    "(torch.nn.Parameter or None expected)"
+                    "(core.nn.Parameter or None expected)"
                 )
             self.register_parameter(name, value)
         else:
@@ -1052,7 +1052,7 @@ class Module:
                 if value is not None:
                     raise TypeError(
                         f"cannot assign '{core.typename(value)}' as child module '{name}' "
-                        "(torch.nn.Module or None expected)"
+                        "(core.nn.Module or None expected)"
                     )
                 for hook in _global_module_registration_hooks.values():
                     output = hook(self, name, value)
@@ -1065,7 +1065,7 @@ class Module:
                     if value is not None and not isinstance(value, core.Tensor):
                         raise TypeError(
                             f"cannot assign '{core.typename(value)}' as buffer '{name}' "
-                            "(torch.nn.Buffer, torch.Tensor or None expected)"
+                            "(core.nn.Buffer, core.Tensor or None expected)"
                         )
                     if isinstance(value, Buffer):
                         persistent = value.persistent
@@ -1115,7 +1115,7 @@ class Module:
             super().__delattr__(name)
 
     def _register_state_dict_hook(self, hook):
-        r"""Register a post-hook for the :meth:`~torch.nn.Module.state_dict` method.
+        r"""Register a post-hook for the :meth:`~core.nn.Module.state_dict` method.
 
         It should have the following signature::
             hook(module, state_dict, prefix, local_metadata) -> None or state_dict
@@ -1204,7 +1204,7 @@ class Module:
         return self._apply(lambda t: t.npu(device))
 
     def cpu(self: T, device: Optional[Union[int, device]] = None) -> T:
-        return self._apply(lambda t: t.cpu(device))
+        return self._apply(lambda t: t.cpu())
 
 
     def _load_from_state_dict(
@@ -1216,11 +1216,11 @@ class Module:
         missing_keys,
         unexpected_keys,
         error_msgs,
-    ):
+    ) -> None:
         r"""Copy parameters and buffers from :attr:`state_dict` into only this module, but not its descendants.
 
         This is called on every submodule
-        in :meth:`~torch.nn.Module.load_state_dict`. Metadata saved for this
+        in :meth:`~core.nn.Module.load_state_dict`. Metadata saved for this
         module in input :attr:`state_dict` is provided as :attr:`local_metadata`.
         For state dicts without metadata, :attr:`local_metadata` is empty.
         Subclasses can achieve class-specific backward compatible loading using
@@ -1231,7 +1231,7 @@ class Module:
 
         .. note::
             :attr:`state_dict` is not the same object as the input
-            :attr:`state_dict` to :meth:`~torch.nn.Module.load_state_dict`. So
+            :attr:`state_dict` to :meth:`~core.nn.Module.load_state_dict`. So
             it can be modified.
 
         Args:
@@ -1250,7 +1250,7 @@ class Module:
                 keys to this list
             error_msgs (list of str): error messages should be added to this
                 list, and will be reported together in
-                :meth:`~torch.nn.Module.load_state_dict`
+                :meth:`~core.nn.Module.load_state_dict`
         """
         for hook in self._load_state_dict_pre_hooks.values():
             hook(
@@ -1282,7 +1282,7 @@ class Module:
                 if not core.overrides.is_tensor_like(input_param):
                     error_msgs.append(
                         f'While copying the parameter named "{key}", '
-                        "expected torch.Tensor or Tensor-like object from checkpoint but "
+                        "expected core.Tensor or Tensor-like object from checkpoint but "
                         f"received {type(input_param)}"
                     )
                     continue
@@ -2008,7 +2008,7 @@ class Module:
         r"""Move the parameters and buffers to the specified device without copying storage.
 
         Args:
-            device (:class:`torch.device`): The desired device of the parameters
+            device (:class:`core.device`): The desired device of the parameters
                 and buffers in this module.
             recurse (bool): Whether parameters and buffers of submodules should
                 be recursively moved to the specified device.

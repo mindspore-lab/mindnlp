@@ -36,6 +36,8 @@ try:
 except:
     disable_multi_thread = None
 # for different ascend devices
+    context.set_context(device_target='CPU')
+
 if platform.system().lower() == 'linux':
     SOC = MSContext.get_instance().get_ascend_soc_version()
     if ('910b' not in SOC and '310' not in SOC) or version.parse(mindspore.__version__) < version.parse('2.4.0'):

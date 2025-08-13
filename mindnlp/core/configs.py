@@ -11,6 +11,7 @@ USE_PYBOOST = DEVICE_TARGET == 'Ascend'
 DEFAULT_DTYPE = mindspore.float32
 MS27 = '.'.join(mindspore.__version__.split('.')[:2]) >= '2.7'
 
+CPU_USE_NUMPY_OP = DEVICE_TARGET != 'CPU'
 
 def set_pyboost(mode: bool):
     """set global pyboost"""

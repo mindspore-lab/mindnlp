@@ -1,5 +1,6 @@
 """sparse"""
 from typing import Optional
+from mindnlp import core
 from mindnlp.core import Tensor
 from ..parameter import Parameter
 from .module import Module
@@ -33,7 +34,7 @@ class Embedding(Module):
                  max_norm: Optional[float] = None, norm_type: float = 2., scale_grad_by_freq: bool = False,
                  sparse: bool = False, _weight: Optional[Tensor] = None, _freeze: bool = False,
                  dtype=None, device=None) -> None:
-        factory_kwargs = {'dtype': dtype}
+        factory_kwargs = {'dtype': dtype, 'device': device}
         super().__init__()
         self.num_embeddings = num_embeddings
         self.embedding_dim = embedding_dim
@@ -61,6 +62,11 @@ class Embedding(Module):
     def reset_parameters(self) -> None:
         init.normal_(self.weight)
         self._fill_padding_idx_with_zero()
+
+    def _fill_padding_idx_with_zero(self) -> None:
+        if self.padding_idx is not None:
+            with core.no_grad():
+                self.weight[self.padding_idx].fill_(0)
 
     def _fill_padding_idx_with_zero(self) -> None:
         if self.padding_idx is not None:

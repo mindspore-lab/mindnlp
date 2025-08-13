@@ -1,7 +1,9 @@
 from mindnlp import core
 from mindnlp.core import Tensor
+from mindnlp.core.executor import execute
 from typing import List, Optional, Dict, Any
 from enum import Enum
+
 
 class BackendType(Enum):
     UNDEFINED = 0
@@ -108,7 +110,7 @@ class ProcessGroup:
 
     def broadcast(self, tensors: List[Tensor], opts: Any) -> Any:
         tensor = tensors[0]
-        _, work = execute('dist_comm_broadcast', tensor, opts.rootRank, self._name, device=self.device)
+        _, work = execute('dist_comm_broadcast', tensor, opts.rootRank, self._rank, self._name, device=self.device)
         return work
 
     def allreduce(self, tensors: List[Tensor], opts: Any) -> Any:
