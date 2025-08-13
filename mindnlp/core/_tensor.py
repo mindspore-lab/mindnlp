@@ -1,9 +1,11 @@
 import math
+import ctypes
 import numpy as np
 import mindspore
 from mindspore import Tensor
 from mindspore.common.tensor import _TensorMeta
 from mindspore._c_expression.typing import Type
+from mindspore._c_expression import typing
 try:
     from mindspore.common._stub_tensor import StubTensor, _stub_method
 except:
@@ -15,12 +17,17 @@ except:
     from mindspore._c_expression import Tensor as Tensor_
 
 from . import ops, _dtype
-from ._bind import get_default_device, device_, get_default_dtype
+from ._bind import get_device_in_context, device_, get_default_dtype
 from .storage import UntypedStorage
 from ._utils import _rebuild_tensor_v2
 from ._C.size import Size
-from .types import DEVICE_MAP
-from .configs import DEVICE_TARGET
+from .configs import DEVICE_TARGET, CPU_USE_NUMPY_OP
+from .dispatcher import device_map
+
+if DEVICE_TARGET == 'Ascend':
+    import acl
+else:
+    acl = None
 
 DTYPE_ELEMENT_SIZE_MAP = {
     mindspore.float64: 8,
@@ -70,50 +77,78 @@ class BoolTensor(Tensor, metaclass=TypedTensorMeta):
         super().__init__(*args, dtype=_dtype.bool, **kwargs)
 
 
+def tensor_meta_str(self):
+    return "<class 'torch.Tensor'>"
+
+_TensorMeta.__str__ = tensor_meta_str
+
+old_init = Tensor.__init__
+def __init__(self, *args, **kwargs):
+    if len(args) > 1 and all([isinstance(arg, int) for arg in args]):
+        tensor = Tensor_(shape=args, dtype=get_default_dtype())
+        old_init(self, tensor, internal=True)
+    else:
+        old_init(self, *args, **kwargs)
+
+Tensor.__init__ = __init__
+origin_setitem = Tensor.__setitem__
+
 def tensor(data, *, dtype=None, device=None, requires_grad=False):
     if isinstance(data, Tensor):
         UserWarning("To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than core.tensor(sourceTensor).")
-        return Tensor(data)
+        out = Tensor(data)
+        out._device = data.device
+        return out
 
-    if isinstance(data, list):
-        new_data = []
-        for d in data:
-            if isinstance(d, Tensor):
-                d = d.item()
-            new_data.append(d)
-        data = new_data
+    # if isinstance(data, list):
+    #     new_data = []
+    #     for d in data:
+    #         if isinstance(d, Tensor):
+    #             d = d.item()
+    #         new_data.append(d)
+    #     data = new_data
 
     if device is None:
-        device = get_default_device()
+        device = get_device_in_context()
+
+    if isinstance(device, (str, int)):
+        device = device_(device)
 
     if dtype is not None:
         tensor = Tensor(data, dtype=dtype)
     else:
         tensor = Tensor(data)
 
-    tensor = tensor.to(device)
+    tensor._device = device
+    if DEVICE_TARGET == 'Ascend' and device.type == 'cuda':
+        device.type = 'npu'
+    if device.type not in ['meta', 'cpu']:
+        tensor = tensor.to(device)
     tensor.requires_grad_(requires_grad)
     return tensor
 
 def is_tensor(x):
     return isinstance(x, Tensor)
 
-def enable_mindspore_patch():
+class TensorPlaceHolder:
 
-    def tensor_meta_str(self):
-        return "<class 'torch.Tensor'>"
+    def cpu(self):
+        return self.to(device_('cpu'))
 
-    _TensorMeta.__str__ = tensor_meta_str
+    def npu(self, device=None, non_blocking=False):
+        if device is None:
+            device = device_('npu', 0)
+        return self.to(device, non_blocking=non_blocking)
 
-    old_init = Tensor.__init__
-    def __init__(self, *args, **kwargs):
-        if len(args) > 1 and all([isinstance(arg, int) for arg in args]):
-            tensor = Tensor_(shape=args, dtype=get_default_dtype())
-            old_init(self, tensor, internal=True)
-        else:
-            old_init(self, *args, **kwargs)
+    def cuda(self, device=None, non_blocking=False):
+        if DEVICE_TARGET == 'Ascend':
+            return self.npu(device, non_blocking)
+        if device is None:
+            device = device_('gpu', 0)
+        return self.to(device, non_blocking=non_blocking)
 
-    Tensor.__init__ = __init__
+    def requires_grad_(self, requires_grad=True):
+        self.requires_grad = requires_grad
 
     def __reduce_ex__(self, protocol):
         if isinstance(self, StubTensor):
@@ -128,128 +163,28 @@ def enable_mindspore_patch():
         return (
             _rebuild_from_type_v2, (_rebuild_tensor_v2, type(self), args, None))
 
-    Tensor.__reduce_ex__ = __reduce_ex__
-    StubTensor.__reduce_ex__ = __reduce_ex__
+    def __hash__(self):
+        return hash(id(self))
 
-    def to_(self, *args, **kwargs):
-        dtype_to = kwargs.get("dtype", None)
-        if len(args) == 1:
-            if isinstance(args[0], Type):
-                dtype_to = args[0]
-            elif isinstance(args[0], Tensor):
-                dtype_to = args[0].dtype
-        elif len(args) == 2:
-            _, dtype_to = args
+    def __len__(self):
+        if self.shape == ():
+            return 1
+        return self.shape[0]
+
+    def __repr__(self) -> str:
+        self.data_sync(True)
+        return Tensor_.__repr__(self)[:-1] + f', device={self.device})'
+
+    def __format__(self, format_spec):
+        return np.ndarray.__format__(self.asnumpy(), format_spec)
+
+    def __iter__(self):
+        if self.ndim == 0:
+            yield self
         else:
-            dtype_to = kwargs.get("dtype", None)
-        if dtype_to is not None:
-            return mindspore.ops.cast(self, dtype_to)
-        return self
+            for i in range(len(self)):
+                yield self[i]
 
-    Tensor.to = to_
-    StubTensor.to = to_
-
-    def size(self, dim=None):
-        if dim is None:
-            return self.shape
-        assert isinstance(dim, int), f'`dim` must be int but got {type(dim)}'
-        return self.shape[dim]
-
-    Tensor.size = size
-    StubTensor.size = size
-
-    @property
-    def shape(self):
-        if isinstance(self, StubTensor):
-            if self.stub is not None:
-                stub_shape = self.stub.get_shape()
-            else:
-                stub_shape = self.tensor.shape
-            return Size(stub_shape)
-        return Size(self._shape)
-
-    Tensor.shape = shape
-    StubTensor.shape = shape
-
-    @property
-    def is_meta(self):
-        return False
-
-    Tensor.is_meta = is_meta
-    StubTensor.is_meta = is_meta
-
-    def data_ptr(self):
-        ptr = self._data_ptr()
-        if ptr != 0:
-            return ptr
-        self + 1
-        return self._data_ptr()
-    
-    Tensor.data_ptr = data_ptr
-    StubTensor.data_ptr = data_ptr
-
-    Tensor.device = device_(DEVICE_MAP[mindspore.get_context('device_target')])
-    StubTensor.device = device_(DEVICE_MAP[mindspore.get_context('device_target')])
-
-    def _expand(self, *size):
-        if len(size) == 1 and isinstance(size[0], (tuple, list)):
-            size = size[0]
-        new_size = ()
-        for s in size:
-            if isinstance(s, Tensor):
-                s = s.item()
-            new_size += (s,)
-        return self.broadcast_to(new_size)
-
-    Tensor.expand = _expand
-    StubTensor.expand = _expand
-
-    Tensor.broadcast_to = ops.broadcast_to
-    StubTensor.broadcast_to = ops.broadcast_to
-
-    def clone(self, *args, **kwargs):
-        return self.copy()
-    
-    Tensor.clone = clone
-    StubTensor.clone = clone
-
-    def _repeat(self, *sizes):
-        if len(sizes) == 1 and isinstance(sizes[0], (list, tuple)):
-            sizes = sizes[0]
-        new_sizes = ()
-        for s in sizes:
-            if not isinstance(s, int):
-                s = s.item()
-            new_sizes += (s,)
-
-        return ops.tile(self, new_sizes)
-
-    Tensor.repeat = _repeat
-    StubTensor.repeat = _repeat
-
-    def __or__(self, other):
-        if isinstance(other, (int, bool, float, Tensor)):
-            return ops.bitwise_or(self, other)
-        raise TypeError("Unsupported operand type(s) for |: 'Tensor' and '{}'".format(type(other)))
-
-    Tensor.__or__ = __or__
-    StubTensor.__or__ = __or__
-
-    def __and__(self, other):
-        if isinstance(other, (int, bool, float, Tensor)):
-            return ops.bitwise_and(self, other)
-        raise TypeError("Unsupported operand type(s) for &: 'Tensor' and '{}'".format(type(other)))
-
-    Tensor.__and__ = __and__
-    StubTensor.__and__ = __and__
-
-    def detach(self):
-        return ops.stop_gradient(self)
-
-    Tensor.detach = detach
-    StubTensor.detach = detach
-
-    origin_getitem = Tensor.__getitem__
     def __getitem__(self, slices):
         slices = self._convert_numpy_slices(slices)
         # if 0 in self.shape:
@@ -263,10 +198,2260 @@ def enable_mindspore_patch():
                     s = tensor(s)
                 new_slices += (s,)
             slices = new_slices
-        return origin_getitem(self, slices)
+        if self.device.type == 'npu':
+            out = ops.tensor_getitem(self, slices)
+        else:
+            if CPU_USE_NUMPY_OP:
+                out = ops.getitem_np(self, slices)
+            else:
+                out = ops.getitem(self, slices)
 
-    Tensor.__getitem__ = __getitem__
-    StubTensor.__getitem__ = _stub_method(__getitem__)
+        out._device = self.device
+        return out
+
+    def __setitem__(self, slices, value):
+        slices = self._convert_numpy_slices(slices)
+        if isinstance(value, float):
+            if value == float('inf'):
+                value = ops.finfo(self.dtype).max
+            elif value == -float('inf'):
+                value = ops.finfo(self.dtype).min
+        if isinstance(slices, tuple):
+            new_slices = ()
+            for s in slices:
+                if isinstance(s, range):
+                    s = list(s)
+                new_slices += (s,)
+            slices = new_slices
+        if not isinstance(value, Tensor):
+            value = tensor(value, dtype=self.dtype, device=self.device)
+        else:
+            value = value.to(self.dtype)
+
+        if 1 in value.shape and self[slices].ndim != value.ndim:
+            value = value.squeeze()
+
+        if self.device.type == 'meta':
+            return self
+        elif self.device.type == 'npu':
+            if value.device != self.device:
+                value._device = self.device
+            out = ops.tensor_setitem(self, slices, value)
+        else:
+            if CPU_USE_NUMPY_OP:
+                out = ops.setitem_np(self, slices, value)
+            else:
+                out = ops.setitem(self, slices, value)
+        return self
+
+    def __add__(self, other):
+        # if 0 in self.shape:
+        #     return self
+        return ops.add(self, other)
+
+    def __iadd__(self, other):
+        return self.copy_(ops.add(self, other))
+
+    def __radd__(self, other):
+        return Tensor.__add__(other, self)
+
+    def __div__(self, other):
+        # if 0 in self.shape:
+        #     return self
+        if isinstance(other, (np.ndarray, np.integer)):
+            other = tensor(other)
+        return ops.div(self, other)
+
+    def __rshift__(self, other):
+        return ops.bitwise_right_shift(self, other)
+
+    def __rtruediv__ (self, other):
+        return ops.div(other, self)
+
+    def __ne__(self, other):
+        return ops.ne(self, other)
+
+    def __neg__(self):
+        return ops.neg(self)
+
+    def __mul__(self, other):
+        # if 0 in self.shape:
+        #     return self
+        if isinstance(other, (np.ndarray, np.integer)):
+            other = tensor(other)
+        return ops.mul(self, other)
+
+    def __rmul__(self, other):
+        if isinstance(other, (str, list)):
+            return self.item() * other
+        return self.__mul__(other)
+
+
+    def __imul__(self, other):
+        return self.copy_(ops.mul(self, other))
+
+    def __itruediv__(self, other):
+        return self.copy_(ops.div(self, other))
+
+    def __pow__(self, other):
+        return ops.pow(self, other)
+
+    def __rpow__(self, other):
+        return ops.pow(other, self)
+
+    def __sub__(self, other):
+        # if 0 in self.shape:
+        #     return self
+        if isinstance(other, (np.ndarray, np.integer)):
+            other = tensor(other)
+        return ops.sub(self, other)
+
+    def __isub__(self, other):
+        return self.copy_(ops.sub(self, other))
+
+    def __rsub__(self, other):
+        return ops.sub(other, self)
+
+    def __eq__(self, other):
+        return ops.eq(self, other)
+
+    def __gt__(self, other):
+        return ops.gt(self, other)
+
+    def __ge__(self, other):
+        return ops.ge(self, other)
+
+    def __lt__(self, other):
+        return ops.lt(self, other)
+
+    def __le__(self, other):
+        return ops.le(self, other)
+
+    def __int__(self):
+        return int(self.item())
+
+    def __bool__(self):
+        return bool(self.item())
+
+    def __index__(self):
+        if self.ndim > 0:
+            return self.tolist()
+        return int(self.item())
+
+    def __and__(self, other):
+        return ops.bitwise_and(self, other)
+
+    def __xor__(self, other):
+        return ops.bitwise_xor(self, other)
+
+    def __or__(self, other):
+        return ops.bitwise_or(self, other)
+
+    def __invert__(self):
+        return ops.logical_not(self)
+
+    def __round__(self):
+        return ops.round(self)
+
+    # def __del__(self):
+    #     # self._offload()
+    #     # Tensor_.__del__(self)
+    #     mindspore.runtime.synchronize()
+
+    def new(self, *shape):
+        if not isinstance(shape[0], int):
+            return tensor(shape[0], dtype=self.dtype)
+        return ops.empty(*shape, dtype=self.dtype, device=self.device)
+
+    # Tensor.new_tensor
+    def new_tensor(self, data, *, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False):
+        return tensor(data, dtype=dtype if dtype is not None else self.dtype)
+
+    # Tensor.new_full
+    def new_full(self, size, fill_value, *, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False):
+        return ops.full(size, fill_value, dtype=dtype if dtype is not None else self.dtype)
+
+    # Tensor.new_empty
+    def new_empty(self, size, *, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False):
+        if dtype is None:
+            dtype = self.dtype
+        if device is None:
+            device = self.device
+        return ops.empty(*size, dtype=dtype, device=device, requires_grad=requires_grad, pin_memory=pin_memory)
+
+    # Tensor.new_ones
+    def new_ones(self, *size, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False, **kwargs):
+        size = kwargs.get('size', size)
+        if isinstance(size[0], (tuple, list)):
+            size = size[0]
+
+        new_size = ()
+        for s in size:
+            if isinstance(s, Tensor):
+                s = s.item()
+            new_size += (s,)
+        if new_size == new_size:
+            new_size = (new_size,)
+        return ops.ones(*new_size, dtype=dtype if dtype is not None else self.dtype, device=self.device)
+
+
+    # Tensor.new_zeros
+    def new_zeros(self, *size, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False):
+        if isinstance(size[0], (tuple, list)):
+            size = size[0]
+
+        new_size = ()
+        for s in size:
+            if isinstance(s, Tensor):
+                s = s.item()
+            new_size += (s,)
+        return ops.zeros(*new_size, dtype=dtype if dtype is not None else self.dtype)
+
+    # Tensor.ndim
+    @property
+    def ndim(self):
+        return len(self.shape)
+
+    def dim(self):
+        return self.ndim
+
+    def ndimension(self):
+        return self.ndim
+
+    # Tensor.real
+    @property
+    def real(self):
+        return ops.real(self)
+
+    # Tensor.imag
+    @property
+    def imag(self):
+        return ops.imag(self)
+
+    # Tensor.nbytes
+    @property
+    def nbytes(self):
+        return self.numel() * self.element_size()
+
+    # Tensor.itemsize
+    @property
+    def itemsize(self):
+        return self._data._itemsize
+
+    # Tensor.abs
+    def abs(self):
+        return ops.abs(self)
+
+    # Tensor.abs_
+    def abs_(self):
+        return self.copy_(ops.abs(input))
+
+    # Tensor.absolute
+    absolute = abs
+
+    # Tensor.absolute_
+    absolute_ = abs_
+
+    # Tensor.acos
+    def acos(self):
+        return ops.acos(self)
+
+    # Tensor.acos_
+    def acos_(self):
+        return self.copy_(ops.acos(input))
+
+    # Tensor.arccos
+    arccos = acos
+
+    # Tensor.arccos_
+    arccos_ = acos_
+
+    # Tensor.add
+    def add(self, other, *, alpha=1):
+        return ops.add(self, other, alpha=alpha)
+
+    # Tensor.add_
+    def add_(self, other, *, alpha=1):
+        return ops.inplace_add(self, other, alpha=alpha)
+
+    # Tensor.addbmm
+    def addbmm(self, batch1, batch2, *, beta=1, alpha=1):
+        return ops.addbmm(self, batch1, batch2, beta=beta, alpha=alpha)
+
+    # Tensor.addbmm_
+    def addbmm_(self, batch1, batch2, *, beta=1, alpha=1):
+        return self.copy_(ops.addbmm(self, batch1, batch2, beta=beta, alpha=alpha))
+
+    # Tensor.addcdiv
+    def addcdiv(self, tensor1, tensor2, *, value=1):
+        return ops.addcdiv(self, tensor1, tensor2, value=value)
+
+    # Tensor.addcdiv_
+    def addcdiv_(self, tensor1, tensor2, *, value=1):
+        return self.copy_(ops.addcdiv(self, tensor1, tensor2, value=value))
+
+    # Tensor.addcmul
+    def addcmul(self, tensor1, tensor2, *, value=1):
+        return ops.addcmul(self, tensor1, tensor2, value=value)
+
+    # Tensor.addcmul_
+    def addcmul_(self, tensor1, tensor2, *, value=1):
+        return self.copy_(ops.addcmul(self, tensor1, tensor2, value=value))
+
+    # Tensor.addmm
+    def addmm(self, mat1, mat2, *, beta=1, alpha=1):
+        return ops.addmm(self, mat1, mat2, beta=beta, alpha=alpha)
+
+    # Tensor.addmm_
+    def addmm_(self, mat1, mat2, *, beta=1, alpha=1):
+        return self.copy_(ops.addmm(self, mat1, mat2, beta=beta, alpha=alpha))
+
+    # Tensor.sspaddmm
+
+
+    # Tensor.addmv
+    def addmv(self, mat, vec, *, beta=1, alpha=1):
+        return ops.addmv(self, mat, vec, beta=beta, alpha=alpha)
+
+    # Tensor.addmv_
+    def addmv_(self, mat, vec, *, beta=1, alpha=1):
+        return self.copy_(ops.addmv(self, mat, vec, beta=beta, alpha=alpha))
+
+    # Tensor.addr
+
+    # Tensor.addr_
+
+
+    # Tensor.adjoint
+
+    # Tensor.allclose
+    def allclose(self, other, rtol=1e-05, atol=1e-08, equal_nan=False):
+        return ops.allclose(self, other, rtol, atol, equal_nan)
+
+    # Tensor.amax
+    def amax(self, dim=None, keepdim=False):
+        return ops.amax(self, dim, keepdim)
+
+    # Tensor.amin
+    def amin(self, dim=None, keepdim=False):
+        return ops.amin(self, dim, keepdim)
+
+    # Tensor.aminmax
+    def aminmax(self, dim=None, keepdim=False):
+        return ops.aminmax(self, dim=dim, keepdim=keepdim)
+
+    # Tensor.angle
+
+
+    # Tensor.apply_
+    def apply_(self, callable):
+        return self.copy_(callable(self))
+
+    # Tensor.argmax
+    def argmax(self, dim=None, keepdim=False):
+        out = ops.argmax(self, dim, keepdim)
+        return out
+
+    # Tensor.argmin
+    def argmin(self, dim=None, keepdim=False):
+        out = ops.argmin(self, dim, keepdim)
+        return out
+
+    # Tensor.argsort
+    def argsort(self, dim=-1, descending=False):
+        return ops.argsort(self, dim=-1, descending=False)
+
+    # Tensor.argwhere
+    def argwhere(self):
+        return ops.argwhere(self)
+
+    # Tensor.asin
+    def asin(self):
+        return ops.asin(self)
+
+    # Tensor.asin_
+    def asin_(self):
+        return self.copy_(ops.asin(self))
+
+    # Tensor.arcsin
+    arcsin = asin
+
+    # Tensor.arcsin_
+    arcsin_ = asin_
+
+    # Tensor.as_strided
+    def as_strided(self, size, stride, storage_offset=None):
+        return ops.as_strided(self, size, stride, storage_offset)
+
+    # Tensor.atan
+    def atan(self):
+        return ops.atan(self)
+
+    # Tensor.atan_
+    def atan_(self):
+        return self.copy_(ops.atan(self))
+
+    # Tensor.arctan
+    arctan = atan
+
+    # Tensor.arctan_
+    arctan_ = atan_
+
+    # Tensor.atan2
+    def atan2(self, other):
+        return ops.atan2(self, other)
+
+    # Tensor.atan2_
+    def atan2_(self, other):
+        return self.copy_(ops.atan2(self, other))
+
+    # Tensor.arctan2
+    arctan2 = atan2
+
+    # Tensor.arctan2_
+    arctan2_ = atan2_
+
+    # Tensor.all
+    def all(self, dim=None, keepdim=False):
+        return ops.all(self, dim, keepdim)
+
+    # Tensor.any
+    def any(self, dim=None, keepdim=False):
+        return ops.any(self, dim, keepdim)
+
+    # Tensor.baddbmm
+    def baddbmm(self, batch1, batch2, *, beta=1, alpha=1):
+        return ops.baddbmm(self, batch1, batch2, beta=beta, alpha=alpha)
+
+    # Tensor.baddbmm_
+    def baddbmm_(self, batch1, batch2, *, beta=1, alpha=1):
+        return self.copy_(ops.baddbmm(self, batch1, batch2, beta=beta, alpha=alpha))
+
+    # Tensor.bernoulli
+    def bernoulli(self, *, generator=None):
+        return ops.bernoulli(self, generator=generator)
+
+    # Tensor.bernoulli_
+    def bernoulli_(self, *, generator=None):
+        return self.copy_(ops.bernoulli(self, generator=generator))
+
+    # Tensor.bfloat16
+    def bfloat16(self):
+        return self.to(ops.bfloat16)
+
+    # Tensor.bincount
+    def bincount(self, weight=None, minlength=0):
+        return ops.bincount(self, weight, minlength)
+
+    # Tensor.bitwise_not
+    def bitwise_not(self):
+        return ops.bitwise_not(self)
+
+    # Tensor.bitwise_not_
+    def bitwise_not_(self):
+        return self.copy_(ops.bitwise_not(self))
+
+    # Tensor.bitwise_and
+    def bitwise_and(self, other):
+        return ops.bitwise_and(self, other)
+
+    # Tensor.bitwise_and_
+    def bitwise_and_(self, other):
+        return self.copy_(ops.bitwise_and(self, other))
+
+    # Tensor.bitwise_or
+    def bitwise_or(self, other):
+        return ops.bitwise_or(self, other)
+
+    # Tensor.bitwise_or_
+    def bitwise_or_(self, other):
+        return self.copy_(ops.bitwise_or(self, other))
+
+    # Tensor.bitwise_xor
+    def bitwise_xor(self, other):
+        return ops.bitwise_xor(self, other)
+
+    # Tensor.bitwise_xor_
+    def bitwise_xor_(self, other):
+        return self.copy_(ops.bitwise_xor(self, other))
+
+    # Tensor.bitwise_left_shift
+
+
+    # Tensor.bitwise_left_shift_
+
+
+    # Tensor.bitwise_right_shift
+
+
+    # Tensor.bitwise_right_shift_
+
+
+    # Tensor.bmm
+    def bmm(self, batch2):
+        return ops.bmm(self, batch2)
+
+    # Tensor.bool
+    def bool(self):
+        return self.to(mindspore.bool_)
+
+    # Tensor.byte
+    def byte(self):
+        return self.to(mindspore.uint8)
+
+    # Tensor.broadcast_to
+    def broadcast_to(self, shape):
+        return ops.broadcast_to(self, shape)
+
+    # Tensor.cauchy_
+
+
+    # Tensor.ceil
+    def ceil(self):
+        return ops.ceil(self)
+
+    # Tensor.ceil_
+    def ceil_(self):
+        return self.copy_(ops.ceil(self))
+
+    # Tensor.char
+    def char(self):
+        return self.to(mindspore.int8)
+
+    # Tensor.cholesky
+
+
+    # Tensor.cholesky_inverse
+
+
+    # Tensor.cholesky_solve
+
+
+    # Tensor.chunk
+    def chunk(self, chunks, dim=0):
+        return ops.chunk(self, chunks, dim)
+
+    # Tensor.clamp
+    def clamp(self, min=None, max=None):
+        return ops.clamp(self, min, max)
+
+    # Tensor.clamp_
+    def clamp_(self, min=None, max=None):
+        return self.copy_(ops.clamp(self, min, max))
+
+    # Tensor.clip
+    def clip(self, min=None, max=None):
+        return ops.clip(self, min, max)
+
+    # Tensor.clip_
+    def clip_(self, min=None, max=None):
+        return self.copy_(ops.clip(self, min, max))
+
+    # Tensor.clone
+    def clone(self, memory_format=None):
+        return ops.clone(self)
+
+    # Tensor.contiguous
+    def contiguous(self):
+        return ops.contiguous(self)
+
+    # Tensor.copy_
+    def copy_(self, value):
+        if self.dtype != value.dtype:
+            value = value.to(self.dtype)
+        return ops.inplace_copy(self, value)
+
+    # Tensor.conj
+    def conj(self):
+        return ops.conj(self)
+
+    # Tensor.conj_physical
+
+
+    # Tensor.conj_physical_
+
+
+    # Tensor.resolve_conj
+
+
+    # Tensor.resolve_neg
+
+
+    # Tensor.copysign
+
+
+    # Tensor.copysign_
+
+
+    # Tensor.cos
+    def cos(self):
+        return ops.cos(self)
+
+    # Tensor.cos_
+    def cos_(self):
+        return self.copy_(ops.cos(self))
+
+    # Tensor.cosh
+    def cosh(self):
+        return ops.cosh(self)
+
+    # Tensor.cosh_
+    def cosh_(self):
+        return self.copy_(ops.cosh(self))
+
+    # Tensor.corrcoef
+
+
+    # Tensor.count_nonzero
+    def count_nonzero(self, dim=None):
+        return ops.count_nonzero(self, dim)
+
+    # Tensor.cov
+
+
+    # Tensor.acosh
+    def acosh(self):
+        return ops.acosh(self)
+
+    # Tensor.acosh_
+    def acosh_(self):
+        return self.copy_(ops.acosh(self))
+
+    # Tensor.arccosh
+    arccosh = acosh
+
+    # Tensor.arccosh_
+    arccosh_ = acosh_
+
+    # Tensor.cross
+
+
+    # Tensor.logcumsumexp
+
+
+    # Tensor.cummax
+
+
+    # Tensor.cummin
+
+
+    # Tensor.cumprod
+
+
+    # Tensor.cumprod_
+
+
+    # Tensor.cumsum
+    def cumsum(self, dim, dtype=None):
+        return ops.cumsum(self, dim, dtype)
+
+    # Tensor.cumsum_
+    def cumsum_(self, dim, dtype=None):
+        return self.copy_(ops.cumsum(self, dim, dtype))
+
+    # Tensor.chalf
+
+
+    # Tensor.cfloat
+
+
+    # Tensor.cdouble
+
+
+    @property
+    def data(self):
+        out = Tensor(self)
+        out._device = self.device
+        return out
+
+    @data.setter
+    def data(self, new_value):
+        if isinstance(self, StubTensor) and isinstance(new_value, StubTensor):
+            self.stub = new_value.stub
+        else:
+            if self.device.type == 'cpu' and new_value.device.type == 'cpu':
+                src_ct = ctypes.c_void_p(new_value.data_ptr())
+                dst_ct = ctypes.c_void_p(self.data_ptr())
+                ctypes.memmove(dst_ct, src_ct, self.nbytes)
+            else:
+                self.assign_value(new_value)
+        self._device = new_value.device
+
+    # Tensor.data_ptr
+    def data_ptr(self):
+        if self.device.type in ['cpu']:
+            self.dyn_shape()
+        # ptr = self._data_ptr()
+        return self._data_ptr()
+
+    def dyn_shape(self):
+        return ops.dyn_shape(self)
+
+    # Tensor.deg2rad
+    def deg2rad(self):
+        return ops.deg2rad(self)
+
+    # Tensor.dequantize
+
+
+    # Tensor.det
+
+
+    # Tensor.dense_dim
+
+
+    # Tensor.diag
+    def diag(self, diagonal=0):
+        return ops.diag(self, diagonal)
+
+    # Tensor.diag_embed
+
+
+    # Tensor.diagflat
+
+
+    # Tensor.diagonal
+    def diagnoal(self, offset=0, dim1=0, dim2=1):
+        return ops.diagonal(self, offset, dim1, dim2)
+
+
+    # Tensor.diagonal_scatter
+
+    # Tensor.fill_diagonal_
+
+
+    # Tensor.fmax
+
+
+    # Tensor.fmin
+
+
+    # Tensor.diff
+
+
+    # Tensor.digamma
+
+
+    # Tensor.digamma_
+
+
+    # Tensor.dim_order
+
+
+    # Tensor.dist
+
+
+    # Tensor.div
+    def div(self, other):
+        return ops.div(self, other)
+
+    # Tensor.div_
+    def div_(self, other):
+        return self.copy_(ops.div(self, other))
+
+    # Tensor.divide
+    divide = div
+
+    # Tensor.divide_
+    divide_ = div_
+
+    # Tensor.dot
+    def dot(self, other):
+        return ops.dot(self, other)
+
+    # Tensor.double
+    def double(self):
+        return self.to(mindspore.float64)
+
+    # Tensor.dsplit
+
+
+    # Tensor.element_size
+    def element_size(self,):
+        return DTYPE_ELEMENT_SIZE_MAP[self.dtype]
+
+    # Tensor.eq
+    def eq(self, other):
+        return ops.eq(self, other)
+
+    # Tensor.eq_
+    def eq_(self, other):
+        return self.copy_(ops.eq(self, other))
+
+    # Tensor.equal
+    def equal(self, other):
+        return ops.eq(self, other)
+
+    # Tensor.erf
+    def erf(self):
+        return ops.erf(self)
+
+    # Tensor.erf_
+    def erf_(self):
+        return self.copy_(ops.erf(self))
+
+    # Tensor.erfc
+    def erfc(self):
+        return ops.erfc(self)
+
+    # Tensor.erfc_
+    def erfc_(self):
+        return self.copy_(ops.erfc(self))
+
+    # Tensor.erfinv
+    def erfinv(self):
+        return ops.erfinv(self)
+
+
+    # Tensor.erfinv_
+    def erfinv_(self):
+        return self.copy_(ops.erfinv(self))
+
+    # Tensor.exp
+    def exp(self):
+        return ops.exp(self)
+
+    # Tensor.exp_
+    def exp_(self):
+        return self.copy_(ops.exp(self))
+
+
+    # Tensor.expm1
+    def expm1(self):
+        return ops.expm1(self)
+
+
+    # Tensor.expm1_
+    def expm1_(self):
+        return self.copy_(ops.expm1(self))
+
+
+    # Tensor.expand
+    def expand(self, *size):
+        if len(size) == 1:
+            size = size[0]
+        return self.broadcast_to(size)
+
+    # Tensor.expand_as
+    def expand_as(self, other):
+        return self.expand(other.size())
+
+    # Tensor.exponential_
+
+
+    # Tensor.fix
+
+
+    # Tensor.fix_
+
+
+    # Tensor.fill_
+    def fill_(self, value):
+        ops.inplace_fill(self, value)
+        return self
+
+    # Tensor.flatten
+    def flatten(self, start_dim=0, end_dim=-1):
+        return ops.flatten(self, start_dim, end_dim)
+
+    # Tensor.flip
+    def flip(self, dims):
+        return ops.flip(self, dims)
+
+    # Tensor.fliplr
+
+
+    # Tensor.flipud
+
+
+    # Tensor.float
+    def float(self):
+        return self.to(mindspore.float32)
+
+    # Tensor.float_power
+    def float_power(self, exponent):
+        return ops.float_power(self, exponent)
+
+    # Tensor.float_power_
+    def float_power_(self, exponent):
+        return self.copy_(ops.float_power(self, exponent))
+
+    # Tensor.floor
+    def floor(self):
+        return ops.floor(self)
+
+    # Tensor.floor_
+    def floor_(self):
+        return self.copy_(ops.floor(self))
+
+    # Tensor.floor_divide
+    def floor_divide(self, other):
+        return ops.floor_divide(self, other)
+
+    # Tensor.floor_divide_
+    def floor_divide_(self, other):
+        return self.copy_(ops.floor_divide(self, other))
+
+
+    # Tensor.fmod
+    def fmod(self, other):
+        return ops.fmod(self, other)
+
+    # Tensor.fmod_
+    def fmod_(self, other):
+        return self.copy_(ops.fmod(self, other))
+
+    # Tensor.frac
+    def frac(self):
+        return ops.frac(self)
+
+    # Tensor.frac_
+    def frac_(self):
+        return self.copy_(ops.frac(self))
+
+
+    # Tensor.frexp
+
+
+    # Tensor.gather
+    def gather(self, dim, index):
+        return ops.gather(self, dim, index)
+
+    # Tensor.gcd
+
+
+    # Tensor.gcd_
+
+
+    # Tensor.ge
+    def ge(self, other):
+        return ops.ge(self, other)
+
+    # Tensor.ge_
+    def ge_(self, other):
+        return self.copy_(ops.ge(self, other))
+
+    # Tensor.greater_equal
+    greater_equal = ge
+
+    # Tensor.greater_equal_
+    greater_equal_ = ge_
+
+
+    # Tensor.geometric_
+
+
+    # Tensor.geqrf
+
+
+    # Tensor.ger
+
+
+    # Tensor.get_device
+    def get_device(self):
+        return self.device.index
+
+    # Tensor.gt
+    def gt(self, other):
+        return ops.gt(self, other)
+
+    # Tensor.gt_
+    def gt_(self, other):
+        return self.copy_(ops.gt(self, other))
+
+    # Tensor.greater
+    greater = gt
+
+    # Tensor.greater_
+    greater_ = gt_
+
+
+    # Tensor.half
+    def half(self):
+        return self.to(mindspore.float16)
+
+    # Tensor.hardshrink
+    def hardshrink(self, lambd=0.5):
+        return ops.nn.functional.hardshrink(self, lambd)
+
+    # Tensor.heaviside
+
+
+    # Tensor.histc
+
+
+    # Tensor.histogram
+
+
+    # Tensor.hsplit
+
+
+    # Tensor.hypot
+
+
+    # Tensor.hypot_
+
+
+    # Tensor.i0
+
+
+    # Tensor.i0_
+
+
+    # Tensor.igamma
+
+
+    # Tensor.igamma_
+
+
+    # Tensor.igammac
+
+
+    # Tensor.igammac_
+
+
+    # Tensor.index_add_
+    def index_add_(self, dim, index, source, *, alpha=1):
+        return self.copy_(ops.index_add(self, dim, source, alpha=alpha))
+
+    # Tensor.index_add
+    def index_add(self, dim, index, source, *, alpha=1):
+        return ops.index_add(self, dim, source, alpha=alpha)
+
+    # Tensor.index_copy_
+
+
+    # Tensor.index_copy
+
+
+    # Tensor.index_fill_
+
+
+    # Tensor.index_fill
+
+
+    # Tensor.index_put_
+
+
+    # Tensor.index_put
+
+
+    # Tensor.index_reduce_
+
+
+    # Tensor.index_reduce
+
+    # Tensor.index_select
+    def index_select(self, dim, index):
+        return ops.index_select(self, dim, index)
+
+    # Tensor.indices
+
+
+    # Tensor.inner
+
+
+    # Tensor.int
+    def int(self):
+        return self.to(mindspore.int64)
+
+    # Tensor.int_repr
+
+
+    # Tensor.inverse
+
+
+    # Tensor.isclose
+    def isclose(self, other, rtol=1e-05, atol=1e-08, equal_nan=False):
+        return ops.isclose(self, other, rtol, atol, equal_nan)
+
+    # Tensor.isfinite
+    def isfinite(self):
+        return ops.isfinite(self)
+
+    # Tensor.isinf
+    def isinf(self):
+        return ops.isinf(self)
+
+    # Tensor.isposinf
+
+
+    # Tensor.isneginf
+
+
+    # Tensor.isnan
+    def isnan(self):
+        return ops.isnan(self)
+
+    # Tensor.is_contiguous
+    # def is_contiguous(self):
+    #     return self.is_contiguous()
+
+    # Tensor.is_complex
+    def is_complex(self):
+        return False
+
+    # Tensor.is_conj
+
+
+    # Tensor.is_floating_point
+    def is_floating_point(self):
+        return isinstance(self.dtype, typing.Float)
+
+    # Tensor.is_inference
+
+
+    # Tensor.is_leaf
+    @property
+    def is_leaf(self):
+        if not self.requires_grad:
+            return True
+        if self.requires_grad and self._user_created:
+            return True
+        return False
+
+    # Tensor.is_pinned
+    def is_pinned(self):
+        return False
+
+    # Tensor.is_set_to
+
+
+    # Tensor.is_shared
+
+
+    # Tensor.is_signed
+
+
+    # Tensor.is_sparse
+    @property
+    def is_sparse(self):
+        return False
+
+    # Tensor.istft
+
+
+    # Tensor.isreal
+
+
+    # Tensor.item
+    def item(self):
+        return self._item()
+
+    # Tensor.kthvalue
+
+    @property
+    def layout(self):
+        return None
+
+    # Tensor.lcm
+
+
+    # Tensor.lcm_
+
+
+    # Tensor.ldexp
+
+
+    # Tensor.ldexp_
+
+
+    # Tensor.le
+    def le(self, other):
+        return ops.le(self, other)
+
+    # Tensor.le_
+    def le_(self, other):
+        return self.copy_(ops.le(self, other))
+
+    # Tensor.less_equal
+    less_equal = le
+
+    # Tensor.less_equal_
+    less_equal_ = le_
+
+
+    # Tensor.lerp
+    def lerp(self, end, weight):
+        return ops.lerp(self, end, weight)
+
+    # Tensor.lerp_
+    def lerp_(self, end, weight):
+        return self.copy_(ops.lerp(self, end, weight))
+
+
+    # Tensor.lgamma
+
+
+    # Tensor.lgamma_
+
+
+    # Tensor.log
+    def log(self):
+        return ops.log(self)
+
+    # Tensor.log_
+    def log_(self):
+        return self.copy_(ops.log(self))
+
+    # Tensor.logdet
+
+
+    # Tensor.log10
+    def log10(self):
+        return ops.log10(self)
+
+
+    # Tensor.log10_
+    def log10_(self):
+        return self.copy_(ops.log10(self))
+
+    # Tensor.log1p
+    def log1p(self):
+        return ops.log1p(self)
+
+
+    # Tensor.log1p_
+    def log1p_(self):
+        return self.copy_(ops.log1p(self))
+
+
+    # Tensor.log2
+    def log2(self):
+        return ops.log2(self)
+
+
+    # Tensor.log2_
+    def log2_(self):
+        return self.copy_(ops.log2(self))
+
+
+    # Tensor.log_normal_
+
+
+    # Tensor.logaddexp
+
+
+    # Tensor.logaddexp2
+
+
+    # Tensor.logsumexp
+    def logsumexp(self, dim, keepdim=False):
+        return ops.logsumexp(self, dim, keepdim)
+
+    # Tensor.logical_and
+    def logical_and(self, other):
+        return ops.logical_and(self, other)
+
+    # Tensor.logical_and_
+    def logical_and_(self, other):
+        return self.copy_(ops.logical_and(self, other))
+
+
+    # Tensor.logical_not
+    def logical_not(self):
+        return ops.logical_not(self)
+
+
+    # Tensor.logical_not_
+    def logical_not_(self):
+        return self.copy_(ops.logical_not(self))
+
+
+    # Tensor.logical_or
+    def logical_or(self, other):
+        return ops.logical_or(self, other)
+
+
+    # Tensor.logical_or_
+    def logical_or_(self, other):
+        return self.copy_(ops.logical_or(self, other))
+
+
+    # Tensor.logical_xor
+    def logical_xor(self, other):
+        return ops.logical_xor(self, other)
+
+    # Tensor.logical_xor_
+    def logical_xor_(self, other):
+        return self.copy_(ops.logical_xor(self, other))
+
+    # Tensor.logit
+
+
+    # Tensor.logit_
+
+
+    # Tensor.long
+    def long(self):
+        return self.to(mindspore.int64)
+
+    # Tensor.lt
+    def lt(self, other):
+        return ops.lt(self, other)
+
+    # Tensor.lt_
+    def lt_(self, other):
+        return self.copy_(ops.lt(self, other))
+
+    # Tensor.less
+    less = lt
+
+    # Tensor.less_
+    less_ = lt_
+
+    # Tensor.lu
+
+
+    # Tensor.lu_solve
+
+
+    # Tensor.as_subclass
+
+
+    # Tensor.map_
+
+
+    # Tensor.masked_scatter_
+
+
+    # Tensor.masked_scatter
+
+
+    # Tensor.masked_fill_
+    def masked_fill_(self, mask, value):
+        return self.copy_(ops.masked_fill(self, mask, value))
+
+    # Tensor.masked_fill
+    def masked_fill(self, mask, value):
+        return ops.masked_fill(self, mask, value)
+
+    # Tensor.masked_select
+    def masked_select(self, mask):
+        return ops.masked_select(self, mask)
+
+    # Tensor.matmul
+    def matmul(self, other):
+        return ops.matmul(self, other)
+
+    # Tensor.matrix_power
+
+
+    # Tensor.matrix_exp
+
+
+    # Tensor.max
+    def max(self, dim=None, keepdim=False):
+        return ops.max(self, dim, keepdim)
+
+    # Tensor.maximum
+    def maximum(self, other):
+        return ops.maximum(self, other)
+
+    # Tensor.mean
+    def mean(self, dim=None, keepdim=False, *, dtype=None, **kwargs):
+        dim = kwargs.pop('axis', dim)
+        return ops.mean(self, dim, keepdim, dtype=dtype)
+
+    # Tensor.module_load
+
+
+    # Tensor.nanmean
+
+
+    # Tensor.median
+    def median(self, dim=-1, keepdim=False):
+        return ops.median(self, dim, keepdim)
+
+    # Tensor.nanmedian
+
+
+    # Tensor.min
+    def min(self, dim=None, keepdim=False):
+        return ops.min(self, dim, keepdim)
+
+    # Tensor.minimum
+    def minimum(self, other):
+        return ops.minimum(self, other)
+
+    # Tensor.mm
+    mm = matmul
+
+    # Tensor.smm
+
+
+    # Tensor.mode
+    def mode(self, dim=None, keepdim=False):
+        return ops.mode(self, dim, keepdim)
+
+    # Tensor.movedim
+    def movedim(self, source, destination):
+        return ops.movedim(source, destination)
+
+    # Tensor.moveaxis
+    moveaxis = movedim
+
+    # Tensor.msort
+    def msort(self):
+        return ops.msort(self)
+
+    # Tensor.mul
+    def mul(self, other):
+        return ops.mul(self, other)
+
+    # Tensor.mul_
+    def mul_(self, other):
+        return self.copy_(ops.mul(self, other))
+
+    # Tensor.multiply
+    multiply = mul
+
+    # Tensor.multiply_
+    multiply_ = mul_
+
+
+    # Tensor.multinomial
+    def multinomial(self, num_samples, replacement=False, *, generator=None):
+        return ops.multinomial(self, num_samples, replacement, generator=generator)
+
+    # Tensor.mv
+
+
+    # Tensor.mvlgamma
+
+
+    # Tensor.mvlgamma_
+
+
+    # Tensor.nansum
+    def nansum(self, dim=None, keepdim=False, *, dtype=None):
+        return ops.nansum(self, dim, keepdim, dtype=dtype)
+
+    # Tensor.narrow
+    def narrow(self, dim, start, length):
+        return ops.narrow(self, dim, start, length)
+
+    # Tensor.narrow_copy
+    def narrow_copy(self, dimension, start, length):
+        return ops.narrow(self, dimension, start, length).clone()
+
+    # Tensor.nan_to_num
+    def nan_to_num(self, nan=0.0, posinf=None, neginf=None):
+        return ops.nan_to_num(self, nan, posinf, neginf)
+
+    # Tensor.nan_to_num_
+    def nan_to_num_(self, nan=0.0, posinf=None, neginf=None):
+        return self.copy_(ops.nan_to_num(self, nan, posinf, neginf))
+
+    # Tensor.ne
+    def ne(self, other):
+        return ops.ne(self, other)
+
+    # Tensor.ne_
+    def ne_(self, other):
+        return self.copy_(ops.ne(self, other))
+
+    # Tensor.not_equal
+    not_equal = ne
+
+    # Tensor.not_equal_
+    not_equal_ = ne_
+
+
+    # Tensor.neg
+    def neg(self):
+        return ops.neg(self)
+
+    # Tensor.neg_
+    def neg_(self):
+        return self.copy_(ops.neg(self))
+
+    # Tensor.negative
+    negative = neg
+
+    # Tensor.negative_
+    negative_ = neg_
+
+
+    # Tensor.numel
+    def numel(self):
+        return math.prod(self.shape)
+
+    # Tensor.nelement
+    nelement = numel
+
+    # Tensor.nextafter
+
+
+    # Tensor.nextafter_
+
+
+    # Tensor.nonzero
+    def nonzero(self, as_tuple=False):
+        return ops.nonzero(self, as_tuple=as_tuple)
+
+    # Tensor.norm
+    def norm(self, p='fro', dim=None, keepdim=False, dtype=None):
+        return ops.norm(self, p, dim, keepdim, dtype)
+
+    # Tensor.normal_
+    def normal_(self, mean=0, std=1, *, generator=None):
+        return ops.inplace_normal(self, mean, std, generator=generator)
+
+    # Tensor.numpy
+    def numpy(self):
+        assert self.device.type == 'cpu'
+        return self.asnumpy()
+
+    def mindspore(self):
+        return mindspore.Tensor(self._data)
+
+    # Tensor.orgqr
+
+
+    # Tensor.ormqr
+
+
+    # Tensor.outer
+    def outer(self, vec2):
+        return ops.outer(self, vec2)
+
+    # Tensor.permute
+    def permute(self, *dims):
+        return ops.permute(self, dims)
+
+    # Tensor.pin_memory
+
+
+    # Tensor.pinverse
+
+
+    # Tensor.polygamma
+
+
+    # Tensor.polygamma_
+
+
+    # Tensor.positive
+    def positive(self):
+        return self
+
+    # Tensor.pow
+    def pow(self, exponent):
+        return ops.pow(self, exponent)
+
+    # Tensor.pow_
+    def pow_(self, exponent):
+        return self.copy_(ops.pow(self, exponent))
+
+
+    # Tensor.prod
+    def prod(self, dim=None, keepdim=False, dtype=None):
+        return ops.prod(self, dim, keepdim, dtype=dtype)
+
+    # Tensor.put_
+
+
+    # Tensor.qr
+
+
+    # Tensor.qscheme
+
+
+    # Tensor.quantile
+
+
+    # Tensor.nanquantile
+
+
+    # Tensor.q_scale
+
+
+    # Tensor.q_zero_point
+
+
+    # Tensor.q_per_channel_scales
+
+
+    # Tensor.q_per_channel_zero_points
+
+
+    # Tensor.q_per_channel_axis
+
+
+    # Tensor.rad2deg
+
+
+    # Tensor.ravel
+    def ravel(self):
+        return ops.ravel(self)
+
+    # Tensor.reciprocal
+    def reciprocal(self):
+        return ops.reciprocal(self)
+
+    # Tensor.reciprocal_
+    def reciprocal_(self):
+        return self.copy_(ops.reciprocal(self))
+
+
+    # Tensor.record_stream
+    def record_stream(self, stream):
+        pass
+
+    # Tensor.register_hook
+    def register_hook(self, hook):
+        return self._data.register_hook(hook)
+
+    # Tensor.register_post_accumulate_grad_hook
+
+
+    # Tensor.remainder
+    def remainder(self, other):
+        return ops.remainder(self, other)
+
+    # Tensor.remainder_
+    def remainder_(self, other):
+        return self.copy_(ops.remainder(self, other))
+
+    # Tensor.renorm
+
+
+    # Tensor.renorm_
+
+
+    # Tensor.repeat
+    def repeat(self, *repeats):
+        return ops.tile(self, repeats)
+
+    # Tensor.repeat_interleave
+    def repeat_interleave(self, repeats, dim=None):
+        return ops.repeat_interleave(self, repeats, dim)
+
+    # Tensor.reshape
+    def reshape(self, *shape):
+        return ops.reshape(self, *shape)
+
+    # Tensor.reshape_as
+    def reshape_as(self, other):
+        return self.reshape(*other.shape)
+
+    # Tensor.resize_
+    def resize_(self, *shape):
+        self.data = ops.reshape(self, *shape)
+        return self
+
+    # Tensor.resize_as_
+    def resize_as_(self, other):
+        self.data = ops.reshape(self, *other.shape)
+        return self
+
+    # Tensor.retains_grad
+    @property
+    def retains_grad(self):
+        return not self.is_leaf and self._retain_grad
+
+    # Tensor.roll
+    def roll(self, shifts, dims=None):
+        return ops.roll(self, shifts, dims)
+
+    # Tensor.rot90
+
+
+    # Tensor.round
+    def round(self):
+        return ops.round(self)
+
+    # Tensor.round_
+    def round_(self):
+        return self.copy_(ops.round(self))
+
+
+    # Tensor.rsqrt
+    def rsqrt(self):
+        return ops.rsqrt(self)
+
+    # Tensor.rsqrt_
+    def rsqrt_(self):
+        return self.copy_(ops.rsqrt(self))
+
+
+    # Tensor.scatter
+    def scatter(self, dim, index, src):
+        return ops.scatter(self, dim, index, src)
+
+    # Tensor.scatter_
+    def scatter_(self, dim, index, src):
+        return self.copy_(ops.scatter(self, dim, index, src))
+
+    # Tensor.scatter_add_
+    def scatter_add_(self, dim, index, src):
+        return self.copy_(ops.scatter_add(self, dim, index, src))
+
+    # Tensor.scatter_add
+    def scatter_add(self, dim, index, src):
+        return ops.scatter_add(self, dim, index, src)
+
+
+    # Tensor.scatter_reduce_
+    def scatter_reduce_(self, dim, index, src):
+        return self.copy_(ops.scatter_reduce(self, dim, index, src))
+
+
+    # Tensor.scatter_reduce
+    def scatter_reduce(self, dim, index, src):
+        return ops.scatter_reduce(self, dim, index, src)
+
+
+    # Tensor.select
+    def select(self, dim, index):
+        return ops.select(self, dim, index)
+
+    # Tensor.select_scatter
+
+
+    # Tensor.set_
+
+
+    # Tensor.share_memory_
+
+
+    # Tensor.short
+    def short(self):
+        return self.to(mindspore.int16)
+
+    # Tensor.sigmoid
+    def sigmoid(self):
+        return ops.sigmoid(self)
+
+    # Tensor.sigmoid_
+    def sigmoid_(self):
+        return self.copy_(ops.sigmoid(self))
+
+    # Tensor.sign
+    def sign(self):
+        return ops.sign(self)
+
+    # Tensor.sign_
+    def sign_(self):
+        return self.copy_(ops.sign(self))
+
+
+    # Tensor.signbit
+
+
+    # Tensor.sgn
+
+
+    # Tensor.sgn_
+
+
+    # Tensor.sin
+    def sin(self):
+        return ops.sin(self)
+
+    # Tensor.sin_
+    def sin_(self):
+        return self.copy_(ops.sin(self))
+
+
+    # Tensor.sinc
+    def sinc(self):
+        return ops.sinc(self)
+
+
+    # Tensor.sinc_
+    def sinc_(self):
+        return self.copy_(ops.sinc(self))
+
+    # Tensor.sinh
+    def sinh(self):
+        return ops.sinh(self)
+
+
+    # Tensor.sinh_
+    def sinh_(self):
+        return self.copy_(ops.sinh(self))
+
+
+    # Tensor.asinh
+    def asinh(self):
+        return ops.asinh(self)
+
+
+    # Tensor.asinh_
+    def asinh_(self):
+        return self.copy_(ops.asinh(self))
+
+
+    # Tensor.arcsinh
+    arcsinh_ = asinh
+
+    # Tensor.arcsinh_
+    arcsinh_ = asinh_
+
+
+    # Tensor.size
+    def size(self, dim=None):
+        if dim is None:
+            return self.shape
+        assert isinstance(dim, int), f'`dim` must be int but got {type(dim)}'
+        return self.shape[dim]
+
+    # Tensor.slogdet
+
+
+    # Tensor.slice_scatter
+
+
+    # Tensor.softmax
+    def softmax(self, dim):
+        return ops.softmax(self, dim)
+
+    # Tensor.sort
+    def sort(self, dim=-1, descending=False):
+        return ops.sort(self, dim=dim, descending=descending)
+
+    # Tensor.split
+    def split(self, split_size, dim=0):
+        return ops.split(self, split_size, dim)
+
+    # Tensor.sparse_mask
+
+
+    # Tensor.sparse_dim
+
+
+    # Tensor.sqrt
+    def sqrt(self):
+        return ops.sqrt(self)
+
+    # Tensor.sqrt_
+    def sqrt_(self):
+        return self.copy_(ops.sqrt(self))
+
+
+    # Tensor.square
+    def square(self):
+        return ops.square(self)
+
+
+    # Tensor.square_
+    def square_(self):
+        return self.copy_(ops.square(self))
+
+    # Tensor.squeeze
+    def squeeze(self, *args, **kwargs):
+        return ops.squeeze(self, *args, **kwargs)
+
+    # Tensor.squeeze_
+    def squeeze_(self, dim=None):
+        return self.copy_(ops.squeeze(self, dim))
+
+
+    # Tensor.std
+    def std(self, dim=None, *, correction=1, keepdim=False):
+        return ops.std(self, dim, correction=correction, keepdim=keepdim)
+
+    # Tensor.stft
+
+
+    # Tensor.storage
+
+
+    # Tensor.untyped_storage
+    def untyped_storage(self):
+        return UntypedStorage(self)
+
+    # Tensor.storage_offset
+
+
+    # Tensor.storage_type
+
+
+    # Tensor.stride
+    def stride(self, dim=None):
+        if dim is None:
+            return self._data.stride()
+        return self._data.stride()[dim]
+
+
+    # Tensor.sub
+    def sub(self, other, *, alpha=1):
+        return ops.sub(self, other, alpha=alpha)
+
+    # Tensor.sub_
+    def sub_(self, other, *, alpha=1):
+        return self.copy_(ops.sub(self, other, alpha=alpha))
+
+
+    # Tensor.subtract
+    subtract = sub
+
+    # Tensor.subtract_
+    subtract_ = sub_
+
+    # Tensor.sum
+    def sum(self, dim=None, keepdim=False, dtype=None):
+        return ops.sum(self, dim, keepdim, dtype=dtype)
+
+    # Tensor.sum_to_size
+
+
+    # Tensor.svd
+
+
+    # Tensor.swapaxes
+    def swapaxes(self, dim0, dim1):
+        return ops.swapaxes(self, dim0, dim1)
+
+    # Tensor.swapdims
+    swapdims = swapaxes
+
+    @property
+    def T(self):
+        return self.t()
+
+    # Tensor.t
+    def t(self):
+        return ops.t(self)
+
+    # Tensor.t_
+    def t_(self):
+        self.data = ops.t(self)
+        return self
+
+    # Tensor.tensor_split
+
+
+    # Tensor.tile
+    def tile(self, *dims):
+        return ops.tile(self, dims)
+
+    # Tensor.to
+    def _move_to(self, device, non_blocking=False):
+        if device.type == 'meta':
+            out = Tensor(Tensor_(shape=self.shape, dtype=self.dtype))
+            out._device = device
+            return out
+        if self.device == device:
+            return self
+        else:
+            if DEVICE_TARGET == 'Ascend' and device.type == 'cuda':
+                device.type = 'npu'
+            device_str = device_map[device.type]
+            # if device_str == 'Ascend':
+            #     out = ops.empty_like(self, device=device)
+            #     ACL_MEMCPY_HOST_TO_DEVICE = 1
+            #     ret = acl.rt.memcpy(out.data_ptr(), self.nbytes, self.data_ptr(), self.nbytes, ACL_MEMCPY_HOST_TO_DEVICE)
+            # else:
+            # self.data_sync(True)
+            if self.device.type == 'cpu':
+                self.data_ptr()
+            data = self.move_to(device_str, blocking=not non_blocking)
+
+            out = Tensor(data)
+            out._device = device
+            return out
+
+    def to(self, *args, **kwargs):
+        non_blocking = kwargs.get('non_blocking', False)
+        copy = kwargs.get('copy', False)
+        out = self
+        device = kwargs.pop('device', None)
+        dtype = kwargs.pop('dtype', None)
+        if device:
+            args += (device,)
+        if dtype:
+            args += (dtype,)
+
+        for arg in args:
+            if isinstance(arg, device_):
+                out = Tensor._move_to(out, arg, non_blocking)
+            elif isinstance(arg, int):
+                device = device_(arg)
+                out = Tensor._move_to(out, device, non_blocking)
+            elif isinstance(arg, str):
+                device = device_(arg)
+                out = Tensor._move_to(out, device, non_blocking)
+            elif isinstance(arg, mindspore.common.dtype.Type):
+                if out.dtype == arg:
+                    return out
+                else:
+                    out = ops.cast(out, arg)
+            elif isinstance(arg, Tensor):
+                out = Tensor._move_to(out, arg.device, non_blocking)
+                if out.dtype == arg:
+                    return out
+                else:
+                    out = ops.cast(out, arg)
+        return out
+
+    # Tensor.take
+    def take(self, index):
+        return ops.take(self, index)
+
+    # Tensor.take_along_dim
+
+
+    # Tensor.tan
+    def tan(self):
+        return ops.tan(self)
+
+    # Tensor.tan_
+    def tan_(self):
+        return self.copy_(ops.tan(self))
+
+
+    # Tensor.tanh
+    def tanh(self):
+        return ops.tanh(self)
+
+
+    # Tensor.tanh_
+    def tanh_(self):
+        return self.copy_(ops.tanh(self))
+
+
+    # Tensor.atanh
+
+    def atanh(self):
+        return ops.atanh(self)
+
+
+    # Tensor.atanh_
+    def atanh_(self):
+        return self.copy_(ops.atanh(self))
+
+
+    # Tensor.arctanh
+    arctanh = atanh
+
+    # Tensor.arctanh_
+    arctanh_ = atanh_
+
+    # Tensor.tolist
+    # def tolist(self):
+    #     return self.numpy().tolist()
+
+    # Tensor.topk
+    def topk(self, k, dim=-1, largest=True, sorted=True):
+        return ops.topk(self, k, dim, largest, sorted)
+
+    # Tensor.to_dense
+
+
+    # Tensor.to_sparse
+
+
+    # Tensor.to_sparse_csr
+
+
+    # Tensor.to_sparse_csc
+
+
+    # Tensor.to_sparse_bsr
+
+
+    # Tensor.to_sparse_bsc
+
+
+    # Tensor.trace
+
+
+    # Tensor.transpose
+    def transpose(self, dim0, dim1):
+        return ops.transpose(self, dim0, dim1)
+
+    # Tensor.transpose_
+    def transpose_(self, dim0, dim1):
+        self.data = ops.transpose(self, dim0, dim1)
+        return self
+
+    # Tensor.triangular_solve
+
+
+    # Tensor.tril
+    def tril(self, diagonal=0):
+        return ops.tril(self, diagonal)
+
+    # Tensor.tril_
+    def tril_(self, diagonal=0):
+        return self.copy_(ops.tril(self, diagonal))
+
+
+    # Tensor.triu
+    def triu(self, diagonal=0):
+        return ops.triu(self, diagonal)
+
+
+    # Tensor.triu_
+    def triu_(self, diagonal=0):
+        return self.copy_(ops.triu(self, diagonal))
+
+
+    # Tensor.true_divide
+    def true_divide(self, other):
+        return ops.true_divide(self, other)
+
+    # Tensor.true_divide_
+    def true_divide_(self, other):
+        return self.copy_(ops.true_divide(self, other))
+
+
+    # Tensor.trunc
+    def trunc(self):
+        return ops.trunc(self)
+
+    # Tensor.trunc_
+    def trunc_(self):
+        return self.copy_(ops.trunc(self))
+
+
+    # Tensor.type
+    def type(self, dtype=None, non_blocking=False):
+        if dtype is None:
+            dtype_str = str(dtype_class_map[self.dtype])[8:-2]
+            dtype_str = dtype_str.replace('_tensor', self.device.type) \
+                if self.device.type != 'cpu' else dtype_str.replace('._tensor', '')
+            return dtype_str
+        return self.to(dtype, non_blocking=non_blocking)
+
+    # Tensor.type_as
+    def type_as(self, tensor):
+        return self.type(tensor.dtype)
+
+    # Tensor.unbind
+    def unbind(self, dim=0):
+        return ops.unbind(self, dim)
+
+    # Tensor.unflatten
+    def unflatten(self, dim, sizes):
+        return ops.unflatten(self, dim, sizes)
+
+    # Tensor.unfold
+    def unfold(self, dimension, size, step):
+        return ops.unfold(self, dimension, size, step)
+
+    # Tensor.uniform_
+    def uniform_(self, *args, **kwargs):
+        return ops.inplace_uniform(self, *args, **kwargs)
+
+    # Tensor.random_
+    def random_(self, *args, **kwargs):
+        return ops.inplace_random(self, *args, **kwargs)
+
+    # Tensor.unique
+    def unique(self, sorted=True, return_inverse=False, return_counts=False, dim=None):
+        return ops.unique(self, sorted, return_inverse, return_counts, dim)
+
+    # Tensor.unique_consecutive
+    def unique_consecutive(self, return_inverse=False, return_counts=False, dim=None):
+        return ops.unique_consecutive(self, return_inverse, return_counts, dim)
+
+    # Tensor.unsqueeze
+    def unsqueeze(self, dim):
+        return ops.unsqueeze(self, dim)
+
+    # Tensor.unsqueeze_
+    def unsqueeze_(self, dim):
+        return self.copy_(ops.unsqueeze(self, dim))
+
+
+    # Tensor.values
+
+
+    # Tensor.var
+    def var(self, dim=None, *, correction=1, keepdim=False):
+        return ops.var(self, dim, correction=correction, keepdim=keepdim)
+
+    # Tensor.vdot
+
+
+    # Tensor.view
+    def view(self, *shape):
+        return self.reshape(*shape)
+
+    # Tensor.view_as
+    def view_as(self, other):
+        return self.reshape(*other.shape)
+
+    # Tensor.vsplit
+
+
+    # Tensor.where
+    def where(self, condition, y):
+        return ops.where(condition, self, y)
+
+    # Tensor.xlogy
+    def xlogy(self, other):
+        return ops.xlogy(self, other)
+
+    # Tensor.xlogy_
+    def xlogy_(self, other):
+        return self.copy_(ops.xlogy(self, other))
+
+    # Tensor.zero_
+    def zero_(self):
+        return ops.inplace_zero(self) 
+
+    # Tensor.detach
+    def detach(self):
+        out = self.data
+        out._requires_grad = False
+        return out
+
+    # Tensor.detach_
+    def detach_(self):
+        self.requires_grad_(self)
+        return self
+
+    def stub_sync(self):
+        if self.stub:
+            self.tensor = self.stub.get_value()
+            self.stub = None
+        return self.tensor
+
+    @property
+    def is_cuda(self):
+        device_type = 'cuda'
+        if DEVICE_TARGET == 'Ascend':
+            device_type = 'npu'
+        return self.device.type == device_type
+
+    def tobytes(self):
+        return self.get_bytes()
+    
+    def __contains__(self, item):
+        return ops.eq(self, item).any()
+
+    def __float__(self):
+        out = self.item()
+        return round(float(out), 5)
+
+    def pin_memory(self, *args, **kwargs):
+        return self
+
+
+    @property
+    def shape(self):
+        if isinstance(self, StubTensor):
+            if self.stub is not None:
+                stub_shape = self.stub.get_shape()
+            else:
+                stub_shape = self.tensor.shape
+            return Size(stub_shape)
+        return Size(self._shape)
+
+    @property
+    def is_meta(self):
+        return False
+
+    @property
+    def device(self):
+        if not hasattr(self, '_device'):
+            raise ValueError('Tensor must have device')
+        return self._device
 
     def _convert_numpy_slices(self, key):
         """递归转换 key 中的 NumPy 整数为内置 int"""
@@ -298,544 +2483,41 @@ def enable_mindspore_patch():
         else:
             return key
 
-    Tensor._convert_numpy_slices = _convert_numpy_slices
-    StubTensor._convert_numpy_slices = _convert_numpy_slices
-
-    origin_setitem = Tensor.__setitem__
-    def __setitem__(self, slices, value):
-        slices = self._convert_numpy_slices(slices)
-        if isinstance(value, float):
-            if value == float('inf'):
-                value = ops.finfo(self.dtype).max
-            elif value == -float('inf'):
-                value = ops.finfo(self.dtype).min
-        if isinstance(slices, tuple):
-            new_slices = ()
-            for s in slices:
-                if isinstance(s, range):
-                    s = list(s)
-                new_slices += (s,)
-            slices = new_slices
-        if not isinstance(value, Tensor):
-            value = tensor(value, dtype=self.dtype)
-        else:
-            value = value.to(self.dtype)
-
-        if 1 in value.shape and self[slices].ndim != value.ndim:
-            value = value.squeeze()
-
-        return origin_setitem(self, slices, value)
-
-    Tensor.__setitem__ = __setitem__
-    StubTensor.__setitem__ = __setitem__
-
-    def numel(self):
-        return math.prod(self.shape)
-
-    Tensor.numel = numel
-    StubTensor.numel = numel
-    Tensor.nelement = numel
-    StubTensor.nelement = numel
-
-    @property
-    def nbytes(self):
-        return self.numel() * self.element_size()
-
-    Tensor.nbytes = nbytes
-    StubTensor.nbytes = nbytes
-
-    Tensor.normal_ = ops.inplace_normal
-    StubTensor.normal_ = ops.inplace_normal
-
-
-    Tensor.softmax = ops.softmax
-    StubTensor.softmax = ops.softmax
-
-    Tensor.squeeze = ops.squeeze
-    StubTensor.squeeze = ops.squeeze
-
-    Tensor.unsqueeze = ops.unsqueeze
-    StubTensor.unsqueeze = ops.unsqueeze
-
-    Tensor.log_softmax = ops.log_softmax
-    StubTensor.log_softmax = ops.log_softmax
-
-    def untyped_storage(self):
-        return UntypedStorage(self)
-    
-    Tensor.untyped_storage = untyped_storage
-    StubTensor.untyped_storage = untyped_storage
-
-    def element_size(self,):
-        return DTYPE_ELEMENT_SIZE_MAP[self.dtype]
-
-    Tensor.element_size = element_size
-    StubTensor.element_size = element_size
-
-    @property
-    def layout(self):
-        return None
-
-    Tensor.layout = layout
-    StubTensor.layout = layout
-
-    def __add__(self, other):
-        # if 0 in self.shape:
-        #     return self
-        return ops.add(self, other)
-    
-    Tensor.__add__ = __add__
-    StubTensor.__add__ = __add__
-
-    def __iadd__(self, other):
-        self.data = ops.add(self, other)
-        return self
-
-    Tensor.__iadd__ = __iadd__
-    StubTensor.__iadd__ = __iadd__
-
-    def __sub__(self, other):
-        # if 0 in self.shape:
-        #     return self
-        if isinstance(other, (np.ndarray, np.integer)):
-            other = tensor(other)
-        return ops.sub(self, other)
-    
-    Tensor.__sub__ = __sub__
-    StubTensor.__sub__ = __sub__
-
-
-    def __mul__(self, other):
-        # if 0 in self.shape:
-        #     return self
-        if isinstance(other, (np.ndarray, np.integer)):
-            other = tensor(other)
-        return ops.mul(self, other)
-    
-    Tensor.__mul__ = __mul__
-    StubTensor.__mul__ = __mul__
-
-
-    def __div__(self, other):
-        # if 0 in self.shape:
-        #     return self
-        if isinstance(other, (np.ndarray, np.integer)):
-            other = tensor(other)
-        return ops.div(self, other)
-    
-    Tensor.__truediv__ = __div__
-    StubTensor.__truediv__ = __div__
-
-    Tensor.repeat_interleave = ops.repeat_interleave
-    StubTensor.repeat_interleave = ops.repeat_interleave
-
-    def dim(self):
-        return self.ndim
-
-    Tensor.dim = dim
-    StubTensor.dim = dim
-
-    def unfold(self, dimension, size, step):
-        return ops.unfold(self, dimension, size, step)
-
-    Tensor.unfold = unfold
-    StubTensor.unfold = unfold
-
-    def new(self, *shape):
-        if not isinstance(shape[0], int):
-            return tensor(shape[0], dtype=self.dtype)
-        return ops.empty(*shape, dtype=self.dtype, device=self.device)
-
-    Tensor.new = new
-    StubTensor.new = new
-
-    def view(self, *args):
-        return self.reshape(*args)
-    
-    Tensor.view = view
-    StubTensor.view = view
-
-    def cpu(self, *args, **kwargs):
-        return self
-
-    Tensor.cpu = cpu
-    StubTensor.cpu = cpu
-
-    Tensor.take = ops.take
-    StubTensor.take = ops.take
-
-    Tensor.sort = ops.sort
-    StubTensor.sort = ops.sort
-
-    def requires_grad_(self, requires_grad=True):
-        self.requires_grad = requires_grad
-        return self
-
-    Tensor.requires_grad_ = requires_grad_
-    StubTensor.requires_grad_ = requires_grad_
-
-    @property
-    def data(self):
-        return Tensor(self)
-
-    @data.setter
-    def data(self, new_value):
-        if isinstance(self, StubTensor) and isinstance(new_value, StubTensor):
-            self.stub = new_value.stub
-        else:
-            self.assign_value(new_value)
-
-    Tensor.data = data
-    StubTensor.data = data
-
-    Tensor.narrow = ops.narrow
-    StubTensor.narrow = ops.narrow
-
-    def bitwise_or_(self, other):
-        out = ops.bitwise_or(self, other)
-        self.copy_(out)
-        return self
-    
-    Tensor.bitwise_or_ = bitwise_or_
-    StubTensor.bitwise_or_ = bitwise_or_
-
-    # fix TypeError: unhashable type: 'StubTensor'
-    StubTensor.__hash__ = Tensor.__hash__
-
-    Tensor.masked_fill = ops.masked_fill
-    StubTensor.masked_fill = ops.masked_fill
-
-    Tensor.reshape = ops.reshape
-    StubTensor.reshape = ops.reshape
-
-    def __rmul__(self, other):
-        if isinstance(other, (str, list)):
-            return self.item() * other
-        return self.__mul__(other)
-
-    Tensor.__rmul__ = __rmul__
-    StubTensor.__rmul__ = __rmul__
-
-    Tensor.norm = ops.norm
-    StubTensor.norm = ops.norm
-
-    def clamp_min(self, value):
-        return ops.clamp(self, value)
-
-    Tensor.clamp_min = clamp_min
-    StubTensor.clamp_min = clamp_min
-
-    Tensor.index_copy_ = ops.inplace_index_copy
-    StubTensor.index_copy_ = ops.inplace_index_copy
-
-    Tensor.max = ops.max
-    StubTensor.max = ops.max
-
-    Tensor.min = ops.min
-    StubTensor.min = ops.min
-
-    Tensor.squeeze_ = ops.inplace_squeeze
-    StubTensor.squeeze_ = ops.inplace_squeeze
-
-    Tensor.unsqueeze_ = ops.inplace_unsqueeze
-    StubTensor.unsqueeze_ = ops.inplace_unsqueeze
-
-    def pin_memory(self, *args, **kwargs):
-        return self
-    
-    Tensor.pin_memory = pin_memory
-    StubTensor.pin_memory = pin_memory
-
     def __deepcopy__(self, memodict):
         new_obj = Tensor(self)
+        new_obj._device = self.device
         return new_obj
 
-    Tensor.__deepcopy__ = __deepcopy__
-    StubTensor.__deepcopy__ = __deepcopy__
+    def __matmul__(self, other):
+        return ops.matmul(self, other)
 
-    def asnumpy(self):
-        return Tensor_.asnumpy(self)
+    def __truediv__(self, other):
+        return ops.true_divide(self, other)
 
-    Tensor.asnumpy = asnumpy
-    StubTensor.asnumpy = _stub_method(asnumpy)
+    def __floordiv__(self, other):
+        return ops.floor_divide(self, other)
 
-    def backward(self, *args, **kwargs):
+    def __mod__(self, other):
+        return ops.fmod(self, other)
+
+    def backward(self):
         pass
 
-    Tensor.backward = backward
-    StubTensor.backward = backward
+    def log_softmax(self, dim):
+        return ops.log_softmax(self, dim)
+
+def enable_mindspore_patch():
+    fn_keys = list(TensorPlaceHolder.__dict__)
+    fn_keys.remove('__doc__')
+    fn_keys.remove('__dict__')
+    fn_keys.remove('__weakref__')
+    fn_keys.remove('__module__')
+
+    for fn in fn_keys:
+        setattr(Tensor, fn, getattr(TensorPlaceHolder, fn))
+        if StubTensor is not None:
+            setattr(StubTensor, fn, getattr(TensorPlaceHolder, fn))
 
-    def __repr__(self):
-        Tensor_.data_sync(self, True)
-        return Tensor_.__repr__(self)
-
-    Tensor.__repr__ = __repr__
-    StubTensor.__repr__ = _stub_method(__repr__)
-
-    def detach_(self):
-        return ops.stop_gradient(self)
-
-    Tensor.detach_ = detach_
-    StubTensor.detach_ = detach_
-
-    def new_full(self, size, fill_value, *, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False):
-        return ops.full(size, fill_value, dtype=dtype if dtype is not None else self.dtype)
-
-    Tensor.new_full = new_full
-    StubTensor.new_full = new_full
-
-    def new_zeros(self, *size, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False):
-        if isinstance(size[0], (tuple, list)):
-            size = size[0]
-
-        new_size = ()
-        for s in size:
-            if isinstance(s, Tensor):
-                s = s.item()
-            new_size += (s,)
-        return ops.zeros(*new_size, dtype=dtype if dtype is not None else self.dtype)
-
-    Tensor.new_zeros = new_zeros
-    StubTensor.new_zeros = new_zeros
-
-    def new_ones(self, *size, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False, **kwargs):
-        size = kwargs.get('size', size)
-        if isinstance(size[0], (tuple, list)):
-            size = size[0]
-
-        new_size = ()
-        for s in size:
-            if isinstance(s, Tensor):
-                s = s.item()
-            new_size += (s,)
-        if new_size == new_size:
-            new_size = (new_size,)
-        return ops.ones(*new_size, dtype=dtype if dtype is not None else self.dtype)
-
-    Tensor.new_ones = new_ones
-    StubTensor.new_ones = new_ones
-
-    Tensor.sum = ops.sum
-    StubTensor.sum = ops.sum
-
-    def new_tensor(self, data, *, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False):
-        return tensor(data, dtype=dtype if dtype is not None else self.dtype)
-
-    Tensor.new_tensor = new_tensor
-    StubTensor.new_tensor = new_tensor
-
-    Tensor.fill_diagonal_ = ops.inplace_fill_diagonal
-    StubTensor.fill_diagonal_ = ops.inplace_fill_diagonal
-
-    Tensor.fill_ = ops.inplace_fill
-    StubTensor.fill_ = ops.inplace_fill
-
-    Tensor.zero_ = ops.inplace_zero
-    StubTensor.zero_ = ops.inplace_zero
-
-    Tensor.uniform_ = ops.inplace_uniform
-    StubTensor.uniform_ = ops.inplace_uniform
-
-    Tensor.random_ = ops.inplace_random
-    StubTensor.random_ = ops.inplace_random
-
-
-    Tensor.triu_ = ops.inplace_triu
-    StubTensor.triu_ = ops.inplace_triu
-
-    Tensor.masked_fill_ = ops.inplace_masked_fill
-    StubTensor.masked_fill_ = ops.inplace_masked_fill
-
-
-    @property
-    def real(self):
-        return ops.real(self)
-    
-    Tensor.real = real
-    StubTensor.real = real
-
-    @property
-    def imag(self):
-        return ops.imag(self)
-
-    Tensor.imag = imag
-    StubTensor.imag = imag
-
-    def bfloat16(self):
-        return self.to(_dtype.bfloat16)
-
-    Tensor.bfloat16 = bfloat16
-    StubTensor.bfloat16 = bfloat16
-
-    def sort(self, dim=-1, descending=False):
-        return ops.sort(self, dim=dim, descending=descending)
-
-    Tensor.sort = sort
-    StubTensor.sort = sort
-
-    Tensor.cumsum = ops.cumsum
-    StubTensor.cumsum = ops.cumsum
-
-    Tensor.scatter_ = ops.inplace_scatter
-    StubTensor.scatter_ = ops.inplace_scatter
-
-    def __contains__(self, item):
-        return ops.eq(self, item).any()
-
-    Tensor.__contains__ = __contains__
-    StubTensor.__contains__ = __contains__
-
-    Tensor.tile = ops.tile
-    StubTensor.tile = ops.tile
-
-    Tensor.mean = ops.mean
-    StubTensor.mean = ops.mean
-
-    Tensor.amax = ops.amax
-    StubTensor.amax = ops.amax
-
-    Tensor.as_strided = ops.as_strided
-    StubTensor.as_strided = ops.as_strided
-
-    Tensor.split = ops.split
-    StubTensor.split = ops.split
-
-    Tensor.flip = ops.flip
-    StubTensor.flip = ops.flip
-
-    Tensor.unflatten = ops.unflatten
-    StubTensor.unflatten = ops.unflatten
-
-    Tensor.round_ = ops.inplace_round
-    StubTensor.round_ = ops.inplace_round
-
-    Tensor.split_with_sizes = ops.split_with_sizes
-    StubTensor.split_with_sizes = ops.split_with_sizes
-
-    Tensor.scatter_reduce_ = ops.inplace_scatter_reduce
-    StubTensor.scatter_reduce_ = ops.inplace_scatter_reduce
-
-    Tensor.exponential_ = ops.inplace_exponential
-    StubTensor.exponential_ = ops.inplace_exponential
-
-    Tensor.log_ = ops.inplace_log
-    StubTensor.log_ = ops.inplace_log
-
-    Tensor.mul_ = ops.inplace_mul
-    StubTensor.mul_ = ops.inplace_mul
-
-    Tensor.neg_ = ops.inplace_neg
-    StubTensor.neg_ = ops.inplace_neg
-
-    Tensor.exp_ = ops.inplace_exp
-    StubTensor.exp_ = ops.inplace_exp
-
-    Tensor.sub_ = ops.inplace_sub
-    StubTensor.sub_ = ops.inplace_sub
-
-    Tensor.roll = ops.roll
-    StubTensor.roll = ops.roll
-
-    Tensor.bernoulli_ = ops.inplace_bernoulli
-    StubTensor.bernoulli_ = ops.inplace_bernoulli
-
-    Tensor.scatter_reduce = ops.scatter_reduce
-    StubTensor.scatter_reduce = ops.scatter_reduce
-
-    Tensor.tril_ = ops.inplace_tril
-    StubTensor.tril_ = ops.inplace_tril
-
-    Tensor.var = ops.var
-    StubTensor.var = ops.var
-
-    Tensor.logsumexp = ops.logsumexp
-    StubTensor.logsumexp = ops.logsumexp
-
-    def __iter__(self):
-        if self.ndim == 0:
-            yield self
-        else:
-            for i in range(len(self)):
-                yield self[i]
-
-    Tensor.__iter__ = __iter__
-    StubTensor.__iter__ = __iter__
-
-    def __float__(self):
-        out = self.item()
-        return round(float(out), 5)
-
-    Tensor.__float__ = __float__
-    StubTensor.__float__ = __float__
-
-    Tensor.__matmul__ = ops.matmul
-    StubTensor.__matmul__ = ops.matmul
-
-    Tensor.expm1 = ops.expm1
-    StubTensor.expm1 = ops.expm1
-
-    Tensor.__eq__ = ops.eq
-    StubTensor.__eq__ = ops.eq
-
-    def tobytes(self):
-        return self.get_bytes()
-    
-    Tensor.tobytes = tobytes
-    StubTensor.tobytes = tobytes
-
-    Tensor.cuda = cpu
-    StubTensor.cuda = cpu
-
-    Tensor.nonzero = ops.nonzero
-    StubTensor.nonzero = ops.nonzero
-
-    Tensor.clamp_ = ops.inplace_clamp
-    StubTensor.clamp_ = ops.inplace_clamp
-
-    Tensor.copy_ = ops.inplace_copy
-    StubTensor.copy_ = ops.inplace_copy
-
-    Tensor.index_add_ = ops.inplace_index_add
-    StubTensor.index_add_ = ops.inplace_index_add
-
-    Tensor.erfinv_ = ops.inplace_erfinv
-    StubTensor.erfinv_ = ops.inplace_erfinv
-
-    def is_pinned(self):
-        return False
-    
-    Tensor.is_pinned = is_pinned
-    StubTensor.is_pinned = is_pinned
-
-    def record_stream(self, stream):
-        pass
-
-    Tensor.record_stream = record_stream
-    StubTensor.record_stream = record_stream
-
-    Tensor.scatter = ops.scatter
-    StubTensor.scatter = ops.scatter
-
-    Tensor.mul = ops.mul
-    StubTensor.mul = ops.mul
-
-    Tensor.index_select = ops.index_select
-    StubTensor.index_select = ops.index_select
-
-    Tensor.gather = ops.gather
-    StubTensor.gather = ops.gather
-
-    def is_cuda(self):
-        device_type = 'cuda'
-        if DEVICE_TARGET == 'Ascend':
-            device_type = 'npu'
-        return self.device.type == device_type
-
-    Tensor.is_cuda = is_cuda
-    StubTensor.is_cuda = is_cuda
-
-    Tensor.__rshift__ = ops.bitwise_right_shift
-    StubTensor.__rshift__ = ops.bitwise_right_shift
 
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)

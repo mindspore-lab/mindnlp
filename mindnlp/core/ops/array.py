@@ -1,56 +1,54 @@
 """array op"""
 import numbers
 import numpy as np
-import mindspore
-from mindspore import ops
-from mindspore.ops._primitive_cache import _get_cache_prim
-from mindspore.ops.operations._grad_ops import StridedSliceGrad
-from mindspore.ops.auto_generate.gen_ops_prim import inplace_scatter_src_reduce_op
 
-from ..configs import use_pyboost, ON_ORANGE_PI
-from .other import broadcast_tensors, finfo
-from ._inner import call_ms_func
+import mindspore
 from mindnlp import core
+from mindnlp.core.executor import execute
+from .other import broadcast_tensors, broadcast_to
+
+
+def t(input):
+    assert input.ndim <= 2
+    if input.ndim == 2:
+        return transpose(input, 0, 1)
+    return input
+
 
 # adjoint
 
+
 # argwhere
 def argwhere(input):
-    if use_pyboost():
-        return mindspore.mint.nonzero(input)
-    return ops.argwhere(input)
+    return execute("nonzero", input)
+
 
 # cat
-has_cat = hasattr(mindspore.mint, 'cat')
-def cat(tensors, dim=0, *, out=None, **kwargs):
-    axis = kwargs.get('axis', None)
-    if axis is not None:
-        dim = axis
-    max_dtype = max([x.dtype for x in tensors])
-    tensors = [x.to(max_dtype) for x in tensors]
-    if use_pyboost() and has_cat:
-        return call_ms_func(mindspore.mint.cat, tensors, dim, out=out)
-    return call_ms_func(ops.cat, tensors, dim, out=out)
+def cat(tensors, dim=0, **kwargs):
+    dim = kwargs.pop('axis', dim)
+    return execute("concat", tensors, dim)
+
 
 # concat
-has_concat = hasattr(mindspore.mint, 'concat')
-def concat(tensors, dim=0, *, out=None, **kwargs):
-    return cat(tensors, dim, out=out, **kwargs)
+def concat(tensors, dim=0, **kwargs):
+    dim = kwargs.pop('axis', dim)
+    return cat(tensors, dim)
+
 
 # concatenate
-def concatenate(tensors, dim=0, out=None, **kwargs):
-    return cat(tensors, dim, out=out, **kwargs)
+def concatenate(tensors, dim=0):
+    return cat(tensors, dim)
+
 
 # conj
 def conj(input):
-    return ops.conj(input)
+    return execute("conj", input)
+
 
 # chunk
-has_chunk = hasattr(mindspore.mint, 'chunk')
 def chunk(input, chunks, dim=0):
-    if use_pyboost() and has_chunk:
-        return mindspore.mint.chunk(input, chunks, dim)
-    return ops.chunk(input, chunks, dim)
+    return execute("chunk", input, chunks, dim)
+
 
 # dsplit
 
@@ -62,74 +60,26 @@ def chunk(input, chunks, dim=0):
 
 
 # gather
-has_gather = hasattr(mindspore.mint, 'gather')
 def gather(input, dim, index):
-    is_complex = input.dtype == mindspore.complex64
-    if is_complex:
-        real_part = mindspore.mint.gather(input.real, dim, index)
-        imag_part = mindspore.mint.gather(input.imag, dim, index)
-        _complex = _get_cache_prim(ops.Complex)()
-        return _complex(real_part, imag_part)
+    return execute("gather_d", input, dim, index)
 
-    if use_pyboost() and has_gather and not ON_ORANGE_PI:
-        return mindspore.mint.gather(input, dim, index)
-
-    index = core.where(index < input.shape[dim], index, index - input.shape[dim])
-    if not ON_ORANGE_PI:
-        return ops.gather_elements(input, dim, index)
-
-    return torch_gather(input, index, dim)
 
 def gather_nd(input, indices):
-    return ops.gather_nd(input, indices)
+    return execute("gather_nd", input, indices)
 
-def tf_gather(input, indices, axis, batch_dims=0):
-    return ops.gather(input, indices, axis, batch_dims)
-
-def torch_gather(x, indices, axis=1):
-    # 这个实现模拟了 torch.gather 的行为
-    if axis < 0:
-        axis = len(x.shape) + axis
-    
-    # 创建索引数组，其他维度保持原样
-    all_indices = []
-    for dim in range(len(x.shape)):
-        if dim == axis:
-            # 使用提供的索引
-            all_indices.append(indices.to(mindspore.int32))
-        else:
-            # 创建该维度的原始索引
-            shape = [1] * len(x.shape)
-            shape[dim] = x.shape[dim]
-            dim_indices = core.arange(x.shape[dim], dtype=mindspore.int32)
-            dim_indices = core.reshape(dim_indices, shape)
-            # 广播到 indices 的形状
-            dim_indices = core.broadcast_to(dim_indices, indices.shape)
-            all_indices.append(dim_indices)
-    
-    # 组合所有维度的索引
-    multi_indices = core.stack(all_indices, axis=-1)
-    
-    # 使用 tf.gather_nd 收集元素
-    return gather_nd(x, multi_indices)
 
 # hsplit
 
 
 # hstack
-def hstack(tensors):
-    return ops.hstack(tensors)
-
 
 # index_fill
-def index_fill(input, dim, index, value):
-    return ops.index_fill(input, dim, index, value)
+
 
 # index_add
 def index_add(input, dim, index, source, *, alpha=1):
-    if use_pyboost():
-        return mindspore.mint.index_add(input, dim, index, source, alpha=alpha)
-    return ops.index_add(input, index, source, dim)
+    return execute("index_add_ext", input, index, source, dim, alpha)
+
 
 # index_copy
 
@@ -138,106 +88,65 @@ def index_add(input, dim, index, source, *, alpha=1):
 
 
 # index_select
-has_index_select = hasattr(mindspore.mint, 'index_select')
-def index_select(input, dim, index, *, out=None):
-    if use_pyboost() and has_index_select:
-        return call_ms_func(mindspore.mint.index_select, input, dim, index, out=out)
-    return call_ms_func(ops.index_select, input, dim, index, out=out)
+def index_select(input, dim, index):
+    return execute("index_select", input, dim, index)
 
 # masked_select
-has_masked_select = hasattr(mindspore.mint, 'masked_select')
-def masked_select(input, mask, *, out=None):
-    if use_pyboost() and has_masked_select:
-        return call_ms_func(mindspore.mint.masked_select, input, mask, out=out)
-    return call_ms_func(ops.masked_select, input, mask, out=out)
+def masked_select(input, mask):
+    return execute("masked_select", input, mask)
+
 
 # movedim
-def movedim(input, source, destination):
-    return ops.movedim(input, source, destination)
+
 
 # moveaxis
 
 
 # narrow
-has_narrow = hasattr(mindspore.mint, 'narrow')
 def narrow(input, dim, start, length):
-    length = length.item() if isinstance(length, mindspore.Tensor) else length
-    if use_pyboost() and has_narrow:
-        return mindspore.mint.narrow(input, dim, start, length)
-    return ops.narrow(input, dim, start, length)
+    return execute("narrow", input, dim, start, length)
+
 
 # narrow_copy
 
 
 # nonzero
-has_nonzero = hasattr(mindspore.mint, 'nonzero')
 def nonzero(input, *, as_tuple=False):
-    if use_pyboost() and has_nonzero:
-        return mindspore.mint.nonzero(input, as_tuple=as_tuple)
-    _nonzero = _get_cache_prim(ops.NonZero)()
-    out = _nonzero(input)
     if as_tuple:
-        if 0 in out.shape:
-            return (out, out)
-        return unbind(out, 1)
-    return out
+        return execute("non_zero_ext", input)
+    return execute("non_zero", input)
+
 
 # permute
-has_permute = hasattr(mindspore.mint, 'permute')
 def permute(input, dims):
-    if use_pyboost() and has_permute:
-        return mindspore.mint.permute(input, dims)
-    return ops.permute(input, dims)
+    assert isinstance(dims, tuple)
+    return execute("transpose_view", input, dims)
+
 
 # reshape
-has_reshape = hasattr(mindspore.mint, 'reshape')
-def reshape(input, *shape, **kwargs):
-    shape = kwargs.pop('shape', shape)
+def reshape(input, *shape):
     if isinstance(shape[0], (tuple, list)):
         shape = shape[0]
-    new_shape = ()
-    for s in shape:
-        if not isinstance(s, int):
-            s = s.item()
-        new_shape += (s,)
-    if use_pyboost() and has_reshape:
-        return mindspore.mint.reshape(input, new_shape)
-    return ops.reshape(input, new_shape)
+    return execute("reshape", input, shape)
+
 
 def view(input, *shape):
-    # if use_pyboost():
-    #     return mindspore.ops.auto_generate.gen_ops_prim.view_op(input, shape)
     return reshape(input, shape)
+
 
 # row_stack
 
+
 # select
-has_select = hasattr(mindspore.mint, 'select')
 def select(input, dim, index):
-    if use_pyboost() and has_select:
-        return mindspore.mint.select(input, dim, index)
-    slices = ()
-    for _ in range(dim):
-        slices += (slice(None, None, None),)
-    slices += (index,)
-    return input[slices]
+    return execute("select_ext", input, dim, index)
+
 
 # scatter
-has_scatter = hasattr(mindspore.mint, 'scatter')
 def scatter(input, dim, index, src):
-    if use_pyboost() and has_scatter and not ON_ORANGE_PI:
-        return mindspore.mint.scatter(input, dim, index, src)
-    if not isinstance(src, mindspore.Tensor):
-        src = ops.full(index.shape, src, dtype=input.dtype)
-    if input.dtype == mindspore.bool_:
-        return ops.tensor_scatter_elements(input.int(), index, src.int(), dim).bool()
-    return ops.tensor_scatter_elements(input, index, src, dim)
+    return execute(
+        "scatter", input, dim, index, src)
 
-def tf_scatter_nd_update(input, indices, updates):
-    return ops.scatter_nd_update(input, indices, updates)
-
-def tf_scatter_nd(indices, updates, shape):
-    return ops.scatter_nd(indices, updates, shape)
 
 # diagonal_scatter
 
@@ -249,94 +158,61 @@ def tf_scatter_nd(indices, updates, shape):
 
 
 # scatter_add
-has_scatter_add = hasattr(mindspore.mint, 'scatter_add')
 def scatter_add(input, dim, index, src):
-    if use_pyboost() and has_scatter_add:
-        return mindspore.mint.scatter_add(input, dim, index, src)
-    return ops.tensor_scatter_elements(input, index, src, dim, 'add')
-
-def scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
-    if reduce == 'sum':
-        return scatter_add(input, dim, index, src)
-    else:
-        raise ValueError(f'do not support reduce: {reduce}')
-
-# scatter_nd_update
-def scatter_nd_update(input, indices, update):
-    return ops.scatter_nd_update(input, indices, update)
+    return execute("scatter_add_ext", input, dim, index, src)
 
 
-def scatter_update(input, indices, updates):
-    return ops.scatter_update(input, indices, updates)
+# scatter_reduce
+
 
 # split
-has_split = hasattr(mindspore.mint, 'split')
 def split(tensor, split_size_or_sections, dim=0):
-    if isinstance(split_size_or_sections, (tuple, list)):
-        new_split_size_or_sections = ()
-        for s in split_size_or_sections:
-            if not isinstance(s, int):
-                s = s.item()
-            new_split_size_or_sections += (s,)
-        split_size_or_sections = new_split_size_or_sections
-    if use_pyboost() and has_split:
-        return mindspore.mint.split(tensor, split_size_or_sections, dim)
-    return ops.split(tensor, split_size_or_sections, dim)
-
-def split_with_sizes(input, split_sizes, dim=0):
-    assert input.dim() != 0, "split expects at least a 1-dimensional tensor"
-    dim_size = input.size(dim)
-    num_splits = len(split_sizes)
-    start_idx = 0
-
-    splits = []
-    for i in range(num_splits):
-        length = split_sizes[i]
-        assert length >= 0, f"split_with_sizes expects split_sizes have only non-negative entries, but got split_sizes={split_sizes}"
-        splits.append(
-            narrow(input, dim, start_idx, length)
+    if isinstance(split_size_or_sections, int):
+        res = execute("split_tensor", tensor, split_size_or_sections, dim)
+    elif isinstance(split_size_or_sections, (list, tuple)):
+        res = execute("split_with_size", tensor, split_size_or_sections, dim)
+    else:
+        raise TypeError(
+            f"Type of Argument `split_size_or_sections` should be integer, tuple(int) or list(int), "
+            f"but got {type(split_size_or_sections)}"
         )
-        start_idx += length
-
-    return splits
+    return res
 
 
 # squeeze
-has_squeeze = hasattr(mindspore.mint, 'squeeze')
 def squeeze(input, *dim, **kwargs):
     dim = kwargs.get('dim', dim)
-    if use_pyboost() and has_squeeze:
-        return mindspore.mint.squeeze(input, dim)
-    return ops.squeeze(input, dim)
+    return execute("squeeze", input, dim)
+
 
 # stack
-has_stack = hasattr(mindspore.mint, 'stack')
-def stack(tensors, dim=0, *, out=None, **kwargs):
-    dim = kwargs.pop('axis', dim)
-    if use_pyboost() and has_stack:
-        return call_ms_func(mindspore.mint.stack, tensors, dim, out=out)
-    return call_ms_func(ops.stack, tensors, dim, out=out)
+
+
+def stack(tensors, dim=0):
+    if tensors[0].device.type == "npu":
+        return execute("stack_ext", tensors, dim)
+    return execute("stack", tensors, dim)
+
 
 # swapaxes
-has_swapaxes = hasattr(mindspore.mint, 'swapaxes')
 def swapaxes(input, dim0, dim1):
     return transpose(input, dim0, dim1)
+
 
 # swapdims
 def swapdims(input, dim0, dim1):
     return transpose(input, dim0, dim1)
+
 
 # take
 def take(input, index):
     input = input.view(-1)
     index_shape = index.shape
     index = index.view(-1)
-    if ON_ORANGE_PI:
-        return tf_gather(input, index, 0).view(index_shape)
-    if index_shape == ():
-        return gather(input, 0, index)[0]
     return gather(input, 0, index).view(index_shape)
 
+
+# take_along_dim
 def infer_size_impl(a, b):
     lenA = len(a)
     lenB = len(b)
@@ -363,7 +239,6 @@ def infer_size_impl(a, b):
 
     return expanded_sizes
 
-
 def _take_along_dim_helper(self, indices, dim):
     assert self.dim() == indices.dim(), f"torch.take_along_dim(): input and indices should have the same number of dimensions, " \
         f"but got {self.dim()} dimensions for input, and {indices.dim()} dimensions for indices"
@@ -388,85 +263,246 @@ def take_along_dim(input, indices, dim=None, *, out=None):
     return input.view(-1).gather(0, indices.view(-1))
 
 # tensor_split
-def tensor_split(input, indices_or_sections, dim=0):
-    return ops.tensor_split(input, indices_or_sections, dim)
+
 
 # tile
-has_tile = hasattr(mindspore.mint, 'tile')
-def tile(input, *dims):
-    if isinstance(dims[0], (tuple, list)):
-        dims = tuple(dims[0])
-    if use_pyboost() and has_tile:
-        return mindspore.mint.tile(input, dims)
-    return ops.tile(input, dims)
+def tile(input, dims):
+    return execute("tile", input, dims)
+
 
 # transpose
-has_transpose = hasattr(mindspore.mint, 'transpose')
 def transpose(input, dim0, dim1):
-    if use_pyboost() and has_transpose:
-        return mindspore.mint.transpose(input, dim0, dim1)
-    ranks = list(range(input.ndim))
-    rank0 = ranks[dim0]
-    rank1 = ranks[dim1]
-    ranks[dim0] = rank1
-    ranks[dim1] = rank0
-    return permute(input, tuple(ranks))
+    return execute("transpose_ext_view", input, dim0, dim1)
 
-def t(input):
-    assert input.ndim <= 2, 'Expects input to be <= 2-D tensor and transposes dimensions 0 and 1.'
-    if input.ndim == 1:
-        return input
-    return transpose(input, 0, 1)
 
 # unbind
-has_unbind = hasattr(mindspore.mint, 'unbind')
 def unbind(input, dim=0):
-    if use_pyboost() and has_unbind:
-        return mindspore.mint.unbind(input, dim)
-    return ops.unbind(input, dim)
+    return execute("unstack_ext", input, dim)
+
 
 # unravel_index
 
+
 # unsqueeze
-has_unsqueeze = hasattr(mindspore.mint, 'unsqueeze')
-def unsqueeze(input, dim=None):
-    if use_pyboost() and has_unsqueeze:
-        return mindspore.mint.unsqueeze(input, dim)
-    return ops.expand_dims(input, dim)
+def unsqueeze(input, dim):
+    return execute("expand_dims_view", input, dim)
+
 
 # vsplit
 
 # vstack
-def vstack(input):
-    return ops.vstack(input)
+
+
+# where
+def where(condition, input, other):
+    return execute("select", condition, input, other)
+
+
+tensor_1d = mindspore.Tensor([0], dtype=core.int64)
+empty_tensor_1d = mindspore.Tensor(shape=(0,), dtype=core.int64)
+empty_tensor_9d = mindspore.Tensor(shape=(0,)*9, dtype=core.int64)
+
+def _do_select(self, dim: int, index: int, dim_index: int, self_shape: list):
+    """call select view operator"""
+    if not self_shape:
+        raise TypeError("Invalid index of a 0-dim tensor.")
+    dim_size = self_shape[dim]
+    if index >= dim_size or index < -dim_size:
+        raise IndexError(f"Index {index} is out of bounds for dimension {dim_index} with size {dim_size}")
+    index = index + dim_size if index < 0 else index
+    return execute('select_ext_view', self, dim, index)
+
+
+def _do_slice(self, dim: int, index: slice, self_shape: list):
+    """call slice view operator"""
+    def _get_index(index, default):
+        if index is None:
+            return default
+        if core.is_tensor(index):
+            index = int(index)
+        return index
+
+    if not self_shape:
+        raise TypeError("Invalid index of a 0-dim tensor.")
+    step = _get_index(index.step, 1)
+    if step <= 0:
+        raise ValueError("slice step must be positive")
+    start = _get_index(index.start, 0)
+    end = _get_index(index.stop, self_shape[dim])
+    if start == 0 and end == self_shape[dim] and step == 1:
+        return self
+    return execute('slice_ext', self, dim, start, end, step)
+
+def _wrap_index_to_tuple(index):
+    """Wrap index to tuple"""
+    if isinstance(index, tuple):
+        return index
+    if isinstance(index, list):
+        if len(index) < 32 and any(isinstance(i, (core.Tensor, list, tuple, slice, type(None), type(...))) for i in index):
+            return tuple(index)
+    return (index,)
+
+
+def _count_indexed_dims(indexes):
+    """Count indexed dims"""
+    count = 0
+    for index in indexes:
+        if isinstance(index, core.Tensor):
+            if index.dtype == core.bool:
+                count += index.ndim
+            else:
+                count += 1
+        elif not isinstance(index, (type(None), type(...), bool)):
+            count += 1
+    return count
+
+def _record_tensor_index(index, remain_indexes, dim):
+    """Record indexes remained to be used by aclnnIndex/aclnnIndexPut"""
+    if len(remain_indexes) > dim:
+        remain_indexes[dim] = index
+        return remain_indexes
+
+    while dim > len(remain_indexes):
+        # use empty_tensor with dim_num 9 to indicate unused dim
+        remain_indexes.append(empty_tensor_9d)
+
+    remain_indexes.append(index)
+    return remain_indexes
+
+def _process_dim_in_multi_dim_index(prev_result, orig_tensor, index, dim, indexed_dims, dim_index, remain_indexes,
+                                    prev_shape):
+    """Process dim in multi dim index"""
+    if isinstance(index, bool):
+        result = unsqueeze(prev_result, dim)
+        index_for_bool = tensor_1d if index else empty_tensor_1d
+        _record_tensor_index(index_for_bool, remain_indexes, dim)
+        prev_shape.insert(dim, 1)
+        dim += 1
+        return result, dim, remain_indexes, prev_shape
+    if isinstance(index, int):
+        result = _do_select(prev_result, dim, index, dim_index, prev_shape)
+        del prev_shape[dim]
+        return result, dim, remain_indexes, prev_shape
+    if isinstance(index, slice):
+        result = _do_slice(prev_result, dim, index, prev_shape)
+        # current dim in prev_shape will not be used later, ignore it
+        dim += 1
+        return result, dim, remain_indexes, prev_shape
+    if isinstance(index, type(...)):
+        dim += (orig_tensor.ndim - indexed_dims)
+        return prev_result, dim, remain_indexes, prev_shape
+    if index is None:
+        result = unsqueeze(prev_result, dim)
+        prev_shape.insert(dim, 1)
+        dim += 1
+        return result, dim, remain_indexes, prev_shape
+    if isinstance(index, core.Tensor):
+        result = prev_result
+        if index.ndim == 0 and index.dtype in (core.int, core.long, core.short, core.bool):
+            if index.dtype in (core.int, core.long, core.short):
+                result = _do_select(prev_result, dim, index.item(), dim_index, prev_shape)
+                del prev_shape[dim]
+                return result, dim, remain_indexes, prev_shape
+            # process index with Tensor bool type
+            result = unsqueeze(prev_result, dim)
+            index_for_bool = tensor_1d if index else empty_tensor_1d
+            _record_tensor_index(index_for_bool, remain_indexes, dim)
+            prev_shape.insert(dim, 1)
+            dim += 1
+            return result, dim, remain_indexes, prev_shape
+        _record_tensor_index(index, remain_indexes, dim)
+        dim += 1
+        return result, dim, remain_indexes, prev_shape
+    raise IndexError(f"Invalid tensor index type {index}")
+
+
+def _process_multi_dim_index(self, indexes, remain_indexes, indexed_dims):
+    """Process indexes in tuple"""
+    self_viewed = self
+    self_viewed_shape = list(self.shape)
+    dim = 0
+    for i, index in enumerate(indexes):
+        if isinstance(index, (list, tuple, np.ndarray)):
+            index_np = np.array(index) if isinstance(index, (list, tuple)) else index
+            if index_np.dtype in (np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64,
+                                  np.float16, np.float32, np.float64):
+                index = core.tensor(index_np, device=self.device, dtype=core.int64)
+            elif index_np.dtype == np.bool_:
+                index = core.tensor(index_np, device=self.device, dtype=core.int64)
+            else:
+                raise TypeError(f"Index {index} contain unsupported elements")
+        self_viewed, dim, remain_indexes, self_viewed_shape = _process_dim_in_multi_dim_index(
+            self_viewed, self, index, dim, indexed_dims, i, remain_indexes, self_viewed_shape)
+    return self_viewed, remain_indexes
+
+
+def tensor_getitem(self, index):
+    """Handle tensor getitem"""
+    if isinstance(index, bool):
+        self_viewed = unsqueeze(self, 0)
+        index_for_bool = tensor_1d if index else empty_tensor_1d
+        return execute('index', self_viewed, [index_for_bool])
+    if isinstance(index, int):
+        return _do_select(self, 0, index, 0, list(self.shape))
+    if isinstance(index, slice):
+        result = _do_slice(self, 0, index, list(self.shape))
+        return result
+    if index is None:
+        return unsqueeze(self, 0)
+    if isinstance(index, type(...)):
+        return self
+    indexes = _wrap_index_to_tuple(index)
+    indexed_dims = _count_indexed_dims(indexes)
+    if self.ndim < indexed_dims:
+        raise IndexError(f"too many indices for tensor with dimension size {self.ndim}")
+    remain_indexes = []
+    self_viewed, remain_indexes = _process_multi_dim_index(self, indexes, remain_indexes, indexed_dims)
+    if not remain_indexes:
+        return self_viewed
+    return execute('index', self_viewed, remain_indexes)
+
+
+def tensor_setitem(self, index, value):
+    """Handle tensor setitem"""
+    if not isinstance(value, core.Tensor):
+        if isinstance(value, (bool, int, float)):
+            value = core.tensor(value, dtype=self.dtype, device=self.device)
+        else:
+            raise TypeError(f"Can't assign a {type(value)} to a {self.dtype}.")
+
+    if isinstance(index, bool) and index is False:
+        return self
+    if isinstance(index, type(...)):
+        execute('inplace_copy', self, value)
+        return self
+    if index is None or (isinstance(index, bool) and index is True):
+        self_viewed = unsqueeze(self, 0)
+        execute('inplace_copy', self_viewed, value)
+        return self
+    if isinstance(index, int):
+        self_viewed = _do_select(self, 0, index, 0, list(self.shape))
+        execute('inplace_copy', self_viewed, value)
+        return self
+    if isinstance(index, slice):
+        self_viewed = _do_slice(self, 0, index, list(self.shape))
+        execute('inplace_copy', self_viewed, value)
+        return self
+    indexes = _wrap_index_to_tuple(index)
+    indexed_dims = _count_indexed_dims(indexes)
+    if self.ndim < indexed_dims:
+        raise IndexError(f"too many indices for tensor with dimension size {self.ndim}")
+    remain_indexes = []
+    self_viewed, remain_indexes = _process_multi_dim_index(self, indexes, remain_indexes, indexed_dims)
+    if not remain_indexes:
+        execute('inplace_copy', self_viewed, value)
+        return self
+    execute('inplace_index_put', self_viewed, remain_indexes, value, False) # accumulate=False
+    return self
 
 _SLICE_ERROR = (
     'only integers, slices (`:`), ellipsis (`...`), '
     'newaxis (`None`) and integer or boolean arrays are valid indices'
 )
-
-# where
-def where(condition, *args, out=None):
-    if len(args) == 0:
-        return nonzero(condition, as_tuple=True)
-    assert len(args) == 2
-    input, other = args
-
-    if isinstance(input, float) and input == -float("inf"):
-        input = finfo(other.dtype).min
-    if isinstance(other, float) and other == -float("inf"):
-        if isinstance(input, numbers.Number):
-            input = mindspore.tensor(input, dtype=mindspore.float32)
-        other = finfo(input.dtype).min
-
-    if use_pyboost() and not ON_ORANGE_PI:
-        output = mindspore.mint.where(condition, input, other)
-    else:
-        output = condition * input + (~condition) * other
-
-    if out is not None:
-        out.assign_value(output)
-    return output
 
 def _as_index(idx, need_scalar=True):
     """Helper function to parse idx as an index.
@@ -474,14 +510,13 @@ def _as_index(idx, need_scalar=True):
     if isinstance(idx, numbers.Integral):
         return idx, True
 
-    idx = mindspore.Tensor(idx)
+    idx = core.tensor(idx)
     if need_scalar and idx.ndim not in (None, 0):
         raise IndexError(_SLICE_ERROR + ', got {!r}'.format(idx))
 
     if idx.ndim == 0:
         return idx.item(), True
     return idx, False
-
 
 def cumprod(x, axis=0, exclusive=False, reverse=False):
     x = np.array(x)
@@ -531,12 +566,12 @@ def moveaxis(a, source, destination):
             assert dest <= len(perm)
             perm.insert(dest, src)
     else:
-        r = ops.range(0, a_rank, 1)
+        r = core.range(0, a_rank, 1)
 
         def _remove_indices(a, b):
             """Remove indices (`b`) from `a`."""
-            items = ops.unstack(
-                ops.sort(ops.stack(b))
+            items = core.unbind(
+                core.sort(core.stack(b))
             )
 
             i = 0
@@ -548,18 +583,18 @@ def moveaxis(a, source, destination):
 
             result.append(a[i:])
 
-            return ops.concat(result, 0)
+            return core.concat(result, 0)
 
         minus_sources = _remove_indices(r, source)
         minus_dest = _remove_indices(r, destination)
 
-        perm = ops.scatter_nd(
-            ops.expand_dims(minus_dest, 1), minus_sources, [a_rank]
+        perm = execute('scatter_nd', 
+            core.unsqueeze(minus_dest, 1), minus_sources, [a_rank]
         )
-        perm = ops.tensor_scatter_update(
-            perm, ops.expand_dims(destination, 1), source
+        perm = execute('tensor_scatter_update',
+            perm, core.unsqueeze(destination, 1), source
         )
-    a = ops.transpose(a, tuple(perm))
+    a = core.permute(a, tuple(perm))
 
     return a
 
@@ -630,21 +665,17 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
     else:
         if updates is not None:
             original_tensor = tensor
-        tensor = ops.strided_slice(
+        tensor = execute(
+            'strided_slice',
             tensor,
             begin,
             end,
             strides,
-            begin_mask=begin_mask,
-            end_mask=end_mask,
-            shrink_axis_mask=shrink_axis_mask,
-            new_axis_mask=new_axis_mask,
-            ellipsis_mask=ellipsis_mask,
+            begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask
         )
 
     if not advanced_indices:
         return tensor
-
     advanced_indices_map = {}
     for index, data, had_ellipsis in advanced_indices:
         if had_ellipsis:
@@ -666,20 +697,20 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
                     break
     indices = [advanced_indices_map[x] for x in dims]
     indices = broadcast_tensors(*indices)
-    stacked_indices = ops.stack(indices, axis=-1)
+    stacked_indices = stack(indices, dim=-1)
     # Skip the contiguous-dims optimization for update because there is no
     # tf.*scatter* op that supports the `axis` argument.
     if not dims_contiguous or updates is not None:
         if range(len(dims)) != dims:
             tensor = moveaxis(tensor, dims, range(len(dims)))
-        tensor_shape_prefix = mindspore.Tensor(tensor.shape[: len(dims)])
+        tensor_shape_prefix = core.tensor(tensor.shape[: len(dims)])
         stacked_indices = where(
             stacked_indices < 0,
             stacked_indices + tensor_shape_prefix,
             stacked_indices,
         )
         if updates is None:
-            return ops.gather_nd(tensor, stacked_indices)
+            return execute('gather_nd', tensor, stacked_indices)
         else:
             # We only need to move-axis `updates` in the contiguous case becausce
             # only in this case the result dimensions of advanced indexing are in
@@ -697,7 +728,7 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
                 updates = moveaxis(
                     updates, range_(batch_start, batch_size), range(batch_size)
                 )
-            tensor = ops.tensor_scatter_update(tensor, stacked_indices, updates)
+            tensor = execute('tensor_scatter_update', tensor, stacked_indices, updates)
             if range(len(dims)) != dims:
                 tensor = moveaxis(tensor, range(len(dims)), dims)
             return strided_slice_update(
@@ -722,9 +753,9 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
     dim_sizes = np.take_along_axis(np.array(shape_tensor), np.array(dims), axis=0)
     if len(dims) == 1:
         stacked_indices = indices[0]
-    stacked_indices = ops.cast(stacked_indices, mindspore.int32)
+    stacked_indices = stacked_indices.to(core.int32)
     stacked_indices = where(
-        stacked_indices < 0, stacked_indices + mindspore.Tensor(dim_sizes), stacked_indices
+        stacked_indices < 0, stacked_indices + core.tensor(dim_sizes, device=stacked_indices.device), stacked_indices
     )
     axis = dims[0]
     if len(dims) > 1:
@@ -733,14 +764,14 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
         def _tensordot(a, b):
             # TODO(b/168657656): This function should be replaced by
             # tensordot(axis=1) once MatMul has int32 XLA kernel.
-            b = ops.broadcast_to(b, a.shape)
-            return ops.sum(a * b, dim=-1)
+            b = broadcast_to(b, a.shape)
+            return core.sum(a * b, dim=-1)
 
-        stacked_indices = _tensordot(stacked_indices, mindspore.Tensor(index_scaling))
+        stacked_indices = _tensordot(stacked_indices, core.tensor(index_scaling))
         flat_shape = shape_tensor[:axis] + (-1,) + shape_tensor[axis + len(dims) :]
-        tensor = ops.reshape(tensor, flat_shape)
+        tensor = tensor.reshape(flat_shape)
 
-    return ops.gather(tensor, stacked_indices, axis=axis)
+    return execute('gather', tensor, stacked_indices, axis)
 
 def _as_spec_tuple(slice_spec):
     """Convert slice_spec to tuple."""
@@ -758,11 +789,11 @@ def getitem(self, slice_spec):
     if (
         isinstance(slice_spec, bool)
         or (
-            isinstance(slice_spec, mindspore.Tensor)
-            and slice_spec.dtype == mindspore.bool_
+            isinstance(slice_spec, core.Tensor)
+            and slice_spec.dtype == core.bool
         )
     ):
-        return ops.boolean_mask(tensor=self, mask=slice_spec)
+        return masked_select(self, slice_spec)
 
     if not isinstance(slice_spec, tuple):
         slice_spec = _as_spec_tuple(slice_spec)
@@ -775,8 +806,8 @@ def setitem(a, slice_spec, updates):
     if (
         isinstance(slice_spec, bool)
         or (
-            isinstance(slice_spec, mindspore.Tensor)
-            and slice_spec.dtype == mindspore.bool_
+            isinstance(slice_spec, core.Tensor)
+            and slice_spec.dtype == core.bool
         )
     ):
         slice_spec = nonzero(slice_spec)
@@ -786,86 +817,80 @@ def setitem(a, slice_spec, updates):
 
     a_dtype = a.dtype
     result_t = _slice_helper(a, slice_spec, True, updates)
-    return result_t.astype(a_dtype)
-
-def tensor_scatter_add(input, indeices, updates):
-    return ops.tensor_scatter_add(input, indeices, updates)
-
-def tensor_scatter_max(input, indeices, updates):
-    return ops.tensor_scatter_max(input, indeices, updates)
-
-def tensor_scatter_min(input, indeices, updates):
-    return ops.tensor_scatter_min(input, indeices, updates)
+    return result_t.to(a_dtype)
 
 def strided_slice_update(input, begin, end, strides, update, begin_mask=0, end_mask=0, ellipsis_mask=0, new_axis_mask=0, shrink_axis_mask=0):
-    strided_slice_grad = _get_cache_prim(StridedSliceGrad)(begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask)
-    updated_tensor = strided_slice_grad(update, input.shape, begin, end, strides)
-    return ops.assign(input, where(updated_tensor != 0, updated_tensor, input))
+    if isinstance(update, (int, float, bool)):
+        update = core.tensor(update, device=input.device, dtype=input.dtype)
+    sliced_tensor = execute('strided_slice', input, begin, end, strides, begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask)
+    if update.shape != sliced_tensor.shape:
+        update = update.broadcast_to(sliced_tensor.shape)
+        update = update - sliced_tensor
+    updated_tensor = execute('strided_slice_grad', input, begin, end, strides, update, begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask)
+    input.data = input + updated_tensor
+    return input
+
+def getitem_np(input, slice):
+    return execute('getitem', input, slice)
+
+def setitem_np(input, slice, value):
+    return execute('setitem', input, slice, value)
 
 __all__ = [
     # adjoint,
-    'argwhere',
-    'cat',
-    'concat',
-    'concatenate',
-    'conj',
-    'chunk',
+    "argwhere",
+    "cat",
+    "concat",
+    "concatenate",
+    "conj",
+    "chunk",
     # dsplit,
     # column_stack
     # dstack
-    'gather',
-    'gather_nd',
-    'tf_gather',
+    "gather",
+    "gather_nd",
     # hsplit
-    'hstack',
-    'index_fill',
-    'index_add',
+    "index_add",
     # index_copy
     # index_reduce
-    'index_select',
-    'masked_select',
-    'movedim',
+    "index_select",
+    "masked_select",
+    # movedim
     # moveaxis
-    'narrow',
+    "narrow",
     # narrow_copy
-    'nonzero',
-    'permute',
-    'reshape',
-    'view',
+    "nonzero",
+    "permute",
+    "reshape",
+    "view",
     # row_stack
-    'select',
-    'scatter',
-    'tf_scatter_nd_update',
-    'tf_scatter_nd',
+    "select",
+    "scatter",
     # diagonal_scatter
     # select_scatter
     # slice_scatter
-    'scatter_add',
-    'scatter_reduce',
-    'scatter_nd_update',
-    'scatter_update',
-    'split',
-    'split_with_sizes',
-    'squeeze',
-    'stack',
-    'swapaxes',
-    'swapdims',
-    'take',
-    'take_along_dim',
-    'tensor_split',
-    'tile',
-    'transpose',
-    't',
-    'unbind',
+    "scatter_add",
+    # scatter_reduce
+    "split",
+    "squeeze",
+    "stack",
+    "swapaxes",
+    "swapdims",
+    "take",
+    "take_along_dim",
+    # tensor_split
+    "tile",
+    "transpose",
+    "unbind",
     # unravel_index
-    'unsqueeze',
+    "unsqueeze",
     # vsplit
-    'vstack',
-    'where',
+    "where",
+    'tensor_getitem',
+    'tensor_setitem',
+    't',
     'getitem',
     'setitem',
-    'tensor_scatter_add',
-    'tensor_scatter_max',
-    'tensor_scatter_min',
-    'strided_slice_update'
+    'getitem_np',
+    'setitem_np'
 ]

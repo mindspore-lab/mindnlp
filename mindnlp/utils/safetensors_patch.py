@@ -3,8 +3,8 @@ import mmap
 from typing import OrderedDict
 import numpy as np
 import mindspore
-from mindspore import Tensor
 
+from mindnlp import core
 from mindnlp.core.configs import SUPPORT_BF16
 import safetensors
 from safetensors import SafetensorError
@@ -92,8 +92,8 @@ class PySafeSlice:
         array = np.frombuffer(buffer, dtype=self.dtype).reshape(self.shape)
         array = array.reshape(self.shape)
         if not SUPPORT_BF16 and self.info["dtype"] == 'BF16':
-            array = array.astype(np.float16)
-        tensor = Tensor.from_numpy(array)
+            array = array.view(np.float16)
+        tensor = core.from_numpy(array)
         tensor._ptr = array.ctypes.data
         return tensor
 

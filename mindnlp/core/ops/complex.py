@@ -1,3 +1,5 @@
+from mindnlp.core.executor import execute
+
 def real(input):
     return execute('real', input)
 

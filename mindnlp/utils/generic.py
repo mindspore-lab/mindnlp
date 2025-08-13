@@ -25,7 +25,6 @@ from contextlib import ExitStack
 from functools import wraps
 import numpy as np
 import mindspore
-from .import_utils import is_mindspore_available
 
 
 def is_tensor(x):
@@ -58,6 +57,7 @@ def is_mindspore_tensor(x):
     Tests if `x` is a torch tensor or not. Safe to call even if torch is not installed.
     """
     return False if not is_mindspore_available() else _is_mindspore(x)
+
 def set_attribute_for_modules(module, key: str, value: Any):
     """
     Set a value to a module and all submodules.

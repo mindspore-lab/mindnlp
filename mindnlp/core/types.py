@@ -10,7 +10,9 @@ import mindspore
 from typing import Any, IO, TYPE_CHECKING, Union, Dict
 from typing_extensions import Self, TypeAlias
 
+from mindnlp import core
 from ._dtype import dtype
+from .configs import DEVICE_TARGET
 
 DEVICE_MAP = {
     'GPU': 'cuda',
@@ -51,6 +53,8 @@ class device():
 
         self.type = _target
         self.index = _id
+        if DEVICE_TARGET == 'Ascned' and self.type == 'cuda':
+            self.type = 'npu'
 
     def __repr__(self):
         if self.index is None:
@@ -65,12 +69,18 @@ class device():
     def __hash__(self):
         return hash(self.type) ^ hash(self.index)
 
+    def __gt__(self, other):
+        if self.type == 'cpu':
+            return False
+        return True
+
     def __enter__(self):
         # self.prev_idx = torch.cuda._exchange_device(self.idx)
-        pass
+        core._bind.set_device_in_context(self)
 
     def __exit__(self, type: Any, value: Any, traceback: Any):
         # self.idx = torch.cuda._maybe_exchange_device(self.prev_idx)
+        core._bind.set_device_in_context(None)
         return False
 
 

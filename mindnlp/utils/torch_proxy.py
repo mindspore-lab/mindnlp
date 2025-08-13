@@ -101,11 +101,14 @@ class RedirectLoader(importlib.abc.Loader):
 REDIRECT_MAP = {
     "torch": "mindnlp.core",
 }
+if DEVICE_TARGET == 'Ascend':
+    REDIRECT_MAP["torch_npu"] = 'mindnlp.core.npu'
 
 def initialize_torch_proxy():
     sys.meta_path.insert(0, RedirectFinder(REDIRECT_MAP))
     import torch
     torch.__version__ = TORCH_VERSION
+
 
 
 def setup_metadata_patch():

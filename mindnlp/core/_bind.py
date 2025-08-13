@@ -6,6 +6,8 @@ from .configs import ON_A1
 
 DEFAULT_DTYPE, DEFAULT_DEVICE = float32, device_('cpu')
 
+DEVICE_IN_CONTEXT = None
+
 AUTO_CAST_DTYE = {
     'cuda': float16,
     'cpu': bfloat16,
@@ -40,6 +42,16 @@ def set_default_device(device):
 def get_default_device():
     """get default dtype"""
     return DEFAULT_DEVICE
+
+def set_device_in_context(device):
+    global DEVICE_IN_CONTEXT
+    DEVICE_IN_CONTEXT = device
+
+def get_device_in_context():
+    """get default dtype"""
+    if DEVICE_IN_CONTEXT is None:
+        return get_default_device()
+    return DEVICE_IN_CONTEXT
 
 bits_map = {
 
