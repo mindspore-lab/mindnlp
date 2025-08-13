@@ -14,7 +14,7 @@ from mindspore.communication import GlobalComm, get_group_size
 
 from mindnlp import core
 from mindnlp.core.executor import execute
-from ..configs import SUPPORT_BF16
+from ..configs import SUPPORT_BF16, ON_A1
 
 FloatTensor = core.FloatTensor
 HalfTensor = core.FloatTensor
@@ -99,5 +99,6 @@ def npu_rotary_mul(x, cos, sin):
     return execute('rotary_position_embedding', x, cos, sin, 0)
 
 def empty_cache():
-    ms_empty_cache()
+    if not ON_A1:
+        ms_empty_cache()
     _ms_memory_recycle()

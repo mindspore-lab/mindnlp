@@ -92,7 +92,7 @@ class PySafeSlice:
         array = np.frombuffer(buffer, dtype=self.dtype).reshape(self.shape)
         array = array.reshape(self.shape)
         if not SUPPORT_BF16 and self.info["dtype"] == 'BF16':
-            array = array.view(np.float16)
+            array = array.astype(np.float16)
         tensor = core.from_numpy(array)
         tensor._ptr = array.ctypes.data
         return tensor
