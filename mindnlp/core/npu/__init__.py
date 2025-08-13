@@ -94,11 +94,25 @@ def current_device():
 def get_device_capability(device=None):
     return 10, 0
 
-
-def npu_rotary_mul(x, cos, sin):
-    return execute('rotary_position_embedding', x, cos, sin, 0)
-
 def empty_cache():
     if not ON_A1:
         ms_empty_cache()
     _ms_memory_recycle()
+
+def npu_rotary_mul(x, cos, sin):
+    return execute('rotary_position_embedding', x, cos, sin, 0)
+
+def npu_fusion_attention(query, key, value, head_num, input_layout, *, pse=None, padding_mask=None, atten_mask=None,
+                         scale=1., keep_prob=1., pre_tockens=2147483647, next_tockens=2147483647, inner_precise=0,
+                         drop_mask=None, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0,
+                         gen_mask_parallel=True, sync=False, pse_type=1, q_start_idx=None, kv_start_idx=None):
+    output = gen.flash_attention_score_impl(
+        query, key, value, real_shift=pse, padding_mask=padding_mask, drop_mask=drop_mask,
+        attn_mask=atten_mask, prefix=prefix, actual_seq_qlen=actual_seq_qlen,
+        actual_seq_kvlen=actual_seq_kvlen, head_num=head_num, keep_prob=float(keep_prob),
+        scale_value=scale, pre_tokens=pre_tockens, next_tokens=next_tockens,
+        inner_precise=inner_precise, input_layout=input_layout, sparse_mode=sparse_mode
+    )
+    sfm_max, sfm_sum, sfm_out, atten_out = output
+
+    return atten_out, sfm_max, sfm_sum
