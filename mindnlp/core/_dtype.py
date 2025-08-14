@@ -6,6 +6,8 @@ from mindspore._c_expression.typing import Type
 
 from .configs import ON_A1
 
+bool_alias = bool
+
 if ON_A1:
     warnings.warn('MindSpore on GPU/910A do not support bfloat16, use float16 instead.')
     bfloat16 = float16
@@ -98,4 +100,8 @@ dtype2np = {
     float16 : np.float16,
     float32 : np.float32,
     float64 : np.float64,
+}
+
+py2dtype = {
+    bool_alias: bool
 }

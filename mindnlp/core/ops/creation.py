@@ -23,7 +23,7 @@ def from_numpy(ndarray):
 
 # frombuffer
 def frombuffer(buffer, *, dtype, count=-1, offset=0, requires_grad=False):
-    arr = np.frombuffer(buffer=buffer, dtype=core.dtype_to_nptype(dtype), count=count, offset=offset)
+    arr = np.frombuffer(buffer=buffer, dtype=core.dtype2np[dtype], count=count, offset=offset)
     tensor = core.Tensor(arr)
     tensor.requires_grad_(requires_grad)
     return tensor
@@ -62,6 +62,8 @@ def zeros_like(input, *, dtype=None, layout=None, device=None, requires_grad=Fal
 def ones(*size, out=None, dtype=None, layout=None, device=None, requires_grad=False):
     if dtype is None:
         dtype = get_default_dtype()
+    if isinstance(dtype, type):
+        dtype = core.py2dtype[dtype]
     if device is None:
         device = get_device_in_context()
     if isinstance(size[0], (tuple, list)):

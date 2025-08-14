@@ -137,6 +137,12 @@ def argmax_with_value(*args):
 
 __all__.append('argmax_with_value')
 
+def argmin_with_value(*args):
+    return pyboost_inner_prim.argmin_with_value_impl(*args)
+
+__all__.append('argmin_with_value')
+
+
 right_shift_op = ops.RightShift().set_device('Ascend')
 def right_shift(input, other):
     if isinstance(other, numbers.Number):

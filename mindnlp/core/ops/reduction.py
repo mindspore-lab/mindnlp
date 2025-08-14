@@ -59,7 +59,7 @@ def min(input, dim=None, keepdim=False, *, out=None):
         return execute('min', input)
     if core.is_tensor(dim):
         return core.minimum(input, dim)
-    output = execute('argmin_ext', input, dim, keepdim)
+    output = execute('argmin_with_value', input, dim, keepdim)
     if out is None:
         return min_out(values=output[1], indices=output[0])
 
