@@ -61,6 +61,8 @@ def sub_ext(input, other, alpha):
     elif not isinstance(other, numbers.Number):
         other = other.numpy()
     out = np.subtract(input, other * alpha)
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
     return core.Tensor.from_numpy(out)
 
 __all__.append('sub_ext')
@@ -503,3 +505,9 @@ def less_equal(input, other):
     return core.Tensor.from_numpy(out)
 
 __all__.append('less_equal')
+
+def tril_ext(input, diagonal):
+    out = np.tril(input.numpy(), diagonal)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('tril_ext')

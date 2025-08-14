@@ -866,7 +866,7 @@ def iinfo(dtype):
     return iinfo_dtype[dtype]
 
 def iinfo(dtype):
-    return np.iinfo(mindspore.dtype_to_nptype(dtype))
+    return np.iinfo(core.dtype2np[dtype])
 
 
 def contains(self, key):

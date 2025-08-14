@@ -262,3 +262,32 @@ def concat(tensors, dim):
     return core.Tensor(out)
 
 __all__.append('concat')
+
+def tril_ext(input, k):
+    return input
+
+__all__.append('tril_ext')
+
+def reshape(input, shape):
+    out = Tensor_(shape=tuple(shape), dtype=input.dtype)
+    return core.Tensor(out)
+
+__all__.append('reshape')
+
+def linalg_vector_norm(input, p, dim, keepdim, dtype):
+    input_shape = list(input.shape)
+    if isinstance(dim, int):
+        dim = (dim,)
+    for d in dim:
+        input_shape[d] = 1 if keepdim else 0
+    
+    new_shape = []
+    for s in input_shape:
+        if s != 0:
+            new_shape.append(s)
+    if dtype is None:
+        dtype = input.dtype
+    out = Tensor_(shape=tuple(new_shape), dtype=dtype)
+    return core.Tensor(out)
+
+__all__.append('linalg_vector_norm')
