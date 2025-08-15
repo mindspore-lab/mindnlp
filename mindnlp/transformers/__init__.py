@@ -4106,6 +4106,7 @@ from .masking_utils import create_causal_mask, create_sliding_window_causal_mask
 from .modeling_utils import construct_pipeline_parallel_model, _load_pretrained_model_wrapper, \
     _get_resolved_checkpoint_files_wrapper
 from .tokenization_utils import apply_chat_template_wrapper
+from .trainer import training_step
 
 # redirect mindnlp.transformers to transformers
 import transformers
@@ -4150,6 +4151,8 @@ transformers.pipelines.pipeline = dtype_wrapper(transformers.pipelines.pipeline)
 transformers.modeling_utils.caching_allocator_warmup = empty_fn
 transformers.masking_utils.create_causal_mask = create_causal_mask
 transformers.masking_utils.create_sliding_window_causal_mask = create_sliding_window_causal_mask
+
+transformers.trainer.Trainer.training_step = training_step
 
 # add mindnlp.transformers modules/attrs to lazymodule
 # setattr(sys.modules[__name__], 'test_ms_model', test_ms_model)

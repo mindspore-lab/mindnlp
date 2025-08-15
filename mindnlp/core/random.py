@@ -5,9 +5,9 @@ from typing import Generator
 
 import mindspore
 from mindnlp import core
+from ._C import default_generator
 # from mindspore import default_generator, set_seed
 
-default_generator = core._C.default_generator
 
 def get_rng_state():
     """

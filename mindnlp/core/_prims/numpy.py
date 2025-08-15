@@ -511,3 +511,10 @@ def tril_ext(input, diagonal):
     return core.Tensor.from_numpy(out)
 
 __all__.append('tril_ext')
+
+def randperm_ext(n, seed, offset, dtype):
+    out = np.random.permutation(n)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('randperm_ext')
+

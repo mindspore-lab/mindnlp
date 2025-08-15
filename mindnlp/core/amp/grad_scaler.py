@@ -7,11 +7,31 @@ from collections import abc, defaultdict
 from enum import Enum
 from typing import Any, cast, Dict, Iterable, List, Optional, overload, Tuple, Union
 
+import numpy as np
+import mindspore
 from mindnlp import core
-
+from mindnlp.core.configs import DEVICE_TARGET, SOC
 
 __all__ = ["OptState", "GradScaler"]
 
+
+def non_finite_check(inputs):
+    """all finite check"""
+    if DEVICE_TARGET == 'Ascend':
+        status = core.tensor(np.array([0] * 8), dtype=core.int32, device='npu')
+        status = core.depend(status, inputs)
+        found_inf = core.npu_get_float_status_v2(status)
+        status = core.depend(status, found_inf)
+        clear_status = core.npu_clear_float_status_v2(status)
+        found_inf = core.depend(found_inf, clear_status)
+        return found_inf.sum()
+
+    found_inf = core.all_finite(inputs)  # pylint: disable=invalid-unary-operand-type
+    # else:
+    #     outputs = _hypermap(_partial(_overflow), inputs)
+    #     flag_sum = ops.addn(outputs).reshape(())
+    #     status_finite = ops.less(flag_sum, 1)
+    return found_inf
 
 class _MultiDeviceReplicator:
     """Lazily serves copies of a tensor to requested devices.
@@ -276,11 +296,15 @@ class GradScaler:
 
             for device, per_dtype_grads in per_device_and_dtype_grads.items():
                 for grads in per_dtype_grads.values():
-                    core._amp_foreach_non_finite_check_and_unscale_(
-                        grads,
-                        per_device_found_inf.get(device),
-                        per_device_inv_scale.get(device),
-                    )
+                    # core._amp_foreach_non_finite_check_and_unscale_(
+                    #     grads,
+                    #     per_device_found_inf.get(device),
+                    #     per_device_inv_scale.get(device),
+                    # )
+                    found_inf = per_device_found_inf.get(device)
+                    found_inf.copy_(non_finite_check(grads).to(found_inf.dtype))
+                    for grad in grads:
+                        grad *= per_device_inv_scale.get(device)
 
         return per_device_found_inf._per_device_tensors
 
@@ -518,14 +542,32 @@ class GradScaler:
                 for i in range(1, len(found_infs)):
                     found_inf_combined += found_infs[i]
 
-            core._amp_update_scale_(
-                _scale,
-                _growth_tracker,
-                found_inf_combined,
-                self._growth_factor,
-                self._backoff_factor,
-                self._growth_interval,
-            )
+            # core._amp_update_scale_(
+            #     _scale,
+            #     _growth_tracker,
+            #     found_inf_combined,
+            #     self._growth_factor,
+            #     self._backoff_factor,
+            #     self._growth_interval,
+            # )
+            if found_inf_combined > 0:
+                _scale.copy_(_scale * self._backoff_factor)
+                _growth_tracker.copy_(_growth_tracker * 0)
+            else:
+                successful = self._growth_interval + 1
+                if successful == self._growth_interval:
+                    new_scale = _scale * self._growth_factor
+                    if core.isfinite(new_scale):
+                        _scale.copy_(new_scale)
+                    _growth_tracker.copy_(_growth_tracker * 0)
+                else:
+                    _growth_tracker.copy_(
+                        core.tensor(successful,
+                                    dtype=_growth_tracker.dtype,
+                                    device=_growth_tracker.device
+                        )
+                    )
+
 
         # To prepare for next iteration, clear the data collected from optimizers this iteration.
         self._per_optimizer_states = defaultdict(_refresh_per_optimizer_state)

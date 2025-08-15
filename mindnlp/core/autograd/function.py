@@ -13,6 +13,8 @@ try:
 except:
     Function = None
 
+from mindnlp import core
+
 grad_ = GradOperation(False, True, False)
 grad_sens_ = GradOperation(False, True, True)
 grad_input_sens_ = GradOperation(True, True, True)
@@ -29,7 +31,7 @@ def value_and_grad(fn, params_or_argnums, has_aux=False, attach_grads=True):
         outputs = fn(*args)
         no_grad_outputs = ()
         for out in outputs[1:]:
-            no_grad_outputs += (stop_gradient(out),)
+            no_grad_outputs += (out.detach(),)
         return outputs[0], no_grad_outputs
 
     if has_aux:
@@ -39,9 +41,9 @@ def value_and_grad(fn, params_or_argnums, has_aux=False, attach_grads=True):
 
     def value_and_grad_f(*args, **kwargs):
         _pynative_executor.set_grad_flag(True)
-        _pynative_executor.new_graph(fn, *args, **kwargs)
+        _pynative_executor.new_graph(fn_, *args, **kwargs)
         values = fn_(*args, **kwargs)
-        _pynative_executor.end_graph(fn, values, *args, **kwargs)
+        _pynative_executor.end_graph(fn_, values, *args, **kwargs)
 
         run_args = args
         if kwargs:
@@ -49,9 +51,9 @@ def value_and_grad(fn, params_or_argnums, has_aux=False, attach_grads=True):
 
         grads = _pynative_executor.check_run(grad_, fn_, params_or_argnums, None, *run_args)
         grads = _pynative_executor.grad(fn_, grad_, params_or_argnums, None, *run_args)
-        grads = tuple(mindspore.Tensor(grad) for grad in grads)
         if attach_grads:
             for param, grad in zip(params_or_argnums, grads):
+                grad = core.tensor(grad, device=param.device)
                 if param.grad is None:
                     param.grad = grad
                 else:
