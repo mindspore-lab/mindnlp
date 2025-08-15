@@ -560,6 +560,10 @@ def softmax(input, dim=-1, *, dtype=None):
     return out
 
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
+    if weight is None:
+        weight = core.ones(normalized_shape, dtype=input.dtype, device=input.device)
+    if bias is None:
+        bias = core.zeros(normalized_shape, dtype=input.dtype, device=input.device)
     return execute('layer_norm_ext', input, normalized_shape, weight, bias, eps)[0]
 
 
