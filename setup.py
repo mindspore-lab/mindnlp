@@ -159,7 +159,7 @@ setup(
         'mindspore>=2.5.0',
         'tqdm',
         'requests',
-        'transformers', # hf dependency
+        'transformers>=4.55.0', # hf dependency
         'datasets', # hf dependency
         'evaluate', # hf dependency
         'tokenizers', # hf dependency
@@ -170,7 +170,7 @@ setup(
         'addict',
         'ml_dtypes',
         'pyctcdecode',
-        'pytest==7.2.0',
+        'pytest',
         'pillow>=10.0.0',
     ],
     classifiers=[

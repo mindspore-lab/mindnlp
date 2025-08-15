@@ -20,6 +20,13 @@ FloatTensor = core.FloatTensor
 HalfTensor = core.FloatTensor
 BFloat16Tensor = core.BFloat16Tensor
 
+
+class DefaultGenerators:
+    def __getitem__(self, idx):
+        return core.default_generator
+
+default_generators = DefaultGenerators()
+
 def set_compile_mode(*args, **kwargs):
     pass
 

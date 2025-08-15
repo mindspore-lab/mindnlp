@@ -343,7 +343,7 @@ def randperm(
         n,
         seed,
         offset,
-        dtype_to_type_id("RandpermExt", "dtype", dtype),
+        dtype,
         device=device,
         requires_grad=requires_grad,
     )

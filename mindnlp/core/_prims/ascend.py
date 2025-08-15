@@ -3,6 +3,7 @@ from mindspore import ops
 from mindspore.ops.auto_generate import gen_ops_prim
 from mindspore.ops.auto_generate import pyboost_inner_prim
 from mindspore._c_expression import _empty_instance
+from mindspore.ops.operations.math_ops import NPUGetFloatStatusV2, NPUClearFloatStatusV2
 
 from mindnlp import core
 from mindnlp.core._C import default_generator
@@ -162,4 +163,33 @@ def reverse_v2(input, dims):
         dims = (dims,)
     return pyboost_inner_prim.reverse_v2_impl(input, dims)
 
-__all__.append('reverse_v2')
+adam_op = ops.Adam().set_device('Ascend')
+def raw_adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad):
+    # var, m, v, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad
+    return adam_op(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad)
+
+__all__.append('raw_adam')
+
+depend_op = ops.Depend().set_device('Ascend')
+def depend(*args):
+    return depend_op(*args)
+
+__all__.append('depend')
+
+npu_get_float_status_op = NPUGetFloatStatusV2().set_device('Ascend')
+def npu_get_float_status_v2(status):
+    return npu_get_float_status_op(status)
+
+__all__.append('npu_get_float_status_v2')
+
+npu_clear_float_status_op = NPUClearFloatStatusV2().set_device('Ascend')
+def npu_clear_float_status_v2(status):
+    return npu_clear_float_status_op(status)
+
+__all__.append('npu_clear_float_status_v2')
+
+stop_gradient_op = ops.StopGradient().set_device('Ascend')
+def stop_gradient(*args):
+    return stop_gradient_op(*args)
+
+__all__.append('stop_gradient')

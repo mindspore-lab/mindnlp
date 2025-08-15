@@ -97,7 +97,11 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False):
     if isinstance(data, Tensor):
         UserWarning("To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than core.tensor(sourceTensor).")
         out = Tensor(data)
-        out._device = data.device
+        if device is not None:
+            out._device = device
+        else:
+            out._device = data.device
+
         return out
 
     # if isinstance(data, list):
@@ -1306,7 +1310,7 @@ class TensorPlaceHolder:
     def is_leaf(self):
         if not self.requires_grad:
             return True
-        if self.requires_grad and self._user_created:
+        if self.requires_grad and hasattr(self, 'param_info'):
             return True
         return False
 
@@ -2397,9 +2401,7 @@ class TensorPlaceHolder:
 
     # Tensor.detach
     def detach(self):
-        out = self.data
-        out._requires_grad = False
-        return out
+        return ops.stop_gradient(self)
 
     # Tensor.detach_
     def detach_(self):
@@ -2501,7 +2503,7 @@ class TensorPlaceHolder:
         return ops.fmod(self, other)
 
     def backward(self):
-        pass
+        return self
 
     def log_softmax(self, dim):
         return ops.log_softmax(self, dim)
