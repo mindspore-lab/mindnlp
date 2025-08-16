@@ -16,5 +16,11 @@ def npu_get_float_status_v2(status):
 def npu_clear_float_status_v2(status):
     return execute('npu_clear_float_status_v2', status)
 
+def all_finite(inputs):
+    return execute('all_finite', inputs)
 
-__all__ = ['cast', 'assign', 'depend', 'npu_get_float_status_v2', 'npu_clear_float_status_v2']
+__all__ = [
+    'cast', 'assign', 'depend',
+    'npu_get_float_status_v2', 'npu_clear_float_status_v2',
+    'all_finite'
+]

@@ -10,9 +10,16 @@ DEVICE_IN_CONTEXT = None
 
 AUTO_CAST_DTYE = {
     'cuda': float16,
-    'cpu': bfloat16,
-    'npu': float16
+    'cpu': float16,
+    'npu': float16,
+    'Ascend': float16
 }
+
+AUTO_CAST_ENABLED = False
+
+def set_autocast_enabled(device, mode):
+    global AUTO_CAST_ENABLED
+    AUTO_CAST_ENABLED = mode
 
 def set_autocast_dtype(device_type, dtype):
     assert device_type in AUTO_CAST_DTYE.keys(), f'{device_type} is not in {AUTO_CAST_DTYE.keys()}'
@@ -20,6 +27,12 @@ def set_autocast_dtype(device_type, dtype):
 
 def get_autocast_dtype(device_type):
     return AUTO_CAST_DTYE[device_type]
+
+def get_autocast_gpu_dtype():
+    return AUTO_CAST_DTYE['cuda']
+
+def is_autocast_enabled(device):
+    return AUTO_CAST_ENABLED
 
 def set_default_dtype(dtype):
     """set default dtype"""

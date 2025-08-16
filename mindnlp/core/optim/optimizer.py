@@ -385,17 +385,17 @@ class Optimizer:
                             f"{func} must return None or a tuple of (new_args, new_kwargs), but got {result}."
                         )
 
-                out = func(*args, **kwargs)
-                self._optimizer_step_code()
+            out = func(*args, **kwargs)
+            self._optimizer_step_code()
 
-                # call optimizer step post hooks
-                for post_hook in chain(
-                    self._optimizer_step_post_hooks.values(),
-                    _global_optimizer_post_hooks.values(),
-                ):
-                    post_hook(self, args, kwargs)
+            # call optimizer step post hooks
+            for post_hook in chain(
+                self._optimizer_step_post_hooks.values(),
+                _global_optimizer_post_hooks.values(),
+            ):
+                post_hook(self, args, kwargs)
 
-                return out
+            return out
 
         return wrapper
 

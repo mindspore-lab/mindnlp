@@ -45,12 +45,12 @@ def add(input, other, *, alpha=1):
 
 # addcdiv
 def addcdiv(input, tensor1, tensor2, *, value=1):
-    return execute("addcdiv", input, tensor1, tensor2, value)
+    return execute("addcdiv_ext", input, tensor1, tensor2, value)
 
 
 # addcmul
 def addcmul(input, tensor1, tensor2, *, value=1):
-    return execute("addcmul", input, tensor1, tensor2, value)
+    return execute("addcmul_ext", input, tensor1, tensor2, value)
 
 
 # angle

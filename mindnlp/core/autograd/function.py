@@ -43,6 +43,7 @@ def value_and_grad(fn, params_or_argnums, has_aux=False, attach_grads=True):
         _pynative_executor.set_grad_flag(True)
         _pynative_executor.new_graph(fn_, *args, **kwargs)
         values = fn_(*args, **kwargs)
+        print('all_finite forward', mindspore.amp.all_finite(values))
         _pynative_executor.end_graph(fn_, values, *args, **kwargs)
 
         run_args = args
@@ -51,6 +52,7 @@ def value_and_grad(fn, params_or_argnums, has_aux=False, attach_grads=True):
 
         grads = _pynative_executor.check_run(grad_, fn_, params_or_argnums, None, *run_args)
         grads = _pynative_executor.grad(fn_, grad_, params_or_argnums, None, *run_args)
+        # print('all_finite backward', mindspore.amp.all_finite(grads))
         if attach_grads:
             for param, grad in zip(params_or_argnums, grads):
                 grad = core.tensor(grad, device=param.device)

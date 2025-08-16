@@ -338,8 +338,8 @@ class TensorPlaceHolder:
         return bool(self.item())
 
     def __index__(self):
-        if self.ndim > 0:
-            return self.tolist()
+        # if self.ndim > 0:
+        #     return self.tolist()
         return int(self.item())
 
     def __and__(self, other):
@@ -1216,7 +1216,7 @@ class TensorPlaceHolder:
 
     # Tensor.index_add_
     def index_add_(self, dim, index, source, *, alpha=1):
-        return self.copy_(ops.index_add(self, dim, source, alpha=alpha))
+        return self.copy_(ops.index_add(self, dim, index, source, alpha=alpha))
 
     # Tensor.index_add
     def index_add(self, dim, index, source, *, alpha=1):

@@ -1625,9 +1625,7 @@ def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0, reducti
     return loss
 
 def one_hot(tensor, num_classes=-1):
-    if use_pyboost():
-        return mint.nn.functional.one_hot(tensor, num_classes)
-    return ops.one_hot(tensor, num_classes)
+    return execute('one_hot_ext', tensor, num_classes)
 
 def pixel_shuffle(input, upscale_factor):
     return ops.pixel_shuffle(input, upscale_factor)

@@ -209,11 +209,11 @@ class Adam(Optimizer):
             closure (Callable, optional): A closure that reevaluates the model
                 and returns the loss.
         """
-
         loss = None
         if closure is not None:
             with core.enable_grad():
                 loss = closure()
+
         for group in self.param_groups:
             params_with_grad: list[Tensor] = []
             grads: list[Tensor] = []

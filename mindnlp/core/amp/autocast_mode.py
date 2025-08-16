@@ -10,6 +10,7 @@ from mindspore._c_expression.amp import pop_amp_strategy, push_amp_strategy, Amp
 from mindspore.common.dtype import TensorType as _dtype, float32
 from mindspore.train.amp import AMP_AUTO_BLACK_LIST, AMP_AUTO_WHITE_LIST, AMP_PRIM_ARG_TABLE
 
+
 try:
     import numpy as np
 
@@ -48,6 +49,7 @@ def autocast_decorator(autocast_instance, func):
     return decorate_autocast
 
 
+
 class autocast:
 
     def __init__(
@@ -81,6 +83,7 @@ class autocast:
 
     def __call__(self, func):
         return autocast_decorator(self, func)
+
 
 def _cast(value, device_type: str, dtype):
     if isinstance(value, core.Tensor):

@@ -1,9 +1,11 @@
 import numbers
+import mindspore
 from mindspore import ops
 from mindspore.ops.auto_generate import gen_ops_prim
 from mindspore.ops.auto_generate import pyboost_inner_prim
 from mindspore._c_expression import _empty_instance
 from mindspore.ops.operations.math_ops import NPUGetFloatStatusV2, NPUClearFloatStatusV2
+from mindspore.ops.operations.nn_ops import AllFinite
 
 from mindnlp import core
 from mindnlp.core._C import default_generator
@@ -163,6 +165,8 @@ def reverse_v2(input, dims):
         dims = (dims,)
     return pyboost_inner_prim.reverse_v2_impl(input, dims)
 
+__all__.append('reverse_v2')
+
 adam_op = ops.Adam().set_device('Ascend')
 def raw_adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad):
     # var, m, v, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad
@@ -193,3 +197,44 @@ def stop_gradient(*args):
     return stop_gradient_op(*args)
 
 __all__.append('stop_gradient')
+
+# allfinite_op = AllFinite().set_device('Ascend')
+def all_finite(inputs):
+    return allfinite_op(inputs)
+
+def rsqrt_fp32(input):
+    return rsqrt(input.astype(mindspore.float32))
+
+__all__.append('rsqrt_fp32')
+
+def matmul_ext_fp16(input, other):
+    return matmul_ext(input.astype(mindspore.float16), other.astype(mindspore.float16))
+
+__all__.append('matmul_ext_fp16')
+
+def dense_fp16(input, weight, bias):
+    input = input.astype(mindspore.float16)
+    weight = weight.astype(mindspore.float16)
+    if bias is not None:
+        bias = bias.astype(mindspore.float16)
+    return dense(input, weight, bias)
+
+__all__.append('dense_fp16')
+
+def softmax_fp32(input, dim):
+    return softmax(input.astype(mindspore.float32), dim)
+
+__all__.append('softmax_fp32')
+
+def log_softmax_ext_fp32(input, dim, dtype):
+    return log_softmax_ext(input.astype(mindspore.float32), dim, dtype)
+
+__all__.append('log_softmax_ext_fp32')
+
+def one_hot_ext(tensor, num_classes):
+    on_value = core.Tensor(1, dtype=tensor.dtype)
+    off_value = core.Tensor(0, dtype=tensor.dtype)
+
+    return pyboost_inner_prim.one_hot_ext_impl(tensor, num_classes, on_value, off_value, -1)
+
+__all__.append('one_hot_ext')
