@@ -1,5 +1,4 @@
 from mindnlp import core
-from .types import device as device_
 from ._prims import ascend, cpu, numpy, meta, ascend_310b
 from .configs import DEVICE_TARGET, CPU_USE_NUMPY_OP, SOC
 from ._bind import is_autocast_enabled
@@ -115,7 +114,7 @@ class Dispatcher(metaclass=SingletonMeta):
     def dispatch(self, func_name, *args, **kwargs):
         device = kwargs.pop("device", None)
         if isinstance(device, str):
-            device = device_(device)
+            device = core.device(device)
 
         if device is None:
             tensors = (
@@ -133,7 +132,7 @@ class Dispatcher(metaclass=SingletonMeta):
                 if len(devices) > 1:
                     raise ValueError("All tensor arguments must be on the same device.")
 
-                device = next(iter(devices), device_("cpu"))
+                device = next(iter(devices), core.device("cpu"))
 
         if DEVICE_TARGET == "Ascend" and device.type == "cuda":
             device.type = "npu"

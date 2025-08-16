@@ -124,3 +124,6 @@ def npu_fusion_attention(query, key, value, head_num, input_layout, *, pse=None,
     sfm_max, sfm_sum, sfm_out, atten_out = output
 
     return atten_out, sfm_max, sfm_sum
+
+def is_initialized():
+    True

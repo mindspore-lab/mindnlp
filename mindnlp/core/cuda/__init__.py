@@ -71,3 +71,6 @@ def stream(stream: Optional["torch.cuda.Stream"]) -> StreamContext:
         an object of the custom class ``torch.classes.cuda.Stream``.
     """
     return StreamContext(stream)
+
+def is_initialized():
+    return True

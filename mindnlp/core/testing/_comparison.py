@@ -712,6 +712,21 @@ class TensorLikePair(Pair):
         except Exception:
             self._inputs_not_supported()
 
+    def _check_supported(self, tensor: core.Tensor, *, id: tuple[Any, ...]) -> None:
+        if tensor.layout not in {
+            core.strided,
+            # core.jagged,
+            # core.sparse_coo,
+            # core.sparse_csr,
+            # core.sparse_csc,
+            # core.sparse_bsr,
+            # core.sparse_bsc,
+        }:
+            raise ErrorMeta(
+                ValueError, f"Unsupported tensor layout {tensor.layout}", id=id
+            )
+
+
     def compare(self) -> None:
         actual, expected = self.actual, self.expected
 

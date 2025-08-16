@@ -21,14 +21,10 @@ def non_finite_check(inputs):
         status = core.tensor(np.array([0] * 8), dtype=core.int32, device='npu')
         status = core.depend(status, inputs)
         found_inf = core.npu_get_float_status_v2(status)
-        print('found_inf', found_inf)
         status = core.depend(status, found_inf)
         clear_status = core.npu_clear_float_status_v2(status)
         found_inf = core.depend(found_inf, clear_status)
-        print('found_inf', found_inf)
         found_inf = core.not_equal(found_inf, 0)
-        print('found_inf', found_inf)
-        print('after clear', core.npu_get_float_status_v2(status))
         return found_inf.sum()
 
     found_inf = core.all_finite(inputs)  # pylint: disable=invalid-unary-operand-type
@@ -307,9 +303,7 @@ class GradScaler:
                     #     per_device_inv_scale.get(device),
                     # )
                     found_inf = per_device_found_inf.get(device)
-                    print('found_inf before', found_inf)
                     found_inf.copy_(non_finite_check(grads).to(found_inf.dtype))
-                    print('found_inf after', found_inf)
                     for grad in grads:
                         grad *= per_device_inv_scale.get(device)
 
@@ -379,7 +373,6 @@ class GradScaler:
         **kwargs: Any,
     ) -> Optional[float]:
         retval: Optional[float] = None
-        print(sum(v.item() for v in optimizer_state["found_inf_per_device"].values()))
         if not sum(v.item() for v in optimizer_state["found_inf_per_device"].values()):
             retval = optimizer.step(*args, **kwargs)
         return retval
@@ -426,8 +419,6 @@ class GradScaler:
             )
 
         retval: Optional[float] = None
-        print('grad scaler')
-        print(getattr(optimizer, "_step_supports_amp_scaling", False))
         if getattr(optimizer, "_step_supports_amp_scaling", False):
             # This optimizer has customized scale-handling logic, so we can call optimizer.step() directly.
             # The contract with custom optimizers is that their step() should accept an additional,
@@ -487,7 +478,6 @@ class GradScaler:
             len(optimizer_state["found_inf_per_device"]) > 0
         ), "No inf checks were recorded for this optimizer."
 
-        print('_maybe_opt_step')
         retval = self._maybe_opt_step(optimizer, optimizer_state, *args, **kwargs)
 
         optimizer_state["stage"] = OptState.STEPPED
@@ -524,8 +514,6 @@ class GradScaler:
 
         _scale, _growth_tracker = self._check_scale_growth_tracker("update")
 
-        print('scaler update')
-        print('scaler update', new_scale is not None)
         if new_scale is not None:
             assert self._scale is not None
             # Accept a new user-defined scale.
@@ -563,9 +551,7 @@ class GradScaler:
             #     self._growth_interval,
             # )
             if found_inf_combined > 0:
-                print(_scale)
                 _scale.copy_(_scale * self._backoff_factor)
-                print(_scale)
                 
                 _growth_tracker.copy_(_growth_tracker * 0)
             else:

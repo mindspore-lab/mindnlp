@@ -1,5 +1,4 @@
 from mindnlp import core
-from ..types import device as device_
 
 def _parse_to(*args, **kwargs):
     """
@@ -22,7 +21,7 @@ def _parse_to(*args, **kwargs):
             device = args[0]
             dtype = None
         elif isinstance(args[0], (str, int)):
-            device = device_(args[0])
+            device = core.device(args[0])
             dtype = None
         else:
             raise TypeError(f"Expected core.dtype or core.device, but got {type(args[0])}")

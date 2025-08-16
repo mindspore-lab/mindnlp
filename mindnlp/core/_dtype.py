@@ -46,6 +46,11 @@ bool = bool_
 
 float8_e4m3fn = None # TODO: not support fp8 for now
 float8_e5m2 = None
+float8_e4m3fnuz = None
+float8_e5m2fnuz = None
+complex32 = None
+cfloat = complex32
+cdouble = complex64
 
 uint1 = None
 uint2 = None
