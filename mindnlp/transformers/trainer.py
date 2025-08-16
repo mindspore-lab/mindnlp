@@ -85,10 +85,12 @@ def training_step(
             else:
                 loss.backward(**kwargs)
 
+        print(loss, loss_true)
         return loss, loss_true
 
-    grad_fn = autograd.value_and_grad(forward_fn, model.trainable_params(), has_aux=True)
+    if not hasattr(self, 'grad_fn'):
+        self.grad_fn = autograd.value_and_grad(forward_fn, model.trainable_params(), has_aux=True)
 
-    loss_scaled, (loss_true,) = grad_fn(inputs, num_items_in_batch)
+    loss_scaled, (loss_true,) = self.grad_fn(inputs, num_items_in_batch)
 
     return loss_true

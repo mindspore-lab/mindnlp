@@ -1,3 +1,4 @@
+import numbers
 from mindnlp import core
 from mindnlp.core._C import default_generator
 from mindnlp.core.executor import execute
@@ -64,6 +65,8 @@ def inplace_uniform(input, *args, **kwargs):
     return input
 
 def inplace_add(input, other, alpha):
+    if isinstance(other, numbers.Number):
+        other = core.tensor(other, dtype=input.dtype, device=input.device)
     execute('inplace_add_ext', input, other, alpha)
     return input
 

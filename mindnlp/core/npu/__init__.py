@@ -8,6 +8,7 @@ from mindspore.runtime import memory_reserved as ms_memory_reserved, \
     memory_allocated as ms_memory_allocated, StreamCtx as StreamContext, Stream, empty_cache as ms_empty_cache, \
     reset_peak_memory_stats, reset_max_memory_allocated, max_memory_allocated, synchronize, \
     current_stream
+from mindspore.hal import get_device_properties
 
 from mindspore.device_context.ascend import device_count as ms_device_count
 from mindspore.communication import GlobalComm, get_group_size

@@ -78,7 +78,7 @@ def gather_nd(input, indices):
 
 # index_add
 def index_add(input, dim, index, source, *, alpha=1):
-    return execute("index_add_ext", input, index, source, dim, alpha)
+    return execute("index_add_ext", input, dim, index, source, alpha)
 
 
 # index_copy
@@ -294,7 +294,9 @@ def unsqueeze(input, dim):
 
 
 # where
-def where(condition, input, other):
+def where(condition, input=None, other=None):
+    if input is None and other is None:
+        return nonzero(condition, as_tuple=True)
     return execute("select", condition, input, other)
 
 

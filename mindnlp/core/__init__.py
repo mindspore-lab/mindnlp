@@ -50,7 +50,9 @@ from .types import device
 from .autograd import *
 from .ops import *
 from .serialization import load, save
-from ._bind import get_default_dtype, set_default_dtype, get_default_device
+from ._bind import get_default_dtype, set_default_dtype, get_default_device, is_autocast_enabled, set_autocast_enabled, \
+    set_autocast_dtype, get_autocast_dtype
+
 from .amp import autocast, GradScaler
 from .func import vmap
 from .configs import set_pyboost
@@ -90,25 +92,6 @@ def compile(fn=None, *args, **kwargs):
         return wrap_func(fn)
     return wrap_func
 
-AUTO_CAST_DTYE = {
-    'cuda': float16,
-    'cpu': float16,
-    'npu': float16,
-    'Ascend': float16
-}
-
-def set_autocast_dtype(device_type, dtype):
-    assert device_type in AUTO_CAST_DTYE.keys(), f'{device_type} is not in {AUTO_CAST_DTYE.keys()}'
-    AUTO_CAST_DTYE[device_type] = dtype
-
-def get_autocast_dtype(device_type):
-    return AUTO_CAST_DTYE[device_type]
-
-def get_autocast_gpu_dtype():
-    return AUTO_CAST_DTYE['cuda']
-
-def is_autocast_enabled():
-    return True
 
 def use_deterministic_algorithms(mode, *, warn_only=False):
     mindspore.set_context(deterministic='ON' if mode else 'OFF')
