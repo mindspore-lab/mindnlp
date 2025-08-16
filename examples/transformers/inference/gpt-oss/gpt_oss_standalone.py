@@ -1,5 +1,4 @@
 import mindnlp
-from mindnlp.core import distributed as dist
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 model_id = "openai/gpt-oss-20b"

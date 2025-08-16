@@ -1,7 +1,7 @@
 import ctypes
 from typing import Any
 from ._dtype import *
-from .types import device as device_
+from ._C import device as device_
 from .configs import ON_A1
 
 DEFAULT_DTYPE, DEFAULT_DEVICE = float32, device_('cpu')

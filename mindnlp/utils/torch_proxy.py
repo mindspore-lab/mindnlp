@@ -21,7 +21,7 @@ class RedirectFinder(importlib.abc.MetaPathFinder):
             if fullname == proxy_prefix or fullname.startswith(proxy_prefix + "."):
                 # 计算实际模块名
                 target_name = fullname.replace(proxy_prefix, target_prefix, 1)
-                if DEVICE_TARGET == 'Ascend':
+                if DEVICE_TARGET == 'Ascend' and 'common_cuda' not in target_name:
                     target_name = target_name.replace('cuda', 'npu')
                 try:
                     importlib.import_module(target_name)

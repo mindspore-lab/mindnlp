@@ -518,3 +518,14 @@ def randperm_ext(n, seed, offset, dtype):
 
 __all__.append('randperm_ext')
 
+def embedding(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq):
+    out = np.take(weight.numpy(), input.numpy(), axis=0)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('embedding')
+
+def randn(size, seed, offset, dtype):
+    out = np.random.randn(*size).astype(core.dtype2np[dtype])
+    return core.Tensor.from_numpy(out)
+
+__all__.append('randn')

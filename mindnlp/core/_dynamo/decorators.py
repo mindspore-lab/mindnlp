@@ -39,3 +39,17 @@ def allow_in_graph(fn):
         return [allow_in_graph(x) for x in fn]
     assert callable(fn), "allow_in_graph expects a callable"
     return fn
+
+def disable(fn=None, recursive=True, *, reason=None, wrapping=True):  # type: ignore[no-untyped-def]
+    """
+    Decorator to disable TorchDynamo
+
+    If recursive=True, Dynamo is completely skipped on the decorated function
+    frame as well as the recursively invoked functions.
+
+    If recursive=False, Dynamo skips frames associated with the function code,
+    but still process recursively invoked frames.
+
+    If reason is provided, it will be printed when Dynamo attempts to trace the disabled function.
+    """
+    return fn

@@ -173,3 +173,4 @@ tests/huggingface_transformers/
 .gradio/
 
 huanhuan.json
+pytorch/

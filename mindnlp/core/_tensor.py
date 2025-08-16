@@ -18,7 +18,6 @@ except:
 
 from . import ops, _dtype
 from ._bind import get_device_in_context, device_, get_default_dtype
-from .storage import UntypedStorage
 from ._utils import _rebuild_tensor_v2
 from ._C.size import Size
 from .configs import DEVICE_TARGET, CPU_USE_NUMPY_OP
@@ -92,6 +91,8 @@ def __init__(self, *args, **kwargs):
 
 Tensor.__init__ = __init__
 origin_setitem = Tensor.__setitem__
+
+Tensor._device = device_('cpu')
 
 def tensor(data, *, dtype=None, device=None, requires_grad=False):
     if isinstance(data, Tensor):
@@ -2065,7 +2066,7 @@ class TensorPlaceHolder:
 
     # Tensor.untyped_storage
     def untyped_storage(self):
-        return UntypedStorage(self)
+        return core.UntypedStorage(self)
 
     # Tensor.storage_offset
 
@@ -2507,6 +2508,10 @@ class TensorPlaceHolder:
 
     def log_softmax(self, dim):
         return ops.log_softmax(self, dim)
+
+    @property
+    def is_nested(self):
+        return False
 
 def enable_mindspore_patch():
     fn_keys = list(TensorPlaceHolder.__dict__)
