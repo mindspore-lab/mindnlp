@@ -1414,6 +1414,7 @@ MACOS_VERSION = float('.'.join(platform.mac_ver()[0].split('.')[:2]) or -1)
 # TEST_HPU = True if (hasattr(torch, "hpu") and core.hpu.is_available()) else False
 TEST_CUDA = core.cuda.is_available()
 TEST_NPU = core.npu.is_available()
+TEST_PRIVATEUSE1 = False
 # custom_device_mod = getattr(torch, core._C._get_privateuse1_backend_name(), None)
 # TEST_PRIVATEUSE1 = is_privateuse1_backend_available()
 # TEST_PRIVATEUSE1_DEVICE_TYPE = core._C._get_privateuse1_backend_name()

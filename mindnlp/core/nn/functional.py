@@ -426,7 +426,7 @@ def _nllloss_nd(input, target, weight=None, ingore_index=-100, reduction='mean')
         raise ValueError(f"input bacth_size should be equal to target batch_size, but got {input.shape[0]} and "
                          f"{target.shape[0]}")
     if input_dim == 1 or input_dim == 2:
-        return execute('nllloss', input.float(), target, weight.float(), reduction, ingore_index)[0]
+        return execute('nllloss', input, target, weight, reduction, ingore_index)[0]
     if input_dim == 4:
         return execute('nllloss_2d', input, target, weight, reduction, ingore_index)[0]
     # input_dim==3 or input_dim>4
@@ -554,9 +554,9 @@ def manual_softmax(x, dim=-1):
     return exp_x / ops.sum(exp_x, dim=dim, keepdim=True)
 
 def softmax(input, dim=-1, *, dtype=None):
-    out = execute('softmax', input, dim)
     if dtype is not None:
-        out = out.to(dtype)
+        input = input.to(dtype)
+    out = execute('softmax', input, dim)
     return out
 
 def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
@@ -819,13 +819,13 @@ def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
 
 def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     if use_pyboost() and not ON_ORANGE_PI:
-        return mint.nn.functional.conv2d(input, weight, bias, stride, padding, dilation, groups)
+        return execute('conv2d_ext', input, weight, bias, stride, padding, dilation, groups)
 
-    pad_mode = 'pad'
-    if not isinstance(padding, (int, tuple)):
-        pad_mode = padding
+    # pad_mode = 'pad'
+    # if not isinstance(padding, (int, tuple)):
+    #     pad_mode = padding
 
-    return ops.conv2d(input, weight, bias=bias, stride=stride, pad_mode=pad_mode, padding=padding, dilation=dilation, groups=groups)
+    # return ops.conv2d(input, weight, bias=bias, stride=stride, pad_mode=pad_mode, padding=padding, dilation=dilation, groups=groups)
 
 def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     if use_pyboost() and not ON_ORANGE_PI:
@@ -893,38 +893,38 @@ def _deconv_output_length(pad_mode, filter_size, stride_size, dilation_size, pad
 
 def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
     if use_pyboost():
-        return mint.nn.functional.conv_transpose2d(input, weight, bias, stride, padding, output_padding, groups, dilation)
+        return execute('conv_transpose2d', input, weight, bias, stride, padding, output_padding, groups, dilation)
 
-    pad_mode = 'pad'
-    pad = padding
-    if isinstance(padding, tuple):
-        pad = (0, 0, padding[0], padding[0])
-    elif isinstance(padding, int):
-        pad = (0, 0) + (padding,) * 2
-    if not isinstance(padding, (int, tuple)):
-        pad_mode = padding
-        pad = (0,) * 4
+    # pad_mode = 'pad'
+    # pad = padding
+    # if isinstance(padding, tuple):
+    #     pad = (0, 0, padding[0], padding[0])
+    # elif isinstance(padding, int):
+    #     pad = (0, 0) + (padding,) * 2
+    # if not isinstance(padding, (int, tuple)):
+    #     pad_mode = padding
+    #     pad = (0,) * 4
 
-    in_channel, out_channels = weight.shape[0], weight.shape[1] * groups
-    kernel_size = weight.shape[2:]
+    # in_channel, out_channels = weight.shape[0], weight.shape[1] * groups
+    # kernel_size = weight.shape[2:]
 
-    conv2d_transpose_op = ops.Conv2DTranspose(out_channel=out_channels,
-                                                kernel_size=kernel_size,
-                                                mode=1,
-                                                pad_mode=pad_mode,
-                                                pad=pad,
-                                                stride=stride,
-                                                dilation=dilation,
-                                                group=groups)
-    n, _, h, w = input.shape
-    h_add = _deconv_output_length(pad_mode, kernel_size[0], stride[0], dilation[0], pad[0] + pad[1])
-    w_add = _deconv_output_length(pad_mode, kernel_size[1], stride[1], dilation[1], pad[2] + pad[3])
+    # conv2d_transpose_op = ops.Conv2DTranspose(out_channel=out_channels,
+    #                                             kernel_size=kernel_size,
+    #                                             mode=1,
+    #                                             pad_mode=pad_mode,
+    #                                             pad=pad,
+    #                                             stride=stride,
+    #                                             dilation=dilation,
+    #                                             group=groups)
+    # n, _, h, w = input.shape
+    # h_add = _deconv_output_length(pad_mode, kernel_size[0], stride[0], dilation[0], pad[0] + pad[1])
+    # w_add = _deconv_output_length(pad_mode, kernel_size[1], stride[1], dilation[1], pad[2] + pad[3])
 
-    out = conv2d_transpose_op(input, weight,
-                              (n, out_channels, h * stride[0] + h_add, w * stride[1] + w_add))
-    if bias is not None:
-        out = ops.bias_add(out, bias)
-    return out
+    # out = conv2d_transpose_op(input, weight,
+    #                           (n, out_channels, h * stride[0] + h_add, w * stride[1] + w_add))
+    # if bias is not None:
+    #     out = ops.bias_add(out, bias)
+    # return out
 
 def conv_transpose3d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
     if input.device.type == 'npu':
@@ -1164,17 +1164,18 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
 
     attn_bias_shape = (L, S) if attn_mask is None else attn_mask.shape
     attn_bias = core.zeros(attn_bias_shape, dtype=query.dtype, device=query.device)
+
     if is_causal:
         assert attn_mask is None
         temp_mask = core.ones(L, S, dtype=core.bool, device=query.device).tril(diagonal=0)
-        attn_bias = attn_bias.masked_fill_(temp_mask.logical_not(), core.finfo(attn_bias.dtype).min)
+        attn_bias = attn_bias.masked_fill(temp_mask.logical_not(), core.finfo(attn_bias.dtype).min)
         attn_bias.to(query.dtype)
 
     if attn_mask is not None:
         if attn_mask.dtype == core.bool:
             if attn_mask.ndim == 3:
                 attn_mask = attn_mask.squeeze(0)
-            attn_bias = attn_bias.masked_fill_(attn_mask.logical_not(), core.finfo(attn_bias.dtype).min)
+            attn_bias = attn_bias.masked_fill(attn_mask.logical_not(), core.finfo(attn_bias.dtype).min)
         else:
             attn_bias = attn_mask + attn_bias
 
@@ -1182,9 +1183,9 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
         key = key.repeat_interleave(query.size(-3) // key.size(-3), -3)
         value = value.repeat_interleave(query.size(-3) // value.size(-3), -3)
 
-    attn_weight = query @ key.transpose(-2, -1) * scale_factor
-    attn_weight += attn_bias
-    attn_weight = softmax(attn_weight, dim=-1)
+    attn_weight = query.float() @ key.transpose(-2, -1).float() * scale_factor
+    attn_weight += attn_bias.float()
+    attn_weight = softmax(attn_weight, dim=-1, dtype=core.float32).to(query.dtype)
     attn_weight = dropout(attn_weight, dropout_p, training=True)
     return attn_weight @ value
 

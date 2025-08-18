@@ -4,9 +4,6 @@ from mindnlp.core.executor import execute
 def cast(input, dtype):
     return execute('cast', input, dtype)
 
-def assign(input, other):
-    return execute('assign', input, other)
-
 def depend(*args):
     return execute('depend', *args)
 
@@ -20,7 +17,7 @@ def all_finite(inputs):
     return execute('all_finite', inputs)
 
 __all__ = [
-    'cast', 'assign', 'depend',
+    'cast', 'depend',
     'npu_get_float_status_v2', 'npu_clear_float_status_v2',
     'all_finite'
 ]

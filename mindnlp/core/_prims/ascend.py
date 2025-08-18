@@ -238,3 +238,4 @@ def one_hot_ext(tensor, num_classes):
     return pyboost_inner_prim.one_hot_ext_impl(tensor, num_classes, on_value, off_value, -1)
 
 __all__.append('one_hot_ext')
+

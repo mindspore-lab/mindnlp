@@ -15,5 +15,5 @@
 """mindnlp nn"""
 from . import utils, functional, init
 from .modules import *
-from .parameter import Parameter
+from .parameter import Parameter, Buffer
 from .parallel import DataParallel as DataParallel

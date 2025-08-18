@@ -76,7 +76,8 @@ def clip_grad_norm_(
     # when the gradients do not reside in CPU memory.
     clip_coef_clamped = ops.clamp(clip_coef, max=1.0)
     for g in grads:
-        ops.assign(g, ops.mul(g, clip_coef_clamped))
+        # ops.assign(g, ops.mul(g, clip_coef_clamped))
+        g.copy_(ops.mul(g, clip_coef_clamped))
     return total_norm
 
 

@@ -85,7 +85,6 @@ def training_step(
             else:
                 loss.backward(**kwargs)
 
-        print(loss, loss_true)
         return loss, loss_true
 
     if not hasattr(self, 'grad_fn'):
