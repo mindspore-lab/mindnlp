@@ -16,6 +16,7 @@ try:
 except:
     from mindspore._c_expression import Tensor as Tensor_
 
+from mindnlp import core
 from . import ops, _dtype
 from ._bind import get_device_in_context, device_, get_default_dtype
 from ._utils import _rebuild_tensor_v2
@@ -2508,6 +2509,9 @@ class TensorPlaceHolder:
 
     def log_softmax(self, dim):
         return ops.log_softmax(self, dim)
+
+    def char(self):
+        return self.to(core.int8)
 
     @property
     def is_nested(self):

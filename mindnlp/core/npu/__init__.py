@@ -127,3 +127,6 @@ def npu_fusion_attention(query, key, value, head_num, input_layout, *, pse=None,
 
 def is_initialized():
     True
+
+def is_tf32_supported():
+    return False

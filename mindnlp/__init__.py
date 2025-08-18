@@ -50,12 +50,10 @@ if platform.system().lower() == 'linux':
 
 # set mindnlp.core to torch
 from .utils.torch_proxy import initialize_torch_proxy, setup_metadata_patch
-from .utils.safetensors_patch import setup_safetensors_patch
-from .core._tensor import enable_mindspore_patch
-
-enable_mindspore_patch()
 initialize_torch_proxy()
 setup_metadata_patch()
+
+from .utils.safetensors_patch import setup_safetensors_patch
 setup_safetensors_patch()
 
 from . import transformers

@@ -41,27 +41,16 @@ memory_format = None
 inf = float("inf")
 nan = float("nan")
 
-from ._dtype import *
-from ._tensor import Tensor, tensor, is_tensor, \
-    LongTensor, FloatTensor, BoolTensor, HalfTensor, BFloat16Tensor, IntTensor
+
+
 from ._C import *
 from ._C.size import Size
-from .autograd import *
+from ._dtype import *
 from .ops import *
-from .serialization import load, save
-from ._bind import get_default_dtype, set_default_dtype, get_default_device, is_autocast_enabled, set_autocast_enabled, \
-    set_autocast_dtype, get_autocast_dtype
-
-from .amp import autocast, GradScaler
-from .func import vmap
-from .configs import set_pyboost
-
-from . import _dynamo
-from . import profiler, cuda, amp, compiler, jit, version, __future__, overrides, \
-    return_types, linalg, fx, backends, nn, fft, _jit_internal, utils, optim, testing
-from ._lowrank import svd_lowrank
-from .random import get_rng_state, initial_seed, manual_seed, seed, set_rng_state
-
+from ._tensor import Tensor, tensor, is_tensor, \
+    LongTensor, FloatTensor, BoolTensor, HalfTensor, BFloat16Tensor, IntTensor
+from ._tensor import enable_mindspore_patch
+enable_mindspore_patch()
 
 def _has_compatible_shallow_copy_type(tensor, other):
     """
@@ -135,6 +124,28 @@ def typename(obj: _Any, /) -> str:
     if module in {"", "builtins"}:
         return qualname
     return f"{module}.{qualname}"
+
+
+def _nnpack_available():
+    return False
+
+
+from .autograd import *
+from .serialization import load, save
+from ._bind import get_default_dtype, set_default_dtype, get_default_device, is_autocast_enabled, set_autocast_enabled, \
+    set_autocast_dtype, get_autocast_dtype
+
+from .amp import autocast, GradScaler
+from .func import vmap
+from .configs import set_pyboost
+from .storage import UntypedStorage, Storage, TypedStorage
+
+from . import _dynamo
+from . import profiler, cuda, amp, compiler, jit, version, __future__, overrides, \
+    return_types, linalg, fx, backends, nn, fft, _jit_internal, utils, optim, testing
+from ._lowrank import svd_lowrank
+from .random import get_rng_state, initial_seed, manual_seed, seed, set_rng_state
+
 
 
 __version__ = 'test_version_no_value'

@@ -194,3 +194,18 @@ def bitwise_right_shift(input, other):
     return bitwise_right_shift_op(input, other)
 
 __all__.append('bitwise_right_shift')
+
+embedding_op = ops.Gather().set_device('CPU')
+def embedding(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq):
+    return embedding_op(weight, input, 0)
+
+__all__.append('embedding')
+
+
+def randn(size, seed, offset, dtype):
+    rand_op = ops.StandardNormal()
+    output = rand_op(size)
+    return output
+
+__all__.append('randn')
+

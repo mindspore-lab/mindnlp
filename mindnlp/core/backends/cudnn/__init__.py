@@ -13,3 +13,7 @@ def flags(
         yield
     finally:
         pass
+
+
+def is_acceptable(tensor):
+    return True

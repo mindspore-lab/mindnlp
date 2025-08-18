@@ -312,7 +312,7 @@ def randn_like(
         input,
         seed,
         offset,
-        dtype_to_type_id("RandnLike", "dtype", dtype),
+        dtype,
         device=device,
         requires_grad=requires_grad,
     )

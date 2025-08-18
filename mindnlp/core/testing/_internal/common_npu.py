@@ -10,7 +10,7 @@ import contextlib
 import os
 import unittest
 
-
+TEST_CUDA = TEST_NPU
 NPU_ALREADY_INITIALIZED_ON_IMPORT = core.npu.is_initialized()
 
 

@@ -6,7 +6,7 @@ from typing import Any, Optional
 
 from mindnlp import core
 
-from mindspore._c_expression.amp import pop_amp_strategy, push_amp_strategy, AmpLevel
+from mindspore._c_expression.amp import pop_amp_strategy, push_amp_strategy, AmpLevel, create_amp_strategy
 from mindspore.common.dtype import TensorType as _dtype, float32
 from mindspore.train.amp import AMP_AUTO_BLACK_LIST, AMP_AUTO_WHITE_LIST, AMP_PRIM_ARG_TABLE
 
@@ -74,6 +74,7 @@ class autocast:
         core.set_autocast_dtype(self.device_type, self.dtype)
         white_list = [(prim.__name__, AMP_PRIM_ARG_TABLE[prim]) for prim in AMP_AUTO_WHITE_LIST]
         black_list = [(prim.__name__, AMP_PRIM_ARG_TABLE[prim]) for prim in AMP_AUTO_BLACK_LIST]
+        amp_strategy = create_amp_strategy(self.amp_level, self.dtype, white_list, black_list)
         push_amp_strategy(self.amp_level, self.dtype, white_list, black_list)
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any):  # type: ignore[override]
