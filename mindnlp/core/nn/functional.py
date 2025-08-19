@@ -1197,9 +1197,9 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
 
     attn_weight = query.float() @ key.transpose(-2, -1).float() * scale_factor
     attn_weight += attn_bias.float()
-    attn_weight = softmax(attn_weight, dim=-1)
+    attn_weight = softmax(attn_weight, dim=-1, dtype=core.float32).to(query.dtype)
     attn_weight = dropout(attn_weight, dropout_p, training=True)
-    return (attn_weight @ value.float()).to(query.dtype)
+    return attn_weight @ value
 
 
 def _mha_shape_check(query, key, value, key_padding_mask, attn_mask, num_heads):

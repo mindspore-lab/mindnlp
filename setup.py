@@ -159,7 +159,9 @@ setup(
         'mindspore>=2.5.0',
         'tqdm',
         'requests',
+        'accelerate', # hf dependency
         'transformers>=4.55.0', # hf dependency
+        'peft', # hf dependency
         'datasets', # hf dependency
         'evaluate', # hf dependency
         'tokenizers', # hf dependency

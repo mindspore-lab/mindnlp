@@ -5,13 +5,17 @@
 import mindnlp
 import mindspore
 
-# mindspore.set_context(pynative_synchronize=True)
 from datasets import Dataset
 import pandas as pd
 from transformers import AutoTokenizer, AutoModelForCausalLM, DataCollatorForSeq2Seq, TrainingArguments, Trainer, GenerationConfig
 
+# download file
+"""
+wget "https://gh-proxy.com/https://raw.githubusercontent.com/datawhalechina/self-llm/refs/heads/master/dataset/huanhuan.json"
+"""
+
 # 将JSON文件转换为CSV文件
-df = pd.read_json('/home/lvyufeng/lvyufeng/mindnlp/examples/transformers/peft/lora/huanhuan.json')
+df = pd.read_json('./huanhuan.json')
 ds = Dataset.from_pandas(df)
 
 # 处理数据集
@@ -60,8 +64,8 @@ model.print_trainable_parameters()
 # 配置训练参数
 args = TrainingArguments(
     output_dir="./output/Qwen2.5_instruct_lora",
-    per_device_train_batch_size=4,
-    gradient_accumulation_steps=4,
+    per_device_train_batch_size=3,
+    gradient_accumulation_steps=5,
     logging_steps=10,
     num_train_epochs=3,
     save_steps=100, 
@@ -87,7 +91,7 @@ import torch
 from peft import PeftModel
 
 mode_path = 'Qwen/Qwen2.5-7B-Instruct'
-lora_path = './output/Qwen2.5_instruct_lora/checkpoint-702' # 这里改称你的 lora 输出对应 checkpoint 地址
+lora_path = './output/Qwen2.5_instruct_lora/checkpoint-747' # 这里改称你的 lora 输出对应 checkpoint 地址
 
 # 加载tokenizer
 tokenizer = AutoTokenizer.from_pretrained(mode_path, trust_remote_code=True)

@@ -16,6 +16,7 @@ from mindspore.communication import GlobalComm, get_group_size
 from mindnlp import core
 from mindnlp.core.executor import execute
 from ..configs import SUPPORT_BF16, ON_A1
+from . import random
 
 FloatTensor = core.FloatTensor
 HalfTensor = core.FloatTensor
