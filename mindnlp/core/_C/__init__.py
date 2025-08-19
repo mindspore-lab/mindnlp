@@ -1,6 +1,6 @@
 from typing import Any
-from mindspore import Generator as msGenerator
 import mindspore
+from mindspore.ops.operations._inner_ops import Generator as GeneratorOp
 
 from mindnlp import core
 from . import _nn
@@ -105,18 +105,100 @@ class device():
 
 device_ = device
 
-class Generator(msGenerator):
+STEP = 0
+SEED = 1
+GET_STATE = 2
+SET_STATE = 3
+MANUAL_SEED = 4
+INITIAL_SEED = 5
+
+class Generator:
     def __init__(self, device='cpu'):
-        super().__init__()
         if device == 'cuda' and DEVICE_TARGET == 'Ascend':
             device = 'npu'
         self._device = device_(device) if isinstance(device, str) else device
+
+        self._seed = mindspore.Tensor(0)
+        self._offset = mindspore.Tensor(0)
+        self._generator = GeneratorOp().set_device("CPU")
+        self._generator.add_prim_attr("manual_seed", False)
+
 
     @property
     def device(self):
         if hasattr(self, '_device'):
             return self._device
         return device('cpu')
+
+    def set_state(self, state):
+        """
+        Sets the generator state.
+
+        Args:
+            state (tensor): target state of the generator.
+        """
+        self._generator(SET_STATE, (self._seed, self._offset, state))
+
+    def get_state(self):
+        """
+        Get the generator state.
+
+        Returns:
+            Tensor, generator state.
+        """
+        return self._generator(GET_STATE, (self._seed, self._offset))[2]
+
+    def seed(self):  # pylint: disable=redefined-outer-name
+        """
+        Seed generator with random number.
+
+        Returns:
+            Randomly generated seeds, the type is int.
+        """
+        current_seed = self._generator(
+            SEED, (self._seed, self._offset))[0]
+        return current_seed.item()
+
+    def manual_seed(self, seed):  # pylint: disable=redefined-outer-name
+        """
+        Set the generator seed.
+
+        Args:
+            seed (int): Set the generator seed.
+
+        Returns:
+            Generator, the generator instance.
+        """
+        if not isinstance(seed, int):
+            raise TypeError("Seed must be an integer.")
+        seed = mindspore.Tensor(seed, mindspore.int64)
+        self._generator(MANUAL_SEED, (self._seed, self._offset, seed))
+        self._generator.add_prim_attr("manual_seed", True)
+        return self
+
+    def initial_seed(self):
+        """
+        Return the initial seed of generator.
+
+        Returns:
+            The initial seed of generator.
+        """
+        current_seed = self._generator(
+            INITIAL_SEED, (self._seed, self._offset))[0]
+        return current_seed.item()
+
+
+    def _step(self, step):
+        """
+        Return current seed and offset, and update offset for the next call.
+
+        Args:
+            step (Tensor): Update offset by step.
+
+        Returns:
+            Current seed and offset.
+        """
+        return self._generator(STEP, (self._seed, self._offset, step,))[:2]
 
 default_generator = Generator()
 

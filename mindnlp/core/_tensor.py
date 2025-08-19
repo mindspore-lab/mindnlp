@@ -5,6 +5,7 @@ import mindspore
 from mindspore import Tensor
 from mindspore.common.tensor import _TensorMeta
 from mindspore._c_expression.typing import Type
+from mindspore._c_expression import ParamInfo # pylint: disable=no-name-in-module
 from mindspore._c_expression import typing
 try:
     from mindspore.common._stub_tensor import StubTensor, _stub_method
@@ -84,16 +85,19 @@ _TensorMeta.__str__ = tensor_meta_str
 
 old_init = Tensor.__init__
 def __init__(self, *args, **kwargs):
+    requires_grad = kwargs.pop('requires_grad', False)
     if len(args) > 1 and all([isinstance(arg, int) for arg in args]):
         tensor = Tensor_(shape=args, dtype=get_default_dtype())
         old_init(self, tensor, internal=True)
     else:
         old_init(self, *args, **kwargs)
+    self.requires_grad_(requires_grad)
 
 Tensor.__init__ = __init__
 origin_setitem = Tensor.__setitem__
 
 Tensor._device = device_('cpu')
+Tensor._requires_grad = False
 
 def tensor(data, *, dtype=None, device=None, requires_grad=False):
     if isinstance(data, Tensor):
@@ -2516,6 +2520,32 @@ class TensorPlaceHolder:
     @property
     def is_nested(self):
         return False
+
+    @property
+    def requires_grad(self):
+        return self._requires_grad
+
+    @requires_grad.setter
+    def requires_grad(self, value):
+        if not isinstance(value, bool):
+            raise TypeError("The 'requires_grad' attribute of parameter must be set as bool.")
+        self._requires_grad = value
+        if self.param_info is not None:
+            self.param_info.requires_grad = value
+        else:
+            self.param_info = ParamInfo()
+            self.param_info.requires_grad = value
+
+        if value:
+            if not hasattr(self, 'handle'):
+                self.retain_grad()
+        else:
+            if hasattr(self, 'handle'):
+                self.handle.remove()
+                delattr(self, 'handle')
+
+    def retain_grad(self):
+        pass
 
 def enable_mindspore_patch():
     fn_keys = list(TensorPlaceHolder.__dict__)

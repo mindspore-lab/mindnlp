@@ -10,7 +10,6 @@ from mindnlp import core
 
 class Parameter(Tensor):
     grad = None
-    requires_grad = False
     _grad_fn = None
 
     def __init__(self, input_data=None, requires_grad=True, **kwargs):
@@ -49,26 +48,6 @@ class Parameter(Tensor):
         """
         return self.param_info.name
 
-    @property
-    def requires_grad(self):
-        return self._requires_grad
-
-    @requires_grad.setter
-    def requires_grad(self, value):
-        if not isinstance(value, bool):
-            raise TypeError("The 'requires_grad' attribute of parameter must be set as bool.")
-        self.param_info.requires_grad = value
-        self._requires_grad = value
-        if value:
-            if not hasattr(self, 'handle'):
-                self.retain_grad()
-        else:
-            if hasattr(self, 'handle'):
-                self.handle.remove()
-                delattr(self, 'handle')
-
-    def retain_grad(self):
-        pass
 
 class UninitializedTensorMixin:
     _allowed_methods = [
