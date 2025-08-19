@@ -239,3 +239,7 @@ def one_hot_ext(tensor, num_classes):
 
 __all__.append('one_hot_ext')
 
+def flash_attention_score(*args, **kwargs):
+    return pyboost_inner_prim.flash_attention_score_impl(*args, **kwargs)
+
+__all__.append('flash_attention_score')

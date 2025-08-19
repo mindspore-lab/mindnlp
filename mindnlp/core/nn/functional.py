@@ -7,7 +7,7 @@ from typing import Optional, Tuple, List
 from mindnlp import core
 from mindnlp.core.executor import execute
 
-from ..configs import DEVICE_TARGET, ON_ORANGE_PI, use_pyboost, ON_A1
+from ..configs import DEVICE_TARGET, ON_ORANGE_PI, use_pyboost, ON_A1, ON_A2
 
 generator_step_ = 12
 
@@ -1171,9 +1171,27 @@ def repeat_kv(hidden_states, n_rep: int):
 
 def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0,
         is_causal=False, scale=None, enable_gqa=False) -> core.Tensor:
+
     L, S = query.size(-2), key.size(-2)
     scale_factor = 1 / math.sqrt(query.size(-1)) if scale is None else scale
 
+    if enable_gqa:
+        key = repeat_kv(key, query.size(-3) // key.size(-3)).contiguous()
+        value = repeat_kv(value, query.size(-3) // value.size(-3)).contiguous()
+
+    if query.device.type == 'npu' and ON_A2:
+        if attn_mask is not None:
+            attn_mask = ~attn_mask
+        
+        head_num = query.shape[1]
+        output = execute('flash_attention_score', query, key, value, head_num=head_num, input_layout='BNSD', real_shift=None, padding_mask=None, attn_mask=attn_mask,
+                        scale_value=scale_factor, keep_prob=1 - dropout_p, pre_tokens=2147483647, next_tokens=2147483647, inner_precise=0,
+                        drop_mask=None, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0)
+
+        sfm_max, sfm_sum, sfm_out, atten_out = output
+
+        return atten_out
+    
     attn_bias_shape = (L, S) if attn_mask is None else attn_mask.shape
     attn_bias = core.zeros(attn_bias_shape, dtype=query.dtype, device=query.device)
 
@@ -1190,11 +1208,7 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
             attn_bias = attn_bias.masked_fill(attn_mask.logical_not(), core.finfo(attn_bias.dtype).min)
         else:
             attn_bias = attn_mask + attn_bias
-
-    if enable_gqa:
-        key = repeat_kv(key, query.size(-3) // key.size(-3)).contiguous()
-        value = repeat_kv(value, query.size(-3) // value.size(-3)).contiguous()
-
+        
     attn_weight = query.float() @ key.transpose(-2, -1).float() * scale_factor
     attn_weight += attn_bias.float()
     attn_weight = softmax(attn_weight, dim=-1, dtype=core.float32).to(query.dtype)
