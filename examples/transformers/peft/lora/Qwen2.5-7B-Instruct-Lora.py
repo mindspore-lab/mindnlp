@@ -64,11 +64,11 @@ model.print_trainable_parameters()
 # 配置训练参数
 args = TrainingArguments(
     output_dir="./output/Qwen2.5_instruct_lora",
-    per_device_train_batch_size=3,
+    per_device_train_batch_size=2,
     gradient_accumulation_steps=5,
     logging_steps=10,
     num_train_epochs=3,
-    save_steps=100, 
+    save_steps=100,
     learning_rate=1e-4,
     save_on_each_node=True,
     # gradient_checkpointing=True

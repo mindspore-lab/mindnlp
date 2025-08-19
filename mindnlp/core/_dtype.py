@@ -4,7 +4,12 @@ from mindspore.common.dtype import *
 from mindspore._c_expression import typing
 from mindspore._c_expression.typing import Type
 
-from .configs import ON_A1
+from .configs import ON_A1, SUPPORT_BF16
+
+if SUPPORT_BF16:
+    from mindspore.common.np_dtype import bfloat16 as np_bfloat16# pylint: disable=import-error
+else:
+    from ml_dtypes import bfloat16 as np_bfloat16
 
 bool_alias = bool
 
@@ -106,6 +111,9 @@ dtype2np = {
     float32 : np.float32,
     float64 : np.float64,
 }
+
+if not ON_A1:
+    dtype2np[bfloat16] = np_bfloat16
 
 py2dtype = {
     bool_alias: bool
