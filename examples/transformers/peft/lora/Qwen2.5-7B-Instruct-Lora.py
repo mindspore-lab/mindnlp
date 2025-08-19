@@ -1,11 +1,7 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
 # coding: utf-8
 
-# # 导入环境
-
-# In[ ]:
-
-
+# 导入环境
 import mindnlp
 import mindspore
 
@@ -14,30 +10,12 @@ from datasets import Dataset
 import pandas as pd
 from transformers import AutoTokenizer, AutoModelForCausalLM, DataCollatorForSeq2Seq, TrainingArguments, Trainer, GenerationConfig
 
-
-
 # 将JSON文件转换为CSV文件
 df = pd.read_json('/home/lvyufeng/lvyufeng/mindnlp/examples/transformers/peft/lora/huanhuan.json')
 ds = Dataset.from_pandas(df)
 
-
-# In[ ]:
-
-
-ds[:3]
-
-
-# # 处理数据集
-
-# In[ ]:
-
-
+# 处理数据集
 tokenizer = AutoTokenizer.from_pretrained('Qwen/Qwen2.5-7B-Instruct', use_fast=False, trust_remote_code=True)
-tokenizer
-
-
-# In[ ]:
-
 
 def process_func(example):
     MAX_LENGTH = 384    # Llama分词器会将一个中文字切分为多个token，因此需要放开一些最大长度，保证数据的完整性
@@ -57,55 +35,14 @@ def process_func(example):
         "labels": labels
     }
 
-
-# In[ ]:
-
-
 tokenized_id = ds.map(process_func, remove_columns=ds.column_names)
-
-print(len(tokenized_id))
-
-# In[ ]:
-
-
-tokenizer.decode(tokenized_id[0]['input_ids'])
-
-
-# In[ ]:
-
-
-tokenizer.decode(list(filter(lambda x: x != -100, tokenized_id[1]["labels"])))
-
-
-# # 创建模型
-
-# In[ ]:
 
 
 import torch
-
-model = AutoModelForCausalLM.from_pretrained('Qwen/Qwen2.5-7B-Instruct', torch_dtype=torch.float16, attn_implementation='eager')
-# model = AutoModelForCausalLM.from_pretrained('Qwen/Qwen2.5-7B-Instruct', torch_dtype=torch.float16)
-model = model.npu()
-
-
-# In[ ]:
-
-
+model = AutoModelForCausalLM.from_pretrained('Qwen/Qwen2.5-7B-Instruct', torch_dtype=torch.float16, device_map=0)
 model.enable_input_require_grads() # 开启梯度检查点时，要执行该方法
 
-
-# In[ ]:
-
-
-model.dtype
-
-
-# # lora 
-
-# In[ ]:
-
-
+# lora 
 from peft import LoraConfig, TaskType, get_peft_model
 
 config = LoraConfig(
@@ -116,30 +53,11 @@ config = LoraConfig(
     lora_alpha=32, # Lora alaph，具体作用参见 Lora 原理
     lora_dropout=0.1# Dropout 比例
 )
-config
-
-
-# In[ ]:
-
 
 model = get_peft_model(model, config)
-config
-
-
-# In[ ]:
-
-
 model.print_trainable_parameters()
 
-
-# In[ ]:
-
-
-# # 配置训练参数
-
-# In[ ]:
- 
-
+# 配置训练参数
 args = TrainingArguments(
     output_dir="./output/Qwen2.5_instruct_lora",
     per_device_train_batch_size=4,
@@ -149,13 +67,8 @@ args = TrainingArguments(
     save_steps=100, 
     learning_rate=1e-4,
     save_on_each_node=True,
-    # fp16=True,
     # gradient_checkpointing=True
 )
-
-
-# In[ ]:
-
 
 trainer = Trainer(
     model=model,
@@ -164,24 +77,11 @@ trainer = Trainer(
     data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer, padding=True),
 )
 
-
-# In[ ]:
-
-
-trainer.accelerator.state
-
-
-# In[ ]:
-
-
 trainer.train()
 
+# 合并加载模型
 
-# # 合并加载模型
-
-# In[ ]:
-
-
+import mindnlp
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 from peft import PeftModel
@@ -193,10 +93,12 @@ lora_path = './output/Qwen2.5_instruct_lora/checkpoint-702' # 这里改称你的
 tokenizer = AutoTokenizer.from_pretrained(mode_path, trust_remote_code=True)
 
 # 加载模型
-model = AutoModelForCausalLM.from_pretrained(mode_path, device_map="auto",torch_dtype=torch.bfloat16, trust_remote_code=True).eval()
+model = AutoModelForCausalLM.from_pretrained(mode_path, torch_dtype=torch.float16, trust_remote_code=True).eval()
 
 # 加载lora权重
 model = PeftModel.from_pretrained(model, model_id=lora_path)
+
+model = model.npu()
 
 prompt = "你是谁？"
 inputs = tokenizer.apply_chat_template([{"role": "user", "content": "假设你是皇帝身边的女人--甄嬛。"},{"role": "user", "content": prompt}],

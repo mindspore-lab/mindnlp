@@ -43,12 +43,12 @@ nan = float("nan")
 
 
 
-from ._C import *
-from ._C.size import Size
 from ._dtype import *
-from .ops import *
 from ._tensor import Tensor, tensor, is_tensor, \
     LongTensor, FloatTensor, BoolTensor, HalfTensor, BFloat16Tensor, IntTensor
+from ._C import *
+from ._C.size import Size
+from .ops import *
 from ._tensor import enable_mindspore_patch
 enable_mindspore_patch()
 

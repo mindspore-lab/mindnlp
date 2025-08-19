@@ -1157,6 +1157,18 @@ def _in_projection_packed(
             b_q, b_k, b_v = b.chunk(3)
         return linear(q, w_q, b_q), linear(k, w_k, b_k), linear(v, w_v, b_v)
 
+def repeat_kv(hidden_states, n_rep: int):
+    """
+    This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
+    num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)
+    """
+    batch, num_key_value_heads, slen, head_dim = hidden_states.shape
+    if n_rep == 1:
+        return hidden_states
+    hidden_states = hidden_states.unsqueeze(2).expand(batch, num_key_value_heads, n_rep, slen, head_dim)
+    return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
+
+
 def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0,
         is_causal=False, scale=None, enable_gqa=False) -> core.Tensor:
     L, S = query.size(-2), key.size(-2)
@@ -1180,14 +1192,14 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
             attn_bias = attn_mask + attn_bias
 
     if enable_gqa:
-        key = key.repeat_interleave(query.size(-3) // key.size(-3), -3)
-        value = value.repeat_interleave(query.size(-3) // value.size(-3), -3)
+        key = repeat_kv(key, query.size(-3) // key.size(-3)).contiguous()
+        value = repeat_kv(value, query.size(-3) // value.size(-3)).contiguous()
 
     attn_weight = query.float() @ key.transpose(-2, -1).float() * scale_factor
     attn_weight += attn_bias.float()
-    attn_weight = softmax(attn_weight, dim=-1, dtype=core.float32).to(query.dtype)
+    attn_weight = softmax(attn_weight, dim=-1)
     attn_weight = dropout(attn_weight, dropout_p, training=True)
-    return attn_weight @ value
+    return (attn_weight @ value.float()).to(query.dtype)
 
 
 def _mha_shape_check(query, key, value, key_padding_mask, attn_mask, num_heads):
