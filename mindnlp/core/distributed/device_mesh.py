@@ -8,8 +8,8 @@ from itertools import chain
 from typing import Dict, List, Optional, Tuple, TYPE_CHECKING, Union
 
 from mindnlp import core
-from core.distributed import is_available
-from core.utils._typing_utils import not_none
+from mindnlp.core.distributed import is_available
+from mindnlp.core.utils._typing_utils import not_none
 
 
 __all__ = ["init_device_mesh", "DeviceMesh"]
@@ -37,7 +37,7 @@ if not is_available():
 
 else:
     from .c10d import Backend as C10dBackend
-    from core.distributed.distributed_c10d import (
+    from mindnlp.core.distributed.distributed_c10d import (
         _find_pg_by_ranks_and_tag,
         _get_default_group,
         _get_group_tag,
