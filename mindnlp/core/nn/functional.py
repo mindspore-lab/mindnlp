@@ -1182,11 +1182,18 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
     if query.device.type == 'npu' and ON_A2:
         if attn_mask is not None:
             attn_mask = ~attn_mask
-        
+
+        sparse_mode = 0
+
+        if is_causal:
+            assert attn_mask is None
+            attn_mask = core.ones(2048, 2048, dtype=core.bool, device=query.device).triu(diagonal=1)
+            sparse_mode = 3
+
         head_num = query.shape[1]
         output = execute('flash_attention_score', query, key, value, head_num=head_num, input_layout='BNSD', real_shift=None, padding_mask=None, attn_mask=attn_mask,
                         scale_value=scale_factor, keep_prob=1 - dropout_p, pre_tokens=2147483647, next_tokens=2147483647, inner_precise=0,
-                        drop_mask=None, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0)
+                        drop_mask=None, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=sparse_mode)
 
         sfm_max, sfm_sum, sfm_out, atten_out = output
 

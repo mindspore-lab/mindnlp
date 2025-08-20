@@ -243,3 +243,8 @@ def flash_attention_score(*args, **kwargs):
     return pyboost_inner_prim.flash_attention_score_impl(*args, **kwargs)
 
 __all__.append('flash_attention_score')
+
+def triu(input, diagonal):
+    return pyboost_inner_prim.triu_impl(input, diagonal)
+
+__all__.append('triu')
