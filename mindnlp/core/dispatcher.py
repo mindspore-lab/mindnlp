@@ -154,7 +154,7 @@ class Dispatcher(metaclass=SingletonMeta):
             raise RuntimeError(
                 f"No implementation for function: {func_name} on {device_type}."
             )
-        return func(*args), device
+        return func(*args, **kwargs), device
 
 
 dispatcher = Dispatcher()
