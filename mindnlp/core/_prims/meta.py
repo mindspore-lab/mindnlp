@@ -291,3 +291,42 @@ def linalg_vector_norm(input, p, dim, keepdim, dtype):
     return core.Tensor(out)
 
 __all__.append('linalg_vector_norm')
+
+def erfinv(input):
+    return input
+__all__.append('erfinv')
+
+
+def stop_gradient(input):
+    out = Tensor_(shape=input.shape, dtype=input.dtype)
+    return core.Tensor(out)
+
+__all__.append('stop_gradient')
+
+def log(input):
+    return input
+__all__.append('log')
+
+def mul(input, other):
+    out = Tensor_(shape=input.shape, dtype=input.dtype)
+    return core.Tensor(out)
+__all__.append('mul')
+
+def randn(size, seed, offset, dtype):
+    out = Tensor_(shape=size, dtype=dtype)
+    return core.Tensor(out)
+
+__all__.append('randn')
+
+def zeros_like_ext(input, *args, **kwargs):
+    out = Tensor_(shape=input.shape, dtype=input.dtype)
+    return core.Tensor(out)
+__all__.append('zeros_like_ext')
+
+def inplace_add_ext(input, other, alpha):
+    return input
+__all__.append('inplace_add_ext')
+
+def clamp_scalar(input, *args):
+    return input
+__all__.append('clamp_scalar')

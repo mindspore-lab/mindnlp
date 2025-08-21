@@ -621,6 +621,8 @@ def einsum(equation, *operands):
          [3. 6.]
          [4. 8.]]
     """
+    if isinstance(operands[0], (list, tuple)):
+        operands = operands[0]
     _equation, _operands = _einsum_convert_sublist(equation, *operands)
     _einsum_check_inputargs(_equation, _operands)
     return _einsum(_equation, _operands)
@@ -684,7 +686,7 @@ def ravel(input):
 
 
 # repeat_interleave
-def repeat_interleave(input, repeats, dim=None):
+def repeat_interleave(input, repeats, dim=None, *, output_size=None):
     if input.device.type == 'npu' and not ON_A1:
         if isinstance(repeats, int):
             return execute('repeat_interleave_int', input, repeats, dim, None)

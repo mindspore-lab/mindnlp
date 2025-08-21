@@ -1,6 +1,8 @@
 import numbers
 import numpy as np
+import scipy
 from mindspore import ops
+from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp import core
 
 __all__ = []
@@ -28,6 +30,8 @@ __all__.append('arange')
 def div(input, other):
     if not isinstance(input, numbers.Number):
         input = input.numpy()
+        if input.dtype == np.int64:
+            input = input.astype(np.int32)
     elif not isinstance(other, numbers.Number):
         other = other.numpy()
     out = np.divide(input, other)
@@ -98,7 +102,15 @@ def cast(input, dtype):
 __all__.append('cast')
 
 def getitem(input, slice):
-    out = input.asnumpy()[slice]
+    if isinstance(slice, tuple):
+        new_slice = ()
+        for s in slice:
+            if isinstance(s, core.Tensor):
+                s = s.numpy()
+            new_slice += (s,)
+    else:
+        new_slice = slice
+    out = input.asnumpy()[new_slice]
     if not isinstance(out, np.ndarray):
         out = np.array(out)
     return core.Tensor.from_numpy(out)
@@ -233,6 +245,8 @@ __all__.append('concat')
 
 def abs(input):
     out = np.abs(input.numpy())
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
     return core.Tensor.from_numpy(out)
 
 __all__.append('abs')
@@ -277,6 +291,8 @@ __all__.append('identity')
 # def non_zero()
 def isclose(input, other, rtol, atol, equal_nan):
     out = np.isclose(input.numpy(), other.numpy(), rtol, atol, equal_nan)
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
     return core.Tensor.from_numpy(out)
 
 __all__.append('isclose')
@@ -308,8 +324,11 @@ def index_select(input, dim, index):
 __all__.append('index_select')
 
 def rand_ext(size, seed, offset, dtype):
-    out = np.random.randn(*size).astype(core.dtype2np[dtype])
-    return core.Tensor.from_numpy(out[0])
+    out = np.random.randn(*size)
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+    out = out.astype(core.dtype2np[dtype])
+    return core.Tensor.from_numpy(out)
 
 __all__.append('rand_ext')
 
@@ -438,6 +457,9 @@ def less(input, other):
         other = other.numpy()
     
     out = input < other
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+
     return core.Tensor.from_numpy(out)
 
 __all__.append('less')
@@ -529,3 +551,87 @@ def randn(size, seed, offset, dtype):
     return core.Tensor.from_numpy(out)
 
 __all__.append('randn')
+
+def erfinv(input):
+    out = scipy.special.erfinv(input)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('erfinv')
+
+def inplace_add_ext(input, other, alpha):
+    if not isinstance(other, numbers.Number):
+        other = other.numpy()
+    out = input.numpy() + other * alpha
+    input.assign_value(core.Tensor.from_numpy(out))
+    return input
+
+__all__.append('inplace_add_ext')
+
+def pow_tensor_scalar(input, other):
+    out = np.power(input.numpy(), other)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('pow_tensor_scalar')
+
+stop_gradient_op = ops.StopGradient().set_device('CPU')
+def stop_gradient(*args):
+    return stop_gradient_op(*args)
+
+__all__.append('stop_gradient')
+
+def fmod_scalar(input, other):
+    out = np.fmod(input.numpy(), other)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('fmod_scalar')
+
+def argmax_with_value(input, dim, keepdim):
+    indices = np.argmax(input.numpy(), dim, keepdims=keepdim)
+    values = np.max(input.numpy(), dim, keepdims=keepdim)
+
+    if not isinstance(indices, np.ndarray):
+        indices = np.array(indices)
+    if not isinstance(values, np.ndarray):
+        values = np.array(values)
+    return core.Tensor.from_numpy(indices), core.Tensor.from_numpy(values)
+
+__all__.append('argmax_with_value')
+
+def argmax_ext(input, dim, keepdim):
+    indices = np.argmax(input.numpy(), dim, keepdims=keepdim)
+    if not isinstance(indices, np.ndarray):
+        indices = np.array(indices)
+    return core.Tensor.from_numpy(indices)
+__all__.append('argmax_ext')
+
+
+def log(input):
+    out = np.log(input.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('log')
+
+def eye(n, m, dtype):
+    out = np.eye(n, m, dtype=core.dtype2np[dtype])
+    return core.Tensor.from_numpy(out)
+
+__all__.append('eye')
+
+def lin_space_ext(start, end, steps, dtype):
+    out = np.linspace(start, end, steps, dtype=core.dtype2np[dtype])
+    return core.Tensor.from_numpy(out)
+
+__all__.append('lin_space_ext')
+
+def upsample_bilinear2d(input, output_size, scale_factors, align_corners):
+    resize = _get_cache_prim(ops.ResizeBilinearV2)(align_corners, not align_corners).set_device('CPU')
+    return resize(input, output_size)
+
+__all__.append('upsample_bilinear2d')
+
+def split_with_size(tensor, split_size_or_sections, dim):
+    out = np.array_split(tensor.numpy(), np.cumsum(split_size_or_sections[:-1]), dim)
+    out = [core.Tensor.from_numpy(o) for o in out]
+    return out
+
+__all__.append('split_with_size')
