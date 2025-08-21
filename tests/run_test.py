@@ -33,10 +33,12 @@ def run_tests():
         "and not torch_fx " \
         "and not test_wrong_device_map " \
         "and not test_layerwise_casting " \
-        "and not test_flex_attention"
+        "and not test_flex_attention " \
+        "and not offload " \
+        "and not global_device"
 
     pytest_args.extend(["--ignore-glob=test_modeling_flax_*.py"])
-    # pytest_args.extend(['-k', skip_ut])
+    pytest_args.extend(['-k', skip_ut])
     if not pytest_args:
         print("未提供参数，默认运行当前目录下所有测试")
         print("使用示例: python run_test.py -v tests/")

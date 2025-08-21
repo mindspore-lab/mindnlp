@@ -91,13 +91,12 @@ def arange(start=0, end=None, step=1, *, out=None, dtype=None, layout=None, devi
     if end is None:
         start, end = 0, start
     if dtype is None:
-        dtype = core.int64
+        dtype = core.py2dtype[type(start)]
     if device is None:
         device = get_device_in_context()
     if isinstance(device, str):
         device = core.device(device)
-    output = execute('arange', start, end, step, dtype,
-                        device=device, requires_grad=requires_grad, user_created=True)
+    output = execute('arange', start, end, step, dtype, device=device, requires_grad=requires_grad, user_created=True)
     if out is None:
         return output
     out.data = output
@@ -124,14 +123,11 @@ def linspace(start, end, steps, *, out=None, dtype=None, layout=None, device=Non
         dtype = get_default_dtype()
     if device is None:
         device = get_device_in_context()
-    if device.type == 'cpu':
-        start = core.tensor(start, device=device, dtype=dtype)
-        end = core.tensor(end, device=device, dtype=dtype)
-        output = execute('linspace', start, end, steps,
-                         device=device, requires_grad=requires_grad, user_created=True)
-    else:
-        output = execute('lin_space_ext', start, end, steps, dtype,
-                         device=device, requires_grad=requires_grad, user_created=True)
+    if isinstance(device, str):
+        device = core.device(device)
+
+    output = execute('lin_space_ext', start, end, steps, dtype,
+                        device=device, requires_grad=requires_grad, user_created=True)
     if out is None:
         return output
     out.data = output
@@ -162,7 +158,7 @@ def empty(*size, out=None, dtype=None, layout=None, device=None,
         device = get_device_in_context()
     if isinstance(device, str):
         device = core.device(device)
-    if isinstance(size[0], (tuple, list)):
+    if len(size) > 0 and isinstance(size[0], (tuple, list)):
         size = size[0]
 
     if device.type == 'meta':
@@ -205,6 +201,8 @@ def full(size, fill_value, *, out=None, dtype=None, layout=None, device=None, re
 
 # full_like
 def full_like(input, fill_value, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=None):
+    if dtype is None:
+        dtype = input.dtype
     return full(input.shape, fill_value, dtype=dtype, layout=layout, device=input.device, requires_grad=requires_grad)
 
 # quantize_per_tensor

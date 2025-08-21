@@ -17,6 +17,8 @@ from ._C import device as _device
 
 _TensorOrTensors: TypeAlias = Union[Tensor, Sequence[Tensor]]  # noqa: PYI047
 
+Device: TypeAlias = Union[_device, str, int, None]
+
 # Meta-type for "numeric" things; matches our docs
 Number: TypeAlias = Union[int, float, bool]
 # tuple for isinstance(x, Number) checks.

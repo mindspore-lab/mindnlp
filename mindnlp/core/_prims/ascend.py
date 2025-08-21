@@ -1,12 +1,12 @@
 import numbers
 import mindspore
 from mindspore import ops
+from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.auto_generate import gen_ops_prim
 from mindspore.ops.auto_generate import pyboost_inner_prim
 from mindspore._c_expression import _empty_instance
 from mindspore.ops.operations.math_ops import NPUGetFloatStatusV2, NPUClearFloatStatusV2
-from mindspore.ops.operations.nn_ops import AllFinite
-
+from mindspore.ops.auto_generate.gen_ops_prim import MaxPoolWithIndices, MaxPoolWithMask
 from mindnlp import core
 from mindnlp.core._C import default_generator
 
@@ -105,7 +105,12 @@ def tile(*args):
 __all__.append('tile')
 
 def pad_v3(input_x, padding, mode='constant', value=None):
-    pad_op = ops.PadV3(mode=mode, paddings_contiguous=True).set_device('CPU')
+    pad_op = ops.PadV3(mode=mode, paddings_contiguous=True).set_device('Ascend')
+    if input_x.dtype == core.bool:
+        input_x = input_x.to(core.int32)
+        out = pad_op(input_x, padding, value)
+        return cast(out, core.bool)
+
     if isinstance(value, (float, int)):
         value = core.tensor(value, dtype=input_x.dtype)
     return pad_op(input_x, padding, value)
@@ -248,3 +253,39 @@ def triu(input, diagonal):
     return pyboost_inner_prim.triu_impl(input, diagonal)
 
 __all__.append('triu')
+
+masked_scatter_op = ops.MaskedScatter().set_device('Ascend')
+def masked_scatter(input, mask, source):
+    return masked_scatter_op(input, mask, source)
+
+__all__.append('masked_scatter')
+
+def roll(*args):
+    return pyboost_inner_prim.roll_impl(*args)
+
+__all__.append('roll')
+
+lgamma_op = ops.Lgamma().set_device('Ascend')
+def lgamma(input):
+    return lgamma_op(input)
+
+__all__.append('lgamma')
+
+def max_pool2d(input, kernel_size, stride, padding, dilation, ceil_mode, return_indices):
+    strides = stride if (stride is not None) else kernel_size
+    if return_indices:
+        max_pool_func_ = _get_cache_prim(MaxPoolWithIndices)(kernel_size, strides, padding, dilation, ceil_mode)
+        out, indices = max_pool_func_(input)
+    else:
+        max_pool_func_ = _get_cache_prim(MaxPoolWithMask)(kernel_size, strides, padding, dilation, ceil_mode)
+        out, indices = max_pool_func_(input)
+    if return_indices:
+        return out, indices
+    return out
+
+__all__.append('max_pool2d')
+
+def unique_consecutive(*args):
+    return pyboost_inner_prim.unique_consecutive_impl(*args)
+
+__all__.append('unique_consecutive')

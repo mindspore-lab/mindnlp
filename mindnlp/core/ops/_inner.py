@@ -16,8 +16,11 @@ def npu_clear_float_status_v2(status):
 def all_finite(inputs):
     return execute('all_finite', inputs)
 
+def masked_scatter(input, mask, source):
+    return execute('masked_scatter', input, mask, source)
+
 __all__ = [
-    'cast', 'depend',
+    'cast', 'depend', 'masked_scatter',
     'npu_get_float_status_v2', 'npu_clear_float_status_v2',
     'all_finite'
 ]

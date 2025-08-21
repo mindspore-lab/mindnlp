@@ -124,20 +124,16 @@ def rand(
     seed, offset = generator._step(generator_step_)  # pylint: disable=protected-access
     if size and isinstance(size[0], (tuple, list)):
         size = size[0]
-    if device.type == 'cpu':
-        output = execute('uniform_real', size,
-                         device=device, requires_grad=requires_grad, user_created=True).to(dtype)
-    else:
-        output = execute(
-            "rand_ext",
-            size,
-            seed,
-            offset,
-            dtype,
-            device=device,
-            requires_grad=requires_grad,
-            user_created=True,
-        )
+    output = execute(
+        "rand_ext",
+        size,
+        seed,
+        offset,
+        dtype,
+        device=device,
+        requires_grad=requires_grad,
+        user_created=True,
+    )
     if out is None:
         return output
     out.data = output

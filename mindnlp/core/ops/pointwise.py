@@ -306,6 +306,8 @@ def lerp(input, end, weight):
 
 
 # lgamma
+def lgamma(input):
+    return execute('lgamma', input)
 
 
 # log
@@ -617,6 +619,7 @@ __all__ = [
     "frac",
     "ldexp",
     "lerp",
+    "lgamma",
     "log",
     "log1p",
     "log2",

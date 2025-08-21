@@ -159,9 +159,9 @@ setup(
         'mindspore>=2.5.0',
         'tqdm',
         'requests',
-        'accelerate', # hf dependency
+        'accelerate>=1.6.0', # hf dependency
         'transformers>=4.55.0', # hf dependency
-        'peft', # hf dependency
+        'peft>=0.15.2', # hf dependency
         'datasets', # hf dependency
         'evaluate', # hf dependency
         'tokenizers', # hf dependency
@@ -174,6 +174,7 @@ setup(
         'pyctcdecode',
         'pytest',
         'pillow>=10.0.0',
+        'ftfy'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License'

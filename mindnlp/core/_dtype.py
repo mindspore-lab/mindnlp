@@ -12,6 +12,8 @@ else:
     from ml_dtypes import bfloat16 as np_bfloat16
 
 bool_alias = bool
+float_alias = float
+int_alias = int
 
 if ON_A1:
     warnings.warn('MindSpore on GPU/910A do not support bfloat16, use float16 instead.')
@@ -116,5 +118,7 @@ if not ON_A1:
     dtype2np[bfloat16] = np_bfloat16
 
 py2dtype = {
-    bool_alias: bool
+    bool_alias: bool,
+    float_alias: float,
+    int_alias: int64
 }

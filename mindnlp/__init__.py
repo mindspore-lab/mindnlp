@@ -39,8 +39,8 @@ except:
 # for different ascend devices
 if platform.system().lower() == 'linux':
     SOC = MSContext.get_instance().get_ascend_soc_version()
-    if ('910b' not in SOC and '310' not in SOC) or version.parse(mindspore.__version__) < version.parse('2.4.0'):
-        os.environ["MS_ALLOC_CONF"] = 'enable_vmm:True,vmm_align_size:2MB'
+    # enable vmm since only vmm can release device memory when del tensor.
+    os.environ["MS_ALLOC_CONF"] = 'enable_vmm:True,vmm_align_size:2MB'
 
     if SOC in ('ascend910', 'ascend310b'):
         # context.set_context(ascend_config={"precision_mode": "allow_mix_precision"})

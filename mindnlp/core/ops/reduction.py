@@ -49,8 +49,8 @@ def max(input, dim=None, keepdim=False, *, out=None):
     if out is None:
         return max_out(values=output[1], indices=output[0])
 
-    out[0].data = output[0]
-    out[1].data = output[1]
+    out[0].data = output[1]
+    out[1].data = output[0]
     return out
 
 # min

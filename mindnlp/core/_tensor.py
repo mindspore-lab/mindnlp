@@ -1,3 +1,4 @@
+import gc
 import math
 import ctypes
 import numpy as np
@@ -50,31 +51,37 @@ class TypedTensorMeta(_TensorMeta):
 class IntTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.int
     def __init__(self, *args, **kwargs):
+        self._device = kwargs.pop('device', device_('cpu'))
         super().__init__(*args, dtype=_dtype.int, **kwargs)
 
 class LongTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.long
     def __init__(self, *args, **kwargs):
+        self._device = kwargs.pop('device', device_('cpu'))
         super().__init__(*args, dtype=_dtype.long, **kwargs)
 
 class FloatTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.float32
     def __init__(self, *args, **kwargs):
+        self._device = kwargs.pop('device', device_('cpu'))
         super().__init__(*args, dtype=_dtype.float32, **kwargs)
 
 class HalfTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.float16
     def __init__(self, *args, **kwargs):
+        self._device = kwargs.pop('device', device_('cpu'))
         super().__init__(*args, dtype=_dtype.float16, **kwargs)
 
 class BFloat16Tensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.float16
     def __init__(self, *args, **kwargs):
+        self._device = kwargs.pop('device', device_('cpu'))
         super().__init__(*args, dtype=_dtype.bfloat16, **kwargs)
 
 class BoolTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.bool
     def __init__(self, *args, **kwargs):
+        self._device = kwargs.pop('device', device_('cpu'))
         super().__init__(*args, dtype=_dtype.bool, **kwargs)
 
 
@@ -86,17 +93,17 @@ _TensorMeta.__str__ = tensor_meta_str
 old_init = Tensor.__init__
 def __init__(self, *args, **kwargs):
     requires_grad = kwargs.pop('requires_grad', False)
+    device = kwargs.pop('device', core.get_default_device())
     if len(args) > 1 and all([isinstance(arg, int) for arg in args]):
         tensor = Tensor_(shape=args, dtype=get_default_dtype())
         old_init(self, tensor, internal=True)
     else:
         old_init(self, *args, **kwargs)
     self.requires_grad_(requires_grad)
+    self._device = device
 
 Tensor.__init__ = __init__
 origin_setitem = Tensor.__setitem__
-
-Tensor._device = device_('cpu')
 Tensor._requires_grad = False
 
 def tensor(data, *, dtype=None, device=None, requires_grad=False):
@@ -363,11 +370,6 @@ class TensorPlaceHolder:
     def __round__(self):
         return ops.round(self)
 
-    # def __del__(self):
-    #     # self._offload()
-    #     # Tensor_.__del__(self)
-    #     mindspore.runtime.synchronize()
-
     def new(self, *shape):
         if not isinstance(shape[0], int):
             return tensor(shape[0], dtype=self.dtype)
@@ -415,7 +417,11 @@ class TensorPlaceHolder:
             if isinstance(s, Tensor):
                 s = s.item()
             new_size += (s,)
-        return ops.zeros(*new_size, dtype=dtype if dtype is not None else self.dtype)
+        return ops.zeros(
+            *new_size,
+            dtype=dtype if dtype is not None else self.dtype,
+            device=device if device is not None else self.device
+        )
 
     # Tensor.ndim
     @property
@@ -744,6 +750,12 @@ class TensorPlaceHolder:
     # Tensor.clamp
     def clamp(self, min=None, max=None):
         return ops.clamp(self, min, max)
+
+    def clamp_min(self, min):
+        return ops.clamp(self, min, None)
+
+    def clamp_max(self, min):
+        return ops.clamp(self, None, max)
 
     # Tensor.clamp_
     def clamp_(self, min=None, max=None):
@@ -1523,10 +1535,12 @@ class TensorPlaceHolder:
 
 
     # Tensor.masked_scatter_
-
+    def masked_scatter_(self, mask, tensor):
+        return self.copy_(ops.masked_scatter(self, mask, tensor))
 
     # Tensor.masked_scatter
-
+    def masked_scatter(self, mask, tensor):
+        return ops.masked_scatter(self, mask, tensor)
 
     # Tensor.masked_fill_
     def masked_fill_(self, mask, value):
@@ -1728,6 +1742,8 @@ class TensorPlaceHolder:
 
     # Tensor.permute
     def permute(self, *dims):
+        if isinstance(dims[0], (list, tuple)):
+            dims = tuple(dims[0])
         return ops.permute(self, dims)
 
     # Tensor.pin_memory
@@ -1835,8 +1851,8 @@ class TensorPlaceHolder:
         return ops.tile(self, repeats)
 
     # Tensor.repeat_interleave
-    def repeat_interleave(self, repeats, dim=None):
-        return ops.repeat_interleave(self, repeats, dim)
+    def repeat_interleave(self, repeats, dim=None, output_size=None):
+        return ops.repeat_interleave(self, repeats, dim, output_size=output_size)
 
     # Tensor.reshape
     def reshape(self, *shape):
@@ -2241,8 +2257,8 @@ class TensorPlaceHolder:
     arctanh_ = atanh_
 
     # Tensor.tolist
-    # def tolist(self):
-    #     return self.numpy().tolist()
+    def tolist(self):
+        return self.numpy().tolist()
 
     # Tensor.topk
     def topk(self, k, dim=-1, largest=True, sorted=True):
@@ -2329,7 +2345,10 @@ class TensorPlaceHolder:
 
     # Tensor.type_as
     def type_as(self, tensor):
-        return self.type(tensor.dtype)
+        out = self.type(tensor.dtype)
+        if self.device != tensor.device:
+            out = out.to(tensor.device)
+        return out
 
     # Tensor.unbind
     def unbind(self, dim=0):
@@ -2365,7 +2384,8 @@ class TensorPlaceHolder:
 
     # Tensor.unsqueeze_
     def unsqueeze_(self, dim):
-        return self.copy_(ops.unsqueeze(self, dim))
+        self.data = ops.unsqueeze(self, dim)
+        return self
 
 
     # Tensor.values

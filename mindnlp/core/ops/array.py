@@ -22,10 +22,19 @@ def t(input):
 def argwhere(input):
     return execute("nonzero", input)
 
+def infer_dtype(dtypes):
+    is_float_dtypes = [d.is_floating_point for d in dtypes]
+    float_dtypes = [d for d in dtypes if d.is_floating_point]
+    if any(is_float_dtypes):
+        return max(float_dtypes)
+    else:
+        return max(dtypes)
 
 # cat
 def cat(tensors, dim=0, **kwargs):
     dim = kwargs.pop('axis', dim)
+    dtype = infer_dtype([t.dtype for t in tensors])
+    tensors = [t.to(dtype) for t in tensors]
     return execute("concat", tensors, dim)
 
 

@@ -58,6 +58,7 @@ class _NormBase(Module):
             self.register_buffer("running_mean", None)
             self.register_buffer("running_var", None)
             self.register_buffer("num_batches_tracked", None)
+        self.reset_parameters()
 
     def reset_running_stats(self) -> None:
         if self.track_running_stats:
