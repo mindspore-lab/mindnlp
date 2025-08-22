@@ -1,5 +1,5 @@
 import sys
-
+from mindnlp.core.configs import ON_ORANGE_PI
 from mindnlp.utils.import_utils import *
 from mindnlp.utils.import_utils import _LazyModule
 
@@ -4107,6 +4107,7 @@ from .modeling_utils import construct_pipeline_parallel_model, _load_pretrained_
     _get_resolved_checkpoint_files_wrapper
 from .tokenization_utils import apply_chat_template_wrapper
 from .trainer import training_step
+from .generation import *
 
 # redirect mindnlp.transformers to transformers
 import transformers
@@ -4153,6 +4154,9 @@ transformers.masking_utils.create_causal_mask = create_causal_mask
 transformers.masking_utils.create_sliding_window_causal_mask = create_sliding_window_causal_mask
 
 transformers.trainer.Trainer.training_step = training_step
+# for ORANGE_PI
+if ON_ORANGE_PI:
+    transformers.generation.logits_process.InfNanRemoveLogitsProcessor.__call__ = InfNanRemoveLogitsProcessor_call
 
 # add mindnlp.transformers modules/attrs to lazymodule
 # setattr(sys.modules[__name__], 'test_ms_model', test_ms_model)

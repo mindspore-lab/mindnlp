@@ -40,7 +40,8 @@ except:
 if platform.system().lower() == 'linux':
     SOC = MSContext.get_instance().get_ascend_soc_version()
     # enable vmm since only vmm can release device memory when del tensor.
-    os.environ["MS_ALLOC_CONF"] = 'enable_vmm:True,vmm_align_size:2MB'
+    if SOC != 'ascend310b':
+        os.environ["MS_ALLOC_CONF"] = 'enable_vmm:True,vmm_align_size:2MB'
 
     if SOC in ('ascend910', 'ascend310b'):
         # context.set_context(ascend_config={"precision_mode": "allow_mix_precision"})

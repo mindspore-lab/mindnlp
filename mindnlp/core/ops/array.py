@@ -6,6 +6,7 @@ import mindspore
 from mindnlp import core
 from mindnlp.core.executor import execute
 from .other import broadcast_tensors, broadcast_to
+from ..configs import ON_ORANGE_PI
 
 
 def t(input):
@@ -70,7 +71,36 @@ def chunk(input, chunks, dim=0):
 
 # gather
 def gather(input, dim, index):
+    if ON_ORANGE_PI:
+        return torch_gather(input, index, dim)
     return execute("gather_d", input, dim, index)
+
+def torch_gather(x, indices, axis=1):
+    # 这个实现模拟了 torch.gather 的行为
+    if axis < 0:
+        axis = len(x.shape) + axis
+    
+    # 创建索引数组，其他维度保持原样
+    all_indices = []
+    for dim in range(len(x.shape)):
+        if dim == axis:
+            # 使用提供的索引
+            all_indices.append(indices.to(mindspore.int32))
+        else:
+            # 创建该维度的原始索引
+            shape = [1] * len(x.shape)
+            shape[dim] = x.shape[dim]
+            dim_indices = core.arange(x.shape[dim], dtype=mindspore.int32, device=x.device)
+            dim_indices = core.reshape(dim_indices, shape)
+            # 广播到 indices 的形状
+            dim_indices = core.broadcast_to(dim_indices, indices.shape)
+            all_indices.append(dim_indices)
+    
+    # 组合所有维度的索引
+    multi_indices = core.stack(all_indices, dim=-1)
+    
+    # 使用 tf.gather_nd 收集元素
+    return gather_nd(x, multi_indices)
 
 
 def gather_nd(input, indices):
@@ -153,8 +183,16 @@ def select(input, dim, index):
 
 # scatter
 def scatter(input, dim, index, src):
-    return execute(
-        "scatter", input, dim, index, src)
+    # if ON_ORANGE_PI:
+    #     if not isinstance(src, core.Tensor):
+    #         src = core.full(index.shape, src, dtype=input.dtype, device=input.device)
+    #     if input.dtype == mindspore.bool_:
+    #         return execute('tensor_scatter_elements', input.int(), index, src.int(), dim).bool()
+    #     return execute('tensor_scatter_elements', input, index, src, dim)
+    if input.dtype == mindspore.bool_:
+        return execute("scatter", input.int(), dim, index, src.int()).bool()
+
+    return execute("scatter", input, dim, index, src)
 
 
 # diagonal_scatter
@@ -306,6 +344,9 @@ def unsqueeze(input, dim):
 def where(condition, input=None, other=None):
     if input is None and other is None:
         return nonzero(condition, as_tuple=True)
+    if ON_ORANGE_PI:
+        out = condition * input + (~condition) * other
+        return out
     return execute("select", condition, input, other)
 
 
