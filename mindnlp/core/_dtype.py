@@ -22,15 +22,15 @@ if ON_A1:
 dtype = Type
 
 @property
-def is_floating_point(self):
+def _is_floating_point(self):
     return isinstance(self, (typing.Float, typing.BFloat))
 
 @property
-def is_complex(self):
+def _is_complex(self):
     return isinstance(self, typing.Complex)
 
-Type.is_floating_point = is_floating_point
-Type.is_complex = is_complex
+Type.is_floating_point = _is_floating_point
+Type.is_complex = _is_complex
 Type.__str__ = Type.__repr__
 
 

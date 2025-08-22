@@ -16,4 +16,7 @@ def numel(input):
 def as_tensor(data, dtype=None, **kwarg):
     return core.tensor(data, dtype=dtype)
 
-__all__ = ['as_tensor', 'is_floating_point', 'is_tensor', 'numel']
+def is_complex(input):
+    return input.dtype.is_complex
+
+__all__ = ['as_tensor', 'is_floating_point', 'is_tensor', 'numel', 'is_complex']
