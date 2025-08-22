@@ -1,5 +1,7 @@
 import numbers
+import numpy as np
 from mindspore import ops
+from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops.auto_generate import gen_ops_prim
 from mindspore.ops.auto_generate import pyboost_inner_prim
 from mindspore._c_expression import _empty_instance
@@ -137,6 +139,12 @@ def argmax_with_value(*args):
 
 __all__.append('argmax_with_value')
 
+def argmin_with_value(*args):
+    return pyboost_inner_prim.argmin_with_value_impl(*args)
+
+__all__.append('argmin_with_value')
+
+
 right_shift_op = ops.RightShift().set_device('Ascend')
 def right_shift(input, other):
     if isinstance(other, numbers.Number):
@@ -167,3 +175,56 @@ def matmul_ext(input, other):
     input_dtype = input.dtype
     out = matmul_op(cast(input, core.float16), cast(other, core.float16))
     return cast(out, input_dtype)
+
+def dropout_ext(input, p):
+    keep_prob = 1 - p
+    dropout_op = ops.Dropout(keep_prob=keep_prob).set_device('Ascend')
+    return dropout_op(input)
+
+def isclose(input, other, rtol, atol, equal_nan):
+    out = np.isclose(input.asnumpy(), other.asnumpy(), rtol, atol, equal_nan)
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+    return core.Tensor.from_numpy(out)
+
+stop_gradient_op = ops.StopGradient().set_device('Ascend')
+def stop_gradient(*args):
+    return stop_gradient_op(*args)
+
+__all__.append('stop_gradient')
+
+def sort_ext(input, dim, descending, stable):
+    ops.sort
+    _sort = _get_cache_prim(ops.Sort)(dim, descending).set_device('Ascend')
+    return _sort(input)
+
+def tensor_scatter_elements(input, index, src, dim):
+    scatter_op = gen_ops_prim.TensorScatterElements(dim).set_device('Ascend')
+    return scatter_op(input, index, src)
+
+__all__.append('tensor_scatter_elements')
+
+def topk_ext(input, k, dim, largest, sorted):
+    top_k_ = _get_cache_prim(ops.TopK)(sorted).set_device('Ascend')
+    if not largest:
+        input = -input
+    if dim is None or dim == input.ndim - 1:
+        if not largest:
+            res = top_k_(input, k)
+            values, indices = -res[0], res[1]
+            return values, indices
+        return top_k_(input, k)
+    input = input.swapaxes(dim, input.ndim - 1)
+    output = top_k_(input, k)
+    values = transpose_ext_view(output[0], dim, input.ndim - 1)
+    indices = transpose_ext_view(output[1], dim, input.ndim - 1)
+    if not largest:
+        res = (-values, indices)
+    else:
+        res = (values, indices)
+    return res
+
+def std(input, dim, correction, keepdim):
+    std_op = _get_cache_prim(ops.ReduceStd)(axis=dim, unbiased=bool(correction), keep_dims=keepdim)
+    std_op.set_device('Ascend')
+    return std_op(input)[0]

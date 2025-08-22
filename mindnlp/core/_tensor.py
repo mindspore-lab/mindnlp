@@ -131,6 +131,9 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False):
     if isinstance(device, (str, int)):
         device = device_(device)
 
+    if isinstance(data, float) and data == float('-inf'):
+        data = core.finfo(get_default_dtype()).min
+
     if dtype is not None:
         tensor = Tensor(data, dtype=dtype)
     else:
@@ -2257,8 +2260,8 @@ class TensorPlaceHolder:
     arctanh_ = atanh_
 
     # Tensor.tolist
-    def tolist(self):
-        return self.numpy().tolist()
+    # def tolist(self):
+    #     return self.numpy().tolist()
 
     # Tensor.topk
     def topk(self, k, dim=-1, largest=True, sorted=True):

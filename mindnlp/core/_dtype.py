@@ -21,9 +21,11 @@ if ON_A1:
 
 dtype = Type
 
+@property
 def is_floating_point(self):
-    return isinstance(self, (typing.Float, typing.BFloat16))
+    return isinstance(self, (typing.Float, typing.BFloat))
 
+@property
 def is_complex(self):
     return isinstance(self, typing.Complex)
 
