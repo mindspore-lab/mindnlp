@@ -307,7 +307,7 @@ __all__.append('non_zero')
 def tile(input, dims):
     out = np.tile(input.numpy(), dims)
 
-    return core.Tensor.from_numpy(out[0])
+    return core.Tensor.from_numpy(out)
 
 __all__.append('tile')
 
@@ -635,3 +635,117 @@ def split_with_size(tensor, split_size_or_sections, dim):
     return out
 
 __all__.append('split_with_size')
+
+def floor_div(input, other):
+    if not isinstance(other, numbers.Number):
+        other = other.numpy()
+    out = np.floor_divide(input.numpy(), other)
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+
+    return core.Tensor.from_numpy(out)
+
+__all__.append('floor_div')
+
+def sin(input):
+    out = np.sin(input.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('sin')
+
+def cos(input):
+    out = np.cos(input.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('cos')
+
+def triu(input, diagonal):
+    out = np.triu(input.numpy(), diagonal)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('triu')
+
+def sigmoid(input):
+    out = 1 / (1 + np.exp(-input))
+    return core.Tensor.from_numpy(out)
+
+__all__.append('sigmoid')
+
+def neg(input):
+    out = -input.numpy()
+    return core.Tensor.from_numpy(out)
+
+__all__.append('neg')
+
+def divmod(input, other, rounding_mode):
+    if not isinstance(input, numbers.Number):
+        input = input.numpy()
+    if not isinstance(other, numbers.Number):
+        other = other.numpy()
+
+    if rounding_mode == 'floor':
+        out = np.floor_divide(input, other)
+    elif rounding_mode == 'trunc':
+        out = np.trunc(np.true_divide(input, other))
+
+    return core.Tensor.from_numpy(out)
+
+__all__.append('divmod')
+
+def unstack_ext_view(input, dim):
+    arr = input.numpy()
+    num_splits = arr.shape[dim]
+    outs = np.split(arr, indices_or_sections=np.arange(1, num_splits), axis=dim)
+    outs = [core.Tensor.from_numpy(out) for out in outs]
+    return outs
+
+__all__.append('unstack_ext_view')
+
+def stack(tensors, dim):
+    out = np.stack([t.numpy() for t in tensors], dim)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('stack')
+
+def sqrt(input):
+    out = np.sqrt(input.numpy())
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('sqrt')
+
+def transpose_view(input, dims):
+    out = np.transpose(input.numpy(), dims)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('transpose_view')
+
+def einsum(equation, operands):
+    out = np.einsum(equation, *[o.numpy() for o in operands])
+    return core.Tensor.from_numpy(out)
+
+__all__.append('einsum')
+
+def std(input, dim, correction, keepdim):
+    out = np.std(input.numpy(), dim, ddof=float(correction), keepdims=keepdim)
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('std')
+
+def meshgrid(tensors, indexing):
+    out = np.meshgrid(*[t.numpy() for t in tensors], indexing=indexing)
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('meshgrid')
+
+def repeat_interleave_tensor(input, repeats, dim, _):
+    out = np.repeat(input.numpy(), repeats, dim)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('repeat_interleave_tensor')
+

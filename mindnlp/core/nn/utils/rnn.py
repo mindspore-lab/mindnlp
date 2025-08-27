@@ -1,23 +1,19 @@
-import torch
-from typing import Iterable, List, NamedTuple, Tuple, Union
-import numpy as np
-from torch import Tensor
-from ..._dtype import np2dtype, dtype2np
+from typing import Iterable, List, Union
+from mindnlp import core
 
-
-def _pad_sequence(sequences: List[torch.Tensor], batch_first: bool = True, padding_value: float = 0.0, padding_side: str = "right") -> torch.Tensor:
+def _pad_sequence(sequences: List[core.Tensor], batch_first: bool = True, padding_value: float = 0.0, padding_side: str = "right") -> core.Tensor:
     """
     Pads a list of variable-length sequences to the same length using NumPy, mimicking PyTorch's pad_sequence.
 
     Args:
-        sequences (List[torch.Tensor]): List of sequences (Tensors) to pad.
+        sequences (List[core.Tensor]): List of sequences (Tensors) to pad.
         batch_first (bool): If True, output shape will be (batch_size, max_len, *dims).
                             If False, output shape will be (max_len, batch_size, *dims).
         padding_value (float): The value used for padding.
         padding_side (str): Either 'left' or 'right', specifying where padding is applied.
 
     Returns:
-        torch.Tensor: A tensor with padded sequences.
+        core.Tensor: A tensor with padded sequences.
     """
     # Ensure valid padding_side input
     assert padding_side in ["left", "right"], "padding_side must be 'left' or 'right'"
@@ -39,31 +35,28 @@ def _pad_sequence(sequences: List[torch.Tensor], batch_first: bool = True, paddi
 
     # Use the dtype of the first sequence to ensure consistency
     dtype = sequences[0].dtype
-    dtype = dtype2np[dtype]
-    out = np.full(out_dims, padding_value, dtype=dtype)  # Use the same dtype as input
+    device = sequences[0].device
+    out = core.full(out_dims, padding_value, dtype=dtype, device=device)  # Use the same dtype as input
 
     # Pad the sequences
     for i, seq in enumerate(sequences):
         length_i = seq.size(0)
         start = max_len - length_i if padding_side == "left" else 0
 
-        # Convert to NumPy array and handle padding
-        np_out = out[i] if batch_first else out[:, i]
-        np_seq = seq.numpy()  # Convert to NumPy array
+        out_i = out[i] if batch_first else out[:, i]
 
         if batch_first:
-            np_out[start:start + length_i] = np_seq
+            out_i[start:start + length_i] = seq
         else:
-            np_out[start:start + length_i] = np_seq
+            out_i[start:start + length_i] = seq
 
-    # Convert the NumPy result back to a PyTorch tensor
-    return torch.tensor(out, dtype=np2dtype[dtype])  # Ensure the output tensor has the same dtype as input
+    return out
 
 def pad_sequence(
-    sequences: Union[Tensor, List[Tensor]],
+    sequences: Union[core.Tensor, List[core.Tensor]],
     batch_first: bool = False,
     padding_value: float = 0.0,
-) -> Tensor:
+) -> core.Tensor:
     r"""Pad a list of variable length Tensors with ``padding_value``
 
     ``pad_sequence`` stacks a list of Tensors along a new dimension,
@@ -77,12 +70,12 @@ def pad_sequence(
     `*` is any number of trailing dimensions, including none.
 
     Example:
-        >>> from torch.nn.utils.rnn import pad_sequence
-        >>> a = torch.ones(25, 300)
-        >>> b = torch.ones(22, 300)
-        >>> c = torch.ones(15, 300)
+        >>> from core.nn.utils.rnn import pad_sequence
+        >>> a = core.ones(25, 300)
+        >>> b = core.ones(22, 300)
+        >>> c = core.ones(15, 300)
         >>> pad_sequence([a, b, c]).size()
-        torch.Size([25, 3, 300])
+        core.Size([25, 3, 300])
 
     Note:
         This function returns a Tensor of size ``T x B x *`` or ``B x T x *``
@@ -100,7 +93,7 @@ def pad_sequence(
         Tensor of size ``B x T x *`` otherwise
     """
 
-    if not (torch.jit.is_tracing() or torch.jit.is_scripting()):
+    if not (core.jit.is_tracing() or core.jit.is_scripting()):
         # JIT doesn't support `Iterable`
         if not isinstance(sequences, Iterable):
             msg = ('pad_sequence: Expected iterable for input sequences, but got arg of type: '
@@ -112,7 +105,7 @@ def pad_sequence(
         sequences = tuple(sequences)
     else:
         # For JIT, we only support Union[Tensor, Tuple[Tensor]]
-        if isinstance(sequences, torch.Tensor):
+        if isinstance(sequences, core.Tensor):
             sequences = sequences.unbind(0)
 
     # assuming trailing dimensions and type of all the Tensors

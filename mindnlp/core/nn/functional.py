@@ -125,9 +125,7 @@ def avg_pool3d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
 
 
 def adaptive_avg_pool1d(input, output_size):
-    if use_pyboost():
-        return mint.nn.functional.adaptive_avg_pool1d(input, output_size)
-    return ops.adaptive_avg_pool1d(input, output_size)
+    return execute('adaptive_avg_pool1d', input, output_size)
 
 def adaptive_avg_pool2d(input, output_size):
     return execute('adaptive_avg_pool2d_ext', input, output_size)
@@ -242,7 +240,8 @@ def custom_circular_pad(x, pad):
         new_size = left_pad + size + right_pad
         
         # 生成循环索引: (index - left_pad) mod size
-        index = (core.arange(new_size, device=x.device) - left_pad) % size
+        index = (core.arange(new_size, device=x.device) + new_size - left_pad) % size
+        index = (index + x.shape[dim]) % x.shape[dim]
         x = core.index_select(x, dim, index)
 
     return x
@@ -295,6 +294,8 @@ def pad(input, pad, mode='constant', value=None):
             new_pad += (pad_v,)
         if sum(new_pad) == 0:
             return input
+        if mode == 'circular':
+            return custom_circular_pad(input, pad)
         return execute('pad_v3', input, new_pad, mode, value)
     out = input
     if (isinstance(pad, tuple) and not pad):
@@ -508,7 +509,7 @@ def mse_loss(input, target, reduction='mean'):
     return execute('mse_loss_ext', input, target, reduction)
 
 def l1_loss(input, target, reduction='mean'):
-    return ops.l1_loss(input, target, reduction)
+    return execute('l1_loss_ext', input, target, reduction)
 
 def smooth_l1_loss(input, target, beta=1.0, reduction='none'):
     input = input.to(core.float32)
@@ -625,11 +626,11 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corne
         )
 
     if input.dim() == 3 and mode == "nearest":
-        return upsample_nearest1d_op(input, output_size, scale_factors)
+        return execute('upsample_nearest1d', input, output_size, scale_factors)
     if input.dim() == 4 and mode == "nearest":
-        return upsample_nearest2d_op(input, output_size, scale_factors)
+        return execute('upsample_nearest2d', input, output_size, scale_factors)
     if input.dim() == 5 and mode == "nearest":
-        return upsample_nearest3d_op(input, output_size, scale_factors)
+        return execute('upsample_nearest3d', input, output_size, scale_factors)
 
     if input.dim() == 3 and mode == "nearest-exact":
         return torch._C._nn._upsample_nearest_exact1d(input, output_size, scale_factors)
@@ -640,7 +641,7 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corne
         return nearest_exact(input, output_size)
     if input.dim() == 5 and mode == "nearest-exact":
         warnings.warn('interpolate do not support `nearest-exact` for 5-D input, use `nearest` instead.')
-        return upsample_nearest3d_op(input, output_size, scale_factors)
+        return execute('upsample_nearest3d', input, output_size, scale_factors)
 
     if input.dim() == 3 and mode == "area":
         assert output_size is not None
@@ -654,8 +655,8 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corne
 
     if input.dim() == 3 and mode == "linear":
         assert align_corners is not None
-        return upsample_linear1d_op(
-            input, output_size, scale_factors, align_corners
+        return execute(
+            'upsample_linear1d', input, output_size, scale_factors, align_corners
         )
     if input.dim() == 4 and mode == "bilinear":
         assert align_corners is not None
@@ -677,8 +678,8 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corne
             return torch._C._nn._upsample_bicubic2d_aa(
                 input, output_size, align_corners, scale_factors
             )
-        return upsample_bicubic2d_op(
-            input, output_size, scale_factors, align_corners
+        return execute(
+            'upsample_bicubic2d', input, output_size, scale_factors, align_corners
         )
 
     if input.dim() == 3 and mode == "bilinear":
@@ -757,8 +758,10 @@ def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     return execute('conv2d_ext', input, weight, bias, stride, padding, dilation, groups)
 
 def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    if use_pyboost() and not ON_ORANGE_PI:
-        return mint.nn.functional.conv3d(input, weight, bias, stride, padding, dilation, groups)
+    if isinstance(padding, str):
+        return execute('conv3d_padding', input, weight, bias, stride, padding, dilation, groups)
+    print(input.device, weight.device)
+    return execute('conv3d_ext', input, weight, bias, stride, padding, dilation, groups)
 
     pad_mode = 'pad'
     pad = padding
@@ -1477,14 +1480,14 @@ def multi_head_attention_forward(
         assert not (is_causal and attn_mask is None), "FIXME: is_causal not implemented for need_weights"
 
         if attn_mask is not None:
-            attn_output_weights = ops.baddbmm(attn_mask, q_scaled, k.swapaxes(-2, -1))
+            attn_output_weights = core.baddbmm(attn_mask, q_scaled, k.swapaxes(-2, -1))
         else:
-            attn_output_weights = ops.bmm(q_scaled, k.swapaxes(-2, -1))
+            attn_output_weights = core.bmm(q_scaled, k.swapaxes(-2, -1))
         attn_output_weights = softmax(attn_output_weights, dim=-1)
         if dropout_p > 0.0:
             attn_output_weights = dropout(attn_output_weights, p=dropout_p)
 
-        attn_output = ops.bmm(attn_output_weights, v)
+        attn_output = core.bmm(attn_output_weights, v)
 
         attn_output = attn_output.swapaxes(0, 1).view(tgt_len * bsz, embed_dim)
         attn_output = linear(attn_output, out_proj_weight, out_proj_bias)
@@ -1561,6 +1564,9 @@ def _none_or_dtype(input: Optional[core.Tensor]) -> Optional[int]:
     raise RuntimeError("input to _none_or_dtype() must be None or core.Tensor")
 
 def unfold(input, kernel_size, dilation=1, padding=0, stride=1):
+    if ON_A1:
+        return execute('im2col', input, kernel_size, dilation, padding, stride)
+    return execute('im2col_ext', input, kernel_size, dilation, padding, stride)
     if use_pyboost() and not ON_A1:
         return mint.nn.functional.unfold(input, kernel_size, dilation, padding, stride)
     return ops.unfold(input, kernel_size, dilation, padding, stride)

@@ -131,9 +131,9 @@ def gather(input_params, input_indices, axis, batch_dims=0):
 
 __all__.append('gather')
 
-def randint(low, high, shape, dtype, generator):
+def randint(low, high, size, dtype, generator):
     seed, offset = generator._step(12)  # pylint: disable=protected-access
-    return gen_ops_prim.randint_op(low, high, shape, seed, offset, dtype)
+    return gen_ops_prim.randint_op(low, high, size, seed, offset, dtype)
 
 def stack_ext(*args):
     return pyboost_inner_prim.stack_ext_impl(*args)
@@ -289,3 +289,27 @@ def unique_consecutive(*args):
     return pyboost_inner_prim.unique_consecutive_impl(*args)
 
 __all__.append('unique_consecutive')
+
+def im2col(input, kernel_size, dilation, padding, stride):
+    if isinstance(kernel_size, int):
+        kernel_size = (kernel_size, kernel_size)
+    if isinstance(stride, int):
+        stride = (stride, stride)
+    if isinstance(dilation, int):
+        dilation = (dilation, dilation)
+    if isinstance(padding, int):
+        padding = (padding, padding)
+    unfold_op = _get_cache_prim(ops.Im2Col)(ksizes=kernel_size, strides=stride, dilations=dilation, pads=padding).set_device('Ascend')
+    tmp = unfold_op(input)
+    tmp_shape = tmp.shape
+    out_shape = tmp_shape[:1] + (-1,) + tmp_shape[-1:]
+    out = reshape(tmp, out_shape)
+    return out
+
+__all__.append('im2col')
+
+def cdist(x1, x2, p):
+    cdist_op = _get_cache_prim(ops.Cdist)(float(p)).set_device('Ascend')
+    return cdist_op(x1, x2)
+
+__all__.append('cdist')

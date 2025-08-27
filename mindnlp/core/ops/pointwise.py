@@ -196,6 +196,8 @@ def div(input, other, *, rounding_mode=None):
             rounding_mode
         )
     else:
+        if not isinstance(other, numbers.Number) and not isinstance(input, numbers.Number) and other.device != input.device:
+            other = other.to(input.device)
         output = execute("div", input, other)
     return output
 
@@ -373,7 +375,9 @@ def logical_xor(input, other):
 
 # mul
 def mul(input, other):
-    # if isinstance(other, (float, int, bool)) and isinstance(input, torch.Tensor):
+    if not isinstance(other, numbers.Number) and other.device != input.device:
+        other = other.to(input.device)
+    #  and isinstance(input, torch.Tensor):
     #     return execute("muls", input, other)
     return execute("mul", input, other)
 

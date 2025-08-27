@@ -21,7 +21,7 @@ def t(input):
 
 # argwhere
 def argwhere(input):
-    return execute("nonzero", input)
+    return execute("non_zero", input)
 
 def infer_dtype(dtypes):
     is_float_dtypes = [d.is_floating_point for d in dtypes]
@@ -183,15 +183,11 @@ def select(input, dim, index):
 
 # scatter
 def scatter(input, dim, index, src):
-    # if ON_ORANGE_PI:
-    #     if not isinstance(src, core.Tensor):
-    #         src = core.full(index.shape, src, dtype=input.dtype, device=input.device)
-    #     if input.dtype == mindspore.bool_:
-    #         return execute('tensor_scatter_elements', input.int(), index, src.int(), dim).bool()
-    #     return execute('tensor_scatter_elements', input, index, src, dim)
     if input.dtype == mindspore.bool_:
         return execute("scatter", input.int(), dim, index, src.int()).bool()
 
+    if not isinstance(src, core.Tensor):
+        return execute("scatter_value", input, dim, index, src)
     return execute("scatter", input, dim, index, src)
 
 
@@ -324,7 +320,7 @@ def transpose(input, dim0, dim1):
 
 # unbind
 def unbind(input, dim=0):
-    return execute("unstack_ext", input, dim)
+    return execute("unstack_ext_view", input, dim)
 
 
 # unravel_index

@@ -88,12 +88,11 @@ def clone(input, *, memory_format=core.preserve_format):
 
 # cumsum
 def cumsum(input, dim, dtype=None):
-    return execute('cumsum_ext', input, dim,
-                   dtype if dtype is None else dtype_to_type_id('CumsumExt', 'dtype', dtype))
+    return execute('cumsum_ext', input, dim, dtype)
 
 # diag
 def diag(input, diagonal=0, *, out=None):
-    return execute('diag', input, diagonal)
+    return execute('diag_ext', input, diagonal)
 
 # diag_embed
 
@@ -623,6 +622,8 @@ def einsum(equation, *operands):
     """
     if isinstance(operands[0], (list, tuple)):
         operands = operands[0]
+    if operands[0].device.type != 'npu':
+        return execute('einsum', equation, operands)
     _equation, _operands = _einsum_convert_sublist(equation, *operands)
     _einsum_check_inputargs(_equation, _operands)
     return _einsum(_equation, _operands)
@@ -668,6 +669,8 @@ def flip(input, dims):
 
 # meshgrid
 def meshgrid(*tensors, indexing=None):
+    if isinstance(tensors[0], (tuple, list)):
+        tensors = tensors[0]
     if indexing is None:
         indexing = 'ij'
     return execute('meshgrid', tensors, indexing)
@@ -687,45 +690,46 @@ def ravel(input):
 
 # repeat_interleave
 def repeat_interleave(input, repeats, dim=None, *, output_size=None):
-    if input.device.type == 'npu' and not ON_A1:
-        if isinstance(repeats, int):
-            return execute('repeat_interleave_int', input, repeats, dim, None)
-        return execute('repeat_interleave_tensor', input, repeats, dim, None)
+    if input.device.type == 'npu' and ON_A1:
 
-    if isinstance(repeats, core.Tensor):
-        repeats = repeats.tolist()
-    if not isinstance(repeats, (tuple, list)):
-        repeats = (repeats,)
-    for index, element in enumerate(repeats):
-        if not isinstance(element, int):
-            raise TypeError(f"For 'Tensor.repeat', each element in {repeats} should be int, but got "
-                            f"{type(element)} at index {index}.")
-    if dim is None:
-        input = input.ravel()
-        dim = 0
+        if isinstance(repeats, core.Tensor):
+            repeats = repeats.tolist()
+        if not isinstance(repeats, (tuple, list)):
+            repeats = (repeats,)
+        for index, element in enumerate(repeats):
+            if not isinstance(element, int):
+                raise TypeError(f"For 'Tensor.repeat', each element in {repeats} should be int, but got "
+                                f"{type(element)} at index {index}.")
+        if dim is None:
+            input = input.ravel()
+            dim = 0
 
-    dim = dim + input.ndim if dim < 0 else dim
+        dim = dim + input.ndim if dim < 0 else dim
 
-    if len(repeats) == 1:
-        repeats = repeats[0]
-        if repeats == 0:
-            return Tensor_(input.dtype, (0,))
-        if input.dtype == mindspore.bool_:
-            input = input.to(mindspore.int32)
-            out = execute('repeat_elements', input, repeats, dim)
-            return out.to(mindspore.bool_)
-        return execute('repeat_elements', input, repeats, dim)
-    size = input.shape[dim]
-    if len(repeats) != size:
-        raise ValueError(f"For 'Tensor.repeat', the length of 'repeats' must be the same as the shape of the "
-                            f"original tensor in the 'axis' dimension, but got the length of 'repeats' "
-                            f"{len(repeats)}, the shape of the original tensor in the 'axis' dimension {size}.")
-    subs = core.tensor_split(input, size, dim)
-    repeated_subs = []
-    for sub, rep in zip(subs, repeats):
-        if rep != 0:
-            repeated_subs.append(execute('repeat_elements', sub, rep, dim))
-    return core.concat(repeated_subs, dim)
+        if len(repeats) == 1:
+            repeats = repeats[0]
+            if repeats == 0:
+                return Tensor_(input.dtype, (0,))
+            if input.dtype == mindspore.bool_:
+                input = input.to(mindspore.int32)
+                out = execute('repeat_elements', input, repeats, dim)
+                return out.to(mindspore.bool_)
+            return execute('repeat_elements', input, repeats, dim)
+        size = input.shape[dim]
+        if len(repeats) != size:
+            raise ValueError(f"For 'Tensor.repeat', the length of 'repeats' must be the same as the shape of the "
+                                f"original tensor in the 'axis' dimension, but got the length of 'repeats' "
+                                f"{len(repeats)}, the shape of the original tensor in the 'axis' dimension {size}.")
+        subs = core.split(input, 1, dim)
+        repeated_subs = []
+        for sub, rep in zip(subs, repeats):
+            if rep != 0:
+                repeated_subs.append(execute('repeat_elements', sub, rep, dim))
+        return core.concat(repeated_subs, dim)
+
+    if isinstance(repeats, int):
+        return execute('repeat_interleave_int', input, repeats, dim, None)
+    return execute('repeat_interleave_tensor', input, repeats, dim, None)
 
 
 # roll

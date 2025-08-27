@@ -59,7 +59,8 @@ def zeros_like(input, *, dtype=None, layout=None, device=None, requires_grad=Fal
                    device=device, requires_grad=requires_grad, user_created=True)
 
 # ones
-def ones(*size, out=None, dtype=None, layout=None, device=None, requires_grad=False):
+def ones(*size, out=None, dtype=None, layout=None, device=None, requires_grad=False, **kwargs):
+    size = kwargs.pop('size', size)
     if dtype is None:
         dtype = get_default_dtype()
     if isinstance(dtype, type):
@@ -96,6 +97,11 @@ def arange(start=0, end=None, step=1, *, out=None, dtype=None, layout=None, devi
         device = get_device_in_context()
     if isinstance(device, str):
         device = core.device(device)
+
+    start = start.item() if isinstance(start, (core.Tensor, np.integer)) else start
+    end = end.item() if isinstance(end, (core.Tensor, np.integer)) else end
+    step = step.item() if isinstance(step, (core.Tensor, np.integer)) else step
+
     output = execute('arange', start, end, step, dtype, device=device, requires_grad=requires_grad, user_created=True)
     if out is None:
         return output
