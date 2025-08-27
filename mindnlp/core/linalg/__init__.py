@@ -5,6 +5,7 @@ from mindspore import ops, mint
 from mindspore.ops._primitive_cache import _get_cache_prim
 
 from mindnlp import core
+from ..executor import execute
 
 linalg_cholesky_ex = namedtuple('linalg_cholesky_ex', ['L', 'info'])
 
@@ -27,7 +28,7 @@ def norm(A, ord=None, dim=None, keepdim=False, *, out=None, dtype=None):
     return mint.norm(A, 2 if ord is None else ord, dim, keepdim, dtype=dtype)
 
 def vector_norm(x, ord=2, dim=None, keepdim=False, *, dtype=None, out=None):
-    return mint.linalg.vector_norm(x, ord, dim, keepdim, dtype=dtype)
+    return execute('linalg_vector_norm', x, ord, dim, keepdim, dtype=dtype)
 
 def solve(A, B, *, left=True, out=None):
     return core.tensor(np.linalg.solve(A.numpy(), B.numpy()))

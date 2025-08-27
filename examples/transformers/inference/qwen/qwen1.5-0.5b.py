@@ -6,7 +6,7 @@ from threading import Thread
 
 # Loading the tokenizer and model from Hugging Face's model hub.
 tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-0.5B-Chat", ms_dtype=mindspore.float16)
-model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen1.5-0.5B-Chat", ms_dtype=mindspore.float16)
+model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen1.5-0.5B-Chat", ms_dtype=mindspore.float16, device_map='auto')
 
 system_prompt = "You are a helpful and friendly chatbot"
 
@@ -29,7 +29,7 @@ def predict(message, history):
             add_generation_prompt=True,
             return_tensors="ms",
             tokenize=True
-        )
+        ).npu()
     streamer = TextIteratorStreamer(tokenizer, timeout=120, skip_prompt=True, skip_special_tokens=True)
     generate_kwargs = dict(
         input_ids=input_ids,

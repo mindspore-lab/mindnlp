@@ -128,7 +128,6 @@ class Dispatcher(metaclass=SingletonMeta):
 
             else:
                 devices = {tensor.device for tensor in tensors}
-
                 if len(devices) > 1:
                     raise ValueError("All tensor arguments must be on the same device.")
 
@@ -148,7 +147,6 @@ class Dispatcher(metaclass=SingletonMeta):
 
         #     elif func_name in AMP_AUTO_BLACK_LIST or func_name.replace('_ext', '') in AMP_AUTO_BLACK_LIST:
         #         func_name = func_name + "_fp32"
-
         func = self._registry[device_type].get(func_name, None)
         if func is None:
             raise RuntimeError(

@@ -13,8 +13,8 @@ def is_tensor(input):
 def numel(input):
     return input.numel()
 
-def as_tensor(data, dtype=None, **kwarg):
-    return core.tensor(data, dtype=dtype)
+def as_tensor(data, dtype=None, device=None, **kwargs):
+    return core.tensor(data, dtype=dtype, device=device)
 
 def is_complex(input):
     return input.dtype.is_complex

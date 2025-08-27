@@ -173,7 +173,7 @@ def rand_like(
 
 # randint
 def randint(
-    *args,
+    low=0, high=0, size=None, *,
     generator=None,
     out=None,
     dtype=None,
@@ -189,14 +189,15 @@ def randint(
     if isinstance(device, str):
         device = core.device(device)
 
-    if not generator:
+    if generator is None:
         generator = default_generator
-    args = list(args)
-    if len(args) == 2:
-        args = [0] + args
+
+    if size is None and isinstance(high, (tuple, list)):
+        low, high, size = 0, low, high
+
     output = execute(
         "randint",
-        *args,
+        low, high, size,
         dtype,
         generator,
         device=device,

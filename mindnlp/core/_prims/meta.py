@@ -330,3 +330,40 @@ __all__.append('inplace_add_ext')
 def clamp_scalar(input, *args):
     return input
 __all__.append('clamp_scalar')
+
+def expand_dims_view(input, dim):
+    input_shape = list(input.shape)
+    input_shape.insert(dim, 1)
+
+    out = Tensor_(shape=tuple(input_shape), dtype=input.dtype)
+    return core.Tensor(out)
+__all__.append('expand_dims_view')
+
+def floor_div(input, other):
+    return input
+__all__.append('floor_div')
+
+def sin(input):
+    return input
+
+__all__.append('sin')
+
+def cos(input):
+    return input
+
+__all__.append('cos')
+
+def triu(input, diagonal):
+    return input
+
+__all__.append('triu')
+
+def fill_scalar(size, fill_value, dtype):
+    out = Tensor_(shape=size, dtype=dtype)
+    return core.Tensor(out)
+__all__.append('fill_scalar')
+
+def sqrt(input):
+    return input
+
+__all__.append('sqrt')

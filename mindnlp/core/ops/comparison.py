@@ -1,4 +1,5 @@
 """comparison op"""
+import numbers
 from collections import namedtuple
 from mindnlp import core
 from mindnlp.core.executor import execute
@@ -16,6 +17,8 @@ def argsort(input, dim=-1, descending=False, stable=False):
 
 # eq
 def eq(input, other):
+    if not isinstance(other, numbers.Number) and other.device != input.device:
+        other = other.to(input.device)
     return execute('equal', input, other)
 
 # equal

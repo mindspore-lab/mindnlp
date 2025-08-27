@@ -147,6 +147,9 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False):
     tensor.requires_grad_(requires_grad)
     return tensor
 
+def scalar_tensor(*args, **kwargs):
+    return tensor(*args, **kwargs)
+
 def is_tensor(x):
     return isinstance(x, Tensor)
 
@@ -2213,7 +2216,7 @@ class TensorPlaceHolder:
                 if out.dtype == arg:
                     return out
                 else:
-                    out = ops.cast(out, arg)
+                    out = ops.cast(out, arg.dtype)
         return out
 
     # Tensor.take
