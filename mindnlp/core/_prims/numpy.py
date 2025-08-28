@@ -1,3 +1,4 @@
+import ctypes
 import numbers
 import numpy as np
 import scipy
@@ -332,23 +333,36 @@ def rand_ext(size, seed, offset, dtype):
 
 __all__.append('rand_ext')
 
+def numpy_to_tensor_overwrite(np_array, torch_tensor):
+    if not np_array.flags.c_contiguous:
+        np_array = np.ascontiguousarray(np_array)
+
+    tensor_ptr = torch_tensor.data_ptr()
+        
+    ctypes.memmove(tensor_ptr, np_array.ctypes.data, torch_tensor.nbytes)
+    
+    return torch_tensor
+
 def inplace_uniform(input, from_, to_, generator_):
+    seed, _ = generator_._step(12)
+    np.random.seed(seed.item())
     out = np.random.uniform(from_, to_, input.shape).astype(core.dtype2np[input.dtype])
-    input.assign_value(core.Tensor.from_numpy(out))
+    numpy_to_tensor_overwrite(out, input)
     return input
 
 __all__.append('inplace_uniform')
 
 def inplace_fill_scalar(input, value):
     out = np.full_like(input.numpy(), value)
-    input.assign_value(core.Tensor.from_numpy(out))
+    numpy_to_tensor_overwrite(out, input)
     return input
 
 __all__.append('inplace_fill_scalar')
 
-def inplace_normal(input, mean, std, seed, offset):
+def inplace_normal(input, mean, std, generator_):
     out = np.random.normal(mean, std, input.shape).astype(core.dtype2np[input.dtype])
-    input.assign_value(core.Tensor.from_numpy(out))
+    numpy_to_tensor_overwrite(out, input)
+
     return input
 
 __all__.append('inplace_normal')
@@ -396,13 +410,16 @@ def inplace_random(input, from_val=0, to_val=None, seed=None, offset=None):
     else:
         raise TypeError(f"Unsupported data type: {arr.dtype}")
     
-    input.assign_value(core.Tensor.from_numpy(rnd))
+    numpy_to_tensor_overwrite(rnd, input)
+
     return input
 
 __all__.append('inplace_random')
 
 def inplace_copy(input, other):
-    input.assign_value(other)
+    # input.assign_value(other)
+    ctypes.memmove(input.data_ptr(), other.data_ptr(), input.nbytes)
+
     return input
 
 __all__.append('inplace_copy')
@@ -562,7 +579,7 @@ def inplace_add_ext(input, other, alpha):
     if not isinstance(other, numbers.Number):
         other = other.numpy()
     out = input.numpy() + other * alpha
-    input.assign_value(core.Tensor.from_numpy(out))
+    numpy_to_tensor_overwrite(out, input)
     return input
 
 __all__.append('inplace_add_ext')

@@ -121,6 +121,11 @@ def inplace_uniform(input, from_, to_, generator_):
     seed, offset = generator_._step(12)
     return gen_ops_prim.inplace_uniform_op(input, from_, to_, seed, offset)
 
+def inplace_normal(input, mean, std, generator_):
+    seed, offset = generator_._step(12)
+    return gen_ops_prim.inplace_normal_op(input, mean, std, seed, offset)
+
+
 def binary_cross_entropy_with_logits(*args):
     return pyboost_inner_prim.binary_cross_entropy_with_logits_impl(*args)
 
@@ -313,3 +318,17 @@ def cdist(x1, x2, p):
     return cdist_op(x1, x2)
 
 __all__.append('cdist')
+
+def meshgrid(tensors, indexing):
+    return pyboost_inner_prim.meshgrid_impl(tensors, indexing)
+
+__all__.append('meshgrid')
+
+def grid_sampler_2d(input, grid, mode, padding_mode, align_corners):
+    return pyboost_inner_prim.grid_sampler_2d_impl(input, grid, mode, padding_mode, align_corners)
+
+def grid_sampler_3d(input, grid, mode, padding_mode, align_corners):
+    return pyboost_inner_prim.grid_sampler_3d_impl(input, grid, mode, padding_mode, align_corners)
+
+__all__.append('grid_sampler_2d')
+__all__.append('grid_sampler_3d')

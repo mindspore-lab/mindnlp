@@ -64,7 +64,7 @@ def leaky_relu(input, alpha=0.2):
     return ops.leaky_relu(input, alpha)
 
 def prelu(input, weight):
-    return ops.prelu(input, weight)
+    return execute('prelu', input, weight)
 
 def celu(input, alpha=1., inplace=False):
     return ops.celu(input, alpha)
@@ -1604,18 +1604,22 @@ def pixel_unshuffle(input, downscale_factor):
     return ops.pixel_unshuffle(input, downscale_factor)
 
 def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corners=False):
-    if use_pyboost():
-        return mint.nn.functional.grid_sample(input, grid, mode, padding_mode, align_corners)
-    return ops.grid_sample(input, grid, mode, padding_mode, align_corners)
+    align_corners = False if align_corners is None else align_corners
+    if input.ndim == 4:
+        return execute('grid_sampler_2d', input, grid, mode, padding_mode, align_corners)
+    return execute('grid_sampler_3d', input, grid, mode, padding_mode, align_corners)
 
 def cosine_similarity(x1, x2, dim=1, eps=1e-8):
-    if DEVICE_TARGET == 'Ascend':
-        zero_norm_mask = ((x1.sum(dim) == 0).int() & (x2.sum(dim) == 0).int()).bool()
-    else:
-        zero_norm_mask = (x1.sum(dim) == 0) & (x2.sum(dim) == 0)
-
-    cosine_sim = ops.cosine_similarity(x1, x2, dim, eps)
-    return ops.select(zero_norm_mask, ops.ones_like(cosine_sim), cosine_sim)
+    dot_product = core.sum(x1 * x2, dim=dim)
+    
+    # 2. 计算L2范数 (||x|| 和 ||y||)
+    norm_vec1 = core.norm(x1, p=2, dim=dim)
+    norm_vec2 = core.norm(x2, p=2, dim=dim)
+    
+    # 3. 计算余弦相似度: (x · y) / (||x|| * ||y|| + eps)
+    cosine_sim = dot_product / (norm_vec1 * norm_vec2 + eps)
+    
+    return cosine_sim
 
 # def pairwise_distance():
 #     return ops.pairwise_distance
