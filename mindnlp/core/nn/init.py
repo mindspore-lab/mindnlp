@@ -1,24 +1,97 @@
-# mypy: allow-untyped-defs
 """This file contains utilities for initializing neural network parameters."""
+
 import math
 import warnings
-from typing import Optional as _Optional
+from typing import Callable, Literal, Optional as _Optional, TypeVar, Union
+from typing_extensions import ParamSpec
 
 from mindnlp import core
 from mindnlp.core import Tensor
 
-def _no_grad_uniform_(tensor, a, b, generator=None):
+
+__all__ = [
+    "calculate_gain",
+    "uniform_",
+    "normal_",
+    "trunc_normal_",
+    "constant_",
+    "ones_",
+    "zeros_",
+    "eye_",
+    "dirac_",
+    "xavier_uniform_",
+    "xavier_normal_",
+    "kaiming_uniform_",
+    "kaiming_normal_",
+    "orthogonal_",
+    "sparse_",
+    # Deprecated aliases (for backward compatibility)
+    "uniform",
+    "normal",
+    "constant",
+    "eye",
+    "dirac",
+    "xavier_uniform",
+    "xavier_normal",
+    "kaiming_uniform",
+    "kaiming_normal",
+    "orthogonal",
+    "sparse",
+]
+
+
+_R = TypeVar("_R")
+_P = ParamSpec("_P")
+
+_NonlinearityType = Literal[
+    "linear",
+    "conv1d",
+    "conv2d",
+    "conv3d",
+    "conv_transpose1d",
+    "conv_transpose2d",
+    "conv_transpose3d",
+    "sigmoid",
+    "tanh",
+    "relu",
+    "leaky_relu",
+    "selu",
+]
+
+_FanMode = Literal["fan_in", "fan_out"]
+
+
+# These no_grad_* functions are necessary as wrappers around the parts of these
+# functions that use `with core.no_grad()`. The JIT doesn't support context
+# managers, so these need to be implemented as builtins. Using these wrappers
+# lets us keep those builtins small and re-usable.
+def _no_grad_uniform_(
+    tensor: Tensor, a: float, b: float, generator: _Optional[core.Generator] = None
+) -> Tensor:
     with core.no_grad():
         return tensor.uniform_(a, b, generator=generator)
 
-def _no_grad_normal_(tensor, mean, std, generator=None):
+
+def _no_grad_normal_(
+    tensor: Tensor,
+    mean: float,
+    std: float,
+    generator: _Optional[core.Generator] = None,
+) -> Tensor:
     with core.no_grad():
         return tensor.normal_(mean, std, generator=generator)
 
 
-def _no_grad_trunc_normal_(tensor, mean, std, a, b, generator=None):
+def _no_grad_trunc_normal_(
+    tensor: Tensor,
+    mean: float,
+    std: float,
+    a: float,
+    b: float,
+    generator: _Optional[core.Generator] = None,
+) -> Tensor:
     # Method based on https://people.sc.fsu.edu/~jburkardt/presentations/truncated_normal.pdf
-    def norm_cdf(x):
+    def norm_cdf(x: float) -> float:
         # Computes standard normal cumulative distribution function
         return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
 
@@ -53,16 +126,19 @@ def _no_grad_trunc_normal_(tensor, mean, std, a, b, generator=None):
         return tensor
 
 
-def _no_grad_fill_(tensor, val):
+def _no_grad_fill_(tensor: Tensor, val: float) -> Tensor:
     with core.no_grad():
         return tensor.fill_(val)
 
 
-def _no_grad_zero_(tensor):
+def _no_grad_zero_(tensor: Tensor) -> Tensor:
     with core.no_grad():
         return tensor.zero_()
 
-def calculate_gain(nonlinearity, param=None):
+
+def calculate_gain(
+    nonlinearity: _NonlinearityType, param: _Optional[Union[int, float]] = None
+) -> float:
     r"""Return the recommended gain value for the given nonlinearity function.
 
     The values are as follows:
@@ -92,7 +168,9 @@ def calculate_gain(nonlinearity, param=None):
         param: optional parameter for the non-linear function
 
     Examples:
-        >>> gain = nn.init.calculate_gain('leaky_relu', 0.2)  # leaky_relu with negative_slope=0.2
+        >>> gain = nn.init.calculate_gain(
+        ...     "leaky_relu", 0.2
+        ... )  # leaky_relu with negative_slope=0.2
 
     .. _Self-Normalizing Neural Networks: https://papers.nips.cc/paper/2017/hash/5d44ee6f2c3f71b73125876103c8f6c4-Abstract.html
     """
@@ -146,6 +224,7 @@ def uniform_(
         tensor: an n-dimensional `core.Tensor`
         a: the lower bound of the uniform distribution
         b: the upper bound of the uniform distribution
+        generator: the torch Generator to sample from (default: None)
 
     Examples:
         >>> w = core.empty(3, 5)
@@ -168,6 +247,7 @@ def normal_(
         tensor: an n-dimensional `core.Tensor`
         mean: the mean of the normal distribution
         std: the standard deviation of the normal distribution
+        generator: the torch Generator to sample from (default: None)
 
     Examples:
         >>> w = core.empty(3, 5)
@@ -198,6 +278,7 @@ def trunc_normal_(
         std: the standard deviation of the normal distribution
         a: the minimum cutoff value
         b: the maximum cutoff value
+        generator: the torch Generator to sample from (default: None)
 
     Examples:
         >>> w = core.empty(3, 5)
@@ -220,7 +301,6 @@ def constant_(tensor: Tensor, val: float) -> Tensor:
     return _no_grad_fill_(tensor, val)
 
 
-
 def ones_(tensor: Tensor) -> Tensor:
     r"""Fill the input Tensor with the scalar value `1`.
 
@@ -232,7 +312,6 @@ def ones_(tensor: Tensor) -> Tensor:
         >>> nn.init.ones_(w)
     """
     return _no_grad_fill_(tensor, 1.0)
-
 
 
 def zeros_(tensor: Tensor) -> Tensor:
@@ -248,8 +327,28 @@ def zeros_(tensor: Tensor) -> Tensor:
     return _no_grad_zero_(tensor)
 
 
+def eye_(tensor: Tensor) -> Tensor:
+    r"""Fill the 2-dimensional input `Tensor` with the identity matrix.
 
-def dirac_(tensor, groups=1):
+    Preserves the identity of the inputs in `Linear` layers, where as
+    many inputs are preserved as possible.
+
+    Args:
+        tensor: a 2-dimensional `core.Tensor`
+
+    Examples:
+        >>> w = core.empty(3, 5)
+        >>> nn.init.eye_(w)
+    """
+    if tensor.ndimension() != 2:
+        raise ValueError("Only tensors with 2 dimensions are supported")
+
+    with core.no_grad():
+        core.eye(*tensor.shape, out=tensor, requires_grad=tensor.requires_grad)
+    return tensor
+
+
+def dirac_(tensor: Tensor, groups: int = 1) -> Tensor:
     r"""Fill the {3, 4, 5}-dimensional input `Tensor` with the Dirac delta function.
 
     Preserves the identity of the inputs in `Convolutional`
@@ -302,17 +401,17 @@ def dirac_(tensor, groups=1):
     return tensor
 
 
-def _calculate_fan_in_and_fan_out(tensor):
-    dimensions = tensor.ndim
+def _calculate_fan_in_and_fan_out(tensor: Tensor) -> tuple[int, int]:
+    dimensions = tensor.dim()
     if dimensions < 2:
         raise ValueError(
             "Fan in and fan out can not be computed for tensor with fewer than 2 dimensions"
         )
 
-    num_input_fmaps = tensor.shape[1]
-    num_output_fmaps = tensor.shape[0]
+    num_input_fmaps = tensor.size(1)
+    num_output_fmaps = tensor.size(0)
     receptive_field_size = 1
-    if tensor.ndim > 2:
+    if tensor.dim() > 2:
         # math.prod is not always available, accumulate the product manually
         # we could use functools.reduce but that is not supported by TorchScript
         for s in tensor.shape[2:]:
@@ -326,6 +425,7 @@ def _calculate_fan_in_and_fan_out(tensor):
 def xavier_uniform_(
     tensor: Tensor,
     gain: float = 1.0,
+    generator: _Optional[core.Generator] = None,
 ) -> Tensor:
     r"""Fill the input `Tensor` with values using a Xavier uniform distribution.
 
@@ -346,7 +446,7 @@ def xavier_uniform_(
 
     Examples:
         >>> w = core.empty(3, 5)
-        >>> nn.init.xavier_uniform_(w, gain=nn.init.calculate_gain('relu'))
+        >>> nn.init.xavier_uniform_(w, gain=nn.init.calculate_gain("relu"))
 
     Note:
         Be aware that ``fan_in`` and ``fan_out`` are calculated assuming
@@ -360,12 +460,13 @@ def xavier_uniform_(
     std = gain * math.sqrt(2.0 / float(fan_in + fan_out))
     a = math.sqrt(3.0) * std  # Calculate uniform bounds from standard deviation
 
-    return uniform_(tensor, -a, a)
+    return _no_grad_uniform_(tensor, -a, a, generator)
 
 
 def xavier_normal_(
     tensor: Tensor,
     gain: float = 1.0,
+    generator: _Optional[core.Generator] = None,
 ) -> Tensor:
     r"""Fill the input `Tensor` with values using a Xavier normal distribution.
 
@@ -398,10 +499,10 @@ def xavier_normal_(
     fan_in, fan_out = _calculate_fan_in_and_fan_out(tensor)
     std = gain * math.sqrt(2.0 / float(fan_in + fan_out))
 
-    return normal_(tensor, 0.0, std)
+    return _no_grad_normal_(tensor, 0.0, std, generator)
 
 
-def _calculate_correct_fan(tensor, mode):
+def _calculate_correct_fan(tensor: Tensor, mode: _FanMode) -> int:
     mode = mode.lower()
     valid_modes = ["fan_in", "fan_out"]
     if mode not in valid_modes:
@@ -414,9 +515,10 @@ def _calculate_correct_fan(tensor, mode):
 def kaiming_uniform_(
     tensor: Tensor,
     a: float = 0,
-    mode: str = "fan_in",
-    nonlinearity: str = "leaky_relu",
-):
+    mode: _FanMode = "fan_in",
+    nonlinearity: _NonlinearityType = "leaky_relu",
+    generator: _Optional[core.Generator] = None,
+) -> Tensor:
     r"""Fill the input `Tensor` with values using a Kaiming uniform distribution.
 
     The method is described in `Delving deep into rectifiers: Surpassing
@@ -443,7 +545,7 @@ def kaiming_uniform_(
 
     Examples:
         >>> w = core.empty(3, 5)
-        >>> nn.init.kaiming_uniform_(w, mode='fan_in', nonlinearity='relu')
+        >>> nn.init.kaiming_uniform_(w, mode="fan_in", nonlinearity="relu")
 
     Note:
         Be aware that ``fan_in`` and ``fan_out`` are calculated assuming
@@ -453,7 +555,6 @@ def kaiming_uniform_(
         If you plan to use ``x @ w``, where ``w.shape = [fan_in, fan_out]``,
         pass in a transposed weight matrix, i.e. ``nn.init.kaiming_uniform_(w.T, ...)``.
     """
-
     if 0 in tensor.shape:
         warnings.warn("Initializing zero-element tensors is a no-op")
         return tensor
@@ -461,16 +562,17 @@ def kaiming_uniform_(
     gain = calculate_gain(nonlinearity, a)
     std = gain / math.sqrt(fan)
     bound = math.sqrt(3.0) * std  # Calculate uniform bounds from standard deviation
-    return uniform_(tensor, -bound, bound)
+    with core.no_grad():
+        return tensor.uniform_(-bound, bound, generator=generator)
 
 
 def kaiming_normal_(
     tensor: Tensor,
     a: float = 0,
-    mode: str = "fan_in",
-    nonlinearity: str = "leaky_relu",
+    mode: _FanMode = "fan_in",
+    nonlinearity: _NonlinearityType = "leaky_relu",
     generator: _Optional[core.Generator] = None,
-):
+) -> Tensor:
     r"""Fill the input `Tensor` with values using a Kaiming normal distribution.
 
     The method is described in `Delving deep into rectifiers: Surpassing
@@ -497,7 +599,7 @@ def kaiming_normal_(
 
     Examples:
         >>> w = core.empty(3, 5)
-        >>> nn.init.kaiming_normal_(w, mode='fan_out', nonlinearity='relu')
+        >>> nn.init.kaiming_normal_(w, mode="fan_out", nonlinearity="relu")
 
     Note:
         Be aware that ``fan_in`` and ``fan_out`` are calculated assuming
@@ -516,11 +618,12 @@ def kaiming_normal_(
     with core.no_grad():
         return tensor.normal_(0, std, generator=generator)
 
+
 def orthogonal_(
-    tensor,
-    gain=1,
+    tensor: Tensor,
+    gain: float = 1,
     generator: _Optional[core.Generator] = None,
-):
+) -> Tensor:
     r"""Fill the input `Tensor` with a (semi) orthogonal matrix.
 
     Described in `Exact solutions to the nonlinear dynamics of learning in deep
@@ -531,6 +634,7 @@ def orthogonal_(
     Args:
         tensor: an n-dimensional `core.Tensor`, where :math:`n \geq 2`
         gain: optional scaling factor
+        generator: the torch Generator to sample from (default: None)
 
     Examples:
         >>> # xdoctest: +REQUIRES(env:TORCH_DOCTEST_LAPACK)
@@ -565,12 +669,13 @@ def orthogonal_(
         tensor.mul_(gain)
     return tensor
 
+
 def sparse_(
-    tensor,
-    sparsity,
-    std=0.01,
+    tensor: Tensor,
+    sparsity: float,
+    std: float = 0.01,
     generator: _Optional[core.Generator] = None,
-):
+) -> Tensor:
     r"""Fill the 2D input `Tensor` as a sparse matrix.
 
     The non-zero elements will be drawn from the normal distribution
@@ -603,14 +708,38 @@ def sparse_(
     return tensor
 
 
+# for backward compatibility
+def _make_deprecate(meth: Callable[_P, _R]) -> Callable[_P, _R]:
+    new_name = meth.__name__
+    old_name = new_name[:-1]
 
-uniform = uniform_
-normal = normal_
-constant = constant_
-dirac = dirac_
-xavier_uniform = xavier_uniform_
-xavier_normal = xavier_normal_
-kaiming_uniform = kaiming_uniform_
-kaiming_normal = kaiming_normal_
-orthogonal = orthogonal_
-sparse = sparse_
+    def deprecated_init(*args: _P.args, **kwargs: _P.kwargs) -> _R:
+        warnings.warn(
+            f"`nn.init.{old_name}` is now deprecated in favor of `nn.init.{new_name}`.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return meth(*args, **kwargs)
+
+    deprecated_init.__doc__ = rf"""
+    {old_name}(...)
+
+    .. warning::
+        This method is now deprecated in favor of :func:`core.nn.init.{new_name}`.
+
+    See :func:`~core.nn.init.{new_name}` for details."""
+    deprecated_init.__name__ = old_name
+    return deprecated_init
+
+
+uniform = _make_deprecate(uniform_)
+normal = _make_deprecate(normal_)
+constant = _make_deprecate(constant_)
+eye = _make_deprecate(eye_)
+dirac = _make_deprecate(dirac_)
+xavier_uniform = _make_deprecate(xavier_uniform_)
+xavier_normal = _make_deprecate(xavier_normal_)
+kaiming_uniform = _make_deprecate(kaiming_uniform_)
+kaiming_normal = _make_deprecate(kaiming_normal_)
+orthogonal = _make_deprecate(orthogonal_)
+sparse = _make_deprecate(sparse_)

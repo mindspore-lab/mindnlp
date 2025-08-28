@@ -30,14 +30,13 @@ def inplace_fill(input, value):
 def inplace_normal(input, mean=0, std=1, *, generator=None):
     if generator is None:
         generator = default_generator
-    seed, offset = generator._step(generator_step_)
 
     if isinstance(mean, core.Tensor):
         mean = mean.item()
     if isinstance(std, core.Tensor):
         std = std.item()
 
-    execute('inplace_normal', input, mean, std, seed, offset, device=input.device)
+    execute('inplace_normal', input, mean, std, generator, device=input.device)
 
     return input
 
@@ -61,6 +60,7 @@ def inplace_uniform(input, *args, **kwargs):
     generator_ = kwargs.get("generator", None)
     if generator_ is None:
         generator_ = default_generator
+
     execute("inplace_uniform", input, from_, to_, generator_)
     return input
 

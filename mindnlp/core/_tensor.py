@@ -95,8 +95,9 @@ def __init__(self, *args, **kwargs):
     requires_grad = kwargs.pop('requires_grad', False)
     device = kwargs.pop('device', core.get_default_device())
     if len(args) > 1 and all([isinstance(arg, int) for arg in args]):
-        tensor = Tensor_(shape=args, dtype=get_default_dtype())
-        old_init(self, tensor, internal=True)
+        # tensor = Tensor_(shape=args, dtype=get_default_dtype())
+        # Tensor_(self, tensor)
+        old_init(self, shape=args, dtype=get_default_dtype())
     else:
         old_init(self, *args, **kwargs)
     self.requires_grad_(requires_grad)
@@ -2530,6 +2531,9 @@ class TensorPlaceHolder:
 
     def __floordiv__(self, other):
         return ops.floor_divide(self, other)
+
+    def __ifloordiv__(self, other):
+        return self.copy_(ops.floor_divide(self, other))
 
     def __mod__(self, other):
         return ops.fmod(self, other)
