@@ -332,3 +332,46 @@ def grid_sampler_3d(input, grid, mode, padding_mode, align_corners):
 
 __all__.append('grid_sampler_2d')
 __all__.append('grid_sampler_3d')
+
+def rms_norm(x, gamma, epsilon):
+    return pyboost_inner_prim.rms_norm_impl(x, gamma, epsilon)[0]
+
+__all__.append('rms_norm')
+
+_complex = ops.Complex().set_device('Ascend')
+def view_as_complex(input):
+    real_part, imag_part = input.tensor_split(2, -1)
+    return _complex(real_part.squeeze(-1), imag_part.squeeze(-1))
+
+__all__.append('view_as_complex')
+
+imag_op = ops.Imag().set_device('Ascend')
+def imag(input):
+    return imag_op(input)
+
+__all__.append('imag')
+
+def glu(x, axis):
+    return pyboost_inner_prim.glu_impl(x, axis)
+
+__all__.append('glu')
+
+def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0, reduction='mean', zero_infinity=False):
+    ctc_loss_op = _get_cache_prim(ops.CTCLossV2)(blank=blank, reduction="none", zero_infinity=zero_infinity).set_device('Ascend')
+    if targets.ndim == 1:
+        targets = targets.unsqueeze(-1)
+    loss, _ = ctc_loss_op(log_probs, targets, input_lengths, target_lengths)
+    if zero_infinity:
+        loss = select(isinf(loss), 0., loss)
+    if reduction == 'sum':
+        loss = sum_ext(loss)
+    if reduction == 'mean':
+        input_type = loss.dtype
+        target_length_t = target_lengths.clip(1., None)
+        loss = loss.astype("float32")
+        loss = div(loss, target_length_t)
+        loss = mean_ext(loss)
+        loss = loss.astype(input_type)
+    return loss
+
+__all__.append('ctc_loss')

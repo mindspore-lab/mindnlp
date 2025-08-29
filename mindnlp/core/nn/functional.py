@@ -197,8 +197,8 @@ def rms_norm(input, normalized_shape, weight, eps=None):
     if eps is None:
         eps = core.finfo(input.dtype).eps
     if weight is None:
-        weight = core.ones(normalized_shape)
-    return ops.rms_norm(input, weight, eps)[0]
+        weight = core.ones(normalized_shape, dtype=input.dtype, device=input.device)
+    return execute('rms_norm', input, weight, eps)
 
 def fast_gelu(x):
     return ops.fast_gelu(x)
@@ -760,7 +760,6 @@ def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
 def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     if isinstance(padding, str):
         return execute('conv3d_padding', input, weight, bias, stride, padding, dilation, groups)
-    print(input.device, weight.device)
     return execute('conv3d_ext', input, weight, bias, stride, padding, dilation, groups)
 
     pad_mode = 'pad'
@@ -1577,28 +1576,13 @@ def fold(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
     return ops.fold(input, output_size, kernel_size, dilation, padding, stride)
 
 def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0, reduction='mean', zero_infinity=False):
-    ctc_loss_op = _get_cache_prim(ops.CTCLossV2)(blank=blank, reduction="none", zero_infinity=zero_infinity)
-    if targets.ndim == 1:
-        targets = targets.unsqueeze(-1)
-    loss, _ = ctc_loss_op(log_probs, targets, input_lengths, target_lengths)
-    if zero_infinity:
-        loss = ops.where(ops.isinf(loss), 0., loss)
-    if reduction == 'sum':
-        loss = loss.sum()
-    if reduction == 'mean':
-        input_type = loss.dtype
-        target_length_t = target_lengths.clip(1., None)
-        loss = loss.astype("float32")
-        loss = loss / target_length_t
-        loss = loss.mean()
-        loss = loss.astype(input_type)
-    return loss
+    return execute('ctc_loss', log_probs, targets, input_lengths, target_lengths, blank, reduction, zero_infinity)
 
 def one_hot(tensor, num_classes=-1):
     return execute('one_hot_ext', tensor, num_classes)
 
 def pixel_shuffle(input, upscale_factor):
-    return ops.pixel_shuffle(input, upscale_factor)
+    return execute('pixel_shuffle', input, upscale_factor)
 
 def pixel_unshuffle(input, downscale_factor):
     return ops.pixel_unshuffle(input, downscale_factor)

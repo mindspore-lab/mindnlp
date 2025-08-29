@@ -766,3 +766,16 @@ def repeat_interleave_tensor(input, repeats, dim, _):
 
 __all__.append('repeat_interleave_tensor')
 
+def greater(input, other):
+    if not isinstance(input, numbers.Number):
+        input = input.numpy()
+    if not isinstance(other, numbers.Number):
+        other = other.numpy()
+    
+    out = input > other
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+
+    return core.Tensor.from_numpy(out)
+
+__all__.append('greater')

@@ -1,6 +1,6 @@
 """core ops like torch funcional api"""
 from . import array, blas, comparison, pointwise, creation, random, reduction, other, \
-    tensor, _inner, optim, inplace
+    tensor, _inner, optim, inplace, complex
 from .array import *
 from .blas import *
 from .comparison import *
@@ -14,6 +14,7 @@ from .tensor import *
 from ._inner import *
 from .optim import *
 from .inplace import *
+from .complex import *
 
 def load_library(lib_path):
     raise ImportError('not support import any ops for now.')

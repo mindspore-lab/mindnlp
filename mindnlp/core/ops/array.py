@@ -166,7 +166,12 @@ def permute(input, dims):
 def reshape(input, *shape):
     if isinstance(shape[0], (tuple, list)):
         shape = shape[0]
-    return execute("reshape", input, shape)
+    new_shape = ()
+    for s in shape:
+        if not isinstance(s, numbers.Number):
+            s = s.item()
+        new_shape += (s,)
+    return execute("reshape", input, new_shape)
 
 
 def view(input, *shape):
@@ -221,6 +226,22 @@ def split(tensor, split_size_or_sections, dim=0):
         )
     return res
 
+def split_with_sizes(input, split_sizes, dim=0):
+    assert input.dim() != 0, "split expects at least a 1-dimensional tensor"
+    dim_size = input.size(dim)
+    num_splits = len(split_sizes)
+    start_idx = 0
+
+    splits = []
+    for i in range(num_splits):
+        length = split_sizes[i]
+        assert length >= 0, f"split_with_sizes expects split_sizes have only non-negative entries, but got split_sizes={split_sizes}"
+        splits.append(
+            narrow(input, dim, start_idx, length)
+        )
+        start_idx += length
+
+    return splits
 
 # squeeze
 def squeeze(input, *dim, **kwargs):
@@ -306,10 +327,27 @@ def take_along_dim(input, indices, dim=None, *, out=None):
     return input.view(-1).gather(0, indices.view(-1))
 
 # tensor_split
-
+def tensor_split(input, indices_or_sections, dim=0):
+    if isinstance(indices_or_sections, int):
+        # 分割成大致相等的部分
+        dim_size = input.size(dim)
+        if dim_size == 0:
+            return [input] * indices_or_sections
+        split_size = (dim_size + indices_or_sections - 1) // indices_or_sections
+        return split(input, split_size, dim=dim)
+    elif isinstance(indices_or_sections, (list, tuple, core.Tensor)):
+        # 按照给定的索引分割
+        dim_size = input.size(dim)
+        indices = [0] + list(indices_or_sections) + [dim_size]
+        split_sizes = [indices[i+1] - indices[i] for i in range(len(indices)-1)]
+        return split(input, split_sizes, dim=dim)
+    else:
+        raise ValueError("indices_or_sections must be int or list/tuple of indices")
 
 # tile
 def tile(input, dims):
+    if isinstance(dims[0], (tuple, list)):
+        dims = dims[0]
     return execute("tile", input, dims)
 
 
@@ -882,6 +920,8 @@ def getitem_np(input, slice):
     return execute('getitem', input, slice)
 
 def setitem_np(input, slice, value):
+    if input.device != value.device:
+        value = value.to(input.device)
     return execute('setitem', input, slice, value)
 
 __all__ = [
@@ -926,7 +966,7 @@ __all__ = [
     "swapdims",
     "take",
     "take_along_dim",
-    # tensor_split
+    "tensor_split",
     "tile",
     "transpose",
     "unbind",
@@ -940,5 +980,6 @@ __all__ = [
     'getitem',
     'setitem',
     'getitem_np',
-    'setitem_np'
+    'setitem_np',
+    'split_with_sizes'
 ]

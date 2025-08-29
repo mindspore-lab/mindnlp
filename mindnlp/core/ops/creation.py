@@ -30,7 +30,8 @@ def frombuffer(buffer, *, dtype, count=-1, offset=0, requires_grad=False):
 
 
 # zeros
-def zeros(*size, out=None, dtype=None, layout=None, device=None, requires_grad=False):
+def zeros(*size, out=None, dtype=None, layout=None, device=None, requires_grad=False, **kwargs):
+    size = kwargs.pop('size', size)
     if dtype is None:
         dtype = get_default_dtype()
     if device is None:

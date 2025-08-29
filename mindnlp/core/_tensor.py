@@ -310,6 +310,8 @@ class TensorPlaceHolder:
             return self.item() * other
         return self.__mul__(other)
 
+    def __abs__(self):
+        return ops.abs(self)
 
     def __imul__(self, other):
         return self.copy_(ops.mul(self, other))
@@ -2038,8 +2040,8 @@ class TensorPlaceHolder:
 
 
     # Tensor.softmax
-    def softmax(self, dim):
-        return ops.softmax(self, dim)
+    def softmax(self, dim, dtype=None):
+        return ops.softmax(self, dim, dtype=dtype)
 
     # Tensor.sort
     def sort(self, dim=-1, descending=False):
@@ -2125,7 +2127,8 @@ class TensorPlaceHolder:
     subtract_ = sub_
 
     # Tensor.sum
-    def sum(self, dim=None, keepdim=False, dtype=None):
+    def sum(self, dim=None, keepdim=False, dtype=None, **kwargs):
+        dim = kwargs.pop('axis', dim)
         return ops.sum(self, dim, keepdim, dtype=dtype)
 
     # Tensor.sum_to_size
@@ -2155,7 +2158,8 @@ class TensorPlaceHolder:
         return self
 
     # Tensor.tensor_split
-
+    def tensor_split(self, indices_or_sections, dim=0):
+        return ops.tensor_split(self, indices_or_sections, dim)
 
     # Tensor.tile
     def tile(self, *dims):
@@ -2438,7 +2442,7 @@ class TensorPlaceHolder:
 
     # Tensor.detach_
     def detach_(self):
-        self.requires_grad_(self)
+        self.requires_grad_(False)
         return self
 
     def stub_sync(self):

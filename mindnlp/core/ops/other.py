@@ -777,9 +777,15 @@ def unflatten(x, dim, sizes):
 
 
 # view_as_real
+def view_as_real(input):
+    real_part = input.real.unsqueeze(-1)
+    imag_part = input.imag.unsqueeze(-1)
+    return core.concat((real_part, imag_part), -1)
+
 
 # view_as_complex
-
+def view_as_complex(input):
+    return execute('view_as_complex', input)
 
 # resolve_conj
 
@@ -794,6 +800,8 @@ def masked_fill(input, mask, value):
         if value == float('inf'):
             value = finfo(input.dtype).max
 
+    if isinstance(value, core.Tensor) and input.device != value.device:
+        value = value.to(input.device)
     return execute('masked_fill', input, mask, value)
 
 class finfo:
@@ -949,5 +957,7 @@ __all__ = [
     "contiguous",
     "ravel",
     "dyn_shape",
-    "diff"
+    "diff",
+    'view_as_complex',
+    'view_as_real'
 ]
