@@ -367,3 +367,54 @@ def sqrt(input):
     return input
 
 __all__.append('sqrt')
+
+def normal_float_float(mean, std, size, seed, offset):
+    out = Tensor_(shape=size, dtype=core.float32)
+    return core.Tensor(out)
+
+
+__all__.append('normal_float_float')
+
+def stack(tensors, dim):
+    x_shape = list(tensors[0].shape)
+    x_shape.insert(dim, len(tensors))
+    out = Tensor_(shape=tuple(x_shape), dtype=tensors[0].dtype)
+    return core.Tensor(out)
+
+__all__.append('stack')
+
+def argmax_with_value(input, dim, keepdim):
+    out_shape = list(input.shape)
+    if keepdim:
+        out_shape[dim] = 1
+    else:
+        out_shape.pop(dim)
+
+    indices = Tensor_(shape=out_shape, dtype=core.int64)
+    values = Tensor_(shape=out_shape, dtype=input.dtype)
+
+    return core.Tensor(indices), core.Tensor(values)
+
+__all__.append('argmax_with_value')
+
+def tile(input, dims):
+    input_shape = input.shape
+    out_shape = [input_shape[i] * dims[i] for i in range(input.ndim)]
+    out = Tensor_(shape=tuple(out_shape), dtype=input.dtype)
+    return core.Tensor(out)
+
+__all__.append('tile')
+
+def flatten_ext(input, start_dim, end_dim):
+    input_shape = list(input.shape)
+    if start_dim < 0:
+        start_dim = start_dim + input.ndim
+    if end_dim < 0:
+        end_dim = end_dim + input.ndim
+
+    flatten_shape = input_shape[:start_dim] + input_shape[start_dim:end_dim+1] + input_shape[end_dim+1:]
+    out = Tensor_(shape=tuple(flatten_shape), dtype=input.dtype)
+    return core.Tensor(out)
+
+__all__.append('flatten_ext')
+

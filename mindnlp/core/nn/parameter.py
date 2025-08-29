@@ -27,9 +27,6 @@ class Parameter(Tensor):
         new_obj._device = self.device
         return new_obj
 
-    def clone(self):
-        return copy.deepcopy(self)
-
     def __parameter__(self): # only for O2
         """For parse check."""
 
