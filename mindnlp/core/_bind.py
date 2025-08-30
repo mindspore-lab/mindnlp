@@ -31,7 +31,7 @@ def get_autocast_dtype(device_type):
 def get_autocast_gpu_dtype():
     return AUTO_CAST_DTYE['cuda']
 
-def is_autocast_enabled(device):
+def is_autocast_enabled(device=None):
     return AUTO_CAST_ENABLED
 
 def set_default_dtype(dtype):

@@ -779,3 +779,9 @@ def greater(input, other):
     return core.Tensor.from_numpy(out)
 
 __all__.append('greater')
+
+def linalg_vector_norm(input, p, dim, keepdim, dtype):
+    out = np.linalg.norm(input.numpy(), p, dim, keepdim)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('linalg_vector_norm')
