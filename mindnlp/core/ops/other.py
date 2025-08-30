@@ -88,6 +88,10 @@ def clone(input, *, memory_format=core.preserve_format):
 
 # cumsum
 def cumsum(input, dim, dtype=None):
+    if input.dtype in [core.int64, core.bool]:
+        return execute('cumsum_ext', input.int(), dim, None).long()
+    if dtype is not None and dtype == core.int64:
+        return execute('cumsum_ext', input, dim, None).long()
     return execute('cumsum_ext', input, dim, dtype)
 
 # diag
@@ -928,6 +932,12 @@ def contiguous(input):
 def dyn_shape(input):
     return execute('dyn_shape', input)
 
+def cross(input, other, dim=None, *, out=None):
+    if dim is None:
+        dim = -65530
+    return execute('cross', input, other, dim)
+
+
 __all__ = [
     "bincount",
     "broadcast_shapes",
@@ -936,6 +946,7 @@ __all__ = [
     "cdist",
     "clone",
     "contains",
+    "cross",
     "cumsum",
     "diag",
     "diagonal",

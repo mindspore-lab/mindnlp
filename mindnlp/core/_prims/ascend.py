@@ -375,3 +375,24 @@ def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0, reducti
     return loss
 
 __all__.append('ctc_loss')
+
+def reduce_max(input, dim, keepdim):
+    return pyboost_inner_prim.reduce_max_impl(input, dim, keepdim)
+
+__all__.append('reduce_max')
+
+def elu(input, alpha):
+    return pyboost_inner_prim.elu_ext_impl(input, alpha)
+
+__all__.append('elu')
+
+dynamic_rnn_op = ops.DynamicRNN().set_device('Ascend')
+def dynamic_rnn(*args):
+    return dynamic_rnn_op(*args)
+
+__all__.append('dynamic_rnn')
+
+def cross(input, other, dim=None, *, out=None):
+    return pyboost_inner_prim.cross_impl(input, other, dim)
+
+__all__.append('cross')

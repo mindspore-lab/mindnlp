@@ -418,3 +418,22 @@ def flatten_ext(input, start_dim, end_dim):
 
 __all__.append('flatten_ext')
 
+def cumsum_ext(input, dim, dtype):
+    return input
+
+__all__.append('cumsum_ext')
+
+def squeeze(input, dim):
+    input_shape = list(input.shape)
+    if isinstance(dim, int):
+        dim = (dim,)
+    
+    new_shape = ()
+    for idx, s in enumerate(input_shape):
+        if idx not in dim and s != 1:
+            new_shape += (s,)
+
+    out = Tensor_(shape=tuple(new_shape), dtype=input.dtype)
+    return core.Tensor(out)
+
+__all__.append('squeeze')

@@ -218,6 +218,7 @@ def split(tensor, split_size_or_sections, dim=0):
     if isinstance(split_size_or_sections, int):
         res = execute("split_tensor", tensor, split_size_or_sections, dim)
     elif isinstance(split_size_or_sections, (list, tuple)):
+        split_size_or_sections = tuple(s.item() if isinstance(s, core.Tensor) else s for s in split_size_or_sections)
         res = execute("split_with_size", tensor, split_size_or_sections, dim)
     else:
         raise TypeError(
@@ -227,21 +228,7 @@ def split(tensor, split_size_or_sections, dim=0):
     return res
 
 def split_with_sizes(input, split_sizes, dim=0):
-    assert input.dim() != 0, "split expects at least a 1-dimensional tensor"
-    dim_size = input.size(dim)
-    num_splits = len(split_sizes)
-    start_idx = 0
-
-    splits = []
-    for i in range(num_splits):
-        length = split_sizes[i]
-        assert length >= 0, f"split_with_sizes expects split_sizes have only non-negative entries, but got split_sizes={split_sizes}"
-        splits.append(
-            narrow(input, dim, start_idx, length)
-        )
-        start_idx += length
-
-    return splits
+    return execute("split_with_size", input, split_sizes, dim)
 
 # squeeze
 def squeeze(input, *dim, **kwargs):

@@ -386,11 +386,20 @@ class TensorPlaceHolder:
 
     # Tensor.new_tensor
     def new_tensor(self, data, *, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False):
-        return tensor(data, dtype=dtype if dtype is not None else self.dtype)
+        if device is None:
+            device = self.device
+        if dtype is None:
+            dtype = self.dtype
+
+        return tensor(data, dtype=dtype, device=device)
 
     # Tensor.new_full
     def new_full(self, size, fill_value, *, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False):
-        return ops.full(size, fill_value, dtype=dtype if dtype is not None else self.dtype)
+        if device is None:
+            device = self.device
+        if dtype is None:
+            dtype = self.dtype
+        return ops.full(size, fill_value, dtype=dtype, device=device)
 
     # Tensor.new_empty
     def new_empty(self, size, *, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False):
@@ -1058,7 +1067,8 @@ class TensorPlaceHolder:
 
 
     # Tensor.expand
-    def expand(self, *size):
+    def expand(self, *size, **kwargs):
+        size = kwargs.pop('size', size)
         if len(size) == 1:
             size = size[0]
         return self.broadcast_to(size)
@@ -1284,7 +1294,7 @@ class TensorPlaceHolder:
 
     # Tensor.int
     def int(self):
-        return self.to(mindspore.int64)
+        return self.to(mindspore.int32)
 
     # Tensor.int_repr
 
@@ -2129,6 +2139,7 @@ class TensorPlaceHolder:
     # Tensor.sum
     def sum(self, dim=None, keepdim=False, dtype=None, **kwargs):
         dim = kwargs.pop('axis', dim)
+        keepdim = kwargs.pop('keepdims', keepdim)
         return ops.sum(self, dim, keepdim, dtype=dtype)
 
     # Tensor.sum_to_size
@@ -2550,6 +2561,9 @@ class TensorPlaceHolder:
 
     def char(self):
         return self.to(core.int8)
+
+    def cross(self, other, dim=None):
+        return ops.cross(self, other, dim)
 
     @property
     def is_nested(self):

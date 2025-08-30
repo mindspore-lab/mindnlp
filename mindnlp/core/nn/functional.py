@@ -47,7 +47,7 @@ def relu6(input):
     return execute('relu6', input)
 
 def elu(input, alpha=1.0):
-    return execute('relu6', input, alpha)
+    return execute('elu', input, alpha)
 
 def glu(input, dim=-1):
     return execute('glu', input, dim)
@@ -59,9 +59,7 @@ def logsigmoid(input):
     return execute('logsigmoid', input)
 
 def leaky_relu(input, alpha=0.2):
-    if use_pyboost():
-        return mint.nn.functional.leaky_relu(input, alpha)
-    return ops.leaky_relu(input, alpha)
+    return execute('leaky_relu_ext', input, alpha)
 
 def prelu(input, weight):
     return execute('prelu', input, weight)
@@ -284,6 +282,9 @@ def _circular_pad(input_x, padding):
     return out
 
 def pad(input, pad, mode='constant', value=None):
+    if isinstance(pad, tuple):
+        pad = tuple(p if isinstance(p, int) else p.item() for p in pad)
+
     if input.device.type in ['cpu', 'meta'] or ON_A1:
         new_pad = ()
         for idx, pad_v in enumerate(pad):
@@ -296,6 +297,8 @@ def pad(input, pad, mode='constant', value=None):
             return input
         if mode == 'circular':
             return custom_circular_pad(input, pad)
+        elif mode == 'reflect':
+            return execute('pad_v3', input, new_pad, mode)
         return execute('pad_v3', input, new_pad, mode, value)
     out = input
     if (isinstance(pad, tuple) and not pad):

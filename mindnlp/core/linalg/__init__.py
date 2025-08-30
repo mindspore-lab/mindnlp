@@ -25,7 +25,7 @@ def cholesky_ex(A, *, upper=False, check_errors=False, out=None):
 
 
 def norm(A, ord=None, dim=None, keepdim=False, *, out=None, dtype=None):
-    return mint.norm(A, 2 if ord is None else ord, dim, keepdim, dtype=dtype)
+    return core.norm(A, 2 if ord is None else ord, dim, keepdim, dtype=dtype)
 
 def vector_norm(x, ord=2, dim=None, keepdim=False, *, dtype=None, out=None):
     return execute('linalg_vector_norm', x, ord, dim, keepdim, dtype=dtype)

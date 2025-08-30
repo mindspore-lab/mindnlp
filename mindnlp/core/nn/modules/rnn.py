@@ -19,6 +19,7 @@ from mindspore import context
 from mindspore import ops as P
 
 from mindnlp import core
+from mindnlp.core.executor import execute
 from .module import Module
 from .dropout import Dropout
 from ..parameter import Parameter
@@ -29,9 +30,9 @@ from ... import ops
 __all__ = ['LSTM', 'GRU', 'RNN']
 
 
-def _init_state(shape, dtype, is_lstm):
-    hx = ops.zeros(*shape, dtype=dtype)
-    cx = ops.zeros(*shape, dtype=dtype)
+def _init_state(shape, dtype, device, is_lstm):
+    hx = ops.zeros(*shape, dtype=dtype, device=device)
+    cx = ops.zeros(*shape, dtype=dtype, device=device)
     if is_lstm:
         return (hx, cx)
     return hx
@@ -285,7 +286,7 @@ class _DynamicLSTMAscend(Module):
         w_hh = ops.cat((w_hh_i, w_hh_g, w_hh_f, w_hh_o), 0)
         weight = ops.cat((w_ih, w_hh), 1)
         if b_ih is None:
-            bias = ops.zeros(w_ih.shape[0], dtype=w_ih.dtype)
+            bias = ops.zeros(w_ih.shape[0], dtype=w_ih.dtype, device=w_ih.device)
         else:
             b_ih_i, b_ih_f, b_ih_g, b_ih_o = ops.chunk(b_ih, 4, 0)
             b_hh_i, b_hh_f, b_hh_g, b_hh_o = ops.chunk(b_hh, 4, 0)
@@ -294,7 +295,8 @@ class _DynamicLSTMAscend(Module):
                             b_ih_f + b_hh_f, \
                             b_ih_o + b_hh_o), 0)
 
-        outputs, h, c, _, _, _, _, _ = self.lstm(x.to(core.float16), \
+        outputs, h, c, _, _, _, _, _ = execute('dynamic_rnn',
+                                                 x.to(core.float16), \
                                                  ops.transpose(weight, 1, 0).to(core.float16), \
                                                  bias.to(core.float16), None, \
                                                  h_0[0].unsqueeze(0).to(core.float16), \
@@ -314,8 +316,8 @@ class _RNNBase(Module):
     '''Basic class for RNN operators'''
 
     def __init__(self, mode, input_size, hidden_size, num_layers=1, bias=True,
-                 batch_first=False, dropout=0., bidirectional=False, dtype=None):
-        factory_kwargs = {'dtype': dtype}
+                 batch_first=False, dropout=0., bidirectional=False, dtype=None, device=None):
+        factory_kwargs = {'dtype': dtype, 'device': device}
         super().__init__()
 
         if not 0 <= dropout < 1:
@@ -495,7 +497,7 @@ class _RNNBase(Module):
         x_dtype = x.dtype
         if hx is None:
             hx = _init_state((self.num_layers * num_directions, max_batch_size, self.hidden_size), \
-                             x_dtype, self.is_lstm)
+                             x_dtype, x.device, self.is_lstm)
         if self.batch_first:
             x = ops.permute(x, (1, 0, 2))
         if self.bidirectional:
