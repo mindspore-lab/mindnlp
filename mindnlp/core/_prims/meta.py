@@ -15,143 +15,16 @@ def arange(start, end, step, dtype):
 
 __all__.append('arange')
 
-import math
-from typing import Tuple, Union
-
-def infer_broadcast_shape(input_shape: Tuple[int, ...], 
-                          target_shape: Tuple[Union[int, None], ...]) -> Tuple[int, ...]:
-    """
-    推断 torch.broadcast_to 的输出形状
-    
-    参数:
-        input_shape: 输入张量的形状元组 (例如 (3, 1))
-        target_shape: 目标广播形状元组 (可包含None表示自动推断维度)
-    
-    返回:
-        广播后的输出形状元组
-        
-    异常:
-        ValueError: 当广播不兼容时
-    """
-    # 处理 None 值（自动维度推断）
-    final_target_shape = []
-    for i, dim in enumerate(target_shape):
-        if dim is None:
-            # 查找可以推断的维度位置
-            candidates = [j for j, d in enumerate(target_shape) if d is None]
-            if len(candidates) > 1:
-                raise ValueError(f"多个None维度 {candidates}，无法明确推断")
-            final_target_shape.append(None)
-        elif dim < -1:
-            raise ValueError(f"维度大小不能为负数 (除-1外)，发现 {dim}")
-        else:
-            final_target_shape.append(dim)
-    
-    # 计算需要推断的总元素数量
-    def count_product(shape, exclude_none=True):
-        prod = 1
-        for dim in shape:
-            if dim == 0:
-                return 0  # 任何维度为0结果即为0
-            if dim is not None and not (exclude_none and dim == -1):
-                prod *= max(1, dim)  # -1视为1用于计数
-        return prod
-    
-    # 验证维度数量兼容性
-    ndim_input = len(input_shape)
-    ndim_target = len(final_target_shape)
-    
-    if ndim_input > ndim_target:
-        raise ValueError(
-            f"输入维度({ndim_input})多于目标维度({ndim_target})，"
-            f"无法广播: {input_shape} -> {final_target_shape}"
-        )
-    
-    # 创建对齐后的形状（左侧填充1）
-    aligned_input_shape = (1,) * (ndim_target - ndim_input) + input_shape
-    inferred_target_shape = list(final_target_shape)
-    known_product = 1
-    
-    # 第一遍：收集已知信息
-    for i in range(ndim_target):
-        target_dim = inferred_target_shape[i]
-        input_dim = aligned_input_shape[i]
-        
-        if target_dim == -1:
-            # 标记需要推断的维度
-            inferred_target_shape[i] = None
-        elif target_dim is not None:
-            # 验证维度兼容性
-            if target_dim == 0:
-                if input_dim not in (0, 1):
-                    raise ValueError(
-                        f"维度 {i}: 目标维度为0时输入维度必须为0或1, "
-                        f"但得到 {input_dim} -> {target_dim}"
-                    )
-            else:  # 正数维度
-                if input_dim != 1 and input_dim != target_dim:
-                    raise ValueError(
-                        f"维度 {i}: 大小 {input_dim} 无法广播到 {target_dim}"
-                    )
-            known_product *= target_dim
-
-    # 第二遍：推断维度
-    total_elements = math.prod([d for d in input_shape if d != 0])
-    inferred_product = known_product
-    
-    # 统计需要推断的维度数量
-    none_indices = [i for i, d in enumerate(inferred_target_shape) if d is None]
-    num_infer = len(none_indices)
-    
-    if num_infer > 0:
-        # 计算需要推断的总元素量
-        required_total = total_elements
-        
-        # 当输入有0维时的特殊情况
-        if 0 in input_shape:
-            if required_total != 0:
-                raise ValueError("含0维输入广播时无法推断非0维度")
-            # 所有推断维度必须为0
-            for i in none_indices:
-                inferred_target_shape[i] = 0
-        else:
-            if inferred_product == 0 and required_total > 0:
-                raise ValueError(
-                    "无法将非0输入广播到含0维的目标形状: "
-                    f"{input_shape} -> {inferred_target_shape}"
-                )
-            
-            # 计算推断维度的乘积
-            infer_product = required_total // inferred_product if inferred_product != 0 else 0
-            
-            if infer_product * inferred_product != required_total:
-                raise ValueError(
-                    f"元素总数不兼容: 输入有 {total_elements} 元素, "
-                    f"但目标形状仅能容纳 {inferred_product * infer_product} 元素"
-                )
-            
-            # 检查是否可以整数划分
-            for i in none_indices:
-                # 仅当有1个-1时可以推断
-                if num_infer == 1:
-                    inferred_target_shape[i] = infer_product
-                else:
-                    # 多维度无法自动推断
-                    raise ValueError(
-                        f"多个维度({len(none_indices)})需要推断: {none_indices} "
-                        "但未指定足够约束条件"
-                    )
-    
-    # 转换为确定形状元组
-    result_shape = tuple(
-        d if d is not None else -1  # 保留-1表示未指定
-        for d in inferred_target_shape
-    )
-    
-    return result_shape
-
 def broadcast_to(input, shape):
-    out_shape = infer_broadcast_shape(input.shape, shape)
+    out_shape = ()
+    input_shape = input.shape
+    if len(input_shape) != shape:
+        input_shape = (1,) + input_shape
+    for idx, s in enumerate(shape):
+        if s == -1:
+            s = input_shape[idx]
+        out_shape += (s,)
+
     out = Tensor_(shape=out_shape, dtype=input.dtype)
     return core.Tensor(out)
 
@@ -437,3 +310,34 @@ def squeeze(input, dim):
     return core.Tensor(out)
 
 __all__.append('squeeze')
+
+def exp(input):
+    return input
+
+__all__.append('exp')
+
+def rand_ext(size, seed, offset, dtype):
+    out = Tensor_(shape=size, dtype=dtype)
+    return core.Tensor(out)
+
+__all__.append('rand_ext')
+
+def add(input, other):
+    return input
+
+__all__.append('add')
+
+def neg(input):
+    return input
+
+__all__.append('neg')
+
+def expm1(input):
+    return input
+
+__all__.append('expm1')
+
+def reverse_v2(input, dims):
+    return input
+
+__all__.append('reverse_v2')

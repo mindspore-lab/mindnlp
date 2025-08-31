@@ -42,7 +42,13 @@ def zeros(*size, out=None, dtype=None, layout=None, device=None, requires_grad=F
     if isinstance(size[0], (tuple, list)):
         size = size[0]
     
-    output = execute('zeros', size, dtype, device=device, requires_grad=requires_grad, user_created=True)
+    new_size = ()
+    for s in size:
+        if not isinstance(s, int):
+            s = s.item()
+        new_size += (s,)
+
+    output = execute('zeros', new_size, dtype, device=device, requires_grad=requires_grad, user_created=True)
     if out is None:
         return output
     out.data = output
