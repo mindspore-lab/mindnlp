@@ -710,10 +710,14 @@ def repeat_interleave(input, repeats, dim=None, *, output_size=None):
 
         dim = dim + input.ndim if dim < 0 else dim
 
+
+        if sum(repeats) == 0:
+            out_shape = list(input.shape)
+            out_shape[dim] = 0
+            return core.Tensor(shape=tuple(out_shape), dtype=input.dtype)
+
         if len(repeats) == 1:
             repeats = repeats[0]
-            if repeats == 0:
-                return Tensor_(input.dtype, (0,))
             if input.dtype == mindspore.bool_:
                 input = input.to(mindspore.int32)
                 out = execute('repeat_elements', input, repeats, dim)

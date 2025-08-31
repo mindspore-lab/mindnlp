@@ -381,7 +381,7 @@ class TensorPlaceHolder:
 
     def new(self, *shape):
         if not isinstance(shape[0], int):
-            return tensor(shape[0], dtype=self.dtype)
+            return tensor(shape[0], dtype=self.dtype, device=self.device)
         return ops.empty(*shape, dtype=self.dtype, device=self.device)
 
     # Tensor.new_tensor

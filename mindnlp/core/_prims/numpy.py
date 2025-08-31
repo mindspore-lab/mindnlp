@@ -785,3 +785,27 @@ def linalg_vector_norm(input, p, dim, keepdim, dtype):
     return core.Tensor.from_numpy(out)
 
 __all__.append('linalg_vector_norm')
+
+def exp(input):
+    out = np.exp(input.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('exp')
+
+def expm1(input):
+    out = np.expm1(input.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('expm1')
+
+def ones_like(input):
+    out = np.ones_like(input.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('ones_like')
+
+def reverse_v2(input, dims):
+    out = np.flip(input.numpy(), dims)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('reverse_v2')
