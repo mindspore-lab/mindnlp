@@ -1071,6 +1071,8 @@ class TensorPlaceHolder:
         size = kwargs.pop('size', size)
         if len(size) == 1:
             size = size[0]
+        if isinstance(size, int):
+            size = (size,)
         return self.broadcast_to(size)
 
     # Tensor.expand_as
@@ -2551,6 +2553,10 @@ class TensorPlaceHolder:
 
     def __floordiv__(self, other):
         return ops.floor_divide(self, other)
+
+    def __rfloordiv__(self, other):
+        return ops.floor_divide(other, self)
+
 
     def __ifloordiv__(self, other):
         return self.copy_(ops.floor_divide(self, other))

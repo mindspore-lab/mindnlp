@@ -76,7 +76,14 @@ def ones(*size, out=None, dtype=None, layout=None, device=None, requires_grad=Fa
         device = get_device_in_context()
     if isinstance(size[0], (tuple, list)):
         size = size[0]
-    output = execute('ones', size, dtype,
+
+    new_size = ()
+    for s in size:
+        if not isinstance(s, int):
+            s = s.item()
+        new_size += (s,)
+
+    output = execute('ones', new_size, dtype,
                      device=device, requires_grad=requires_grad, user_created=True)
     if out is None:
         return output
@@ -89,6 +96,8 @@ def ones_like(input, *, dtype=None, layout=None, device=None, requires_grad=Fals
         dtype = input.dtype
     if device is None:
         device = input.device
+    if isinstance(device, str):
+        device = core.device(device)
     if device.type == 'cpu':
         return execute('ones_like', input, device=device, requires_grad=requires_grad, user_created=True)
     return execute('ones_like_ext', input, dtype,
@@ -207,6 +216,7 @@ def full(size, fill_value, *, out=None, dtype=None, layout=None, device=None, re
     if device.type == 'cpu':
         output = execute('full', size, fill_value, device=device, requires_grad=requires_grad, user_created=True)
     else:
+        size = [s if isinstance(s, int) else s.item() for s in size]
         if isinstance(fill_value, numbers.Number):
             output = execute('fill_scalar', size, fill_value, dtype,
                              device=device, requires_grad=requires_grad, user_created=True)

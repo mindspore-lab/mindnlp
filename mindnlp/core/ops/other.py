@@ -54,6 +54,16 @@ def broadcast_shapes(*shapes):
     return tuple(reversed(result_shape))
 
 # bucketize
+def bucketize(input, boundaries, *, out_int32=False, right=False, out=None):
+    if isinstance(boundaries, core.Tensor):
+        boundaries = boundaries.tolist()
+    
+    if not boundaries:
+        return core.zeros_like(input)
+    out = execute('bucketize', input, boundaries, right)
+    if out_int32:
+        return out.to(core.int32)
+    return out
 
 # cartesian_prod
 
@@ -755,8 +765,7 @@ def searchsorted(
                          f"got side of left while right was True.")
     if side == "right":
         right = True
-    return execute('search_sorted', sorted_sequence, values, sorter,
-                   dtype_to_type_id('SearchSorted', 'dtype', dtype), right)
+    return execute('search_sorted', sorted_sequence, values, sorter, dtype, right)
 
 # tensordot
 
@@ -926,7 +935,7 @@ def unfold(input, dimension, size, step):
     _indices, _dimension = _get_unfold_indices(input.shape, dimension, size, step)
     indices = core.tensor(_indices, device=input.device)
     output = execute('gather', input, indices, _dimension)
-    output = core.swapaxes(output, _dimension + 1, -1)
+    output = core.moveaxis(output, _dimension + 1, -1)
     return output
 
 
@@ -974,5 +983,6 @@ __all__ = [
     "dyn_shape",
     "diff",
     'view_as_complex',
-    'view_as_real'
+    'view_as_real',
+    'bucketize'
 ]

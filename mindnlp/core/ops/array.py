@@ -1,5 +1,7 @@
 """array op"""
 import numbers
+import operator
+import builtins
 import numpy as np
 
 import mindspore
@@ -136,10 +138,66 @@ def masked_select(input, mask):
 
 
 # movedim
+def movedim(x, source, destination):
+    """
+    Swap two dimensions of the input tensor.
 
+    Args:
+        x (Tensor): The input tensor.
+        source (Union[int, sequence[int]]): Original dimensions.
+        destination (Union[int, sequence[int]]): Destination positions for each of the original dimensions.
+
+    Returns:
+        Tensor
+
+    Supported Platforms:
+        ``Ascend`` ``GPU`` ``CPU``
+
+    Examples:
+        >>> # case1 : moving single axis
+        >>> import mindspore
+        >>> x = mindspore.tensor(mindspore.ops.zeros((3, 4, 5)))
+        >>> output = mindspore.ops.movedim(x, 0, -1)
+        >>> print(output.shape)
+        (4, 5, 3)
+        >>> # case 2 : moving multiple axes
+        >>> x = mindspore.tensor(mindspore.ops.zeros((3, 4, 5)))
+        >>> output = mindspore.ops.movedim(x, (0, 2), (1, 2))
+        >>> print(output.shape)
+        (4, 3, 5)
+    """
+    ndim = x.ndim
+    if len(source) != len(destination):
+        raise ValueError(
+            f"For `source` and `destination` arguments, the number of elements must be the same, but got 'source':"
+            f" {len(source)} and 'destination': {len(destination)}.")
+    perm = _get_moved_perm(ndim, source, destination)
+    return permute(x, perm)
 
 # moveaxis
+def _get_moved_perm(ndim, source, destination):
+    """
+    Helper function for movedim, returns permutation after moving axis
+    from source to destination.
+    """
+    dest_sorted_idx = [i for i, _ in sorted(enumerate(destination), key=operator.itemgetter(1))]
+    axis_orig = [i for i in builtins.range(0, ndim) if i not in source]
 
+    k = 0
+    m = 0
+    perm = []
+    for i in dest_sorted_idx:
+        # inserts an axis that has been moved, denoted by n, and axis that remain
+        # in their original position, indexed from k to k + n - m, into index m in
+        # the list of permuted axis
+        n = destination[i]
+        j = k + n - m
+        perm += axis_orig[k:j]
+        perm.append(source[i])
+        k += n - m
+        m = n + 1
+    perm += axis_orig[k:]
+    return tuple(perm)
 
 # narrow
 def narrow(input, dim, start, length):
@@ -930,8 +988,8 @@ __all__ = [
     # index_reduce
     "index_select",
     "masked_select",
-    # movedim
-    # moveaxis
+    "movedim",
+    "moveaxis",
     "narrow",
     # narrow_copy
     "nonzero",

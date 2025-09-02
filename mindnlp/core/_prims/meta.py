@@ -234,8 +234,11 @@ def triu(input, diagonal):
 __all__.append('triu')
 
 def fill_scalar(size, fill_value, dtype):
+    if dtype is None:
+        dtype = core.get_default_dtype()
     out = Tensor_(shape=size, dtype=dtype)
     return core.Tensor(out)
+
 __all__.append('fill_scalar')
 
 def sqrt(input):

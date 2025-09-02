@@ -132,7 +132,8 @@ def binary_cross_entropy_with_logits(*args):
 __all__.append('binary_cross_entropy_with_logits')
 
 def gather(input_params, input_indices, axis, batch_dims=0):
-    return ops.gather(input_params, input_indices, axis, batch_dims)
+    gather_op = _get_cache_prim(ops.Gather)(batch_dims).set_device('Ascend')
+    return gather_op(input_params, input_indices, axis)
 
 __all__.append('gather')
 
@@ -404,3 +405,11 @@ def logit(input, eps):
     return logit_(input)
 
 __all__.append('logit')
+
+def bucketize(input, boundaries, right):
+    epsilon_ = 0. if right else 1.e-6
+    boundaries = [boundary + epsilon_ for boundary in boundaries]
+    bucketize_op = ops.Bucketize(boundaries).set_device('Ascend')
+    return bucketize_op(input)
+
+__all__.append('bucketize')

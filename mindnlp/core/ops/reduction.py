@@ -168,7 +168,8 @@ def std_mean(input, dim=None, *, correction=1, keepdim=False):
     return execute('std_mean', input, dim, correction, keepdim)
 
 # sum
-def sum(input, dim=None, keepdim=False, *, dtype=None):
+def sum(input, dim=None, keepdim=False, *, dtype=None, **kwargs):
+    dim = kwargs.pop('axis', dim)
     if 0 in input.shape:
         return core.tensor(0, dtype=dtype, device=input.device)
     return execute('sum_ext', input, dim, keepdim, dtype)
