@@ -203,6 +203,8 @@ __all__.append('sum_ext')
 
 def full(size, fill_value):
     out = np.full(size, fill_value)
+    if out.dtype == np.float64:
+        out = out.astype(np.float32)
     return core.Tensor.from_numpy(out)
 
 __all__.append('full')
@@ -274,6 +276,17 @@ def max(input):
     return core.Tensor.from_numpy(out)
 
 __all__.append('max')
+
+
+def min(input):
+    out = np.min(input.numpy())
+
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('min')
+
 
 def randint(from_, to, shape, dtype, generator):
     out = np.random.randint(from_, to, shape, dtype=core.dtype2np[dtype])
@@ -586,6 +599,8 @@ __all__.append('inplace_add_ext')
 
 def pow_tensor_scalar(input, other):
     out = np.power(input.numpy(), other)
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
     return core.Tensor.from_numpy(out)
 
 __all__.append('pow_tensor_scalar')
@@ -613,6 +628,19 @@ def argmax_with_value(input, dim, keepdim):
     return core.Tensor.from_numpy(indices), core.Tensor.from_numpy(values)
 
 __all__.append('argmax_with_value')
+
+def argmin_with_value(input, dim, keepdim):
+    indices = np.argmin(input.numpy(), dim, keepdims=keepdim)
+    values = np.min(input.numpy(), dim, keepdims=keepdim)
+
+    if not isinstance(indices, np.ndarray):
+        indices = np.array(indices)
+    if not isinstance(values, np.ndarray):
+        values = np.array(values)
+    return core.Tensor.from_numpy(indices), core.Tensor.from_numpy(values)
+
+__all__.append('argmin_with_value')
+
 
 def argmax_ext(input, dim, keepdim):
     indices = np.argmax(input.numpy(), dim, keepdims=keepdim)
@@ -725,7 +753,11 @@ def stack(tensors, dim):
 __all__.append('stack')
 
 def sqrt(input):
-    out = np.sqrt(input.numpy())
+    if isinstance(input, numbers.Number):
+        input = np.array(input)
+    else:
+        input = input.numpy()
+    out = np.sqrt(input)
     if not isinstance(out, np.ndarray):
         out = np.array(out)
     return core.Tensor.from_numpy(out)
@@ -829,9 +861,19 @@ __all__.append('bitwise_xor_tensor')
 
 def minimum(input, other):
     out = np.minimum(input.numpy(), other.numpy())
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
     return core.Tensor.from_numpy(out)
 
 __all__.append('minimum')
+
+def maximum(input, other):
+    out = np.maximum(input.numpy(), other.numpy())
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('maximum')
 
 def prod_ext(input, dim, keepdim, dtype):
     out = np.prod(input.numpy(), axis=dim, keepdims=keepdim)
@@ -867,3 +909,11 @@ def dropout_ext(input, p):
         return input, None
 
 __all__.append('dropout_ext')
+
+def floor(input):
+    out = np.floor(input.numpy())
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('floor')

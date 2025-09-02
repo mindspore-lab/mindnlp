@@ -188,7 +188,7 @@ def log_softmax(input, dim=None, dtype=None):
         return execute('log_softmax', input, dim)
     return execute('log_softmax_ext', input, dim, dtype)
 
-def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0, scale_grad_by_freq=False):
+def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0, scale_grad_by_freq=False, sparse=False):
     return execute('embedding', input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq)
 
 def rms_norm(input, normalized_shape, weight, eps=None):
@@ -299,6 +299,8 @@ def pad(input, pad, mode='constant', value=None):
             return custom_circular_pad(input, pad)
         elif mode == 'reflect':
             return execute('pad_v3', input, new_pad, mode)
+        if value is None:
+            value = 0
         return execute('pad_v3', input, new_pad, mode, value)
     out = input
     if (isinstance(pad, tuple) and not pad):
