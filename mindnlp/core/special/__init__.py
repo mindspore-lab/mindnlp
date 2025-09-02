@@ -1,4 +1,4 @@
-from mindspore import ops
+from ..executor import execute
 
 def logit(input, eps=None, *, out=None):
-    return ops.logit(input, eps)
+    return execute('logit', input, eps)

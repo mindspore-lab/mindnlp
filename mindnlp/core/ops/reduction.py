@@ -152,7 +152,7 @@ def nansum(input, dim=None, keepdim=False, *, dtype=None):
 
 # prod
 def prod(input, dim=None, keepdim=False, *, dtype=None):
-    return execute('prod_ext', input, dim, keepdim,dtype)
+    return execute('prod_ext', input, dim, keepdim, dtype)
 
 # quantile
 

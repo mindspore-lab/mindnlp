@@ -1,5 +1,4 @@
 from typing import Callable
-
 import mindspore
 
 def vmap(

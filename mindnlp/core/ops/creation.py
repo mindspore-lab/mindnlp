@@ -39,9 +39,9 @@ def zeros(*size, out=None, dtype=None, layout=None, device=None, requires_grad=F
     
     if isinstance(device, str):
         device = core.device(device)
-    if isinstance(size[0], (tuple, list)):
+    if len(size) > 0 and isinstance(size[0], (tuple, list)):
         size = size[0]
-    
+
     new_size = ()
     for s in size:
         if not isinstance(s, int):
@@ -139,6 +139,10 @@ def linspace(start, end, steps, *, out=None, dtype=None, layout=None, device=Non
     if isinstance(device, str):
         device = core.device(device)
 
+    start = start.item() if isinstance(start, (core.Tensor, np.integer)) else start
+    end = end.item() if isinstance(end, (core.Tensor, np.integer)) else end
+    steps = steps.item() if isinstance(steps, (core.Tensor, np.integer)) else steps
+
     output = execute('lin_space_ext', start, end, steps, dtype,
                         device=device, requires_grad=requires_grad, user_created=True)
     if out is None:
@@ -154,6 +158,8 @@ def eye(n, m=None, *, out=None, dtype=None, layout=None, device=None, requires_g
         device = get_device_in_context()
     if dtype is None:
         dtype = get_default_dtype()
+    if m is None:
+        m = n
     output = execute('eye', n, m, dtype,
                      device=device, requires_grad=requires_grad, user_created=True)
     if out is None:
@@ -194,8 +200,8 @@ def empty_like(input, *, dtype=None, layout=None, device=None, requires_grad=Fal
 
 # full
 def full(size, fill_value, *, out=None, dtype=None, layout=None, device=None, requires_grad=False):
-    if dtype is None:
-        dtype = get_default_dtype()
+    # if dtype is None:
+    #     dtype = get_default_dtype()
     if device is None:
         device = get_device_in_context()
     if device.type == 'cpu':
