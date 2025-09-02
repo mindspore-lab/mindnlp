@@ -21,8 +21,7 @@ from mindnlp.core.nn import functional as F
 # Register a fake type to avoid crashing for annotations and `isinstance` checks
 BlockMask = core.Tensor
 
-_is_torch_greater_or_equal_than_2_6 = False
-
+_is_torch_greater_or_equal_than_2_6 = True
 
 def and_masks(*mask_functions: list[Callable]) -> Callable:
     """Returns a mask function that is the intersection of provided mask functions"""
@@ -32,11 +31,10 @@ def and_masks(*mask_functions: list[Callable]) -> Callable:
     def and_mask(batch_idx, head_idx, q_idx, kv_idx):
         result = q_idx.new_ones((), dtype=core.bool)
         for mask in mask_functions:
-            result = result & mask(batch_idx, head_idx, q_idx, kv_idx)
+            result = result & mask(batch_idx, head_idx, q_idx, kv_idx).to(result.device)
         return result
 
     return and_mask
-
 
 def or_masks(*mask_functions: list[Callable]) -> Callable:
     """Returns a mask function that is the union of provided mask functions"""
@@ -46,11 +44,10 @@ def or_masks(*mask_functions: list[Callable]) -> Callable:
     def or_mask(batch_idx, head_idx, q_idx, kv_idx):
         result = q_idx.new_zeros((), dtype=core.bool)
         for mask in mask_functions:
-            result = result | mask(batch_idx, head_idx, q_idx, kv_idx)
+            result = result | mask(batch_idx, head_idx, q_idx, kv_idx).to(result.device)
         return result
 
     return or_mask
-
 
 def causal_mask_function(batch_idx: int, head_idx: int, q_idx: int, kv_idx: int) -> bool:
     """
@@ -110,14 +107,13 @@ def padding_mask_function(padding_mask: core.Tensor) -> Callable:
 
     return inner_mask
 
-
 def packed_sequence_mask_function(packed_sequence_mask: core.Tensor) -> Callable:
     """
     This return the mask_function function corresponding to a 2D packed sequence mask.
     """
 
     def inner_mask(batch_idx: int, head_idx: int, q_idx: int, kv_idx: int) -> bool:
-        return packed_sequence_mask[batch_idx, q_idx] == packed_sequence_mask[batch_idx, kv_idx]
+        return packed_sequence_mask[:, q_idx] == packed_sequence_mask[:, kv_idx]
 
     return inner_mask
 
@@ -221,6 +217,136 @@ def _ignore_causal_mask_sdpa(
 
     return False
 
+def sdpa_mask_recent_torch(
+    batch_size: int,
+    cache_position: core.Tensor,
+    kv_length: int,
+    kv_offset: int = 0,
+    mask_function: Callable = causal_mask_function,
+    attention_mask: Optional[core.Tensor] = None,
+    local_size: Optional[int] = None,
+    allow_is_causal_skip: bool = True,
+    **kwargs,
+) -> Optional[core.Tensor]:
+    """
+    Create a 4D boolean mask of shape `(batch_size, 1, query_length, kv_length)` where a value of True indicates that
+    the element should take part in the attention computation, and False that it should not.
+    This function can only be used with torch>=2.5, as the context manager is otherwise not available.
+
+    Args:
+        batch_size (`int`):
+            The batch size of the input sequence.
+        cache_position (`torch.Tensor`):
+            A tensor of shape (query_length,) indicating the current indices of the input sequence elements.
+        kv_length (`int`):
+            The size that the key and value states will have during the attention computation.
+        kv_offset (`int`, optional):
+            An optional offset to indicate at which first position the key and values states will refer to.
+        mask_function (`Callable`):
+            The mask factory function describing the mask pattern.
+        attention_mask (`torch.Tensor`, optional):
+            The 2D attention mask corresponding to padded tokens of shape (batch_size, number_of_seen_tokens+q_length)
+        local_size (`int`, optional):
+            The size of the local attention, if we do not use full attention. This is used only if `allow_is_causal_skip=True`
+            to try to skip mask creation if possible.
+        allow_is_causal_skip (`bool`, optional):
+            Whether to allow to return `None` for the mask under conditions where we can use the `is_causal` argument in
+            `torch.sdpa` instead. Default to `True`.
+        allow_torch_fix (`bool`, optional):
+            Whether to update the mask in case a query is not attending to any tokens, to solve a bug in torch's older
+            versions. We need an arg to skip it when using eager. By default `True`.
+
+
+    ## Creating a simple causal mask:
+
+    To create the following causal mask:
+
+        0 ■ ⬚ ⬚ ⬚ ⬚
+        1 ■ ■ ⬚ ⬚ ⬚
+        2 ■ ■ ■ ⬚ ⬚
+        3 ■ ■ ■ ■ ⬚
+        4 ■ ■ ■ ■ ■
+
+    You can do
+
+    ```python
+    >>> create_4d_causal_mask(batch_size=1, cache_position=torch.arange(5), kv_length=5)
+    >>> tensor([[[[ True, False, False, False, False],
+                  [ True,  True, False, False, False],
+                  [ True,  True,  True, False, False],
+                  [ True,  True,  True,  True, False],
+                  [ True,  True,  True,  True,  True]]]])
+    ```
+
+    ## Creating a sliding window mask:
+
+    To create the following sliding window mask (`sliding_window=3`):
+
+        0 ■ ⬚ ⬚ ⬚ ⬚
+        1 ■ ■ ⬚ ⬚ ⬚
+        2 ■ ■ ■ ⬚ ⬚
+        3 ⬚ ■ ■ ■ ⬚
+        4 ⬚ ⬚ ■ ■ ■
+
+    You can do
+
+    ```python
+    >>> create_4d_causal_mask(batch_size=1, cache_position=torch.arange(5), kv_length=5, mask_function=sliding_window_causal_mask_function(3))
+    >>> tensor([[[[ True, False, False, False, False],
+                  [ True,  True, False, False, False],
+                  [ True,  True,  True, False, False],
+                  [False,  True,  True,  True, False],
+                  [False, False,  True,  True,  True]]]])
+    ```
+
+    ## Creating a chunked attention mask
+
+    To create the following chunked attention mask (`chunk_size=3`):
+
+        0 ■ ⬚ ⬚ ⬚ ⬚
+        1 ■ ■ ⬚ ⬚ ⬚
+        2 ■ ■ ■ ⬚ ⬚
+        3 ⬚ ⬚ ⬚ ■ ⬚
+        4 ⬚ ⬚ ⬚ ■ ■
+
+    You can do
+
+    ```python
+    >>> create_4d_causal_mask(batch_size=1, cache_position=torch.arange(5), kv_length=5, mask_function=chunked_causal_mask_function(3))
+    >>> tensor([[[[ True, False, False, False, False],
+                [ True,  True, False, False, False],
+                [ True,  True,  True, False, False],
+                [False, False, False,  True, False],
+                [False, False, False,  True,  True]]]])
+    ```
+
+    """
+    q_length = cache_position.shape[0]
+    # Potentially pad the 2D mask, and slice it correctly
+    padding_mask = prepare_padding_mask(attention_mask, kv_length, kv_offset, _slice=False)
+
+    # Under specific conditions, we can avoid materializing the mask, instead relying on the `is_causal` argument
+    if allow_is_causal_skip and _ignore_causal_mask_sdpa(padding_mask, q_length, kv_length, kv_offset, local_size):
+        return None
+
+    # Similar to `kv_arange = torch.arange(start=kv_offset, end=kv_offset + kv_length, device=cache_position.device)`
+    # but without data-dependent slicing (i.e. torch.compile friendly)
+    kv_arange = core.arange(kv_length, device=cache_position.device)
+    kv_arange += kv_offset
+
+    # Potentially add the padding 2D mask
+    if padding_mask is not None:
+        mask_function = and_masks(mask_function, padding_mask_function(padding_mask))
+
+    batch_arange = core.arange(batch_size, device=cache_position.device)
+    head_arange = core.arange(1, device=cache_position.device)
+    # This creates the 4D mask easily. Note that we need this context manager as vmap cannot handle slicing a tensor from
+    # scalar tensor (it internally calls `.item()` which vmap does not allow, but this context works around it
+    # We don't need to add an offset to the mask_function either, as we vmap directly the correct indices for k and kv indices
+    causal_mask = _vmap_for_bhqkv(mask_function)(batch_arange, head_arange, cache_position, kv_arange)
+
+    return causal_mask
+
 
 def sdpa_mask_older_torch(
     batch_size: int,
@@ -283,9 +409,14 @@ def sdpa_mask_older_torch(
     # as vmap cannot handle slicing a tensor from scalar tensor (it internally calls `.item()` which vmap does not allow
     # However, in more recent version of Pytorch, a trick was introduced to handle it - which is the reason we have
     # `sdpa_mask_recent_torch`, as it allows more general `mask_function`
+    # causal_mask = mask_function(None, None, cache_position, kv_arange)
     causal_mask = mask_function(None, None, cache_position.reshape(cache_position.shape[0], 1), kv_arange.reshape(1, kv_arange.shape[0]))
     # causal_mask = _vmap_for_bhqkv(mask_function, bh_indices=False)(None, None, cache_position, kv_arange)
-    causal_mask = causal_mask[None, None, :, :].expand(batch_size, -1, -1, -1)
+    if causal_mask.ndim == 2:
+        causal_mask = causal_mask[None, None, :, :].expand(batch_size, -1, -1, -1)
+    elif causal_mask.ndim == 3:
+        causal_mask = causal_mask[:, None, :, :].expand(batch_size, -1, -1, -1)
+
     if padding_mask is not None:
         causal_mask = causal_mask * padding_mask[:, None, None, :]
 
@@ -299,7 +430,6 @@ def sdpa_mask_older_torch(
 # We use the version with newer torch whenever possible, as it is more general and can handle arbitrary mask functions
 # (especially mask_function indexing a tensor, such as the padding mask function)
 sdpa_mask = sdpa_mask_older_torch
-
 
 def eager_mask(
     batch_size: int,

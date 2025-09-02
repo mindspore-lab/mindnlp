@@ -1590,9 +1590,56 @@ def pixel_shuffle(input, upscale_factor):
 def pixel_unshuffle(input, downscale_factor):
     return ops.pixel_unshuffle(input, downscale_factor)
 
+def getWH(input):
+    """Get [W, H] tensor from input"""
+    H, W = input.size()[-2:]
+    return core.tensor([[W, H]], dtype=core.float32, device=input.device)
+
+def center_of(input):
+    """return [(W-1)/2, (H-1)/2] tensor of input img"""
+    if input.dim() == 4:
+        H, W = input.size()[-2:]
+        shape = [[W, H]]
+    else:
+        D, H, W = input.size()[-3:]
+        shape = [[W, H, D]]
+    return core.tensor(shape, dtype=core.float32, device=input.device).sub_(1).div_(2)
+
+def u(s, a: float = -0.75):
+    s2, s3 = s**2, s**3
+    l1 = (a+2)*s3 - (a+3)*s2 + 1
+    l2 = a*s3 - (5*a)*s2 + (8*a)*s - 4*a
+    return l1.where(s <= 1, l2)
+
+def bicubic_grid_sample(input, grid, padding_mode: str = 'zeros', align_corners: bool = False):
+    """bicubic_grid_sample"""
+    kernel_size = 4
+    if not align_corners:
+        grid = grid * getWH(input) / getWH(input).sub_(1)
+    center = center_of(input)
+    abs_loc = ((grid + 1) * center).unsqueeze(-1)
+
+    locs = abs_loc.floor() + core.tensor([-1, 0, 1, 2], device=grid.device)
+
+    loc_w, loc_h = locs.detach().flatten(0, 2).unbind(dim=-2)
+    loc_w = loc_w.reshape(-1, 1, kernel_size).expand(-1, kernel_size, -1)
+    loc_h = loc_h.reshape(-1, kernel_size, 1).expand(-1, -1, kernel_size)
+    loc_grid = core.stack([loc_w, loc_h], dim=-1)
+    loc_grid = loc_grid.view(grid.size(0), -1, 1, 2)/center - 1
+
+    selected = grid_sample(input, loc_grid.detach(), mode='nearest',
+                             padding_mode=padding_mode, align_corners=True)
+    patch = selected.view(input.size()[:2]+grid.size()[1:3]+(kernel_size,)*2)
+
+    mat_r, mat_l = u(core.abs(abs_loc - locs.detach())).unbind(dim=-2)
+    output = core.einsum('bhwl,bchwlr,bhwr->bchw', mat_l, patch, mat_r)
+    return output
+
 def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corners=False):
     align_corners = False if align_corners is None else align_corners
     if input.ndim == 4:
+        if mode == 'bicubic':
+            return bicubic_grid_sample(input, grid, padding_mode, align_corners)
         return execute('grid_sampler_2d', input, grid, mode, padding_mode, align_corners)
     return execute('grid_sampler_3d', input, grid, mode, padding_mode, align_corners)
 

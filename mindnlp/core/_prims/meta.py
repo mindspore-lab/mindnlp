@@ -65,7 +65,9 @@ def getitem(input, slice):
 __all__.append('getitem')
 
 def sub_ext(input, other, alpha):
-    return input
+    if isinstance(input, core.Tensor):
+        return input
+    return other
 
 __all__.append('sub_ext')
 
@@ -341,3 +343,13 @@ def reverse_v2(input, dims):
     return input
 
 __all__.append('reverse_v2')
+
+def rsqrt(input):
+    return input
+
+__all__.append('rsqrt')
+
+def bitwise_xor_tensor(input, other):
+    return input
+
+__all__.append('bitwise_xor_tensor')

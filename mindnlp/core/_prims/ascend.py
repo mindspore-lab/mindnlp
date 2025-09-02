@@ -396,3 +396,11 @@ def cross(input, other, dim=None, *, out=None):
     return pyboost_inner_prim.cross_impl(input, other, dim)
 
 __all__.append('cross')
+
+def logit(input, eps):
+    if eps is None:
+        eps = -1.0
+    logit_ = _get_cache_prim(ops.Logit)(eps).set_device('Ascend')
+    return logit_(input)
+
+__all__.append('logit')

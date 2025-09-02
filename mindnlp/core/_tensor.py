@@ -196,7 +196,7 @@ class TensorPlaceHolder:
         return self.shape[0]
 
     def __repr__(self) -> str:
-        self.data_sync(True)
+        # self.data_sync(True)
         return Tensor_.__repr__(self)[:-1] + f', device={self.device})'
 
     def __format__(self, format_spec):
@@ -982,8 +982,8 @@ class TensorPlaceHolder:
 
 
     # Tensor.div
-    def div(self, other):
-        return ops.div(self, other)
+    def div(self, other, rounding_mode=None):
+        return ops.div(self, other, rounding_mode=rounding_mode)
 
     # Tensor.div_
     def div_(self, other):
@@ -1257,13 +1257,18 @@ class TensorPlaceHolder:
 
     # Tensor.index_add
     def index_add(self, dim, index, source, *, alpha=1):
-        return ops.index_add(self, dim, source, alpha=alpha)
+        return ops.index_add(self, dim, index, source, alpha=alpha)
 
     # Tensor.index_copy_
-
+    def index_copy_(self, dim, index, tensor2):
+        return self.copy_(self.index_copy(dim, index, tensor2))
 
     # Tensor.index_copy
-
+    def index_copy(self, dim, index, tensor2):
+        original_values_at_index = self.index_select(dim, index)
+        result = self.index_add(dim, index, -original_values_at_index)
+        result.index_add_(dim, index, tensor2)
+        return result
 
     # Tensor.index_fill_
 

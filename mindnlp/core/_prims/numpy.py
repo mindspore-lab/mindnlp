@@ -753,10 +753,13 @@ def std(input, dim, correction, keepdim):
 __all__.append('std')
 
 def meshgrid(tensors, indexing):
-    out = np.meshgrid(*[t.numpy() for t in tensors], indexing=indexing)
-    if not isinstance(out, np.ndarray):
-        out = np.array(out)
-    return core.Tensor.from_numpy(out)
+    outs = np.meshgrid(*[t.numpy() for t in tensors], indexing=indexing)
+    new_outs = ()
+    for out in outs:
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
+        new_outs += (core.Tensor.from_numpy(out),)
+    return new_outs
 
 __all__.append('meshgrid')
 
@@ -809,3 +812,58 @@ def reverse_v2(input, dims):
     return core.Tensor.from_numpy(out)
 
 __all__.append('reverse_v2')
+
+def rsqrt(input):
+    out = np.reciprocal(np.sqrt(input.numpy()))
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('rsqrt')
+
+def bitwise_xor_tensor(input, other):
+    out = np.bitwise_xor(input.numpy(), other.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('bitwise_xor_tensor')
+
+def minimum(input, other):
+    out = np.minimum(input.numpy(), other.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('minimum')
+
+def prod_ext(input, dim, keepdim, dtype):
+    out = np.prod(input.numpy(), axis=dim, keepdims=keepdim)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('prod_ext')
+
+def select(condition, input, other):
+    if not isinstance(input, numbers.Number):
+        input = input.numpy()
+    if not isinstance(other, numbers.Number):
+        other = other.numpy()
+
+    out = np.where(condition.numpy(), input, other)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('select')
+
+def dense(input, weight, bias):
+    output = np.dot(input.numpy(), weight.numpy().T)
+    if bias is not None:
+        output += bias
+    return core.Tensor.from_numpy(output)
+
+__all__.append('dense')
+
+def dropout_ext(input, p):
+    if p != 0:
+        mask = (np.random.rand(*input.shape) < (1 - p))
+        out = input.numpy() * mask / (1 - p)
+        return core.Tensor.from_numpy(out), core.Tensor.from_numpy(mask)
+    else:
+        return input, None
+
+__all__.append('dropout_ext')
