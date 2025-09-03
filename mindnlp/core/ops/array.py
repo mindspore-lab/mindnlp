@@ -201,6 +201,7 @@ def _get_moved_perm(ndim, source, destination):
 
 # narrow
 def narrow(input, dim, start, length):
+    length = length.item() if not isinstance(length, int) else length
     return execute("narrow", input, dim, start, length)
 
 
@@ -393,7 +394,7 @@ def tensor_split(input, indices_or_sections, dim=0):
 def tile(input, dims):
     if isinstance(dims[0], (tuple, list)):
         dims = dims[0]
-    return execute("tile", input, dims)
+    return execute("tile", input, tuple(dims))
 
 
 # transpose

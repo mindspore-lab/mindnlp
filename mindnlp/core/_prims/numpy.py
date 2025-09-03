@@ -43,7 +43,10 @@ def div(input, other):
 __all__.append('div')
 
 def pow_scalar_tensor(input, other):
-    out = np.power(input, other.numpy())
+    other = other.numpy()
+    out = np.power(input, other)
+    if out.dtype == np.float64:
+        out = out.astype(np.float32)
     return core.Tensor.from_numpy(out)
 
 __all__.append('pow_scalar_tensor')
@@ -51,9 +54,12 @@ __all__.append('pow_scalar_tensor')
 def mul(input, other):
     if not isinstance(input, numbers.Number):
         input = input.asnumpy()
-    elif not isinstance(other, numbers.Number):
+    if not isinstance(other, numbers.Number):
         other = other.asnumpy()
-    out = np.multiply(input, other)
+
+    out = input * other
+    if out.dtype == np.float64:
+        out = out.astype(np.float32)
     if not isinstance(out, np.ndarray):
         out = np.array(out)
     return core.Tensor.from_numpy(out)
@@ -598,7 +604,10 @@ def inplace_add_ext(input, other, alpha):
 __all__.append('inplace_add_ext')
 
 def pow_tensor_scalar(input, other):
-    out = np.power(input.numpy(), other)
+    input = input.numpy()
+    if input.dtype == np.int64:
+        input = input.astype(np.int32)
+    out = np.power(input, other)
     if not isinstance(out, np.ndarray):
         out = np.array(out)
     return core.Tensor.from_numpy(out)
@@ -731,8 +740,10 @@ def divmod(input, other, rounding_mode):
     if rounding_mode == 'floor':
         out = np.floor_divide(input, other)
     elif rounding_mode == 'trunc':
-        out = np.trunc(np.true_divide(input, other))
+        out = np.trunc(np.true_divide(input, other)).astype(np.int64)
 
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
     return core.Tensor.from_numpy(out)
 
 __all__.append('divmod')
@@ -801,6 +812,12 @@ def repeat_interleave_tensor(input, repeats, dim, _):
 
 __all__.append('repeat_interleave_tensor')
 
+def repeat_interleave_int(input, repeats, dim, _):
+    out = np.repeat(input.numpy(), repeats, dim)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('repeat_interleave_int')
+
 def greater(input, other):
     if not isinstance(input, numbers.Number):
         input = input.numpy()
@@ -823,6 +840,8 @@ __all__.append('linalg_vector_norm')
 
 def exp(input):
     out = np.exp(input.numpy())
+    if input.dtype == np.int64:
+        out = out.astype(np.float32)
     return core.Tensor.from_numpy(out)
 
 __all__.append('exp')
@@ -917,3 +936,41 @@ def floor(input):
     return core.Tensor.from_numpy(out)
 
 __all__.append('floor')
+
+def chunk(input, chunks, dim):
+    out = np.array_split(input.numpy(), chunks, dim)
+    out = [core.Tensor.from_numpy(o) for o in out]
+    return out
+
+__all__.append('chunk')
+
+def narrow(input, dim, start, length):
+    slices = [slice(None)] * input.ndim
+    # 将指定维度的切片修改为 [start: start+length]
+    slices[dim] = slice(start, start + length)
+    # 应用切片并返回视图
+    out = input.numpy()[tuple(slices)]
+    return core.Tensor.from_numpy(out)
+
+__all__.append('narrow')
+
+def roll(input, shifts, dims):
+    out = np.roll(input.numpy(), shifts, dims)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('roll')
+
+def outer(input, other):
+    out = np.outer(input.numpy(), other.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('outer')
+
+def one_hot_ext(tensor, num_classes=-1):
+    if num_classes == -1:
+        num_classes = np.max(tensor.numpy()) + 1  # 自动确定类别数[2](@ref)
+    
+    out = np.eye(num_classes)[tensor.numpy()]
+    return core.Tensor.from_numpy(out)
+
+__all__.append('one_hot_ext')

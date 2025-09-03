@@ -40,7 +40,8 @@ def any(input, dim=None, keepdim=False):
     return execute('reduce_any', input, dim, keepdim)
 
 # max
-def max(input, dim=None, keepdim=False, *, out=None):
+def max(input, dim=None, keepdim=False, *, out=None, **kwargs):
+    dim = kwargs.pop('axis', dim)
     if dim is None and not keepdim:
         return execute('max', input)
     if core.is_tensor(dim):

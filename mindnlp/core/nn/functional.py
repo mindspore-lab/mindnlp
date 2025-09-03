@@ -7,7 +7,7 @@ from typing import Optional, Tuple, List
 from mindnlp import core
 from mindnlp.core.executor import execute
 
-from ..configs import DEVICE_TARGET, ON_ORANGE_PI, use_pyboost, ON_A1, ON_A2
+from ..configs import ON_ORANGE_PI, use_pyboost, ON_A1, ON_A2
 
 generator_step_ = 12
 
@@ -74,7 +74,7 @@ def hardsigmoid(input, inplace=False):
     return ops.hardsigmoid(input)
 
 def hardswish(input: core.Tensor, inplace: bool = False) -> core.Tensor:
-    return ops.hardswish(input)
+    return execute('hswish', input)
 
 def hardshrink(input, lambd=0.5):
     return execute('hard_shrink', input, lambd)
@@ -129,7 +129,7 @@ def adaptive_avg_pool2d(input, output_size):
     return execute('adaptive_avg_pool2d_ext', input, output_size)
 
 def dropout(input, p=0.5, training=True, inplace=False):
-    if not training:
+    if not training or p==0:
         return input
     out, _ = execute('dropout_ext', input, p)
     if inplace:
@@ -138,7 +138,10 @@ def dropout(input, p=0.5, training=True, inplace=False):
     return out
 
 def dropout2d(input, p=0.5, training=False):
-    return ops.dropout2d(input, p, training)
+    if not training or p==0:
+        return input
+    out, _ = execute('dropout2d', input, p)
+    return out
 
 def drop_and_mask(keep_prob, seed=None):
     seed0, seed1 = _get_seed(seed, "dropout")
@@ -301,6 +304,9 @@ def pad(input, pad, mode='constant', value=None):
             return execute('pad_v3', input, new_pad, mode)
         if value is None:
             value = 0
+        if mode == "replicate":
+            mode = "edge"
+            return execute('pad_v3', input, new_pad, mode)
         return execute('pad_v3', input, new_pad, mode, value)
     out = input
     if (isinstance(pad, tuple) and not pad):
@@ -1541,8 +1547,8 @@ def _canonical_mask(
 ) -> Optional[core.Tensor]:
     if mask is not None:
         _mask_dtype = mask.dtype
-        _mask_is_float = ops.is_floating_point(mask)
-        if _mask_dtype != mindspore.bool_ and not _mask_is_float:
+        _mask_is_float = core.is_floating_point(mask)
+        if _mask_dtype != core.bool and not _mask_is_float:
             raise AssertionError(
                 f"only bool and floating types of {mask_name} are supported")
         if check_other and other_type is not None:
@@ -1552,8 +1558,8 @@ def _canonical_mask(
                     "is deprecated. Use same type for both instead."
                 )
         if not _mask_is_float:
-            zero_tensor = ops.zeros_like(mask, dtype=target_type)
-            mask = ops.where(mask, core.Tensor(float("-inf"), target_type), zero_tensor)
+            zero_tensor = core.zeros_like(mask, dtype=target_type, device=mask.device)
+            mask = core.where(mask, core.tensor(float("-inf"), dtype=target_type, device=mask.device), zero_tensor)
             # mask = (
             #     ops.zeros_like(mask, dtype=target_type)
             #     .masked_fill_(mask, float("-inf"))
@@ -1571,14 +1577,9 @@ def unfold(input, kernel_size, dilation=1, padding=0, stride=1):
     if ON_A1:
         return execute('im2col', input, kernel_size, dilation, padding, stride)
     return execute('im2col_ext', input, kernel_size, dilation, padding, stride)
-    if use_pyboost() and not ON_A1:
-        return mint.nn.functional.unfold(input, kernel_size, dilation, padding, stride)
-    return ops.unfold(input, kernel_size, dilation, padding, stride)
 
 def fold(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
-    if use_pyboost():
-        return mint.nn.functional.fold(input, output_size, kernel_size, dilation, padding, stride)
-    return ops.fold(input, output_size, kernel_size, dilation, padding, stride)
+    return execute('col2im_ext', input, output_size, kernel_size, dilation, padding, stride)
 
 def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0, reduction='mean', zero_infinity=False):
     return execute('ctc_loss', log_probs, targets, input_lengths, target_lengths, blank, reduction, zero_infinity)

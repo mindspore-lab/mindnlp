@@ -108,6 +108,7 @@ def pad_v3(input_x, padding, mode='constant', value=None):
     pad_op = ops.PadV3(mode=mode, paddings_contiguous=True).set_device('Ascend')
     if input_x.dtype == core.bool:
         input_x = input_x.to(core.int32)
+        value = int(value)
         out = pad_op(input_x, padding, value)
         return cast(out, core.bool)
 
@@ -116,6 +117,7 @@ def pad_v3(input_x, padding, mode='constant', value=None):
     return pad_op(input_x, padding, value)
 
 __all__.append('pad_v3')
+
 
 def inplace_uniform(input, from_, to_, generator_):
     seed, offset = generator_._step(12)
@@ -413,3 +415,9 @@ def bucketize(input, boundaries, right):
     return bucketize_op(input)
 
 __all__.append('bucketize')
+
+def dropout2d(input, p):
+    dropout_2d_op = ops.Dropout2D(1.0 - p)
+    return dropout_2d_op(input)
+
+__all__.append('dropout2d')
