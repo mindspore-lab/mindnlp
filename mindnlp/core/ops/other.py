@@ -97,7 +97,8 @@ def clone(input, *, memory_format=core.preserve_format):
 # cumprod
 
 # cumsum
-def cumsum(input, dim, dtype=None):
+def cumsum(input, dim=None, dtype=None, **kwargs):
+    dim = kwargs.pop('axis', dim)
     if input.dtype in [core.int64, core.bool]:
         return execute('cumsum_ext', input.int(), dim, None).long()
     if dtype is not None and dtype == core.int64:

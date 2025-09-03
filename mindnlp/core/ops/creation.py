@@ -12,7 +12,10 @@ from mindnlp.core.executor import execute
 from .._bind import get_default_dtype, get_device_in_context
 
 def as_strided(self, size, stride, storage_offset=None):
-    return execute('as_strided', self, size, stride, storage_offset)
+    size = [s if isinstance(s, int) else s.item() for s in size]
+    if storage_offset is None:
+        storage_offset = 0
+    return execute('as_strided', self, tuple(size), tuple(stride), storage_offset)
 
 # from_numpy
 def from_numpy(ndarray):
@@ -37,7 +40,7 @@ def zeros(*size, out=None, dtype=None, layout=None, device=None, requires_grad=F
     if device is None:
         device = get_device_in_context()
     
-    if isinstance(device, str):
+    if isinstance(device, (str, int)):
         device = core.device(device)
     if len(size) > 0 and isinstance(size[0], (tuple, list)):
         size = size[0]

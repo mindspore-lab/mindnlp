@@ -115,7 +115,8 @@ def npu_fusion_attention(query, key, value, head_num, input_layout, *, pse=None,
                          scale=1., keep_prob=1., pre_tockens=2147483647, next_tockens=2147483647, inner_precise=0,
                          drop_mask=None, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0,
                          gen_mask_parallel=True, sync=False, pse_type=1, q_start_idx=None, kv_start_idx=None):
-    output = gen.flash_attention_score_impl(
+    output = execute(
+        'flash_attention_score',
         query, key, value, real_shift=pse, padding_mask=padding_mask, drop_mask=drop_mask,
         attn_mask=atten_mask, prefix=prefix, actual_seq_qlen=actual_seq_qlen,
         actual_seq_kvlen=actual_seq_kvlen, head_num=head_num, keep_prob=float(keep_prob),

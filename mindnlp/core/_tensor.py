@@ -173,6 +173,7 @@ class TensorPlaceHolder:
 
     def requires_grad_(self, requires_grad=True):
         self.requires_grad = requires_grad
+        return self
 
     def __reduce_ex__(self, protocol):
         if isinstance(self, StubTensor):
@@ -293,6 +294,8 @@ class TensorPlaceHolder:
         return ops.div(other, self)
 
     def __ne__(self, other):
+        if isinstance(other, list):
+            return True
         return ops.ne(self, other)
 
     def __neg__(self):
@@ -2122,10 +2125,10 @@ class TensorPlaceHolder:
 
 
     # Tensor.stride
-    def stride(self, dim=None):
-        if dim is None:
-            return self._data.stride()
-        return self._data.stride()[dim]
+    # def stride(self, dim=None):
+    #     if dim is None:
+    #         return self.stride()
+    #     return self.stride()[dim]
 
 
     # Tensor.sub

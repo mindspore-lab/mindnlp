@@ -356,3 +356,17 @@ def bitwise_xor_tensor(input, other):
     return input
 
 __all__.append('bitwise_xor_tensor')
+
+def divmod(input, other, rounding_mode):
+    if isinstance(input, core.Tensor):
+        return input
+    return other
+
+__all__.append('divmod')
+
+def greater_equal(input, other):
+    if isinstance(input, core.Tensor):
+        return input
+    return other
+
+__all__.append('greater_equal')
