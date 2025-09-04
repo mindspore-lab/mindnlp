@@ -56,7 +56,7 @@ def softplus(input, beta=1, threshold=20):
     return execute('softplus_ext', input, beta, threshold)
 
 def logsigmoid(input):
-    return execute('logsigmoid', input)
+    return execute('logsigmoid', input)[0]
 
 def leaky_relu(input, alpha=0.2):
     return execute('leaky_relu_ext', input, alpha)

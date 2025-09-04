@@ -388,6 +388,13 @@ def inplace_fill_scalar(input, value):
 
 __all__.append('inplace_fill_scalar')
 
+def inplace_fill_tensor(input, value):
+    out = np.full_like(input.numpy(), value)
+    numpy_to_tensor_overwrite(out, input)
+    return input
+
+__all__.append('inplace_fill_tensor')
+
 def inplace_normal(input, mean, std, generator_):
     out = np.random.normal(mean, std, input.shape).astype(core.dtype2np[input.dtype])
     numpy_to_tensor_overwrite(out, input)
@@ -600,6 +607,8 @@ __all__.append('randn')
 
 def erfinv(input):
     out = scipy.special.erfinv(input)
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
     return core.Tensor.from_numpy(out)
 
 __all__.append('erfinv')
@@ -910,6 +919,8 @@ __all__.append('maximum')
 
 def prod_ext(input, dim, keepdim, dtype):
     out = np.prod(input.numpy(), axis=dim, keepdims=keepdim)
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
     return core.Tensor.from_numpy(out)
 
 __all__.append('prod_ext')
@@ -1136,3 +1147,9 @@ def sign(input):
     return core.Tensor.from_numpy(out)
 
 __all__.append('sign')
+
+def log2(input):
+    out = np.log2(input.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('log2')

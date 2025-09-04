@@ -271,6 +271,11 @@ def scatter_add(input, dim, index, src):
 
 
 # scatter_reduce
+def scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
+    if reduce == 'sum':
+        return scatter_add(input, dim, index, src)
+    else:
+        raise ValueError(f'do not support reduce: {reduce}')
 
 
 # split
@@ -1005,7 +1010,7 @@ __all__ = [
     # select_scatter
     # slice_scatter
     "scatter_add",
-    # scatter_reduce
+    "scatter_reduce",
     "split",
     "squeeze",
     "stack",
