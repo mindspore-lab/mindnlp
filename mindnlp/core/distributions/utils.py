@@ -63,12 +63,12 @@ def _standard_normal(
     dtype: Optional[_dtype],
     device: Optional[Device],
 ) -> Tensor:
-    if core._C._get_tracing_state():
-        # [JIT WORKAROUND] lack of support for .normal_()
-        return core.normal(
-            core.zeros(shape, dtype=dtype, device=device),
-            core.ones(shape, dtype=dtype, device=device),
-        )
+    # if core._C._get_tracing_state():
+    #     # [JIT WORKAROUND] lack of support for .normal_()
+    #     return core.normal(
+    #         core.zeros(shape, dtype=dtype, device=device),
+    #         core.ones(shape, dtype=dtype, device=device),
+    #     )
     return core.empty(shape, dtype=dtype, device=device).normal_()
 
 

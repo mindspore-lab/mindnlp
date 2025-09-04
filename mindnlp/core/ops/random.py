@@ -12,8 +12,7 @@ generator_step_ = 12
 def bernoulli(input, *, generator=None, out=None):
     if generator is None:
         generator = default_generator
-    seed, offset = generator._step(generator_step_)  # pylint: disable=protected-access
-    output = execute("bernoulli_ext", input, seed, offset)
+    output = execute("bernoulli_ext", input, generator)
     if out is None:
         return output
     out.data = output
@@ -239,7 +238,7 @@ def randint_like(
         high,
         seed,
         offset,
-        dtype_to_type_id("RandIntLike", "dtype", dtype),
+        dtype,
         device=device,
         requires_grad=requires_grad,
     )
@@ -349,6 +348,8 @@ def randperm(
     out.data = output
     return out
 
+def gamma(shape, alpha, beta):
+    return execute('gamma', shape, alpha, beta)
 
 __all__ = [
     "bernoulli",
@@ -361,4 +362,5 @@ __all__ = [
     "randn_like",
     "randperm",
     "randint_like",
+    "gamma"
 ]

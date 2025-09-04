@@ -27,6 +27,9 @@ class DefaultGenerators:
     def __getitem__(self, idx):
         return core.default_generator
 
+    def __len__(self):
+        return 1
+
 default_generators = DefaultGenerators()
 
 def set_compile_mode(*args, **kwargs):

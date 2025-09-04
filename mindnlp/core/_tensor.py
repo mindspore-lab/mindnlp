@@ -175,6 +175,12 @@ class TensorPlaceHolder:
         self.requires_grad = requires_grad
         return self
 
+    def __array_wrap__(self, array):
+        if array.dtype == bool:
+            # Workaround, torch has no built-in bool tensor
+            array = array.astype("uint8")
+        return ops.from_numpy(array)
+
     def __reduce_ex__(self, protocol):
         if isinstance(self, StubTensor):
             data = Tensor_(self.stub_sync())
@@ -912,7 +918,7 @@ class TensorPlaceHolder:
         if isinstance(self, StubTensor) and isinstance(new_value, StubTensor):
             self.stub = new_value.stub
         else:
-            if self.device.type == 'cpu' and new_value.device.type == 'cpu':
+            if self.device.type == 'cpu' and new_value.device.type == 'cpu' and self.shape == new_value.shape:
                 src_ct = ctypes.c_void_p(new_value.data_ptr())
                 dst_ct = ctypes.c_void_p(self.data_ptr())
                 ctypes.memmove(dst_ct, src_ct, self.nbytes)
@@ -1594,7 +1600,8 @@ class TensorPlaceHolder:
 
 
     # Tensor.max
-    def max(self, dim=None, keepdim=False):
+    def max(self, dim=None, keepdim=False, **kwargs):
+        dim = kwargs.pop('axis', dim)
         return ops.max(self, dim, keepdim)
 
     # Tensor.maximum
@@ -2096,8 +2103,11 @@ class TensorPlaceHolder:
         return self.copy_(ops.square(self))
 
     # Tensor.squeeze
-    def squeeze(self, *args, **kwargs):
-        return ops.squeeze(self, *args, **kwargs)
+    def squeeze(self, *dim, **kwargs):
+        dim = kwargs.pop('dim', dim)
+        if isinstance(dim, tuple) and len(dim) == 1:
+            dim = dim[0]
+        return ops.squeeze(self, dim)
 
     # Tensor.squeeze_
     def squeeze_(self, dim=None):
@@ -2150,6 +2160,8 @@ class TensorPlaceHolder:
     def sum(self, dim=None, keepdim=False, dtype=None, **kwargs):
         dim = kwargs.pop('axis', dim)
         keepdim = kwargs.pop('keepdims', keepdim)
+        if isinstance(dim, list):
+            dim = tuple(dim)
         return ops.sum(self, dim, keepdim, dtype=dtype)
 
     # Tensor.sum_to_size

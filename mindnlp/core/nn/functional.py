@@ -291,6 +291,8 @@ def pad(input, pad, mode='constant', value=None):
     if input.device.type in ['cpu', 'meta'] or ON_A1:
         new_pad = ()
         for idx, pad_v in enumerate(pad):
+            if not isinstance(pad_v, int):
+                pad_v = pad_v.item()
             if pad_v < 0:
                 dim = input.ndim - 1 - idx // 2
                 input = input.narrow(dim, 0, input.shape[dim] + pad_v)

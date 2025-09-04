@@ -48,7 +48,8 @@ def concat(tensors, dim=0, **kwargs):
 
 
 # concatenate
-def concatenate(tensors, dim=0):
+def concatenate(tensors, dim=0, **kwargs):
+    dim = kwargs.pop('axis', dim)
     return cat(tensors, dim)
 
 
@@ -227,7 +228,7 @@ def reshape(input, *shape):
         shape = shape[0]
     new_shape = ()
     for s in shape:
-        if not isinstance(s, numbers.Number):
+        if not isinstance(s, numbers.Number) or isinstance(s, np.int64):
             s = s.item()
         new_shape += (s,)
     return execute("reshape", input, new_shape)
@@ -290,10 +291,10 @@ def split_with_sizes(input, split_sizes, dim=0):
     return execute("split_with_size", input, split_sizes, dim)
 
 # squeeze
-def squeeze(input, *dim, **kwargs):
-    dim = kwargs.get('dim', dim)
+def squeeze(input, dim=None):
+    if dim is None:
+        dim = ()
     return execute("squeeze", input, dim)
-
 
 # stack
 

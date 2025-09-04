@@ -1,13 +1,13 @@
-"""studentT"""
 # mypy: allow-untyped-defs
 import math
-from math import inf, nan
+from typing import Optional, Union
 
-from .. import ops
-from . import constraints
-from .chi2 import Chi2
-from .distribution import Distribution
-from .utils import _standard_normal, broadcast_all
+from mindnlp import core
+from mindnlp.core import inf, nan, Tensor
+from mindnlp.core.distributions import Chi2, constraints
+from mindnlp.core.distributions.distribution import Distribution
+from mindnlp.core.distributions.utils import _standard_normal, broadcast_all
+from mindnlp.core.types import _size
 
 
 __all__ = ["StudentT"]
@@ -30,6 +30,7 @@ class StudentT(Distribution):
         loc (float or Tensor): mean of the distribution
         scale (float or Tensor): scale of the distribution
     """
+
     arg_constraints = {
         "df": constraints.positive,
         "loc": constraints.real,
@@ -39,18 +40,18 @@ class StudentT(Distribution):
     has_rsample = True
 
     @property
-    def mean(self):
-        m = self.loc.copy()
+    def mean(self) -> Tensor:
+        m = self.loc.clone(memory_format=core.contiguous_format)
         m[self.df <= 1] = nan
         return m
 
     @property
-    def mode(self):
+    def mode(self) -> Tensor:
         return self.loc
 
     @property
-    def variance(self):
-        m = self.df.copy()
+    def variance(self) -> Tensor:
+        m = self.df.clone(memory_format=core.contiguous_format)
         m[self.df > 2] = (
             self.scale[self.df > 2].pow(2)
             * self.df[self.df > 2]
@@ -60,14 +61,21 @@ class StudentT(Distribution):
         m[self.df <= 1] = nan
         return m
 
-    def __init__(self, df, loc=0.0, scale=1.0, validate_args=None):
+    def __init__(
+        self,
+        df: Union[Tensor, float],
+        loc: Union[Tensor, float] = 0.0,
+        scale: Union[Tensor, float] = 1.0,
+        validate_args: Optional[bool] = None,
+    ) -> None:
         self.df, self.loc, self.scale = broadcast_all(df, loc, scale)
         self._chi2 = Chi2(self.df)
-        batch_shape = self.df.shape
+        batch_shape = self.df.size()
         super().__init__(batch_shape, validate_args=validate_args)
 
     def expand(self, batch_shape, _instance=None):
         new = self._get_checked_instance(StudentT, _instance)
+        batch_shape = core.Size(batch_shape)
         new.df = self.df.expand(batch_shape)
         new.loc = self.loc.expand(batch_shape)
         new.scale = self.scale.expand(batch_shape)
@@ -76,7 +84,7 @@ class StudentT(Distribution):
         new._validate_args = self._validate_args
         return new
 
-    def rsample(self, sample_shape=()):
+    def rsample(self, sample_shape: _size = core.Size()) -> Tensor:
         # NOTE: This does not agree with scipy implementation as much as other distributions.
         # (see https://github.com/fritzo/notebooks/blob/master/debug-student-t.ipynb). Using DoubleTensor
         # parameters seems to help.
@@ -85,9 +93,9 @@ class StudentT(Distribution):
         #   Z ~ Chi2(df)
         #   Y = X / sqrt(Z / df) ~ StudentT(df)
         shape = self._extended_shape(sample_shape)
-        X = _standard_normal(shape, dtype=self.df.dtype)
+        X = _standard_normal(shape, dtype=self.df.dtype, device=self.df.device)
         Z = self._chi2.rsample(sample_shape)
-        Y = X * ops.rsqrt(Z / self.df)
+        Y = X * core.rsqrt(Z / self.df)
         return self.loc + self.scale * Y
 
     def log_prob(self, value):
@@ -98,22 +106,22 @@ class StudentT(Distribution):
             self.scale.log()
             + 0.5 * self.df.log()
             + 0.5 * math.log(math.pi)
-            + ops.lgamma(0.5 * self.df)
-            - ops.lgamma(0.5 * (self.df + 1.0))
+            + core.lgamma(0.5 * self.df)
+            - core.lgamma(0.5 * (self.df + 1.0))
         )
-        return -0.5 * (self.df + 1.0) * ops.log1p(y**2.0 / self.df) - Z
+        return -0.5 * (self.df + 1.0) * core.log1p(y**2.0 / self.df) - Z
 
     def entropy(self):
         lbeta = (
-            ops.lgamma(0.5 * self.df)
+            core.lgamma(0.5 * self.df)
             + math.lgamma(0.5)
-            - ops.lgamma(0.5 * (self.df + 1))
+            - core.lgamma(0.5 * (self.df + 1))
         )
         return (
             self.scale.log()
             + 0.5
             * (self.df + 1)
-            * (ops.digamma(0.5 * (self.df + 1)) - ops.digamma(0.5 * self.df))
+            * (core.digamma(0.5 * (self.df + 1)) - core.digamma(0.5 * self.df))
             + 0.5 * self.df.log()
             + lbeta
         )

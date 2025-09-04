@@ -1,14 +1,19 @@
-"""gamma"""
 # mypy: allow-untyped-defs
-from numbers import Number
+from typing import Optional, Union
 
-from .. import ops
-from . import constraints
-from .exp_family import ExponentialFamily
-from .utils import broadcast_all
+from mindnlp import core
+from mindnlp.core import Tensor
+from mindnlp.core.distributions import constraints
+from mindnlp.core.distributions.exp_family import ExponentialFamily
+from mindnlp.core.distributions.utils import broadcast_all
+from mindnlp.core.types import _Number, _size
 
 
 __all__ = ["Gamma"]
+
+
+def _standard_gamma(concentration):
+    return core._standard_gamma(concentration)
 
 
 class Gamma(ExponentialFamily):
@@ -25,9 +30,10 @@ class Gamma(ExponentialFamily):
     Args:
         concentration (float or Tensor): shape parameter of the distribution
             (often referred to as alpha)
-        rate (float or Tensor): rate = 1 / scale of the distribution
-            (often referred to as beta)
+        rate (float or Tensor): rate parameter of the distribution
+            (often referred to as beta), rate = 1 / scale
     """
+
     arg_constraints = {
         "concentration": constraints.positive,
         "rate": constraints.positive,
@@ -37,77 +43,82 @@ class Gamma(ExponentialFamily):
     _mean_carrier_measure = 0
 
     @property
-    def mean(self):
+    def mean(self) -> Tensor:
         return self.concentration / self.rate
 
     @property
-    def mode(self):
+    def mode(self) -> Tensor:
         return ((self.concentration - 1) / self.rate).clamp(min=0)
 
     @property
-    def variance(self):
+    def variance(self) -> Tensor:
         return self.concentration / self.rate.pow(2)
 
-    def __init__(self, concentration, rate, validate_args=None):
+    def __init__(
+        self,
+        concentration: Union[Tensor, float],
+        rate: Union[Tensor, float],
+        validate_args: Optional[bool] = None,
+    ) -> None:
         self.concentration, self.rate = broadcast_all(concentration, rate)
-        if isinstance(concentration, Number) and isinstance(rate, Number):
-            batch_shape = ()
+        if isinstance(concentration, _Number) and isinstance(rate, _Number):
+            batch_shape = core.Size()
         else:
-            batch_shape = self.concentration.shape
+            batch_shape = self.concentration.size()
         super().__init__(batch_shape, validate_args=validate_args)
 
     def expand(self, batch_shape, _instance=None):
         new = self._get_checked_instance(Gamma, _instance)
-        new.concentration = self.concentration.broadcast_to(batch_shape)
-        new.rate = self.rate.broadcast_to(batch_shape)
+        batch_shape = core.Size(batch_shape)
+        new.concentration = self.concentration.expand(batch_shape)
+        new.rate = self.rate.expand(batch_shape)
         super(Gamma, new).__init__(batch_shape, validate_args=False)
         new._validate_args = self._validate_args
         return new
 
-    def rsample(self, sample_shape=()):
+    def rsample(self, sample_shape: _size = core.Size()) -> Tensor:
         shape = self._extended_shape(sample_shape)
-
         if shape == (): # pylint: disable=use-implicit-booleaness-not-comparison
             sample_shape = (1,)
         else:
             sample_shape = shape
-        value = ops.gamma(sample_shape, self.concentration, self.rate)
+        value = core.gamma(sample_shape, self.concentration, self.rate)
 
         if shape == (): # pylint: disable=use-implicit-booleaness-not-comparison
-            value = ops.squeeze(value)
+            value = core.squeeze(value)
 
-        value = value.clamp(
-            min=float(ops.finfo(value.dtype).tiny)
+        value.detach().clamp_(
+            min=core.finfo(value.dtype).tiny
         )  # do not record in autograd graph
         return value
 
     def log_prob(self, value):
-        value = ops.as_tensor(value, dtype=self.rate.dtype)
+        value = core.as_tensor(value, dtype=self.rate.dtype, device=self.rate.device)
         if self._validate_args:
             self._validate_sample(value)
         return (
-            ops.xlogy(self.concentration, self.rate)
-            + ops.xlogy(self.concentration - 1, value)
+            core.xlogy(self.concentration, self.rate)
+            + core.xlogy(self.concentration - 1, value)
             - self.rate * value
-            - ops.lgamma(self.concentration)
+            - core.lgamma(self.concentration)
         )
 
     def entropy(self):
         return (
             self.concentration
-            - ops.log(self.rate)
-            + ops.lgamma(self.concentration)
-            + (1.0 - self.concentration) * ops.digamma(self.concentration)
+            - core.log(self.rate)
+            + core.lgamma(self.concentration)
+            + (1.0 - self.concentration) * core.digamma(self.concentration)
         )
 
     @property
-    def _natural_params(self):
+    def _natural_params(self) -> tuple[Tensor, Tensor]:
         return (self.concentration - 1, -self.rate)
 
     def _log_normalizer(self, x, y):
-        return ops.lgamma(x + 1) + (x + 1) * ops.log(-y.reciprocal())
+        return core.lgamma(x + 1) + (x + 1) * core.log(-y.reciprocal())
 
     def cdf(self, value):
         if self._validate_args:
             self._validate_sample(value)
-        return ops.igamma(self.concentration, self.rate * value)
+        return core.special.gammainc(self.concentration, self.rate * value)

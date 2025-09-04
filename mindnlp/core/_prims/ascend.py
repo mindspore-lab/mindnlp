@@ -421,3 +421,9 @@ def dropout2d(input, p):
     return dropout_2d_op(input)
 
 __all__.append('dropout2d')
+
+def bernoulli_ext(input, generator):
+    seed, offset = generator._step(12)  # pylint: disable=protected-access
+    return gen_ops_prim.bernoulli_ext_op(input, seed, offset)
+
+__all__.append('bernoulli_ext')

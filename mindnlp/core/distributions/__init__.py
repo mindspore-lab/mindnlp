@@ -1,6 +1,7 @@
 """distributions"""
 from .bernoulli import Bernoulli
 from .categorical import Categorical
+from .chi2 import *
 from .distribution import Distribution
 from .independent import Independent
 from .negative_binomial import NegativeBinomial
