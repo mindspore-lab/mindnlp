@@ -9,7 +9,7 @@ generator_step_ = 12
 
 
 # bernoulli
-def bernoulli(input, *, generator=None, out=None):
+def bernoulli(input, *, generator=None, out=None, **kwargs):
     if generator is None:
         generator = default_generator
     output = execute("bernoulli_ext", input, generator)

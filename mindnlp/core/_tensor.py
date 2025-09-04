@@ -348,6 +348,8 @@ class TensorPlaceHolder:
         return ops.sub(other, self)
 
     def __eq__(self, other):
+        if other is None:
+            return False
         return ops.eq(self, other)
 
     def __gt__(self, other):
@@ -1891,7 +1893,8 @@ class TensorPlaceHolder:
         return ops.repeat_interleave(self, repeats, dim, output_size=output_size)
 
     # Tensor.reshape
-    def reshape(self, *shape):
+    def reshape(self, *shape, **kwargs):
+        shape = kwargs.pop('shape', shape)
         return ops.reshape(self, *shape)
 
     # Tensor.reshape_as
@@ -1956,13 +1959,13 @@ class TensorPlaceHolder:
 
 
     # Tensor.scatter_reduce_
-    def scatter_reduce_(self, dim, index, src):
+    def scatter_reduce_(self, dim, index, src, reduce, *, include_self=True):
         return self.copy_(ops.scatter_reduce(self, dim, index, src))
 
 
     # Tensor.scatter_reduce
-    def scatter_reduce(self, dim, index, src):
-        return ops.scatter_reduce(self, dim, index, src)
+    def scatter_reduce(self, dim, index, src, reduce, *, include_self=True):
+        return ops.scatter_reduce(self, dim, index, src, reduce)
 
 
     # Tensor.select
@@ -2436,7 +2439,8 @@ class TensorPlaceHolder:
 
 
     # Tensor.var
-    def var(self, dim=None, *, correction=1, keepdim=False):
+    def var(self, dim=None, *, correction=1, keepdim=False, **kwargs):
+        correction = int(kwargs.pop('unbiased', correction))
         return ops.var(self, dim, correction=correction, keepdim=keepdim)
 
     # Tensor.vdot

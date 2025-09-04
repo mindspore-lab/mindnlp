@@ -410,7 +410,7 @@ def sdpa_mask_older_torch(
     # However, in more recent version of Pytorch, a trick was introduced to handle it - which is the reason we have
     # `sdpa_mask_recent_torch`, as it allows more general `mask_function`
     # causal_mask = mask_function(None, None, cache_position, kv_arange)
-    causal_mask = mask_function(None, None, cache_position.reshape(cache_position.shape[0], 1), kv_arange.reshape(1, kv_arange.shape[0]))
+    causal_mask = mask_function(slice(None), None, cache_position.reshape(cache_position.shape[0], 1), kv_arange.reshape(1, kv_arange.shape[0]))
     # causal_mask = _vmap_for_bhqkv(mask_function, bh_indices=False)(None, None, cache_position, kv_arange)
     if causal_mask.ndim == 2:
         causal_mask = causal_mask[None, None, :, :].expand(batch_size, -1, -1, -1)
