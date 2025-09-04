@@ -51,12 +51,20 @@ def isfinite(input):
     return execute('isfinite', input)
 
 # isin
-def isin(elements, test_elements):
+def in1d(ar1, ar2, invert=False):
+    ar1 = core.unsqueeze(ar1.ravel(), -1)
+    ar2 = ar2.ravel()
+    included = core.eq(ar1, ar2)
+    # ops.reduce_sum only supports float
+    res = core.sum(included.to(core.float32), -1).to(core.bool_)
+    if invert:
+        res = core.logical_not(res)
+    return res
+
+def isin(elements, test_elements, invert=False):
     if elements.device.type != 'cpu':
-        test_elements = core.tensor(test_elements)
-        if test_elements.ndim == 0:
-            test_elements = test_elements.unsqueeze(0)
-        return elements.tile(test_elements.shape[0], 1).eq(test_elements.unsqueeze(1)).sum(dim=0).bool().squeeze()
+        res = in1d(elements, test_elements, invert=invert)
+        return core.reshape(res, elements.shape)
 
     return execute('isin', elements, test_elements)
 
@@ -94,6 +102,8 @@ def less(input, other):
 
 # maximum
 def maximum(input, other):
+    if isinstance(other, core.Tensor) and other.device != input.device:
+        other = other.to(input.device)
     return execute('maximum', input, other)
 
 # minimum
@@ -128,8 +138,9 @@ def topk(input, k, dim=-1, largest=True, sorted=True):
             if not largest:
                 res = execute('topk', input, k, sorted)
                 values, indices = -res[0], res[1]
-                return values, indices
-            return execute('topk', input, k, sorted)
+                return topk_out(values=values, indices=indices)
+            out =  execute('topk', input, k, sorted)
+            return topk_out(values=out[0], indices=out[1])
         input = input.swapaxes(dim, input.ndim - 1)
         output = execute('topk', input, k, sorted)
         values = output[0].swapaxes(dim, input.ndim - 1)

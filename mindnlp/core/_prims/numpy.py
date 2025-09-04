@@ -240,9 +240,17 @@ def normal(shape):
 
 __all__.append('normal')
 
-def pad_v3(input, pad, mode, value):
-    out = np.pad(input.asnumpy(), pad, mode, constant_values=value)
-    return core.Tensor.from_numpy(out)
+def pad_v3(input_x, padding, mode='constant', value=None):
+    pad_op = ops.PadV3(mode=mode, paddings_contiguous=True).set_device('CPU')
+    if input_x.dtype == core.bool:
+        input_x = input_x.to(core.int32)
+        value = int(value)
+        out = pad_op(input_x, padding, value)
+        return cast(out, core.bool)
+
+    if isinstance(value, (float, int)):
+        value = core.tensor(value, dtype=input_x.dtype)
+    return pad_op(input_x, padding, value)
 
 __all__.append('pad_v3')
 
@@ -332,6 +340,8 @@ def tile(input, dims):
 __all__.append('tile')
 
 def squeeze(input, dim):
+    if isinstance(dim, int) and input.shape[dim] != 1:
+        return input
     out = np.squeeze(input.numpy(), dim)
     return core.Tensor.from_numpy(out)
 
@@ -661,6 +671,8 @@ __all__.append('argmax_ext')
 
 def log(input):
     out = np.log(input.numpy())
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
     return core.Tensor.from_numpy(out)
 
 __all__.append('log')
@@ -842,6 +854,8 @@ def exp(input):
     out = np.exp(input.numpy())
     if input.dtype == np.int64:
         out = out.astype(np.float32)
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
     return core.Tensor.from_numpy(out)
 
 __all__.append('exp')
@@ -974,3 +988,151 @@ def one_hot_ext(tensor, num_classes=-1):
     return core.Tensor.from_numpy(out)
 
 __all__.append('one_hot_ext')
+
+def log1p(input):
+    out = np.log1p(input.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('log1p')
+
+def gather(input, indices, _dimension):
+    out = np.take(input.numpy(), indices.numpy(), _dimension)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('gather')
+
+
+def layer_norm_ext(input, normalized_shape, weight=None, bias=None, eps=1e-5):
+    # 确定需要计算均值和方差的轴
+    # 从第一个维度开始到 normalized_shape 所涵盖的维度之前的维度会被保留（即 batch 维度等）
+    # 我们需要计算所有不在最后 len(normalized_shape) 个维度上的轴的均值和方差
+    input = input.numpy()
+    if weight is not None:
+        weight = weight.numpy()
+    if bias is not None:
+        bias = bias.numpy()
+
+    start_axis = input.ndim - len(normalized_shape)
+    axes = tuple(range(start_axis, input.ndim))
+    
+    # 计算均值和方差，并保持维度以便广播
+    mean = np.mean(input, axis=axes, keepdims=True)
+    var = np.var(input, axis=axes, keepdims=True)
+    
+    # 标准化: (x - mean) / sqrt(var + eps)
+    normalized = (input - mean) / np.sqrt(var + eps)
+    
+    # 应用可学习的缩放和平移参数 (gamma 和 beta)
+    if weight is not None:
+        normalized = normalized * weight
+    if bias is not None:
+        normalized = normalized + bias
+    
+    return (core.Tensor.from_numpy(normalized),)
+
+__all__.append('layer_norm_ext')
+
+def erf(input):
+    out = scipy.special.erf(input.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('erf')
+
+def mse_loss_ext(input, target, reduction='mean'):
+    if input.shape != target.shape:
+        raise ValueError(f"Input and target must have the same shape. Got input: {input.shape}, target: {target.shape}")
+
+    squared_errors = np.square(input - target)
+
+    if reduction == 'mean':
+        loss = np.mean(squared_errors)
+    elif reduction == 'sum':
+        loss = np.sum(squared_errors)
+    elif reduction == 'none':
+        loss = squared_errors
+    else:
+        raise ValueError("Reduction must be 'mean', 'sum', or 'none'.")
+
+    if not isinstance(loss, np.ndarray):
+        loss = np.array(loss)
+    return core.Tensor.from_numpy(loss)
+
+__all__.append('mse_loss_ext')
+
+def square(input):
+    out = np.square(input.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('square')
+
+def lgamma(input):
+    out = scipy.special.gammaln(input.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('lgamma')
+
+def gamma(shape, alpha, beta):
+    out = np.random.gamma(alpha, 1/beta, shape)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('gamma')
+
+def gather_d(input, dim, index):
+    indices = []
+    for axis in range(input.ndim):
+        if axis == dim:
+            indices.append(index)
+        else:
+            shape = [1] * index.ndim
+            shape[axis] = input.shape[axis]
+            indices.append(np.arange(input.shape[axis]).reshape(shape))
+    
+    out = input[tuple(indices)]
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('gather_d')
+
+
+def log_softmax(x, axis=-1):
+    x = x.numpy()
+    x_max = np.max(x, axis=axis, keepdims=True)
+    x_shifted = x - x_max
+    
+    exp_x = np.exp(x_shifted)
+    sum_exp_x = np.sum(exp_x, axis=axis, keepdims=True)
+    log_sum_exp_x = np.log(sum_exp_x)
+    
+    out = x_shifted - log_sum_exp_x
+    return core.Tensor.from_numpy(out)
+
+__all__.append('log_softmax')
+
+def nllloss(input, target, weight=None, reduction='mean', ignore_index=-100):
+    op = ops.NLLLoss(reduction, ignore_index).set_device('CPU')
+    return op(input, target, weight)
+
+__all__.append('nllloss')
+
+def linalg_qr(A, mode):
+    # out = np.linalg.qr(A.numpy(), mode)
+    # return [core.Tensor.from_numpy(o) for o in out]
+    if mode not in ('reduced', 'complete'):
+        raise TypeError(f"For qr, the arg mode must be 'reduced' or 'complete', but got {mode}.")
+    qr_ = _get_cache_prim(ops.Qr)(mode == 'complete').set_device('CPU')
+    return qr_(A)
+
+__all__.append('linalg_qr')
+
+def diag_ext(input, diagonal):
+    out = np.diag(input.numpy(), diagonal)
+    return core.Tensor.from_numpy(out)
+
+__all__.append('diag_ext')
+
+def sign(input):
+    out = np.sign(input.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('sign')

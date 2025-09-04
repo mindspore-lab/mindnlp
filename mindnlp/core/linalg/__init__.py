@@ -1,7 +1,7 @@
 from collections import namedtuple
 import numpy as np
 
-from mindspore import ops, mint
+from mindspore import ops
 from mindspore.ops._primitive_cache import _get_cache_prim
 
 from mindnlp import core
@@ -32,3 +32,6 @@ def vector_norm(x, ord=2, dim=None, keepdim=False, *, dtype=None, out=None):
 
 def solve(A, B, *, left=True, out=None):
     return core.tensor(np.linalg.solve(A.numpy(), B.numpy()))
+
+def qr(A, mode='reduced'):
+    return execute('linalg_qr', A, mode)
