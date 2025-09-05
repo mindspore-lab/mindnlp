@@ -39,7 +39,28 @@
 
 ## News 📢
 
-* 🔥 **Fully compatible with 🤗HuggingFace**, it enables seamless execution of any Transformers/Diffusers models on MindSpore across all hardware platforms (GPU/Ascend/CPU).
+* ⚡ **MindNLP Core support Pytorch compatible:** To meet ecosystem compatibility requirements, we provide the `mindnlp.core` module to support compatibility with PyTorch interfaces. This module is built upon MindSpore's foundational APIs and operators, enabling model development using syntax similar to PyTorch. It also supports taking over torch interfaces through a Proxy, allowing the use of MindSpore for acceleration on Ascend hardware without the need for code modifications. The specific usage is as follows:
+
+    ```python
+    import mindnlp # import mindnlp lib will enable proxy automaticlly
+    import torch
+    from torch import nn
+
+    # all torch.xx apis will be mapped to mindnlp.core.xx
+    net = nn.Linear(10, 5)
+    x = torch.randn(3, 10)
+    out = net(x)
+    print(out.shape)
+    # core.Size([3, 5])
+    ```
+
+    It is particularly noteworthy that MindNLP supports several features not yet available in MindSpore, which enables better support for model serialization, heterogeneous computing, and other scenarios:
+    1. ​Dispatch Mechanism Support: Operators are dispatched to the appropriate backend based on Tensor.device.
+    2. ​Meta Device Support: Allows for shape inference without performing actual computations.
+    3. ​Numpy as CPU Backend: Supports using NumPy as a CPU backend for acceleration.
+    4. ​Tensor.to for Heterogeneous Data Movement: Facilitates the movement of data across different devices using `Tensor.to`.
+
+* 🔥 **Fully compatible with 🤗HuggingFace:** It enables seamless execution of any Transformers/Diffusers models on MindSpore across all hardware platforms (GPU/Ascend/CPU).
     
     You may still invoke models through MindNLP as shown in the example code below:
 
