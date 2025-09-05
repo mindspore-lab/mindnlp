@@ -36,7 +36,7 @@ language_config._attn_implementation = 'eager'
 vl_gpt: MultiModalityCausalLM = AutoModelForCausalLM.from_pretrained(
     model_path, language_config=language_config, trust_remote_code=True,  ms_dtype=torch.float16
 )
-vl_gpt = vl_gpt.eval()
+vl_gpt = vl_gpt.eval().cuda()
 
 conversation = [
     {

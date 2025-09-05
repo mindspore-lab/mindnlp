@@ -103,6 +103,8 @@ def dyn_shape(self):
 __all__.append('dyn_shape')
 
 def cast(input, dtype):
+    if input.dtype == dtype:
+        return input
     out = input.asnumpy().astype(core.dtype2np[dtype])
     return core.Tensor.from_numpy(out)
 
@@ -149,6 +151,13 @@ def bitwise_and_scalar(input, other):
     return core.Tensor.from_numpy(out)
 
 __all__.append('bitwise_and_scalar')
+
+
+def bitwise_or_tensor(input, other):
+    out = np.bitwise_or(input.numpy(), other.numpy())
+    return core.Tensor.from_numpy(out)
+
+__all__.append('bitwise_or_tensor')
 
 def right_shift(input, other):
     out = np.right_shift(input.numpy(), other)

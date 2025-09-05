@@ -920,7 +920,8 @@ class TensorPlaceHolder:
         if isinstance(self, StubTensor) and isinstance(new_value, StubTensor):
             self.stub = new_value.stub
         else:
-            if self.device.type == 'cpu' and new_value.device.type == 'cpu' and self.shape == new_value.shape:
+            if self.device.type == 'cpu' and new_value.device.type == 'cpu' \
+                and self.shape == new_value.shape and self.dtype == new_value.dtype:
                 src_ct = ctypes.c_void_p(new_value.data_ptr())
                 dst_ct = ctypes.c_void_p(self.data_ptr())
                 ctypes.memmove(dst_ct, src_ct, self.nbytes)
