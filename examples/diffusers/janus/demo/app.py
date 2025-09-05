@@ -1,13 +1,16 @@
-import gradio as gr
-import mindspore
-import mindnlp
 from mindnlp import core
+import gradio as gr
 from transformers import AutoConfig, AutoModelForCausalLM
-from janus.models import MultiModalityCausalLM, VLChatProcessor
+from janus.models import VLChatProcessor
 from PIL import Image
 
 import numpy as np
 
+device = 'cpu'
+if core.npu.is_available():
+    device = 'npu'
+elif core.cuda.is_available():
+    device = 'cuda'
 
 # Load model and processor
 model_path = "deepseek-ai/Janus-1.3B"
@@ -16,7 +19,8 @@ language_config = config.language_config
 language_config._attn_implementation = 'eager'
 vl_gpt = AutoModelForCausalLM.from_pretrained(model_path,
                                              language_config=language_config,
-                                             trust_remote_code=True, ms_dtype=mindspore.float16)
+                                             trust_remote_code=True)
+vl_gpt = vl_gpt.to(core.bfloat16).to(device)
 
 vl_chat_processor = VLChatProcessor.from_pretrained(model_path)
 tokenizer = vl_chat_processor.tokenizer
@@ -26,9 +30,12 @@ tokenizer = vl_chat_processor.tokenizer
 # Multimodal Understanding function
 def multimodal_understanding(image, question, seed, top_p, temperature):
     # Clear CUDA cache before generating
+    core.cuda.empty_cache()
+    
     # set seed
-    mindspore.manual_seed(seed)
+    core.manual_seed(seed)
     np.random.seed(seed)
+    core.cuda.manual_seed(seed)
     
     conversation = [
         {
@@ -42,9 +49,9 @@ def multimodal_understanding(image, question, seed, top_p, temperature):
     pil_images = [Image.fromarray(image)]
     prepare_inputs = vl_chat_processor(
         conversations=conversation, images=pil_images, force_batchify=True
-    ).to(core.get_default_device(), dtype=mindspore.float16)
+    ).to(device, dtype=core.bfloat16 if core.cuda.is_available() else core.float16)
     
-    
+    print(prepare_inputs)
     inputs_embeds = vl_gpt.prepare_inputs_embeds(**prepare_inputs)
     
     outputs = vl_gpt.language_model.generate(
@@ -75,13 +82,13 @@ def generate(input_ids,
     # Clear CUDA cache before generating
     core.cuda.empty_cache()
     
-    tokens = core.zeros((parallel_size * 2, len(input_ids)), dtype=core.int)
+    tokens = core.zeros((parallel_size * 2, len(input_ids)), dtype=core.int).to(device)
     for i in range(parallel_size * 2):
         tokens[i, :] = input_ids
         if i % 2 != 0:
             tokens[i, 1:-1] = vl_chat_processor.pad_id
     inputs_embeds = vl_gpt.language_model.get_input_embeddings()(tokens)
-    generated_tokens = core.zeros((parallel_size, image_token_num_per_image), dtype=core.int)
+    generated_tokens = core.zeros((parallel_size, image_token_num_per_image), dtype=core.int).to(device)
 
     pkv = None
     for i in range(image_token_num_per_image):

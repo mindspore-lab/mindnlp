@@ -1,29 +1,40 @@
-import gradio as gr
-import mindspore
-import mindnlp
 from mindnlp import core
+import gradio as gr
 from janus.janusflow.models import MultiModalityCausalLM, VLChatProcessor
 from PIL import Image
+from transformers import DynamicCache
 from diffusers.models import AutoencoderKL
 import numpy as np
+
+device = 'cpu'
+if core.npu.is_available():
+    device = 'npu'
+elif core.cuda.is_available():
+    device = 'cuda'
 
 # Load model and processor
 model_path = "deepseek-ai/JanusFlow-1.3B"
 vl_chat_processor = VLChatProcessor.from_pretrained(model_path)
 tokenizer = vl_chat_processor.tokenizer
 
-vl_gpt = MultiModalityCausalLM.from_pretrained(model_path, ms_dtype=mindspore.float16)
-vl_gpt = vl_gpt.eval()
+vl_gpt = MultiModalityCausalLM.from_pretrained(model_path)
+vl_gpt = vl_gpt.to(core.bfloat16).to(device).eval()
 
 # remember to use bfloat16 dtype, this vae doesn't work with fp16
-vae = AutoencoderKL.from_pretrained("stabilityai/sdxl-vae", ms_dtype=mindspore.float16)
-vae = vae.eval()
+vae = AutoencoderKL.from_pretrained("stabilityai/sdxl-vae")
+vae = vae.to(core.bfloat16).to(device).eval()
 
 # Multimodal Understanding function
+@core.inference_mode()
+# Multimodal Understanding function
 def multimodal_understanding(image, question, seed, top_p, temperature):
+    # Clear CUDA cache before generating
+    core.cuda.empty_cache()
+    
     # set seed
-    mindspore.manual_seed(seed)
+    core.manual_seed(seed)
     np.random.seed(seed)
+    core.cuda.manual_seed(seed)
     
     conversation = [
         {
@@ -37,9 +48,9 @@ def multimodal_understanding(image, question, seed, top_p, temperature):
     pil_images = [Image.fromarray(image)]
     prepare_inputs = vl_chat_processor(
         conversations=conversation, images=pil_images, force_batchify=True
-    ).to(core.get_default_device(), mindspore.float16)
-
-
+    ).to(device, dtype=core.bfloat16 if core.cuda.is_available() else core.float16)
+    
+    
     inputs_embeds = vl_gpt.prepare_inputs_embeds(**prepare_inputs)
     
     outputs = vl_gpt.language_model.generate(
@@ -60,13 +71,14 @@ def multimodal_understanding(image, question, seed, top_p, temperature):
     return answer
 
 
+@core.inference_mode()
 def generate(
     input_ids,
     cfg_weight: float = 2.0,
     num_inference_steps: int = 30
 ):
     # we generate 5 images at a time, *2 for CFG
-    tokens = core.stack([input_ids] * 10)
+    tokens = core.stack([input_ids] * 10).cuda()
     tokens[5:, 1:] = vl_chat_processor.pad_id
     inputs_embeds = vl_gpt.language_model.get_input_embeddings()(tokens)
     print(inputs_embeds.shape)
@@ -76,10 +88,10 @@ def generate(
     
     # generate with rectified flow ode
     # step 1: encode with vision_gen_enc
-    z = core.randn((5, 4, 48, 48), dtype=mindspore.float16)
+    z = core.randn((5, 4, 48, 48), dtype=core.bfloat16).cuda()
     
     dt = 1.0 / num_inference_steps
-    dt = core.zeros_like(z).to(mindspore.float16) + dt
+    dt = core.zeros_like(z).cuda().to(core.bfloat16) + dt
     
     # step 2: run ode
     attention_mask = core.ones((10, inputs_embeds.shape[1]+577)).to(vl_gpt.device)
@@ -103,18 +115,21 @@ def generate(
                                              use_cache=True, 
                                              attention_mask=attention_mask,
                                              past_key_values=None)
-            past_key_values = []
-            for kv_cache in past_key_values:
-                k, v = kv_cache[0], kv_cache[1]
-                past_key_values.append((k[:, :, :inputs_embeds.shape[1], :], v[:, :, :inputs_embeds.shape[1], :]))
-            past_key_values = tuple(past_key_values)
+            past_key_values = DynamicCache.from_legacy_cache(outputs.past_key_values)
+
         else:
             outputs = vl_gpt.language_model.model(inputs_embeds=llm_emb, 
                                              use_cache=True, 
                                              attention_mask=attention_mask,
                                              past_key_values=past_key_values)
+            past_key_values = []
+            for kv_cache in outputs.past_key_values:
+                k, v = kv_cache[0], kv_cache[1]
+                past_key_values.append((k[:, :, :inputs_embeds.shape[1], :], v[:, :, :inputs_embeds.shape[1], :]))
+            past_key_values = DynamicCache.from_legacy_cache(past_key_values)
+
         hidden_states = outputs.last_hidden_state
-        
+
         # transform hidden_states back to v
         hidden_states = vl_gpt.vision_gen_dec_aligner(vl_gpt.vision_gen_dec_aligner_norm(hidden_states[:, -576:, :]))
         hidden_states = hidden_states.reshape(z_emb.shape[0], 24, 24, 768).permute(0, 3, 1, 2)
@@ -141,13 +156,17 @@ def unpack(dec, width, height, parallel_size=5):
     return visual_img
 
 
+@core.inference_mode()
 def generate_image(prompt,
                    seed=None,
                    guidance=5,
                    num_inference_steps=30):
+    # Clear CUDA cache and avoid tracking gradients
+    core.cuda.empty_cache()
     # Set the seed for reproducible results
     if seed is not None:
-        mindspore.manual_seed(seed)
+        core.manual_seed(seed)
+        core.cuda.manual_seed(seed)
         np.random.seed(seed)
     
     with core.no_grad():
