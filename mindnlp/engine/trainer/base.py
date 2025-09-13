@@ -594,7 +594,7 @@ class Trainer:
         """
         train_tokens = 0
         try:
-            for step, batch in train_ds.create_dict_iterator():
+            for step, batch in enumerate(train_ds.create_dict_iterator()):
                 tokens = batch["input_ids"].numel()
                 if max_steps is not None:
                     return tokens * max_steps
