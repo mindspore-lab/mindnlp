@@ -1,0 +1,38 @@
+# MindSpore框架
+mindspore>=2.6.0
+
+# MindNLP
+mindnlp>=0.4.0
+
+# 基础依赖
+numpy>=1.21.0
+sentencepiece>=0.1.99
+fire>=0.5.0
+ml_dtypes>=0.2.0
+simple-parsing>=0.1.5
+
+# 开发工具
+tqdm>=4.65.0
+pytest>=7.0.0
+jupyter>=1.0.0
+ipykernel>=6.0.0
+
+# 可视化
+matplotlib>=3.5.0
+seaborn>=0.12.0
+
+# 性能分析
+psutil>=5.9.0
+
+# 文档
+sphinx>=4.0.0
+sphinx-rtd-theme>=1.0.0
+
+# 代码质量
+black>=22.0.0
+flake8>=4.0.0
+pylint>=2.15.0
+
+# 可选：加速库
+# accelerate>=0.20.0
+# deepspeed>=0.9.0
