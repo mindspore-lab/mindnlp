@@ -1,5 +1,5 @@
 from mindnlp import core
-from ._apis import npu, cpu, meta
+from ._apis import npu, cpu, gpu, meta
 from .configs import DEVICE_TARGET, SOC
 from ._bind import is_autocast_enabled
 
@@ -16,7 +16,8 @@ class SingletonMeta(type):
 api_map = {
     'cpu': cpu,
     'npu': npu,
-    'meta': meta
+    'meta': meta,
+    'cuda': gpu
 }
 
 class Dispatcher(metaclass=SingletonMeta):

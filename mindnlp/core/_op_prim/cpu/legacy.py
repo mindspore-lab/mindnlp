@@ -3509,11 +3509,3 @@ def zeros_like(*args):
 zeta_op = Zeta().set_device('CPU')
 def zeta(*args):
     return zeta_op(*args)
-
-geitiem_tensor_index_info_op = GetitemTensorIndexInfo(False).set_device('CPU')
-def geitiem_tensor_index_info(*args):
-    return geitiem_tensor_index_info_op(*args)
-
-setitem_tensor_index_info_op = SetitemTensorIndexInfo(False).set_device('CPU')
-def setitem_tensor_index_info(*args):
-    return setitem_tensor_index_info_op(*args)

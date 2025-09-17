@@ -7,6 +7,8 @@ from mindspore.runtime import memory_reserved as ms_memory_reserved, \
     reset_peak_memory_stats, reset_max_memory_allocated, max_memory_allocated, synchronize, \
     current_stream
 from mindspore.device_context.gpu import device_count as ms_device_count
+from mindspore.hal import get_device_properties
+from mindspore.communication import GlobalComm, get_group_size
 
 from mindnlp import core
 
@@ -17,9 +19,9 @@ BFloat16Tensor = core.BFloat16Tensor
 def device_count():
     if not is_available():
         return 0
-    # if GlobalComm.INITED:
-    #     return get_group_size()
-    return ms_device_count()
+    if GlobalComm.INITED:
+        return get_group_size()
+    return 1
 
 def manual_seed_all(seed: int):
     manual_seed(seed)
