@@ -4,7 +4,7 @@ from mindspore.common.dtype import *
 from mindspore._c_expression import typing
 from mindspore._c_expression.typing import Type
 
-from .configs import ON_A1, SUPPORT_BF16
+from .configs import ON_A1, SUPPORT_BF16, DEVICE_TARGET
 
 if SUPPORT_BF16:
     from mindspore.common.np_dtype import bfloat16 as np_bfloat16# pylint: disable=import-error
@@ -15,7 +15,7 @@ bool_alias = bool
 float_alias = float
 int_alias = int
 
-if ON_A1:
+if ON_A1 or DEVICE_TARGET == 'GPU':
     warnings.warn('MindSpore on GPU/910A do not support bfloat16, use float16 instead.')
     bfloat16 = float16
 

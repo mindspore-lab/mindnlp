@@ -710,19 +710,22 @@ _SLICE_ERROR = (
 )
 
 
-def _as_index(idx, need_scalar=True):
+def _as_index(idx, device, need_scalar=True):
     """Helper function to parse idx as an index.
     """
     if isinstance(idx, numbers.Integral):
         return idx, True
 
     if not isinstance(idx, core.Tensor):
-        idx = core.tensor(idx, dtype=core.int64)
+        idx = core.tensor(idx, dtype=core.int64, device=device)
     if need_scalar and idx.ndim not in (None, 0):
         raise IndexError(_SLICE_ERROR + ', got {!r}'.format(idx))
 
     if idx.ndim == 0:
         return idx.item(), True
+
+    if idx.device != device:
+        idx._device = device
     return idx, False
 
 def cumprod(x, axis=0, exclusive=False, reverse=False):
@@ -781,7 +784,7 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
             # strides.append(1)
             new_axis_mask |= (1 << index)
         else:
-            s, is_scalar = _as_index(s, False)
+            s, is_scalar = _as_index(s, tensor.device, False)
             if is_scalar:
                 begin.append(s)
                 end.append(s + 1)
@@ -852,7 +855,7 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
     if not dims_contiguous or updates is not None:
         if range(len(dims)) != dims:
             tensor = moveaxis(tensor, dims, range(len(dims)))
-        tensor_shape_prefix = core.tensor(tensor.shape[: len(dims)])
+        tensor_shape_prefix = core.tensor(tensor.shape[: len(dims)], device=stacked_indices.device)
         stacked_indices = where(
             stacked_indices < 0,
             stacked_indices + tensor_shape_prefix,
@@ -962,7 +965,7 @@ def setitem(a, slice_spec, updates):
             and slice_spec.dtype == core.bool
         )
     ):
-        if slice_spec.shape == a.shape and isinstance(updates, numbers.Number):
+        if slice_spec.shape == a.shape and (isinstance(updates, numbers.Number) or updates.ndim == 0):
             a.masked_fill_(slice_spec, updates)
             return a
         slice_spec = nonzero(slice_spec, as_tuple=True)

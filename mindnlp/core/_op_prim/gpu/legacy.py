@@ -1,5 +1,6 @@
 from mindspore.ops.operations import *
 from mindspore.ops.operations._grad_ops import *
+from mindspore.ops.operations._inner_ops import *
 from mindspore.ops._primitive_cache import _get_cache_prim
 
 
@@ -748,26 +749,6 @@ def acosh(*args):
     return acosh_op(*args)
 
 
-act_ulq_clamp_max_grad_op = ActULQClampMaxGrad().set_device('GPU')
-def act_ulq_clamp_max_grad(*args):
-    return act_ulq_clamp_max_grad_op(*args)
-
-
-act_ulq_clamp_min_grad_op = ActULQClampMinGrad().set_device('GPU')
-def act_ulq_clamp_min_grad(*args):
-    return act_ulq_clamp_min_grad_op(*args)
-
-
-def acts_ulq(*args):
-    op = _get_cache_prim(ActsULQ)(*args[-2:]).set_device('GPU')
-    return op(*args[:-2])
-
-
-acts_ulq_input_grad_op = ActsULQInputGrad().set_device('GPU')
-def acts_ulq_input_grad(*args):
-    return acts_ulq_input_grad_op(*args)
-
-
 def adam(*args):
     op = _get_cache_prim(Adam)(*args[-2:]).set_device('GPU')
     return op(*args[:-2])
@@ -1063,51 +1044,6 @@ def batch_norm(*args):
     return op(*args[:-4])
 
 
-def batch_norm_fold(*args):
-    op = _get_cache_prim(BatchNormFold)(*args[-4:]).set_device('GPU')
-    return op(*args[:-4])
-
-
-def batch_norm_fold2(*args):
-    op = _get_cache_prim(BatchNormFold2)(*args[-1:]).set_device('GPU')
-    return op(*args[:-1])
-
-
-def batch_norm_fold2_d(*args):
-    op = _get_cache_prim(BatchNormFold2D)(*args[-1:]).set_device('GPU')
-    return op(*args[:-1])
-
-
-def batch_norm_fold2_grad(*args):
-    op = _get_cache_prim(BatchNormFold2Grad)(*args[-1:]).set_device('GPU')
-    return op(*args[:-1])
-
-
-def batch_norm_fold2_grad_d(*args):
-    op = _get_cache_prim(BatchNormFold2GradD)(*args[-1:]).set_device('GPU')
-    return op(*args[:-1])
-
-
-def batch_norm_fold2_grad_reduce(*args):
-    op = _get_cache_prim(BatchNormFold2GradReduce)(*args[-1:]).set_device('GPU')
-    return op(*args[:-1])
-
-
-def batch_norm_fold_d(*args):
-    op = _get_cache_prim(BatchNormFoldD)(*args[-4:]).set_device('GPU')
-    return op(*args[:-4])
-
-
-def batch_norm_fold_grad(*args):
-    op = _get_cache_prim(BatchNormFoldGrad)(*args[-3:]).set_device('GPU')
-    return op(*args[:-3])
-
-
-def batch_norm_fold_grad_d(*args):
-    op = _get_cache_prim(BatchNormFoldGradD)(*args[-3:]).set_device('GPU')
-    return op(*args[:-3])
-
-
 def batch_to_space(*args):
     op = _get_cache_prim(BatchToSpace)(*args[-2:]).set_device('GPU')
     return op(*args[:-2])
@@ -1283,16 +1219,6 @@ def ctc_loss_v2(*args):
     return op(*args[:-3])
 
 
-def ctc_loss_v2_grad(*args):
-    op = _get_cache_prim(CTCLossV2Grad)(*args[-3:]).set_device('GPU')
-    return op(*args[:-3])
-
-
-cache_swap_table_op = CacheSwapTable().set_device('GPU')
-def cache_swap_table(*args):
-    return cache_swap_table_op(*args)
-
-
 cast_op = Cast().set_device('GPU')
 def cast(*args):
     return cast_op(*args)
@@ -1346,11 +1272,6 @@ def cholesky_inverse(*args):
 def cholesky_solve(*args):
     op = _get_cache_prim(CholeskySolve)(*args[-1:]).set_device('GPU')
     return op(*args[:-1])
-
-
-def cholesky_trsm(*args):
-    op = _get_cache_prim(CholeskyTrsm)(*args[-3:]).set_device('GPU')
-    return op(*args[:-3])
 
 
 coalesce_op = Coalesce().set_device('GPU')
@@ -1448,21 +1369,6 @@ def copy_with_slice(*args):
     return copy_with_slice_op(*args)
 
 
-def correction_mul(*args):
-    op = _get_cache_prim(CorrectionMul)(*args[-1:]).set_device('GPU')
-    return op(*args[:-1])
-
-
-def correction_mul_grad(*args):
-    op = _get_cache_prim(CorrectionMulGrad)(*args[-1:]).set_device('GPU')
-    return op(*args[:-1])
-
-
-def correction_mul_grad_reduce(*args):
-    op = _get_cache_prim(CorrectionMulGradReduce)(*args[-1:]).set_device('GPU')
-    return op(*args[:-1])
-
-
 cos_op = Cos().set_device('GPU')
 def cos(*args):
     return cos_op(*args)
@@ -1513,66 +1419,6 @@ def cumulative_logsumexp(*args):
     return op(*args[:-2])
 
 
-cus_batch_mat_mul_op = CusBatchMatMul().set_device('GPU')
-def cus_batch_mat_mul(*args):
-    return cus_batch_mat_mul_op(*args)
-
-
-cus_cholesky_trsm_op = CusCholeskyTrsm().set_device('GPU')
-def cus_cholesky_trsm(*args):
-    return cus_cholesky_trsm_op(*args)
-
-
-def cus_fused_abs_max1(*args):
-    op = _get_cache_prim(CusFusedAbsMax1)(*args[-1:]).set_device('GPU')
-    return op(*args[:-1])
-
-
-def cus_img2_col(*args):
-    op = _get_cache_prim(CusImg2Col)(*args[-4:]).set_device('GPU')
-    return op(*args[:-4])
-
-
-def cus_mat_mul_cube(*args):
-    op = _get_cache_prim(CusMatMulCube)(*args[-2:]).set_device('GPU')
-    return op(*args[:-2])
-
-
-cus_mat_mul_cube_dense_left_op = CusMatMulCubeDenseLeft().set_device('GPU')
-def cus_mat_mul_cube_dense_left(*args):
-    return cus_mat_mul_cube_dense_left_op(*args)
-
-
-cus_mat_mul_cube_dense_right_op = CusMatMulCubeDenseRight().set_device('GPU')
-def cus_mat_mul_cube_dense_right(*args):
-    return cus_mat_mul_cube_dense_right_op(*args)
-
-
-cus_mat_mul_cube_fracz_left_cast_op = CusMatMulCubeFraczLeftCast().set_device('GPU')
-def cus_mat_mul_cube_fracz_left_cast(*args):
-    return cus_mat_mul_cube_fracz_left_cast_op(*args)
-
-
-cus_mat_mul_cube_fracz_right_mul_op = CusMatMulCubeFraczRightMul().set_device('GPU')
-def cus_mat_mul_cube_fracz_right_mul(*args):
-    return cus_mat_mul_cube_fracz_right_mul_op(*args)
-
-
-cus_matrix_combine_op = CusMatrixCombine().set_device('GPU')
-def cus_matrix_combine(*args):
-    return cus_matrix_combine_op(*args)
-
-
-cus_transpose02314_op = CusTranspose02314().set_device('GPU')
-def cus_transpose02314(*args):
-    return cus_transpose02314_op(*args)
-
-
-dsd_matmul_op = DSDMatmul().set_device('GPU')
-def dsd_matmul(*args):
-    return dsd_matmul_op(*args)
-
-
 d_type_op = DType().set_device('GPU')
 def d_type(*args):
     return d_type_op(*args)
@@ -1611,11 +1457,6 @@ def depth_to_space(*args):
 def depthwise_conv2d_native(*args):
     op = _get_cache_prim(DepthwiseConv2dNative)(*args[-8:]).set_device('GPU')
     return op(*args[:-8])
-
-
-def det_triangle(*args):
-    op = _get_cache_prim(DetTriangle)(*args[-1:]).set_device('GPU')
-    return op(*args[:-1])
 
 
 diag_op = Diag().set_device('GPU')
@@ -1666,11 +1507,6 @@ def dropout3_d(*args):
 def dropout_gen_mask(*args):
     op = _get_cache_prim(DropoutGenMask)(*args[-2:]).set_device('GPU')
     return op(*args[:-2])
-
-
-dynamic_assign_op = DynamicAssign().set_device('GPU')
-def dynamic_assign(*args):
-    return dynamic_assign_op(*args)
 
 
 def dynamic_gruv2(*args):
@@ -1743,6 +1579,11 @@ def erfinv(*args):
     return erfinv_op(*args)
 
 
+erfinv_op = Erfinv().set_device('GPU')
+def erfinv(*args):
+    return erfinv_op(*args)
+
+
 def euclidean_norm(*args):
     op = _get_cache_prim(EuclideanNorm)(*args[-1:]).set_device('GPU')
     return op(*args[:-1])
@@ -1751,6 +1592,7 @@ def euclidean_norm(*args):
 exp_op = Exp().set_device('GPU')
 def exp(*args):
     return exp_op(*args)
+
 
 
 expand_dims_op = ExpandDims().set_device('GPU')
@@ -1786,91 +1628,6 @@ def eye(*args):
 def fft_with_size(*args):
     op = _get_cache_prim(FFTWithSize)(*args[-6:]).set_device('GPU')
     return op(*args[:-6])
-
-
-def fake_learned_scale_quant_per_channel(*args):
-    op = _get_cache_prim(FakeLearnedScaleQuantPerChannel)(*args[-4:]).set_device('GPU')
-    return op(*args[:-4])
-
-
-def fake_learned_scale_quant_per_channel_grad(*args):
-    op = _get_cache_prim(FakeLearnedScaleQuantPerChannelGrad)(*args[-3:]).set_device('GPU')
-    return op(*args[:-3])
-
-
-def fake_learned_scale_quant_per_channel_grad_d(*args):
-    op = _get_cache_prim(FakeLearnedScaleQuantPerChannelGradD)(*args[-2:]).set_device('GPU')
-    return op(*args[:-2])
-
-
-def fake_learned_scale_quant_per_channel_grad_d_reduce(*args):
-    op = _get_cache_prim(FakeLearnedScaleQuantPerChannelGradDReduce)(*args[-1:]).set_device('GPU')
-    return op(*args[:-1])
-
-
-def fake_learned_scale_quant_per_layer(*args):
-    op = _get_cache_prim(FakeLearnedScaleQuantPerLayer)(*args[-3:]).set_device('GPU')
-    return op(*args[:-3])
-
-
-def fake_learned_scale_quant_per_layer_grad(*args):
-    op = _get_cache_prim(FakeLearnedScaleQuantPerLayerGrad)(*args[-2:]).set_device('GPU')
-    return op(*args[:-2])
-
-
-def fake_learned_scale_quant_per_layer_grad_d(*args):
-    op = _get_cache_prim(FakeLearnedScaleQuantPerLayerGradD)(*args[-1:]).set_device('GPU')
-    return op(*args[:-1])
-
-
-fake_learned_scale_quant_per_layer_grad_d_reduce_op = FakeLearnedScaleQuantPerLayerGradDReduce().set_device('GPU')
-def fake_learned_scale_quant_per_layer_grad_d_reduce(*args):
-    return fake_learned_scale_quant_per_layer_grad_d_reduce_op(*args)
-
-
-def fake_quant_param(*args):
-    op = _get_cache_prim(FakeQuantParam)(*args[-4:]).set_device('GPU')
-    return op(*args[:-4])
-
-
-def fake_quant_per_channel(*args):
-    op = _get_cache_prim(FakeQuantPerChannel)(*args[-8:]).set_device('GPU')
-    return op(*args[:-8])
-
-
-def fake_quant_per_channel_grad(*args):
-    op = _get_cache_prim(FakeQuantPerChannelGrad)(*args[-5:]).set_device('GPU')
-    return op(*args[:-5])
-
-
-def fake_quant_per_layer(*args):
-    op = _get_cache_prim(FakeQuantPerLayer)(*args[-7:]).set_device('GPU')
-    return op(*args[:-7])
-
-
-def fake_quant_per_layer_grad(*args):
-    op = _get_cache_prim(FakeQuantPerLayerGrad)(*args[-4:]).set_device('GPU')
-    return op(*args[:-4])
-
-
-def fake_quant_with_min_max_vars(*args):
-    op = _get_cache_prim(FakeQuantWithMinMaxVars)(*args[-2:]).set_device('GPU')
-    return op(*args[:-2])
-
-
-def fake_quant_with_min_max_vars_gradient(*args):
-    op = _get_cache_prim(FakeQuantWithMinMaxVarsGradient)(*args[-2:]).set_device('GPU')
-    return op(*args[:-2])
-
-
-def fake_quant_with_min_max_vars_per_channel(*args):
-    op = _get_cache_prim(FakeQuantWithMinMaxVarsPerChannel)(*args[-2:]).set_device('GPU')
-    return op(*args[:-2])
-
-
-def fake_quant_with_min_max_vars_per_channel_gradient(*args):
-    op = _get_cache_prim(FakeQuantWithMinMaxVarsPerChannelGradient)(*args[-2:]).set_device('GPU')
-    return op(*args[:-2])
 
 
 fast_ge_lu_op = FastGeLU().set_device('GPU')
@@ -2133,11 +1890,6 @@ def hypot(*args):
     return hypot_op(*args)
 
 
-def ifmr(*args):
-    op = _get_cache_prim(IFMR)(*args[-5:]).set_device('GPU')
-    return op(*args[:-5])
-
-
 def iou(*args):
     op = _get_cache_prim(IOU)(*args[-1:]).set_device('GPU')
     return op(*args[:-1])
@@ -2228,11 +1980,6 @@ def insert_gradient_of(*args):
     return op(*args[:-1])
 
 
-def instance_norm(*args):
-    op = _get_cache_prim(InstanceNorm)(*args[-2:]).set_device('GPU')
-    return op(*args[:-2])
-
-
 inv_op = Inv().set_device('GPU')
 def inv(*args):
     return inv_op(*args)
@@ -2298,16 +2045,6 @@ def lstm(*args):
     return op(*args[:-7])
 
 
-lamb_apply_optimizer_assign_op = LambApplyOptimizerAssign().set_device('GPU')
-def lamb_apply_optimizer_assign(*args):
-    return lamb_apply_optimizer_assign_op(*args)
-
-
-lamb_apply_weight_assign_op = LambApplyWeightAssign().set_device('GPU')
-def lamb_apply_weight_assign(*args):
-    return lamb_apply_weight_assign_op(*args)
-
-
 def layer_norm(*args):
     op = _get_cache_prim(LayerNorm)(*args[-3:]).set_device('GPU')
     return op(*args[:-3])
@@ -2356,16 +2093,6 @@ def lin_space(*args):
 def list_diff(*args):
     op = _get_cache_prim(ListDiff)(*args[-1:]).set_device('GPU')
     return op(*args[:-1])
-
-
-load_op = Load().set_device('GPU')
-def load(*args):
-    return load_op(*args)
-
-
-def load_im2_col(*args):
-    op = _get_cache_prim(LoadIm2Col)(*args[-4:]).set_device('GPU')
-    return op(*args[:-4])
 
 
 log_op = Log().set_device('GPU')
@@ -2488,11 +2215,6 @@ def mat_mul(*args):
     return op(*args[:-2])
 
 
-def matmul_dds(*args):
-    op = _get_cache_prim(MatmulDDS)(*args[-2:]).set_device('GPU')
-    return op(*args[:-2])
-
-
 matrix_band_part_op = MatrixBandPart().set_device('GPU')
 def matrix_band_part(*args):
     return matrix_band_part_op(*args)
@@ -2603,16 +2325,6 @@ def meshgrid(*args):
     return op(*args[:-1])
 
 
-def min_max_update_per_channel(*args):
-    op = _get_cache_prim(MinMaxUpdatePerChannel)(*args[-3:]).set_device('GPU')
-    return op(*args[:-3])
-
-
-def min_max_update_per_layer(*args):
-    op = _get_cache_prim(MinMaxUpdatePerLayer)(*args[-2:]).set_device('GPU')
-    return op(*args[:-2])
-
-
 minimum_op = Minimum().set_device('GPU')
 def minimum(*args):
     return minimum_op(*args)
@@ -2687,6 +2399,7 @@ def nms_with_mask(*args):
     op = _get_cache_prim(NMSWithMask)(*args[-1:]).set_device('GPU')
     return op(*args[:-1])
 
+
 def nan_to_num(*args):
     op = _get_cache_prim(NanToNum)(*args[-3:]).set_device('GPU')
     return op(*args[:-3])
@@ -2705,11 +2418,6 @@ def neighbor_exchange(*args):
 def neighbor_exchange_v2(*args):
     op = _get_cache_prim(NeighborExchangeV2)(*args[-6:]).set_device('GPU')
     return op(*args[:-6])
-
-
-def new_im2_col(*args):
-    op = _get_cache_prim(NewIm2Col)(*args[-5:]).set_device('GPU')
-    return op(*args[:-5])
 
 
 next_after_op = NextAfter().set_device('GPU')
@@ -2797,11 +2505,6 @@ def pad(*args):
     return op(*args[:-1])
 
 
-pad_and_shift_op = PadAndShift().set_device('GPU')
-def pad_and_shift(*args):
-    return pad_and_shift_op(*args)
-
-
 def pad_v3(*args):
     op = _get_cache_prim(PadV3)(*args[-2:]).set_device('GPU')
     return op(*args[:-2])
@@ -2867,11 +2570,6 @@ def pow(*args):
     return pow_op(*args)
 
 
-def prod_force_se_a(*args):
-    op = _get_cache_prim(ProdForceSeA)(*args[-1:]).set_device('GPU')
-    return op(*args[:-1])
-
-
 pull_op = Pull().set_device('GPU')
 def pull(*args):
     return pull_op(*args)
@@ -2930,6 +2628,11 @@ def random_categorical(*args):
 def random_choice_with_mask(*args):
     op = _get_cache_prim(RandomChoiceWithMask)(*args[-3:]).set_device('GPU')
     return op(*args[:-3])
+
+
+def random_gamma(*args):
+    op = _get_cache_prim(RandomGamma)(*args[-2:]).set_device('GPU')
+    return op(*args[:-2])
 
 
 def random_gamma(*args):
@@ -3627,11 +3330,6 @@ def trace(*args):
     return trace_op(*args)
 
 
-trans_shape_op = TransShape().set_device('GPU')
-def trans_shape(*args):
-    return trans_shape_op(*args)
-
-
 transpose_op = Transpose().set_device('GPU')
 def transpose(*args):
     return transpose_op(*args)
@@ -3702,11 +3400,6 @@ def tuple_to_array(*args):
     return tuple_to_array_op(*args)
 
 
-type_as_op = TypeAs().set_device('GPU')
-def type_as(*args):
-    return type_as_op(*args)
-
-
 def uniform_candidate_sampler(*args):
     op = _get_cache_prim(UniformCandidateSampler)(*args[-6:]).set_device('GPU')
     return op(*args[:-6])
@@ -3730,6 +3423,7 @@ def unique(*args):
 def unique_consecutive(*args):
     op = _get_cache_prim(UniqueConsecutive)(*args[-3:]).set_device('GPU')
     return op(*args[:-3])
+
 
 
 def unpack(*args):
@@ -3767,19 +3461,9 @@ def unstack(*args):
     return op(*args[:-2])
 
 
-update_cache_op = UpdateCache().set_device('GPU')
-def update_cache(*args):
-    return update_cache_op(*args)
-
-
 update_state_op = UpdateState().set_device('GPU')
 def update_state(*args):
     return update_state_op(*args)
-
-
-def update_thor_gradient(*args):
-    op = _get_cache_prim(UpdateThorGradient)(*args[-1:]).set_device('GPU')
-    return op(*args[:-1])
 
 
 def upper_bound(*args):
@@ -3800,11 +3484,6 @@ def upsample_trilinear3_d(*args):
 while_loop_op = WhileLoop().set_device('GPU')
 def while_loop(*args):
     return while_loop_op(*args)
-
-
-def wts_arq(*args):
-    op = _get_cache_prim(WtsARQ)(*args[-2:]).set_device('GPU')
-    return op(*args[:-2])
 
 
 xdivy_op = Xdivy().set_device('GPU')
@@ -3830,4 +3509,3 @@ def zeros_like(*args):
 zeta_op = Zeta().set_device('GPU')
 def zeta(*args):
     return zeta_op(*args)
-
