@@ -565,7 +565,6 @@ def kaiming_uniform_(
     with core.no_grad():
         return tensor.uniform_(-bound, bound, generator=generator)
 
-
 def kaiming_normal_(
     tensor: Tensor,
     a: float = 0,

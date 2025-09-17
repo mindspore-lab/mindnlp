@@ -419,7 +419,6 @@ def sdpa_mask_older_torch(
 
     if padding_mask is not None:
         causal_mask = causal_mask * padding_mask[:, None, None, :]
-
     # # Due to a bug in versions of torch<2.5, we need to update the mask in case a query is not attending to any
     # # tokens (due to padding). See details in https://github.com/pytorch/pytorch/issues/110213
     # if not _is_torch_greater_or_equal_than_2_5 and allow_torch_fix:

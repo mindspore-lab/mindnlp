@@ -12,7 +12,7 @@ generator_step_ = 12
 def bernoulli(input, *, generator=None, out=None, **kwargs):
     if generator is None:
         generator = default_generator
-    output = execute("bernoulli_ext", input, generator)
+    output = execute("bernoulli", input, generator)
     if out is None:
         return output
     out.data = output
@@ -22,10 +22,12 @@ def bernoulli(input, *, generator=None, out=None, **kwargs):
 # multinomial
 def multinomial(input, num_samples, replacement=False, *, generator=None, out=None):
     """custom multinomial"""
+    if not isinstance(num_samples, int):
+        num_samples = num_samples.item()
     if generator is None:
         generator = default_generator
-    if not ON_A1:
-        output = execute("multinomial_ext", input, num_samples, replacement, generator)
+    if input.device.type == 'npu':
+        output = execute("multinomial", input, num_samples, replacement, generator)
 
     else:
         if replacement:
@@ -60,7 +62,9 @@ def normal(mean=0.0, std=1.0, *, size=None, generator=None, out=None,
            dtype=None, layout=None, device=None, pin_memory=None, requires_grad=False):
     if generator is None:
         generator = default_generator
-    seed, offset = generator._step(generator_step_)  # pylint: disable=protected-access
+
+    if dtype is None:
+        dtype = get_default_dtype()
     if device is None:
         if out is None:
             device = get_device_in_context()
@@ -70,28 +74,16 @@ def normal(mean=0.0, std=1.0, *, size=None, generator=None, out=None,
     is_mean_tensor = isinstance(mean, core.Tensor)
     is_std_tensor = isinstance(std, core.Tensor)
 
-    if device.type == 'cpu':
-        if is_mean_tensor and is_std_tensor:
-            size = (mean * std).shape
-        if is_mean_tensor and not is_std_tensor:
-            size = mean.shape
-        if not is_mean_tensor and is_std_tensor:
-            size = std.shape
-        if out is not None:
-            size = out.shape
-        output = execute('normal', size)
-        output = output * std - mean
 
-    else:
-        if is_mean_tensor and is_std_tensor:
-            output = execute("normal_tensor_tensor", mean, std, seed, offset, device=device)
-        if is_mean_tensor and not is_std_tensor:
-            output = execute("normal_tensor_float", mean, std, seed, offset, device=device)
-        if not is_mean_tensor and is_std_tensor:
-            output = execute("normal_float_tensor", mean, std, seed, offset, device=device)
-        if out is not None:
-            size = out.shape
-        output = execute("normal_float_float", float(mean), float(std), size, seed, offset, device=device)
+    if is_mean_tensor and is_std_tensor:
+        output = execute("normal_tensor_tensor", mean, std, size, dtype, generator, device=device)
+    if is_mean_tensor and not is_std_tensor:
+        output = execute("normal_tensor_float", mean, std, size, dtype, generator, device=device)
+    if not is_mean_tensor and is_std_tensor:
+        output = execute("normal_float_tensor", mean, std, size, dtype, generator, device=device)
+    if out is not None:
+        size = out.shape
+    output = execute("normal_float_float", float(mean), float(std), size, dtype, generator, device=device)
 
     if out is None:
         return output
@@ -120,18 +112,15 @@ def rand(
         dtype = get_default_dtype()
     if not generator:
         generator = default_generator
-    seed, offset = generator._step(generator_step_)  # pylint: disable=protected-access
+
     if size and isinstance(size[0], (tuple, list)):
         size = size[0]
     output = execute(
-        "rand_ext",
+        "rand",
         size,
-        seed,
-        offset,
+        generator,
         dtype,
         device=device,
-        requires_grad=requires_grad,
-        user_created=True,
     )
     if out is None:
         return output
@@ -156,17 +145,13 @@ def rand_like(
 
     if dtype is None:
         dtype = input.dtype
-    seed, offset = default_generator._step(  # pylint: disable=protected-access
-        generator_step_
-    )
+
     return execute(
-        "rand_like_ext",
+        "rand_like",
         input,
-        seed,
-        offset,
+        default_generator,
         dtype,
         device=device,
-        requires_grad=requires_grad,
     )
 
 
@@ -197,10 +182,11 @@ def randint(
     output = execute(
         "randint",
         low, high, size,
-        dtype,
         generator,
+        dtype,
         device=device,
     )
+
     if out is None:
         return output
     out.data = output
@@ -228,11 +214,12 @@ def randint_like(
 
     if dtype is None:
         dtype = input.dtype
+
     seed, offset = default_generator._step(  # pylint: disable=protected-access
         generator_step_
     )
     return execute(
-        "randint_like_ext",
+        "randint_like",
         input,
         low,
         high,
@@ -240,7 +227,6 @@ def randint_like(
         offset,
         dtype,
         device=device,
-        requires_grad=requires_grad,
     )
 
 
@@ -264,18 +250,15 @@ def randn(
         dtype = get_default_dtype()
     if not generator:
         generator = default_generator
-    seed, offset = generator._step(generator_step_)  # pylint: disable=protected-access
+
     if size and isinstance(size[0], (tuple, list)):
         size = size[0]
     output = execute(
         "randn",
         size,
-        seed,
-        offset,
+        generator,
         dtype,
         device=device,
-        requires_grad=requires_grad,
-        user_created=True,
     )
     if out is None:
         return output
@@ -300,17 +283,12 @@ def randn_like(
 
     if dtype is None:
         dtype = input.dtype
-    seed, offset = default_generator._step(  # pylint: disable=protected-access
-        generator_step_
-    )
     return execute(
-        "rand_like_ext",
+        "rand_like",
         input,
-        seed,
-        offset,
+        default_generator,
         dtype,
         device=device,
-        requires_grad=requires_grad,
     )
 
 
@@ -333,15 +311,12 @@ def randperm(
 
     if not generator:
         generator = default_generator
-    seed, offset = generator._step(generator_step_)  # pylint: disable=protected-access
     output = execute(
-        "randperm_ext",
+        "randperm",
         n,
-        seed,
-        offset,
+        generator,
         dtype,
         device=device,
-        requires_grad=requires_grad,
     )
     if out is None:
         return output

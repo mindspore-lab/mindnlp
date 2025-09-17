@@ -78,7 +78,7 @@ def _register_parameter_or_buffer(module, name, X):
 
 
 def _maybe_set(dest: Tensor, src: Tensor) -> None:
-    dest.assign_value(src)  # type: ignore[call-overload]
+    dest.copy_(src)  # type: ignore[call-overload]
 
 
 class ParametrizationList(ModuleList):

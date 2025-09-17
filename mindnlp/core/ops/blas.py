@@ -22,7 +22,7 @@ def baddbmm(input, batch1, batch2, *, beta=1, alpha=1):
 
 # bmm
 def bmm(input, other):
-    return execute('bmm_ext', input, other)
+    return execute('bmm', input, other)
 
 # chain_matmul
 
@@ -61,7 +61,7 @@ def dot(input, other):
 
 # matmul
 def matmul(input, other):
-    return execute('matmul_ext', input, other)
+    return execute('matmul', input, other)
 
 # matrix_power
 

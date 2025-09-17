@@ -28,7 +28,7 @@ def arrcos(input):
 
 # acosh
 def acosh(input):
-    return execute("acosh_ext", input)
+    return execute("acosh", input)
 
 
 # arccosh
@@ -38,19 +38,16 @@ def arccosh(input):
 
 # add
 def add(input, other, *, alpha=1):
-    if alpha != 1:
-        return execute("add_ext", input, other, alpha)
-    return execute('add', input, other)
-
+    return execute("add", input, other, alpha)
 
 # addcdiv
 def addcdiv(input, tensor1, tensor2, *, value=1):
-    return execute("addcdiv_ext", input, tensor1, tensor2, value)
+    return execute("addcdiv", input, tensor1, tensor2, value)
 
 
 # addcmul
 def addcmul(input, tensor1, tensor2, *, value=1):
-    return execute("addcmul_ext", input, tensor1, tensor2, value)
+    return execute("addcmul", input, tensor1, tensor2, value)
 
 
 # angle
@@ -60,7 +57,7 @@ def angle(input):
 
 # asin
 def asin(input):
-    return execute("asin_ext", input)
+    return execute("asin", input)
 
 
 # arcsin
@@ -70,7 +67,7 @@ def arcsin(input):
 
 # asinh
 def asinh(input):
-    return execute("asinh_ext", input)
+    return execute("asinh", input)
 
 
 # arcsinh
@@ -80,7 +77,7 @@ def arcsinh(input):
 
 # atan
 def atan(input):
-    return execute("atan_ext", input)
+    return execute("atan", input)
 
 
 # arctan
@@ -100,7 +97,7 @@ def arctanh(input):
 
 # atan2
 def atan2(input, other):
-    return execute("atan2_ext", input, other)
+    return execute("atan2", input, other)
 
 
 # arctan2
@@ -154,6 +151,13 @@ def clamp(input, min=None, max=None):
     if isinstance(min, numbers.Number) or isinstance(max, numbers.Number):
         return execute("clamp_scalar", input, min, max)
     return execute("clamp_tensor", input, min, max)
+
+def clamp_min(self, min):
+    return clamp(self, min, None)
+
+
+def clamp_max(self, max):
+    return clamp(self, None, max)
 
 
 # clip
@@ -457,8 +461,8 @@ def remainder(input, other):
 
 
 # round
-def round(input):
-    return execute("round", input)
+def round(input, *, decimals=0):
+    return execute("round", input, decimals)
 
 
 # rsqrt
@@ -521,10 +525,7 @@ def sub(input, other, *, alpha=1, out=None):
         device = other.device
     else:
         device = input.device
-    if device == 'cpu':
-        output = execute("sub", input, alpha * other)
-    else:
-        output = execute("sub_ext", input, other, alpha)
+    output = execute("sub", input, other, alpha)
     if out is None:
         return output
     out.copy_(output)
@@ -571,9 +572,7 @@ def relu(input):
 
 
 def log_softmax(input, dim=None, dtype=None):
-    if input.device.type == 'cpu':
-        return execute('log_softmax', input, dim)
-    return execute('log_softmax_ext', input, dim, dtype)
+    return execute('log_softmax', input, dim, dtype)
 
 
 __all__ = [
@@ -604,6 +603,8 @@ __all__ = [
     "bitwise_right_shift",
     "ceil",
     "clamp",
+    "clamp_min",
+    "clamp_max",
     "clip",
     "cos",
     "cosh",

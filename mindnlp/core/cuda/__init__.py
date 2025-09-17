@@ -6,13 +6,20 @@ from mindspore.runtime import memory_reserved as ms_memory_reserved, \
     memory_allocated as ms_memory_allocated, StreamCtx as StreamContext, Stream, empty_cache, \
     reset_peak_memory_stats, reset_max_memory_allocated, max_memory_allocated, synchronize, \
     current_stream
-from mindspore.device_context.gpu import device_count 
+from mindspore.device_context.gpu import device_count as ms_device_count
 
 from mindnlp import core
 
 FloatTensor = core.FloatTensor
 HalfTensor = core.FloatTensor
 BFloat16Tensor = core.BFloat16Tensor
+
+def device_count():
+    if not is_available():
+        return 0
+    # if GlobalComm.INITED:
+    #     return get_group_size()
+    return ms_device_count()
 
 def manual_seed_all(seed: int):
     manual_seed(seed)

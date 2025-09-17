@@ -12,12 +12,7 @@ def inplace_copy(self, other):
     return self
 
 def inplace_zero(input):
-    if input.device.type == 'npu':
-        execute('inplace_zero', input)
-    elif input.device.type == 'meta':
-        pass
-    else:
-        input.data = core.zeros_like(input)
+    execute('inplace_zero', input)
     return input
 
 def inplace_fill(input, value):
@@ -25,6 +20,7 @@ def inplace_fill(input, value):
         execute('inplace_fill_scalar', input, value)
     else:
         execute('inplace_fill_tensor', input, value)
+
     return input
 
 def inplace_normal(input, mean=0, std=1, *, generator=None):
@@ -37,7 +33,6 @@ def inplace_normal(input, mean=0, std=1, *, generator=None):
         std = std.item()
 
     execute('inplace_normal', input, mean, std, generator, device=input.device)
-
     return input
 
 # uniform_
@@ -62,22 +57,32 @@ def inplace_uniform(input, *args, **kwargs):
         generator_ = default_generator
 
     execute("inplace_uniform", input, from_, to_, generator_)
+
     return input
 
 def inplace_add(input, other, alpha):
     if isinstance(other, numbers.Number):
         other = core.tensor(other, dtype=input.dtype, device=input.device)
-    execute('inplace_add_ext', input, other, alpha)
+    execute('inplace_add', input, other, alpha)
     return input
+
 
 def inplace_random(self, from_=0, to=None, *, generator=None):
     if not generator:
         generator = default_generator
-    seed, offset = generator._step(  # pylint: disable=protected-access
-        generator_step_)
-    execute('inplace_random', self, from_, to, seed, offset, device=self.device)
+    execute('inplace_random', self, from_, to, generator, device=self.device)
+
     return self
 
+def inplace_exponential(self, lambd, generator):
+    if not generator:
+        generator = default_generator
+    execute('inplace_exponential', self, lambd, generator, device=self.device)
+    return self
+
+def inplace_fill_diagonal(input, value, wrap):
+    execute("inplace_fill_diagonal", input, value, wrap)
+    return input
 
 __all__ = [
     'inplace_copy',
@@ -86,5 +91,7 @@ __all__ = [
     'inplace_fill',
     'inplace_uniform',
     'inplace_add',
-    'inplace_random'
+    'inplace_random',
+    'inplace_exponential',
+    'inplace_fill_diagonal'
 ]

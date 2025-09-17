@@ -8,7 +8,6 @@ import mindspore
 from mindnlp import core
 from mindnlp.core.executor import execute
 from .other import broadcast_tensors, broadcast_to
-from ..configs import ON_ORANGE_PI
 
 
 def t(input):
@@ -74,8 +73,6 @@ def chunk(input, chunks, dim=0):
 
 # gather
 def gather(input, dim, index):
-    if ON_ORANGE_PI:
-        return torch_gather(input, index, dim)
     return execute("gather_d", input, dim, index)
 
 def torch_gather(x, indices, axis=1):
@@ -131,7 +128,9 @@ def index_add(input, dim, index, source, *, alpha=1):
 
 # index_select
 def index_select(input, dim, index):
-    return execute("index_select", input, dim, index)
+    if input.device.type in ['npu', 'meta']:
+        return execute("index_select", input, dim, index)
+    return execute("gather", input, index, dim, 0)
 
 # masked_select
 def masked_select(input, mask):
@@ -167,15 +166,69 @@ def movedim(x, source, destination):
         >>> print(output.shape)
         (4, 3, 5)
     """
-    ndim = x.ndim
-    if len(source) != len(destination):
-        raise ValueError(
-            f"For `source` and `destination` arguments, the number of elements must be the same, but got 'source':"
-            f" {len(source)} and 'destination': {len(destination)}.")
-    perm = _get_moved_perm(ndim, source, destination)
-    return permute(x, perm)
+    return movedim(x, source, destination)
 
 # moveaxis
+def moveaxis(a, source, destination):
+    """Raises ValueError if source, destination not in (-ndim(a), ndim(a))."""
+    if not source and not destination:
+        return a
+
+    if isinstance(source, int):
+        source = (source,)
+    if isinstance(destination, int):
+        destination = (destination,)
+    if len(source) != len(destination):
+        raise ValueError('The lengths of source and destination must equal')
+
+    a_rank = a.ndim
+
+    def _correct_axis(axis, rank):
+        if axis < 0:
+            return axis + rank
+        return axis
+
+    source = tuple(_correct_axis(axis, a_rank) for axis in source)
+    destination = tuple(_correct_axis(axis, a_rank) for axis in destination)
+
+    if a.ndim is not None:
+        perm = [i for i in range(a_rank) if i not in source]
+        for dest, src in sorted(zip(destination, source)):
+            assert dest <= len(perm)
+            perm.insert(dest, src)
+    else:
+        r = core.range(0, a_rank, 1)
+
+        def _remove_indices(a, b):
+            """Remove indices (`b`) from `a`."""
+            items = core.unbind(
+                core.sort(core.stack(b))
+            )
+
+            i = 0
+            result = []
+
+            for item in items:
+                result.append(a[i:item])
+                i = item + 1
+
+            result.append(a[i:])
+
+            return core.concat(result, 0)
+
+        minus_sources = _remove_indices(r, source)
+        minus_dest = _remove_indices(r, destination)
+
+        perm = execute('scatter_nd', 
+            core.unsqueeze(minus_dest, 1), minus_sources, [a_rank]
+        )
+        perm = execute('tensor_scatter_update',
+            perm, core.unsqueeze(destination, 1), source
+        )
+    a = core.permute(a, tuple(perm))
+
+    return a
+
 def _get_moved_perm(ndim, source, destination):
     """
     Helper function for movedim, returns permutation after moving axis
@@ -203,6 +256,7 @@ def _get_moved_perm(ndim, source, destination):
 # narrow
 def narrow(input, dim, start, length):
     length = length.item() if not isinstance(length, int) else length
+    start = start.item() if not isinstance(start, int) else start
     return execute("narrow", input, dim, start, length)
 
 
@@ -219,7 +273,7 @@ def nonzero(input, *, as_tuple=False):
 # permute
 def permute(input, dims):
     assert isinstance(dims, tuple)
-    return execute("transpose_view", input, dims)
+    return execute("permute", input, dims)
 
 
 # reshape
@@ -305,8 +359,6 @@ def squeeze(input, dim=None):
 
 
 def stack(tensors, dim=0):
-    if tensors[0].device.type == "npu":
-        return execute("stack_ext", tensors, dim)
     return execute("stack", tensors, dim)
 
 
@@ -373,6 +425,7 @@ def _take_along_dim_helper(self, indices, dim):
 
 # take_along_dim
 def take_along_dim(input, indices, dim=None, *, out=None):
+    input = input.clone() # input wiil be modified on CPU
     if dim:
         self_broadcasted, indices_broadcasted, dim = _take_along_dim_helper(input, indices, dim)
         return gather(self_broadcasted, dim, indices_broadcasted)
@@ -400,17 +453,23 @@ def tensor_split(input, indices_or_sections, dim=0):
 def tile(input, dims):
     if isinstance(dims[0], (tuple, list)):
         dims = dims[0]
-    return execute("tile", input, tuple(dims))
+
+    new_dims = ()
+    for d in dims:
+        if not isinstance(d, int):
+            d = d.item()
+        new_dims += (d,)
+    return execute("tile", input, tuple(new_dims))
 
 
 # transpose
 def transpose(input, dim0, dim1):
-    return execute("transpose_ext_view", input, dim0, dim1)
+    return execute("transpose_view", input, dim0, dim1)
 
 
 # unbind
 def unbind(input, dim=0):
-    return execute("unstack_ext_view", input, dim)
+    return execute("unstack_view", input, dim)
 
 
 # unravel_index
@@ -418,7 +477,7 @@ def unbind(input, dim=0):
 
 # unsqueeze
 def unsqueeze(input, dim):
-    return execute("expand_dims_view", input, dim)
+    return execute("expand_dims", input, dim)
 
 
 # vsplit
@@ -430,9 +489,6 @@ def unsqueeze(input, dim):
 def where(condition, input=None, other=None):
     if input is None and other is None:
         return nonzero(condition, as_tuple=True)
-    if ON_ORANGE_PI:
-        out = condition * input + (~condition) * other
-        return out
     return execute("select", condition, input, other)
 
 
@@ -469,7 +525,7 @@ def _do_slice(self, dim: int, index: slice, self_shape: list):
     end = _get_index(index.stop, self_shape[dim])
     if start == 0 and end == self_shape[dim] and step == 1:
         return self
-    return execute('slice_ext', self, dim, start, end, step)
+    return execute('slice', self, dim, start, end, step)
 
 def _wrap_index_to_tuple(index):
     """Wrap index to tuple"""
@@ -494,7 +550,7 @@ def _count_indexed_dims(indexes):
             count += 1
     return count
 
-def _record_tensor_index(index, remain_indexes, dim):
+def _record_tensor_index(index, remain_indexes, dim, device):
     """Record indexes remained to be used by aclnnIndex/aclnnIndexPut"""
     if len(remain_indexes) > dim:
         remain_indexes[dim] = index
@@ -502,7 +558,10 @@ def _record_tensor_index(index, remain_indexes, dim):
 
     while dim > len(remain_indexes):
         # use empty_tensor with dim_num 9 to indicate unused dim
-        remain_indexes.append(empty_tensor_9d)
+        if device.type == 'npu':
+            remain_indexes.append(empty_tensor_9d)
+        else:
+            remain_indexes.append(slice(None, None, None))
 
     remain_indexes.append(index)
     return remain_indexes
@@ -513,7 +572,7 @@ def _process_dim_in_multi_dim_index(prev_result, orig_tensor, index, dim, indexe
     if isinstance(index, bool):
         result = unsqueeze(prev_result, dim)
         index_for_bool = tensor_1d if index else empty_tensor_1d
-        _record_tensor_index(index_for_bool, remain_indexes, dim)
+        _record_tensor_index(index_for_bool, remain_indexes, dim, prev_result.device)
         prev_shape.insert(dim, 1)
         dim += 1
         return result, dim, remain_indexes, prev_shape
@@ -544,11 +603,11 @@ def _process_dim_in_multi_dim_index(prev_result, orig_tensor, index, dim, indexe
             # process index with Tensor bool type
             result = unsqueeze(prev_result, dim)
             index_for_bool = tensor_1d if index else empty_tensor_1d
-            _record_tensor_index(index_for_bool, remain_indexes, dim)
+            _record_tensor_index(index_for_bool, remain_indexes, dim, prev_result.device)
             prev_shape.insert(dim, 1)
             dim += 1
             return result, dim, remain_indexes, prev_shape
-        _record_tensor_index(index, remain_indexes, dim)
+        _record_tensor_index(index, remain_indexes, dim, prev_result.device)
         dim += 1
         return result, dim, remain_indexes, prev_shape
     raise IndexError(f"Invalid tensor index type {index}")
@@ -597,7 +656,11 @@ def tensor_getitem(self, index):
     self_viewed, remain_indexes = _process_multi_dim_index(self, indexes, remain_indexes, indexed_dims)
     if not remain_indexes:
         return self_viewed
-    return execute('index', self_viewed, remain_indexes)
+
+    if self.device.type == 'npu':
+        return execute('index', self_viewed, remain_indexes)
+
+    return getitem(self_viewed, tuple(remain_indexes) if len(remain_indexes) > 1 else remain_indexes[0])
 
 
 def tensor_setitem(self, index, value):
@@ -634,7 +697,11 @@ def tensor_setitem(self, index, value):
     if not remain_indexes:
         execute('inplace_copy', self_viewed, value)
         return self
-    execute('inplace_index_put', self_viewed, remain_indexes, value, False) # accumulate=False
+    
+    if self.device.type == 'npu':
+        execute('inplace_index_put', self_viewed, remain_indexes, value, False) # accumulate=False
+    else:
+        setitem(self_viewed, tuple(remain_indexes) if len(remain_indexes) > 1 else remain_indexes[0], value)
     return self
 
 _SLICE_ERROR = (
@@ -642,13 +709,15 @@ _SLICE_ERROR = (
     'newaxis (`None`) and integer or boolean arrays are valid indices'
 )
 
+
 def _as_index(idx, need_scalar=True):
     """Helper function to parse idx as an index.
     """
     if isinstance(idx, numbers.Integral):
         return idx, True
 
-    idx = core.tensor(idx)
+    if not isinstance(idx, core.Tensor):
+        idx = core.tensor(idx, dtype=core.int64)
     if need_scalar and idx.ndim not in (None, 0):
         raise IndexError(_SLICE_ERROR + ', got {!r}'.format(idx))
 
@@ -675,66 +744,6 @@ def cumprod(x, axis=0, exclusive=False, reverse=False):
         result = np.flip(result, axis=axis)
 
     return result
-
-def moveaxis(a, source, destination):
-    """Raises ValueError if source, destination not in (-ndim(a), ndim(a))."""
-    if not source and not destination:
-        return a
-
-    if isinstance(source, int):
-        source = (source,)
-    if isinstance(destination, int):
-        destination = (destination,)
-    if len(source) != len(destination):
-        raise ValueError('The lengths of source and destination must equal')
-
-    a_rank = a.ndim
-
-    def _correct_axis(axis, rank):
-        if axis < 0:
-            return axis + rank
-        return axis
-
-    source = tuple(_correct_axis(axis, a_rank) for axis in source)
-    destination = tuple(_correct_axis(axis, a_rank) for axis in destination)
-
-    if a.ndim is not None:
-        perm = [i for i in range(a_rank) if i not in source]
-        for dest, src in sorted(zip(destination, source)):
-            assert dest <= len(perm)
-            perm.insert(dest, src)
-    else:
-        r = core.range(0, a_rank, 1)
-
-        def _remove_indices(a, b):
-            """Remove indices (`b`) from `a`."""
-            items = core.unbind(
-                core.sort(core.stack(b))
-            )
-
-            i = 0
-            result = []
-
-            for item in items:
-                result.append(a[i:item])
-                i = item + 1
-
-            result.append(a[i:])
-
-            return core.concat(result, 0)
-
-        minus_sources = _remove_indices(r, source)
-        minus_dest = _remove_indices(r, destination)
-
-        perm = execute('scatter_nd', 
-            core.unsqueeze(minus_dest, 1), minus_sources, [a_rank]
-        )
-        perm = execute('tensor_scatter_update',
-            perm, core.unsqueeze(destination, 1), source
-        )
-    a = core.permute(a, tuple(perm))
-
-    return a
 
 def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
     """Helper function for __getitem__ and _with_index_update_helper.
@@ -788,6 +797,8 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
                 advanced_indices.append((index, s, ellipsis_mask != 0))
 
     if do_update and not advanced_indices:
+        if 0 in updates.shape:
+            return tensor
         return strided_slice_update(
             tensor,
             begin,
@@ -854,7 +865,7 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
             # only in this case the result dimensions of advanced indexing are in
             # the middle of `updates`. In the non-contiguous case, those dimensions
             # are always at the front.
-            if dims_contiguous:
+            if dims_contiguous and updates.ndim > 1:
                 batch_size = stacked_indices.ndim - 1
                 batch_start = dims[0]
                 if batch_start < 0:
@@ -866,6 +877,7 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
                 updates = moveaxis(
                     updates, range_(batch_start, batch_size), range(batch_size)
                 )
+            updates = updates.broadcast_to(stacked_indices.shape[:-1] + tensor.shape[stacked_indices.shape[-1]:])
             tensor = execute('tensor_scatter_update', tensor, stacked_indices, updates)
             if range(len(dims)) != dims:
                 tensor = moveaxis(tensor, range(len(dims)), dims)
@@ -909,7 +921,7 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
         flat_shape = shape_tensor[:axis] + (-1,) + shape_tensor[axis + len(dims) :]
         tensor = tensor.reshape(flat_shape)
 
-    return execute('gather', tensor, stacked_indices, axis)
+    return execute('gather', tensor, stacked_indices, axis, 0)
 
 def _as_spec_tuple(slice_spec):
     """Convert slice_spec to tuple."""
@@ -930,8 +942,10 @@ def getitem(self, slice_spec):
             isinstance(slice_spec, core.Tensor)
             and slice_spec.dtype == core.bool
         )
-    ):
-        return masked_select(self, slice_spec)
+    ):  
+        if self.shape == slice_spec.shape:
+            return masked_select(self, slice_spec)
+        slice_spec = nonzero(slice_spec, as_tuple=True)
 
     if not isinstance(slice_spec, tuple):
         slice_spec = _as_spec_tuple(slice_spec)
@@ -948,7 +962,10 @@ def setitem(a, slice_spec, updates):
             and slice_spec.dtype == core.bool
         )
     ):
-        slice_spec = nonzero(slice_spec)
+        if slice_spec.shape == a.shape and isinstance(updates, numbers.Number):
+            a.masked_fill_(slice_spec, updates)
+            return a
+        slice_spec = nonzero(slice_spec, as_tuple=True)
 
     if not isinstance(slice_spec, tuple):
         slice_spec = _as_spec_tuple(slice_spec)
@@ -963,9 +980,12 @@ def strided_slice_update(input, begin, end, strides, update, begin_mask=0, end_m
     sliced_tensor = execute('strided_slice', input, begin, end, strides, begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask)
     if update.shape != sliced_tensor.shape:
         update = update.broadcast_to(sliced_tensor.shape)
-        update = update - sliced_tensor
+    update = update - sliced_tensor
     updated_tensor = execute('strided_slice_grad', input, begin, end, strides, update, begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask)
-    input.data = input + updated_tensor
+    out = input + updated_tensor
+    if input.dtype == core.bool:
+        out = out.astype(core.bool)
+    input.copy_(out)
     return input
 
 def getitem_np(input, slice):

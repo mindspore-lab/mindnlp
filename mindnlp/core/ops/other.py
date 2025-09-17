@@ -1,10 +1,9 @@
 """other op"""
 import numpy as np
 import mindspore
-from mindspore.ops import gather
 from mindnlp import core
 from mindnlp.core.executor import execute
-from ..configs import ON_A1
+from ..configs import ON_A2
 
 # atleast_2d
 
@@ -14,7 +13,7 @@ from ..configs import ON_A1
 
 # bincount
 def bincount(input, weights=None, minlength=0):
-    return execute('bincount_ext', input, weights, minlength)
+    return execute('bincount', input, weights, minlength)
 
 # block_diag
 
@@ -28,7 +27,12 @@ def broadcast_tensors(*tensors):
 
 # broadcast_to
 def broadcast_to(input, shape):
-    return execute('broadcast_to', input, shape)
+    new_shape = ()
+    for s in shape:
+        if not isinstance(s, int):
+            s = s.item()
+        new_shape += (s,)
+    return execute('broadcast_to', input, new_shape)
 
 
 # broadcast_shapes
@@ -74,9 +78,7 @@ def cdist(x1, x2, p=2.0, compute_mode="use_mm_for_euclid_dist_if_necessary"):
 
 # clone
 def clone(input, *, memory_format=core.preserve_format):
-    if input.device.type == 'npu':
-        return execute('clone', input)
-    return execute('identity', input)
+    return execute('clone', input)
 
 
 # combinations
@@ -100,14 +102,14 @@ def clone(input, *, memory_format=core.preserve_format):
 def cumsum(input, dim=None, dtype=None, **kwargs):
     dim = kwargs.pop('axis', dim)
     if input.dtype in [core.int64, core.bool]:
-        return execute('cumsum_ext', input.int(), dim, None).long()
+        return execute('cumsum', input.int(), dim, None).long()
     if dtype is not None and dtype == core.int64:
-        return execute('cumsum_ext', input, dim, None).long()
-    return execute('cumsum_ext', input, dim, dtype)
+        return execute('cumsum', input, dim, None).long()
+    return execute('cumsum', input, dim, dtype)
 
 # diag
 def diag(input, diagonal=0, *, out=None):
-    return execute('diag_ext', input, diagonal)
+    return execute('diag', input, diagonal)
 
 # diag_embed
 
@@ -548,7 +550,7 @@ def einsum(equation, *operands):
     You can use this operator to perform diagonal, reducesum, transpose, matmul, mul, inner product operations, etc.
 
     Note:
-        The sublist format is also supported. For example, einsum_ext(op1, sublist1, op2, sublist2, ..., sublist_out).
+        The sublist format is also supported. For example, einsum(op1, sublist1, op2, sublist2, ..., sublist_out).
         In this format, equation can be derived by the sublists which are made up of Python's Ellipsis and list of
         integers in [0, 52). Each operand is followed by a sublist and an output sublist is at the end.
         Dynamic shape, dynamic rank input is not supported in `graph mode (mode=mindspore.GRAPH_MODE)
@@ -585,50 +587,50 @@ def einsum(equation, *operands):
         >>> from mindspore import Tensor, ops
         >>> x = Tensor(np.array([1.0, 2.0, 4.0]), mindspore.float32)
         >>> equation = "i->"
-        >>> output = ops.einsum_ext(equation, x)
+        >>> output = ops.einsum(equation, x)
         >>> print(output)
         7.0
         >>> x = Tensor(np.array([1.0, 2.0, 4.0]), mindspore.float32)
         >>> y = Tensor(np.array([2.0, 4.0, 3.0]), mindspore.float32)
         >>> equation = "i,i->i"
-        >>> output = ops.einsum_ext(equation, x, y)
+        >>> output = ops.einsum(equation, x, y)
         >>> print(output)
         [ 2. 8. 12.]
         >>> x = Tensor(np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]), mindspore.float32)
         >>> y = Tensor(np.array([[2.0, 3.0], [1.0, 2.0], [4.0, 5.0]]), mindspore.float32)
         >>> equation = "ij,jk->ik"
-        >>> output = ops.einsum_ext(equation, x, y)
+        >>> output = ops.einsum(equation, x, y)
         >>> print(output)
         [[16. 22.]
          [37. 52.]]
         >>> x = Tensor(np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]), mindspore.float32)
         >>> equation = "ij->ji"
-        >>> output = ops.einsum_ext(equation, x)
+        >>> output = ops.einsum(equation, x)
         >>> print(output)
         [[1. 4.]
          [2. 5.]
          [3. 6.]]
         >>> x = Tensor(np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]), mindspore.float32)
         >>> equation = "ij->j"
-        >>> output = ops.einsum_ext(equation, x)
+        >>> output = ops.einsum(equation, x)
         >>> print(output)
         [5. 7. 9.]
         >>> x = Tensor(np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]), mindspore.float32)
         >>> equation = "...->"
-        >>> output = ops.einsum_ext(equation, x)
+        >>> output = ops.einsum(equation, x)
         >>> print(output)
         21.0
         >>> x = Tensor(np.array([1.0, 2.0, 3.0]), mindspore.float32)
         >>> y = Tensor(np.array([2.0, 4.0, 1.0]), mindspore.float32)
         >>> equation = "j,i->ji"
-        >>> output = ops.einsum_ext(equation, x, y)
+        >>> output = ops.einsum(equation, x, y)
         >>> print(output)
         [[ 2. 4. 1.]
          [ 4. 8. 2.]
          [ 6. 12. 3.]]
         >>> x = mindspore.Tensor([1, 2, 3, 4], mindspore.float32)
         >>> y = mindspore.Tensor([1, 2], mindspore.float32)
-        >>> output = ops.einsum_ext(x, [..., 1], y, [..., 2], [..., 1, 2])
+        >>> output = ops.einsum(x, [..., 1], y, [..., 2], [..., 1, 2])
         >>> print(output)
         [[1. 2.]
          [2. 4.]
@@ -637,7 +639,7 @@ def einsum(equation, *operands):
     """
     if isinstance(operands[0], (list, tuple)):
         operands = operands[0]
-    if operands[0].device.type != 'npu':
+    if operands[0].device.type == 'cuda':
         return execute('einsum', equation, operands)
     _equation, _operands = _einsum_convert_sublist(equation, *operands)
     _einsum_check_inputargs(_equation, _operands)
@@ -645,12 +647,7 @@ def einsum(equation, *operands):
 
 # flatten
 def flatten(input, start_dim=0, end_dim=-1):
-    if input.device.type == 'cpu':
-        if end_dim < 0:
-            end_dim = input.ndim + end_dim
-        new_shape = input.shape[:start_dim] + (-1,) + input.shape[end_dim + 1:]
-        return input.reshape(new_shape)
-    return execute('flatten_ext', input, start_dim, end_dim)
+    return execute('flatten', input, start_dim, end_dim)
 
 
 # flip
@@ -704,57 +701,139 @@ def ravel(input):
 
 
 # repeat_interleave
-def repeat_interleave(input, repeats, dim=None, *, output_size=None):
-    if input.device.type == 'npu' and ON_A1:
+def efficient_repeat_interleave(input_tensor, repeats, dim=None):
+    """
+    高效实现 core.repeat_interleave 的功能，支持 repeats 为 int 或 list/tensor。
+    
+    参数:
+        input_tensor (Tensor): 输入张量。
+        repeats (int 或 list 或 Tensor): 每个元素的重复次数。
+        dim (int, optional): 沿着哪个维度进行重复。如果为None，则先将输入张量展平。
+    
+    返回:
+        Tensor: 重复后的张量。
+    """
+    if dim is None:
+        input_tensor = input_tensor.flatten()
+        dim = 0
 
-        if isinstance(repeats, core.Tensor):
-            repeats = repeats.tolist()
-        if not isinstance(repeats, (tuple, list)):
-            repeats = (repeats,)
-        for index, element in enumerate(repeats):
-            if not isinstance(element, int):
-                raise TypeError(f"For 'Tensor.repeat', each element in {repeats} should be int, but got "
-                                f"{type(element)} at index {index}.")
-        if dim is None:
-            input = input.ravel()
-            dim = 0
+    # 确保 dim 是有效的维度
+    if dim < 0:
+        dim += input_tensor.dim()
 
-        dim = dim + input.ndim if dim < 0 else dim
-
-
-        if sum(repeats) == 0:
-            out_shape = list(input.shape)
-            out_shape[dim] = 0
-            return core.Tensor(shape=tuple(out_shape), dtype=input.dtype)
-
-        if len(repeats) == 1:
-            repeats = repeats[0]
-            if input.dtype == mindspore.bool_:
-                input = input.to(mindspore.int32)
-                out = execute('repeat_elements', input, repeats, dim)
-                return out.to(mindspore.bool_)
-            return execute('repeat_elements', input, repeats, dim)
-        size = input.shape[dim]
-        if len(repeats) != size:
-            raise ValueError(f"For 'Tensor.repeat', the length of 'repeats' must be the same as the shape of the "
-                                f"original tensor in the 'axis' dimension, but got the length of 'repeats' "
-                                f"{len(repeats)}, the shape of the original tensor in the 'axis' dimension {size}.")
-        subs = core.split(input, 1, dim)
-        repeated_subs = []
-        for sub, rep in zip(subs, repeats):
-            if rep != 0:
-                repeated_subs.append(execute('repeat_elements', sub, rep, dim))
-        return core.concat(repeated_subs, dim)
-
+    # 将 repeats 统一转换为 LongTensor 并确保其在正确的设备上
     if isinstance(repeats, int):
-        return execute('repeat_interleave_int', input, repeats, dim, None)
-    return execute('repeat_interleave_tensor', input, repeats, dim, None)
+        repeats_tensor = core.tensor([repeats], device=input_tensor.device, dtype=core.long)
+        uniform_repeat = True
+    elif isinstance(repeats, (list, tuple)):
+        repeats_tensor = core.tensor(repeats, device=input_tensor.device, dtype=core.long)
+        uniform_repeat = False
+    elif isinstance(repeats, core.Tensor):
+        repeats_tensor = repeats.to(device=input_tensor.device, dtype=core.long)
+        uniform_repeat = False
+    else:
+        raise TypeError("repeats must be an int, a list, or a core.Tensor")
+
+    # 获取输入张量在目标维度上的大小
+    dim_size = input_tensor.size(dim)
+    
+    if uniform_repeat:
+        # ✅ 优化路径：当所有元素重复次数相同时，使用 expand 和 reshape 避免循环
+        # 此方法利用广播机制，非常高效
+        unsqueezed_tensor = input_tensor.unsqueeze(dim + 1)
+        expanded_shape = list(input_tensor.shape)
+        expanded_shape[dim] = -1
+        expanded_shape.insert(dim + 1, repeats_tensor.item())
+        expanded_tensor = unsqueezed_tensor.expand(*expanded_shape)
+        
+        final_shape = list(input_tensor.shape)
+        final_shape[dim] *= repeats_tensor.item()
+        output = expanded_tensor.reshape(*final_shape)
+    else:
+        # 🔄 当重复次数不同时，需要构建索引
+        # 检查 repeats_tensor 的长度是否与目标维度的长度匹配
+        if len(repeats_tensor) != dim_size:
+            raise ValueError(f"repeats must have length {dim_size} along dimension {dim}, but got {len(repeats_tensor)}")
+        
+        # 生成索引：例如 repeats_tensor = [2, 3, 1] -> index = [0, 0, 1, 1, 1, 2]
+        # 使用 cumsum 计算总重复次数以预分配空间
+        total_repeats = repeats_tensor.sum().item()
+        index = core.zeros(total_repeats, dtype=core.long, device=input_tensor.device)
+        
+        # 计算每个块的起始位置
+        # start_positions = core.cat([core.tensor([0], device=input_tensor.device), core.cumsum(repeats_tensor, dim=0)[:-1]])
+        
+        # 使用 scatter 或高级索引填充（这里用循环填充，但可考虑更底层的优化）
+        # 注意：对于非常大的非均匀重复，此部分可能成为瓶颈
+        current_pos = 0
+        for i in range(dim_size):
+            repeat_count = repeats_tensor[i].item()
+            index[current_pos:current_pos + repeat_count] = i
+            current_pos += repeat_count
+
+        output = input_tensor.index_select(dim, index)
+
+    return output
+
+def repeat_interleave(input, repeats, dim=None, *, output_size=None):
+    if input.device.type == 'npu' and ON_A2:
+        if isinstance(repeats, int):
+            return execute('repeat_interleave_int', input, repeats, dim, None)
+        return execute('repeat_interleave_tensor', input, repeats, dim, None)
+    return efficient_repeat_interleave(input, repeats, dim)
 
 
 # roll
 def roll(input, shifts, dims=None):
-    return execute('roll', input, shifts, dims)
-
+    if input.device.type == 'npu':
+        return execute('roll', input, shifts, dims)
+    # 处理 dims 为 None 的情况：先展平，操作后再恢复形状[4,6](@ref)
+    if dims is None:
+        original_shape = input.shape
+        flattened = input.flatten()
+        rolled_flattened = roll(flattened, shifts, dims=0)
+        return rolled_flattened.reshape(original_shape)
+    
+    # 确保 shifts 和 dims 为元组以便统一处理[1,6](@ref)
+    if not isinstance(shifts, tuple):
+        shifts = (shifts,)
+    if not isinstance(dims, tuple):
+        dims = (dims,)
+    
+    # 检查 shifts 和 dims 长度是否匹配
+    if len(shifts) != len(dims):
+        raise ValueError("shifts 和 dims 必须具有相同的长度")
+    
+    result = input.clone()  # 创建输入张量的副本以避免修改原张量
+    
+    # 对每个需要移动的维度依次进行处理[2](@ref)
+    for shift, dim in zip(shifts, dims):
+        # 确保维度有效
+        if dim >= result.dim():
+            raise ValueError("维度索引超出张量的维度范围")
+        
+        # 获取该维度的长度
+        dim_size = result.size(dim)
+        # 处理负的 shift 值：正向移动 shift + dim_size 等同于反向移动 dim_size - shift
+        effective_shift = shift % dim_size
+        if effective_shift == 0:
+            continue  # 移动 0 步，无需操作
+        
+        # 沿指定维度切片并重新拼接[1,3](@ref)
+        # 将张量沿该维度分成两部分：[第一部分: 从开始到 (dim_size - effective_shift)], [第二部分: 从 (dim_size - effective_shift) 到结束]
+        # 然后交换这两部分的位置
+        slices_pre = [slice(None)] * result.dim()
+        slices_pre[dim] = slice(dim_size - effective_shift, None)
+        part1 = result[slices_pre]
+        
+        slices_post = [slice(None)] * result.dim()
+        slices_post[dim] = slice(0, dim_size - effective_shift)
+        part2 = result[slices_post]
+        
+        # 沿该维度拼接两部分
+        result = core.concat((part1, part2), dim)
+    
+    return result
 
 # searchsorted
 def searchsorted(
@@ -774,7 +853,7 @@ def searchsorted(
 
 # tril
 def tril(input, diagonal=0):
-    return execute('tril_ext', input, diagonal)
+    return execute('tril', input, diagonal)
 
 
 # tril_indices
@@ -921,6 +1000,8 @@ def contains(self, key):
 def stop_gradient(input):
     return execute('stop_gradient', input)
 
+def detach(input):
+    return stop_gradient(input)
 
 def _get_unfold_indices(input_shape, dimension, size, step):
     if dimension < 0:
@@ -935,7 +1016,7 @@ def _get_unfold_indices(input_shape, dimension, size, step):
 def unfold(input, dimension, size, step):
     _indices, _dimension = _get_unfold_indices(input.shape, dimension, size, step)
     indices = core.tensor(_indices, device=input.device)
-    output = execute('gather', input, indices, _dimension)
+    output = execute('gather', input, indices, _dimension, 0)
     output = core.moveaxis(output, _dimension + 1, -1)
     return output
 
@@ -944,13 +1025,24 @@ def contiguous(input):
     return execute('contiguous', input)
 
 def dyn_shape(input):
-    return execute('dyn_shape', input)
+    return execute('tensor_shape', input)
 
 def cross(input, other, dim=None, *, out=None):
     if dim is None:
         dim = -65530
     return execute('cross', input, other, dim)
 
+def cosine_similarity(x1, x2, dim=1, eps=1e-8):
+    dot_product = core.sum(x1 * x2, dim=dim)
+    
+    # 2. 计算L2范数 (||x|| 和 ||y||)
+    norm_vec1 = core.norm(x1, p=2, dim=dim)
+    norm_vec2 = core.norm(x2, p=2, dim=dim)
+    
+    # 3. 计算余弦相似度: (x · y) / (||x|| * ||y|| + eps)
+    cosine_sim = dot_product / (norm_vec1 * norm_vec2 + eps)
+    
+    return cosine_sim
 
 __all__ = [
     "bincount",
@@ -985,5 +1077,7 @@ __all__ = [
     "diff",
     'view_as_complex',
     'view_as_real',
-    'bucketize'
+    'bucketize',
+    'cosine_similarity',
+    'detach'
 ]

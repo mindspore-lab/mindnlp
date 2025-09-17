@@ -39,6 +39,8 @@ def manual_seed_all(seed: int):
     manual_seed(seed)
 
 def device_count():
+    if not is_available():
+        return 0
     if GlobalComm.INITED:
         return get_group_size()
     return ms_device_count()

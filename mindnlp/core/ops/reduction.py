@@ -9,11 +9,11 @@ min_out = namedtuple('min_out', ['values', 'indices'])
 
 # argmax
 def argmax(input, dim=None, keepdim=False):
-    return execute('argmax_ext', input, dim, keepdim)
+    return execute('argmax', input, dim, keepdim)
 
 # argmin
 def argmin(input, dim=None, keepdim=False):
-    return execute('argmin_ext', input, dim, keepdim)
+    return execute('argmin', input, dim, keepdim)
 
 # amax
 def amax(input, dim, keepdim=False):
@@ -37,6 +37,8 @@ def all(input, dim=None, keepdim=False, *, dtype=None, **kwargs):
 
 # any
 def any(input, dim=None, keepdim=False):
+    if dim is None:
+        dim = ()
     return execute('reduce_any', input, dim, keepdim)
 
 # max
@@ -77,7 +79,7 @@ def logsumexp(input, dim, keepdim=False):
 # mean
 def mean(input, dim=None, keepdim=False, *, dtype=None, **kwargs):
     dim = kwargs.pop('axis', dim)
-    return execute('mean_ext', input, dim, keepdim, dtype)
+    return execute('mean', input, dim, keepdim, dtype)
 
 # nanmean
 
@@ -85,7 +87,7 @@ def mean(input, dim=None, keepdim=False, *, dtype=None, **kwargs):
 # median
 def median(input, dim=-1, keepdim=False):
     if dim is None:
-        return execute('median_ext', input)
+        return execute('median', input)
     return execute('median_dim', input, dim, keepdim)
 
 # nanmedian
@@ -95,7 +97,7 @@ def median(input, dim=-1, keepdim=False):
 
 
 # norm
-def vector_norm_ext(input, p=2, dim=None, keepdim=False, *, dtype=None):
+def vector_norm(input, p=2, dim=None, keepdim=False, *, dtype=None):
     if float(p) in [0.0, 1.0, 2.0, 3.0]:
         return execute('linalg_vector_norm', input, float(p), dim, keepdim, dtype)
     if input.dtype in [core.bfloat16, core.float16, core.float32]:
@@ -107,12 +109,12 @@ def vector_norm_ext(input, p=2, dim=None, keepdim=False, *, dtype=None):
     input = input.to(core.float32)
     return execute('lp_norm_v2', input, p, dim, keepdim, 0.0).to(cast_dtype)
 
-def matrix_norm_ext(A, ord='fro', dim=(-2, -1), keepdim=False, *, dtype=None):
+def matrix_norm(A, ord='fro', dim=(-2, -1), keepdim=False, *, dtype=None):
     ndim = A.ndim
     row_axis, col_axis = _check_matrix_norm_axis(dim, ndim)
     _check_matrix_norm_ord(ord)
     if ord == 'fro':
-        return vector_norm_ext(A, 2, dim, keepdim, dtype=dtype)
+        return vector_norm(A, 2, dim, keepdim, dtype=dtype)
     if ord == 'nuc':
         res = _multi_svd_norm(A, row_axis, col_axis, 'sum')
         return _reshape_matrix_norm(A, res, dim, keepdim)
@@ -127,24 +129,24 @@ def matrix_norm_ext(A, ord='fro', dim=(-2, -1), keepdim=False, *, dtype=None):
     if not keepdim and col_axis > row_axis:
         col_axis -= 1
     if ord < 0:
-        return amin(vector_norm_ext(A, 1, row_axis, keepdim, dtype=dtype), col_axis, keepdim)
-    return amax(vector_norm_ext(A, 1, row_axis, keepdim, dtype=dtype), col_axis, keepdim)
+        return amin(vector_norm(A, 1, row_axis, keepdim, dtype=dtype), col_axis, keepdim)
+    return amax(vector_norm(A, 1, row_axis, keepdim, dtype=dtype), col_axis, keepdim)
 
 def norm(input, p='fro', dim=None, keepdim=False, dtype=None):
     if not isinstance(input, core.Tensor):
-        raise TypeError(f"For `norm_ext`, the `input` must be Tensor!, but get {type(input)}.")
+        raise TypeError(f"For `norm`, the `input` must be Tensor!, but get {type(input)}.")
     if isinstance(p, (bool, int, float)):
-        return vector_norm_ext(input, p, dim, keepdim, dtype=dtype)
+        return vector_norm(input, p, dim, keepdim, dtype=dtype)
     if p == 'fro':
         if isinstance(dim, (list, tuple)) and len(dim) > 2:
-            raise ValueError(f"For `norm_ext`, the size of `dim` cannot be greater than 2 "
+            raise ValueError(f"For `norm`, the size of `dim` cannot be greater than 2 "
                              f"when the norm mode is `fro`.")
         return execute('linalg_vector_norm', input, 2.0, dim, keepdim,
                        dtype if dtype is None else dtype)
     if p == 'nuc':
         dim = tuple(range(input.ndim)) if dim is None else dim
-        return matrix_norm_ext(input, p, dim, keepdim, dtype=dtype)
-    raise ValueError(f"For `norm_ext`, the value of `p` must be one of [int, float, inf, -inf, 'fro', 'nuc',] "
+        return matrix_norm(input, p, dim, keepdim, dtype=dtype)
+    raise ValueError(f"For `norm`, the value of `p` must be one of [int, float, inf, -inf, 'fro', 'nuc',] "
                      f"but got `{p}`.")
 
 # nansum
@@ -153,7 +155,7 @@ def nansum(input, dim=None, keepdim=False, *, dtype=None):
 
 # prod
 def prod(input, dim=None, keepdim=False, *, dtype=None):
-    return execute('prod_ext', input, dim, keepdim, dtype)
+    return execute('prod', input, dim, keepdim, dtype)
 
 # quantile
 
@@ -173,7 +175,7 @@ def sum(input, dim=None, keepdim=False, *, dtype=None, **kwargs):
     dim = kwargs.pop('axis', dim)
     if 0 in input.shape:
         return core.tensor(0, dtype=dtype, device=input.device)
-    return execute('sum_ext', input, dim, keepdim, dtype)
+    return execute('sum', input, dim, keepdim, dtype)
 
 # unique
 def unique(input, sorted=True, return_inverse=False, return_counts=False, dim=None):
@@ -210,7 +212,7 @@ def var_mean(input, dim=None, *, correction=1, keepdim=False):
     return execute('var_mean', input, dim, correction, keepdim)
 
 # count_nonzero
-def count_nonzero(input, dim=None):
+def count_nonzero(input, dim=-1):
     return execute('count_nonzero', input, dim)
 
 __all__ = ['all', 'amax', 'amin', 'aminmax', 'any', 'argmax', 'argmin', 'count_nonzero',

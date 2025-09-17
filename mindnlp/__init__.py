@@ -18,7 +18,6 @@ MindNLP library.
 """
 import os
 import platform
-from packaging import version
 
 # huggingface env
 if os.environ.get('HF_ENDPOINT', None) is None:
@@ -29,12 +28,14 @@ if 'RANK_TABLE_FILE' in os.environ:
     del os.environ['RANK_TABLE_FILE']
 
 import mindspore
-from mindspore import context
 from mindspore._c_expression import MSContext # pylint: disable=no-name-in-module, import-error
 try:
     from mindspore._c_expression import disable_multi_thread
 except:
     disable_multi_thread = None
+
+if os.environ.get('DEVICE_TARGET', None) is not None:
+    mindspore.set_device(os.environ.get('DEVICE_TARGET'))
 
 # for different ascend devices
 if platform.system().lower() == 'linux':

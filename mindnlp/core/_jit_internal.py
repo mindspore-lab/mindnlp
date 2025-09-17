@@ -95,3 +95,6 @@ class BroadcastingListCls:
 BroadcastingList1 = BroadcastingListCls()
 for i in range(2, 7):
     globals()[f"BroadcastingList{i}"] = BroadcastingList1
+
+def is_scripting():
+    False

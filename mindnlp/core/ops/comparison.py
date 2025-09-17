@@ -19,16 +19,11 @@ def argsort(input, dim=-1, descending=False, stable=False):
 def eq(input, other):
     if not isinstance(other, numbers.Number) and other.device != input.device:
         other = other.to(input.device)
-    return execute('equal', input, other)
+    return execute('eq', input, other)
 
 # equal
 def equal(input, other):
-    if input.device.type == 'npu':
-        return execute('equal_ext', input, other)
-    # if input.shape != other.shape:
-    #     return False
-    out = eq(input, other)
-    return out.all()
+    return execute('equal', input, other)
 
 # ge
 def ge(input, other):
@@ -44,7 +39,10 @@ def greater(input, other):
 
 # isclose
 def isclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
+    if not isinstance(atol, numbers.Number):
+        atol = atol.item()
     return execute('isclose', input, other, rtol, atol, equal_nan)
+    
 
 # isfinite
 def isfinite(input):
@@ -53,7 +51,8 @@ def isfinite(input):
 # isin
 def in1d(ar1, ar2, invert=False):
     ar1 = core.unsqueeze(ar1.ravel(), -1)
-    ar2 = ar2.ravel()
+    if not isinstance(ar2, numbers.Number):
+        ar2 = ar2.ravel()
     included = core.eq(ar1, ar2)
     # ops.reduce_sum only supports float
     res = core.sum(included.to(core.float32), -1).to(core.bool_)
@@ -62,11 +61,8 @@ def in1d(ar1, ar2, invert=False):
     return res
 
 def isin(elements, test_elements, invert=False):
-    if elements.device.type != 'cpu':
-        res = in1d(elements, test_elements, invert=invert)
-        return core.reshape(res, elements.shape)
-
-    return execute('isin', elements, test_elements)
+    res = in1d(elements, test_elements, invert=invert)
+    return core.reshape(res, elements.shape)
 
 # isinf
 def isinf(input):
@@ -108,6 +104,8 @@ def maximum(input, other):
 
 # minimum
 def minimum(input, other):
+    if other.device != input.device:
+        other = other.to(input.device)
     return execute('minimum', input, other)
 
 # fmax
@@ -124,32 +122,13 @@ def not_equal(input, other):
 
 # sort
 def sort(input, *, dim=-1, descending=False, stable=False):
-    out = execute('sort_ext', input, dim, descending, stable)
+    out = execute('sort', input, dim, descending, stable)
+        
     return sort_out(values=out[0], indices=out[1])
 
 # topk
 def topk(input, k, dim=-1, largest=True, sorted=True):
-    if input.device.type == 'npu':
-        out = execute('topk_ext', input, k, dim, largest, sorted)
-    else:
-        if not largest:
-            input = -input
-        if dim is None or dim == input.ndim - 1:
-            if not largest:
-                res = execute('topk', input, k, sorted)
-                values, indices = -res[0], res[1]
-                return topk_out(values=values, indices=indices)
-            out =  execute('topk', input, k, sorted)
-            return topk_out(values=out[0], indices=out[1])
-        input = input.swapaxes(dim, input.ndim - 1)
-        output = execute('topk', input, k, sorted)
-        values = output[0].swapaxes(dim, input.ndim - 1)
-        indices = output[1].swapaxes(dim, input.ndim - 1)
-        if not largest:
-            res = (-values, indices)
-        else:
-            res = (values, indices)
-        out = res
+    out = execute('topk', input, k, dim, largest, sorted)
     return topk_out(values=out[0], indices=out[1])
 
 
