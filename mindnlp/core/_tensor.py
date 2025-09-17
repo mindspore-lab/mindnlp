@@ -24,7 +24,12 @@ from ._bind import get_device_in_context, device_, get_default_dtype
 from ._utils import _rebuild_tensor_v2
 from ._C.size import Size
 from .configs import DEVICE_TARGET, CPU_USE_NUMPY_OP
-from .dispatcher import device_map
+
+device_map = {
+    'cpu': 'CPU',
+    'npu': 'Ascend',
+    'cuda': 'GPU'
+}
 
 if DEVICE_TARGET == 'Ascend':
     import acl
@@ -134,6 +139,8 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False):
 
     if isinstance(data, float) and data == float('-inf'):
         data = core.finfo(get_default_dtype()).min
+    elif isinstance(data, list) and float('-inf') in data:
+        data = [core.finfo(get_default_dtype()).min if d == float('-inf') else d for d in data]
 
     if dtype is not None:
         tensor = Tensor(data, dtype=dtype)
@@ -145,7 +152,8 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False):
         device.type = 'npu'
     if device.type not in ['meta', 'cpu']:
         tensor = tensor.to(device)
-    tensor.requires_grad_(requires_grad)
+    if requires_grad:
+        tensor.requires_grad_(requires_grad)
     return tensor
 
 def scalar_tensor(*args, **kwargs):
@@ -203,7 +211,7 @@ class TensorPlaceHolder:
         return self.shape[0]
 
     def __repr__(self) -> str:
-        # self.data_sync(True)
+        self.data_sync(True)
         return Tensor_.__repr__(self)[:-1] + f', device={self.device})'
 
     def __format__(self, format_spec):
@@ -226,16 +234,19 @@ class TensorPlaceHolder:
                 if isinstance(s, range):
                     s = list(s)
                 if isinstance(s, np.ndarray):
-                    s = tensor(s)
+                    s = tensor(s, device=self.device)
                 new_slices += (s,)
             slices = new_slices
         if self.device.type == 'npu':
             out = ops.tensor_getitem(self, slices)
+        elif self.device.type == 'meta':
+            out = ops.getitem_np(self, slices)
         else:
-            if CPU_USE_NUMPY_OP:
-                out = ops.getitem_np(self, slices)
-            else:
-                out = ops.getitem(self, slices)
+            # if CPU_USE_NUMPY_OP:
+            #     out = ops.getitem_np(self, slices)
+            # else:
+            #     out = ops.getitem(self, slices)
+            out = ops.tensor_getitem(self, slices)
 
         out._device = self.device
         return out
@@ -264,7 +275,11 @@ class TensorPlaceHolder:
 
         if self.device.type == 'meta':
             return self
-        elif self.device.type == 'npu':
+
+        if value.device != self.device:
+            value._device = self.device
+
+        if self.device.type == 'npu':
             if value.device != self.device:
                 value._device = self.device
             out = ops.tensor_setitem(self, slices, value)
@@ -913,6 +928,7 @@ class TensorPlaceHolder:
     def data(self):
         out = Tensor(self)
         out._device = self.device
+        out._base = self
         return out
 
     @data.setter
@@ -920,13 +936,15 @@ class TensorPlaceHolder:
         if isinstance(self, StubTensor) and isinstance(new_value, StubTensor):
             self.stub = new_value.stub
         else:
-            if self.device.type == 'cpu' and new_value.device.type == 'cpu' \
-                and self.shape == new_value.shape and self.dtype == new_value.dtype:
-                src_ct = ctypes.c_void_p(new_value.data_ptr())
-                dst_ct = ctypes.c_void_p(self.data_ptr())
-                ctypes.memmove(dst_ct, src_ct, self.nbytes)
-            else:
-                self.assign_value(new_value)
+            # if self.device.type == 'cpu' and new_value.device.type == 'cpu' \
+            #     and self.shape == new_value.shape and self.dtype == new_value.dtype:
+            #     src_ct = ctypes.c_void_p(new_value.data_ptr())
+            #     dst_ct = ctypes.c_void_p(self.data_ptr())
+            #     ctypes.memmove(dst_ct, src_ct, self.nbytes)
+            # else:
+            if getattr(self, '_base', None) is not None:
+                self._base.assign_value(new_value)
+            self.assign_value(new_value)
         self._device = new_value.device
 
     # Tensor.data_ptr
@@ -970,7 +988,8 @@ class TensorPlaceHolder:
     # Tensor.diagonal_scatter
 
     # Tensor.fill_diagonal_
-
+    def fill_diagonal_(self, value, wrap=False):
+        return ops.inplace_fill_diagonal(self, value, wrap)
 
     # Tensor.fmax
 
@@ -1092,7 +1111,8 @@ class TensorPlaceHolder:
         return self.expand(other.size())
 
     # Tensor.exponential_
-
+    def exponential_(self, lambd=1, *, generator=None):
+        return ops.inplace_exponential(self, lambd, generator)
 
     # Tensor.fix
 

@@ -247,7 +247,7 @@ class _DynamicLSTMCPUGPU(Module):
                 has_bias = False
             else:
                 has_bias = True
-                if self.is_gpu:
+                if x.device.type == 'cuda':
                     weights = ops.concat((
                         w_ih.view(-1, 1, 1),
                         w_hh.view(-1, 1, 1),
@@ -261,12 +261,13 @@ class _DynamicLSTMCPUGPU(Module):
                         w_hh.view(-1, 1, 1),
                         bias.view(-1, 1, 1)
                     ))
-            _lstm = _get_cache_prim(LSTMOP)(input_size, hidden_size, 1, has_bias, False, 0.0)
-            output, h_n, c_n, _, _ = _lstm(
+            output, h_n, c_n, _, _ = execute(
+                'lstm',
                 x,
                 h_0[0].unsqueeze(0),
                 h_0[1].unsqueeze(0),
-                weights.astype(x.dtype)
+                weights.astype(x.dtype),
+                input_size, hidden_size, 1, has_bias, False, 0.0, 0
             )
         return output, (h_n, c_n)
 

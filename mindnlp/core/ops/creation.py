@@ -51,7 +51,7 @@ def zeros(*size, out=None, dtype=None, layout=None, device=None, requires_grad=F
             s = s.item()
         new_size += (s,)
 
-    output = execute('zeros', new_size, dtype, device=device, requires_grad=requires_grad, user_created=True)
+    output = execute('zeros', new_size, dtype, device=device)
     if out is None:
         return output
     out.data = output
@@ -63,10 +63,7 @@ def zeros_like(input, *, dtype=None, layout=None, device=None, requires_grad=Fal
         dtype = input.dtype
     if device is None:
         device = input.device
-    if device.type == 'cpu':
-        return execute('zeros_like', input, device=device, requires_grad=requires_grad, user_created=True)
-    return execute('zeros_like_ext', input, dtype,
-                   device=device, requires_grad=requires_grad, user_created=True)
+    return execute('zeros_like', input, dtype, device=device)
 
 # ones
 def ones(*size, out=None, dtype=None, layout=None, device=None, requires_grad=False, **kwargs):
@@ -87,7 +84,7 @@ def ones(*size, out=None, dtype=None, layout=None, device=None, requires_grad=Fa
         new_size += (s,)
 
     output = execute('ones', new_size, dtype,
-                     device=device, requires_grad=requires_grad, user_created=True)
+                     device=device)
     if out is None:
         return output
     out.data = output
@@ -101,10 +98,7 @@ def ones_like(input, *, dtype=None, layout=None, device=None, requires_grad=Fals
         device = input.device
     if isinstance(device, str):
         device = core.device(device)
-    if device.type == 'cpu':
-        return execute('ones_like', input, device=device, requires_grad=requires_grad, user_created=True)
-    return execute('ones_like_ext', input, dtype,
-                   device=device, requires_grad=requires_grad, user_created=True)
+    return execute('ones_like', input, dtype, device=device)
 
 # arange
 def arange(start=0, end=None, step=1, *, out=None, dtype=None, layout=None, device=None, requires_grad=False):
@@ -121,7 +115,7 @@ def arange(start=0, end=None, step=1, *, out=None, dtype=None, layout=None, devi
     end = end.item() if isinstance(end, (core.Tensor, np.integer)) else end
     step = step.item() if isinstance(step, (core.Tensor, np.integer)) else step
 
-    output = execute('arange', start, end, step, dtype, device=device, requires_grad=requires_grad, user_created=True)
+    output = execute('arange', start, end, step, dtype, device=device)
     if out is None:
         return output
     out.data = output
@@ -136,7 +130,7 @@ def range(start=0, end=None, step=1, *, out=None, dtype=None, layout=None, devic
     if device is None:
         device = get_device_in_context()
     output = execute('range', start, end + 1, step, 1000000,
-                     device=device, requires_grad=requires_grad, user_created=True)
+                     device=device)
     if out is None:
         return output
     out.data = output
@@ -155,8 +149,7 @@ def linspace(start, end, steps, *, out=None, dtype=None, layout=None, device=Non
     end = end.item() if isinstance(end, (core.Tensor, np.integer)) else end
     steps = steps.item() if isinstance(steps, (core.Tensor, np.integer)) else steps
 
-    output = execute('lin_space_ext', start, end, steps, dtype,
-                        device=device, requires_grad=requires_grad, user_created=True)
+    output = execute('linspace', start, end, steps, dtype, device=device)
     if out is None:
         return output
     out.data = output
@@ -173,7 +166,7 @@ def eye(n, m=None, *, out=None, dtype=None, layout=None, device=None, requires_g
     if m is None:
         m = n
     output = execute('eye', n, m, dtype,
-                     device=device, requires_grad=requires_grad, user_created=True)
+                     device=device)
     if out is None:
         return output
     out.data = output
@@ -205,7 +198,7 @@ def empty(*size, out=None, dtype=None, layout=None, device=None,
 def empty_like(input, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=None):
     if device is None:
         device = input.device
-    return empty(input.shape, dtype=input.dtype, layout=layout, device=device, requires_grad=requires_grad)
+    return empty(input.shape, dtype=input.dtype, layout=layout, device=device)
 
 # empty_strided
 
@@ -216,16 +209,13 @@ def full(size, fill_value, *, out=None, dtype=None, layout=None, device=None, re
     #     dtype = get_default_dtype()
     if device is None:
         device = get_device_in_context()
-    if device.type == 'cpu':
-        output = execute('full', size, fill_value, device=device, requires_grad=requires_grad, user_created=True)
+    size = tuple([s if isinstance(s, int) else s.item() for s in size])
+    if isinstance(fill_value, numbers.Number):
+        output = execute('fill_scalar', size, fill_value, dtype,
+                            device=device)
     else:
-        size = [s if isinstance(s, int) else s.item() for s in size]
-        if isinstance(fill_value, numbers.Number):
-            output = execute('fill_scalar', size, fill_value, dtype,
-                             device=device, requires_grad=requires_grad, user_created=True)
-        else:
-            output = execute('fill_tensor', size, fill_value, dtype,
-                             device=device, requires_grad=requires_grad, user_created=True)
+        output = execute('fill_tensor', size, fill_value, dtype,
+                            device=device)
     if out is None:
         return output
     out.data = output
@@ -235,7 +225,7 @@ def full(size, fill_value, *, out=None, dtype=None, layout=None, device=None, re
 def full_like(input, fill_value, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=None):
     if dtype is None:
         dtype = input.dtype
-    return full(input.shape, fill_value, dtype=dtype, layout=layout, device=input.device, requires_grad=requires_grad)
+    return full(input.shape, fill_value, dtype=dtype, layout=layout, device=input.device)
 
 # quantize_per_tensor
 

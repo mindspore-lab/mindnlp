@@ -84,13 +84,15 @@ class PySafeSlice:
     def ndim(self):
         return len(self.shape)
 
-    def get(self, *args, **kwargs):
+    def get(self, slice=None):
         nbytes = int(np.prod(self.shape)) * np.dtype(self.dtype).itemsize
         buffer = bytearray(nbytes)
         self.bufferfile.seek(self.start_offset)
         self.bufferfile.readinto(buffer)
         array = np.frombuffer(buffer, dtype=self.dtype).reshape(self.shape)
         array = array.reshape(self.shape)
+        if slice is not None:
+            array = array[slice]
         if not SUPPORT_BF16 and self.info["dtype"] == 'BF16':
             array = array.astype(np.float16)
         tensor = core.from_numpy(array)
@@ -128,7 +130,7 @@ class PySafeSlice:
         return self.nelements * self.bits
 
     def __getitem__(self, slice):
-        return self.get()[slice]
+        return self.get(slice)
 
 def getSize(fileobject):
     fileobject.seek(0, 2)  # move the cursor to the end of the file

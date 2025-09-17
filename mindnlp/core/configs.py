@@ -8,11 +8,12 @@ SUPPORT_BF16 = DEVICE_TARGET == 'Ascend' and SOC not in ['ascend910', 'ascend310
 ON_A1 = SOC == 'ascend910'
 ON_A2 = SOC in ['ascend910b', 'ascend910_93']
 ON_ORANGE_PI = '310b' in SOC
-USE_PYBOOST = DEVICE_TARGET == 'Ascend'
 DEFAULT_DTYPE = mindspore.float32
 MS27 = '.'.join(mindspore.__version__.split('.')[:2]) >= '2.7'
 
-CPU_USE_NUMPY_OP = DEVICE_TARGET != 'CPU'
+# OP backend select
+USE_PYBOOST = True
+CPU_USE_NUMPY_OP = False
 
 def set_pyboost(mode: bool):
     """set global pyboost"""
@@ -22,3 +23,12 @@ def set_pyboost(mode: bool):
 def use_pyboost():
     """set global pyboost"""
     return USE_PYBOOST
+
+def set_cpu_use_numpy(mode: bool):
+    """set global pyboost"""
+    global CPU_USE_NUMPY_OP
+    CPU_USE_NUMPY_OP = mode
+
+def cpu_use_numpy():
+    """set global pyboost"""
+    return CPU_USE_NUMPY_OP

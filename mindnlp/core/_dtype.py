@@ -124,3 +124,11 @@ py2dtype = {
     float_alias: float,
     int_alias: int64
 }
+
+mantissa_bits_map = {
+    int64: 63,
+    float32: 23,   # FP32, 单精度[6](@ref)
+    float64: 52,   # FP64, 双精度
+    float16: 10,   # FP16, 半精度[1,7](@ref)
+    bfloat16: 7,   # BF16, Brain浮点16位[7](@ref)
+}

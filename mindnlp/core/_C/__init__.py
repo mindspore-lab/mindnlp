@@ -198,7 +198,10 @@ class Generator:
         Returns:
             Current seed and offset.
         """
-        return self._generator(STEP, (self._seed, self._offset, step,))[:2]
+        outs = self._generator(STEP, (self._seed, self._offset, step,))[:2]
+        for o in outs:
+            o._device = self.device
+        return outs
 
 default_generator = Generator()
 

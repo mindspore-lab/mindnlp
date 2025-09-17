@@ -6,18 +6,15 @@ from typing import Optional, Tuple, List
 
 from mindnlp import core
 from mindnlp.core.executor import execute
+from mindnlp.core._C import default_generator
+from mindnlp.core.nn.modules.utils import _pair
 
-from ..configs import ON_ORANGE_PI, use_pyboost, ON_A1, ON_A2
+from ..configs import ON_A2, ON_A1
 
 generator_step_ = 12
 
 def gelu(input, *, approximate='none'):
-    if input.device.type == 'npu':
-        return execute('gelu_ext', input, approximate)
-    if approximate == 'tanh':
-        return execute('gelu', input)
-    return input * 0.5 * (1.0 + core.erf(input / core.sqrt(2.0)))
-
+    return execute('gelu', input, approximate)
 
 def relu(input, inplace=False):
     if inplace:
@@ -53,13 +50,13 @@ def glu(input, dim=-1):
     return execute('glu', input, dim)
 
 def softplus(input, beta=1, threshold=20):
-    return execute('softplus_ext', input, beta, threshold)
+    return execute('softplus', input, beta, threshold)
 
 def logsigmoid(input):
     return execute('logsigmoid', input)[0]
 
 def leaky_relu(input, alpha=0.2):
-    return execute('leaky_relu_ext', input, alpha)
+    return execute('leaky_relu', input, alpha)
 
 def prelu(input, weight):
     return execute('prelu', input, weight)
@@ -114,11 +111,6 @@ def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
     return execute('avg_pool2d', input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
 def avg_pool3d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=None):
-    if use_pyboost() and has_avg_pool3d:
-        return mint.nn.functional.avg_pool3d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
-
-    if divisor_override is None:
-        divisor_override = 0
     return ops.avg_pool3d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
 
@@ -126,12 +118,15 @@ def adaptive_avg_pool1d(input, output_size):
     return execute('adaptive_avg_pool1d', input, output_size)
 
 def adaptive_avg_pool2d(input, output_size):
-    return execute('adaptive_avg_pool2d_ext', input, output_size)
+    return execute('adaptive_avg_pool2d', input, output_size)
 
 def dropout(input, p=0.5, training=True, inplace=False):
     if not training or p==0:
         return input
-    out, _ = execute('dropout_ext', input, p)
+    seed, offset = default_generator._step(generator_step_)
+    seed._device = input.device
+    offset._device = input.device
+    out, _ = execute('dropout', input, p, seed, offset)
     if inplace:
         input.copy_(out)
         return input
@@ -143,21 +138,7 @@ def dropout2d(input, p=0.5, training=False):
     out, _ = execute('dropout2d', input, p)
     return out
 
-def drop_and_mask(keep_prob, seed=None):
-    seed0, seed1 = _get_seed(seed, "dropout")
-    dropout_op = ops.Dropout(keep_prob=keep_prob, Seed0=seed0, Seed1=seed1)
-    dropout_op = _set_prim_op_user_data(dropout_op, "random_cache", False)
-    out, mask = dropout_op(input)
-    return out, mask
-
 def linear(input, weight, bias=None):
-    if ON_ORANGE_PI:
-        input = input.to(core.float16)
-        weight = weight.to(core.float16)
-        if bias is not None:
-            bias = bias.to(core.float16)
-            return execute('dense', input, weight) + bias
-        return execute('dense', input, weight)
     return execute('dense', input, weight, bias)
 
 def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean', pos_weight=None):
@@ -165,31 +146,36 @@ def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean
         target = target.unsqueeze(1).expand_as(input).to(input.dtype)
     
     return execute('binary_cross_entropy_with_logits', input, target, weight, pos_weight, reduction)
-    return ops.binary_cross_entropy_with_logits(input, target.astype(input.dtype), weight, pos_weight, reduction)
 
 def gumbel_softmax(logits: core.Tensor, tau: float = 1, hard: bool = False, eps: float = 1e-10, dim: int = -1) -> core.Tensor:
     if eps != 1e-10:
         warnings.warn("`eps` parameter is deprecated and has no effect.")
 
-    uniform_samples = _get_cache_prim(ops.UniformReal)()(logits.shape)
-    gumbels = -ops.log(-ops.log(uniform_samples + eps) + eps) # ~Gumbel(0, 1)
+    if eps != 1e-10:
+        warnings.warn("`eps` parameter is deprecated and has no effect.")
+
+    gumbels = (
+        -core.empty_like(logits, memory_format=core.legacy_contiguous_format)
+        .exponential_()
+        .log()
+    )  # ~Gumbel(0,1)
     gumbels = (logits + gumbels) / tau  # ~Gumbel(logits,tau)
-    y_soft = softmax(gumbels, dim)
+    y_soft = gumbels.softmax(dim)
 
     if hard:
         # Straight through.
-        index = y_soft.argmax(dim)
-        y_hard = one_hot(index, logits.shape[dim])
-        ret = ops.stop_gradient(y_hard - y_soft) + y_soft
+        index = y_soft.max(dim, keepdim=True)[1]
+        y_hard = core.zeros_like(
+            logits, memory_format=core.legacy_contiguous_format
+        ).scatter_(dim, index, 1.0)
+        ret = y_hard - y_soft.detach() + y_soft
     else:
         # Reparametrization trick.
         ret = y_soft
     return ret
 
 def log_softmax(input, dim=None, dtype=None):
-    if input.device.type == 'cpu':
-        return execute('log_softmax', input, dim)
-    return execute('log_softmax_ext', input, dim, dtype)
+    return execute('log_softmax', input, dim, dtype)
 
 def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0, scale_grad_by_freq=False, sparse=False):
     return execute('embedding', input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq)
@@ -309,6 +295,12 @@ def pad(input, pad, mode='constant', value=None):
         if mode == "replicate":
             mode = "edge"
             return execute('pad_v3', input, new_pad, mode)
+        if input.dtype.is_floating_point:
+            value = float(value)
+        elif input.dtype == core.bool:
+            value = bool(value)
+        elif input.dtype in [core.int32, core.int64]:
+            value = int(value)
         return execute('pad_v3', input, new_pad, mode, value)
     out = input
     if (isinstance(pad, tuple) and not pad):
@@ -332,9 +324,9 @@ def pad(input, pad, mode='constant', value=None):
     return out
 
 def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean'):
-    if input.device.type == 'npu':
-        return _nllloss_nd(input, target, weight, ignore_index, reduction)
-    return _inner_nll_loss(input, target, weight, ignore_index, reduction)
+    # if input.device.type == 'npu':
+    return _nllloss_nd(input, target, weight, ignore_index, reduction)
+    # return _inner_nll_loss(input, target, weight, ignore_index, reduction)
 
 def _inner_nll_loss(inputs, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     ndim = inputs.ndim
@@ -362,29 +354,29 @@ def _nll_loss(inputs, target, target_dim=-1, weight=None, ignore_index=None, red
     if target.ndim == inputs.ndim - 1:
         target = target.expand_dims(target_dim)
     if ignore_index is not None:
-        non_pad_mask = ops.equal(target, ignore_index)
-        target = target.masked_fill(non_pad_mask, ops.cast(0, target.dtype))
+        non_pad_mask = core.eq(target, ignore_index)
+        target = target.masked_fill(non_pad_mask, core.cast(0, target.dtype))
     else:
         non_pad_mask = target
     if weight is not None:
-        loss_weights = ops.gather(weight, target, 0)
+        loss_weights = core.gather(weight, target, 0)
         orig_shape = inputs.shape
         if inputs.ndim != 2:
             inputs = inputs.view(orig_shape[:2] + (-1,))
             weight = weight.view(weight.shape + (1,))
         weighted_inputs = inputs * weight
         weighted_inputs = weighted_inputs.view(orig_shape)
-        loss = ops.neg(ops.gather_d(weighted_inputs, target_dim, target))
-        smooth_loss = ops.neg(weighted_inputs.sum(axis=target_dim, keepdims=True))
+        loss = core.neg(core.gather_d(weighted_inputs, target_dim, target))
+        smooth_loss = core.neg(weighted_inputs.sum(axis=target_dim, keepdims=True))
     else:
-        loss = ops.neg(ops.gather_d(inputs, target_dim, target))
-        smooth_loss = ops.neg(inputs.sum(axis=target_dim, keepdims=True))
-        loss_weights = ops.ones_like(loss)
+        loss = core.neg(core.gather_d(inputs, target_dim, target))
+        smooth_loss = core.neg(inputs.sum(axis=target_dim, keepdims=True))
+        loss_weights = core.ones_like(loss)
 
     if ignore_index is not None:
-        loss = loss.masked_fill(non_pad_mask, ops.cast(0, loss.dtype))
-        loss_weights = loss_weights.masked_fill(non_pad_mask, ops.cast(0, loss_weights.dtype))
-        smooth_loss = smooth_loss.masked_fill(non_pad_mask, ops.cast(0, smooth_loss.dtype))
+        loss = loss.masked_fill(non_pad_mask, core.cast(0, loss.dtype))
+        loss_weights = loss_weights.masked_fill(non_pad_mask, core.cast(0, loss_weights.dtype))
+        smooth_loss = smooth_loss.masked_fill(non_pad_mask, core.cast(0, smooth_loss.dtype))
 
     loss = loss.squeeze(target_dim)
     smooth_loss = smooth_loss.squeeze(target_dim)
@@ -493,7 +485,7 @@ def _cross_entropy_for_class_indices(input, target, weight, ingore_index, reduct
         else:
             smooth_loss = -input.sum(class_dim)
         ignore_mask = core.eq(target, ingore_index)
-        smooth_loss = core.masked_fill(smooth_loss, ignore_mask, 0)
+        smooth_loss = core.masked_fill(smooth_loss, ignore_mask, 0.)
         if reduction == "mean":
             true_mask = ~ignore_mask
             if weight is not None:
@@ -519,10 +511,10 @@ def _cross_entropy_for_class_indices(input, target, weight, ingore_index, reduct
 
 
 def mse_loss(input, target, reduction='mean'):
-    return execute('mse_loss_ext', input, target, reduction)
+    return execute('mse_loss', input, target, reduction)
 
 def l1_loss(input, target, reduction='mean'):
-    return execute('l1_loss_ext', input, target, reduction)
+    return execute('l1_loss', input, target, reduction)
 
 def smooth_l1_loss(input, target, beta=1.0, reduction='none'):
     input = input.to(core.float32)
@@ -533,10 +525,6 @@ def kl_div(logits, labels, reduction='mean', log_target=False):
     if log_target:
         labels = ops.log(labels)
     return ops.kl_div(logits, labels, reduction)
-
-def manual_softmax(x, dim=-1):
-    exp_x = ops.exp(x - ops.max(x, axis=dim, keepdims=True)[0])
-    return exp_x / ops.sum(exp_x, dim=dim, keepdim=True)
 
 def softmax(input, dim=-1, *, dtype=None):
     if dtype is not None:
@@ -549,7 +537,7 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
         weight = core.ones(normalized_shape, dtype=input.dtype, device=input.device)
     if bias is None:
         bias = core.zeros(normalized_shape, dtype=input.dtype, device=input.device)
-    return execute('layer_norm_ext', input, normalized_shape, weight, bias, eps)[0]
+    return execute('layer_norm', input, normalized_shape, weight, bias, eps)[0]
 
 
 def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corners=None, recompute_scale_factor=None, antialias=False):
@@ -749,7 +737,7 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None, trainin
         bias = core.zeros(input.shape[1], dtype=input.dtype, device=input.device)
 
     return execute(
-        'batch_norm_ext',
+        'batch_norm',
         input,
         running_mean,
         running_var,
@@ -763,17 +751,17 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None, trainin
 def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     if isinstance(padding, str):
         return execute('conv1d_padding', input, weight, bias, stride, padding, dilation, groups)
-    return execute('conv1d_ext', input, weight, bias, stride, padding, dilation, groups)
+    return execute('conv1d', input, weight, bias, stride, padding, dilation, groups)
 
 def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     if isinstance(padding, str):
         return execute('conv2d_padding', input, weight, bias, stride, padding, dilation, groups)
-    return execute('conv2d_ext', input, weight, bias, stride, padding, dilation, groups)
+    return execute('conv2d', input, weight, bias, stride, padding, dilation, groups)
 
 def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     if isinstance(padding, str):
         return execute('conv3d_padding', input, weight, bias, stride, padding, dilation, groups)
-    return execute('conv3d_ext', input, weight, bias, stride, padding, dilation, groups)
+    return execute('conv3d', input, weight, bias, stride, padding, dilation, groups)
 
     pad_mode = 'pad'
     pad = padding
@@ -836,8 +824,7 @@ def _deconv_output_length(pad_mode, filter_size, stride_size, dilation_size, pad
     return length
 
 def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
-    if use_pyboost():
-        return execute('conv_transpose2d', input, weight, bias, stride, padding, output_padding, groups, dilation)
+    return execute('conv_transpose2d', input, weight, bias, stride, padding, output_padding, groups, dilation)
 
     # pad_mode = 'pad'
     # pad = padding
@@ -927,7 +914,7 @@ def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode
     input_ndim = input.ndim
     if input_ndim == 3:
         input = input.unsqueeze(1)
-    out = execute('max_pool2d', input, kernel_size, stride, padding, dilation, ceil_mode=ceil_mode, return_indices=return_indices)
+    out = execute('max_pool2d', input, kernel_size, stride, padding, dilation, ceil_mode, return_indices)
     if input_ndim == 3:
         out = out.squeeze(1)
     return out
@@ -959,28 +946,26 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
         weight = core.ones([input.shape[1]], dtype=input.dtype, device=input.device)
     if bias is None:
         bias = core.zeros([input.shape[1]], dtype=input.dtype, device=input.device)
-    return execute('group_norm', input, num_groups, weight, bias, eps)[0]
+    if input.device.type == 'npu':
+        return execute('group_norm', input, num_groups, weight, bias, eps)[0]
 
-    # input_shape = input.shape
-    # N = input_shape[0]
-    # C = input_shape[1]
-    # input_reshaped = input.view(1, N * num_groups, -1 if N!=0 else 1)
-    # outputs = batch_norm(input_reshaped, None, None, None, None, True, 0., eps)
-    # out = outputs.view(input_shape)
-    # affine_param_shape = [1] * input.ndim
-    # affine_param_shape[1] = C
-    # affine_param_shape = tuple(affine_param_shape)
-    # if weight is not None and bias is not None:
-    #     if not ON_ORANGE_PI:
-    #         out = bias.view(affine_param_shape).addcmul(out, weight.view(affine_param_shape), 1)
-    #     else:
-    #         out = core.addcmul(bias.view(affine_param_shape), out, weight.view(affine_param_shape), value=1)
+    input_shape = input.shape
+    N = input_shape[0]
+    C = input_shape[1]
+    input_reshaped = input.view(1, N * num_groups, -1 if N!=0 else 1)
+    outputs = batch_norm(input_reshaped, None, None, None, None, True, 0., eps)
+    out = outputs.view(input_shape)
+    affine_param_shape = [1] * input.ndim
+    affine_param_shape[1] = C
+    affine_param_shape = tuple(affine_param_shape)
+    if weight is not None and bias is not None:
+        out = core.addcmul(bias.view(affine_param_shape), out, weight.view(affine_param_shape), value=1)
 
-    # elif weight is not None:
-    #     out = out.mul(weight.view(affine_param_shape))
-    # elif bias is not None:
-    #     out = out.add(bias.view(affine_param_shape))
-    # return out
+    elif weight is not None:
+        out = out.mul(weight.view(affine_param_shape))
+    elif bias is not None:
+        out = out.add(bias.view(affine_param_shape))
+    return out
 
 
 def _in_projection(
@@ -1576,18 +1561,16 @@ def _none_or_dtype(input: Optional[core.Tensor]) -> Optional[int]:
     raise RuntimeError("input to _none_or_dtype() must be None or core.Tensor")
 
 def unfold(input, kernel_size, dilation=1, padding=0, stride=1):
-    if ON_A1:
-        return execute('im2col', input, kernel_size, dilation, padding, stride)
-    return execute('im2col_ext', input, kernel_size, dilation, padding, stride)
+    return execute('im2col', input, _pair(kernel_size), _pair(dilation), _pair(padding), _pair(stride))
 
 def fold(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
-    return execute('col2im_ext', input, output_size, kernel_size, dilation, padding, stride)
+    return execute('col2im', input, output_size, kernel_size, dilation, padding, stride)
 
 def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0, reduction='mean', zero_infinity=False):
     return execute('ctc_loss', log_probs, targets, input_lengths, target_lengths, blank, reduction, zero_infinity)
 
 def one_hot(tensor, num_classes=-1):
-    return execute('one_hot_ext', tensor, num_classes)
+    return execute('one_hot', tensor, num_classes)
 
 def pixel_shuffle(input, upscale_factor):
     return execute('pixel_shuffle', input, upscale_factor)

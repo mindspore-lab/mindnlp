@@ -54,7 +54,7 @@ def manual_seed(seed):
             is raised. Negative inputs are remapped to positive values with the formula
             `0xffff_ffff_ffff_ffff + seed`.
     """
-    mindspore.set_seed(seed)
+    # mindspore.set_seed(seed + 1)
     seed = int(seed)
     # set_seed(seed)
     return default_generator.manual_seed(seed)
