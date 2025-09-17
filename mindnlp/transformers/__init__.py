@@ -56,6 +56,9 @@ transformers.modeling_utils._get_resolved_checkpoint_files = _get_resolved_check
 transformers.tokenization_utils_base.PreTrainedTokenizerBase.apply_chat_template = apply_chat_template_wrapper(
     transformers.tokenization_utils_base.PreTrainedTokenizerBase.apply_chat_template
 )
+transformers.tokenization_utils_base.PreTrainedTokenizerBase.__call__ = apply_chat_template_wrapper(
+    transformers.tokenization_utils_base.PreTrainedTokenizerBase.__call__
+)
 
 transformers.pipelines.pipeline = dtype_wrapper(transformers.pipelines.pipeline)
 transformers.modeling_utils.caching_allocator_warmup = empty_fn

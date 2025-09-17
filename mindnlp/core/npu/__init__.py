@@ -43,7 +43,7 @@ def device_count():
         return 0
     if GlobalComm.INITED:
         return get_group_size()
-    return ms_device_count()
+    return 1
 
 def current_device():
     return core.device('npu', 0)

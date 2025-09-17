@@ -70,7 +70,7 @@
     tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
     model = AutoModel.from_pretrained("bert-base-uncased")
 
-    inputs = tokenizer("Hello world!")
+    inputs = tokenizer("Hello world!", return_tensors='ms')
     outputs = model(**inputs)
     ```
 
