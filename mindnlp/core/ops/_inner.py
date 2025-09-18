@@ -16,7 +16,14 @@ def npu_clear_float_status_v2(status):
 def all_finite(inputs):
     return execute('all_finite', inputs)
 
+def custom_masked_scatter_vec(input, mask, source):    
+    output = input.clone()
+    output[mask] = source.flatten() # 关键的一行：向量化赋值
+    return output
+
 def masked_scatter(input, mask, source):
+    if input.device.type == 'cuda':
+        return custom_masked_scatter_vec(input, mask, source)
     return execute('masked_scatter', input, mask, source)
 
 __all__ = [

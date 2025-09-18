@@ -110,6 +110,7 @@ def __init__(self, *args, **kwargs):
 
 Tensor.__init__ = __init__
 origin_setitem = Tensor.__setitem__
+origin_is_contiguous = Tensor.is_contiguous
 Tensor._requires_grad = False
 
 def tensor(data, *, dtype=None, device=None, requires_grad=False):
@@ -1253,7 +1254,8 @@ class TensorPlaceHolder:
 
 
     # Tensor.histc
-
+    def histc(self, bins=100, min=0, max=0):
+        return ops.histc(self, bins, min, max)
 
     # Tensor.histogram
 
@@ -1364,8 +1366,8 @@ class TensorPlaceHolder:
         return ops.isnan(self)
 
     # Tensor.is_contiguous
-    # def is_contiguous(self):
-    #     return self.is_contiguous()
+    def is_contiguous(self, memory_format=None):
+        return origin_is_contiguous(self)
 
     # Tensor.is_complex
     def is_complex(self):

@@ -1221,3 +1221,12 @@ def logsumexp(input, dim, keepdim=False):
 
 def bernoulli(input, generator):
     return legacy.bernoulli(input, seed, offset)
+
+def right_shift(input, other):
+    return legacy.right_shift(input, other)
+
+def histc(input, bins=100, min=0, max=0):
+    return legacy.histogram(input, bins, float(min), float(max))
+
+def search_sorted(sorted_sequence, values, sorter, dtype, right):
+    return legacy.search_sorted(sorted_sequence, values, sorter, dtype, right)

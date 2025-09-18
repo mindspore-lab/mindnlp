@@ -274,7 +274,7 @@ def pad(input, pad, mode='constant', value=None):
     if isinstance(pad, tuple):
         pad = tuple(p if isinstance(p, int) else p.item() for p in pad)
 
-    if input.device.type in ['cpu', 'meta'] or ON_A1:
+    if input.device.type in ['cpu', 'meta', 'cuda'] or ON_A1:
         new_pad = ()
         for idx, pad_v in enumerate(pad):
             if not isinstance(pad_v, int):
@@ -301,6 +301,8 @@ def pad(input, pad, mode='constant', value=None):
             value = bool(value)
         elif input.dtype in [core.int32, core.int64]:
             value = int(value)
+        if input.device.type == 'cuda' and len(new_pad) == 8:
+            return execute('pad_v3', input, new_pad[:-2], mode, value)
         return execute('pad_v3', input, new_pad, mode, value)
     out = input
     if (isinstance(pad, tuple) and not pad):
@@ -324,9 +326,9 @@ def pad(input, pad, mode='constant', value=None):
     return out
 
 def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean'):
-    # if input.device.type == 'npu':
-    return _nllloss_nd(input, target, weight, ignore_index, reduction)
-    # return _inner_nll_loss(input, target, weight, ignore_index, reduction)
+    if input.device.type in ['npu', 'cpu']:
+        return _nllloss_nd(input, target, weight, ignore_index, reduction)
+    return _inner_nll_loss(input, target, weight, ignore_index, reduction)
 
 def _inner_nll_loss(inputs, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     ndim = inputs.ndim
@@ -352,7 +354,7 @@ def _inner_nll_loss(inputs, target, weight=None, ignore_index=-100, reduction='m
 def _nll_loss(inputs, target, target_dim=-1, weight=None, ignore_index=None, reduction='none', label_smoothing=0.0):
     """nll loss inner function"""
     if target.ndim == inputs.ndim - 1:
-        target = target.expand_dims(target_dim)
+        target = target.unsqueeze(target_dim)
     if ignore_index is not None:
         non_pad_mask = core.eq(target, ignore_index)
         target = target.masked_fill(non_pad_mask, core.cast(0, target.dtype))
@@ -366,10 +368,10 @@ def _nll_loss(inputs, target, target_dim=-1, weight=None, ignore_index=None, red
             weight = weight.view(weight.shape + (1,))
         weighted_inputs = inputs * weight
         weighted_inputs = weighted_inputs.view(orig_shape)
-        loss = core.neg(core.gather_d(weighted_inputs, target_dim, target))
+        loss = core.neg(core.gather(weighted_inputs, target_dim, target))
         smooth_loss = core.neg(weighted_inputs.sum(axis=target_dim, keepdims=True))
     else:
-        loss = core.neg(core.gather_d(inputs, target_dim, target))
+        loss = core.neg(core.gather(inputs, target_dim, target))
         smooth_loss = core.neg(inputs.sum(axis=target_dim, keepdims=True))
         loss_weights = core.ones_like(loss)
 
@@ -427,11 +429,42 @@ def _nllloss_nd(input, target, weight=None, ingore_index=-100, reduction='mean')
     ret = execute('nllloss_2d', input, target, weight, reduction, ingore_index)[0]
     return ret.view(out_size)
 
+
+def cross_entropy_gpu(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
+    class_dim = 0 if input.ndim == 1 else 1
+    if target.dtype.is_floating_point:
+        return _cross_entropy(input, target, class_dim, weight, reduction, label_smoothing)
+    return nll_loss(log_softmax(input, class_dim), target, weight, ignore_index, reduction)
+
+def _cross_entropy(inputs, target, target_dim, weight=None, reduction='mean', label_smoothing=0.0):
+    """cross entropy inner function"""
+    class_dim = 0 if inputs.ndim == 1 else 1
+    n_classes = inputs.shape[class_dim]
+    inputs = log_softmax(inputs, class_dim)
+    if label_smoothing > 0.0:
+        target = target * (1 - label_smoothing) + label_smoothing / n_classes
+
+    if weight is None:
+        weight = core.ones_like(inputs)
+    elif inputs.ndim != 1:
+        broadcast_shape = [1 for _ in range(inputs.ndim)]
+        broadcast_shape[1] = weight.shape[0]
+        weight = weight.reshape(broadcast_shape)
+
+    if reduction == 'mean':
+        return -(inputs * target * weight).sum() / (inputs.nel / n_classes)
+    if reduction == 'sum':
+        return -(inputs * target * weight).sum()
+    return -(inputs * target * weight).sum(class_dim)
+
+
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     if label_smoothing < 0.0 or label_smoothing > 1.0:
         raise ValueError(f"For cross_entropy, label_smoothing must in [0, 1]")
     if input.ndim == 0 or input.shape[0] == 0:
         raise ValueError(f"For cross_entropy, input don't support 0-dim and shape[0].")
+    if input.device.type == 'cuda':
+        return cross_entropy_gpu(input, target, weight, ignore_index, reduction, label_smoothing)
     class_dim = 0 if input.ndim == 1 else 1
     n_classes = input.shape[class_dim]
     input = log_softmax(input, class_dim, dtype=input.dtype)
@@ -675,10 +708,10 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corne
         )
     if input.dim() == 4 and mode == "bicubic":
         assert align_corners is not None
-        if antialias:
-            return torch._C._nn._upsample_bicubic2d_aa(
-                input, output_size, align_corners, scale_factors
-            )
+        # if antialias:
+        #     return torch._C._nn._upsample_bicubic2d_aa(
+        #         input, output_size, align_corners, scale_factors
+        #     )
         return execute(
             'upsample_bicubic2d', input, output_size, scale_factors, align_corners
         )
@@ -1146,8 +1179,8 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
         else:
             attn_bias = attn_mask + attn_bias
         
-    attn_weight = query.float() @ key.transpose(-2, -1).float() * scale_factor
-    attn_weight += attn_bias.float()
+    attn_weight = query @ key.transpose(-2, -1) * scale_factor
+    attn_weight += attn_bias
     attn_weight = softmax(attn_weight, dim=-1, dtype=core.float32).to(query.dtype)
     attn_weight = dropout(attn_weight, dropout_p, training=True)
     return attn_weight @ value

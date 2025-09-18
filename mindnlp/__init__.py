@@ -38,7 +38,7 @@ if os.environ.get('DEVICE_TARGET', None) is not None:
     mindspore.set_device(os.environ.get('DEVICE_TARGET'))
 
 # for different ascend devices
-if platform.system().lower() == 'linux':
+if platform.system().lower() == 'linux' and mindspore.get_context('device_target') == 'Ascend':
     SOC = MSContext.get_instance().get_ascend_soc_version()
     # enable vmm since only vmm can release device memory when del tensor.
     if SOC != 'ascend310b':

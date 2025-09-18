@@ -669,7 +669,40 @@ def flip(input, dims):
 
 
 # histc
+def manual_histc_searchsorted(input_tensor, bins=100, min=0, max=0):
+    """
+    使用 searchsorted 实现 histc，适用于浮点数，更精确地模拟边界。
+    """
+    if min == 0 and max == 0:
+        min = input_tensor.min().item()
+        max = input_tensor.max().item()
 
+    bin_width = (max - min) / bins
+    # 生成 bin 的右边界（除了最后一个，因为histc的最后一个bin是闭区间[2,5]）
+    bin_edges = core.linspace(min, max, bins + 1, device=input_tensor.device)
+    # 调整最后一个区间的右边界为无穷大，以确保等于max的值被包含在最后一个bin
+    # 同时，其他区间保持左闭右开
+    bin_edges[-1] = float('inf') 
+
+    flattened = input_tensor.view(-1)
+    # 找到每个元素应该插入到 bin_edges 中的位置，然后减1得到 bin 索引
+    # side='right' 表示返回的是使得 sorted_sequence[i-1] < v <= sorted_sequence[i] 成立的索引 i
+    indices = core.searchsorted(bin_edges, flattened, side='right') - 1
+
+    # 处理小于 min 的值（索引会变成 -1）
+    valid_mask = (indices >= 0)
+    indices_valid = indices[valid_mask]
+    # 同样需要确保索引不超过 bins-1（理论上由于bin_edges[-1]=inf，不会超过，但保险起见）
+    indices_valid = core.clamp(indices_valid, 0, bins - 1)
+
+    # 使用 bincount 统计有效的索引
+    histogram = core.bincount(indices_valid, minlength=bins)
+    return histogram.float() # 保持与 histc 输出类型一致
+
+def histc(input, bins=100, min=0, max=0):
+    if input.device.type == 'cuda':
+        return manual_histc_searchsorted(input, bins, min, max)
+    return execute('histc', input, bins, min, max)
 
 # histogram
 
@@ -1077,5 +1110,6 @@ __all__ = [
     'view_as_real',
     'bucketize',
     'cosine_similarity',
-    'detach'
+    'detach',
+    'histc'
 ]
