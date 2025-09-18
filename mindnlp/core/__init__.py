@@ -36,6 +36,7 @@ contiguous_format = None
 preserve_format = None
 legacy_contiguous_format = None
 channels_last_3d = None
+channels_last = None
 memory_format = None
 
 inf = float("inf")

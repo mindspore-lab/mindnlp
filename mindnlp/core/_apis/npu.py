@@ -1594,3 +1594,13 @@ def bernoulli(input, generator):
 def multinomial(input, num_samples, replacement, generator):
     seed, offset = generator._step(12)  # pylint: disable=protected-access
     return pyboost.multinomial_ext_op(input, num_samples, replacement, seed, offset)
+
+def right_shift(input, other):
+    if use_pyboost():
+        return pyboost.right_shift_op(input, other)
+    return legacy.right_shift(input, other)
+
+def histc(input, bins=100, min=0, max=0):
+    if use_pyboost():
+        return pyboost.histc_ext_op(input, bins, float(min), float(max))
+    return legacy.histogram(input, bins, float(min), float(max))

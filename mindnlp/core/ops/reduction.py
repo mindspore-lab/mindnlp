@@ -8,7 +8,8 @@ max_out = namedtuple('max_out', ['values', 'indices'])
 min_out = namedtuple('min_out', ['values', 'indices'])
 
 # argmax
-def argmax(input, dim=None, keepdim=False):
+def argmax(input, dim=None, keepdim=False, **kwargs):
+    dim = kwargs.pop('axis', dim)
     return execute('argmax', input, dim, keepdim)
 
 # argmin
@@ -192,8 +193,165 @@ def unique(input, sorted=True, return_inverse=False, return_counts=False, dim=No
         return y, counts
     return y
 
-# unique_consecutive
+def unique_consecutive_optimized(input, return_inverse=False, return_counts=False, dim=None):
+    """
+    优化版的 torch.unique_consecutive 手动实现。
+    """
+    if dim is None:
+        input_flat = input.flatten()
+        return _unique_consecutive_1d(input_flat, return_inverse, return_counts)
+    else:
+        return _unique_consecutive_nd(input, dim, return_inverse, return_counts)
+
+def _unique_consecutive_1d(input, return_inverse, return_counts):
+    """处理一维张量的优化实现"""
+    if input.numel() == 0:
+        return _handle_empty_input(input, return_inverse, return_counts)
+    
+    # 找到变化点的位置
+    diff = input[1:] != input[:-1]
+    change_points = core.cat([
+        core.tensor([True], device=input.device), 
+        diff, 
+        core.tensor([True], device=input.device)
+    ])
+    change_indices = core.where(change_points)[0]
+    
+    # 提取唯一值
+    unique_values = input[change_indices[:-1]]
+    
+    # 准备返回结果
+    result = [unique_values]
+    
+    # 处理逆向索引
+    if return_inverse:
+        inverse_indices = core.repeat_interleave(
+            core.arange(len(unique_values), device=input.device), 
+            core.diff(change_indices)
+        )
+        result.append(inverse_indices)
+    
+    # 处理计数
+    if return_counts:
+        counts = core.diff(change_indices)
+        result.append(counts)
+    
+    return result[0] if len(result) == 1 else tuple(result)
+
+def _unique_consecutive_nd(input, dim, return_inverse, return_counts):
+    """处理多维张量的实现"""
+    # 将目标维度移动到最后一维
+    input_transposed = input.transpose(dim, -1)
+    original_shape = input_transposed.shape
+    input_2d = input_transposed.reshape(-1, original_shape[-1])
+    
+    results = []
+    for i in range(input_2d.shape[0]):
+        slice_result = _unique_consecutive_1d(input_2d[i], return_inverse, return_counts)
+        if isinstance(slice_result, tuple):
+            results.append(slice_result)
+        else:
+            results.append((slice_result,))
+    
+    # 重组结果
+    return _reconstruct_nd_results(results, original_shape, dim, return_inverse, return_counts)
+
+def _handle_empty_input(input, return_inverse, return_counts):
+    """处理空输入的情况"""
+    empty_tensor = core.tensor([], dtype=input.dtype, device=input.device)
+    if return_inverse and return_counts:
+        return empty_tensor, core.tensor([], dtype=core.long, device=input.device), core.tensor([], dtype=core.long, device=input.device)
+    elif return_inverse:
+        return empty_tensor, core.tensor([], dtype=core.long, device=input.device)
+    elif return_counts:
+        return empty_tensor, core.tensor([], dtype=core.long, device=input.device)
+    else:
+        return empty_tensor
+
+def _reconstruct_nd_results(results, original_shape, dim, return_inverse, return_counts):
+    """
+    重组多维处理结果
+    """
+    # 确定最大唯一值长度（用于填充）
+    max_unique_len = max(len(result[0]) for result in results)
+    batch_size = original_shape[0]  # 第一维的大小（其他维度的乘积）
+    
+    # 重组唯一值张量
+    unique_dtype = results[0][0].dtype
+    unique_device = results[0][0].device
+    
+    # 创建输出唯一值张量
+    unique_output_shape = list(original_shape)
+    unique_output_shape[-1] = max_unique_len
+    unique_output = core.full(unique_output_shape, 0, dtype=unique_dtype, device=unique_device)
+    
+    # 填充唯一值张量
+    for i, result in enumerate(results):
+        unique_slice = result[0]
+        unique_output[i, :len(unique_slice)] = unique_slice
+    
+    # 重塑回原始形状（不包括被处理的维度）
+    final_unique_shape = list(original_shape[:-1]) + [max_unique_len]
+    unique_output = unique_output.reshape(final_unique_shape)
+    
+    # 如果需要恢复原始维度顺序
+    if dim != -1:
+        # 计算原始维度顺序
+        dim_perm = list(range(unique_output.dim()))
+        # 将最后一个维度移回原始位置
+        dim_perm.append(dim_perm.pop(-1))
+        # 调整维度顺序
+        unique_output = unique_output.permute(dim_perm)
+    
+    # 处理返回结果
+    output_results = [unique_output]
+    
+    # 处理逆向索引
+    if return_inverse:
+        inverse_shape = list(original_shape)
+        inverse_output = core.zeros(inverse_shape, dtype=core.long, device=unique_device)
+        
+        for i, result in enumerate(results):
+            if len(result) > 1:  # 确保有逆向索引
+                inverse_slice = result[1]
+                inverse_output[i, :len(inverse_slice)] = inverse_slice
+        
+        # 重塑逆向索引到原始形状
+        inverse_output = inverse_output.reshape(original_shape[:-1] + [original_shape[-1]])
+        
+        # 调整维度顺序
+        if dim != -1:
+            inverse_output = inverse_output.permute(dim_perm)
+        
+        output_results.append(inverse_output)
+    
+    # 处理计数
+    if return_counts:
+        counts_shape = list(original_shape[:-1]) + [max_unique_len]
+        counts_output = core.zeros(counts_shape, dtype=core.long, device=unique_device)
+        
+        for i, result in enumerate(results):
+            counts_index = 2 if return_inverse else 1  # 确定计数在结果中的位置
+            if len(result) > counts_index:
+                counts_slice = result[counts_index]
+                counts_output[i, :len(counts_slice)] = counts_slice
+        
+        # 调整计数张量的维度顺序
+        if dim != -1:
+            counts_output = counts_output.permute(dim_perm)
+        
+        output_results.append(counts_output)
+    
+    # 返回适当的结果组合
+    if len(output_results) == 1:
+        return output_results[0]
+    else:
+        return tuple(output_results)
+
+
 def unique_consecutive(input, return_inverse=False, return_counts=False, dim=None):
+    if input.device.type == 'cuda':
+        return unique_consecutive_optimized(input, return_inverse, return_counts, dim)
     output, idx, counts = execute('unique_consecutive', input, return_inverse, return_counts, dim)
     if return_inverse and return_counts:
         return output, idx, counts

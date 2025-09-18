@@ -60,8 +60,19 @@ OutOfMemoryError = RuntimeError
 def is_bf16_supported():
     return False
 
-def mem_get_info(index):
-    return (1024, 1024)
+def mem_get_info(device=None):
+    if not isinstance(device, int):
+        device = mindspore.context.get_context("device_id")
+
+    res = mindspore.hal.get_device_properties(device)
+    return (res.total_memory, res.total_memory)
+
+def get_device_capability(device=None):
+    if not isinstance(device, int):
+        device = mindspore.context.get_context("device_id")
+
+    res = mindspore.hal.get_device_properties(device)
+    return (res.major, res.minor)
 
 def memory_reserved(device=None):
     return ms_memory_reserved()

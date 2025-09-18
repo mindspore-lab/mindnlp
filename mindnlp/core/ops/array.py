@@ -920,7 +920,7 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
             b = broadcast_to(b, a.shape)
             return core.sum(a * b, dim=-1)
 
-        stacked_indices = _tensordot(stacked_indices, core.tensor(index_scaling))
+        stacked_indices = _tensordot(stacked_indices, core.tensor(index_scaling).to(stacked_indices.device))
         flat_shape = shape_tensor[:axis] + (-1,) + shape_tensor[axis + len(dims) :]
         tensor = tensor.reshape(flat_shape)
 

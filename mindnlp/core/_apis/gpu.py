@@ -4,7 +4,7 @@ import math
 import mindspore
 from mindspore._c_expression import _empty_instance
 from mindnlp import core
-from .._op_prim.cpu import legacy
+from .._op_prim.gpu import legacy
 
 try:
     from mindspore._c_expression import TensorPy as Tensor_
@@ -34,6 +34,8 @@ def fill_scalar(size, fill_value, dtype):
     return legacy.cast(legacy.fill_v2(size, mindspore.Tensor(fill_value)), dtype)
 
 def fill_tensor(size, fill_value, dtype):
+    if dtype is None:
+        return legacy.fill_v2(size, mindspore.Tensor(fill_value))
     return legacy.cast(legacy.fill_v2(size, fill_value), dtype)
 
 def zeros_like(input, dtype):
@@ -123,6 +125,9 @@ def div(input, other):
     return legacy.div(input, other)
 
 def mul(input, other):
+    if input.dtype == core.bool:
+        if isinstance(other, bool) or (not isinstance(other, numbers.Number) and other.dtype == core.bool):
+            return bitwise_and_scalar(input, other)
     return legacy.mul(input, other)
 
 def reduce_all(input, axis, keepdims):
@@ -253,6 +258,11 @@ def less(input, other):
     return legacy.less(input, other)
 
 def select(condition, x, y):
+    if isinstance(x, numbers.Number) or x.ndim == 0:
+        x = fill_scalar(condition.shape, x, None)
+    if isinstance(y, numbers.Number) or y.ndim == 0:
+        y = fill_scalar(condition.shape, y, None)
+
     return legacy.select(condition, x, y)
 
 def round(input, decimals):
@@ -317,7 +327,7 @@ def ones_like(input, dtype):
     return legacy.ones_like(input)
 
 def embedding(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq):
-    return cast(legacy.gather(weight, input, 0, 0), weight.dtype)
+    return legacy.gather(weight, input, 0, 0)
 
 def linspace(start, end, steps, dtype):
     start = float(start)
@@ -325,8 +335,7 @@ def linspace(start, end, steps, dtype):
     return legacy.lin_space(mindspore.Tensor(start), mindspore.Tensor(end), steps)
 
 def masked_fill(input, mask, value):
-    if input.dtype.is_floating_point and isinstance(value, numbers.Number):
-        value = float(value)
+    value = fill_scalar((), value, input.dtype)    
     return legacy.masked_fill(input, mask, value)
 
 def sum(input, dim, keepdim, dtype):
@@ -388,9 +397,14 @@ def layer_norm(input, normalized_shape, weight, bias, eps=1e-5):
     return legacy.layer_norm(input, weight, bias, begin_axis, begin_axis, eps)
 
 def argmin_with_value(input, axis, keep_dims):
+    if axis is None:
+        axis = -1
     return legacy.arg_min_with_value(input, axis, keep_dims)
 
 def argmax_with_value(input, axis, keep_dims):
+    if axis is None:
+        axis = -1
+
     return legacy.arg_max_with_value(input, axis, keep_dims)
 
 def silu(input):
@@ -425,9 +439,13 @@ def eye(n, m, dtype):
     return legacy.eye(n, m, dtype)
 
 def argmax(input, axis, keep_dims):
+    if axis is None:
+        axis = -1
     return legacy.arg_max_with_value(input, axis, keep_dims)[0]
 
 def argmin(input, axis, keep_dims):
+    if axis is None:
+        axis = -1
     return legacy.arg_min_with_value(input, axis, keep_dims)[0]
 
 def exp(input):
@@ -489,18 +507,7 @@ def scatter(input, dim, index, src):
     return legacy.tensor_scatter_elements(input, index, src, dim, "none")
 
 def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, training=False, momentum=0.1, epsilon=1e-5):
-    input_ndim = input.ndim
-    if input_ndim == 2:
-        return legacy.batch_norm(input, weight, bias, running_mean, runnning_var, training, epsilon, momentum, 'NCHW')
-    else:
-        input = transpose_view(input, 1, -1)
-        input_shape = input.shape
-        input = reshape(input, (-1, input.shape[-1]))
-        outs = legacy.batch_norm(input, weight, bias, running_mean, runnning_var, training, epsilon, momentum, 'NCHW')
-        out = reshape(outs[0], (*input_shape[:-1], -1))
-        out = transpose_view(out, 1, -1)
-
-        return out, outs[1], outs[2]
+    return legacy.batch_norm(input, weight, bias, running_mean, runnning_var, training, epsilon, momentum, 'NCHW')
 
 def tanh(input):
     return legacy.tanh(input)
@@ -797,16 +804,13 @@ def max_pool2d(input, kernel_size, stride=1, padding=0, dilation=1, ceil_mode=Fa
     return out
 
 def baddbmm(input, batch1, batch2, alpha=1, beta=1):
-    return add(mul(beta, input), mul(alpha, bmm(batch1, batch2)))
+    return add(mul(input, beta), mul(bmm(batch1, batch2), alpha))
 
 def softplus(input, beta=1, threshold=20):
     return legacy.softplus(input)
 
 def gather_nd(input, indices):
     return legacy.gather_nd(input, indices)
-
-def unique_consecutive(input, return_inverse, return_counts, dim):
-    return legacy.unique_consecutive(input, return_inverse, return_counts, dim)
 
 def meshgrid(input, lambd):
     return legacy.meshgrid(input, lambd)
@@ -815,7 +819,7 @@ def addcmul(input, tensor1, tensor2, value=1.0):
     return legacy.addcmul(input, tensor1, tensor2, mindspore.Tensor(value))
 
 def addmm(input, mat1, mat2, alpha=1.0, beta=1.0):
-    return add(mul(beta, input), mul(alpha, bmm(mat1, mat2)))
+    return add(mul(input, beta), mul(bmm(mat1, mat2), alpha))
 
 def im2col(input, kernel_size, dilation=1, padding=0, stride=1):
     out = legacy.im2_col(input, kernel_size, stride, dilation, padding)
@@ -1101,6 +1105,8 @@ def bernoulli(input, generator):
     return legacy.bernoulli(input, seed, offset)
 
 def arange(start, end, step, dtype):
+    if dtype is not None:
+        return cast(legacy.range(start, end, step, 100000), dtype)
     return legacy.range(start, end, step, 100000)
 
 def inplace_fill_scalar(input, value):
@@ -1121,3 +1127,13 @@ def inplace_uniform(input, from_, to_, generator_):
                                     mindspore.tensor(from_, dtype=mindspore.int32),
                                     mindspore.tensor(to_, dtype=mindspore.int32), 0, 0)
     return input.assign_value(value)
+
+def right_shift(input, other):
+    return legacy.right_shift(input, other)
+
+def inplace_fill_tensor(input, value):
+    input.assign_value(fill_tensor(input.shape, value, None))
+    return input
+
+def search_sorted(sorted_sequence, values, sorter, dtype, right):
+    return legacy.search_sorted(sorted_sequence, values, sorter, dtype, right)
