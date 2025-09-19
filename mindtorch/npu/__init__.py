@@ -46,7 +46,7 @@ def device_count():
     return 1
 
 def current_device():
-    return mindtorch.device('npu', 0)
+    return 0
 
 def is_available():
     return mindspore.get_context('device_target') == 'Ascend'
@@ -101,9 +101,6 @@ def mem_get_info(device=None):
         res = mindspore.hal.get_device_properties(device)
 
     return (res.free_memory, res.total_memory)
-
-def current_device():
-    return mindtorch.device('npu', 0)
 
 def get_device_capability(device=None):
     return 10, 0

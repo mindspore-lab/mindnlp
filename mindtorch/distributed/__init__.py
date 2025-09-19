@@ -55,7 +55,7 @@ if is_available():
         # set_debug_level,
         # set_debug_level_from_env,
         Store,
-        # TCPStore,
+        TCPStore,
         Work as _Work,
     )
 
