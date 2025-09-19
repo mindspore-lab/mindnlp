@@ -1,7 +1,7 @@
 '''
 code from https://github.com/mit-han-lab/smoothquant/
 '''
-from mindnlp.core import ops, nn, no_grad
+from mindtorch import ops, nn, no_grad
 
 from transformers.models.llama.modeling_llama import LlamaDecoderLayer, LlamaRMSNorm
 

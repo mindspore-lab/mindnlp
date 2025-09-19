@@ -1,7 +1,7 @@
 """triton adapter for mindspore"""
 from functools import lru_cache
 import mindspore
-from mindnlp.core import ops
+from mindtorch import ops
 from mindnlp.utils import is_triton_available
 
 if is_triton_available():

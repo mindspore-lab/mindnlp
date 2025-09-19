@@ -43,7 +43,7 @@ import urllib3
 import numpy as np
 
 import mindspore
-from mindnlp.core.configs import SUPPORT_BF16
+from mindtorch.configs import SUPPORT_BF16
 
 from transformers.utils.import_utils import (
     is_pytest_available,

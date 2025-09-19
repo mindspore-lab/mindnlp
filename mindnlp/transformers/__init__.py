@@ -1,6 +1,6 @@
 import sys
 from packaging import version
-from mindnlp.core.configs import ON_ORANGE_PI
+from mindtorch.configs import ON_ORANGE_PI
 from mindnlp.utils.import_utils import *
 from mindnlp.utils.import_utils import _LazyModule
 

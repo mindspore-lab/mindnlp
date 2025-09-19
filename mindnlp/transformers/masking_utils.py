@@ -15,11 +15,11 @@
 import itertools
 from typing import Callable, Optional, Union
 
-from mindnlp import core
-from mindnlp.core.nn import functional as F
+import mindtorch
+from mindtorch.nn import functional as F
 
 # Register a fake type to avoid crashing for annotations and `isinstance` checks
-BlockMask = core.Tensor
+BlockMask = mindtorch.Tensor
 
 _is_torch_greater_or_equal_than_2_6 = True
 
@@ -29,7 +29,7 @@ def and_masks(*mask_functions: list[Callable]) -> Callable:
         raise RuntimeError(f"All inputs should be callable mask_functions: {mask_functions}")
 
     def and_mask(batch_idx, head_idx, q_idx, kv_idx):
-        result = q_idx.new_ones((), dtype=core.bool)
+        result = q_idx.new_ones((), dtype=mindtorch.bool)
         for mask in mask_functions:
             result = result & mask(batch_idx, head_idx, q_idx, kv_idx).to(result.device)
         return result
@@ -42,7 +42,7 @@ def or_masks(*mask_functions: list[Callable]) -> Callable:
         raise RuntimeError(f"All inputs should be callable mask_functions: {mask_functions}")
 
     def or_mask(batch_idx, head_idx, q_idx, kv_idx):
-        result = q_idx.new_zeros((), dtype=core.bool)
+        result = q_idx.new_zeros((), dtype=mindtorch.bool)
         for mask in mask_functions:
             result = result | mask(batch_idx, head_idx, q_idx, kv_idx).to(result.device)
         return result
@@ -94,7 +94,7 @@ def chunked_causal_mask_function(chunk_size: int) -> Callable:
     return and_masks(chunked_overlay(chunk_size), causal_mask_function)
 
 
-def padding_mask_function(padding_mask: core.Tensor) -> Callable:
+def padding_mask_function(padding_mask: mindtorch.Tensor) -> Callable:
     """
     This return the mask_function function corresponding to a 2D padding mask.
     """
@@ -107,7 +107,7 @@ def padding_mask_function(padding_mask: core.Tensor) -> Callable:
 
     return inner_mask
 
-def packed_sequence_mask_function(packed_sequence_mask: core.Tensor) -> Callable:
+def packed_sequence_mask_function(packed_sequence_mask: mindtorch.Tensor) -> Callable:
     """
     This return the mask_function function corresponding to a 2D packed sequence mask.
     """
@@ -153,13 +153,13 @@ def _vmap_for_bhqkv(mask_function: Callable, bh_indices: bool = True) -> Callabl
         dimensions.extend([(None, 0, None, None), (0, None, None, None)])
 
     for dims in dimensions:
-        mask_function = core.vmap(mask_function, in_dims=dims, out_dims=0)
+        mask_function = mindtorch.vmap(mask_function, in_dims=dims, out_dims=0)
     return mask_function
 
 
 def prepare_padding_mask(
-    attention_mask: Optional[core.Tensor], kv_length: int, kv_offset: int, _slice: bool = True
-) -> Optional[core.Tensor]:
+    attention_mask: Optional[mindtorch.Tensor], kv_length: int, kv_offset: int, _slice: bool = True
+) -> Optional[mindtorch.Tensor]:
     """
     From the 2D attention mask, prepare the correct padding mask to use by potentially padding it, and slicing
     according to the `kv_offset` if `_slice` is `True`.
@@ -168,19 +168,19 @@ def prepare_padding_mask(
     if attention_mask is not None:
         # Pad it if necesary
         if (padding_length := kv_length + kv_offset - attention_mask.shape[-1]) > 0:
-            local_padding_mask = core.nn.functional.pad(attention_mask, (0, padding_length))
+            local_padding_mask = mindtorch.nn.functional.pad(attention_mask, (0, padding_length))
         # For flex, we should not slice them, only use an offset
         if _slice:
             # Equivalent to: `local_padding_mask = attention_mask[:, kv_offset : kv_offset + kv_length]`,
-            # but without data-dependent slicing (i.e. core.compile friendly)
-            mask_indices = core.arange(kv_length, device=local_padding_mask.device)
+            # but without data-dependent slicing (i.e. mindtorch.compile friendly)
+            mask_indices = mindtorch.arange(kv_length, device=local_padding_mask.device)
             mask_indices += kv_offset
             local_padding_mask = local_padding_mask[:, mask_indices]
     return local_padding_mask
 
 
 def _ignore_causal_mask_sdpa(
-    padding_mask: Optional[core.Tensor],
+    padding_mask: Optional[mindtorch.Tensor],
     query_length: int,
     kv_length: int,
     kv_offset: int,
@@ -194,13 +194,13 @@ def _ignore_causal_mask_sdpa(
     allowing to dispatch to the flash attention kernel (that can otherwise not be used if a custom `attn_mask` is
     passed).
     """
-    is_tracing = core.jit.is_tracing() or isinstance(padding_mask, core.fx.Proxy)
+    is_tracing = mindtorch.jit.is_tracing() or isinstance(padding_mask, mindtorch.fx.Proxy)
     if padding_mask is not None and padding_mask.shape[-1] > kv_length:
-        mask_indices = core.arange(kv_length, device=padding_mask.device)
+        mask_indices = mindtorch.arange(kv_length, device=padding_mask.device)
         mask_indices += kv_offset
         padding_mask = padding_mask[:, mask_indices]
 
-    # When using `core.export` or `core.onnx.dynamo_export`, we must pass an example input, and `is_causal` behavior is
+    # When using `mindtorch.export` or `mindtorch.onnx.dynamo_export`, we must pass an example input, and `is_causal` behavior is
     # hard-coded to the forward. If a user exports a model with query_length > 1, the exported model will hard-code `is_causal=True`
     # which is in general wrong (see https://github.com/pytorch/pytorch/issues/108108). Thus, we only set
     # `ignore_causal_mask = True` if we are not tracing
@@ -219,15 +219,15 @@ def _ignore_causal_mask_sdpa(
 
 def sdpa_mask_recent_torch(
     batch_size: int,
-    cache_position: core.Tensor,
+    cache_position: mindtorch.Tensor,
     kv_length: int,
     kv_offset: int = 0,
     mask_function: Callable = causal_mask_function,
-    attention_mask: Optional[core.Tensor] = None,
+    attention_mask: Optional[mindtorch.Tensor] = None,
     local_size: Optional[int] = None,
     allow_is_causal_skip: bool = True,
     **kwargs,
-) -> Optional[core.Tensor]:
+) -> Optional[mindtorch.Tensor]:
     """
     Create a 4D boolean mask of shape `(batch_size, 1, query_length, kv_length)` where a value of True indicates that
     the element should take part in the attention computation, and False that it should not.
@@ -331,15 +331,15 @@ def sdpa_mask_recent_torch(
 
     # Similar to `kv_arange = torch.arange(start=kv_offset, end=kv_offset + kv_length, device=cache_position.device)`
     # but without data-dependent slicing (i.e. torch.compile friendly)
-    kv_arange = core.arange(kv_length, device=cache_position.device)
+    kv_arange = mindtorch.arange(kv_length, device=cache_position.device)
     kv_arange += kv_offset
 
     # Potentially add the padding 2D mask
     if padding_mask is not None:
         mask_function = and_masks(mask_function, padding_mask_function(padding_mask))
 
-    batch_arange = core.arange(batch_size, device=cache_position.device)
-    head_arange = core.arange(1, device=cache_position.device)
+    batch_arange = mindtorch.arange(batch_size, device=cache_position.device)
+    head_arange = mindtorch.arange(1, device=cache_position.device)
     # This creates the 4D mask easily. Note that we need this context manager as vmap cannot handle slicing a tensor from
     # scalar tensor (it internally calls `.item()` which vmap does not allow, but this context works around it
     # We don't need to add an offset to the mask_function either, as we vmap directly the correct indices for k and kv indices
@@ -350,16 +350,16 @@ def sdpa_mask_recent_torch(
 
 def sdpa_mask_older_torch(
     batch_size: int,
-    cache_position: core.Tensor,
+    cache_position: mindtorch.Tensor,
     kv_length: int,
     kv_offset: int = 0,
     mask_function: Callable = causal_mask_function,
-    attention_mask: Optional[core.Tensor] = None,
+    attention_mask: Optional[mindtorch.Tensor] = None,
     local_size: Optional[int] = None,
     allow_is_causal_skip: bool = True,
     allow_torch_fix: bool = True,
     **kwargs,
-) -> Optional[core.Tensor]:
+) -> Optional[mindtorch.Tensor]:
     """
     NOTE: This function is only used when torch version is torch<2.5 - see `sdpa_mask_recent_torch` otherwise.
 
@@ -372,7 +372,7 @@ def sdpa_mask_older_torch(
     Args:
         batch_size (`int`):
             The batch size of the input sequence.
-        cache_position (`core.Tensor`):
+        cache_position (`mindtorch.Tensor`):
             A tensor of shape (query_length,) indicating the current indices of the input sequence elements.
         kv_length (`int`):
             The size that the key and value states will have during the attention computation.
@@ -380,14 +380,14 @@ def sdpa_mask_older_torch(
             An optional offset to indicate at which first position the key and values states will refer to.
         mask_function (`Callable`):
             The mask factory function describing the mask pattern.
-        attention_mask (`core.Tensor`, optional):
+        attention_mask (`mindtorch.Tensor`, optional):
             The 2D attention mask corresponding to padded tokens of shape (batch_size, number_of_seen_tokens+q_length)
         local_size (`int`, optional):
             The size of the local attention, if we do not use full attention. This is used only if `allow_is_causal_skip=True`
             to try to skip mask creation if possible.
         allow_is_causal_skip (`bool`, optional):
             Whether to allow to return `None` for the mask under conditions where we can use the `is_causal` argument in
-            `core.sdpa` instead. Default to `True`.
+            `mindtorch.sdpa` instead. Default to `True`.
         allow_torch_fix (`bool`, optional):
             Whether to update the mask in case a query is not attending to any tokens, to solve a bug in torch's older
             versions. We need an arg to skip it when using eager. By default `True`.
@@ -400,9 +400,9 @@ def sdpa_mask_older_torch(
     if allow_is_causal_skip and _ignore_causal_mask_sdpa(padding_mask, q_length, kv_length, kv_offset, local_size):
         return None
 
-    # Similar to `kv_arange = core.arange(start=kv_offset, end=kv_offset + kv_length, device=cache_position.device)`
-    # but without data-dependent slicing (i.e. core.compile friendly)
-    kv_arange = core.arange(kv_length, device=cache_position.device)
+    # Similar to `kv_arange = mindtorch.arange(start=kv_offset, end=kv_offset + kv_length, device=cache_position.device)`
+    # but without data-dependent slicing (i.e. mindtorch.compile friendly)
+    kv_arange = mindtorch.arange(kv_length, device=cache_position.device)
     kv_arange += kv_offset
 
     # This creates the 4D mask easily. Note that we do not include vmap over the batch_idx dimension as well,
@@ -422,7 +422,7 @@ def sdpa_mask_older_torch(
     # # Due to a bug in versions of torch<2.5, we need to update the mask in case a query is not attending to any
     # # tokens (due to padding). See details in https://github.com/pytorch/pytorch/issues/110213
     # if not _is_torch_greater_or_equal_than_2_5 and allow_torch_fix:
-    #     causal_mask |= core.all(~causal_mask, dim=-1, keepdim=True)
+    #     causal_mask |= mindtorch.all(~causal_mask, dim=-1, keepdim=True)
     return causal_mask
 
 
@@ -432,14 +432,14 @@ sdpa_mask = sdpa_mask_older_torch
 
 def eager_mask(
     batch_size: int,
-    cache_position: core.Tensor,
+    cache_position: mindtorch.Tensor,
     kv_length: int,
     kv_offset: int = 0,
     mask_function: Callable = causal_mask_function,
-    attention_mask: Optional[core.Tensor] = None,
-    dtype: core.dtype = core.float32,
+    attention_mask: Optional[mindtorch.Tensor] = None,
+    dtype: mindtorch.dtype = mindtorch.float32,
     **kwargs,
-) -> core.Tensor:
+) -> mindtorch.Tensor:
     """
     Create a 4D float mask of shape `(batch_size, 1, query_length, kv_length)` where a value of 0 indicates that
     the element should take part in the attention computation, and -inf (minimum value for the given `dtype`) that
@@ -448,7 +448,7 @@ def eager_mask(
     Args:
         batch_size (`int`):
             The batch size of the input sequence.
-        cache_position (`core.Tensor`):
+        cache_position (`mindtorch.Tensor`):
             A tensor of shape (query_length,) indicating the current indices of the input sequence elements.
         kv_length (`int`):
             The size that the key and value states will have during the attention computation.
@@ -456,10 +456,10 @@ def eager_mask(
             An optional offset to indicate at which first position the key and values states will refer to.
         mask_function (`Callable`):
             The mask factory function describing the mask pattern.
-        attention_mask (`core.Tensor`, optional):
+        attention_mask (`mindtorch.Tensor`, optional):
             The 2D attention mask corresponding to padded tokens of shape (batch_size, number_of_seen_tokens+q_length)
-        dtype (`core.dtype`, optional):
-            The dtype to use for the mask. By default, `core.float32`.
+        dtype (`mindtorch.dtype`, optional):
+            The dtype to use for the mask. By default, `mindtorch.float32`.
     """
     # The masks for eager attention are simply boolean mask from sdpa, casted to 0 and -inf
     _ = kwargs.pop("allow_is_causal_skip", None)
@@ -474,19 +474,19 @@ def eager_mask(
         allow_torch_fix=False,
         **kwargs,
     )
-    min_dtype = core.finfo(dtype).min
+    min_dtype = mindtorch.finfo(dtype).min
     # we need 0s where the tokens should be taken into account, and -inf otherwise (mask is already of boolean type)
-    mask = core.where(mask, core.tensor(0.0, device=mask.device, dtype=dtype), min_dtype)
+    mask = mindtorch.where(mask, mindtorch.tensor(0.0, device=mask.device, dtype=dtype), min_dtype)
     return mask
 
 
 def flash_attention_mask(
     batch_size: int,
-    cache_position: core.Tensor,
+    cache_position: mindtorch.Tensor,
     kv_length: int,
     kv_offset: int = 0,
     mask_function: Callable = causal_mask_function,
-    attention_mask: Optional[core.Tensor] = None,
+    attention_mask: Optional[mindtorch.Tensor] = None,
     **kwargs,
 ):
     """
@@ -497,7 +497,7 @@ def flash_attention_mask(
     Args:
         batch_size (`int`):
             The batch size of the input sequence.
-        cache_position (`core.Tensor`):
+        cache_position (`mindtorch.Tensor`):
             A tensor of shape (query_length,) indicating the current indices of the input sequence elements.
         kv_length (`int`):
             The size that the key and value states will have during the attention computation.
@@ -505,7 +505,7 @@ def flash_attention_mask(
             An optional offset to indicate at which first position the key and values states will refer to.
         mask_function (`Callable`):
             The mask factory function describing the mask pattern.
-        attention_mask (`core.Tensor`, optional):
+        attention_mask (`mindtorch.Tensor`, optional):
             The 2D attention mask corresponding to padded tokens of shape (batch_size, number_of_seen_tokens+q_length)
     """
     if attention_mask is not None:
@@ -521,21 +521,21 @@ def flash_attention_mask(
 
 def flex_attention_mask(
     batch_size: int,
-    cache_position: core.Tensor,
+    cache_position: mindtorch.Tensor,
     kv_length: int,
     kv_offset: int = 0,
     mask_function: Callable = causal_mask_function,
-    attention_mask: Optional[core.Tensor] = None,
+    attention_mask: Optional[mindtorch.Tensor] = None,
     **kwargs,
 ) -> BlockMask:
     """
     Create a 4D block mask which is a compressed representation of the full 4D block causal mask. BlockMask is essential
-    for performant computation of flex attention. See: https://pycore.org/blog/flexattention/
+    for performant computation of flex attention. See: https://pymindtorch.org/blog/flexattention/
 
     Args:
         batch_size (`int`):
             The batch size of the input sequence.
-        cache_position (`core.Tensor`):
+        cache_position (`mindtorch.Tensor`):
             A tensor of shape (query_length,) indicating the current indices of the input sequence elements.
         kv_length (`int`):
             The size that the key and value states will have during the attention computation.
@@ -543,7 +543,7 @@ def flex_attention_mask(
             An optional offset to indicate at which first position the key and values states will refer to.
         mask_function (`Callable`):
             The mask factory function describing the mask pattern.
-        attention_mask (`core.Tensor`, optional):
+        attention_mask (`mindtorch.Tensor`, optional):
             The 2D attention mask corresponding to padded tokens of shape (batch_size, number_of_seen_tokens+q_length)
     """
     q_length, q_offset = cache_position.shape[0], cache_position[0]
@@ -555,7 +555,7 @@ def flex_attention_mask(
         pad_len = ((attention_mask.shape[1] // flex_default_block_size) + 1) * flex_default_block_size
         pad_len = pad_len - attention_mask.shape[1]
         if not _is_torch_greater_or_equal_than_2_6 and pad_len > 0:
-            attention_mask = core.nn.functional.pad(attention_mask, value=0, pad=(0, pad_len))
+            attention_mask = mindtorch.nn.functional.pad(attention_mask, value=0, pad=(0, pad_len))
 
         padding_mask = prepare_padding_mask(attention_mask, kv_length, kv_offset, _slice=False)
         mask_function = and_masks(mask_function, padding_mask_function(padding_mask))
@@ -585,13 +585,13 @@ ALL_MASK_ATTENTION_FUNCTIONS = {
     "flex_attention": flex_attention_mask,
 }
 
-def find_packed_sequence_indices(position_ids: core.Tensor) -> core.Tensor:
+def find_packed_sequence_indices(position_ids: mindtorch.Tensor) -> mindtorch.Tensor:
     """
     Find the indices of the sequence to which each new query token in the sequence belongs when using packed
     tensor format (i.e. several sequences packed in the same batch dimension).
 
     Args:
-        position_ids (`core.Tensor`)
+        position_ids (`mindtorch.Tensor`)
             A 2D tensor of shape (batch_size, query_length) indicating the positions of each token in the sequences.
 
     Returns:
@@ -604,7 +604,7 @@ def find_packed_sequence_indices(position_ids: core.Tensor) -> core.Tensor:
     # Note that we assume that a single sequence cannot span several batch dimensions, i.e. 1 single sequence
     # cannot be part of the end of the first batch dim and the start of the 2nd one for example
     first_dummy_value = position_ids[:, :1] - 1  # We just need the diff on this first value to be 1
-    position_diff = core.diff(position_ids, prepend=first_dummy_value, dim=-1)
+    position_diff = mindtorch.diff(position_ids, prepend=first_dummy_value, dim=-1)
     packed_sequence_mask = (position_diff != 1).cumsum(-1)
 
     # Here it would be nice to return None if we did not detect packed sequence format, i.e. if `packed_sequence_mask[:, -1] == 0`
@@ -614,13 +614,13 @@ def find_packed_sequence_indices(position_ids: core.Tensor) -> core.Tensor:
 
 def _preprocess_mask_arguments(
     config,
-    input_embeds: core.Tensor,
-    attention_mask: Optional[Union[core.Tensor, BlockMask]],
-    cache_position: core.Tensor,
+    input_embeds: mindtorch.Tensor,
+    attention_mask: Optional[Union[mindtorch.Tensor, BlockMask]],
+    cache_position: mindtorch.Tensor,
     past_key_values,
-    position_ids: Optional[core.Tensor],
+    position_ids: Optional[mindtorch.Tensor],
     layer_idx: Optional[int],
-) -> tuple[bool, Optional[Union[core.Tensor, BlockMask]], int, int]:
+) -> tuple[bool, Optional[Union[mindtorch.Tensor, BlockMask]], int, int]:
     """
     Perform some common pre-processing of the mask arguments we get from the modeling code. Mostly determine the
     key-value length and offsets, and if we should early exit or not.
@@ -628,17 +628,17 @@ def _preprocess_mask_arguments(
     Args:
         config (`PretrainedConfig`):
             The model config.
-        input_embeds (`core.Tensor`):
+        input_embeds (`mindtorch.Tensor`):
             The input embeddings of shape (batch_size, query_length, hidden_dim). This is used only to infer the
             batch size, query length and dtype.
-        attention_mask (`core.Tensor`, optional):
+        attention_mask (`mindtorch.Tensor`, optional):
             The 2D attention mask corresponding to padded tokens of shape (batch_size, number_of_seen_tokens+q_length).
             It can also be an already prepared 4D mask, in which case it is returned as-is.
-        cache_position (`core.Tensor`):
+        cache_position (`mindtorch.Tensor`):
             A tensor of shape (query_length,) indicating the current indices of the input sequence elements.
         past_key_values (`Cache`, optional):
             The past key values, if we use a cache.
-        position_ids (`core.Tensor`, optional)
+        position_ids (`mindtorch.Tensor`, optional)
             A 2D tensor of shape (batch_size, query_length) indicating the positions of each token in the sequences.
         layer_idx (`int`, optional):
             If `past_key_values` is not None, this is the layer index of the cache from which to get the key-value
@@ -647,9 +647,9 @@ def _preprocess_mask_arguments(
     Returns:
         early_exit (`bool`):
             Whether we should early exit mask creation, and return the mask as-is.
-        attention_mask (`core.Tensor` or `BlockMask` or `None`):
+        attention_mask (`mindtorch.Tensor` or `BlockMask` or `None`):
             The attention mask to either return immediately, or to use in downstream mask creation.
-        packed_sequence_mask (`core.Tensor`, optional):
+        packed_sequence_mask (`mindtorch.Tensor`, optional):
             In case we detected packed sequence format, this is a tensor where each similar integer indicates that
             the tokens belong to the same sequence.
         kv_length (`int`):
@@ -658,20 +658,20 @@ def _preprocess_mask_arguments(
             An offset to indicate at which first position the key and values states will refer to.
     """
     # If the mask is already 4D, simply return as-is (it was already prepared, or it is custom)
-    if isinstance(attention_mask, (core.Tensor, BlockMask)) and len(attention_mask.shape) == 4:
+    if isinstance(attention_mask, (mindtorch.Tensor, BlockMask)) and len(attention_mask.shape) == 4:
         return True, attention_mask, None, None, None
 
     # For TGI/vLLM backends, or other custom attention without equivalent mask creation: we don't need a mask!
     # Note: it's not ideal to check the `_global_mapping` attribute instead of the object itself, however otherwise
-    # full graph dynamo tracing (i.e. core.export or compile with `fullgraph=True`) will fail on Python<3.11
-    # with `core._dynamo.exc.Unsupported: 'inline in skipfiles:Mapping.__contains__ | __contains__, skipped
+    # full graph dynamo tracing (i.e. mindtorch.export or compile with `fullgraph=True`) will fail on Python<3.11
+    # with `mindtorch._dynamo.exc.Unsupported: 'inline in skipfiles:Mapping.__contains__ | __contains__, skipped
     # according trace_rules.lookup SKIP_DIRS'` -- can be removed when we require Python>=3.11
     if config._attn_implementation not in ALL_MASK_ATTENTION_FUNCTIONS:
         return True, None, None, None, None
 
     # Move the mask to correct device, and potentially switch dtype for efficiency
     if attention_mask is not None and attention_mask.ndim == 2:
-        attention_mask = attention_mask.to(device=cache_position.device, dtype=core.bool)
+        attention_mask = attention_mask.to(device=cache_position.device, dtype=mindtorch.bool)
 
     # If using a cache, it can give all informations about mask sizes based on seen tokens
     if past_key_values is not None:
@@ -695,14 +695,14 @@ def _preprocess_mask_arguments(
 
 def create_causal_mask(
     config,
-    input_embeds: core.Tensor,
-    attention_mask: Optional[core.Tensor],
-    cache_position: core.Tensor,
+    input_embeds: mindtorch.Tensor,
+    attention_mask: Optional[mindtorch.Tensor],
+    cache_position: mindtorch.Tensor,
     past_key_values,
-    position_ids: Optional[core.Tensor] = None,
+    position_ids: Optional[mindtorch.Tensor] = None,
     or_mask_function: Optional[Callable] = None,
     and_mask_function: Optional[Callable] = None,
-) -> Optional[Union[core.Tensor, BlockMask]]:
+) -> Optional[Union[mindtorch.Tensor, BlockMask]]:
     """
     Create a standard causal mask based on the attention implementation used (stored in the config). If `past_key_values`
     has an HybridCache structure, this function will return the mask corresponding to one of the "full_attention" layers (to align
@@ -711,17 +711,17 @@ def create_causal_mask(
     Args:
         config (`PretrainedConfig`):
             The model config.
-        input_embeds (`core.Tensor`):
+        input_embeds (`mindtorch.Tensor`):
             The input embeddings of shape (batch_size, query_length, hidden_dim). This is used only to infer the
             batch size, query length and dtype.
-        attention_mask (`core.Tensor`, optional):
+        attention_mask (`mindtorch.Tensor`, optional):
             The 2D attention mask corresponding to padded tokens of shape (batch_size, number_of_seen_tokens+q_length).
             It can also be an already prepared 4D mask, in which case it is returned as-is.
-        cache_position (`core.Tensor`):
+        cache_position (`mindtorch.Tensor`):
             A tensor of shape (query_length,) indicating the current indices of the input sequence elements.
         past_key_values (`Cache`, optional):
             The past key values, if we use a cache.
-        position_ids (`core.Tensor`, optional)
+        position_ids (`mindtorch.Tensor`, optional)
             A 2D tensor of shape (batch_size, query_length) indicating the positions of each token in the sequences.
         or_mask_function (`Callable`, optional):
             An optional mask function to combine with the causal mask function (by doing the union of both). This is
@@ -784,14 +784,14 @@ def create_causal_mask(
 
 def create_sliding_window_causal_mask(
     config,
-    input_embeds: core.Tensor,
-    attention_mask: Optional[core.Tensor],
-    cache_position: core.Tensor,
+    input_embeds: mindtorch.Tensor,
+    attention_mask: Optional[mindtorch.Tensor],
+    cache_position: mindtorch.Tensor,
     past_key_values,
-    position_ids: Optional[core.Tensor] = None,
+    position_ids: Optional[mindtorch.Tensor] = None,
     or_mask_function: Optional[Callable] = None,
     and_mask_function: Optional[Callable] = None,
-) -> Optional[Union[core.Tensor, BlockMask]]:
+) -> Optional[Union[mindtorch.Tensor, BlockMask]]:
     """
     Create a sliding window causal mask based on the attention implementation used (stored in the config). This type
     of attention pattern was mostly democratized by Mistral. If `past_key_values` has an HybridCache structure, this
@@ -801,17 +801,17 @@ def create_sliding_window_causal_mask(
     Args:
         config (`PretrainedConfig`):
             The model config.
-        input_embeds (`core.Tensor`):
+        input_embeds (`mindtorch.Tensor`):
             The input embeddings of shape (batch_size, query_length, hidden_dim). This is used only to infer the
             batch size, query length and dtype.
-        attention_mask (`core.Tensor`, optional):
+        attention_mask (`mindtorch.Tensor`, optional):
             The 2D attention mask corresponding to padded tokens of shape (batch_size, number_of_seen_tokens+q_length).
             It can also be an already prepared 4D mask, in which case it is returned as-is.
-        cache_position (`core.Tensor`):
+        cache_position (`mindtorch.Tensor`):
             A tensor of shape (query_length,) indicating the current indices of the input sequence elements.
         past_key_values (`Cache`, optional):
             The past key values, if we use a cache.
-        position_ids (`core.Tensor`, optional)
+        position_ids (`mindtorch.Tensor`, optional)
             A 2D tensor of shape (batch_size, query_length) indicating the positions of each token in the sequences.
         or_mask_function (`Callable`, optional):
             An optional mask function to combine with the sliding causal mask function (by doing the union of both). This is
@@ -879,14 +879,14 @@ def create_sliding_window_causal_mask(
 
 def create_chunked_causal_mask(
     config,
-    input_embeds: core.Tensor,
-    attention_mask: Optional[core.Tensor],
-    cache_position: core.Tensor,
+    input_embeds: mindtorch.Tensor,
+    attention_mask: Optional[mindtorch.Tensor],
+    cache_position: mindtorch.Tensor,
     past_key_values,
-    position_ids: Optional[core.Tensor] = None,
+    position_ids: Optional[mindtorch.Tensor] = None,
     or_mask_function: Optional[Callable] = None,
     and_mask_function: Optional[Callable] = None,
-) -> Optional[Union[core.Tensor, BlockMask]]:
+) -> Optional[Union[mindtorch.Tensor, BlockMask]]:
     """
     Create a chunked attention causal mask based on the attention implementation used (stored in the config). This type
     of attention pattern was mostly democratized by Llama4. If `past_key_values` has an HybridCache structure, this
@@ -896,17 +896,17 @@ def create_chunked_causal_mask(
     Args:
         config (`PretrainedConfig`):
             The model config.
-        input_embeds (`core.Tensor`):
+        input_embeds (`mindtorch.Tensor`):
             The input embeddings of shape (batch_size, query_length, hidden_dim). This is used only to infer the
             batch size, query length and dtype.
-        attention_mask (`core.Tensor`, optional):
+        attention_mask (`mindtorch.Tensor`, optional):
             The 2D attention mask corresponding to padded tokens of shape (batch_size, number_of_seen_tokens+q_length).
             It can also be an already prepared 4D mask, in which case it is returned as-is.
-        cache_position (`core.Tensor`):
+        cache_position (`mindtorch.Tensor`):
             A tensor of shape (query_length,) indicating the current indices of the input sequence elements.
         past_key_values (`Cache`, optional):
             The past key values, if we use a cache.
-        position_ids (`core.Tensor`, optional)
+        position_ids (`mindtorch.Tensor`, optional)
             A 2D tensor of shape (batch_size, query_length) indicating the positions of each token in the sequences.
         or_mask_function (`Callable`, optional):
             An optional mask function to combine with the chunked causal mask function (by doing the union of both). This is
@@ -988,11 +988,11 @@ LAYER_PATTERN_TO_MASK_FUNCTION_MAPPING = {
 
 def create_masks_for_generate(
     config,
-    input_embeds: core.Tensor,
-    attention_mask: Optional[core.Tensor],
-    cache_position: core.Tensor,
+    input_embeds: mindtorch.Tensor,
+    attention_mask: Optional[mindtorch.Tensor],
+    cache_position: mindtorch.Tensor,
     past_key_values,
-    position_ids: Optional[core.Tensor] = None,
+    position_ids: Optional[mindtorch.Tensor] = None,
     or_mask_function: Optional[Callable] = None,
     and_mask_function: Optional[Callable] = None,
     **kwargs,
@@ -1004,17 +1004,17 @@ def create_masks_for_generate(
     Args:
         config (`PretrainedConfig`):
             The model config.
-        input_embeds (`core.Tensor`):
+        input_embeds (`mindtorch.Tensor`):
             The input embeddings of shape (batch_size, query_length, hidden_dim). This is used only to infer the
             batch size, query length and dtype.
-        attention_mask (`core.Tensor`, optional):
+        attention_mask (`mindtorch.Tensor`, optional):
             The 2D attention mask corresponding to padded tokens of shape (batch_size, number_of_seen_tokens+q_length).
             It can also be an already prepared 4D mask, in which case it is returned as-is.
-        cache_position (`core.Tensor`):
+        cache_position (`mindtorch.Tensor`):
             A tensor of shape (query_length,) indicating the current indices of the input sequence elements.
         past_key_values (`Cache`, optional):
             The past key values, if we use a cache.
-        position_ids (`core.Tensor`, optional)
+        position_ids (`mindtorch.Tensor`, optional)
             A 2D tensor of shape (batch_size, query_length) indicating the positions of each token in the sequences.
         or_mask_function (`Callable`, optional):
             An optional mask function to combine with the other mask function (by doing the union of both). This is
@@ -1087,7 +1087,7 @@ YELLOW_SQUARE = f"{YELLOW}{BLACK_SQUARE}{RESET}"
 GREEN_SQUARE = f"{GREEN}{BLACK_SQUARE}{RESET}"
 
 
-def tensor_to_mask_visual(original_tensor: core.Tensor, grid_size=(20, 40), style="majong") -> str:
+def tensor_to_mask_visual(original_tensor: mindtorch.Tensor, grid_size=(20, 40), style="majong") -> str:
     BLACK_SQUARE, WHITE_SQUARE, LOW_TRIANGLE, UPPER_TRIANGLE = get_style(style)
     h, w = original_tensor.shape
     max_h, max_w = grid_size
@@ -1139,11 +1139,11 @@ def tensor_to_mask_visual(original_tensor: core.Tensor, grid_size=(20, 40), styl
     return "\n".join(result)
 
 
-class AttentionMask(core.Tensor):
+class AttentionMask(mindtorch.Tensor):
     def __new__(cls, data, style=None):
         # Create a new instance of AttentionMask as a Tensor
         cls.style = style
-        return core.Tensor._make_subclass(cls, data, require_grad=False)
+        return mindtorch.Tensor._make_subclass(cls, data, require_grad=False)
 
     def __init__(self, data):
         # You can initialize any additional metadata here if needed
@@ -1164,7 +1164,7 @@ class AttentionMask(core.Tensor):
             block_vis = tensor_to_mask_visual(dense_mask[batch_idx], grid_size=grid_size, style=self.style)
             total_vis.append(block_vis)
 
-        total_vis.append(f"core.Tensor(shape={tuple(self.shape)}, dtype={self.dtype})")
+        total_vis.append(f"mindtorch.Tensor(shape={tuple(self.shape)}, dtype={self.dtype})")
         return "\n".join(total_vis)
 
     def __repr__(self):
@@ -1174,7 +1174,7 @@ class AttentionMask(core.Tensor):
         return self.to_string()
 
     @classmethod
-    def from_tensor(cls, tensor: core.Tensor, style: Optional[str] = None) -> "AttentionMask":
+    def from_tensor(cls, tensor: mindtorch.Tensor, style: Optional[str] = None) -> "AttentionMask":
         res = cls(tensor)
         res.style = style
         return res

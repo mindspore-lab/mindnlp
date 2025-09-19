@@ -2,8 +2,7 @@
 import types
 
 from mindspore.communication import GlobalComm
-from mindspore import runtime
-from ..core import nn, ops, distributed as dist
+from mindtorch import nn, ops, distributed as dist
 from ..utils import logging
 
 logger = logging.get_logger(__name__)

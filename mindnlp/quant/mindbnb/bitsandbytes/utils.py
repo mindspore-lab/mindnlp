@@ -23,7 +23,7 @@ from typing import Tuple
 import mindspore
 from mindspore import ops
 
-from mindnlp.core import nn
+from mindtorch import nn
 
 
 def outlier_hook(module, input):

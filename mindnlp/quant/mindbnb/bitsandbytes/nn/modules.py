@@ -32,8 +32,8 @@ from bitsandbytes.utils import (
     LINEAR_8BIT_WEIGHTS_FORMAT_MAPPING,
 )
 
-from mindnlp.core import nn
-from core.nn import Parameter
+from mindtorch import nn
+from mindtorch.nn import Parameter
 
 
 def empty(*size, dtype=None):

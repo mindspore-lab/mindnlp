@@ -19,8 +19,8 @@
 # ============================================================================
 import mindspore
 import mindnlp
-import core.nn as nn
-import core.ops as ops
+import mindtorch.nn as nn
+import mindtorch.ops as ops
 from typing import Tuple
 
 
@@ -188,7 +188,7 @@ class RWKV_RNN(nn.Module):
         self.set_train(False)
 
         # 加载权重
-        w = core.serialization.load(args['MODEL_NAME'] + '.pth')
+        w = mindtorch.serialization.load(args['MODEL_NAME'] + '.pth')
         
         # 将所有权重转换为float32
         self.num_layer = 0

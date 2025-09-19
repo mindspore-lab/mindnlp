@@ -21,8 +21,8 @@ import logging
 from bitsandbytes.nn.modules import Int8Params
 import bitsandbytes as bnb
 
-from mindnlp.core import nn
-from core.nn import Parameter
+from mindtorch import nn
+from mindtorch.nn import Parameter
 
 logger = logging.getLogger(__name__)
 
