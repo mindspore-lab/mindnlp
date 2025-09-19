@@ -20,7 +20,7 @@ lookup transforms
 """
 import mindspore._c_dataengine as cde # pylint: disable=no-name-in-module, import-error
 from mindspore.dataset.text.transforms import TextTensorOperation
-from mindspore.dataset.core.datatypes import mstype_to_detype
+from mindspore.dataset.mindtorch.datatypes import mstype_to_detype
 from mindspore.common import dtype as mstype
 from mindspore.dataset.text import Vocab as msVocab
 from mindnlp.vocab import Vocab as nlpVocab

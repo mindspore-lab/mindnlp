@@ -18,7 +18,7 @@
 # limitations under the License.
 # ============================================================================
 import mindspore
-from mindnlp.core import ops
+from mindtorch import ops
 
 
 def sample_logits(out: mindspore.Tensor, temperature: float = 1.0, top_p: float = 0.8) -> mindspore.Tensor:

@@ -3,9 +3,9 @@ from typing import Optional, Tuple
 import mindspore
 from mindspore import Tensor
 from mindspore.ops.primitive import PrimitiveWithInfer, prim_attr_register
-from mindnlp.core import nn, ops
-from mindnlp.core.serialization import load
-from mindnlp.core.configs import ON_ORANGE_PI
+from mindtorch import nn, ops
+from mindtorch.serialization import load
+from mindtorch.configs import ON_ORANGE_PI
 
 from .smooth import smooth_lm
 

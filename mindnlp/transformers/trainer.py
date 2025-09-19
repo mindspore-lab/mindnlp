@@ -1,6 +1,6 @@
 from typing import Union, Any, Optional
-from mindnlp import core
-from mindnlp.core import nn, autograd
+import mindtorch
+from mindtorch import nn, autograd
 
 from transformers.training_args import OptimizerNames
 from accelerate.utils import DistributedType
@@ -8,9 +8,9 @@ from accelerate.utils import DistributedType
 def training_step(
     self,
     model: nn.Module,
-    inputs: dict[str, Union[core.Tensor, Any]],
-    num_items_in_batch: Optional[core.Tensor] = None,
-) -> core.Tensor:
+    inputs: dict[str, Union[mindtorch.Tensor, Any]],
+    num_items_in_batch: Optional[mindtorch.Tensor] = None,
+) -> mindtorch.Tensor:
     """
     Perform a training step on a batch of inputs.
 
@@ -19,14 +19,14 @@ def training_step(
     Args:
         model (`nn.Module`):
             The model to train.
-        inputs (`dict[str, Union[core.Tensor, Any]]`):
+        inputs (`dict[str, Union[mindtorch.Tensor, Any]]`):
             The inputs and targets of the model.
 
             The dictionary will be unpacked before being fed to the model. Most models expect the targets under the
             argument `labels`. Check your model's documentation for all accepted arguments.
 
     Return:
-        `core.Tensor`: The tensor with training loss on this batch.
+        `mindtorch.Tensor`: The tensor with training loss on this batch.
     """
     model.train()
     if hasattr(self.optimizer, "train") and callable(self.optimizer.train):

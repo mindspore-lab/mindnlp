@@ -20,8 +20,8 @@ from typing import Union, Optional, List, Tuple
 import mindspore
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import Parameter
+from mindtorch import nn, ops
+from mindtorch.nn import Parameter
 
 ALL_LAYERNORM_LAYERS = [nn.LayerNorm]
 

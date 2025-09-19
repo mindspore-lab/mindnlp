@@ -21,7 +21,7 @@ import mindspore.context
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindnlp.core import nn
+from mindtorch import nn
 from bitsandbytes.nn import Linear8bitLt
 
 

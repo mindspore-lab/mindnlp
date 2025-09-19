@@ -1,7 +1,7 @@
 import warnings
 import functools
 import mindspore
-from ..core.configs import ON_A1
+from mindtorch.configs import ON_A1
 
 def dtype_wrapper(fn):
     def wrapper(*args, **kwargs):
