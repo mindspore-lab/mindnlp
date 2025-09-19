@@ -1,6 +1,10 @@
-import time
 from typing import List, Optional, Callable
 from abc import ABC, abstractmethod
+from datetime import timedelta
+try:
+    from mindspore.mint.distributed.distributed import TCPStore as MsTCPStore
+except:
+    MsTCPStore = None
 
 class Store:
     kDefaultTimeout = 300  # in seconds
@@ -98,3 +102,42 @@ class StoreTimeoutGuard:
 
     def __move__(self):
         raise NotImplementedError("Moving not allowed")
+
+class TCPStore(Store):
+    def __init__(
+        self,
+        host_name: str,
+        port: int,
+        world_size: Optional[int] = None,
+        is_master: bool = False,
+        timeout: timedelta = timedelta(seconds=300),
+        wait_for_workers: bool = True,
+        multi_tenant: bool = False,
+        master_listen_fd: Optional[int] = None,
+        use_libuv: bool = True
+    ) -> None:
+        super().__init__(timeout)
+        self.ms_store = MsTCPStore(host_name, port, world_size, is_master, timeout, wait_for_workers, multi_tenant, master_listen_fd, use_libuv)
+
+    @property
+    def host(self) -> str:
+        return self.ms_store.host
+
+    @property
+    def port(self) -> int:
+        return self.ms_store.port
+
+    def set(self, key: str, value: str) -> None:
+        self.ms_store.set(key, value)
+
+    def add(self, key: str, value: int) -> int:
+        return self.ms_store.add(key, value)
+
+    def get(self, key: str) -> bytes:
+        return self.ms_store.get(key)
+
+    def delete_key(self, key: str) -> bool:
+        return self.ms_store.delete_key(key)
+
+class FileStore(Store):
+    def __init__(self, path: str, numWorkers: int = ...): ...

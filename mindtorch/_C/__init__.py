@@ -212,3 +212,9 @@ def _log_api_usage_once(*args):
 
 ScriptDict = dict
 ScriptList = list
+
+class _DistStoreError(RuntimeError): pass
+
+def _get_accelerator():
+    device_target = mindspore.get_context("device_target")
+    return device_(DEVICE_MAP[device_target])
