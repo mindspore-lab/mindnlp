@@ -47,6 +47,9 @@ def elu(input, alpha=1.0):
     return execute('elu', input, alpha)
 
 def glu(input, dim=-1):
+    if input.device.type == 'cuda':
+        x, y = input.chunk(2, dim)
+        return x * sigmoid(y)
     return execute('glu', input, dim)
 
 def softplus(input, beta=1, threshold=20):

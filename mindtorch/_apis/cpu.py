@@ -1089,7 +1089,7 @@ def leaky_relu(input, negative_slope):
     select_op = maximum
     if negative_slope > 1:
         select_op = minimum
-    return select_op(mul(negative_slope, input), input)
+    return select_op(mul(input, negative_slope), input)
 
 def ceil(input):
     return legacy.ceil(input)
@@ -1220,7 +1220,8 @@ def logsumexp(input, dim, keepdim=False):
     return add(input_logsumexp, input_max)
 
 def bernoulli(input, generator):
-    return legacy.bernoulli(input, seed, offset)
+    seed, offset = generator._step(12)  # pylint: disable=protected-access
+    return legacy.bernoulli(input, 0.5, seed.item(), offset.item())
 
 def right_shift(input, other):
     return legacy.right_shift(input, other)

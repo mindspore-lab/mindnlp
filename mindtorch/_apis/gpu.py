@@ -746,9 +746,9 @@ def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_paddi
     pad_mode = 'pad'
     pad = padding
     if isinstance(padding, tuple):
-        pad = (0, 0, padding[0], padding[0])
+        pad = (padding[0], padding[0], padding[1], padding[1])
     elif isinstance(padding, int):
-        pad = (0, 0) + (padding,) * 2
+        pad = (padding,) * 4
     if not isinstance(padding, (int, tuple)):
         pad_mode = padding
         pad = (0,) * 4
@@ -758,7 +758,6 @@ def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_paddi
 
     in_channel, out_channels = weight.shape[0], weight.shape[1] * groups
     kernel_size = weight.shape[2:]
-
     n, _, h, w = input.shape
     h_add = _deconv_output_length(pad_mode, kernel_size[0], stride[0], dilation[0], pad[0] + pad[1])
     w_add = _deconv_output_length(pad_mode, kernel_size[1], stride[1], dilation[1], pad[2] + pad[3])
@@ -1004,7 +1003,7 @@ def leaky_relu(input, negative_slope):
     select_op = maximum
     if negative_slope > 1:
         select_op = minimum
-    return select_op(mul(negative_slope, input), input)
+    return select_op(mul(input, negative_slope), input)
 
 def ceil(input):
     return legacy.ceil(input)
@@ -1147,3 +1146,7 @@ def search_sorted(sorted_sequence, values, sorter, dtype, right):
 
 def einsum(equation, operands):
     return legacy.einsum(operands, equation)
+
+def unique2(input, sorted, return_inverse, return_counts):
+    outs = legacy.unique(input)
+    return outs + (None,)
