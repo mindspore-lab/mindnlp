@@ -108,7 +108,46 @@ def cumsum(input, dim=None, dtype=None, **kwargs):
     return execute('cumsum', input, dim, dtype)
 
 # diag
+def my_diag(input_tensor, diagonal=0):
+    """
+    手动实现 torch.diag 的功能
+    参数:
+        input_tensor: 输入张量，可以是一维（向量）或二维（矩阵）
+        diagonal: 对角线的位置，0为主对角线，正数为上对角线，负数为下对角线
+    返回:
+        根据输入维度返回对角矩阵或对角线元素
+    """
+    if input_tensor.dim() == 1:  # 输入是向量，构建对角矩阵
+        n = input_tensor.size(0)
+        output = mindtorch.zeros(n, n, dtype=input_tensor.dtype, device=input_tensor.device)
+        for i in range(n):
+            output[i, i] = input_tensor[i]
+        return output
+        
+    elif input_tensor.dim() == 2:  # 输入是矩阵，提取对角线元素
+        rows, cols = input_tensor.shape
+        if diagonal >= 0:
+            diag_len = min(rows, cols - diagonal)
+        else:
+            diag_len = min(rows + diagonal, cols)
+        
+        if diag_len <= 0:  # 对角线长度无效则返回空张量
+            return mindtorch.tensor([], dtype=input_tensor.dtype, device=input_tensor.device)
+            
+        output = mindtorch.zeros(diag_len, dtype=input_tensor.dtype, device=input_tensor.device)
+        for i in range(diag_len):
+            if diagonal >= 0:
+                output[i] = input_tensor[i, i + diagonal]
+            else:
+                output[i] = input_tensor[i - diagonal, i]
+        return output
+        
+    else:
+        raise RuntimeError("输入张量必须是一维或二维")
+
 def diag(input, diagonal=0, *, out=None):
+    if input.device.type == 'cuda':
+        return my_diag(input, diagonal)
     return execute('diag', input, diagonal)
 
 # diag_embed
@@ -639,6 +678,8 @@ def einsum(equation, *operands):
     """
     if isinstance(operands[0], (list, tuple)):
         operands = operands[0]
+    if operands[0].device.type == 'cuda':
+        return execute('einsum', equation, operands, device=operands[0].device)
     _equation, _operands = _einsum_convert_sublist(equation, *operands)
     _einsum_check_inputargs(_equation, _operands)
     return _einsum(_equation, _operands)
