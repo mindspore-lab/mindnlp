@@ -83,6 +83,7 @@ class ProcessGroup:
         return backend_type_to_string(self.backend_type)
 
     def set_backend(self, device_type, backend_type: BackendType, backend: Optional[Any] = None):
+        self.device = device_type
         self.device_type_to_backend[device_type] = backend_type
         self.device_types.add(device_type)
         
@@ -186,6 +187,10 @@ class ProcessGroup:
     
     def get_group_name(self) -> str:
         return self.device_type_to_backend[next(iter(self.device_type_to_backend))].get_group_uid()
+
+    @property
+    def group_name(self) -> str:
+        return self._name
 
     def set_group_desc(self, desc: str):
         self.pg_desc = desc

@@ -60,7 +60,7 @@ if is_available():
     )
 
 
-    # from .device_mesh import DeviceMesh, init_device_mesh
+    from .device_mesh import DeviceMesh, init_device_mesh
 
     # Variables prefixed with underscore are not auto imported
     # See the comment in `distributed_c10d.py` above `_backend` on why we expose

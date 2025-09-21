@@ -26,6 +26,8 @@ from mindspore.communication import init, GlobalComm, get_group_size, get_proces
 from mindspore.common.api import _pynative_executor
 
 import mindtorch
+from mindtorch._C._distributed_c10d import ProcessGroupHCCL, ProcessGroupGloo
+
 # from mindtorch._C import _DistStoreError as DistStoreError
 from .c10d import (
     # _DistributedBackendOptions,
@@ -50,6 +52,7 @@ from .c10d import (
     ScatterOptions,
     Store,
     Work,
+    str_to_backend_type
 )
 # from mindtorch._utils_internal import set_pytorch_distributed_envs_from_justknobs
 # from mindtorch.monitor import _WaitCounter
@@ -1695,8 +1698,14 @@ def _new_process_group_helper(
         group_size,
     )
 
-    device = 'npu' if backend == 'hccl' else 'cpu'
-    pg._register_backend(mindtorch.device(device), backend, backend)
+    if backend == "hccl":
+        pg_hccl = ProcessGroupHCCL(group_name)
+        backend_type = str_to_backend_type(backend)
+        pg.set_backend(mindtorch.device("npu"), backend_type, pg_hccl)
+    elif backend == "gloo":
+        pg_gloo = ProcessGroupGloo(prefix_store, group_rank, group_size, timeout=timeout)
+        backend_type = str_to_backend_type(backend)
+        pg.set_backend(mindtorch.device("cpu"), backend_type, pg_gloo)
 
     # update global state
     _world.pg_map[pg] = (backend, prefix_store)

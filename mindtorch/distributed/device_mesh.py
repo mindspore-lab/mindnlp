@@ -374,7 +374,7 @@ else:
         Return None when there is no corresponding module for device_type, otherwise
         return the corresponding module.
         """
-        return getattr(torch, device_type, None)
+        return getattr(mindtorch, device_type, None)
 
     class DeviceMesh:
         """

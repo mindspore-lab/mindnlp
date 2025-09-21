@@ -162,6 +162,12 @@ setup(
         'build_py': BuildPy,
         "install": CustomInstall,
     },
+    entry_points={
+        'console_scripts': [
+            'mtrun=mindtorch.distributed.run:main'
+        ],
+    },
+
     install_requires=[
         'mindspore>=2.5.0',
         'tqdm',

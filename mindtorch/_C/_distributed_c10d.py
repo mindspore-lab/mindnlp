@@ -1,6 +1,7 @@
 import pickle
 from typing import List, Any
 from datetime import timedelta
+import mindspore
 
 import mindtorch
 from mindtorch import Tensor
@@ -115,3 +116,6 @@ class ProcessGroupHCCL:
         return self.group_name
 
     class Options: ...
+
+def _resolve_process_group(group_name: str):
+    mindspore.communication.destroy_group(group_name)
