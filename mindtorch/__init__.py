@@ -58,6 +58,7 @@ if platform.system().lower() == 'linux' and mindspore.get_context('device_target
         disable_multi_thread()
 
 pi = math.pi
+layout = object
 strided = None
 contiguous_format = None
 preserve_format = None
@@ -158,6 +159,8 @@ def typename(obj: _Any, /) -> str:
 def _nnpack_available():
     return False
 
+def _running_with_deploy():
+    return False
 
 from .autograd import *
 from .serialization import load, save
@@ -171,7 +174,7 @@ from .storage import UntypedStorage, Storage, TypedStorage
 
 from . import _dynamo
 from . import profiler, cuda, amp, compiler, jit, version, __future__, overrides, \
-    return_types, linalg, fx, backends, nn, fft, _jit_internal, utils, optim, testing
+    return_types, linalg, fx, backends, nn, fft, _jit_internal, utils, optim, testing, _ops
 from ._lowrank import svd_lowrank
 from .random import get_rng_state, initial_seed, manual_seed, seed, set_rng_state
 

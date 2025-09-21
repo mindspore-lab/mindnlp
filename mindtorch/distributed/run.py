@@ -108,7 +108,7 @@ def get_args():
         " rank id of each process on the same node will be continuous."
     )
     parser.add_argument(
-        "--log_dir", default="", type=str,
+        "--log_dir", default="mindnlp_log", type=str,
         help="specifies the log output file path."
     )
     parser.add_argument(

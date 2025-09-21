@@ -1604,3 +1604,12 @@ def histc(input, bins=100, min=0, max=0):
     if use_pyboost():
         return pyboost.histc_ext_op(input, bins, float(min), float(max))
     return legacy.histogram(input, bins, float(min), float(max))
+
+def dist_comm_barrier(group):
+    return pyboost.dist_comm_barrier_op(group)
+
+def new_empty(input, size, dtype):
+    return pyboost.new_empty_op(input, size, dtype, 'Ascend')
+
+def new_ones(input, size, dtype):
+    return pyboost.new_ones_op(input, size, dtype)

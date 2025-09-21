@@ -1,4 +1,6 @@
 from typing import Any
+from enum import Enum, IntEnum
+
 import mindspore
 from mindspore.ops.operations._inner_ops import Generator as GeneratorOp
 
@@ -218,3 +220,6 @@ class _DistStoreError(RuntimeError): pass
 def _get_accelerator():
     device_target = mindspore.get_context("device_target")
     return device_(DEVICE_MAP[device_target])
+
+class DispatchKey(Enum):
+    pass
