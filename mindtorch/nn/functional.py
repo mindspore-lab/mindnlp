@@ -361,7 +361,7 @@ def _nll_loss(inputs, target, target_dim=-1, weight=None, ignore_index=None, red
     else:
         non_pad_mask = target
     if weight is not None:
-        loss_weights = mindtorch.gather(weight, target, 0)
+        loss_weights = mindtorch.index_select(weight, 0, target)
         orig_shape = inputs.shape
         if inputs.ndim != 2:
             inputs = inputs.view(orig_shape[:2] + (-1,))

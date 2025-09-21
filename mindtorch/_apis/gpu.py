@@ -71,6 +71,7 @@ def identity(input):
 def clone(input):
     return cast(legacy.mul(input, 1), input.dtype)
 
+py_max = max
 def max(input):
     return legacy.reduce_max(input, (), False)
 
@@ -106,6 +107,12 @@ def transpose_view(input, dim0, dim1):
 def matmul(self, other):
     if self.ndim > 2:
         if self.ndim == other.ndim:
+            if self.shape[:-2] != other.shape[:-2]:
+                new_shape = ()
+                for i in range(self.ndim - 2):
+                    new_shape += (py_max([self.shape[i], other.shape[i]]),)
+                self = broadcast_to(self, new_shape + self.shape[-2:])
+                other = broadcast_to(other, new_shape + other.shape[-2:])
             return legacy.batch_mat_mul(self, other, False, False)
         else:
             self_shape = self.shape
@@ -988,9 +995,9 @@ def grid_sampler_2d(input, grid, mode='bilinear', padding_mode='zeros', align_co
 def l1_loss(input, target, reduction='mean'):
     loss = abs(sub(input, target))
     if reduction == 'mean':
-        return mean(loss, (), False, False)
+        return mean(loss, (), False, None)
     elif reduction == 'sum':
-        return sum(loss, (), False, False)
+        return sum(loss, (), False, None)
     return loss
 
 def leaky_relu(input, negative_slope):
@@ -1137,3 +1144,6 @@ def inplace_fill_tensor(input, value):
 
 def search_sorted(sorted_sequence, values, sorter, dtype, right):
     return legacy.search_sorted(sorted_sequence, values, sorter, dtype, right)
+
+def einsum(equation, operands):
+    return legacy.einsum(operands, equation)

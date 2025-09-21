@@ -1,7 +1,7 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates
 
 import mindtorch
-import mindtorch.distributed.tensor._ops  # force import all built-in dtensor ops
+# import mindtorch.distributed.tensor._ops  # force import all built-in dtensor ops
 from mindtorch.distributed.device_mesh import DeviceMesh, init_device_mesh  # noqa: F401
 from mindtorch.distributed.tensor._api import (
     distribute_module,

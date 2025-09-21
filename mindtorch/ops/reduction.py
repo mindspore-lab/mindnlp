@@ -163,8 +163,59 @@ def prod(input, dim=None, keepdim=False, *, dtype=None):
 # nanquantile
 
 # std
+def my_std(input_tensor, dim=None, unbiased=True, keepdim=False):
+    """
+    手动实现类似 torch.std 的功能，计算张量的标准差。
+    
+    参数:
+        input_tensor (torch.Tensor): 输入张量。
+        dim (int 或 tuple, 可选): 要计算标准差的维度。默认为 None，计算全局标准差。
+        unbiased (bool, 可选): 是否使用无偏估计 (贝塞尔校正)。默认为 True。
+        keepdim (bool, 可选): 输出是否保持输入张量的维度。默认为 False。
+        
+    返回:
+        torch.Tensor: 包含标准差值的张量。
+    """
+    # 处理空张量输入
+    if input_tensor.numel() == 0:
+        raise ValueError("my_std(): input tensor is empty")
+    
+    # 如果未指定 dim，则计算全局标准差
+    if dim is None:
+        # 计算均值
+        mean = input_tensor.mean()
+        # 计算与均值的平方差
+        squared_diff = (input_tensor - mean) ** 2
+        # 计算平方差的平均值（方差）
+        # 根据 unbiased 选择分母
+        n = input_tensor.numel()
+        divisor = n - 1 if unbiased else n
+        variance = squared_diff.sum() / divisor
+        # 标准差是方差的平方根
+        std_dev = mindtorch.sqrt(variance)
+        return std_dev
+
+    # 如果指定了 dim，则沿指定维度计算标准差
+    else:
+        # 计算沿指定维度的均值，keepdim=True 为了广播
+        mean = input_tensor.mean(dim=dim, keepdim=True)
+        # 计算平方差
+        squared_diff = (input_tensor - mean) ** 2
+        # 计算沿指定维度的平方差和
+        sum_squared_diff = squared_diff.sum(dim=dim, keepdim=keepdim)
+        # 获取沿指定维度缩减后的元素数
+        n = input_tensor.size(dim) if isinstance(dim, int) else mindtorch.prod(mindtorch.tensor([input_tensor.size(d) for d in dim])).item()
+        divisor = (n - 1) if unbiased else n
+        # 计算方差
+        variance = sum_squared_diff / divisor
+        # 标准差是方差的平方根
+        std_dev = mindtorch.sqrt(variance)
+        return std_dev
+
 def std(input, dim=None, *, correction=1, keepdim=False, **kwargs):
     dim = kwargs.pop('axis', dim)
+    if input.device.type == 'cuda':
+        return my_std(input, dim, bool(correction), keepdim)
     return execute('std', input, dim, correction, keepdim)
 
 # std_mean
