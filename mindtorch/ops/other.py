@@ -27,6 +27,9 @@ def broadcast_tensors(*tensors):
 
 # broadcast_to
 def broadcast_to(input, shape):
+    if input.shape == shape:
+        return input
+
     new_shape = ()
     for s in shape:
         if not isinstance(s, int):

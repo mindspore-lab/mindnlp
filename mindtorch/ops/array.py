@@ -908,7 +908,7 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
         stacked_indices = indices[0]
     stacked_indices = stacked_indices.to(mindtorch.int32)
     stacked_indices = where(
-        stacked_indices < 0, stacked_indices + mindtorch.tensor(dim_sizes, device=stacked_indices.device), stacked_indices
+        stacked_indices < 0, stacked_indices + mindtorch.tensor(dim_sizes, dtype=stacked_indices.dtype, device=stacked_indices.device), stacked_indices
     )
     axis = dims[0]
     if len(dims) > 1:
