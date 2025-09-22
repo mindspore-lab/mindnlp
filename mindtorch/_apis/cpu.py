@@ -7,8 +7,8 @@ from mindspore._c_expression import _empty_instance
 import mindtorch
 from .._op_prim.cpu import legacy
 
-def empty(*args, **kwargs):
-    return _empty_instance(*args, **kwargs, device='CPU')
+def empty(size, dtype):
+    return _empty_instance(size, dtype=dtype, device='CPU')
 
 def inplace_normal(input, mean, std, generator_):
     out = np.random.normal(mean, std, input.shape).astype(mindtorch.dtype2np[input.dtype])
@@ -68,7 +68,7 @@ def inplace_uniform(input, from_, to_, generator_):
     numpy_to_tensor_overwrite(out, input)
     return input
 
-def sub(input, other, alpha):
+def sub(input, other, alpha=1):
     return legacy.sub(input, legacy.mul(other, alpha))
 
 def contiguous(input):

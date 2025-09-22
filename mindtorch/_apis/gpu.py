@@ -605,6 +605,9 @@ def avg_pool1d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
 def fmod_scalar(input, other):
     return legacy.floor_mod(input, other)
 
+def conv1d_padding(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+    return conv1d(input, weight, bias, stride, padding, dilation, groups)
+
 def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     pad_mode = 'pad'
     pad = padding
