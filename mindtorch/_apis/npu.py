@@ -4,8 +4,8 @@ from ..configs import use_pyboost, ON_A1, ON_ORANGE_PI
 from .._op_prim.ascend import legacy, pyboost
 
 
-def empty(*args, **kwargs):
-    return _empty_instance(*args, **kwargs, device='Ascend')
+def empty(size, dtype):
+    return _empty_instance(size, dtype=dtype, device='Ascend')
 
 def reshape(x, shape):
     """
