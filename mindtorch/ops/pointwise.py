@@ -628,6 +628,7 @@ __all__ = [
     "log",
     "log1p",
     "log2",
+    "logaddexp",
     "logical_and",
     "logical_not",
     "logical_or",

@@ -1613,3 +1613,6 @@ def new_empty(input, size, dtype):
 
 def new_ones(input, size, dtype):
     return pyboost.new_ones_op(input, size, dtype)
+
+def kl_div(input, target, reduction, log_target):
+    return pyboost.kl_div_op(input, target, reduction, log_target)
