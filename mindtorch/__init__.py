@@ -178,9 +178,9 @@ from . import profiler, cuda, amp, compiler, jit, version, __future__, overrides
 from ._lowrank import svd_lowrank
 from .random import get_rng_state, initial_seed, manual_seed, seed, set_rng_state
 
+__version__ = 'test_version_no_value'
+
 from .torch_proxy import initialize_torch_proxy, setup_metadata_patch
 initialize_torch_proxy()
 setup_metadata_patch()
 
-
-__version__ = 'test_version_no_value'

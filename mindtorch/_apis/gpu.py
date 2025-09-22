@@ -265,6 +265,8 @@ def less(input, other):
     return legacy.less(input, other)
 
 def select(condition, x, y):
+    if 0 in condition.shape:
+        return mindspore.Tensor(Tensor_(shape=condition.shape, dtype=x.dtype))
     if isinstance(x, numbers.Number) or x.ndim == 0:
         x = fill_scalar(condition.shape, x, None)
     if isinstance(y, numbers.Number) or y.ndim == 0:
@@ -1150,3 +1152,31 @@ def einsum(equation, operands):
 def unique2(input, sorted, return_inverse, return_counts):
     outs = legacy.unique(input)
     return outs + (None,)
+
+def logaddexp(input, other):
+    m = maximum(input, other)
+    abs_val = abs(sub(input, other))
+    exp_val = exp(neg(abs_val))
+    y = add(m, log1p(exp_val))
+    return y
+
+def kl_div(input, target, reduction, log_target):
+    if log_target:
+        target = log(target)
+
+    if reduction == 'batchmean':
+        kl_div_sum = legacy.kl_div_loss(input, target, 'sum')
+        # shape = input.shape
+        # batch_size = shape[0]
+        # return div(kl_div_sum, batch_size)
+        return kl_div_sum
+
+    if reduction == 'mean':
+        kl_div_sum = legacy.kl_div_loss(input, target, 'sum')
+        shape = input.shape
+        total_size = 1
+        for dim in shape:
+            total_size = total_size * dim
+        return div(kl_div_sum, total_size)
+
+    return legacy.kl_div_loss(input, target, reduction)

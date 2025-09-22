@@ -177,7 +177,7 @@ class TensorPlaceHolder:
         if DEVICE_TARGET == 'Ascend':
             return self.npu(device, non_blocking)
         if device is None:
-            device = device_('gpu', 0)
+            device = device_('cuda', 0)
         return self.to(device, non_blocking=non_blocking)
 
     def requires_grad_(self, requires_grad=True):

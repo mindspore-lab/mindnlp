@@ -825,6 +825,7 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
             strides,
             begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask
         )
+        tensor = tensor.clone()
 
     if not advanced_indices:
         return tensor
@@ -958,6 +959,8 @@ def getitem(self, slice_spec):
 
 def setitem(a, slice_spec, updates):
     """Implementation of ndarray._with_index_*."""
+    if 0 in updates.shape:
+        return a
     if (
         isinstance(slice_spec, bool)
         or (
@@ -981,6 +984,8 @@ def strided_slice_update(input, begin, end, strides, update, begin_mask=0, end_m
     if isinstance(update, (int, float, bool)):
         update = mindtorch.tensor(update, device=input.device, dtype=input.dtype)
     sliced_tensor = execute('strided_slice', input, begin, end, strides, begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask)
+    if 0 in sliced_tensor.shape:
+        return input
     if update.shape != sliced_tensor.shape:
         update = update.broadcast_to(sliced_tensor.shape)
     update = update - sliced_tensor
