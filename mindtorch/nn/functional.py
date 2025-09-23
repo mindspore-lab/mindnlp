@@ -1134,6 +1134,8 @@ def repeat_kv(hidden_states, n_rep: int):
     This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
     num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)
     """
+    if ON_A2:
+        return mindtorch.repeat_interleave(hidden_states, dim=1, repeats=n_rep)
     batch, num_key_value_heads, slen, head_dim = hidden_states.shape
     if n_rep == 1:
         return hidden_states
@@ -1141,35 +1143,60 @@ def repeat_kv(hidden_states, n_rep: int):
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
+ATTN_MASK_NPU_CACHE = {}
+
+
+def get_attn_mask_npu(device):
+    """Get or create attention mask for the specified device."""
+    if device not in ATTN_MASK_NPU_CACHE:
+        ATTN_MASK_NPU_CACHE[device] = mindtorch.ones(2048, 2048, dtype=mindtorch.bool, device=device).triu(diagonal=1)
+    return ATTN_MASK_NPU_CACHE[device]
+
 def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0,
         is_causal=False, scale=None, enable_gqa=False) -> mindtorch.Tensor:
 
     L, S = query.size(-2), key.size(-2)
     scale_factor = 1 / math.sqrt(query.size(-1)) if scale is None else scale
 
-    if enable_gqa:
-        key = repeat_kv(key, query.size(-3) // key.size(-3)).contiguous()
-        value = repeat_kv(value, query.size(-3) // value.size(-3)).contiguous()
 
     if query.device.type == 'npu' and ON_A2:
-        if attn_mask is not None:
+        if attn_mask is not None and not is_causal:
             attn_mask = ~attn_mask
 
         sparse_mode = 0
 
         if is_causal:
             assert attn_mask is None
-            attn_mask = mindtorch.ones(2048, 2048, dtype=mindtorch.bool, device=query.device).triu(diagonal=1)
+            attn_mask = get_attn_mask_npu(query.device)
             sparse_mode = 3
 
         head_num = query.shape[1]
-        output = execute('flash_attention_score', query, key, value, head_num=head_num, input_layout='BNSD', real_shift=None, padding_mask=None, attn_mask=attn_mask,
-                        scale_value=scale_factor, keep_prob=1 - dropout_p, pre_tokens=2147483647, next_tokens=2147483647, inner_precise=0,
-                        drop_mask=None, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=sparse_mode)
+        if enable_gqa and is_causal:
+            output = execute('prompt_flash_attention', query, key, value, attn_mask,
+                             actual_seq_lengths=None, actual_seq_lengths_kv=None, pse_shift=None,
+                             deq_scale1=None, quant_scale1=None, deq_scale2=None, quant_scale2=None,
+                             quant_offset2=None, num_heads=head_num, scale_value=scale_factor,
+                             pre_tokens=2147483647, next_tokens=0, input_layout='BNSD',
+                             num_key_value_heads=key.shape[1], sparse_mode=sparse_mode, inner_precise=1)
+            # output = execute('incre_flash_attention', query, [key], [value], attn_mask,
+            #                  actual_seq_lengths=None, pse_shift=None, dequant_scale1=None, quant_scale1=None,
+            #                  dequant_scale2=None, quant_scale2=None, quant_offset2=None, antiquant_scale=None,
+            #                  antiquant_offset=None, block_table=None, kv_padding_size=None, num_heads=head_num,
+            #                  input_layout='BNSD', scale_value=scale_factor, num_key_value_heads=key.shape[1],
+            #                  block_size=0, inner_precise=1)
+            return output
+        else:
+            output = execute('flash_attention_score', query, key, value, head_num=head_num, input_layout='BNSD', real_shift=None, padding_mask=None, attn_mask=attn_mask,
+                            scale_value=scale_factor, keep_prob=1 - dropout_p, pre_tokens=2147483647, next_tokens=2147483647, inner_precise=0,
+                            drop_mask=None, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=sparse_mode)
 
-        sfm_max, sfm_sum, sfm_out, atten_out = output
+            sfm_max, sfm_sum, sfm_out, atten_out = output
 
-        return atten_out
+            return atten_out
+
+    if enable_gqa:
+        key = repeat_kv(key, query.size(-3) // key.size(-3)).contiguous()
+        value = repeat_kv(value, query.size(-3) // value.size(-3)).contiguous()
     
     attn_bias_shape = (L, S) if attn_mask is None else attn_mask.shape
     attn_bias = mindtorch.zeros(attn_bias_shape, dtype=query.dtype, device=query.device)

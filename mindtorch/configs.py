@@ -1,3 +1,4 @@
+import os
 from packaging import version
 import mindspore
 from mindspore._c_expression import MSContext # pylint: disable=no-name-in-module, import-error
@@ -13,7 +14,7 @@ MS27 = '.'.join(mindspore.__version__.split('.')[:2]) >= '2.7'
 
 # OP backend select
 USE_PYBOOST = True
-CPU_USE_NUMPY_OP = False
+CPU_USE_NUMPY_OP = bool(os.environ.get('CPU_USE_NUMPY', False))
 
 def set_pyboost(mode: bool):
     """set global pyboost"""

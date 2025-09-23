@@ -30,3 +30,4 @@ setup_safetensors_patch()
 from . import transformers
 from . import diffusers
 
+__version__ = '0.5.0rc2'

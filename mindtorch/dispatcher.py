@@ -1,6 +1,6 @@
 import mindtorch
-from ._apis import npu, cpu, gpu, meta
-from .configs import DEVICE_TARGET, SOC
+from ._apis import npu, cpu, gpu, meta, numpy
+from .configs import DEVICE_TARGET, cpu_use_numpy
 from ._bind import is_autocast_enabled
 
 class SingletonMeta(type):
@@ -14,7 +14,7 @@ class SingletonMeta(type):
 
 
 api_map = {
-    'cpu': cpu,
+    'cpu': numpy if cpu_use_numpy() else cpu,
     'npu': npu,
     'meta': meta,
     'cuda': gpu
