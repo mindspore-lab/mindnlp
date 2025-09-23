@@ -1567,6 +1567,7 @@ def flash_attention_score(query, key, value, real_shift, drop_mask, padding_mask
     return legacy.flash_attention_score(query, key, value, real_shift, drop_mask, padding_mask, attn_mask, prefix, actual_seq_qlen, actual_seq_kvlen, head_num, keep_prob, scale_value, pre_tokens, next_tokens, inner_precise, input_layout, sparse_mode)
 
 def randperm(n, generator, dtype):
+    seed, offset = generator._step(12)  # pylint: disable=protected-access
     if use_pyboost():
         return pyboost.randperm_ext_op(n, seed, offset, dtype)
     return legacy.randperm(n, seed)
