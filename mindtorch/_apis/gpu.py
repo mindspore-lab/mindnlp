@@ -197,7 +197,8 @@ def flatten(input, start_dim, end_dim):
     return legacy.reshape(input, tuple(input_shape))
 
 def sort(input, dim, descending, stable):
-    return legacy.sort(input, dim, descending)
+    out = legacy.sort(input, dim, descending)
+    return out[0], cast(out[1], mindspore.int64)
 
 def gather(input_params, input_indices, axis, batch_dim):
     return legacy.gather(input_params, input_indices, axis, batch_dim)
@@ -513,6 +514,8 @@ def log_softmax(input, axis, dtype):
     return legacy.log_softmax(input, axis)
 
 def scatter(input, dim, index, src):
+    if input.data_ptr() == src.data_ptr():
+        src = clone(src)
     return legacy.tensor_scatter_elements(input, index, src, dim, "none")
 
 def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, training=False, momentum=0.1, epsilon=1e-5):
@@ -1113,6 +1116,7 @@ def logsumexp(input, dim, keepdim=False):
     return add(input_logsumexp, input_max)
 
 def bernoulli(input, generator):
+    seed, offset = generator._step(12)  # pylint: disable=protected-access
     return legacy.bernoulli(input, seed, offset)
 
 def arange(start, end, step, dtype):

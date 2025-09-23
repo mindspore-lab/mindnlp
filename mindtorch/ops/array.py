@@ -825,7 +825,6 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
             strides,
             begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask
         )
-        tensor = tensor.clone()
 
     if not advanced_indices:
         return tensor
@@ -988,13 +987,12 @@ def strided_slice_update(input, begin, end, strides, update, begin_mask=0, end_m
         return input
     if update.shape != sliced_tensor.shape:
         update = update.broadcast_to(sliced_tensor.shape)
-    update = update - sliced_tensor
     updated_tensor = execute('strided_slice_grad', input, begin, end, strides, update, begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask)
-    out = input + updated_tensor
-    if input.dtype == mindtorch.bool:
-        out = out.astype(mindtorch.bool)
+    condition = execute('strided_slice_grad', input, begin, end, strides, mindtorch.full(input.shape, True, device=input.device, dtype=mindtorch.bool), begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask)
+    out = where(condition, updated_tensor, input)
     input.copy_(out)
     return input
+
 
 def getitem_np(input, slice):
     return execute('getitem', input, slice)
