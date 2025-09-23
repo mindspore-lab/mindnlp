@@ -23,7 +23,7 @@ from . import ops, _dtype
 from ._bind import get_device_in_context, device_, get_default_dtype
 from ._utils import _rebuild_tensor_v2
 from ._C.size import Size
-from .configs import DEVICE_TARGET, CPU_USE_NUMPY_OP
+from .configs import DEVICE_TARGET, cpu_use_numpy
 
 device_map = {
     'cpu': 'CPU',
@@ -238,16 +238,15 @@ class TensorPlaceHolder:
                     s = tensor(s, device=self.device)
                 new_slices += (s,)
             slices = new_slices
-        if self.device.type == 'npu':
+        if self.device.type in ['npu', 'cuda']:
             out = ops.tensor_getitem(self, slices)
         elif self.device.type == 'meta':
             out = ops.getitem_np(self, slices)
         else:
-            # if CPU_USE_NUMPY_OP:
-            #     out = ops.getitem_np(self, slices)
-            # else:
-            #     out = ops.getitem(self, slices)
-            out = ops.tensor_getitem(self, slices)
+            if cpu_use_numpy():
+                out = ops.getitem_np(self, slices)
+            else:
+                out = ops.tensor_getitem(self, slices)
 
         out._device = self.device
         return out
@@ -284,8 +283,10 @@ class TensorPlaceHolder:
             if value.device != self.device:
                 value._device = self.device
             out = ops.tensor_setitem(self, slices, value)
+        elif self.device.type == 'cuda':
+            out = ops.setitem(self, slices, value)
         else:
-            if CPU_USE_NUMPY_OP:
+            if cpu_use_numpy():
                 out = ops.setitem_np(self, slices, value)
             else:
                 out = ops.setitem(self, slices, value)

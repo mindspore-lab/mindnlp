@@ -36,7 +36,7 @@ def infer_dtype(dtypes):
 def cat(tensors, dim=0, **kwargs):
     dim = kwargs.pop('axis', dim)
     dtype = infer_dtype([t.dtype for t in tensors])
-    tensors = [t.to(dtype) for t in tensors]
+    tensors = [t.to(dtype) for t in tensors if 0 not in t.shape]
     return execute("concat", tensors, dim)
 
 

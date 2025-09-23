@@ -1566,6 +1566,12 @@ def flash_attention_score(query, key, value, real_shift, drop_mask, padding_mask
         return pyboost.flash_attention_score_impl(query, key, value, real_shift, drop_mask, padding_mask, attn_mask, prefix, actual_seq_qlen, actual_seq_kvlen, head_num, keep_prob, scale_value, pre_tokens, next_tokens, inner_precise, input_layout, sparse_mode)
     return legacy.flash_attention_score(query, key, value, real_shift, drop_mask, padding_mask, attn_mask, prefix, actual_seq_qlen, actual_seq_kvlen, head_num, keep_prob, scale_value, pre_tokens, next_tokens, inner_precise, input_layout, sparse_mode)
 
+def prompt_flash_attention(query, key, value, attn_mask, actual_seq_lengths, actual_seq_lengths_kv, pse_shift, deq_scale1, quant_scale1, deq_scale2, quant_scale2, quant_offset2, num_heads, scale_value, pre_tokens, next_tokens, input_layout, num_key_value_heads, sparse_mode, inner_precise):
+    return pyboost.prompt_flash_attention_impl(query, key, value, attn_mask, actual_seq_lengths, actual_seq_lengths_kv, pse_shift, deq_scale1, quant_scale1, deq_scale2, quant_scale2, quant_offset2, num_heads, scale_value, pre_tokens, next_tokens, input_layout, num_key_value_heads, sparse_mode, inner_precise)
+
+def incre_flash_attention(query, key, value, attn_mask, actual_seq_lengths, pse_shift, dequant_scale1, quant_scale1, dequant_scale2, quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, kv_padding_size, num_heads, input_layout, scale_value, num_key_value_heads, block_size, inner_precise):
+    return pyboost.incre_flash_attention_impl(query, key, value, attn_mask, actual_seq_lengths, pse_shift, dequant_scale1, quant_scale1, dequant_scale2, quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, kv_padding_size, num_heads, input_layout, scale_value, num_key_value_heads, block_size, inner_precise)
+
 def randperm(n, generator, dtype):
     seed, offset = generator._step(12)  # pylint: disable=protected-access
     if use_pyboost():
@@ -1617,3 +1623,9 @@ def new_ones(input, size, dtype):
 
 def kl_div(input, target, reduction, log_target):
     return pyboost.kl_div_op(input, target, reduction, log_target)
+
+def repeat_interleave_int(input, repeats, dim, output_size):
+    return pyboost.repeat_interleave_int_op(input, repeats, dim, output_size)
+
+def repeat_interleave_tensor(input, repeats, dim, output_size):
+    return pyboost.repeat_interleave_tensor_op(input, repeats, dim, output_size)
