@@ -718,6 +718,13 @@ def _as_index(idx, device, need_scalar=True):
 
     if not isinstance(idx, mindtorch.Tensor):
         idx = mindtorch.tensor(idx, dtype=mindtorch.int64, device=device)
+
+    if idx.dtype == mindtorch.bool:
+        if idx.ndim > 1:
+            raise NotImplementedError('Need rank 1 for bool index %s' % idx)
+        idx = nonzero(idx)
+        idx = idx.reshape(-1)
+
     if need_scalar and idx.ndim not in (None, 0):
         raise IndexError(_SLICE_ERROR + ', got {!r}'.format(idx))
 
@@ -779,9 +786,9 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
             strides.append(1)
             ellipsis_mask |= (1 << index)
         elif s is None:
-            # begin.append(0)
-            # end.append(0)
-            # strides.append(1)
+            begin.append(0)
+            end.append(0)
+            strides.append(1)
             new_axis_mask |= (1 << index)
         else:
             s, is_scalar = _as_index(s, tensor.device, False)
@@ -817,14 +824,23 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
     else:
         if updates is not None:
             original_tensor = tensor
-        tensor = execute(
-            'strided_slice',
-            tensor,
-            begin,
-            end,
-            strides,
-            begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask
-        )
+        if new_axis_mask != 0:
+            tensor = strided_slice(
+                tensor,
+                begin,
+                end,
+                strides,
+                begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask
+            )
+        else:
+            tensor = execute(
+                'strided_slice',
+                tensor,
+                begin,
+                end,
+                strides,
+                begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask
+            )
 
     if not advanced_indices:
         return tensor
@@ -979,19 +995,173 @@ def setitem(a, slice_spec, updates):
     result_t = _slice_helper(a, slice_spec, True, updates)
     return result_t.to(a_dtype)
 
-def strided_slice_update(input, begin, end, strides, update, begin_mask=0, end_mask=0, ellipsis_mask=0, new_axis_mask=0, shrink_axis_mask=0):
-    if isinstance(update, (int, float, bool)):
-        update = mindtorch.tensor(update, device=input.device, dtype=input.dtype)
-    sliced_tensor = execute('strided_slice', input, begin, end, strides, begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask)
-    if 0 in sliced_tensor.shape:
-        return input
-    if update.shape != sliced_tensor.shape:
-        update = update.broadcast_to(sliced_tensor.shape)
-    updated_tensor = execute('strided_slice_grad', input, begin, end, strides, update, begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask)
-    condition = execute('strided_slice_grad', input, begin, end, strides, mindtorch.full(input.shape, True, device=input.device, dtype=mindtorch.bool), begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask)
-    out = where(condition, updated_tensor, input)
-    input.copy_(out)
-    return input
+def scatter_nd_update(x, indices, updates_flat):
+    return execute('scatter_nd_update', x, indices, updates_flat)
+
+def strided_slice(x, begin, end, strides, begin_mask=0, end_mask=0,
+                ellipsis_mask=0, new_axis_mask=0, shrink_axis_mask=0):
+
+    x_shape = x.shape
+    ndim = len(x_shape)
+
+    full_begin, full_end, full_strides = [], [], []
+    dim = 0  # 当前 x 的维度
+    i = 0    # 当前 begin/end 索引
+
+    while dim < ndim:
+        # ellipsis_mask
+        if i < len(begin) and ((ellipsis_mask >> i) & 1):
+            remaining_dims = ndim - dim - (len(begin) - i - 1)
+            shrink_axis_mask = shrink_axis_mask << remaining_dims - 1
+            for _ in range(remaining_dims):
+                full_begin.append(0)
+                full_end.append(x_shape[dim])
+                full_strides.append(1)
+                dim += 1
+            i += 1
+            continue
+
+        # new_axis_mask
+        elif i < len(begin) and ((new_axis_mask >> i) & 1):
+            full_begin.append(0)
+            full_end.append(1)
+            full_strides.append(1)
+            i += 1
+            continue
+
+        else:
+            # 自动补齐 begin/end/strides
+            b = begin[i] if i < len(begin) else 0
+            e = end[i]   if i < len(end) else x_shape[dim]
+            s = strides[i] if i < len(strides) else 1
+            if b < 0:
+                b += x_shape[dim]
+                if e == 0:
+                    e += x_shape[dim]
+            if e < 0:
+                e += x_shape[dim]
+
+            # begin_mask / end_mask
+            if i < len(begin) and ((begin_mask >> i) & 1):
+                b = 0 if s > 0 else x_shape[dim]-1
+            if i < len(end) and ((end_mask >> i) & 1):
+                e = x_shape[dim] if s > 0 else -1
+
+            full_begin.append(b)
+            full_end.append(e)
+            full_strides.append(s)
+
+            dim += 1
+            i += 1
+
+    # Step 2: generate indices for scatter update
+    ranges = [mindtorch.arange(b, e, s, device=x.device) for b, e, s in zip(full_begin, full_end, full_strides)]
+    mesh = mindtorch.meshgrid(*ranges, indexing='ij')
+    indices = mindtorch.stack(mesh, dim=-1)
+    indices = mindtorch.reshape(indices, [-1, ndim])
+
+    x_updated = gather_nd(x, indices)
+
+    # # Step 5: optionally squeeze shrinked axes
+    for i in range(ndim-1, -1, -1):
+        if (shrink_axis_mask >> i) & 1:
+            x_updated = mindtorch.squeeze(x_updated, dim=i)
+
+    return x_updated
+
+def strided_slice_update(x, begin, end, strides, updates,
+                         begin_mask=0, end_mask=0,
+                         ellipsis_mask=0, new_axis_mask=0,
+                         shrink_axis_mask=0):
+
+    x_shape = x.shape
+    ndim = len(x_shape)
+
+    full_begin, full_end, full_strides = [], [], []
+    dim = 0  # 当前 x 的维度
+    i = 0    # 当前 begin/end 索引
+
+    while dim < ndim:
+        # ellipsis_mask
+        if i < len(begin) and ((ellipsis_mask >> i) & 1):
+            remaining_dims = ndim - dim - (len(begin) - i - 1)
+            shrink_axis_mask = shrink_axis_mask << remaining_dims - 1
+            for _ in range(remaining_dims):
+                full_begin.append(0)
+                full_end.append(x_shape[dim])
+                full_strides.append(1)
+                dim += 1
+            i += 1
+            continue
+
+        # new_axis_mask
+        elif i < len(begin) and ((new_axis_mask >> i) & 1):
+            full_begin.append(0)
+            full_end.append(1)
+            full_strides.append(1)
+            i += 1
+            continue
+
+        else:
+            # 自动补齐 begin/end/strides
+            b = begin[i] if i < len(begin) else 0
+            e = end[i]   if i < len(end) else x_shape[dim]
+            s = strides[i] if i < len(strides) else 1
+            if b < 0:
+                b += x_shape[dim]
+                if e == 0:
+                    e += x_shape[dim]
+            if e < 0:
+                e += x_shape[dim]
+
+            # begin_mask / end_mask
+            if i < len(begin) and ((begin_mask >> i) & 1):
+                b = 0 if s > 0 else x_shape[dim]-1
+            if i < len(end) and ((end_mask >> i) & 1):
+                e = x_shape[dim] if s > 0 else -1
+
+            full_begin.append(b)
+            full_end.append(e)
+            full_strides.append(s)
+
+            dim += 1
+            i += 1
+
+    # Step 2: 计算目标切片 shape（考虑 shrink_axis_mask）
+    target_shape = []
+    for d, (b, e, s) in enumerate(zip(full_begin, full_end, full_strides)):
+        if (shrink_axis_mask >> d) & 1:
+            continue
+        length = max(0, (abs(e - b) + abs(s) - 1) // abs(s))
+        target_shape.append(length)
+
+    # Step 3: broadcast updates if scalar
+    updates = mindtorch.broadcast_to(updates, target_shape)
+
+    # Step 2: generate indices for scatter update
+    ranges = [mindtorch.arange(b, e, s, device=x.device) for b, e, s in zip(full_begin, full_end, full_strides)]
+    mesh = mindtorch.meshgrid(*ranges, indexing='ij')
+    indices = mindtorch.stack(mesh, dim=-1)
+    indices = mindtorch.reshape(indices, [-1, ndim])
+
+    # Step 3: flatten updates
+    updates_flat = mindtorch.reshape(updates, [-1])
+    # if updates.shape[0] == 1 and updates.shape[0] != indices.shape[0]:
+    #     updates = updates.broadcast_to((indices.shape[0],))
+    # Step 4: apply scatter update
+    if x.dtype == mindtorch.bool:
+        x_updated = scatter_nd_update(x.int(), indices, updates_flat.int()).bool()
+        execute('assign', x, x_updated)
+    else:
+        x_updated = scatter_nd_update(x, indices, updates_flat)
+
+    # # Step 5: optionally squeeze shrinked axes
+    # for i in range(ndim-1, -1, -1):
+    #     if (shrink_axis_mask >> i) & 1:
+    #         x_updated = mindtorch.squeeze(x_updated, dim=i)
+    
+    return x_updated
+
 
 
 def getitem_np(input, slice):

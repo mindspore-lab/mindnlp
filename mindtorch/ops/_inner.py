@@ -18,6 +18,8 @@ def all_finite(inputs):
 
 def custom_masked_scatter_vec(input, mask, source):    
     output = input.clone()
+    if mask.sum() == 0:
+        return output
     output[mask] = source.flatten() # 关键的一行：向量化赋值
     return output
 

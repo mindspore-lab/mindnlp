@@ -494,6 +494,8 @@ def isinf(input):
     return legacy.is_inf(input)
 
 def gelu(input, approximate):
+    if approximate == 'none':
+        return mul(mul(input, 0.5), add(erf(div(input, math.sqrt(2.0))), 1.0))
     return legacy.ge_lu(input)
 
 def greater(input_x, input_y):
@@ -1231,3 +1233,6 @@ def histc(input, bins=100, min=0, max=0):
 
 def search_sorted(sorted_sequence, values, sorter, dtype, right):
     return legacy.search_sorted(sorted_sequence, values, sorter, dtype, right)
+
+def scatter_nd_update(input, indices, updates):
+    return legacy.scatter_nd_update(input, indices, updates, True)
