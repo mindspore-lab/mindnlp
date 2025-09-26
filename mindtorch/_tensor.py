@@ -105,7 +105,8 @@ def __init__(self, *args, **kwargs):
         old_init(self, shape=args, dtype=get_default_dtype())
     else:
         old_init(self, *args, **kwargs)
-    self.requires_grad_(requires_grad)
+    if requires_grad:
+        self.requires_grad_(requires_grad)
     self._device = device
 
 Tensor.__init__ = __init__
@@ -238,15 +239,11 @@ class TensorPlaceHolder:
                     s = tensor(s, device=self.device)
                 new_slices += (s,)
             slices = new_slices
-        if self.device.type in ['npu', 'cuda']:
-            out = ops.tensor_getitem(self, slices)
-        elif self.device.type == 'meta':
+
+        if self.device.type == 'meta':
             out = ops.getitem_np(self, slices)
         else:
-            if cpu_use_numpy():
-                out = ops.getitem_np(self, slices)
-            else:
-                out = ops.tensor_getitem(self, slices)
+            out = ops.tensor_getitem(self, slices)
 
         out._device = self.device
         return out
@@ -283,13 +280,8 @@ class TensorPlaceHolder:
             if value.device != self.device:
                 value._device = self.device
             out = ops.tensor_setitem(self, slices, value)
-        elif self.device.type == 'cuda':
-            out = ops.setitem(self, slices, value)
         else:
-            if cpu_use_numpy():
-                out = ops.setitem_np(self, slices, value)
-            else:
-                out = ops.setitem(self, slices, value)
+            out = ops.setitem(self, slices, value)
         return self
 
     def __add__(self, other):

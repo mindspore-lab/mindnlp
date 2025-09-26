@@ -437,6 +437,8 @@ def isinf(input):
     return legacy.is_inf(input)
 
 def gelu(input, approximate):
+    if approximate == 'none':
+        return mul(mul(input, 0.5), add(erf(div(input, math.sqrt(2.0))), 1.0))
     return legacy.ge_lu(input)
 
 def greater(input_x, input_y):
@@ -599,10 +601,17 @@ def avg_pool1d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
             raise ValueError("For avg_pool1d, stride should be int or tuple of length 1.")
         stride = stride[0]
 
-    input = expand_dims(input, 2)
-    input = expand_dims(input, 2)
-    input = legacy.avg_pool3_d(input, (1, 1, kernel_size), (1, 1, stride), 'pad', padding, ceil_mode, count_include_pad, 0, 'NCDHW')
-    input = squeeze(input, (2, 3))
+    if input.ndim == 3:
+        input = expand_dims(input, 2)
+        input = expand_dims(input, 2)
+        input = legacy.avg_pool3_d(input, (1, 1, kernel_size), (1, 1, stride), 'pad', padding, ceil_mode, count_include_pad, 0, 'NCDHW')
+        input = squeeze(input, (2, 3))
+    elif input.ndim == 2:
+        input = expand_dims(input, 1)
+        input = expand_dims(input, 1)
+        input = expand_dims(input, 1)
+        input = legacy.avg_pool3_d(input, (1, 1, kernel_size), (1, 1, stride), 'pad', padding, ceil_mode, count_include_pad, 0, 'NCDHW')
+        input = squeeze(input, (1, 2, 3))
     return input
 
 def fmod_scalar(input, other):
@@ -1187,3 +1196,14 @@ def kl_div(input, target, reduction, log_target):
         return div(kl_div_sum, total_size)
 
     return legacy.kl_div_loss(input, target, reduction)
+
+def scatter_nd_update(input, indices, updates):
+    return legacy.scatter_nd_update(input, indices, updates, True)
+
+def inplace_exponential(self, lambd, generator):
+
+    u = rand(self.shape, generator, self.dtype)
+    # 逆变换采样
+    out = div(neg(log(sub(1, u))), lambd)
+    inplace_copy(self, out)
+    return self
