@@ -1,6 +1,7 @@
-import ctypes
 import numbers
 import math
+
+import numpy as np
 import mindspore
 from mindspore._c_expression import _empty_instance
 import mindtorch
@@ -170,13 +171,16 @@ def slice(self, dim, start, end, step):
 def pad_v3(input, new_pad, mode, value=None, contiguous=True):
     return legacy.pad_v3(input, new_pad, value, mode, contiguous)
 
+def pad(input, paddings):
+    return legacy.pad(input, paddings)
+
 def cumsum(self, dim, dtype):
     if self.shape[dim] == 0:
         return mindtorch.tensor([], dtype=self.dtype, device=self.device)
     return legacy.cum_sum(self, dim, False, False)
 
 def reduce_any(input, axis, keepdims):
-    return legacy.reduce_any(input, axis, keepdims)
+    return legacy.reduce_any(input.bool(), axis, keepdims)
 
 def concat(tensors, axis):
     return legacy.concat(tensors, axis)
@@ -267,7 +271,7 @@ def less(input, other):
 
 def select(condition, x, y):
     if 0 in condition.shape:
-        return mindspore.Tensor(Tensor_(shape=condition.shape, dtype=x.dtype))
+        return mindspore.Tensor(Tensor_(shape=condition.shape, dtype=Tensor_(x).dtype))
     if isinstance(x, numbers.Number) or x.ndim == 0:
         x = fill_scalar(condition.shape, x, None)
     if isinstance(y, numbers.Number) or y.ndim == 0:
@@ -1130,8 +1134,8 @@ def bernoulli(input, generator):
 
 def arange(start, end, step, dtype):
     if dtype is not None:
-        return cast(legacy.range(start, end, step, 100000), dtype)
-    return legacy.range(start, end, step, 100000)
+        return cast(legacy.range(start, end, step, 1000000), dtype)
+    return legacy.range(start, end, step, 1000000)
 
 def inplace_fill_scalar(input, value):
     input.assign_value(fill_scalar(input.shape, value, input.dtype))
@@ -1207,3 +1211,21 @@ def inplace_exponential(self, lambd, generator):
     out = div(neg(log(sub(1, u))), lambd)
     inplace_copy(self, out)
     return self
+
+def as_strided(self, size, stride, storage_offset=None):
+    if len(size) != len(stride):
+        raise RuntimeError("mismatch in length of strides and shape.")
+    index = np.arange(0, size[0]*stride[0], stride[0])
+    for i in np.arange(1, len(size)):
+        tmp = np.arange(0, size[i]*stride[i], stride[i])
+        index = np.expand_dims(index, -1)
+        index = index + tmp
+    if storage_offset is not None:
+        index = index + storage_offset
+
+    if index.size == 0:
+        input_indices = mindspore.Tensor(Tensor_(index.shape, dtype=mindspore.int32))
+    else:
+        input_indices = mindspore.tensor(index.astype(np.int32))
+    out = gather(reshape(self, (-1,)), input_indices, 0, 0)
+    return out

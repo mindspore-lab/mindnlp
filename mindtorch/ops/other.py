@@ -681,8 +681,8 @@ def einsum(equation, *operands):
     """
     if isinstance(operands[0], (list, tuple)):
         operands = operands[0]
-    if operands[0].device.type == 'cuda':
-        return execute('einsum', equation, operands, device=operands[0].device)
+    # if operands[0].device.type == 'cuda':
+    #     return execute('einsum', equation, operands, device=operands[0].device)
     _equation, _operands = _einsum_convert_sublist(equation, *operands)
     _einsum_check_inputargs(_equation, _operands)
     return _einsum(_equation, _operands)

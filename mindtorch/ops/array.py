@@ -1151,10 +1151,10 @@ def strided_slice_update(x, begin, end, strides, updates,
     # Step 4: apply scatter update
     if x.dtype == mindtorch.bool:
         x_updated = scatter_nd_update(x.int(), indices, updates_flat.int()).bool()
-        execute('assign', x, x_updated)
     else:
         x_updated = scatter_nd_update(x, indices, updates_flat)
 
+    execute('assign', x, x_updated)
     # # Step 5: optionally squeeze shrinked axes
     # for i in range(ndim-1, -1, -1):
     #     if (shrink_axis_mask >> i) & 1:
