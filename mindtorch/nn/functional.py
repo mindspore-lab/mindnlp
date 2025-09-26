@@ -304,8 +304,11 @@ def pad(input, pad, mode='constant', value=None):
             value = bool(value)
         elif input.dtype in [mindtorch.int32, mindtorch.int64]:
             value = int(value)
-        if input.device.type == 'cuda' and len(new_pad) == 8:
-            return execute('pad_v3', input, new_pad[:-2], mode, value)
+        if input.device.type == 'cuda' and mode == 'constant' and value == 0 and len(new_pad) > 6:
+            paddings = ()
+            for i in range(input.ndim-1, -1, -1):
+                paddings += ((new_pad[2*i], new_pad[2*i+1]),)
+            return execute('pad', input, paddings)
         return execute('pad_v3', input, new_pad, mode, value)
     out = input
     if (isinstance(pad, tuple) and not pad):
