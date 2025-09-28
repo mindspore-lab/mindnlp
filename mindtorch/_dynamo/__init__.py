@@ -1,7 +1,7 @@
 from .decorators import (
     allow_in_graph,
     # assume_constant_result,
-    # disable,
+    disable,
     # disallow_in_graph,
     # dont_skip_tracing,
     # forbid_in_graph,
