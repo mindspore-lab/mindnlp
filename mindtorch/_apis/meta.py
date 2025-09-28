@@ -246,8 +246,8 @@ def sqrt(input):
 
 __all__.append('sqrt')
 
-def normal_float_float(mean, std, size, geneartor):
-    out = Tensor_(shape=size, dtype=mindtorch.float32)
+def normal_float_float(mean, std, size, dtype, geneartor):
+    out = Tensor_(shape=size, dtype=dtype)
     return mindtorch.Tensor(out)
 
 
@@ -371,9 +371,24 @@ def greater_equal(input, other):
 
 __all__.append('greater_equal')
 
+def greater(input, other):
+    if isinstance(input, mindtorch.Tensor):
+        return input
+    return other
+
+def less(input, other):
+    if isinstance(input, mindtorch.Tensor):
+        return input
+    return other
+
 def inplace_zero(input):
     return input
 
 def clone(input):
     return input
 
+def select(condition, input, other):
+    return input
+
+def logical_not(input):
+    return input
