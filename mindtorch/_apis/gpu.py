@@ -1,9 +1,9 @@
 import numbers
 import math
+from packaging import version
 
 import numpy as np
 import mindspore
-from mindspore._c_expression import _empty_instance
 import mindtorch
 from .._op_prim.gpu import legacy
 
