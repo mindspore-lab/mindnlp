@@ -277,7 +277,9 @@ def select(condition, x, y):
     if isinstance(y, numbers.Number) or y.ndim == 0:
         y = fill_scalar(condition.shape, y, None)
 
-    return legacy.select(condition, x, y)
+    # return legacy.select(condition, x, y)
+    return add(mul(condition, x), mul(sub(1, condition), y))
+
 
 def round(input, decimals):
     return legacy.round(input, decimals)
