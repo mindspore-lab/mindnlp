@@ -36,7 +36,7 @@ def infer_dtype(dtypes):
 def cat(tensors, dim=0, **kwargs):
     dim = kwargs.pop('axis', dim)
     dtype = infer_dtype([t.dtype for t in tensors])
-    tensors = [t.to(dtype) for t in tensors if 0 not in t.shape]
+    tensors = [t.to(dtype) for t in tensors if t.shape != (0,)]
     return execute("concat", tensors, dim)
 
 
@@ -1108,12 +1108,11 @@ def strided_slice_update(x, begin, end, strides, updates,
             e = end[i]   if i < len(end) else x_shape[dim]
             s = strides[i] if i < len(strides) else 1
             if b < 0:
-                b += x_shape[dim]
+                b %= x_shape[dim]
                 if e == 0:
                     e += x_shape[dim]
             if e < 0:
-                e += x_shape[dim]
-
+                e %= x_shape[dim]
             # begin_mask / end_mask
             if i < len(begin) and ((begin_mask >> i) & 1):
                 b = 0 if s > 0 else x_shape[dim]-1
@@ -1229,5 +1228,6 @@ __all__ = [
     'setitem',
     'getitem_np',
     'setitem_np',
-    'split_with_sizes'
+    'split_with_sizes',
+    'scatter_nd_update'
 ]

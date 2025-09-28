@@ -843,7 +843,8 @@ def efficient_repeat_interleave(input_tensor, repeats, dim=None):
         current_pos = 0
         for i in range(dim_size):
             repeat_count = repeats_tensor[i].item()
-            index[current_pos:current_pos + repeat_count] = i
+            if repeat_count > 0:
+                index[current_pos:current_pos + repeat_count] = i
             current_pos += repeat_count
 
         output = input_tensor.index_select(dim, index)

@@ -1,4 +1,5 @@
 """fft"""
+import mindtorch
 from ..executor import execute
 
 
@@ -29,10 +30,30 @@ def irfft(input, n=None, dim=-1, norm="backward"):
     # return _irfft(input)
 
 def fftn(input, s=None, dim=None, norm=None):
-    return execute('fftn', input, s, dim, norm)
+    if input.device.type == 'npu':
+        return execute('fftn', input, s, dim, norm)
+    if dim is None:
+        dim = tuple(range(input.dim()))
+    if s is None:
+        s = [input.size(d) for d in dim]
+    
+    # 确保s和dim是序列且长度相同
+    if not isinstance(s, (list, tuple)):
+        s = (s,)
+    if not isinstance(dim, (list, tuple)):
+        dim = (dim,)
+    if len(s) != len(dim):
+        raise ValueError("参数 's' 和 'dim' 必须具有相同的长度。")
+    
+    output = input.to(mindtorch.complex64) if input.is_floating_point() else input.clone()
+
+    # 逐个维度进行FFT
+    for d, n in zip(dim, s):
+        output = fft(output, s=n, dim=d, norm=norm)
+    return output
 
 def fft(input, s=None, dim=-1, norm=None):
-    return ops.fft(input, s, dim, norm)
+    return execute('fft', input, s, dim, norm)
 
 def fftshift(x, dim=None):
     return ops.fftshift(x, dim)
