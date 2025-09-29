@@ -1,13 +1,26 @@
-"""batch norm"""
-from typing import Optional, Any
-from mindtorch import Tensor
-import mindtorch
-from ..parameter import Parameter
+# mypy: allow-untyped-defs
+from typing import Any, Optional
 
+import mindtorch
+from mindtorch import Tensor
+from mindtorch.nn import functional as F, init
+from mindtorch.nn.parameter import Parameter, UninitializedBuffer, UninitializedParameter
+
+# from ._functions import SyncBatchNorm as sync_batch_norm
+from .lazy import LazyModuleMixin
 from .module import Module
-from .. import init
-from ... import ops
-from .. import functional as F
+
+
+__all__ = [
+    "BatchNorm1d",
+    "LazyBatchNorm1d",
+    "BatchNorm2d",
+    "LazyBatchNorm2d",
+    "BatchNorm3d",
+    "LazyBatchNorm3d",
+    "SyncBatchNorm",
+]
+
 
 class _NormBase(Module):
     """Common base of _InstanceNorm and _BatchNorm."""
@@ -16,33 +29,42 @@ class _NormBase(Module):
     __constants__ = ["track_running_stats", "momentum", "eps", "num_features", "affine"]
     num_features: int
     eps: float
-    momentum: float
+    momentum: Optional[float]
     affine: bool
     track_running_stats: bool
     # WARNING: weight and bias purposely not defined here.
-    # See https://github.com/pytorch/pytorch/issues/39670
+    # See https://github.com/pymindtorch/pymindtorch/issues/39670
 
     def __init__(
         self,
         num_features: int,
         eps: float = 1e-5,
-        momentum: float = 0.1,
+        momentum: Optional[float] = 0.1,
         affine: bool = True,
         track_running_stats: bool = True,
-        dtype=None
+        device=None,
+        dtype=None,
     ) -> None:
-        factory_kwargs = {'dtype': dtype}
+        factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__()
         self.num_features = num_features
         self.eps = eps
         self.momentum = momentum
         self.affine = affine
         self.track_running_stats = track_running_stats
-        self.weight = Parameter(ops.empty(num_features, **factory_kwargs), affine)
-        self.bias = Parameter(ops.empty(num_features, **factory_kwargs), affine)
+        if self.affine:
+            self.weight = Parameter(mindtorch.empty(num_features, **factory_kwargs))
+            self.bias = Parameter(mindtorch.empty(num_features, **factory_kwargs))
+        else:
+            self.register_parameter("weight", None)
+            self.register_parameter("bias", None)
         if self.track_running_stats:
-            self.register_buffer('running_mean', ops.zeros(num_features,))
-            self.register_buffer('running_var', ops.ones(num_features,))
+            self.register_buffer(
+                "running_mean", mindtorch.zeros(num_features, **factory_kwargs)
+            )
+            self.register_buffer(
+                "running_var", mindtorch.ones(num_features, **factory_kwargs)
+            )
             self.running_mean: Optional[Tensor]
             self.running_var: Optional[Tensor]
             self.register_buffer(
@@ -64,9 +86,9 @@ class _NormBase(Module):
         if self.track_running_stats:
             # running_mean/running_var/num_batches... are registered at runtime depending
             # if self.track_running_stats is on
-            init.zeros_(self.running_mean)  # type: ignore[union-attr]
-            init.ones_(self.running_var)  # type: ignore[union-attr]
-            init.zeros_(self.num_batches_tracked)  # type: ignore[union-attr,operator]
+            self.running_mean.zero_()  # type: ignore[union-attr]
+            self.running_var.fill_(1)  # type: ignore[union-attr]
+            self.num_batches_tracked.zero_()  # type: ignore[union-attr,operator]
 
     def reset_parameters(self) -> None:
         self.reset_running_stats()
@@ -83,18 +105,53 @@ class _NormBase(Module):
             "track_running_stats={track_running_stats}".format(**self.__dict__)
         )
 
+    def _load_from_state_dict(
+        self,
+        state_dict,
+        prefix,
+        local_metadata,
+        strict,
+        missing_keys,
+        unexpected_keys,
+        error_msgs,
+    ) -> None:
+        version = local_metadata.get("version", None)
+
+        if (version is None or version < 2) and self.track_running_stats:
+            # at version 2: added num_batches_tracked buffer
+            #               this should have a default value of 0
+            num_batches_tracked_key = prefix + "num_batches_tracked"
+            if num_batches_tracked_key not in state_dict:
+                state_dict[num_batches_tracked_key] = (
+                    self.num_batches_tracked
+                    if self.num_batches_tracked is not None
+                    and self.num_batches_tracked.device != mindtorch.device("meta")
+                    else mindtorch.tensor(0, dtype=mindtorch.long)
+                )
+
+        super()._load_from_state_dict(
+            state_dict,
+            prefix,
+            local_metadata,
+            strict,
+            missing_keys,
+            unexpected_keys,
+            error_msgs,
+        )
+
 
 class _BatchNorm(_NormBase):
     def __init__(
         self,
         num_features: int,
         eps: float = 1e-5,
-        momentum: float = 0.1,
+        momentum: Optional[float] = 0.1,
         affine: bool = True,
         track_running_stats: bool = True,
-        dtype=None
+        device=None,
+        dtype=None,
     ) -> None:
-        factory_kwargs = {'dtype': dtype}
+        factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__(
             num_features, eps, momentum, affine, track_running_stats, **factory_kwargs
         )
@@ -113,7 +170,7 @@ class _BatchNorm(_NormBase):
         if self.training and self.track_running_stats:
             # TODO: if statement only here to tell the jit to skip emitting this when it is None
             if self.num_batches_tracked is not None:  # type: ignore[has-type]
-                self.num_batches_tracked = self.num_batches_tracked + 1  # type: ignore[has-type]
+                self.num_batches_tracked.add_(1)  # type: ignore[has-type]
                 if self.momentum is None:  # use cumulative moving average
                     exponential_average_factor = 1.0 / float(self.num_batches_tracked)
                 else:  # use exponential moving average
@@ -136,9 +193,11 @@ class _BatchNorm(_NormBase):
         return F.batch_norm(
             input,
             # If buffers are not to be tracked, ensure that they won't be updated
-            self.running_mean
-            if not self.training or self.track_running_stats
-            else None,
+            (
+                self.running_mean
+                if not self.training or self.track_running_stats
+                else None
+            ),
             self.running_var if not self.training or self.track_running_stats else None,
             self.weight,
             self.bias,
@@ -146,6 +205,66 @@ class _BatchNorm(_NormBase):
             exponential_average_factor,
             self.eps,
         )
+
+
+class _LazyNormBase(LazyModuleMixin, _NormBase):
+    weight: UninitializedParameter  # type: ignore[assignment]
+    bias: UninitializedParameter  # type: ignore[assignment]
+
+    def __init__(
+        self,
+        eps=1e-5,
+        momentum=0.1,
+        affine=True,
+        track_running_stats=True,
+        device=None,
+        dtype=None,
+    ) -> None:
+        factory_kwargs = {"device": device, "dtype": dtype}
+        super().__init__(
+            # affine and track_running_stats are hardcoded to False to
+            # avoid creating tensors that will soon be overwritten.
+            0,
+            eps,
+            momentum,
+            False,
+            False,
+            **factory_kwargs,
+        )
+        self.affine = affine
+        self.track_running_stats = track_running_stats
+        if self.affine:
+            self.weight = UninitializedParameter(**factory_kwargs)
+            self.bias = UninitializedParameter(**factory_kwargs)
+        if self.track_running_stats:
+            self.running_mean = UninitializedBuffer(**factory_kwargs)
+            self.running_var = UninitializedBuffer(**factory_kwargs)
+            self.num_batches_tracked = mindtorch.tensor(
+                0,
+                dtype=mindtorch.long,
+                **{k: v for k, v in factory_kwargs.items() if k != "dtype"},
+            )
+
+    def reset_parameters(self) -> None:
+        if not self.has_uninitialized_params() and self.num_features != 0:
+            super().reset_parameters()
+
+    def initialize_parameters(self, input) -> None:  # type: ignore[override]
+        if self.has_uninitialized_params():
+            self.num_features = input.shape[1]
+            if self.affine:
+                assert isinstance(self.weight, UninitializedParameter)
+                assert isinstance(self.bias, UninitializedParameter)
+                self.weight.materialize((self.num_features,))
+                self.bias.materialize((self.num_features,))
+            if self.track_running_stats:
+                self.running_mean.materialize(  # type:ignore[union-attr]
+                    (self.num_features,)
+                )
+                self.running_var.materialize(  # type:ignore[union-attr]
+                    (self.num_features,)
+                )
+            self.reset_parameters()
 
 
 class BatchNorm1d(_BatchNorm):
@@ -163,9 +282,9 @@ class BatchNorm1d(_BatchNorm):
     the mini-batches and :math:`\gamma` and :math:`\beta` are learnable parameter vectors
     of size `C` (where `C` is the number of features or channels of the input). By default, the
     elements of :math:`\gamma` are set to 1 and the elements of :math:`\beta` are set to 0.
-    At train time in the forward pass, the standard-deviation is calculated via the biased estimator,
+    At train time in the forward pass, the variance is calculated via the biased estimator,
     equivalent to ``mindtorch.var(input, unbiased=False)``. However, the value stored in the
-    moving average of the standard-deviation is calculated via the unbiased  estimator, equivalent to
+    moving average of the variance is calculated via the unbiased  estimator, equivalent to
     ``mindtorch.var(input, unbiased=True)``.
 
     Also by default, during training this layer keeps running estimates of its
@@ -219,11 +338,43 @@ class BatchNorm1d(_BatchNorm):
         >>> output = m(input)
     """
 
-    def _check_input_dim(self, input):
+    def _check_input_dim(self, input) -> None:
         if input.dim() != 2 and input.dim() != 3:
-            raise ValueError(
-                f"expected 2D or 3D input (got {input.dim()}D input)"
-            )
+            raise ValueError(f"expected 2D or 3D input (got {input.dim()}D input)")
+
+
+class LazyBatchNorm1d(_LazyNormBase, _BatchNorm):
+    r"""A :class:`mindtorch.nn.BatchNorm1d` module with lazy initialization.
+
+    Lazy initialization based on the ``num_features`` argument of the :class:`BatchNorm1d` that is inferred
+    from the ``input.size(1)``.
+    The attributes that will be lazily initialized are `weight`, `bias`,
+    `running_mean` and `running_var`.
+
+    Check the :class:`mindtorch.nn.modules.lazy.LazyModuleMixin` for further documentation
+    on lazy modules and their limitations.
+
+    Args:
+        eps: a value added to the denominator for numerical stability.
+            Default: 1e-5
+        momentum: the value used for the running_mean and running_var
+            computation. Can be set to ``None`` for cumulative moving average
+            (i.e. simple average). Default: 0.1
+        affine: a boolean value that when set to ``True``, this module has
+            learnable affine parameters. Default: ``True``
+        track_running_stats: a boolean value that when set to ``True``, this
+            module tracks the running mean and variance, and when set to ``False``,
+            this module does not track such statistics, and initializes statistics
+            buffers :attr:`running_mean` and :attr:`running_var` as ``None``.
+            When these buffers are ``None``, this module always uses batch statistics.
+            in both training and eval modes. Default: ``True``
+    """
+
+    cls_to_become = BatchNorm1d  # type: ignore[assignment]
+
+    def _check_input_dim(self, input) -> None:
+        if input.dim() != 2 and input.dim() != 3:
+            raise ValueError(f"expected 2D or 3D input (got {input.dim()}D input)")
 
 
 class BatchNorm2d(_BatchNorm):
@@ -298,7 +449,41 @@ class BatchNorm2d(_BatchNorm):
         >>> output = m(input)
     """
 
-    def _check_input_dim(self, input):
+    def _check_input_dim(self, input) -> None:
+        if input.dim() != 4:
+            raise ValueError(f"expected 4D input (got {input.dim()}D input)")
+
+
+class LazyBatchNorm2d(_LazyNormBase, _BatchNorm):
+    r"""A :class:`mindtorch.nn.BatchNorm2d` module with lazy initialization.
+
+    Lazy initialization is done for the ``num_features`` argument of the :class:`BatchNorm2d` that is inferred
+    from the ``input.size(1)``.
+    The attributes that will be lazily initialized are `weight`, `bias`,
+    `running_mean` and `running_var`.
+
+    Check the :class:`mindtorch.nn.modules.lazy.LazyModuleMixin` for further documentation
+    on lazy modules and their limitations.
+
+    Args:
+        eps: a value added to the denominator for numerical stability.
+            Default: 1e-5
+        momentum: the value used for the running_mean and running_var
+            computation. Can be set to ``None`` for cumulative moving average
+            (i.e. simple average). Default: 0.1
+        affine: a boolean value that when set to ``True``, this module has
+            learnable affine parameters. Default: ``True``
+        track_running_stats: a boolean value that when set to ``True``, this
+            module tracks the running mean and variance, and when set to ``False``,
+            this module does not track such statistics, and initializes statistics
+            buffers :attr:`running_mean` and :attr:`running_var` as ``None``.
+            When these buffers are ``None``, this module always uses batch statistics.
+            in both training and eval modes. Default: ``True``
+    """
+
+    cls_to_become = BatchNorm2d  # type: ignore[assignment]
+
+    def _check_input_dim(self, input) -> None:
         if input.dim() != 4:
             raise ValueError(f"expected 4D input (got {input.dim()}D input)")
 
@@ -375,9 +560,44 @@ class BatchNorm3d(_BatchNorm):
         >>> output = m(input)
     """
 
-    def _check_input_dim(self, input):
+    def _check_input_dim(self, input) -> None:
         if input.dim() != 5:
             raise ValueError(f"expected 5D input (got {input.dim()}D input)")
+
+
+class LazyBatchNorm3d(_LazyNormBase, _BatchNorm):
+    r"""A :class:`mindtorch.nn.BatchNorm3d` module with lazy initialization.
+
+    Lazy initialization is done for the ``num_features`` argument of the :class:`BatchNorm3d` that is inferred
+    from the ``input.size(1)``.
+    The attributes that will be lazily initialized are `weight`, `bias`,
+    `running_mean` and `running_var`.
+
+    Check the :class:`mindtorch.nn.modules.lazy.LazyModuleMixin` for further documentation
+    on lazy modules and their limitations.
+
+    Args:
+        eps: a value added to the denominator for numerical stability.
+            Default: 1e-5
+        momentum: the value used for the running_mean and running_var
+            computation. Can be set to ``None`` for cumulative moving average
+            (i.e. simple average). Default: 0.1
+        affine: a boolean value that when set to ``True``, this module has
+            learnable affine parameters. Default: ``True``
+        track_running_stats: a boolean value that when set to ``True``, this
+            module tracks the running mean and variance, and when set to ``False``,
+            this module does not track such statistics, and initializes statistics
+            buffers :attr:`running_mean` and :attr:`running_var` as ``None``.
+            When these buffers are ``None``, this module always uses batch statistics.
+            in both training and eval modes. Default: ``True``
+    """
+
+    cls_to_become = BatchNorm3d  # type: ignore[assignment]
+
+    def _check_input_dim(self, input) -> None:
+        if input.dim() != 5:
+            raise ValueError(f"expected 5D input (got {input.dim()}D input)")
+
 
 class SyncBatchNorm(_BatchNorm):
     r"""Applies Batch Normalization over a N-Dimensional input.
@@ -396,7 +616,7 @@ class SyncBatchNorm(_BatchNorm):
     By default, the elements of :math:`\gamma` are sampled from
     :math:`\mathcal{U}(0, 1)` and the elements of :math:`\beta` are set to 0.
     The standard-deviation is calculated via the biased estimator, equivalent to
-    `torch.var(input, unbiased=False)`.
+    `mindtorch.var(input, unbiased=False)`.
 
     Also by default, during training this layer keeps running estimates of its
     computed mean and variance, which are then used for normalization during
@@ -420,8 +640,8 @@ class SyncBatchNorm(_BatchNorm):
     Normalization or Spatio-temporal Batch Normalization.
 
     Currently :class:`SyncBatchNorm` only supports
-    :class:`~torch.nn.DistributedDataParallel` (DDP) with single GPU per process. Use
-    :meth:`torch.nn.SyncBatchNorm.convert_sync_batchnorm()` to convert
+    :class:`~mindtorch.nn.DistributedDataParallel` (DDP) with single GPU per process. Use
+    :meth:`mindtorch.nn.SyncBatchNorm.convert_sync_batchnorm()` to convert
     :attr:`BatchNorm*D` layer to :class:`SyncBatchNorm` before wrapping
     Network with DDP.
 
@@ -466,17 +686,17 @@ class SyncBatchNorm(_BatchNorm):
         >>> # Note: every rank calls into new_group for every
         >>> # process group created, even if that rank is not
         >>> # part of the group.
-        >>> process_groups = [torch.distributed.new_group(pids) for pids in [r1, r2]]
+        >>> process_groups = [mindtorch.distributed.new_group(pids) for pids in [r1, r2]]
         >>> process_group = process_groups[0 if dist.get_rank() <= 3 else 1]
         >>> # Without Learnable Parameters
         >>> m = nn.BatchNorm3d(100, affine=False, process_group=process_group)
-        >>> input = torch.randn(20, 100, 35, 45, 10)
+        >>> input = mindtorch.randn(20, 100, 35, 45, 10)
         >>> output = m(input)
 
         >>> # network is nn.BatchNorm layer
         >>> sync_bn_network = nn.SyncBatchNorm.convert_sync_batchnorm(network, process_group)
         >>> # only single gpu per process is currently supported
-        >>> ddp_sync_bn_network = torch.nn.parallel.DistributedDataParallel(
+        >>> ddp_sync_bn_network = mindtorch.nn.parallel.DistributedDataParallel(
         >>>                         sync_bn_network,
         >>>                         device_ids=[args.local_rank],
         >>>                         output_device=args.local_rank)
@@ -499,17 +719,20 @@ class SyncBatchNorm(_BatchNorm):
         )
         self.process_group = process_group
 
-    def _check_input_dim(self, input):
+    def _check_input_dim(self, input) -> None:
         if input.dim() < 2:
             raise ValueError(f"expected at least 2D input (got {input.dim()}D input)")
 
-    def _check_non_zero_input_channels(self, input):
+    def _check_non_zero_input_channels(self, input) -> None:
         if input.size(1) == 0:
             raise ValueError(
                 "SyncBatchNorm number of input channels should be non-zero"
             )
 
     def forward(self, input: Tensor) -> Tensor:
+        """
+        Runs the forward pass.
+        """
         self._check_input_dim(input)
         self._check_non_zero_input_channels(input)
 
@@ -555,25 +778,26 @@ class SyncBatchNorm(_BatchNorm):
         need_sync = (
             bn_training
             and self.training
-            and torch.distributed.is_available()
-            and torch.distributed.is_initialized()
+            and mindtorch.distributed.is_available()
+            and mindtorch.distributed.is_initialized()
         )
         if need_sync:
             # currently only GPU/PrivateUse1 input is supported
             if input.device.type not in [
                 "cuda",
+                "hpu",
                 "xpu",
-                torch._C._get_privateuse1_backend_name(),
+                mindtorch._C._get_privateuse1_backend_name(),
             ]:
                 raise ValueError(
                     "SyncBatchNorm expected input tensor to be on GPU or XPU or "
-                    f"{torch._C._get_privateuse1_backend_name()}"
+                    f"{mindtorch._C._get_privateuse1_backend_name()}"
                 )
 
-            process_group = torch.distributed.group.WORLD
+            process_group = mindtorch.distributed.group.WORLD
             if self.process_group:
                 process_group = self.process_group
-            world_size = torch.distributed.get_world_size(process_group)
+            world_size = mindtorch.distributed.get_world_size(process_group)
             need_sync = world_size > 1
 
         # fallback to framework BN when synchronization is not necessary
@@ -604,7 +828,7 @@ class SyncBatchNorm(_BatchNorm):
 
     @classmethod
     def convert_sync_batchnorm(cls, module, process_group=None):
-        r"""Converts all :attr:`BatchNorm*D` layers in the model to :class:`torch.nn.SyncBatchNorm` layers.
+        r"""Converts all :attr:`BatchNorm*D` layers in the model to :class:`mindtorch.nn.SyncBatchNorm` layers.
 
         Args:
             module (nn.Module): module containing one or more :attr:`BatchNorm*D` layers
@@ -612,18 +836,18 @@ class SyncBatchNorm(_BatchNorm):
                 default is the whole world
 
         Returns:
-            The original :attr:`module` with the converted :class:`torch.nn.SyncBatchNorm`
+            The original :attr:`module` with the converted :class:`mindtorch.nn.SyncBatchNorm`
             layers. If the original :attr:`module` is a :attr:`BatchNorm*D` layer,
-            a new :class:`torch.nn.SyncBatchNorm` layer object will be returned
+            a new :class:`mindtorch.nn.SyncBatchNorm` layer object will be returned
             instead.
 
         Example::
 
             >>> # Network with nn.BatchNorm layer
             >>> # xdoctest: +REQUIRES(env:TORCH_DOCTEST_CUDA)
-            >>> module = torch.nn.Sequential(
-            >>>            torch.nn.Linear(20, 100),
-            >>>            torch.nn.BatchNorm1d(100),
+            >>> module = mindtorch.nn.Sequential(
+            >>>            mindtorch.nn.Linear(20, 100),
+            >>>            mindtorch.nn.BatchNorm1d(100),
             >>>          ).cuda()
             >>> # creating process group (optional)
             >>> # ranks is a list of int identifying rank ids.
@@ -633,14 +857,14 @@ class SyncBatchNorm(_BatchNorm):
             >>> # process group created, even if that rank is not
             >>> # part of the group.
             >>> # xdoctest: +SKIP("distributed")
-            >>> process_groups = [torch.distributed.new_group(pids) for pids in [r1, r2]]
+            >>> process_groups = [mindtorch.distributed.new_group(pids) for pids in [r1, r2]]
             >>> process_group = process_groups[0 if dist.get_rank() <= 3 else 1]
-            >>> sync_bn_module = torch.nn.SyncBatchNorm.convert_sync_batchnorm(module, process_group)
+            >>> sync_bn_module = mindtorch.nn.SyncBatchNorm.convert_sync_batchnorm(module, process_group)
 
         """
         module_output = module
-        if isinstance(module, torch.nn.modules.batchnorm._BatchNorm):
-            module_output = torch.nn.SyncBatchNorm(
+        if isinstance(module, mindtorch.nn.modules.batchnorm._BatchNorm):
+            module_output = mindtorch.nn.SyncBatchNorm(
                 module.num_features,
                 module.eps,
                 module.momentum,
@@ -649,7 +873,7 @@ class SyncBatchNorm(_BatchNorm):
                 process_group,
             )
             if module.affine:
-                with torch.no_grad():
+                with mindtorch.no_grad():
                     module_output.weight = module.weight
                     module_output.bias = module.bias
             module_output.running_mean = module.running_mean

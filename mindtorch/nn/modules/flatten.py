@@ -1,14 +1,14 @@
-"""flatten"""
-from typing import Tuple, Union, List
+# mypy: allow-untyped-defs
+from typing import Union
+
 from mindtorch import Tensor
+from mindtorch.types import _size
 
 from .module import Module
-from ...ops import flatten, unflatten
-
-__all__ = ['Flatten', 'Unflatten']
 
 
-_size = Union[List[int], Tuple[int, ...]]
+__all__ = ["Flatten", "Unflatten"]
+
 
 class Flatten(Module):
     r"""
@@ -40,7 +40,7 @@ class Flatten(Module):
         mindtorch.Size([160, 5])
     """
 
-    __constants__ = ['start_dim', 'end_dim']
+    __constants__ = ["start_dim", "end_dim"]
     start_dim: int
     end_dim: int
 
@@ -50,12 +50,16 @@ class Flatten(Module):
         self.end_dim = end_dim
 
     def forward(self, input: Tensor) -> Tensor:
-        return flatten(input, self.start_dim, self.end_dim)
+        """
+        Runs the forward pass.
+        """
+        return input.flatten(self.start_dim, self.end_dim)
 
     def extra_repr(self) -> str:
-        return f'start_dim={self.start_dim}, end_dim={self.end_dim}'
-
-
+        """
+        Returns the extra representation of the module.
+        """
+        return f"start_dim={self.start_dim}, end_dim={self.end_dim}"
 
 
 class Unflatten(Module):
@@ -98,20 +102,22 @@ class Unflatten(Module):
         >>> output.size()
         mindtorch.Size([2, 2, 5, 5])
         >>> # With namedshape (tuple of tuples)
-        >>> input = mindtorch.randn(2, 50, names=('N', 'features'))
-        >>> unflatten = nn.Unflatten('features', (('C', 2), ('H', 5), ('W', 5)))
+        >>> input = mindtorch.randn(2, 50, names=("N", "features"))
+        >>> unflatten = nn.Unflatten("features", (("C", 2), ("H", 5), ("W", 5)))
         >>> output = unflatten(input)
         >>> output.size()
         mindtorch.Size([2, 2, 5, 5])
     """
 
-    NamedShape = Tuple[Tuple[str, int]]
+    NamedShape = tuple[tuple[str, int]]
 
-    __constants__ = ['dim', 'unflattened_size']
+    __constants__ = ["dim", "unflattened_size"]
     dim: Union[int, str]
     unflattened_size: Union[_size, NamedShape]
 
-    def __init__(self, dim: Union[int, str], unflattened_size: Union[_size, NamedShape]) -> None:
+    def __init__(
+        self, dim: Union[int, str], unflattened_size: Union[_size, NamedShape]
+    ) -> None:
         super().__init__()
 
         if isinstance(dim, int):
@@ -124,27 +130,41 @@ class Unflatten(Module):
         self.dim = dim
         self.unflattened_size = unflattened_size
 
-    def _require_tuple_tuple(self, input):
-        if (isinstance(input, tuple)):
+    def _require_tuple_tuple(self, input) -> None:
+        if isinstance(input, tuple):
             for idx, elem in enumerate(input):
                 if not isinstance(elem, tuple):
-                    raise TypeError("unflattened_size must be tuple of tuples, " +
-                                    f"but found element of type {type(elem).__name__} at pos {idx}")
+                    raise TypeError(
+                        "unflattened_size must be tuple of tuples, "
+                        + f"but found element of type {type(elem).__name__} at pos {idx}"
+                    )
             return
-        raise TypeError("unflattened_size must be a tuple of tuples, " +
-                        f"but found type {type(input).__name__}")
+        raise TypeError(
+            "unflattened_size must be a tuple of tuples, "
+            + f"but found type {type(input).__name__}"
+        )
 
-    def _require_tuple_int(self, input):
-        if (isinstance(input, (tuple, list))):
+    def _require_tuple_int(self, input) -> None:
+        if isinstance(input, (tuple, list)):
             for idx, elem in enumerate(input):
                 if not isinstance(elem, int):
-                    raise TypeError("unflattened_size must be tuple of ints, " +
-                                    f"but found element of type {type(elem).__name__} at pos {idx}")
+                    raise TypeError(
+                        "unflattened_size must be tuple of ints, "
+                        + f"but found element of type {type(elem).__name__} at pos {idx}"
+                    )
             return
-        raise TypeError(f"unflattened_size must be a tuple of ints, but found type {type(input).__name__}")
+        raise TypeError(
+            f"unflattened_size must be a tuple of ints, but found type {type(input).__name__}"
+        )
 
     def forward(self, input: Tensor) -> Tensor:
-        return unflatten(input, self.dim, self.unflattened_size)
+        """
+        Runs the forward pass.
+        """
+        return input.unflatten(self.dim, self.unflattened_size)
 
     def extra_repr(self) -> str:
-        return f'dim={self.dim}, unflattened_size={self.unflattened_size}'
+        """
+        Returns the extra representation of the module.
+        """
+        return f"dim={self.dim}, unflattened_size={self.unflattened_size}"
