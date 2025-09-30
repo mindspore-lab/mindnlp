@@ -1603,6 +1603,8 @@ def multinomial(input, num_samples, replacement, generator):
     return pyboost.multinomial_ext_op(input, num_samples, replacement, seed, offset)
 
 def right_shift(input, other):
+    if isinstance(other, int):
+        other = mindspore.Tensor(other, dtype=input.dtype)
     if use_pyboost():
         return pyboost.right_shift_op(input, other)
     return legacy.right_shift(input, other)

@@ -1,24 +1,27 @@
-
 import types
 
 from mindspore.communication import GlobalComm
-from mindtorch import nn, ops, distributed as dist
+
+import mindtorch
+from mindtorch import nn, distributed as dist
 from ..utils import logging
 
 logger = logging.get_logger(__name__)
 
 
 def replace_submodule(model, submodule_path, new_module):
-    parent_path, _, child_name = submodule_path.rpartition('.')
+    parent_path, _, child_name = submodule_path.rpartition(".")
 
     parent_module = model.get_submodule(parent_path) if parent_path else model
 
     setattr(parent_module, child_name, new_module)
 
+
 def send_forward(self, *args, **kwargs):
     output = self._forward(*args, **kwargs)
     dist.isend(output[0], self.dist)
     return output
+
 
 def receive_forward(self, *args, **kwargs):
     hidden_states = args[0]
@@ -26,11 +29,13 @@ def receive_forward(self, *args, **kwargs):
     output = self._forward(*((hidden_states,) + args[1:]), **kwargs)
     return output
 
+
 def broadcast_forward(self, *args, **kwargs):
     output = self._forward(*args, **kwargs)
     dist.broadcast(output, src=self.src)
     dist.barrier()
     return output
+
 
 class DecoderLayerIdentity(nn.Module):
     def __init__(self, layer_idx, config):
@@ -40,17 +45,34 @@ class DecoderLayerIdentity(nn.Module):
         self.attention_type = config.layer_types[layer_idx]
 
     def forward(self, *args, **kwargs):
-        past_key_value = kwargs.get('past_key_value', None)
+        past_key_value = kwargs.get("past_key_value", None)
         hidden_states = args[0]
         bs, seq_len, _ = hidden_states.shape
 
         if past_key_value is not None:
             past_key_value.update(
-                ops.empty(bs, self.num_key_value_heads, seq_len, 0, dtype=hidden_states.dtype, device='meta'),
-                ops.empty(bs, self.num_key_value_heads, seq_len, 0, dtype=hidden_states.dtype, device='meta'),
-                self.layer_idx)
+                mindtorch.empty(
+                    bs,
+                    self.num_key_value_heads,
+                    seq_len,
+                    0,
+                    dtype=hidden_states.dtype,
+                    device="meta",
+                ),
+                mindtorch.empty(
+                    bs,
+                    self.num_key_value_heads,
+                    seq_len,
+                    0,
+                    dtype=hidden_states.dtype,
+                    device="meta",
+                ),
+                self.layer_idx,
+            )
 
-        return ops.empty(*hidden_states.shape, dtype=hidden_states.dtype, device='meta')
+        return mindtorch.empty(
+            *hidden_states.shape, dtype=hidden_states.dtype, device="meta"
+        )
 
 
 class EmbeddingIndentity(nn.Module):
@@ -61,7 +83,10 @@ class EmbeddingIndentity(nn.Module):
         self.dtype = dtype
 
     def forward(self, input):
-        return ops.empty(input.shape + (self.embedding_dim,), dtype=self.dtype, device='meta')
+        return mindtorch.empty(
+            input.shape + (self.embedding_dim,), dtype=self.dtype, device="meta"
+        )
+
 
 class LinearIndetity(nn.Module):
     def __init__(self, in_features, out_features, dtype=None):
@@ -71,7 +96,10 @@ class LinearIndetity(nn.Module):
         self.dtype = dtype
 
     def forward(self, input):
-        return ops.empty(input.shape[:-1] + (self.out_features,), dtype=self.dtype, device='meta')
+        return mindtorch.empty(
+            input.shape[:-1] + (self.out_features,), dtype=self.dtype, device="meta"
+        )
+
 
 def construct_pipeline_parallel_model(model, device_map):
     current_device = dist.get_rank()
@@ -87,13 +115,19 @@ def construct_pipeline_parallel_model(model, device_map):
         if device != current_device:
             submodule = model.get_submodule(scope_name)
             if isinstance(submodule, nn.Embedding):
-                new_embedding = EmbeddingIndentity(submodule.num_embeddings, submodule.embedding_dim, model.dtype)
+                new_embedding = EmbeddingIndentity(
+                    submodule.num_embeddings, submodule.embedding_dim, model.dtype
+                )
                 replace_submodule(model, scope_name, new_embedding)
             elif isinstance(submodule, nn.Linear):
-                new_linear = LinearIndetity(submodule.in_features, submodule.out_features, model.dtype)
+                new_linear = LinearIndetity(
+                    submodule.in_features, submodule.out_features, model.dtype
+                )
                 replace_submodule(model, scope_name, new_linear)
             elif submodule.__class__.__name__ in no_split_modules:
-                new_layer = DecoderLayerIdentity(submodule.self_attn.layer_idx, submodule.self_attn.config)
+                new_layer = DecoderLayerIdentity(
+                    submodule.self_attn.layer_idx, submodule.self_attn.config
+                )
                 replace_submodule(model, scope_name, new_layer)
             else:
                 # new_layer = nn.Identity()
@@ -101,15 +135,21 @@ def construct_pipeline_parallel_model(model, device_map):
                 pass
 
     if current_device < last_device:
-        current_last_layer = model.get_submodule(reversed_device_map[current_device][-1])
+        current_last_layer = model.get_submodule(
+            reversed_device_map[current_device][-1]
+        )
         current_last_layer._forward = current_last_layer.forward
         current_last_layer.forward = types.MethodType(send_forward, current_last_layer)
         current_last_layer.dist = current_device + 1
 
     if current_device > 0:
-        current_first_layer = model.get_submodule(reversed_device_map[current_device][0])
+        current_first_layer = model.get_submodule(
+            reversed_device_map[current_device][0]
+        )
         current_first_layer._forward = current_first_layer.forward
-        current_first_layer.forward = types.MethodType(receive_forward, current_first_layer)
+        current_first_layer.forward = types.MethodType(
+            receive_forward, current_first_layer
+        )
         current_first_layer.src = current_device - 1
 
     model_last_layer = model.get_submodule(next(reversed(device_map)))
@@ -119,17 +159,18 @@ def construct_pipeline_parallel_model(model, device_map):
 
     return model
 
+
 def find_usefull_files(shared_files, shared_meta, model_params):
-    files_path = '/'.join(shared_files[0].split('/')[:-1])
+    files_path = "/".join(shared_files[0].split("/")[:-1])
     usefull_files = set()
 
-    for param_name, file_name in shared_meta['weight_map'].items():
+    for param_name, file_name in shared_meta["weight_map"].items():
         if param_name in model_params:
             usefull_files.add(file_name)
         # else:
         #     shared_meta['all_checkpoint_keys'].remove(param_name)
 
-    usefull_files = [files_path + '/' + file for file in usefull_files]
+    usefull_files = [files_path + "/" + file for file in usefull_files]
 
     return usefull_files, shared_meta
 
@@ -141,31 +182,31 @@ def _load_pretrained_model_wrapper(fn):
         state_dict,
         checkpoint_files,
         pretrained_model_name_or_path,
-        ignore_mismatched_sizes,
-        sharded_metadata,
-        device_map,
-        disk_offload_folder,
-        offload_state_dict = None,
-        dtype = None,
-        hf_quantizer = None,
-        keep_in_fp32_regex = None,
-        device_mesh = None,
-        key_mapping = None,
-        weights_only = True,
+        **kwargs,
     ):
+        device_map = kwargs.pop("device_map", None)
+        sharded_metadata = kwargs.pop("sharded_metadata", None)
+
         # if device_map is not None and not initialize distribute module, raise Error.
         if device_map is not None:
-            if all([isinstance(d, int) for d in device_map.values()]) and len(set(device_map.values())) > 1:
+            if (
+                all([isinstance(d, int) for d in device_map.values()])
+                and len(set(device_map.values())) > 1
+            ):
                 if not GlobalComm.INITED:
-                    raise RuntimeError(f'to use transformers with multi-gpu/npu, please use `msrun/mpirun` ' \
-                                    f'with {len(set(device_map.values()))} devices to launch multiprocess.')
+                    raise RuntimeError(
+                        f"to use transformers with multi-gpu/npu, please use `msrun/mpirun` "
+                        f"with {len(set(device_map.values()))} devices to launch multiprocess."
+                    )
 
                 model = construct_pipeline_parallel_model(model, device_map)
-                checkpoint_files, sharded_metadata = find_usefull_files(checkpoint_files, sharded_metadata, model.state_dict().keys())
+                checkpoint_files, sharded_metadata = find_usefull_files(
+                    checkpoint_files, sharded_metadata, model.state_dict().keys()
+                )
 
                 rank = dist.get_rank()
                 world_size = dist.get_world_size()
-                
+
                 dist.barrier()
 
                 for target_rank in range(world_size):
@@ -177,42 +218,23 @@ def _load_pretrained_model_wrapper(fn):
                             state_dict,
                             checkpoint_files,
                             pretrained_model_name_or_path,
-                            ignore_mismatched_sizes,
-                            sharded_metadata,
-                            device_map,
-                            disk_offload_folder,
-                            offload_state_dict,
-                            dtype,
-                            hf_quantizer,
-                            keep_in_fp32_regex,
-                            device_mesh,
-                            key_mapping,
-                            weights_only,
+                            **kwargs,
                         )
 
                     dist.barrier()
                 return model
 
         return fn(
-                cls,
-                model,
-                state_dict,
-                checkpoint_files,
-                pretrained_model_name_or_path,
-                ignore_mismatched_sizes,
-                sharded_metadata,
-                device_map,
-                disk_offload_folder,
-                offload_state_dict,
-                dtype,
-                hf_quantizer,
-                keep_in_fp32_regex,
-                device_mesh,
-                key_mapping,
-                weights_only,
-            )
+            cls,
+            model,
+            state_dict,
+            checkpoint_files,
+            pretrained_model_name_or_path,
+            **kwargs,
+        )
 
     return wrapper
+
 
 def _get_resolved_checkpoint_files_wrapper(fn):
     def wrapper(*args, **kwargs):

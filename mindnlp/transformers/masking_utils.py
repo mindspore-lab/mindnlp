@@ -207,7 +207,7 @@ def _ignore_causal_mask_sdpa(
     if (
         not is_tracing
         # only cases when lower and upper diags are the same, see https://github.com/pytorch/pytorch/issues/108108
-        and (query_length == 1 or kv_length == query_length)
+        and query_length in (1, kv_length)
         # in this case we need to add special patterns to the mask so cannot be skipped otherwise
         and (local_attention_size is None or kv_length < local_attention_size)
         # In this case, we need to add padding to the mask, so cannot be skipped otherwise
@@ -519,70 +519,11 @@ def flash_attention_mask(
     return attention_mask
 
 
-def flex_attention_mask(
-    batch_size: int,
-    cache_position: mindtorch.Tensor,
-    kv_length: int,
-    kv_offset: int = 0,
-    mask_function: Callable = causal_mask_function,
-    attention_mask: Optional[mindtorch.Tensor] = None,
-    **kwargs,
-) -> BlockMask:
-    """
-    Create a 4D block mask which is a compressed representation of the full 4D block causal mask. BlockMask is essential
-    for performant computation of flex attention. See: https://pymindtorch.org/blog/flexattention/
-
-    Args:
-        batch_size (`int`):
-            The batch size of the input sequence.
-        cache_position (`mindtorch.Tensor`):
-            A tensor of shape (query_length,) indicating the current indices of the input sequence elements.
-        kv_length (`int`):
-            The size that the key and value states will have during the attention computation.
-        kv_offset (`int`, optional):
-            An optional offset to indicate at which first position the key and values states will refer to.
-        mask_function (`Callable`):
-            The mask factory function describing the mask pattern.
-        attention_mask (`mindtorch.Tensor`, optional):
-            The 2D attention mask corresponding to padded tokens of shape (batch_size, number_of_seen_tokens+q_length)
-    """
-    q_length, q_offset = cache_position.shape[0], cache_position[0]
-
-    # Potentially add the padding 2D mask
-    if attention_mask is not None:
-        # Older torch (2.5.x) cannot handle sequences not in multiples of 128 (default block size)
-        # Hence we pad to multiples of this as a minimum to ensure this
-        pad_len = ((attention_mask.shape[1] // flex_default_block_size) + 1) * flex_default_block_size
-        pad_len = pad_len - attention_mask.shape[1]
-        if not _is_torch_greater_or_equal_than_2_6 and pad_len > 0:
-            attention_mask = mindtorch.nn.functional.pad(attention_mask, value=0, pad=(0, pad_len))
-
-        padding_mask = prepare_padding_mask(attention_mask, kv_length, kv_offset, _slice=False)
-        mask_function = and_masks(mask_function, padding_mask_function(padding_mask))
-
-    # Add the offsets on top (because flex interface only allows length, not start and end indices)
-    mask_function = add_offsets_to_mask_function(mask_function, q_offset, kv_offset)
-
-    # Finally create the block mask
-    block_mask = create_block_mask(
-        mask_mod=mask_function,
-        B=batch_size,
-        H=None,
-        Q_LEN=q_length,
-        KV_LEN=kv_length,
-        device=cache_position.device,
-        _compile=_is_torch_greater_or_equal_than_2_6,
-    )
-    return block_mask
-
-
-
 # Global AttentionMaskInterface shared by all models which do not need to overwrite any of the existing ones
 ALL_MASK_ATTENTION_FUNCTIONS = {
     "sdpa": sdpa_mask,
     "eager": eager_mask,
     "flash_attention_2": flash_attention_mask,
-    "flex_attention": flex_attention_mask,
 }
 
 def find_packed_sequence_indices(position_ids: mindtorch.Tensor) -> mindtorch.Tensor:
@@ -1145,7 +1086,7 @@ class AttentionMask(mindtorch.Tensor):
         cls.style = style
         return mindtorch.Tensor._make_subclass(cls, data, require_grad=False)
 
-    def __init__(self, data):
+    def __init__(self, data): # pylint: disable=super-init-not-called
         # You can initialize any additional metadata here if needed
         pass
 

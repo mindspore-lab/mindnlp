@@ -153,10 +153,11 @@ setup(
         "mindnlp": "mindnlp",
         "mindtorch": "mindtorch",
     },
-    # package_data={
-    #     'mindnlp': ['*', '*/*', '*/*/*', '*/*/*/*', '*/*/*/*/*', '*/*/*/*/*/*'],
-    #     'mindtorch': ['*', '*/*', '*/*/*', '*/*/*/*', '*/*/*/*/*', '*/*/*/*/*/*']
-    # },
+    package_data={
+        'mindnlp': ['*.py', '*/*.py', '*/*/*.py', '*/*/*/*.py', '*/*/*/*/*.py', '*/*/*/*/*/*.py',
+                    '*.cu', '*/*.cu', '*/*/*.cu', '*/*/*/*.cu', '*/*/*/*/*.cu'],
+        'mindtorch': ['*.py', '*/*.py', '*/*/*.py', '*/*/*/*.py', '*/*/*/*/*.py', '*/*/*/*/*/*.py']
+    },
     cmdclass={
         'egg_info': EggInfo,
         'build_py': BuildPy,
