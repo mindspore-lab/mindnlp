@@ -1,7 +1,5 @@
-import mindnlp
-import mindspore
+from mindtorch import distributed as dist
 from mindnlp import core
-from mindnlp.core import distributed as dist
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
 
 import gradio as gr

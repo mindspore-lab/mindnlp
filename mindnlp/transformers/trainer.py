@@ -1,9 +1,10 @@
 from typing import Union, Any, Optional
-import mindtorch
-from mindtorch import nn, autograd
 
 from transformers.training_args import OptimizerNames
 from accelerate.utils import DistributedType
+
+import mindtorch
+from mindtorch import nn, autograd
 
 def training_step(
     self,

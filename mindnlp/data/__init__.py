@@ -13,8 +13,3 @@
 # limitations under the License.
 # ============================================================================
 """data module"""
-from .processors import (
-    SquadExample,
-    SquadFeatures,
-    squad_convert_examples_to_features,
-)

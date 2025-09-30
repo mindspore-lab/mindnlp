@@ -27,7 +27,7 @@ from .. import init
 from ... import ops
 
 
-__all__ = ['LSTM', 'GRU', 'RNN']
+__all__ = ['LSTM', 'GRU', 'RNN', 'RNNBase']
 
 
 def _init_state(shape, dtype, device, is_lstm):
@@ -313,7 +313,7 @@ class _DynamicLSTMAscend(Module):
         return outputs, (h, c)
 
 
-class _RNNBase(Module):
+class RNNBase(Module):
     '''Basic class for RNN operators'''
 
     def __init__(self, mode, input_size, hidden_size, num_layers=1, bias=True,
@@ -512,7 +512,7 @@ class _RNNBase(Module):
         return x_n.astype(x_dtype), (hx_n[0].astype(x_dtype), hx_n[1].astype(x_dtype))
 
 
-class RNN(_RNNBase):
+class RNN(RNNBase):
     r"""
     Stacked Elman RNN layers, applying RNN layer with :math:`\tanh` or :math:`\text{ReLU}` non-linearity to the input.
 
@@ -595,7 +595,7 @@ class RNN(_RNNBase):
         super(RNN, self).__init__(mode, *args, **kwargs)
 
 
-class GRU(_RNNBase):
+class GRU(RNNBase):
     r"""
     Stacked GRU (Gated Recurrent Unit) layers.
 
@@ -684,7 +684,7 @@ class GRU(_RNNBase):
         super(GRU, self).__init__(mode, *args, **kwargs)
 
 
-class LSTM(_RNNBase):
+class LSTM(RNNBase):
     r"""
     Stacked LSTM (Long Short-Term Memory) layers.
 

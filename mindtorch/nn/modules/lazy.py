@@ -3,7 +3,7 @@ import itertools
 from typing import Any, Optional, Protocol
 
 import mindtorch
-from ..parameter import is_lazy
+from mindtorch.nn.parameter import is_lazy
 
 
 __all__ = ["LazyModuleMixin"]
@@ -245,7 +245,7 @@ class LazyModuleMixin:
                 return True
         return False
 
-    # torchrec tests the code consistency with the following code
+    # mindtorchrec tests the code consistency with the following code
     # fmt: off
     def _infer_parameters(self: _LazyProtocol, module, args, kwargs=None):
         r"""Infers the size and initializes the parameters according to the provided input batch.
