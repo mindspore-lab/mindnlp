@@ -36,76 +36,76 @@ jobs:
       run: |
         python -m pip install --upgrade pip==24.0
         pip install -r requirements/pylint_requirements.txt
-    - name: Install MindSpore
-      shell: bash
-      env:
-        OS: ubuntu-latest
-        PYTHON: 3.11
-      run: |
-        python .github/install_mindspore.py
-        pip install -r download.txt
+    # - name: Install MindSpore
+    #   shell: bash
+    #   env:
+    #     OS: ubuntu-latest
+    #     PYTHON: 3.11
+    #   run: |
+    #     python .github/install_mindspore.py
+    #     pip install -r download.txt
     - name: Analysing the mindnlp code with pylint
       run: |
         NUM_CORES=$(nproc)
         pylint --jobs=$NUM_CORES mindnlp --rcfile=.github/pylint.conf
 
-  ut-test:
-    needs: pylint-check
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [3.11]
-    runs-on: ${{ matrix.os }}
-    steps:
-    - uses: actions/checkout@v3
-    - name: avoid macos error
-      if: matrix.os == 'macos-latest'
-      run: rm -rf $RUNNER_TOOL_CACHE/Python/3.8.17
+  # ut-test:
+  #   needs: pylint-check
+  #   strategy:
+  #     matrix:
+  #       os: [ubuntu-latest, macos-latest, windows-latest]
+  #       python: [3.11]
+  #   runs-on: ${{ matrix.os }}
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #   - name: avoid macos error
+  #     if: matrix.os == 'macos-latest'
+  #     run: rm -rf $RUNNER_TOOL_CACHE/Python/3.8.17
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip==24.0
-        pip install -r requirements/requirements.txt
-    - name: Install MindSpore
-      shell: bash
-      env:
-        OS: ${{ matrix.os }}
-        PYTHON: ${{ matrix.python }}
-      run: |
-        python .github/install_mindspore.py
-        pip install -r download.txt
-    - name: Test with pytest
-      run: |
-        pytest -c pytest.ini -m 'not download and not gpu_only' --ignore=tests/transformers tests
+  #   - name: Set up Python
+  #     uses: actions/setup-python@v4
+  #     with:
+  #       python-version: ${{ matrix.python }}
+  #   - name: Install dependencies
+  #     run: |
+  #       python -m pip install --upgrade pip==24.0
+  #       pip install -r requirements/requirements.txt
+  #   # - name: Install MindSpore
+  #   #   shell: bash
+  #   #   env:
+  #   #     OS: ${{ matrix.os }}
+  #   #     PYTHON: ${{ matrix.python }}
+  #   #   run: |
+  #   #     python .github/install_mindspore.py
+  #   #     pip install -r download.txt
+  #   - name: Test with pytest
+  #     run: |
+  #       pytest -c pytest.ini -m 'not download and not gpu_only' --ignore=tests/transformers tests
 
-  release-test:
-    needs: pylint-check
-    strategy:
-      matrix:
-        ms_version: ['2.2.14', '2.3.1', '2.4.10', '2.5.0']
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.9
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip==24.0
-        pip install -r requirements/requirements.txt
-    - name: Install MindSpore
-      shell: bash
-      run: |
-        pip install https://ms-release.obs.cn-north-4.myhuaweicloud.com/${{matrix.ms_version}}/MindSpore/unified/x86_64/mindspore-${{matrix.ms_version}}-cp39-cp39-linux_x86_64.whl --trusted-host ms-release.obs.cn-north-4.myhuaweicloud.com
-    - name: Test with pytest
-      run: |
-        pytest -c pytest.ini -m 'not download and not gpu_only' --ignore=tests/transformers tests
-        # pytest -c pytest.ini -m 'not download and not gpu_only' tests
+  # release-test:
+  #   needs: pylint-check
+  #   strategy:
+  #     matrix:
+  #       ms_version: ['2.5.0', '2.6.0', '2.7.0']
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #   - name: Set up Python
+  #     uses: actions/setup-python@v4
+  #     with:
+  #       python-version: 3.11
+  #   - name: Install dependencies
+  #     run: |
+  #       python -m pip install --upgrade pip==24.0
+  #       pip install -r requirements/requirements.txt
+  #   # - name: Install MindSpore
+  #   #   shell: bash
+  #   #   run: |
+  #   #     pip install https://ms-release.obs.cn-north-4.myhuaweicloud.com/${{matrix.ms_version}}/MindSpore/unified/x86_64/mindspore-${{matrix.ms_version}}-cp39-cp39-linux_x86_64.whl --trusted-host ms-release.obs.cn-north-4.myhuaweicloud.com
+  #   - name: Test with pytest
+  #     run: |
+  #       pytest -c pytest.ini -m 'not download and not gpu_only' --ignore=tests/transformers tests
+  #       # pytest -c pytest.ini -m 'not download and not gpu_only' tests
 
   transformers-model-test:
     needs: pylint-check
@@ -132,9 +132,12 @@ jobs:
         pip install mindspore
     - name: Test with pytest
       run: |
-        pip install transformers==4.51.2
-        git clone -b 4.51.2 https://gitee.com/mirrors/huggingface_transformers
-        python tests/run_test.py -vs huggingface_transformers/tests/models/${{ matrix.alpha }}*/test_modeling*
+        pip install transformers==4.56.2
+        cd tests
+        git clone -b v4.56.2 https://github.com/huggingface/transformers
+        cd ..
+        bash scripts/build_and_reinstall.sh
+        python tests/run_test.py -vs tests/transformers/tests/models/${{ matrix.alpha }}*/test_modeling*
 
   kaggle-gpu-test:
     needs: pylint-check

@@ -25,7 +25,6 @@ import re
 import shutil
 import subprocess
 import sys
-import warnings
 from collections import OrderedDict
 from enum import Enum
 from functools import lru_cache
@@ -430,29 +429,6 @@ def is_accelerate_available(min_version: str = ACCELERATE_MIN_VERSION):
     ) >= version.parse(min_version)
 
 
-def is_torch_accelerator_available():
-    if is_torch_available():
-        import torch
-
-        return hasattr(torch, "accelerator")
-
-    return False
-
-
-def is_torch_deterministic():
-    """
-    Check whether pytorch uses deterministic algorithms by looking if torch.set_deterministic_debug_mode() is set to 1 or 2"
-    """
-    if is_torch_available():
-        import torch
-
-        if torch.get_deterministic_debug_mode() == 0:
-            return False
-        else:
-            return True
-
-    return False
-
 
 def is_triton_available(min_version: str = TRITON_MIN_VERSION):
     return _triton_available and version.parse(_triton_version) >= version.parse(
@@ -578,54 +554,6 @@ def is_pretty_midi_available():
     return _pretty_midi_available
 
 
-def is_torch_cuda_available():
-    if is_torch_available():
-        import torch
-
-        return torch.cuda.is_available()
-    else:
-        return False
-
-
-def is_cuda_platform():
-    if is_torch_available():
-        import torch
-
-        return torch.version.cuda is not None
-    else:
-        return False
-
-
-def is_rocm_platform():
-    if is_torch_available():
-        import torch
-
-        return torch.version.hip is not None
-    else:
-        return False
-
-
-def is_mamba_ssm_available():
-    if is_torch_available():
-        import torch
-
-        if not torch.cuda.is_available():
-            return False
-        else:
-            return _is_package_available("mamba_ssm")
-    return False
-
-
-def is_causal_conv1d_available():
-    if is_torch_available():
-        import torch
-
-        if not torch.cuda.is_available():
-            return False
-        return _is_package_available("causal_conv1d")
-    return False
-
-
 def is_xlstm_available():
     if is_torch_available():
         return _is_package_available("xlstm")
@@ -638,112 +566,9 @@ def is_mambapy_available():
     return False
 
 
-def is_torch_mps_available(min_version: Optional[str] = None):
-    if is_torch_available():
-        import torch
-
-        if hasattr(torch.backends, "mps"):
-            backend_available = (
-                torch.backends.mps.is_available() and torch.backends.mps.is_built()
-            )
-            if min_version is not None:
-                flag = version.parse(_torch_version) >= version.parse(min_version)
-                backend_available = backend_available and flag
-            return backend_available
-    return False
-
-
-def is_torch_bf16_gpu_available() -> bool:
-    if not is_torch_available():
-        return False
-
-    import torch
-
-    if torch.cuda.is_available():
-        return torch.cuda.is_bf16_supported()
-    return False
-
 
 def is_torch_bf16_cpu_available() -> bool:
     return is_torch_available()
-
-
-def is_torch_bf16_available():
-    # the original bf16 check was for gpu only, but later a cpu/bf16 combo has emerged so this util
-    # has become ambiguous and therefore deprecated
-    warnings.warn(
-        "The util is_torch_bf16_available is deprecated, please use is_torch_bf16_gpu_available "
-        "or is_torch_bf16_cpu_available instead according to whether it's used with cpu or gpu",
-        FutureWarning,
-    )
-    return is_torch_bf16_gpu_available()
-
-
-@lru_cache
-def is_torch_fp16_available_on_device(device):
-    if not is_torch_available():
-        return False
-
-    import torch
-
-    try:
-        x = torch.zeros(2, 2, dtype=torch.float16, device=device)
-        _ = x @ x
-
-        # At this moment, let's be strict of the check: check if `LayerNorm` is also supported on device, because many
-        # models use this layer.
-        batch, sentence_length, embedding_dim = 3, 4, 5
-        embedding = torch.randn(
-            batch, sentence_length, embedding_dim, dtype=torch.float16, device=device
-        )
-        layer_norm = torch.nn.LayerNorm(
-            embedding_dim, dtype=torch.float16, device=device
-        )
-        _ = layer_norm(embedding)
-
-    except:  # noqa: E722
-        # TODO: more precise exception matching, if possible.
-        # most backends should return `RuntimeError` however this is not guaranteed.
-        return False
-
-    return True
-
-
-@lru_cache
-def is_torch_bf16_available_on_device(device):
-    if not is_torch_available():
-        return False
-
-    import torch
-
-    if device == "cuda":
-        return is_torch_bf16_gpu_available()
-
-    if device == "hpu":
-        return True
-
-    try:
-        x = torch.zeros(2, 2, dtype=torch.bfloat16, device=device)
-        _ = x @ x
-    except:  # noqa: E722
-        # TODO: more precise exception matching, if possible.
-        # most backends should return `RuntimeError` however this is not guaranteed.
-        return False
-
-    return True
-
-
-def is_torch_tf32_available():
-    if not is_torch_available():
-        return False
-
-    import torch
-
-    if not torch.cuda.is_available() or torch.version.cuda is None:
-        return False
-    if torch.cuda.get_device_properties(torch.cuda.current_device()).major < 8:
-        return False
-    return True
 
 
 def is_torch_fx_available():
@@ -802,43 +627,6 @@ def is_torchdynamo_available():
 
 def is_torch_compile_available():
     return is_torch_available()
-
-
-def is_torchdynamo_compiling():
-    if not is_torch_available():
-        return False
-
-    # Importing torch._dynamo causes issues with PyTorch profiler (https://github.com/pytorch/pytorch/issues/130622)
-    # hence rather relying on `torch.compiler.is_compiling()` when possible (torch>=2.3)
-    try:
-        import torch
-
-        return torch.compiler.is_compiling()
-    except Exception:
-        try:
-            import torch._dynamo as dynamo  # noqa: F401
-
-            return dynamo.is_compiling()
-        except Exception:
-            return False
-
-
-def is_torchdynamo_exporting():
-    if not is_torch_available():
-        return False
-
-    try:
-        import torch
-
-        return torch.compiler.is_exporting()
-    except Exception:
-        try:
-            import torch._dynamo as dynamo  # noqa: F401
-
-            return dynamo.is_exporting()
-        except Exception:
-            return False
-
 
 def is_torch_tensorrt_fx_available():
     if importlib.util.find_spec("torch_tensorrt") is None:
@@ -908,29 +696,6 @@ def is_ninja_available():
     else:
         return True
 
-
-@lru_cache
-def is_bitsandbytes_available(check_library_only=False) -> bool:
-    if not _bitsandbytes_available:
-        return False
-
-    if check_library_only:
-        return True
-
-    if not is_torch_available():
-        return False
-
-    import torch
-
-    # `bitsandbytes` versions older than 0.43.1 eagerly require CUDA at import time,
-    # so those versions of the library are practically only available when CUDA is too.
-    if version.parse(importlib.metadata.version("bitsandbytes")) < version.parse(
-        "0.43.1"
-    ):
-        return torch.cuda.is_available()
-
-    # Newer versions of `bitsandbytes` can be imported on systems without CUDA.
-    return True
 
 
 @lru_cache
@@ -1879,13 +1644,6 @@ class DummyObject(type):
             return super().__getattribute__(key)
         requires_backends(cls, cls._backends)
 
-
-def is_torch_fx_proxy(x):
-    if is_torch_fx_available():
-        import torch.fx
-
-        return isinstance(x, torch.fx.Proxy)
-    return False
 
 
 BACKENDS_T = frozenset[str]
