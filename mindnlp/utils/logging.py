@@ -15,7 +15,7 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=unused-import
-""" Logging utilities."""
+"""Logging utilities."""
 
 import functools
 import logging
@@ -74,21 +74,21 @@ def _get_default_logging_level():
 def _get_library_name() -> str:
     """
     Returns the name of the library based on the module name.
-    
+
     Returns:
         str: The name of the library extracted from the module name.
-    
+
     """
-    return __name__.split(".")[0] # pylint: disable=use-maxsplit-arg
+    return __name__.split(".")[0]  # pylint: disable=use-maxsplit-arg
 
 
 def _get_library_root_logger() -> logging.Logger:
     """
     Retrieves the root logger for the library.
-    
+
     Returns:
         A logging.Logger object representing the root logger for the library.
-    
+
     Raises:
         None.
     """
@@ -98,10 +98,10 @@ def _get_library_root_logger() -> logging.Logger:
 def _configure_library_root_logger() -> None:
     """
     This function configures the root logger for the library.
-    
+
     Returns:
         None: This function does not return any value.
-    
+
     Raises:
         None
     """
@@ -124,7 +124,9 @@ def _configure_library_root_logger() -> None:
         library_root_logger.setLevel(_get_default_logging_level())
         # if logging level is debug, we add pathname and lineno to formatter for easy debugging
         if os.getenv("TRANSFORMERS_VERBOSITY", None) == "detail":
-            formatter = logging.Formatter("[%(levelname)s|%(pathname)s:%(lineno)s] %(asctime)s >> %(message)s")
+            formatter = logging.Formatter(
+                "[%(levelname)s|%(pathname)s:%(lineno)s] %(asctime)s >> %(message)s"
+            )
             _default_handler.setFormatter(formatter)
 
         library_root_logger.propagate = False
@@ -133,13 +135,13 @@ def _configure_library_root_logger() -> None:
 def _reset_library_root_logger() -> None:
     """
     Resets the root logger of the library to its default state.
-    
+
     Args:
         None
-    
+
     Returns:
         None. The function does not return any value.
-    
+
     Raises:
         None
     """
@@ -158,7 +160,7 @@ def _reset_library_root_logger() -> None:
 def get_log_levels_dict():
     """
     Returns a dictionary of log levels.
-    
+
     Returns:
         dict: A dictionary containing log levels and their corresponding values.
     """
@@ -321,7 +323,9 @@ def enable_explicit_format() -> None:
     handlers = _get_library_root_logger().handlers
 
     for handler in handlers:
-        formatter = logging.Formatter("[%(levelname)s|%(filename)s:%(lineno)s] %(asctime)s >> %(message)s")
+        formatter = logging.Formatter(
+            "[%(levelname)s|%(filename)s:%(lineno)s] %(asctime)s >> %(message)s"
+        )
         handler.setFormatter(formatter)
 
 
@@ -342,7 +346,7 @@ def warning_advice(self, *args, **kwargs):
     This method is identical to `logger.warning()`, but if env var TRANSFORMERS_NO_ADVISORY_WARNINGS=1 is set, this
     warning will not be printed
     """
-    no_advisory_warnings = os.getenv("NO_ADVISORY_WARNINGS", False) # pylint: disable=invalid-envvar-default
+    no_advisory_warnings = os.getenv("NO_ADVISORY_WARNINGS", False)  # pylint: disable=invalid-envvar-default
     if no_advisory_warnings:
         return
     self.warning(*args, **kwargs)
@@ -368,16 +372,17 @@ logging.Logger.warning_once = warning_once
 
 class EmptyTqdm:
     """Dummy tqdm which doesn't do anything."""
+
     def __init__(self, *args, **kwargs):
         """
         Initializes an instance of the EmptyTqdm class.
-        
+
         Args:
             self: The instance of the EmptyTqdm class.
-        
+
         Returns:
             None. This method does not return any value.
-        
+
         Raises:
             None.
         """
@@ -386,13 +391,13 @@ class EmptyTqdm:
     def __iter__(self):
         """
         This method implements the iterator protocol for the EmptyTqdm class.
-        
+
         Args:
             self: EmptyTqdm object. The instance of the EmptyTqdm class for which the iterator is being created.
-        
+
         Returns:
             None. This method returns an iterator object that iterates over the _iterator attribute of the EmptyTqdm instance.
-        
+
         Raises:
             No specific exceptions are raised by this method.
         """
@@ -400,22 +405,24 @@ class EmptyTqdm:
 
     def __getattr__(self, _):
         """Return empty function."""
+
         def empty_fn(*args, **kwargs):
             return
+
         return empty_fn
 
     def __enter__(self):
         """
         __enter__
-        
+
         Args:
             self: EmptyTqdm
                 The self parameter refers to the current instance of the EmptyTqdm class.
-        
+
         Returns:
             None
                 This method returns None.
-        
+
         Raises:
             No exceptions are raised by this method.
         """
@@ -424,7 +431,7 @@ class EmptyTqdm:
     def __exit__(self, type_, value, traceback):
         """
         __exit__ method in the EmptyTqdm class.
-        
+
         Args:
             self: EmptyTqdm object
                 The instance of the EmptyTqdm class.
@@ -434,11 +441,11 @@ class EmptyTqdm:
                 The exception that was raised. It represents the actual exception object.
             traceback: traceback
                 The traceback object. It represents the traceback information associated with the exception.
-        
+
         Returns:
             None
             This method does not return any value.
-        
+
         Raises:
             This method does not raise any exceptions explicitly.
         """
@@ -446,24 +453,24 @@ class EmptyTqdm:
 
 
 class _tqdm_cls:
-
     """_tqdm_cls is a Python class that provides functionality for managing the progress of tasks. It includes methods for calling the class, setting a lock, and getting a lock. This class is designed to work
-in conjunction with the tqdm_lib module for displaying progress bars during iterative processes. When _tqdm_active is True, the class uses methods from the tqdm_lib.tqdm module to handle progress tracking.
-Otherwise, it falls back to using an EmptyTqdm instance for progress tracking. The set_lock method allows users to specify a lock for thread safety, and the get_lock method retrieves the current lock if one
-has been set."""
+    in conjunction with the tqdm_lib module for displaying progress bars during iterative processes. When _tqdm_active is True, the class uses methods from the tqdm_lib.tqdm module to handle progress tracking.
+    Otherwise, it falls back to using an EmptyTqdm instance for progress tracking. The set_lock method allows users to specify a lock for thread safety, and the get_lock method retrieves the current lock if one
+    has been set."""
+
     def __call__(self, *args, **kwargs):
         """
-        This method __call__ in the class _tqdm_cls is used to conditionally return either a tqdm object or an EmptyTqdm object based on the _tqdm_active flag.
-        
-        Args:
-            self (object): The instance of the _tqdm_cls class. It is used to access the attributes and methods of the class.
-        
-        Returns:
-            None: This method does not explicitly return any value. It returns either a tqdm object or an EmptyTqdm object based on the _tqdm_active flag.
-        
-        Raises:
-            No specific exceptions are raised by this method under normal circumstances. However, if there are issues related to the instantiation of tqdm objects or EmptyTqdm objects, standard Python
-exceptions may be raised.
+                This method __call__ in the class _tqdm_cls is used to conditionally return either a tqdm object or an EmptyTqdm object based on the _tqdm_active flag.
+
+                Args:
+                    self (object): The instance of the _tqdm_cls class. It is used to access the attributes and methods of the class.
+
+                Returns:
+                    None: This method does not explicitly return any value. It returns either a tqdm object or an EmptyTqdm object based on the _tqdm_active flag.
+
+                Raises:
+                    No specific exceptions are raised by this method under normal circumstances. However, if there are issues related to the instantiation of tqdm objects or EmptyTqdm objects, standard Python
+        exceptions may be raised.
         """
         if _tqdm_active:
             return tqdm_lib.tqdm(*args, **kwargs)
@@ -472,15 +479,15 @@ exceptions may be raised.
     def set_lock(self, *args, **kwargs):
         """
         Method to set the lock for the _tqdm_cls instance.
-        
+
         Args:
             self (_tqdm_cls): The instance of the _tqdm_cls class.
                 This parameter is required to access the instance and set the lock.
                 It is of type _tqdm_cls and represents the instance on which the lock is being set.
-        
+
         Returns:
             None: This method does not return any value. The lock is set within the instance itself.
-        
+
         Raises:
             No specific exceptions are raised by this method.
             However, if _tqdm_active is False, the method will not set the lock and will return without any further action.
@@ -492,13 +499,13 @@ exceptions may be raised.
     def get_lock(self):
         """
         This method is used to retrieve the lock used by the _tqdm_cls class.
-        
+
         Args:
             self (object): The instance of the _tqdm_cls class.
-            
+
         Returns:
             None: This method does not return any value.
-        
+
         Raises:
             N/A
         """
@@ -511,7 +518,7 @@ tqdm = _tqdm_cls()
 
 def is_progress_bar_enabled() -> bool:
     """Return a boolean indicating whether tqdm progress bars are enabled."""
-    global _tqdm_active # pylint: disable=global-variable-not-assigned
+    global _tqdm_active  # pylint: disable=global-variable-not-assigned
     return bool(_tqdm_active)
 
 

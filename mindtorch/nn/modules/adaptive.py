@@ -1,30 +1,32 @@
-"""adaptive"""
 # mypy: allow-untyped-defs
 
 from collections import namedtuple
-from typing import List, Sequence
+from collections.abc import Sequence
 
-from mindtorch import Tensor
+import mindtorch
 import mindtorch.nn.functional as F
+from mindtorch import Tensor
 
-from . import Sequential, ModuleList, Linear
+from .container import ModuleList, Sequential
+from .linear import Linear
 from .module import Module
-from ... import ops
 
-__all__ = ['AdaptiveLogSoftmaxWithLoss']
 
-_ASMoutput = namedtuple('_ASMoutput', ['output', 'loss'])
+__all__ = ["AdaptiveLogSoftmaxWithLoss"]
 
+_ASMoutput = namedtuple("_ASMoutput", ["output", "loss"])
 
 
 class AdaptiveLogSoftmaxWithLoss(Module):
-    r"""Efficient softmax approximation.
+    (
+        """Efficient softmax approximation.
 
     As described in
     `Efficient softmax approximation for GPUs by Edouard Grave, Armand Joulin,
     Moustapha Ciss\u00e9, David Grangier, and Herv\u00e9 J\u00e9gou
     <https://arxiv.org/abs/1609.04309>`__.
-
+"""
+        r"""
     Adaptive softmax is an approximate strategy for training models with large
     output spaces. It is most effective when the label distribution is highly
     imbalanced, for example in natural language modelling, where the word
@@ -104,10 +106,11 @@ class AdaptiveLogSoftmaxWithLoss(Module):
 
     .. _Zipf's law: https://en.wikipedia.org/wiki/Zipf%27s_law
     """
+    )
 
     in_features: int
     n_classes: int
-    cutoffs: List[int]
+    cutoffs: list[int]
     div_value: float
     head_bias: bool
     head: Linear
@@ -118,27 +121,31 @@ class AdaptiveLogSoftmaxWithLoss(Module):
         in_features: int,
         n_classes: int,
         cutoffs: Sequence[int],
-        div_value: float = 4.,
+        div_value: float = 4.0,
         head_bias: bool = False,
-        dtype=None
+        device=None,
+        dtype=None,
     ) -> None:
-        factory_kwargs = {'dtype': dtype}
+        factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__()
 
         cutoffs = list(cutoffs)
 
-        if (len(cutoffs) == 0):
+        if len(cutoffs) == 0:
             raise ValueError("cutoffs should be a sequence of length larger than 0")
 
-        if (cutoffs != sorted(cutoffs)) \
-                or (min(cutoffs) <= 0) \
-                or (max(cutoffs) > (n_classes - 1)) \
-                or (len(set(cutoffs)) != len(cutoffs)) \
-                or any(int(c) != c for c in cutoffs):
-
-            raise ValueError("cutoffs should be a sequence of unique, positive "
-                             "integers sorted in an increasing order, where "
-                             "each value is between 1 and n_classes-1")
+        if (
+            (cutoffs != sorted(cutoffs))
+            or (min(cutoffs) <= 0)
+            or (max(cutoffs) > (n_classes - 1))
+            or (len(set(cutoffs)) != len(cutoffs))
+            or any(int(c) != c for c in cutoffs)
+        ):
+            raise ValueError(
+                "cutoffs should be a sequence of unique, positive "
+                "integers sorted in an increasing order, where "
+                "each value is between 1 and n_classes-1"
+            )
 
         self.in_features = in_features
         self.n_classes = n_classes
@@ -150,12 +157,12 @@ class AdaptiveLogSoftmaxWithLoss(Module):
         self.n_clusters = len(self.cutoffs) - 1
         self.head_size = self.shortlist_size + self.n_clusters
 
-        self.head = Linear(self.in_features, self.head_size, bias=self.head_bias,
-                           **factory_kwargs)
+        self.head = Linear(
+            self.in_features, self.head_size, bias=self.head_bias, **factory_kwargs
+        )
         self.tail = ModuleList()
 
         for i in range(self.n_clusters):
-
             hsz = int(self.in_features // (self.div_value ** (i + 1)))
             osz = self.cutoffs[i + 1] - self.cutoffs[i]
 
@@ -167,53 +174,66 @@ class AdaptiveLogSoftmaxWithLoss(Module):
             self.tail.append(projection)
 
     def reset_parameters(self) -> None:
+        """
+        Resets parameters based on their initialization used in ``__init__``.
+        """
         self.head.reset_parameters()
-        for i2h, h2o in self.tail:
-            i2h.reset_parameters()
-            h2o.reset_parameters()
+        for i2h, h2o in self.tail:  # type: ignore[misc]
+            i2h.reset_parameters()  # type: ignore[has-type]
+            h2o.reset_parameters()  # type: ignore[has-type]
 
     def forward(self, input_: Tensor, target_: Tensor) -> _ASMoutput:
-        targ_dim = target_.ndim
+        """
+        Runs the forward pass.
+        """
+        targ_dim = target_.dim()
 
         if targ_dim == 1:
-            if input_.shape[0] != target_.shape[0]:
-                raise RuntimeError('Input and target should have the same size '
-                                   'in the batch dimension.')
-            if input_.ndim != 2:
-                raise RuntimeError('1D target tensor expects 2D input tensors, '
-                                   'but found inputs with size', input_.shape)
+            if input_.size(0) != target_.size(0):
+                raise RuntimeError(
+                    "Input and target should have the same size in the batch dimension."
+                )
+            if input_.dim() != 2:
+                raise RuntimeError(
+                    "1D target tensor expects 2D input tensors, "
+                    "but found inputs with size",
+                    input_.size(),
+                )
         elif targ_dim == 0:
-            if input_.ndim != 1:
-                raise RuntimeError('0D target tensor expects 1D input tensors, '
-                                   'but found inputs with size', input_.shape)
+            if input_.dim() != 1:
+                raise RuntimeError(
+                    "0D target tensor expects 1D input tensors, "
+                    "but found inputs with size",
+                    input_.size(),
+                )
         else:
-            raise RuntimeError('0D or 1D target tensor expected, '
-                               'multi-target not supported')
+            raise RuntimeError(
+                "0D or 1D target tensor expected, multi-target not supported"
+            )
 
         is_batched = targ_dim > 0
         input = input_ if is_batched else input_.unsqueeze(0)
         target = target_ if is_batched else target_.unsqueeze(0)
 
         used_rows = 0
-        batch_size = target.shape[0]
+        batch_size = target.size(0)
 
-        output = ops.zeros(batch_size, dtype=input.dtype)
-        gather_inds = ops.zeros(batch_size, dtype=target.dtype)
+        output = input.new_zeros(batch_size)
+        gather_inds = target.new_empty(batch_size)
 
         cutoff_values = [0] + self.cutoffs
         for i in range(len(cutoff_values) - 1):
-
             low_idx = cutoff_values[i]
             high_idx = cutoff_values[i + 1]
 
             target_mask = (target >= low_idx) & (target < high_idx)
-            row_indices = ops.nonzero(target_mask).squeeze()
+            row_indices = target_mask.nonzero().squeeze()
 
             if row_indices.numel() == 0:
                 continue
 
             if i == 0:
-                gather_inds = ops.index_add(gather_inds, 0, row_indices, target[target_mask])
+                gather_inds.index_copy_(0, row_indices, target[target_mask])
 
             else:
                 relative_target = target[target_mask] - low_idx
@@ -222,21 +242,23 @@ class AdaptiveLogSoftmaxWithLoss(Module):
                 cluster_output = self.tail[i - 1](input_subset)
                 cluster_index = self.shortlist_size + i - 1
 
-                gather_inds = ops.index_fill(gather_inds, 0, row_indices, cluster_index)
+                gather_inds.index_fill_(0, row_indices, cluster_index)
                 cluster_logprob = F.log_softmax(cluster_output, dim=1)
                 local_logprob = cluster_logprob.gather(1, relative_target.unsqueeze(1))
-                output = ops.index_add(output, 0, row_indices, local_logprob.squeeze(1))
+                output.index_copy_(0, row_indices, local_logprob.squeeze(1))
 
             used_rows += row_indices.numel()
 
         if used_rows != batch_size:
-            raise RuntimeError(f"Target values should be in [0, {self.n_classes - 1}], "
-                               f"but values in range [{target.min().item()}, {target.max().item()}] "
-                               "were found. ")
+            raise RuntimeError(
+                f"Target values should be in [0, {self.n_classes - 1}], "
+                f"but values in range [{target.min().item()}, {target.max().item()}] "
+                "were found. "
+            )
 
         head_output = self.head(input)
         head_logprob = F.log_softmax(head_output, dim=1)
-        output += ops.gather(head_logprob, 1, gather_inds.unsqueeze(1)).squeeze()
+        output += head_logprob.gather(1, gather_inds.unsqueeze(1)).squeeze()
         loss = (-output).mean()
 
         if not is_batched:
@@ -246,20 +268,21 @@ class AdaptiveLogSoftmaxWithLoss(Module):
 
     def _get_full_log_prob(self, input, head_output):
         """Given input tensor, and output of ``self.head``, compute the log of the full distribution."""
-        out = ops.zeros((head_output.shape[0], self.n_classes), dtype=input.dtype)
+        out = input.new_empty((head_output.size(0), self.n_classes))
         head_logprob = F.log_softmax(head_output, dim=1)
 
-        out[:, :self.shortlist_size] = head_logprob[:, :self.shortlist_size]
+        out[:, : self.shortlist_size] = head_logprob[:, : self.shortlist_size]
 
         for i, (start_idx, stop_idx) in enumerate(zip(self.cutoffs, self.cutoffs[1:])):
             cluster_output = self.tail[i](input)
             cluster_logprob = F.log_softmax(cluster_output, dim=1)
-            output_logprob = cluster_logprob + head_logprob[:, self.shortlist_size + i].unsqueeze(1)
+            output_logprob = cluster_logprob + head_logprob[
+                :, self.shortlist_size + i
+            ].unsqueeze(1)
 
             out[:, start_idx:stop_idx] = output_logprob
 
         return out
-
 
     def log_prob(self, input: Tensor) -> Tensor:
         r"""Compute log probabilities for all :math:`\texttt{n\_classes}`.
@@ -280,8 +303,6 @@ class AdaptiveLogSoftmaxWithLoss(Module):
         head_output = self.head(input)
         return self._get_full_log_prob(input, head_output)
 
-
-
     def predict(self, input: Tensor) -> Tensor:
         r"""Return the class with the highest probability for each example in the input minibatch.
 
@@ -298,8 +319,8 @@ class AdaptiveLogSoftmaxWithLoss(Module):
             - Output: :math:`(N)`
         """
         head_output = self.head(input)
-        output = ops.argmax(head_output, dim=1)
-        not_in_shortlist = (output >= self.shortlist_size)
+        output = mindtorch.argmax(head_output, dim=1)
+        not_in_shortlist = output >= self.shortlist_size
         all_in_shortlist = not (not_in_shortlist.any())
 
         if all_in_shortlist:
@@ -307,10 +328,11 @@ class AdaptiveLogSoftmaxWithLoss(Module):
 
         elif not_in_shortlist.all():
             log_prob = self._get_full_log_prob(input, head_output)
-            return ops.argmax(log_prob, dim=1)
+            return mindtorch.argmax(log_prob, dim=1)
 
         else:
-            log_prob = self._get_full_log_prob(input[not_in_shortlist],
-                                               head_output[not_in_shortlist])
-            output[not_in_shortlist] = ops.argmax(log_prob, dim=1)
+            log_prob = self._get_full_log_prob(
+                input[not_in_shortlist], head_output[not_in_shortlist]
+            )
+            output[not_in_shortlist] = mindtorch.argmax(log_prob, dim=1)
             return output

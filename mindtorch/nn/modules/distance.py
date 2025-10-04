@@ -1,11 +1,10 @@
-"""distance"""
+import mindtorch.nn.functional as F
 from mindtorch import Tensor
 
 from .module import Module
-from .. import functional as F
 
 
-__all__ = ['CosineSimilarity']
+__all__ = ["PairwiseDistance", "CosineSimilarity"]
 
 
 class PairwiseDistance(Module):
@@ -35,28 +34,31 @@ class PairwiseDistance(Module):
         - Output: :math:`(N)` or :math:`()` based on input dimension.
           If :attr:`keepdim` is ``True``, then :math:`(N, 1)` or :math:`(1)` based on input dimension.
 
-    Examples::
+    Examples:
         >>> pdist = nn.PairwiseDistance(p=2)
         >>> input1 = mindtorch.randn(100, 128)
         >>> input2 = mindtorch.randn(100, 128)
         >>> output = pdist(input1, input2)
     """
 
-    __constants__ = ['norm', 'eps', 'keepdim']
+    __constants__ = ["norm", "eps", "keepdim"]
     norm: float
     eps: float
     keepdim: bool
 
-    def __init__(self, p: float = 2., eps: float = 1e-6, keepdim: bool = False) -> None:
+    def __init__(
+        self, p: float = 2.0, eps: float = 1e-6, keepdim: bool = False
+    ) -> None:
         super().__init__()
         self.norm = p
         self.eps = eps
         self.keepdim = keepdim
 
     def forward(self, x1: Tensor, x2: Tensor) -> Tensor:
+        """
+        Runs the forward pass.
+        """
         return F.pairwise_distance(x1, x2, self.norm, self.eps, self.keepdim)
-
-
 
 
 class CosineSimilarity(Module):
@@ -72,16 +74,17 @@ class CosineSimilarity(Module):
     Shape:
         - Input1: :math:`(\ast_1, D, \ast_2)` where D is at position `dim`
         - Input2: :math:`(\ast_1, D, \ast_2)`, same number of dimensions as x1, matching x1 size at dimension `dim`,
-              and broadcastable with x1 at other dimensions.
+          and broadcastable with x1 at other dimensions.
         - Output: :math:`(\ast_1, \ast_2)`
-    Examples::
+
+    Examples:
         >>> input1 = mindtorch.randn(100, 128)
         >>> input2 = mindtorch.randn(100, 128)
         >>> cos = nn.CosineSimilarity(dim=1, eps=1e-6)
         >>> output = cos(input1, input2)
     """
 
-    __constants__ = ['dim', 'eps']
+    __constants__ = ["dim", "eps"]
     dim: int
     eps: float
 
@@ -91,4 +94,7 @@ class CosineSimilarity(Module):
         self.eps = eps
 
     def forward(self, x1: Tensor, x2: Tensor) -> Tensor:
+        """
+        Runs the forward pass.
+        """
         return F.cosine_similarity(x1, x2, self.dim, self.eps)

@@ -1,9 +1,9 @@
 import numbers
 import math
+from packaging import version
 
 import numpy as np
 import mindspore
-from mindspore._c_expression import _empty_instance
 import mindtorch
 from .._op_prim.gpu import legacy
 
@@ -277,7 +277,9 @@ def select(condition, x, y):
     if isinstance(y, numbers.Number) or y.ndim == 0:
         y = fill_scalar(condition.shape, y, None)
 
-    return legacy.select(condition, x, y)
+    # return legacy.select(condition, x, y)
+    return add(mul(condition, x), mul(sub(1, condition), y))
+
 
 def round(input, decimals):
     return legacy.round(input, decimals)
@@ -1133,6 +1135,8 @@ def bernoulli(input, generator):
     return legacy.bernoulli(input, seed, offset)
 
 def arange(start, end, step, dtype):
+    end = type(start)(end)
+    step = type(start)(step)
     if dtype is not None:
         return cast(legacy.range(start, end, step, 1000000), dtype)
     return legacy.range(start, end, step, 1000000)
@@ -1229,3 +1233,15 @@ def as_strided(self, size, stride, storage_offset=None):
         input_indices = mindspore.tensor(index.astype(np.int32))
     out = gather(reshape(self, (-1,)), input_indices, 0, 0)
     return out
+
+def fft(input, n=None, dim=-1, norm="backward"):
+    if norm is None:
+        norm="backward"
+    if input.shape[dim] < n:
+        pad_inf = (0, n - input.shape[dim])
+        pad_dims = (0, 0) * (input.ndim - (dim + 1)) + pad_inf
+        input = pad_v3(input, pad_dims, 'constant', 0, True)
+    else:
+        input = narrow(input, dim, 0, n)
+    return legacy.fft_with_size(input, input.ndim, False, False, norm, True, ())
+

@@ -1,4 +1,5 @@
 """inner ops"""
+import mindtorch
 from mindtorch.executor import execute
 
 def cast(input, dtype):
@@ -17,11 +18,14 @@ def all_finite(inputs):
     return execute('all_finite', inputs)
 
 def custom_masked_scatter_vec(input, mask, source):    
-    output = input.clone()
-    if mask.sum() == 0:
-        return output
-    output[mask] = source.flatten() # 关键的一行：向量化赋值
-    return output
+    indices = mindtorch.nonzero(mask)
+
+    # 如果 src 是 1D，按顺序取值
+    updates = source.reshape(-1)[:indices.shape[0]]
+
+    # 更新 tensor
+    out = mindtorch.scatter_nd_update(input, indices, updates)
+    return out
 
 def masked_scatter(input, mask, source):
     if input.device.type == 'cuda':
