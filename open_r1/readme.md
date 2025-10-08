@@ -26,9 +26,8 @@ bash sh/sft.sh
 - `logs/`、`trainer_output/`：训练日志与输出目录。
 
 ### 环境与依赖
-- 建议版本：MindSpore（GPU/Ascend 任一；参考官方安装指南）、MindNLP、Python 3.9+。
-- 请根据本地硬件与驱动选择合适的 MindSpore 发行版；MindNLP 请参考官方文档安装。
-- 额外 Python 依赖可按需在本地安装；如需固定版本，可在本仓库补充 `requirements.txt`。
+- 建议版本：MindSpore 2.6、MindNLP 0.5.0rc2、Python 3.10+。
+- MindNLP 请参考官方文档安装。
 
 ### 数据准备
 - 请准备符合监督微调（SFT）需求的数据集，并在 `configs.py` 或脚本参数中填入数据路径与格式。
@@ -46,7 +45,6 @@ bash sh/sft.sh
 - 在 CPU 后端缺失场景提供稳健回退。
 - 在 `Trainer` 的 `training_step` 中对梯度累积/分布式做安全处理以对齐常见训练器行为。
 
-如需将这些改动上游化，请以 PR 形式提交至对应上游项目并依据社区规范完善测试用例。
 
 ---
 
