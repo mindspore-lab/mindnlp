@@ -20,7 +20,7 @@ bash sh/sft.sh
 - `src/mind_openr1/`：核心源码与配置：
   - `sft.py`：监督微调入口。
   - `configs.py`：训练与模型/数据相关配置。
-  - `rewards.py`、`grpo.py`：与强化学习相关模块（如需扩展可参考此处）。
+  - `rewards.py`、`grpo.py`：与强化学习相关模块。
   - `utils/`：数据、评估、回调、日志等辅助模块。
 - `data/`（如存在）：数据相关目录（按需准备）。
 - `logs/`、`trainer_output/`：训练日志与输出目录。
