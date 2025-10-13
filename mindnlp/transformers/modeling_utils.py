@@ -184,8 +184,8 @@ def _load_pretrained_model_wrapper(fn):
         pretrained_model_name_or_path,
         **kwargs,
     ):
-        device_map = kwargs.pop("device_map", None)
-        sharded_metadata = kwargs.pop("sharded_metadata", None)
+        device_map = kwargs.get("device_map", None)
+        sharded_metadata = kwargs.get("sharded_metadata", None)
 
         # if device_map is not None and not initialize distribute module, raise Error.
         if device_map is not None:
