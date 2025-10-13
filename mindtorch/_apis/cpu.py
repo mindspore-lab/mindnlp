@@ -1237,3 +1237,6 @@ def search_sorted(sorted_sequence, values, sorter, dtype, right):
 
 def scatter_nd_update(input, indices, updates):
     return legacy.scatter_nd_update(input, indices, updates, True)
+
+def triu_indices(row, col, offset, dtype):
+    return legacy.triu_indices(row, col, offset, dtype)

@@ -939,6 +939,8 @@ def triu(input, diagonal=0):
     return execute('triu', input, diagonal)
 
 # triu_indices
+def triu_indices(row, col, offset=0, *, dtype=mindtorch.long, device='cpu', layout=mindtorch.strided):
+    return execute('triu_indices', row, col, offset, dtype, device=device)
 
 
 # unflatten
@@ -1145,6 +1147,7 @@ __all__ = [
     "stop_gradient",
     "tril",
     "triu",
+    "triu_indices",
     "unflatten",
     "unfold",
     "contiguous",

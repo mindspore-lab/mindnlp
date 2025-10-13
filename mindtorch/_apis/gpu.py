@@ -1245,3 +1245,5 @@ def fft(input, n=None, dim=-1, norm="backward"):
         input = narrow(input, dim, 0, n)
     return legacy.fft_with_size(input, input.ndim, False, False, norm, True, ())
 
+def triu_indices(row, col, offset, dtype):
+    return legacy.triu_indices(row, col, offset, dtype)
