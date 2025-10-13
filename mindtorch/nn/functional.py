@@ -1220,7 +1220,7 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
         
     attn_weight = query @ key.transpose(-2, -1) * scale_factor
     attn_weight += attn_bias
-    attn_weight = softmax(attn_weight, dim=-1, dtype=mindtorch.float32).to(query.dtype)
+    attn_weight = softmax(attn_weight, dim=-1)
     attn_weight = dropout(attn_weight, dropout_p, training=True)
     return attn_weight @ value
 
