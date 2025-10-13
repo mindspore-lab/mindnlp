@@ -1631,3 +1631,6 @@ def repeat_interleave_int(input, repeats, dim, output_size):
 
 def repeat_interleave_tensor(input, repeats, dim, output_size):
     return pyboost.repeat_interleave_tensor_op(input, repeats, dim, output_size)
+
+def triu_indices(row, col, offset, dtype):
+    return legacy.triu_indices(row, col, offset, dtype)
