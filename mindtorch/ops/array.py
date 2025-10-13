@@ -8,6 +8,7 @@ import mindspore
 import mindtorch
 from mindtorch.executor import execute
 from .other import broadcast_tensors, broadcast_to
+from ..configs import ON_ORANGE_PI
 
 
 def t(input):
@@ -73,6 +74,8 @@ def chunk(input, chunks, dim=0):
 
 # gather
 def gather(input, dim, index):
+    if ON_ORANGE_PI:
+        return torch_gather(input, index, dim)
     return execute("gather_d", input, dim, index)
 
 def torch_gather(x, indices, axis=1):
@@ -85,7 +88,8 @@ def torch_gather(x, indices, axis=1):
     for dim in range(len(x.shape)):
         if dim == axis:
             # 使用提供的索引
-            all_indices.append(indices.to(mindspore.int32))
+            indices = indices.to(mindspore.int32)
+            all_indices.append(indices)
         else:
             # 创建该维度的原始索引
             shape = [1] * len(x.shape)

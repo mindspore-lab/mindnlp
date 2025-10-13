@@ -3,6 +3,7 @@ import numbers
 from collections import namedtuple
 import mindtorch
 from mindtorch.executor import execute
+from ..configs import ON_ORANGE_PI
 
 sort_out = namedtuple('sort_out', ['values', 'indices'])
 topk_out = namedtuple('topk_out', ['values', 'indices'])
@@ -41,6 +42,9 @@ def greater(input, other):
 def isclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
     if not isinstance(atol, numbers.Number):
         atol = atol.item()
+    if ON_ORANGE_PI:
+        input = input.cpu()
+        other = other.cpu()
     return execute('isclose', input, other, rtol, atol, equal_nan)
     
 

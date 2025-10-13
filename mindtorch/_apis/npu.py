@@ -105,7 +105,7 @@ def embedding(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_fre
     """
     return pyboost.embedding_op(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq)
 
-def add(input, other, alpha): # pylint: disable=unused-argument
+def add(input, other, alpha=1.0): # pylint: disable=unused-argument
     """
     Adds two tensors element-wise.
 
@@ -216,6 +216,15 @@ def dense(input, weight, bias=None):
     Returns:
         Tensor: The result of the dense operation.
     """
+    if ON_ORANGE_PI:
+        input = cast(input, mindspore.float16)
+        weight = cast(weight, mindspore.float16)
+        if bias is None:
+            return pyboost.dense_op(input, weight)
+ 
+        bias = cast(bias, mindspore.float16)
+        return add(pyboost.dense_op(input, weight), bias)
+ 
     if use_pyboost():
         return pyboost.dense_op(input, weight, bias)
     return legacy.dense(input, weight, bias)
@@ -252,6 +261,9 @@ def matmul(input, other):
     Returns:
         Tensor: The result of the matrix multiplication.
     """
+    if ON_ORANGE_PI:
+        input = cast(input, mindspore.float16)
+        other = cast(other, mindspore.float16)
     if use_pyboost():
         return pyboost.matmul_ext_op(input, other)
     return legacy.mat_mul(input, other)
@@ -468,7 +480,7 @@ def dropout(input, p, seed, offset):
     Returns:
         Tensor: The tensor with dropout applied.
     """
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.dropout_ext_op(input, p, seed, offset)
     return legacy.dropout(input, 1-p, 0, 0)
 
@@ -688,9 +700,12 @@ def concat(tensors, axis):
     return legacy.concat(tensors, axis)
 
 def gather_d(input, dim, index):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.gather_d_op(input, dim, index)
     return legacy.gather_d(input, dim, index)
+
+def gather_nd(input, indices):
+    return legacy.gather_nd(input, indices)
 
 def greater_equal(input, other):
     if use_pyboost():
@@ -708,6 +723,8 @@ def less_equal(input, other):
     return legacy.less_equal(input, other)
 
 def select(condition, input, other):
+    if ON_ORANGE_PI:
+        return add(mul(condition, input), mul(bitwise_not(condition), other))
     if use_pyboost():
         return pyboost.select_op(condition, input, other)
     return legacy.select(condition, input, other)
@@ -723,9 +740,9 @@ def index(input, index):
     return legacy.index(input, index)
 
 def scatter(input, dim, index, src):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.scatter_op(input, dim, index, src)
-    return legacy.tensor_scatter_elements(input, index, src, dim)
+    return legacy.tensor_scatter_elements(input, index, src, dim, "none")
 
 def tril(input, diagonal=0):
     if use_pyboost():
@@ -756,9 +773,12 @@ def tile(input, multiples):
     return legacy.tile(input, multiples)
 
 def arange(start, end, step, dtype):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.arange_op(start, end, step, dtype)
-    return legacy.range(start, end, step, 100000)
+    out = legacy.range(start, end, step, 100000)
+    if dtype is not None:
+        out = cast(out, dtype)
+    return out
 
 def fill_scalar(input, value, dtype):
     if use_pyboost():
@@ -774,7 +794,7 @@ def isinf(input):
     return legacy.is_inf(input)
 
 def sort(input, dim, descending, stable):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.sort_ext_op(input, dim, descending, stable)
     return legacy.sort(input, dim, descending)
 
@@ -784,7 +804,7 @@ def prod(input, axis, keepdims, dtype):
     return legacy.reduce_prod(input, axis, keepdims)
 
 def isclose(input, other, rtol, atol, equal_nan):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.isclose_impl(input, other, rtol, atol, equal_nan)
     return legacy.is_close(input, other, rtol, atol, equal_nan)
 
@@ -866,6 +886,8 @@ def bitwise_or_scalar(input, other):
         return pyboost.bitwise_or_scalar_op(input, other)
     return legacy.bitwise_or(input, other)
 
+def bitwise_not(input):
+    return pyboost.bitwise_not_op(input)
 
 def max(input):
     if use_pyboost():
