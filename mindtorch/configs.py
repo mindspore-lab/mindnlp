@@ -11,6 +11,7 @@ ON_A2 = SOC in ['ascend910b', 'ascend910_93']
 ON_ORANGE_PI = '310b' in SOC
 DEFAULT_DTYPE = mindspore.float32
 MS27 = '.'.join(mindspore.__version__.split('.')[:2]) >= '2.7'
+FLASH_ATTN_MASK_VALID = int(os.environ.get('FLASH_ATTN_MASK_VALID', 1))
 
 # OP backend select
 USE_PYBOOST = True
