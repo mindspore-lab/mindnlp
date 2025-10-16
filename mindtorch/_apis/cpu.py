@@ -10,7 +10,7 @@ from .._op_prim.cpu import legacy
 
 empty_op = Empty().set_device('CPU')
 def empty(size, dtype):
-    if mindtorch.config.MS27:
+    if mindtorch.configs.MS27:
         return empty_op(size, dtype=dtype, device='CPU')
     return _empty_instance(size, dtype=dtype, device='CPU')
 
