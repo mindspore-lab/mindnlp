@@ -3,13 +3,16 @@ import numbers
 import math
 import numpy as np
 import mindspore
+from mindspore._c_expression import _empty_instance
 from mindspore.ops.auto_generate.gen_ops_prim import Empty
 import mindtorch
 from .._op_prim.cpu import legacy
 
 empty_op = Empty().set_device('CPU')
 def empty(size, dtype):
-    return empty_op(size, dtype=dtype, device='CPU')
+    if mindtorch.configs.MS27:
+        return empty_op(size, dtype=dtype, device='CPU')
+    return _empty_instance(size, dtype=dtype, device='CPU')
 
 def inplace_normal(input, mean, std, generator_):
     out = np.random.normal(mean, std, input.shape).astype(mindtorch.dtype2np[input.dtype])
