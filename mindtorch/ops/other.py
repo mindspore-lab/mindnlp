@@ -100,6 +100,8 @@ def clone(input, *, memory_format=mindtorch.preserve_format):
 # cummin
 
 # cumprod
+def cumprod(input, dim, *, dtype=None, out=None):
+    return execute('cumprod', input, dim, dtype)
 
 # cumsum
 def cumsum(input, dim=None, dtype=None, **kwargs):
@@ -1131,6 +1133,7 @@ __all__ = [
     "clone",
     "contains",
     "cross",
+    "cumprod",
     "cumsum",
     "diag",
     "diagonal",
