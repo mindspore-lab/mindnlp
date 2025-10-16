@@ -215,6 +215,16 @@ class fast_safe_open:
     def get_slice(self, name):
         return self.tensors[name]
 
+    def offset_keys(self):
+        """
+        Returns the names of the tensors in the file, ordered by offset.
+
+        Returns:
+            (`List[str]`):
+                The name of the tensors contained in that file
+        """
+        return self.keys()
+
 
 def safe_save_file(tensor_dict, filename, metadata=None):
     """

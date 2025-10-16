@@ -9,7 +9,7 @@ from mindtorch.executor import execute
 from mindtorch._C import default_generator
 from mindtorch.nn.modules.utils import _pair
 
-from ..configs import ON_A2, ON_A1
+from ..configs import ON_A2, ON_A1, FLASH_ATTN_MASK_VALID
 
 generator_step_ = 12
 
@@ -1162,9 +1162,12 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.
     scale_factor = 1 / math.sqrt(query.size(-1)) if scale is None else scale
 
 
-    if query.device.type == 'npu' and ON_A2:
+    if query.dtype != mindtorch.float32 and query.device.type == 'npu' and ON_A2:
         if attn_mask is not None and not is_causal:
-            attn_mask = ~attn_mask
+            if FLASH_ATTN_MASK_VALID == 1:
+                attn_mask = ~attn_mask
+            else:
+                attn_mask = attn_mask.bool()
 
         sparse_mode = 0
 
