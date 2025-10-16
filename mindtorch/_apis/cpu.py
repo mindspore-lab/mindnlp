@@ -1240,3 +1240,9 @@ def scatter_nd_update(input, indices, updates):
 
 def triu_indices(row, col, offset, dtype):
     return legacy.triu_indices(row, col, offset, dtype)
+
+def cumprod(input, dim, dtype):
+    out = legacy.cum_prod(input, dim, False, False)
+    if dtype is not None:
+        out = cast(out, dtype)
+    return out

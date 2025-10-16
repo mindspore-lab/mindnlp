@@ -100,7 +100,7 @@
     import mindnlp
     from diffusers import DiffusionPipeline
 
-    pipeline = DiffusionPipeline.from_pretrained("stable-diffusion-v1-5/stable-diffusion-v1-5", ms_dtype=mindspore.float16)
+    pipeline = DiffusionPipeline.from_pretrained("stable-diffusion-v1-5/stable-diffusion-v1-5", ms_dtype=mindspore.float16, device_map='cuda')
     pipeline("An image of a squirrel in Picasso style").images[0]
     ```
 
