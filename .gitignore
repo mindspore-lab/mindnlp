@@ -174,3 +174,7 @@ tests/huggingface_transformers/
 
 huanhuan.json
 pytorch/
+
+*.pkl
+*.tsv
+*.index

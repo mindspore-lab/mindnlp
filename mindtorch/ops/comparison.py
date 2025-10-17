@@ -132,6 +132,8 @@ def sort(input, *, dim=-1, descending=False, stable=False):
 
 # topk
 def topk(input, k, dim=-1, largest=True, sorted=True):
+    if not isinstance(k, int):
+        k = k.item()
     out = execute('topk', input, k, dim, largest, sorted)
     return topk_out(values=out[0], indices=out[1])
 

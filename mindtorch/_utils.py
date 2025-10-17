@@ -88,6 +88,8 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
     Raises:
         None: This function does not raise any exceptions.
     '''
+    if not isinstance(storage, np.ndarray):
+        return mindtorch.Tensor(storage)
     if size == ():
         num_elemets = 1
     else:
