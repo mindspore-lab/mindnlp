@@ -2223,6 +2223,12 @@ class TensorPlaceHolder:
             out = Tensor(Tensor_(shape=self.shape, dtype=self.dtype))
             out._device = device
             return out
+        
+        if device.type == 'cpu':
+            out = Tensor(self.asnumpy())
+            out._device = device
+            return out
+
         if self.device == device:
             return self
         else:
@@ -2237,7 +2243,7 @@ class TensorPlaceHolder:
             # self.data_sync(True)
             if self.device.type == 'cpu':
                 self.data_ptr()
-            data = self.move_to(device_str, blocking=not non_blocking)
+            data = Tensor.move_to(self, device_str, blocking=not non_blocking)
 
             out = Tensor(data)
             out._device = device
@@ -2256,20 +2262,20 @@ class TensorPlaceHolder:
 
         for arg in args:
             if isinstance(arg, device_):
-                out = Tensor._move_to(out, arg, non_blocking)
+                out = out._move_to(arg, non_blocking)
             elif isinstance(arg, int):
                 device = device_(arg)
-                out = Tensor._move_to(out, device, non_blocking)
+                out = out._move_to(device, non_blocking)
             elif isinstance(arg, str):
                 device = device_(arg)
-                out = Tensor._move_to(out, device, non_blocking)
+                out = out._move_to(device, non_blocking)
             elif isinstance(arg, mindspore.common.dtype.Type):
                 if out.dtype == arg:
                     return out
                 else:
                     out = ops.cast(out, arg)
             elif isinstance(arg, Tensor):
-                out = Tensor._move_to(out, arg.device, non_blocking)
+                out = out._move_to(arg.device, non_blocking)
                 if out.dtype == arg:
                     return out
                 else:
@@ -2328,7 +2334,10 @@ class TensorPlaceHolder:
         return ops.topk(self, k, dim, largest, sorted)
 
     # Tensor.to_dense
-
+    def to_dense(self):
+        if self.is_sparse:
+            raise ValueError('not support sparse tensor to dense tensor')
+        return self
 
     # Tensor.to_sparse
 
