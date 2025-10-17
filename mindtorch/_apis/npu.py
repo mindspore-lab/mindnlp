@@ -1025,14 +1025,47 @@ def flatten(input, start_dim, end_dim):
     return legacy.reshape(input, tuple(input_shape))
 
 def conv2d_padding(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.conv2d_padding_op(input, weight, bias, stride, padding, dilation, groups)
-    return legacy.conv2d(input, weight, bias, stride, padding, dilation, groups)
+    return conv2d_legacy(input, weight, bias, stride, padding, dilation, groups)
 
 def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.conv2d_ext_op(input, weight, bias, stride, padding, dilation, groups)
-    return legacy.conv2d(input, weight, bias, stride, padding, dilation, groups)
+    return conv2d_legacy(input, weight, bias, stride, padding, dilation, groups)
+
+def conv2d_legacy(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
+    pad_mode = 'pad'
+    pad = padding
+    if isinstance(padding, (tuple, list)):
+        pad = (padding[0], padding[0], padding[1], padding[1])
+    elif isinstance(padding, int):
+        pad = (padding,) * 4
+    if not isinstance(padding, (int, tuple, list)):
+        pad_mode = padding
+        pad = (0,) * 4
+    
+    if isinstance(stride, int):
+        stride = (stride,) * 4
+
+    out_channels = weight.shape[0]
+    kernel_size = weight.shape[2:]
+
+    output = legacy.conv2_d(
+        input, weight,
+        out_channels,
+        kernel_size,
+        1,#mode=1,
+        pad_mode, #pad_mode=pad_mode,
+        pad, #pad=pad,
+        tuple(stride), #stride=tuple(stride),
+        dilation, #dilation=dilation,
+        groups, #group=groups,
+        "NCHW", #data_format="NCHW"
+    )
+    if bias is not None:
+        output = legacy.bias_add(output, bias, "NCHW")
+    return output
 
 def cos(input):
     if use_pyboost():
