@@ -3,7 +3,7 @@ import mindtorch
 from mindtorch._C import default_generator
 from mindtorch.executor import execute
 from .._bind import get_default_dtype, get_device_in_context
-from ..configs import ON_A1
+from ..configs import ON_A1, ON_ORANGE_PI
 
 generator_step_ = 12
 
@@ -26,7 +26,7 @@ def multinomial(input, num_samples, replacement=False, *, generator=None, out=No
         num_samples = num_samples.item()
     if generator is None:
         generator = default_generator
-    if input.device.type == 'npu':
+    if input.device.type == 'npu' and not ON_ORANGE_PI:
         output = execute("multinomial", input, num_samples, replacement, generator)
 
     else:
