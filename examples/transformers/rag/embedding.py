@@ -20,18 +20,25 @@ from typing import List
 
 from langchain.embeddings.base import Embeddings
 
-from mindnlp.sentence import SentenceTransformer
+from sentence_transformers import SentenceTransformer
 
 
 class EmbeddingsFunAdapter(Embeddings):
-    def __init__(self, embed_model, mirror='huggingface'):
+    def __init__(self, embed_model):
         self.embed_model = embed_model
-        self.embedding_model = SentenceTransformer(model_name_or_path=self.embed_model, mirror=mirror)
+        self.embedding_model = SentenceTransformer(model_name_or_path=self.embed_model)
+
+    def encode_texts(self, texts: List[str]) -> List[List[float]]:
+        texts = [t.replace("\n", " ") for t in texts]
+        embeddings = self.embedding_model.encode(texts)
+        for i, embedding in enumerate(embeddings):
+            embeddings[i] = embedding.tolist()
+        return embeddings
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        embeddings = self.embedding_model.encode_texts(texts)
+        embeddings = self.encode_texts(texts)
         return embeddings
 
     def embed_query(self, text: str) -> List[float]:
-        embeddings = self.embedding_model.encode_texts([text])
+        embeddings = self.encode_texts([text])
         return embeddings[0]

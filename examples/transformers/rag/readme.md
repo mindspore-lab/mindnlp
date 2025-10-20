@@ -3,7 +3,7 @@
 #### Install dependencies
 
 ```
-pip install mindnlp langchain langchain-community faiss-cpu
+pip install -r requirements.txt
 ```
 
 ### Download knowledge file
@@ -16,5 +16,5 @@ wget https://raw.githubusercontent.com/limchiahooi/nlp-chinese/master/%E8%A5%BF%
 ### Run RAG Demo
 
 ```
-streamlit run startup.py xiyouji.txt 
+python newchat.py xiyouji.txt 
 ```
