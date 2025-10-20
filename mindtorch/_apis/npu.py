@@ -909,10 +909,11 @@ def narrow(input, dim, start, length):
     return legacy.slice(input, begin, size)
 
 def std(input, dim, correction, keepdim):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.std_op(input, dim, correction, keepdim)
-    return legacy.reduce_std(input, dim, keepdim)
-
+    if dim is None:
+        dim = ()
+    return legacy.reduce_std(input, dim, bool(correction), keepdim)[0]
 
 def log(input):
     if use_pyboost():
@@ -1083,9 +1084,9 @@ def sin(input):
     return legacy.sin(input)
 
 def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, training=False, momentum=0.1, epsilon=1e-5):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.batch_norm_ext_op(input, weight, bias, running_mean, runnning_var, training, momentum, epsilon)
-    return legacy.batch_norm(input, weight, bias, running_mean, runnning_var, training, momentum, epsilon, 'NHWC')
+    return legacy.batch_norm(input, weight, bias, running_mean, runnning_var, training, epsilon, momentum, 'NCHW')
 
 def silu(input):
     if use_pyboost():
@@ -1448,9 +1449,11 @@ def reciprocal(input):
     return legacy.reciprocal(input)
 
 def index_add_ext(input, dim, index, source, alpha):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.index_add_ext_op(input, dim, index, source, alpha)
-    return legacy.index_add(input, dim, index, source, alpha)
+    if alpha != 1:
+        source = mul(alpha, source)
+    return legacy.index_add(input, cast(index, mindspore.int32), source, dim, True, True)
 
 def polar(abs, angle):
     if use_pyboost():
