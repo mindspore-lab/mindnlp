@@ -2294,8 +2294,8 @@ def max_pool_with_argmax(*args):
 
 
 def max_pool_with_argmax_v2(*args):
-    op = _get_cache_prim(MaxPoolWithArgmaxV2)(*args[-5:]).set_device('Ascend')
-    return op(*args[:-5])
+    op = _get_cache_prim(MaxPoolWithArgmaxV2)(*args[-6:]).set_device('Ascend')
+    return op(*args[:-6])
 
 
 def max_unpool2_d(*args):
