@@ -48,7 +48,7 @@ DTYPE_ELEMENT_SIZE_MAP = {
 }
 
 class TypedTensorMeta(_TensorMeta):
-    def __isinstancecheck__(self, instance):
+    def __instancecheck__(self, instance):
         if not isinstance(instance, Tensor):
             return False
         return instance.dtype == self.dtype
@@ -78,7 +78,7 @@ class HalfTensor(Tensor, metaclass=TypedTensorMeta):
         super().__init__(*args, dtype=_dtype.float16, **kwargs)
 
 class BFloat16Tensor(Tensor, metaclass=TypedTensorMeta):
-    dtype = _dtype.float16
+    dtype = _dtype.bfloat16
     def __init__(self, *args, **kwargs):
         self._device = kwargs.pop('device', device_('cpu'))
         super().__init__(*args, dtype=_dtype.bfloat16, **kwargs)
@@ -88,6 +88,12 @@ class BoolTensor(Tensor, metaclass=TypedTensorMeta):
     def __init__(self, *args, **kwargs):
         self._device = kwargs.pop('device', device_('cpu'))
         super().__init__(*args, dtype=_dtype.bool, **kwargs)
+
+class ByteTensor(Tensor, metaclass=TypedTensorMeta):
+    dtype = _dtype.uint8
+    def __init__(self, *args, **kwargs):
+        self._device = kwargs.pop('device', device_('cpu'))
+        super().__init__(*args, dtype=_dtype.uint8, **kwargs)
 
 
 def tensor_meta_str(self):
