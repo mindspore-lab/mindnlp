@@ -74,7 +74,7 @@ nan = float("nan")
 from . import _C
 from ._dtype import *
 from ._tensor import Tensor, tensor, scalar_tensor, is_tensor, \
-    LongTensor, FloatTensor, BoolTensor, HalfTensor, BFloat16Tensor, IntTensor
+    LongTensor, FloatTensor, BoolTensor, HalfTensor, BFloat16Tensor, IntTensor, ByteTensor
 
 from ._C import *
 from ._C.size import Size
