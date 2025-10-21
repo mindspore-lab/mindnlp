@@ -9,7 +9,7 @@ from mindtorch.executor import execute
 from mindtorch._C import default_generator
 from mindtorch.nn.modules.utils import _pair
 
-from ..configs import ON_A2, ON_A1, FLASH_ATTN_MASK_VALID
+from ..configs import ON_A2, ON_A1, ON_ORANGE_PI, FLASH_ATTN_MASK_VALID
 
 generator_step_ = 12
 
@@ -991,7 +991,7 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
         weight = mindtorch.ones([input.shape[1]], dtype=input.dtype, device=input.device)
     if bias is None:
         bias = mindtorch.zeros([input.shape[1]], dtype=input.dtype, device=input.device)
-    if input.device.type == 'npu':
+    if input.device.type == 'npu' and not ON_ORANGE_PI:
         return execute('group_norm', input, num_groups, weight, bias, eps)[0]
 
     input_shape = input.shape

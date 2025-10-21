@@ -287,6 +287,8 @@ class TensorPlaceHolder:
     def __add__(self, other):
         # if 0 in self.shape:
         #     return self
+        if self.dtype == mindtorch.bool:
+            return ops.bitwise_or(self, other)
         return ops.add(self, other)
 
     def __iadd__(self, other):
