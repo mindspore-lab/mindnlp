@@ -693,8 +693,10 @@ def clamp_scalar(value, min_value, max_value):
     return value
 
 def cumsum(self, dim, dtype):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.cumsum_ext_op(self, dim, dtype)
+    if self.shape[dim] == 0:
+        return mindtorch.tensor([], dtype=self.dtype, device=self.device)
     return legacy.cum_sum(self, dim, False, False)
 
 def reduce_any(input, axis, keepdims):
@@ -1275,12 +1277,16 @@ def square(input):
 def lgamma(input):
     return legacy.lgamma(input)
 
-def reverse_v2(input, axis):
-    if isinstance(axis, int):
-        axis = (axis,)
-    if use_pyboost():
-        return pyboost.reverse_v2_impl(input, axis)
-    return legacy.reverse_v2(input, axis)
+def reverse_v2(input, dims):
+    if isinstance(dims, int):
+        dims = (dims,)
+    if use_pyboost() and not ON_ORANGE_PI:
+        return pyboost.reverse_v2_impl(input, dims)
+
+    for dim in dims:
+        idx = arange(input.size(dim) - 1, -1, -1, None)
+        input = index_select(input, dim, idx)
+    return input
 
 def unique_consecutive(input, return_inverse, return_counts, dim):
     if use_pyboost():
@@ -1579,9 +1585,36 @@ def adaptive_avg_pool1d(input, output_size):
     return legacy.adaptive_avg_pool1d(input, output_size)
 
 def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.conv3d_ext_op(input, weight, bias, stride, padding, dilation, groups)
-    return legacy.conv3d(input, weight, bias, stride, padding, dilation, groups)
+    pad_mode = 'pad'
+    pad = padding
+    if isinstance(padding, (tuple, list)):
+        pad = (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2])
+    elif isinstance(padding, int):
+        pad = (padding,) * 6
+    if not isinstance(padding, (int, tuple, list)):
+        pad_mode = padding
+        pad = (0,) * 6
+
+    out_channels = weight.shape[0]
+    kernel_size = weight.shape[2:]
+
+    output = legacy.conv3_d(input, weight,
+                            out_channels,
+                            kernel_size,
+                            1,
+                            pad_mode,
+                            pad,
+                            tuple(stride),
+                            dilation,
+                            groups,
+                            "NCDHW")
+                            
+    if bias is not None:
+        output = legacy.bias_add(output, bias, 'NCHW')
+    return output
+
 
 def outer(input, other):
     if use_pyboost():
