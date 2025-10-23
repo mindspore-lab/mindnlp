@@ -1898,3 +1898,6 @@ def strided_slice(input, begin, end, strides, begin_mask=0, end_mask=0, ellipsis
 
 def tensor_scatter_update(input, indices, updates):
     return legacy.tensor_scatter_update(input, indices, updates)
+
+def lerp(input, end, weight):
+    return legacy.lerp(input, end, weight)
