@@ -1253,3 +1253,6 @@ def cumprod(input, dim, dtype):
     if dtype is not None:
         out = cast(out, dtype)
     return out
+
+def lerp(input, end, weight):
+    return legacy.lerp(input, end, weight)
