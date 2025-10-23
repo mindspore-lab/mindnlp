@@ -622,6 +622,9 @@ def _process_multi_dim_index(self, indexes, remain_indexes, indexed_dims):
     self_viewed = self
     self_viewed_shape = list(self.shape)
     dim = 0
+    if ON_ORANGE_PI:
+        if all([isinstance(index, slice) for index in indexes]):
+            return getitem(self_viewed, tuple(indexes)), remain_indexes
     for i, index in enumerate(indexes):
         if isinstance(index, (list, tuple, np.ndarray)):
             index_np = np.array(index) if isinstance(index, (list, tuple)) else index
@@ -634,7 +637,6 @@ def _process_multi_dim_index(self, indexes, remain_indexes, indexed_dims):
                 raise TypeError(f"Index {index} contain unsupported elements")
         self_viewed, dim, remain_indexes, self_viewed_shape = _process_dim_in_multi_dim_index(
             self_viewed, self, index, dim, indexed_dims, i, remain_indexes, self_viewed_shape)
-
     return self_viewed, remain_indexes
 
 
