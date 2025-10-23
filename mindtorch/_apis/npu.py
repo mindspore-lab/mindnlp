@@ -1,4 +1,5 @@
 import mindspore
+import mindtorch
 from mindspore._c_expression import _empty_instance
 from ..configs import use_pyboost, ON_A1, ON_ORANGE_PI
 from .._op_prim.ascend import legacy, pyboost
@@ -824,9 +825,11 @@ def argmax(input, axis, keepdims):
     return legacy.argmax(input, axis, keepdims)
 
 def argmin(input, axis, keepdims):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.argmin_ext_op(input, axis, keepdims)
-    return legacy.argmin(input, axis, keepdims)
+    if axis is None:
+        axis = -1
+    return legacy.arg_min_with_value(input, axis, keepdims)[0]
 
 
 def bmm(input, other):
@@ -1136,7 +1139,7 @@ def masked_scatter(input, mask, value):
     return legacy.masked_scatter(input, mask, value)
 
 def neg(input):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.neg_op(input)
     return legacy.neg(input)
 
@@ -1557,7 +1560,7 @@ def inplace_exponential(self, lambd, generator):
     return legacy.expo(self, lambd, generator)
 
 def im2col(input, kernel_size, dilation=1, padding=0, stride=1):
-    if use_pyboost() and not ON_A1:
+    if use_pyboost() and not ON_A1 and not ON_ORANGE_PI:
         return pyboost.im2col_ext_op(input, kernel_size, dilation, padding, stride)
     out = legacy.im2_col(input, kernel_size, stride, dilation, padding)
     out_shape = out.shape[:1] + (-1,) + out.shape[-1:]
@@ -1570,9 +1573,10 @@ def upsample_nearest2d(input, output_size, scale_factors):
     return legacy.upsample_nearest2d(input, scale_factor, align_corners)
 
 def addmm(input, mat1, mat2, alpha=1.0, beta=1.0):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.addmm_op(input, mat1, mat2, alpha, beta)
-    return legacy.addmm(input, mat1, mat2, alpha, beta)
+    return add(mul(input, beta), mul(matmul(mat1, mat2), alpha))
+
 
 def meshgrid(input, lambd):
     if use_pyboost():

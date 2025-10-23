@@ -6,7 +6,8 @@ import mindspore
 import mindnlp
 from mindnlp import transformers
 
-mindspore.set_context(pynative_synchronize=True)
+# mindspore.set_context(pynative_synchronize=True)
+mindspore.runtime.launch_blocking()
 
 def run_tests():
     """

@@ -848,7 +848,7 @@ def addcmul(input, tensor1, tensor2, value=1.0):
     return legacy.addcmul(input, tensor1, tensor2, mindspore.Tensor(value))
 
 def addmm(input, mat1, mat2, alpha=1.0, beta=1.0):
-    return add(mul(input, beta), mul(bmm(mat1, mat2), alpha))
+    return add(mul(input, beta), mul(matmul(mat1, mat2), alpha))
 
 def im2col(input, kernel_size, dilation=1, padding=0, stride=1):
     out = legacy.im2_col(input, kernel_size, stride, dilation, padding)
