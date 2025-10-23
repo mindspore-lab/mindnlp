@@ -1804,7 +1804,7 @@ class Softmax(Module):
         """
         Runs the forward pass.
         """
-        return F.softmax(input, self.dim, _stacklevel=5)
+        return F.softmax(input, self.dim)
 
     def extra_repr(self) -> str:
         """

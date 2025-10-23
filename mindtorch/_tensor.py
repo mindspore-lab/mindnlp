@@ -23,7 +23,7 @@ from . import ops, _dtype
 from ._bind import get_device_in_context, device_, get_default_dtype
 from ._utils import _rebuild_tensor_v2
 from ._C.size import Size
-from .configs import DEVICE_TARGET, cpu_use_numpy
+from .configs import DEVICE_TARGET, cpu_use_numpy, ON_ORANGE_PI
 
 device_map = {
     'cpu': 'CPU',
@@ -282,7 +282,7 @@ class TensorPlaceHolder:
         if value.device != self.device:
             value._device = self.device
 
-        if self.device.type == 'npu':
+        if self.device.type == 'npu' and not ON_ORANGE_PI:
             if value.device != self.device:
                 value._device = self.device
             out = ops.tensor_setitem(self, slices, value)
@@ -301,7 +301,7 @@ class TensorPlaceHolder:
         return self.copy_(ops.add(self, other))
 
     def __radd__(self, other):
-        return Tensor.__add__(other, self)
+        return ops.add(other, self)
 
     def __div__(self, other):
         # if 0 in self.shape:

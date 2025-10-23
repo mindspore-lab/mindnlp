@@ -634,6 +634,7 @@ def _process_multi_dim_index(self, indexes, remain_indexes, indexed_dims):
                 raise TypeError(f"Index {index} contain unsupported elements")
         self_viewed, dim, remain_indexes, self_viewed_shape = _process_dim_in_multi_dim_index(
             self_viewed, self, index, dim, indexed_dims, i, remain_indexes, self_viewed_shape)
+
     return self_viewed, remain_indexes
 
 
@@ -1162,7 +1163,7 @@ def strided_slice_update(x, begin, end, strides, updates,
     # for i in range(ndim-1, -1, -1):
     #     if (shrink_axis_mask >> i) & 1:
     #         x_updated = mindtorch.squeeze(x_updated, dim=i)
-    
+
     return x_updated
 
 

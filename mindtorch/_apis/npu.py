@@ -62,10 +62,10 @@ def inplace_copy(self, value):
     Args:
         value (Tensor): The tensor from which to copy the data.
     """
-    if use_pyboost:
+    if use_pyboost():
         return pyboost.inplace_copy_op(self, value)
     else:
-        self.assign_value(value)
+        legacy.assign(self, value)
         return self
 
 def slice(input, dim, start, end, step):
@@ -85,7 +85,15 @@ def slice(input, dim, start, end, step):
     if use_pyboost():
         return pyboost.slice_ext_op(input, dim, start, end, step)
     else:
-        return legacy.slice(input, dim, start, end, step)
+        ndim = input.ndim
+        begins = [0] * ndim
+        ends = [i for i in input.shape]
+        strides = [1] * ndim
+        begins[dim] = start
+        ends[dim] = end
+        strides[dim] = step
+        return legacy.strided_slice(input, tuple(begins), tuple(ends), tuple(strides), 0, 0, 0, 0, 0)
+
 
 def embedding(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq):
     """
@@ -829,7 +837,7 @@ def bmm(input, other):
     return legacy.batch_mat_mul(input, other, False, False)
 
 def topk(input, k, dim, largest, sorted):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.topk_ext_op(input, k, dim, largest, sorted)
 
     if not largest:
@@ -1296,9 +1304,9 @@ def remainder_tensor_scalar(input, other):
     return out
 
 def baddbmm(input, batch1, batch2, alpha=1, beta=1):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.baddbmm_op(input, batch1, batch2, alpha, beta)
-    return legacy.baddbmm(input, batch1, batch2, alpha, beta)
+    return add(mul(input, beta), mul(bmm(batch1, batch2), alpha))
 
 def floor(input):
     if use_pyboost():
@@ -1845,3 +1853,15 @@ def cumprod(input, dim, dtype):
     if dtype is not None:
         out = cast(out, dtype)
     return out
+
+def scatter_nd_update(input, indices, updates):
+    return legacy.scatter_nd_update(input, indices, updates, True)
+
+def assign(input, value):
+    return inplace_copy(input, value)
+
+def strided_slice(input, begin, end, strides, begin_mask=0, end_mask=0, ellipsis_mask=0, new_axis_mask=0, shrink_axis_mask=0):
+    return legacy.strided_slice(input, tuple(begin), tuple(end), tuple(strides), begin_mask, end_mask, ellipsis_mask, new_axis_mask, shrink_axis_mask)
+
+def tensor_scatter_update(input, indices, updates):
+    return legacy.tensor_scatter_update(input, indices, updates)
