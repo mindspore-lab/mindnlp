@@ -32,6 +32,8 @@ from mindspore.runtime import Stream
 from mindspore.common.api import _pynative_executor
 from mindspore._c_expression import MSContext # pylint: disable=no-name-in-module, import-error
 
+mindspore.runtime.set_memory(init_size='2GB', increase_size='1GB', max_size='4GB', optimize_level='O0', huge_page_reserve_size='0GB')
+
 # for huawei cloud modelarts
 if 'RANK_TABLE_FILE' in os.environ:
     del os.environ['RANK_TABLE_FILE']

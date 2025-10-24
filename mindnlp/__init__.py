@@ -18,6 +18,18 @@ MindNLP library.
 """
 import os
 
+import socket
+import sys
+
+lock_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+try:
+    lock_socket.bind(('127.0.0.1', 54321))  # 使用任意空闲端口
+except socket.error:
+    print("另一个实例已经在运行")
+    sys.exit(1)
+
+
 # huggingface env
 if os.environ.get('HF_ENDPOINT', None) is None:
     os.environ["HF_ENDPOINT"] = 'https://hf-mirror.com'
