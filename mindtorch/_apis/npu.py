@@ -182,7 +182,7 @@ def cast(input, dtype):
     """
     return legacy.cast(input, dtype)
 
-def sub(input, other, alpha):
+def sub(input, other, alpha=1.0):
     """
     Subtracts the other tensor from the input tensor.
 
@@ -271,8 +271,10 @@ def matmul(input, other):
         Tensor: The result of the matrix multiplication.
     """
     if ON_ORANGE_PI:
+        dtype = input.dtype
         input = cast(input, mindspore.float16)
         other = cast(other, mindspore.float16)
+        return cast(pyboost.matmul_ext_op(input, other), dtype)
     if use_pyboost():
         return pyboost.matmul_ext_op(input, other)
     return legacy.mat_mul(input, other)
@@ -1144,9 +1146,9 @@ def neg(input):
     return legacy.neg(input)
 
 def log1p(input):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.log1p_op(input)
-    return legacy.log1p(input)
+    return log(add(input, 1))
 
 def pow_scalar_tensor(input, scalar):
     if use_pyboost():
@@ -1506,9 +1508,11 @@ def var(input, dim=None, correction=1, keepdim=False):
     return legacy.var(input, dim, correction, keepdim)
 
 def linspace(start, end, steps, dtype=None):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.lin_space_ext_op(start, end, steps, dtype)
-    return legacy.lin_space(start, end, steps)
+    start = float(start)
+    end = float(end)
+    return legacy.lin_space(mindspore.Tensor(start), mindspore.Tensor(end), steps)
 
 def masked_select(input, mask):
     if use_pyboost():
@@ -1516,9 +1520,12 @@ def masked_select(input, mask):
     return legacy.masked_select(input, mask)
 
 def glu(input, dim=-1):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.glu_impl(input, dim)
-    return legacy.glu(input, dim)
+    a, b = chunk(input, 2, dim)
+    gate = sigmoid(b)
+    return mul(a, gate)
+
 
 def scatter_value(input, dim, index, src, reduce='none'):
     if use_pyboost():
@@ -1668,11 +1675,13 @@ def pixel_shuffle(input, upscale_factor):
     return legacy.pixel_shuffle(input, upscale_factor)
 
 def view_as_complex(input):
+    if ON_ORANGE_PI:
+        input = clone(input)
     real_part, imag_part = chunk(input, 2, -1)
     return legacy.complex(squeeze(real_part, -1), squeeze(imag_part, -1))
 
 def rms_norm(input, weight, eps=1e-5):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.rms_norm_impl(input, weight, eps)[0]
     input_dtype = input.dtype
     input = cast(input, mindspore.float32)
@@ -1905,3 +1914,10 @@ def tensor_scatter_update(input, indices, updates):
 
 def lerp(input, end, weight):
     return legacy.lerp(input, end, weight)
+
+def logaddexp(input, other):
+    m = maximum(input, other)
+    abs_val = abs(sub(input, other))
+    exp_val = exp(neg(abs_val))
+    y = add(m, log1p(exp_val))
+    return y

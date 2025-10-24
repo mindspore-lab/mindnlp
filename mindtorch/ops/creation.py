@@ -103,7 +103,7 @@ def ones_like(input, *, dtype=None, layout=None, device=None, requires_grad=Fals
 # arange
 def arange(start=0, end=None, step=1, *, out=None, dtype=None, layout=None, device=None, requires_grad=False):
     if end is None:
-        start, end = 0, start
+        start, end = 0, int(start)
     if dtype is None:
         dtype = mindtorch.py2dtype[type(start)]
     if device is None:
