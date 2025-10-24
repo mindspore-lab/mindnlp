@@ -391,9 +391,12 @@ def mul(input, other):
         other = other.to(device)
         input = input.to(device)
     if not isinstance(other, numbers.Number) and other.dtype != input.dtype:
-        dtype = min([input.dtype, other.dtype])
-        other = other.to(dtype)
-        input = input.to(dtype)
+        if other.dtype == mindtorch.bool:
+            other = other.to(input.dtype)
+        else:
+            dtype = min([input.dtype, other.dtype])
+            other = other.to(dtype)
+            input = input.to(dtype)
     #  and isinstance(input, torch.Tensor):
     #     return execute("muls", input, other)
     return execute("mul", input, other)

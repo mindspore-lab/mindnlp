@@ -79,6 +79,7 @@ def bucketize(input, boundaries, *, out_int32=False, right=False, out=None):
 def cdist(x1, x2, p=2.0, compute_mode="use_mm_for_euclid_dist_if_necessary"):
     return execute('cdist', x1, x2, p)
 
+
 # clone
 def clone(input, *, memory_format=mindtorch.preserve_format):
     return execute('clone', input)
