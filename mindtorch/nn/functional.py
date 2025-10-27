@@ -58,7 +58,7 @@ def softplus(input, beta=1, threshold=20):
 def logsigmoid(input):
     return execute('logsigmoid', input)[0]
 
-def leaky_relu(input, alpha=0.2):
+def leaky_relu(input, alpha=0.2, inplace=False):
     return execute('leaky_relu', input, alpha)
 
 def prelu(input, weight):

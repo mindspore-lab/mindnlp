@@ -1921,3 +1921,6 @@ def logaddexp(input, other):
     exp_val = exp(neg(abs_val))
     y = add(m, log1p(exp_val))
     return y
+
+def reflection_pad_1d(input, padding):
+    return pyboost.reflection_pad_1d_op(input, padding)
