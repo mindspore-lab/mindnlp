@@ -75,37 +75,23 @@ def chunk(input, chunks, dim=0):
 # gather
 def gather(input, dim, index):
     if ON_ORANGE_PI:
-        return torch_gather(input, index, dim)
+        return gather_with_index_select(input, dim, index)
     return execute("gather_d", input, dim, index)
 
-def torch_gather(x, indices, axis=1):
-    # 这个实现模拟了 torch.gather 的行为
-    if axis < 0:
-        axis = len(x.shape) + axis
+def gather_with_index_select(x, dim, index):
+    # 获取所有维度的索引
+    idx = mindtorch.meshgrid(*[mindtorch.arange(s) for s in index.shape], indexing='ij')
     
-    # 创建索引数组，其他维度保持原样
-    all_indices = []
-    for dim in range(len(x.shape)):
-        if dim == axis:
-            # 使用提供的索引
-            indices = indices.to(mindspore.int32)
-            all_indices.append(indices)
+    # 替换目标维度的索引
+    new_idx = ()
+    for ix, i in enumerate(idx):
+        if ix == dim:
+            new_idx += (index,)
         else:
-            # 创建该维度的原始索引
-            shape = [1] * len(x.shape)
-            shape[dim] = x.shape[dim]
-            dim_indices = mindtorch.arange(x.shape[dim], dtype=mindspore.int32, device=x.device)
-            dim_indices = mindtorch.reshape(dim_indices, shape)
-            # 广播到 indices 的形状
-            dim_indices = mindtorch.broadcast_to(dim_indices, indices.shape)
-            all_indices.append(dim_indices)
+            new_idx += (i,)
     
-    # 组合所有维度的索引
-    multi_indices = mindtorch.stack(all_indices, dim=-1)
-    
-    # 使用 tf.gather_nd 收集元素
-    return gather_nd(x, multi_indices)
-
+    # 使用高级索引提取数据
+    return x[new_idx]
 
 def gather_nd(input, indices):
     return execute("gather_nd", input, indices)
@@ -1135,6 +1121,7 @@ def strided_slice_update(x, begin, end, strides, updates,
 
     # Step 2: 计算目标切片 shape（考虑 shrink_axis_mask）
     target_shape = []
+
     for d, (b, e, s) in enumerate(zip(full_begin, full_end, full_strides)):
         if (shrink_axis_mask >> d) & 1:
             continue
