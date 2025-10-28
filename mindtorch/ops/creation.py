@@ -114,6 +114,7 @@ def arange(start=0, end=None, step=1, *, out=None, dtype=None, layout=None, devi
     start = start.item() if isinstance(start, (mindtorch.Tensor, np.integer)) else start
     end = end.item() if isinstance(end, (mindtorch.Tensor, np.integer)) else end
     step = step.item() if isinstance(step, (mindtorch.Tensor, np.integer)) else step
+    step = type(start)(step)
 
     output = execute('arange', start, end, step, dtype, device=device)
     if out is None:

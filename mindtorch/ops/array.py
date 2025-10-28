@@ -765,7 +765,10 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
                 begin.append(0)
                 begin_mask |= (1 << index)
             if s.stop is not None:
-                end.append(s.stop)
+                stop = s.stop
+                if stop == -1:
+                    stop = tensor.shape[index]
+                end.append(stop)
             else:
                 end.append(0)
                 end_mask |= (1 << index)
