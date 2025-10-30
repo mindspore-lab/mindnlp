@@ -64,7 +64,7 @@ class CustomInstall(install):
             _create_namespace_links()  # 安装后创建链接
 
 
-version = '0.5.0rc4'
+version = '0.5.0'
 cur_dir = os.path.dirname(os.path.realpath(__file__))
 pkg_dir = os.path.join(cur_dir, 'build')
 
