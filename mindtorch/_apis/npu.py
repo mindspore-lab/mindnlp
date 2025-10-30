@@ -1,5 +1,6 @@
 import mindspore
 import mindtorch
+import numpy as np
 from mindspore._c_expression import _empty_instance
 from ..configs import use_pyboost, ON_A1, ON_ORANGE_PI
 from .._op_prim.ascend import legacy, pyboost
@@ -52,6 +53,8 @@ def select_ext_view(input, dim, index):
         Tensor: The selected slice.
     """
     if use_pyboost():
+        if ON_ORANGE_PI:
+            input = clone(input)
         return pyboost.select_ext_view_op(input, dim, index)
     else:
         return legacy.select_view(input, index, dim)
@@ -83,17 +86,63 @@ def slice(input, dim, start, end, step):
     Returns:
         Tensor: The sliced tensor.
     """
-    if use_pyboost():
-        return pyboost.slice_ext_op(input, dim, start, end, step)
+    if use_pyboost() and not ON_ORANGE_PI:
+        return pyboost.slice_ext_view_op(input, dim, start, end, step)
     else:
-        ndim = input.ndim
-        begins = [0] * ndim
-        ends = [i for i in input.shape]
-        strides = [1] * ndim
-        begins[dim] = start
-        ends[dim] = end
-        strides[dim] = step
-        return legacy.strided_slice(input, tuple(begins), tuple(ends), tuple(strides), 0, 0, 0, 0, 0)
+        if step == 1:
+            return pyboost.slice_ext_view_op(input, dim, start, end, step)
+        # ndim = input.ndim
+        # begins = [0] * ndim
+        # ends = [i for i in input.shape]
+        # strides = [1] * ndim
+        # begins[dim] = start
+        # ends[dim] = end
+        # strides[dim] = step
+        # print(input.shape)
+        # print(tuple(begins), tuple(ends), tuple(strides))
+        # print(legacy.strided_slice(input, tuple(begins), tuple(ends), tuple(strides), 0, 0, 0, 0, 0))
+        # return legacy.strided_slice(input, tuple(begins), tuple(ends), tuple(strides), 0, 0, 0, 0, 0)
+        if end < 0:
+            end = input.shape[dim] + end
+        
+        # 2. 计算新视图的大小（size）
+        new_size = list(input.size())
+        # 新维度上的长度计算考虑了步长
+        new_size[dim] = (end - start + step - 1) // step  # 向上取整计算元素个数
+        if new_size[dim] <= 0:
+            raise RuntimeError(f"Calculated size for dimension {dim} is non-positive after slicing.")
+
+        # 3. 计算新的步长（stride）和存储偏移量（storage_offset）
+        old_strides = input.stride()
+        new_strides = list(old_strides)
+        # 在目标维度上，新步长 = 原步长 * 步长（step）
+        new_strides[dim] = old_strides[dim] * step
+        # 新的存储偏移量 = 原偏移量 + 起始索引 * 目标维度的原步长
+        new_storage_offset = input.storage_offset() + start * old_strides[dim]
+
+        # 4. 使用 as_strided 创建新视图
+        # 关键：as_strided 通过直接定义新张量的尺寸、步长和存储偏移量来创建一个视图，而不复制数据。
+        sliced_tensor = as_strided_manual(input, size=tuple(new_size), stride=tuple(new_strides), storage_offset=new_storage_offset)
+
+        return sliced_tensor
+
+def as_strided_manual(self, size, stride, storage_offset=None):
+    if len(size) != len(stride):
+        raise RuntimeError("mismatch in length of strides and shape.")
+    index = np.arange(0, size[0]*stride[0], stride[0])
+    for i in np.arange(1, len(size)):
+        tmp = np.arange(0, size[i]*stride[i], stride[i])
+        index = np.expand_dims(index, -1)
+        index = index + tmp
+    if storage_offset is not None:
+        index = index + storage_offset
+
+    if index.size == 0:
+        input_indices = mindspore.Tensor(Tensor_(index.shape, dtype=mindspore.int32))
+    else:
+        input_indices = mindspore.tensor(index.astype(np.int32))
+    out = gather(reshape(self, (-1,)), input_indices, 0, 0)
+    return out
 
 
 def embedding(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq):
@@ -306,7 +355,7 @@ def divmod(input, other, rounding_mode):
     Returns:
         Tuple[Tensor, Tensor]: The quotient and the remainder.
     """
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.divmod_op(input, other, rounding_mode)
     if rounding_mode == 'floor':
         return legacy.floor_div(input, other)

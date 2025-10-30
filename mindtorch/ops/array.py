@@ -608,9 +608,9 @@ def _process_multi_dim_index(self, indexes, remain_indexes, indexed_dims):
     self_viewed = self
     self_viewed_shape = list(self.shape)
     dim = 0
-    if ON_ORANGE_PI:
-        if all([isinstance(index, slice) for index in indexes]):
-            return getitem(self_viewed, tuple(indexes)), remain_indexes
+    # if ON_ORANGE_PI:
+    #     if all([isinstance(index, slice) for index in indexes]):
+    #         return getitem(self_viewed, tuple(indexes)), remain_indexes
     for i, index in enumerate(indexes):
         if isinstance(index, (list, tuple, np.ndarray)):
             index_np = np.array(index) if isinstance(index, (list, tuple)) else index
