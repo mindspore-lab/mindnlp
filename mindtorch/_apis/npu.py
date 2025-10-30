@@ -1887,7 +1887,7 @@ def relu6(input):
 def col2im(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
     if use_pyboost():
         return pyboost.col2im_ext_op(input, output_size, kernel_size, dilation, padding, stride)
-    return legacy.col2im(input, output_size, kernel_size, dilation, padding, stride)
+    return legacy.col2_im(input, mindspore.Tensor(output_size), kernel_size, dilation, padding, stride)
 
 def flash_attention_score(query, key, value, real_shift, drop_mask, padding_mask, attn_mask, prefix, actual_seq_qlen, actual_seq_kvlen, head_num, keep_prob, scale_value, pre_tokens, next_tokens, inner_precise, input_layout, sparse_mode):
     if use_pyboost():
@@ -1993,3 +1993,9 @@ def logaddexp(input, other):
 
 def reflection_pad_1d(input, padding):
     return pyboost.reflection_pad_1d_op(input, padding)
+
+def replication_pad_1d(input, padding):
+    return pyboost.reflection_pad_1d_op(input, padding)
+
+def hardtanh(input, min_val, max_val):
+    return pyboost.hardtanh_op(input, min_val, max_val)
