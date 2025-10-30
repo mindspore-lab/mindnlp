@@ -614,7 +614,7 @@ class ELU(Module):
         """
         Runs the forward pass.
         """
-        return F.elu(input, self.alpha, self.inplace)
+        return F.elu(input, self.alpha)
 
     def extra_repr(self) -> str:
         """

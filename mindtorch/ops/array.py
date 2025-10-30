@@ -767,7 +767,7 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
             if s.stop is not None:
                 stop = s.stop
                 if stop == -1:
-                    stop = tensor.shape[index]
+                    stop = tensor.shape[index] - 1
                 end.append(stop)
             else:
                 end.append(0)
@@ -1069,7 +1069,6 @@ def strided_slice_update(x, begin, end, strides, updates,
                          begin_mask=0, end_mask=0,
                          ellipsis_mask=0, new_axis_mask=0,
                          shrink_axis_mask=0):
-
     x_shape = x.shape
     ndim = len(x_shape)
 
