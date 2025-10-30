@@ -173,7 +173,7 @@ class Dropout2d(_DropoutNd):
         """
         Runs the forward pass.
         """
-        return F.dropout2d(input, self.p, self.training, self.inplace)
+        return F.dropout2d(input, self.p, self.training)
 
 
 class Dropout3d(_DropoutNd):

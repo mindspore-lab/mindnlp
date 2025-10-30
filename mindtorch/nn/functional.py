@@ -1898,3 +1898,6 @@ def make_causal_mask(
 
 def rotary_position_embedding(x, cos, sin, mode=0):
     return ops.rotary_position_embedding(x, cos, sin, mode)
+
+def hardtanh(input, min_val=-1.0, max_val=1.0):
+    return execute('hardtanh', input, min_val, max_val)

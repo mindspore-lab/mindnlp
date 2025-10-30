@@ -289,7 +289,7 @@ class Hardtanh(Module):
         """
         Runs the forward pass.
         """
-        return F.hardtanh(input, self.min_val, self.max_val, self.inplace)
+        return F.hardtanh(input, self.min_val, self.max_val)
 
     def extra_repr(self) -> str:
         """
