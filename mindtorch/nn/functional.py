@@ -556,9 +556,7 @@ def l1_loss(input, target, reduction='mean'):
     return execute('l1_loss', input, target, reduction)
 
 def smooth_l1_loss(input, target, beta=1.0, reduction='none'):
-    input = input.to(mindtorch.float32)
-    target = target.to(mindtorch.float32)
-    return ops.smooth_l1_loss(input, target, beta, reduction)
+    return execute('smooth_l1_loss', input, target, beta, reduction)
 
 def kl_div(input, target, reduction='mean', log_target=False):
     if reduction == 'batchmean':

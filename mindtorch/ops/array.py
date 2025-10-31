@@ -548,7 +548,7 @@ def _record_tensor_index(index, remain_indexes, dim, device):
 
     while dim > len(remain_indexes):
         # use empty_tensor with dim_num 9 to indicate unused dim
-        if device.type == 'npu':
+        if device.type == 'npu' and not ON_ORANGE_PI:
             remain_indexes.append(empty_tensor_9d)
         else:
             remain_indexes.append(slice(None, None, None))
@@ -650,7 +650,7 @@ def tensor_getitem(self, index):
     if not remain_indexes:
         return self_viewed
 
-    if self.device.type == 'npu':
+    if self.device.type == 'npu' and not ON_ORANGE_PI:
         return execute('index', self_viewed, remain_indexes)
 
     return getitem(self_viewed, tuple(remain_indexes) if len(remain_indexes) > 1 else remain_indexes[0])
