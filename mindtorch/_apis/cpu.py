@@ -1256,3 +1256,6 @@ def cumprod(input, dim, dtype):
 
 def lerp(input, end, weight):
     return legacy.lerp(input, end, weight)
+
+def smooth_l1_loss(input, target, beta=1.0, reduction='none'):
+    return legacy.smooth_l1_loss(input, target, beta, reduction)

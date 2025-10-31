@@ -804,7 +804,7 @@ def index(input, index):
 def scatter(input, dim, index, src):
     if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.scatter_op(input, dim, index, src)
-    return legacy.tensor_scatter_elements(input, index, src, dim, "none")
+    return legacy.tensor_scatter_elements(input, index, cast(src, input.dtype), dim, "none")
 
 def tril(input, diagonal=0):
     if use_pyboost():
@@ -858,7 +858,8 @@ def isinf(input):
 def sort(input, dim, descending, stable):
     if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.sort_ext_op(input, dim, descending, stable)
-    return legacy.sort(input, dim, descending)
+    out = legacy.sort(input, dim, descending)
+    return out[0], cast(out[1], mindspore.int64)
 
 def prod(input, axis, keepdims, dtype):
     if use_pyboost():
@@ -1612,9 +1613,15 @@ def inplace_add(input, other, alpha):
     return legacy.inplace_add(input, other)
 
 def logsumexp(input, dim, keepdim):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.logsumexp_op(input, dim, keepdim)
-    return legacy.logsumexp(input, dim, keepdim)
+    input_max = legacy.reduce_max(input, dim, True)
+    input_exp = exp(sub(input, input_max))
+    input_sumexp = sum(input_exp, dim, keepdim, None)
+    input_logsumexp = log(input_sumexp)
+    if not keepdim:
+        input_max = squeeze(input_max, dim)
+    return add(input_logsumexp, input_max)
 
 def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank, reduction, zero_infinity):
     loss, log_alpha = legacy.ctc_loss_v2(log_probs, targets, input_lengths, target_lengths, blank, 'none', zero_infinity)
@@ -1922,9 +1929,11 @@ def linalg_qr(input_x, mode):
 
 def bernoulli(input, generator):
     seed, offset = generator._step(12)
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.bernoulli_ext_op(input, seed, offset)
-    return legacy.bernoulli(input, seed, offset)
+    uniform = rand_like(input, generator, input.dtype)
+    result = cast(less(uniform, input), input.dtype)
+    return result
 
 def multinomial(input, num_samples, replacement, generator):
     seed, offset = generator._step(12)  # pylint: disable=protected-access
@@ -1999,3 +2008,6 @@ def replication_pad_1d(input, padding):
 
 def hardtanh(input, min_val, max_val):
     return pyboost.hardtanh_op(input, min_val, max_val)
+
+def smooth_l1_loss(input, target, beta=1.0, reduction='none'):
+    return pyboost.smooth_l1_loss_impl(input, target, beta, reduction)
