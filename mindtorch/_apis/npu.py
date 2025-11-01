@@ -893,6 +893,10 @@ def bmm(input, other):
         return pyboost.bmm_ext_op(input, other)
     return legacy.batch_mat_mul(input, other, False, False)
 
+def topk_legacy(input, k, sorted):
+    out = legacy.top_k(input, k, sorted)
+    return out[0], cast(out[1], mindspore.int64)
+
 def topk(input, k, dim, largest, sorted):
     if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.topk_ext_op(input, k, dim, largest, sorted)
@@ -901,12 +905,12 @@ def topk(input, k, dim, largest, sorted):
         input = -input
     if dim is None or dim == input.ndim - 1:
         if not largest:
-            res = legacy.top_k(input, k, sorted)
+            res = topk_legacy(input, k, sorted)
             values, indices = -res[0], res[1]
             return values, indices
-        return legacy.top_k(input, k, sorted)
+        return topk_legacy(input, k, sorted)
     input = transpose_view(input, dim, input.ndim - 1)
-    output = legacy.top_k(input, k, sorted)
+    output = topk_legacy(input, k, sorted)
     values = transpose_view(output[0], dim, input.ndim - 1)
     indices = transpose_view(output[1], dim, input.ndim - 1)
     if not largest:
@@ -1541,9 +1545,11 @@ def diag(input, diagonal):
     return legacy.diag(input, diagonal)
 
 def logsigmoid(input):
-    if use_pyboost():
+    if use_pyboost() and not ON_ORANGE_PI:
         return pyboost.logsigmoid_op(input)
-    return legacy.logsigmoid(input)
+    output = sigmoid(input)
+    ret = log(output)
+    return ret
 
 def one_hot(tensor, num_classes):
     if use_pyboost():
