@@ -170,7 +170,7 @@ setup(
     },
 
     install_requires=[
-        'mindspore>=2.5.0',
+        'mindspore>=2.7.1',
         'tqdm',
         'requests',
         'accelerate>=1.6.0', # hf dependency

@@ -118,6 +118,7 @@ def __init__(self, *args, **kwargs):
 Tensor.__init__ = __init__
 origin_setitem = Tensor.__setitem__
 origin_is_contiguous = Tensor.is_contiguous
+origin_to = Tensor.to
 Tensor._requires_grad = False
 
 def tensor(data, *, dtype=None, device=None, requires_grad=False):
@@ -248,6 +249,8 @@ class TensorPlaceHolder:
 
         if self.device.type == 'meta':
             out = ops.getitem_np(self, slices)
+        elif self.device.type == 'cpu':
+            return ops.getitem(self, slices)
         else:
             out = ops.tensor_getitem(self, slices)
 
@@ -2251,7 +2254,7 @@ class TensorPlaceHolder:
             # self.data_sync(True)
             if self.device.type == 'cpu':
                 self.data_ptr()
-            data = Tensor.move_to(self, device_str, blocking=not non_blocking)
+            data = origin_to(self, device_str, non_blocking=non_blocking)
 
             out = Tensor(data)
             out._device = device
