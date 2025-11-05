@@ -1716,8 +1716,13 @@ def outer(input, other):
 
 def addcmul(input, tensor1, tensor2, value=1.0):
     if use_pyboost() and not ON_ORANGE_PI:
-        return pyboost.addcmul_op(input, tensor1, tensor2, value)
+        return pyboost.addcmul_op(input, tensor1, tensor2, mindspore.Tensor(value))
     return legacy.add(mul(mul(tensor1, tensor2), value), input)
+
+def addcdiv(input, tensor1, tensor2, value=1.0):
+    if use_pyboost() and not ON_ORANGE_PI:
+        return pyboost.addcdiv_op(input, tensor1, tensor2, mindspore.Tensor(value))
+    return legacy.add(div(mul(tensor1, tensor2), value), input)
 
 def prelu(input, weight):
     if use_pyboost():
