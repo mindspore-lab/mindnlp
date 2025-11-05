@@ -340,10 +340,10 @@ class TensorPlaceHolder:
         return ops.abs(self)
 
     def __imul__(self, other):
-        return self.copy_(ops.mul(self, other))
+        return ops.mul(self, other)
 
     def __itruediv__(self, other):
-        return self.copy_(ops.div(self, other))
+        return ops.div(self, other)
 
     def __pow__(self, other):
         return ops.pow(self, other)

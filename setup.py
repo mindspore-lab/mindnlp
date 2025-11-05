@@ -64,7 +64,7 @@ class CustomInstall(install):
             _create_namespace_links()  # 安装后创建链接
 
 
-version = '0.5.0'
+version = '0.5.1'
 cur_dir = os.path.dirname(os.path.realpath(__file__))
 pkg_dir = os.path.join(cur_dir, 'build')
 
@@ -170,7 +170,7 @@ setup(
     },
 
     install_requires=[
-        'mindspore>=2.5.0',
+        'mindspore>=2.5.0, <=2.7.0',
         'tqdm',
         'requests',
         'accelerate>=1.6.0', # hf dependency
