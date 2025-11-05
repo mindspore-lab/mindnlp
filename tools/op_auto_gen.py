@@ -14,18 +14,20 @@ def camel_to_snake_case_improved(camel_case_str):
     return snake_case_str
 
 op_func_no_init = '''
-{name}_op = {op}().set_device('{device}')
+{name}_op = {op}()
 def {name}(*args):
+    {name}_op = hook_call({name}_op)
     return {name}_op(*args)
 '''
 
 op_func_with_init = '''
 def {name}(*args):
-    op = _get_cache_prim({op})(*args[-{idx}:]).set_device('{device}')
+    op = _get_cache_prim({op})(*args[-{idx}:])
+    op = hook_call(op)
     return op(*args[:-{idx}])
 '''
 
-def gen_legacy_op(gen_file, device='CPU'):
+def gen_legacy_op(gen_file):
     op_list = list(filter(lambda s: s[0].isupper(), ops.operations.__all__))
     grad_op = list(filter(lambda s: s[0].isupper(), dir(mindspore.ops.operations._grad_ops)))
 
@@ -50,14 +52,14 @@ def gen_legacy_op(gen_file, device='CPU'):
                 if len(init_signature.parameters) > 1:
                     init_args = list(init_signature.parameters.keys())
                     init_args.pop(0)
-                    code = op_func_with_init.format(name=name, op=old_op_name, idx=len(init_args), device=device)
+                    code = op_func_with_init.format(name=name, op=old_op_name, idx=len(init_args))
 
                 else:
-                    code = op_func_no_init.format(name=name, op=old_op_name, device=device)
+                    code = op_func_no_init.format(name=name, op=old_op_name)
                 f.write(code + '\n')
     f.close()
 
-def gen_aclnn_op(gen_file, device):
+def gen_aclnn_op(gen_file):
     gen_ops_list = list(filter(lambda s: s.startswith("pyboost"), dir(gen_ops_prim)))
     pyboost_inner_list = list(filter(lambda s: s.endswith("_impl"), dir(pyboost_inner_prim)))
 
@@ -79,14 +81,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # 添加位置参数
     parser.add_argument('output_file', type=str)
-    parser.add_argument('--device', type=str, choices=['CPU', 'GPU', 'Ascend'])
     parser.add_argument('--op_type', type=str, default='legacy', required=False ,choices=['legacy', 'pyboost'])
 
 
     args = parser.parse_args()
     print(args)
     if args.op_type == 'legacy':
-        gen_legacy_op(args.output_file, args.device)
+        gen_legacy_op(args.output_file)
     elif args.op_type == 'pyboost':
-        gen_aclnn_op(args.output_file, args.device)
+        gen_aclnn_op(args.output_file)
         

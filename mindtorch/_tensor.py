@@ -56,43 +56,36 @@ class TypedTensorMeta(_TensorMeta):
 class IntTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.int
     def __init__(self, *args, **kwargs):
-        self._device = kwargs.pop('device', device_('cpu'))
         super().__init__(*args, dtype=_dtype.int, **kwargs)
 
 class LongTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.long
     def __init__(self, *args, **kwargs):
-        self._device = kwargs.pop('device', device_('cpu'))
         super().__init__(*args, dtype=_dtype.long, **kwargs)
 
 class FloatTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.float32
     def __init__(self, *args, **kwargs):
-        self._device = kwargs.pop('device', device_('cpu'))
         super().__init__(*args, dtype=_dtype.float32, **kwargs)
 
 class HalfTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.float16
     def __init__(self, *args, **kwargs):
-        self._device = kwargs.pop('device', device_('cpu'))
         super().__init__(*args, dtype=_dtype.float16, **kwargs)
 
 class BFloat16Tensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.bfloat16
     def __init__(self, *args, **kwargs):
-        self._device = kwargs.pop('device', device_('cpu'))
         super().__init__(*args, dtype=_dtype.bfloat16, **kwargs)
 
 class BoolTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.bool
     def __init__(self, *args, **kwargs):
-        self._device = kwargs.pop('device', device_('cpu'))
         super().__init__(*args, dtype=_dtype.bool, **kwargs)
 
 class ByteTensor(Tensor, metaclass=TypedTensorMeta):
     dtype = _dtype.uint8
     def __init__(self, *args, **kwargs):
-        self._device = kwargs.pop('device', device_('cpu'))
         super().__init__(*args, dtype=_dtype.uint8, **kwargs)
 
 
@@ -101,35 +94,20 @@ def tensor_meta_str(self):
 
 _TensorMeta.__str__ = tensor_meta_str
 
-old_init = Tensor.__init__
 def __init__(self, *args, **kwargs):
-    requires_grad = kwargs.pop('requires_grad', False)
-    device = kwargs.pop('device', mindtorch.get_default_device())
     if len(args) > 1 and all([isinstance(arg, int) for arg in args]):
         # tensor = Tensor_(shape=args, dtype=get_default_dtype())
         # Tensor_(self, tensor)
-        old_init(self, shape=args, dtype=get_default_dtype())
+        super(Tensor, self).__init__(shape=args, dtype=get_default_dtype())
     else:
-        old_init(self, *args, **kwargs)
-    if requires_grad:
-        self.requires_grad_(requires_grad)
-    self._device = device
+        super(Tensor, self).__init__(*args, **kwargs)
 
 Tensor.__init__ = __init__
-origin_setitem = Tensor.__setitem__
-origin_is_contiguous = Tensor.is_contiguous
-origin_to = Tensor.to
-Tensor._requires_grad = False
 
 def tensor(data, *, dtype=None, device=None, requires_grad=False):
     if isinstance(data, Tensor):
         UserWarning("To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than mindtorch.tensor(sourceTensor).")
         out = Tensor(data)
-        if device is not None:
-            out._device = device
-        else:
-            out._device = data.device
-
         return out
 
     # if isinstance(data, list):
@@ -156,7 +134,6 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False):
     else:
         tensor = Tensor(data)
 
-    tensor._device = device
     if DEVICE_TARGET == 'Ascend' and device.type == 'cuda':
         device.type = 'npu'
     if device.type not in ['meta', 'cpu']:
@@ -174,23 +151,13 @@ def is_tensor(x):
 class TensorPlaceHolder:
 
     def cpu(self):
-        return self.to(device_('cpu'))
+        return super(Tensor, self).to('CPU')
 
     def npu(self, device=None, non_blocking=False):
-        if device is None:
-            device = device_('npu', 0)
-        return self.to(device, non_blocking=non_blocking)
+        return super(Tensor, self).to('Ascend', non_blocking=non_blocking)
 
     def cuda(self, device=None, non_blocking=False):
-        if DEVICE_TARGET == 'Ascend':
-            return self.npu(device, non_blocking)
-        if device is None:
-            device = device_('cuda', 0)
-        return self.to(device, non_blocking=non_blocking)
-
-    def requires_grad_(self, requires_grad=True):
-        self.requires_grad = requires_grad
-        return self
+        return super(Tensor, self).to('GPU', non_blocking=non_blocking)
 
     def __array_wrap__(self, array):
         if array.dtype == bool:
@@ -220,7 +187,6 @@ class TensorPlaceHolder:
         return self.shape[0]
 
     def __repr__(self) -> str:
-        self.data_sync(True)
         return Tensor_.__repr__(self)[:-1] + f', device={self.device})'
 
     def __format__(self, format_spec):
@@ -254,7 +220,6 @@ class TensorPlaceHolder:
         else:
             out = ops.tensor_getitem(self, slices)
 
-        out._device = self.device
         return out
 
     def __setitem__(self, slices, value):
@@ -282,12 +247,7 @@ class TensorPlaceHolder:
         if self.device.type == 'meta':
             return self
 
-        if value.device != self.device:
-            value._device = self.device
-
         if self.device.type == 'npu' and not ON_ORANGE_PI:
-            if value.device != self.device:
-                value._device = self.device
             out = ops.tensor_setitem(self, slices, value)
         else:
             out = ops.setitem(self, slices, value)
@@ -301,7 +261,7 @@ class TensorPlaceHolder:
         return ops.add(self, other)
 
     def __iadd__(self, other):
-        return self.copy_(ops.add(self, other))
+        return ops.add(self, other)
 
     def __radd__(self, other):
         return ops.add(other, self)
@@ -343,10 +303,10 @@ class TensorPlaceHolder:
         return ops.abs(self)
 
     def __imul__(self, other):
-        return self.copy_(ops.mul(self, other))
+        return ops.mul(self, other)
 
     def __itruediv__(self, other):
-        return self.copy_(ops.div(self, other))
+        return ops.div(self, other)
 
     def __pow__(self, other):
         return ops.pow(self, other)
@@ -362,7 +322,7 @@ class TensorPlaceHolder:
         return ops.sub(self, other)
 
     def __isub__(self, other):
-        return self.copy_(ops.sub(self, other))
+        return ops.sub(self, other)
 
     def __rsub__(self, other):
         return ops.sub(other, self)
@@ -932,7 +892,6 @@ class TensorPlaceHolder:
     @property
     def data(self):
         out = Tensor(self)
-        out._device = self.device
         out._base = self
         return out
 
@@ -950,7 +909,6 @@ class TensorPlaceHolder:
             if getattr(self, '_base', None) is not None:
                 self._base.assign_value(new_value)
             self.assign_value(new_value)
-        self._device = new_value.device
 
     # Tensor.data_ptr
     def data_ptr(self):
@@ -1371,7 +1329,7 @@ class TensorPlaceHolder:
 
     # Tensor.is_contiguous
     def is_contiguous(self, memory_format=None):
-        return origin_is_contiguous(self)
+        return super(Tensor, self).is_contiguous(self)
 
     # Tensor.is_complex
     def is_complex(self):
@@ -2232,12 +2190,10 @@ class TensorPlaceHolder:
     def _move_to(self, device, non_blocking=False):
         if device.type == 'meta':
             out = Tensor(Tensor_(shape=self.shape, dtype=self.dtype))
-            out._device = device
             return out
         
         if device.type == 'cpu':
             out = Tensor(self.asnumpy())
-            out._device = device
             return out
 
         if self.device == device:
@@ -2254,10 +2210,9 @@ class TensorPlaceHolder:
             # self.data_sync(True)
             if self.device.type == 'cpu':
                 self.data_ptr()
-            data = origin_to(self, device_str, non_blocking=non_blocking)
+            data = super(Tensor, self).to(device_str, non_blocking=non_blocking)
 
             out = Tensor(data)
-            out._device = device
             return out
 
     def to(self, *args, **kwargs):
@@ -2560,10 +2515,12 @@ class TensorPlaceHolder:
         return False
 
     @property
+    def _device(self):
+        return super(Tensor, self).device
+
+    @property
     def device(self):
-        if not hasattr(self, '_device'):
-            raise ValueError('Tensor must have device')
-        return self._device
+        return device_(self._device)
 
     def _convert_numpy_slices(self, key):
         """递归转换 key 中的 NumPy 整数为内置 int"""
@@ -2597,7 +2554,6 @@ class TensorPlaceHolder:
 
     def __deepcopy__(self, memodict):
         new_obj = Tensor(self)
-        new_obj._device = self.device
         return new_obj
 
     def __matmul__(self, other):
@@ -2614,7 +2570,7 @@ class TensorPlaceHolder:
 
 
     def __ifloordiv__(self, other):
-        return self.copy_(ops.floor_divide(self, other))
+        return ops.floor_divide(self, other)
 
     def __mod__(self, other):
         return ops.fmod(self, other)
@@ -2634,29 +2590,6 @@ class TensorPlaceHolder:
     @property
     def is_nested(self):
         return False
-
-    @property
-    def requires_grad(self):
-        return self._requires_grad
-
-    @requires_grad.setter
-    def requires_grad(self, value):
-        if not isinstance(value, bool):
-            raise TypeError("The 'requires_grad' attribute of parameter must be set as bool.")
-        self._requires_grad = value
-        if self.param_info is not None:
-            self.param_info.requires_grad = value
-        else:
-            self.param_info = ParamInfo()
-            self.param_info.requires_grad = value
-
-        if value:
-            if not hasattr(self, 'handle'):
-                self.retain_grad()
-        else:
-            if hasattr(self, 'handle'):
-                self.handle.remove()
-                delattr(self, 'handle')
 
     def retain_grad(self):
         pass
