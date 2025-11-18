@@ -10,6 +10,7 @@ from mindnlp.utils.import_utils import _LazyModule
 from .masking_utils import create_causal_mask, create_sliding_window_causal_mask, create_masks_for_generate
 from .modeling_utils import construct_pipeline_parallel_model, _load_pretrained_model_wrapper, \
     _get_resolved_checkpoint_files_wrapper
+from .cache_utils import dynamic_layer_update
 from .tokenization_utils import apply_chat_template_wrapper
 from .trainer import training_step
 from ..utils.decorators import dtype_wrapper, patch_dtype_wrapper, patch_wrappers
@@ -68,5 +69,6 @@ transformers.generation.utils.create_masks_for_generate = create_masks_for_gener
 
 transformers.trainer.Trainer.training_step = training_step
 
+transformers.cache_utils.DynamicLayer.update = dynamic_layer_update
 # add mindnlp.transformers modules/attrs to lazymodule
 # setattr(sys.modules[__name__], 'test_ms_model', test_ms_model)

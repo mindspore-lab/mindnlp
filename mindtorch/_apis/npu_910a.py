@@ -1,11 +1,15 @@
 import math
+import numbers
 import mindspore
 import mindtorch
 import numpy as np
 from mindspore._c_expression import _empty_instance
-from ..configs import ENABLE_PYBOOST, ON_A1, ON_ORANGE_PI
+
+from mindtorch._C import default_generator
+from ..configs import ENABLE_PYBOOST
 from .._op_prim.ascend import legacy, pyboost
 
+generator_step_ = 12
 
 def empty(size, dtype):
     return _empty_instance(size, dtype=dtype, device='Ascend')
@@ -54,8 +58,6 @@ def select_ext_view(input, dim, index):
         Tensor: The selected slice.
     """
     if ENABLE_PYBOOST:
-        if ON_ORANGE_PI:
-            input = clone(input)
         return pyboost.select_ext_view_op(input, dim, index)
     else:
         return legacy.select_view(input, index, dim)
@@ -88,64 +90,7 @@ def slice(input, dim, start, end, step):
     Returns:
         Tensor: The sliced tensor.
     """
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
-        return pyboost.slice_ext_view_op(input, dim, start, end, step)
-    else:
-        if step == 1:
-            return pyboost.slice_ext_view_op(input, dim, start, end, step)
-        # ndim = input.ndim
-        # begins = [0] * ndim
-        # ends = [i for i in input.shape]
-        # strides = [1] * ndim
-        # begins[dim] = start
-        # ends[dim] = end
-        # strides[dim] = step
-        # print(input.shape)
-        # print(tuple(begins), tuple(ends), tuple(strides))
-        # print(legacy.strided_slice(input, tuple(begins), tuple(ends), tuple(strides), 0, 0, 0, 0, 0))
-        # return legacy.strided_slice(input, tuple(begins), tuple(ends), tuple(strides), 0, 0, 0, 0, 0)
-        if end < 0:
-            end = input.shape[dim] + end
-        
-        # 2. 计算新视图的大小（size）
-        new_size = list(input.size())
-        # 新维度上的长度计算考虑了步长
-        new_size[dim] = (end - start + step - 1) // step  # 向上取整计算元素个数
-        if new_size[dim] <= 0:
-            raise RuntimeError(f"Calculated size for dimension {dim} is non-positive after slicing.")
-
-        # 3. 计算新的步长（stride）和存储偏移量（storage_offset）
-        old_strides = input.stride()
-        new_strides = list(old_strides)
-        # 在目标维度上，新步长 = 原步长 * 步长（step）
-        new_strides[dim] = old_strides[dim] * step
-        # 新的存储偏移量 = 原偏移量 + 起始索引 * 目标维度的原步长
-        new_storage_offset = input.storage_offset() + start * old_strides[dim]
-
-        # 4. 使用 as_strided 创建新视图
-        # 关键：as_strided 通过直接定义新张量的尺寸、步长和存储偏移量来创建一个视图，而不复制数据。
-        sliced_tensor = as_strided_manual(input, size=tuple(new_size), stride=tuple(new_strides), storage_offset=new_storage_offset)
-
-        return sliced_tensor
-
-def as_strided_manual(self, size, stride, storage_offset=None):
-    if len(size) != len(stride):
-        raise RuntimeError("mismatch in length of strides and shape.")
-    index = np.arange(0, size[0]*stride[0], stride[0])
-    for i in np.arange(1, len(size)):
-        tmp = np.arange(0, size[i]*stride[i], stride[i])
-        index = np.expand_dims(index, -1)
-        index = index + tmp
-    if storage_offset is not None:
-        index = index + storage_offset
-
-    if index.size == 0:
-        input_indices = mindspore.Tensor(Tensor_(index.shape, dtype=mindspore.int32))
-    else:
-        input_indices = mindspore.tensor(index.astype(np.int32))
-    out = gather(reshape(self, (-1,)), input_indices, 0, 0)
-    return out
-
+    return pyboost.slice_ext_view_op(input, dim, start, end, step)
 
 def embedding(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq):
     """
@@ -177,11 +122,7 @@ def add(input, other, alpha=1): # pylint: disable=unused-argument
     Returns:
         Tensor: The result of the addition.
     """
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
-        return pyboost.add_ext_op(input, other, alpha)
-    if alpha == 1.0:
-        return legacy.add(input, other)
-    return legacy.add(input, legacy.mul(other, alpha))
+    return pyboost.add_ext_op(input, other, alpha)
 
 def layer_norm(input, normalized_shape, weight, bias, eps=1e-5):
     """
@@ -276,15 +217,6 @@ def dense(input, weight, bias=None):
     Returns:
         Tensor: The result of the dense operation.
     """
-    if ON_ORANGE_PI:
-        dtype = input.dtype
-        input = cast(input, mindspore.float16)
-        weight = cast(weight, mindspore.float16)
-        out = cast(pyboost.dense_op(input, weight), dtype)
-        if bias is not None:
-            out = add(out, bias)
-        return out
- 
     if ENABLE_PYBOOST:
         return pyboost.dense_op(input, weight, bias)
     return legacy.dense(input, weight, bias)
@@ -321,11 +253,6 @@ def matmul(input, other):
     Returns:
         Tensor: The result of the matrix multiplication.
     """
-    if ON_ORANGE_PI:
-        dtype = input.dtype
-        input = cast(input, mindspore.float16)
-        other = cast(other, mindspore.float16)
-        return cast(pyboost.matmul_ext_op(input, other), dtype)
     if ENABLE_PYBOOST:
         return pyboost.matmul_ext_op(input, other)
     return legacy.mat_mul(input, other)
@@ -357,14 +284,7 @@ def divmod(input, other, rounding_mode):
     Returns:
         Tuple[Tensor, Tensor]: The quotient and the remainder.
     """
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
-        return pyboost.divmod_op(input, other, rounding_mode)
-    if rounding_mode == 'floor':
-        return legacy.floor_div(input, other)
-    elif rounding_mode == 'trunc':
-        return legacy.truncate_div(input, other)
-    else:
-        raise ValueError(f'Invalid rounding mode: {rounding_mode}')
+    return pyboost.divmod_op(input, other, rounding_mode)
 
 def softmax(input, axis=-1):
     """
@@ -530,7 +450,7 @@ def sum(input, dim, keepdim, dtype):
         return pyboost.sum_ext_op(input, dim, keepdim, dtype)
     return legacy.reduce_sum(input.astype(dtype), dim, keepdim)
 
-def dropout(input, p, seed, offset):
+def dropout(input, p, training=True):
     """
     Returns a tensor with dropout applied element-wise.
 
@@ -542,9 +462,12 @@ def dropout(input, p, seed, offset):
     Returns:
         Tensor: The tensor with dropout applied.
     """
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
-        return pyboost.dropout_ext_op(input, p, seed, offset)
-    return legacy.dropout(input, 1-p, 0, 0)
+    if not training or p==0:
+        return input
+    if ENABLE_PYBOOST:
+        seed, offset = default_generator._step(generator_step_)
+        return pyboost.dropout_ext_op(input, p, seed, offset)[0]
+    return legacy.dropout(input, 1-p, 0, 0)[0]
 
 def clone(input):
     """
@@ -747,7 +670,7 @@ def clamp_scalar(value, min_value, max_value):
     return value
 
 def cumsum(self, dim, dtype):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.cumsum_ext_op(self, dim, dtype)
     if self.shape[dim] == 0:
         return mindtorch.tensor([], dtype=self.dtype, device=self.device)
@@ -764,7 +687,7 @@ def concat(tensors, axis):
     return legacy.concat(tensors, axis)
 
 def gather_d(input, dim, index):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.gather_d_op(input, dim, index)
     return legacy.gather_d(input, dim, index)
 
@@ -787,8 +710,6 @@ def less_equal(input, other):
     return legacy.less_equal(input, other)
 
 def select(condition, input, other):
-    if ON_ORANGE_PI:
-        return legacy.add(mul(condition, input), mul(bitwise_not(condition), other))
     if ENABLE_PYBOOST:
         return pyboost.select_op(condition, input, other)
     return legacy.select(condition, input, other)
@@ -804,7 +725,7 @@ def index(input, index):
     return legacy.index(input, index)
 
 def scatter(input, dim, index, src):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.scatter_op(input, dim, index, src)
     return legacy.tensor_scatter_elements(input, index, cast(src, input.dtype), dim, "none")
 
@@ -837,7 +758,7 @@ def tile(input, multiples):
     return legacy.tile(input, multiples)
 
 def arange(start, end, step, dtype):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.arange_op(start, end, step, dtype)
     out = legacy.range(start, end, step, 100000)
     if dtype is not None:
@@ -858,7 +779,7 @@ def isinf(input):
     return legacy.is_inf(input)
 
 def sort(input, dim, descending, stable):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.sort_ext_op(input, dim, descending, stable)
     out = legacy.sort(input, dim, descending)
     return out[0], cast(out[1], mindspore.int64)
@@ -869,7 +790,7 @@ def prod(input, axis, keepdims, dtype):
     return legacy.reduce_prod(input, axis, keepdims)
 
 def isclose(input, other, rtol, atol, equal_nan):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.isclose_impl(input, other, rtol, atol, equal_nan)
     return legacy.is_close(input, other, rtol, atol, equal_nan)
 
@@ -879,7 +800,7 @@ def argmax(input, axis, keepdims):
     return legacy.argmax(input, axis, keepdims)
 
 def argmin(input, axis, keepdims):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.argmin_ext_op(input, axis, keepdims)
     if axis is None:
         axis = -1
@@ -887,10 +808,6 @@ def argmin(input, axis, keepdims):
 
 
 def bmm(input, other):
-    if ON_ORANGE_PI:
-        dtype = input.dtype
-        out = pyboost.bmm_ext_op(cast(input, mindspore.float16), cast(other, mindspore.float16))
-        return cast(out, dtype)
     if ENABLE_PYBOOST:
         return pyboost.bmm_ext_op(input, other)
     return legacy.batch_mat_mul(input, other, False, False)
@@ -900,7 +817,7 @@ def topk_legacy(input, k, sorted):
     return out[0], cast(out[1], mindspore.int64)
 
 def topk(input, k, dim, largest, sorted):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.topk_ext_op(input, k, dim, largest, sorted)
 
     if not largest:
@@ -984,7 +901,7 @@ def narrow(input, dim, start, length):
     return legacy.slice(input, begin, size)
 
 def std(input, dim, correction, keepdim):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.std_op(input, dim, correction, keepdim)
     if dim is None:
         dim = ()
@@ -1046,7 +963,7 @@ def inplace_zero(input):
     return input
 
 def mse_loss(input, target, reduction):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.mse_loss_ext_op(input, target, reduction)
     x = square(input - target)
     average_flag = True
@@ -1116,12 +1033,12 @@ def flatten(input, start_dim, end_dim):
     return legacy.reshape(input, tuple(input_shape))
 
 def conv2d_padding(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.conv2d_padding_op(input, weight, bias, stride, padding, dilation, groups)
     return conv2d_legacy(input, weight, bias, stride, padding, dilation, groups)
 
 def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.conv2d_ext_op(input, weight, bias, stride, padding, dilation, groups)
     return conv2d_legacy(input, weight, bias, stride, padding, dilation, groups)
 
@@ -1174,7 +1091,15 @@ def sin(input):
     return legacy.sin(input)
 
 def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, training=False, momentum=0.1, epsilon=1e-5):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if running_mean is None:
+        running_mean = ones(input.shape[1], dtype=input.dtype)
+    if running_var is None:
+        running_var = zeros(input.shape[1], dtype=input.dtype)
+    if weight is None:
+        weight = ones(input.shape[1], dtype=input.dtype)
+    if bias is None:
+        bias = zeros(input.shape[1], dtype=input.dtype)
+    if ENABLE_PYBOOST:
         return pyboost.batch_norm_ext_op(input, weight, bias, running_mean, runnning_var, training, momentum, epsilon)
     return legacy.batch_norm(input, weight, bias, running_mean, runnning_var, training, epsilon, momentum, 'NCHW')
 
@@ -1197,12 +1122,12 @@ def masked_scatter(input, mask, value):
     return legacy.masked_scatter(input, mask, value)
 
 def neg(input):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.neg_op(input)
     return legacy.neg(input)
 
 def log1p(input):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.log1p_op(input)
     return log(add(input, 1))
 
@@ -1212,7 +1137,7 @@ def pow_scalar_tensor(input, scalar):
     return legacy.pow(input, scalar)
 
 def adaptive_avg_pool2d(input, output_size):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.adaptive_avg_pool2d_ext_op(input, output_size)
     return legacy.adaptive_avg_pool2_d(input, output_size)
 
@@ -1288,7 +1213,7 @@ def roll(input, shifts, axis):
     return legacy.roll(input, shifts, axis)
 
 def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.conv1d_ext_op(input, weight, bias, stride, padding, dilation, groups)
     return conv1d_legacy(input, weight, bias, stride, padding, dilation, groups)
 
@@ -1326,7 +1251,7 @@ def conv1d_legacy(input, weight, bias=None, stride=1, padding=0, dilation=1, gro
     return output
 
 def conv1d_padding(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.conv1d_padding_op(input, weight, bias, stride, padding, dilation, groups)
     return conv1d_legacy(input, weight, bias, stride, padding, dilation, groups)
 
@@ -1341,7 +1266,7 @@ def lgamma(input):
 def reverse_v2(input, dims):
     if isinstance(dims, int):
         dims = (dims,)
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.reverse_v2_impl(input, dims)
 
     for dim in dims:
@@ -1360,18 +1285,18 @@ def split_with_size(input, size, dim=0):
     return legacy.split_with_size(input, size, dim)
 
 def softplus(input, beta=1, threshold=20):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.softplus_ext_op(input, beta, threshold)
     return legacy.softplus(input)
 
 def remainder_tensor_scalar(input, other):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.remainder_tensor_scalar_op(input, other)
     out = sub(input, mul(floor_div(input, other), other), 1)
     return out
 
 def baddbmm(input, batch1, batch2, alpha=1, beta=1):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.baddbmm_op(input, batch1, batch2, alpha, beta)
     return add(mul(input, beta), mul(bmm(batch1, batch2), alpha))
 
@@ -1394,7 +1319,7 @@ def _deconv_output_length(pad_mode, filter_size, stride_size, dilation_size, pad
     return length
 
 def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.conv_transpose2d_op(input, weight, bias, stride, padding, output_padding, groups, dilation)
     pad_mode = 'pad'
     pad = padding
@@ -1469,36 +1394,22 @@ def _cal_dilation(dilation, nd):
 
 def max_pool2d(input, kernel_size, stride=1, padding=0, dilation=1, ceil_mode=False, return_indices=False):
     # out, indices = legacy.max_pool_with_argmax_v2(input, kernel_size, stride, padding, dilation, ceil_mode)
-    if not ON_ORANGE_PI:
-        out, indices = legacy.max_pool_with_indices(input, kernel_size, stride, padding, dilation, ceil_mode)
-        if return_indices:
-            return out, indices
-        return out
-
-    if isinstance(kernel_size, tuple):
-        kernel_size = (1,) + kernel_size
-    elif isinstance(kernel_size, int):
-        kernel_size = (1, kernel_size, kernel_size)
-    if isinstance(stride, tuple):
-        stride = (1,) + stride
-    elif isinstance(stride, int):
-        stride = (1, stride, stride)
-    padding = _check_maxpool_padding(padding, 2)
-    dilation = _cal_dilation(dilation, 2)
-
-    input = expand_dims(input, 2)
-    out, indices = legacy.max_pool3_d_with_argmax(input, kernel_size, stride, padding,
-                                            dilation, ceil_mode, 'NCDHW', mindspore.int64)
+    out, indices = legacy.max_pool_with_indices(input, kernel_size, stride, padding, dilation, ceil_mode)
     if return_indices:
-        return squeeze(out, 2), squeeze(indices, 2)
-    return squeeze(out, 2)
+        return out, indices
+    return out
 
 def upsample_bilinear2d(input, size=None, scale_factor=None, align_corners=False):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.upsample_bilinear2d_op(input, size, scale_factor, align_corners)
     return legacy.resize_bilinear_v2(input, size, align_corners, not align_corners)
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
+    if weight is None:
+        weight = ones([input.shape[1]], dtype=input.dtype)
+    if bias is None:
+        bias = zeros([input.shape[1]], dtype=input.dtype)
+
     if ENABLE_PYBOOST:
         return pyboost.group_norm_op(input, num_groups, weight, bias, eps)
     return legacy.group_norm(input, num_groups, eps, affine)
@@ -1547,7 +1458,7 @@ def diag(input, diagonal):
     return legacy.diag(input, diagonal)
 
 def logsigmoid(input):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.logsigmoid_op(input)
     output = sigmoid(input)
     ret = log(output)
@@ -1561,7 +1472,7 @@ def one_hot(tensor, num_classes):
     return legacy.one_hot(tensor, num_classes, on_value, off_value, -1)
 
 def var(input, dim=None, correction=1, keepdim=False):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.var_op(input, dim, correction, keepdim)
     if dim is None:
         input_mean = mean(input, (), False, None)
@@ -1586,7 +1497,7 @@ def var(input, dim=None, correction=1, keepdim=False):
 
 
 def linspace(start, end, steps, dtype=None):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.lin_space_ext_op(start, end, steps, dtype)
     start = float(start)
     end = float(end)
@@ -1598,7 +1509,7 @@ def masked_select(input, mask):
     return legacy.masked_select(input, mask)
 
 def glu(input, dim=-1):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.glu_impl(input, dim)
     a, b = chunk(input, 2, dim)
     gate = sigmoid(b)
@@ -1621,7 +1532,7 @@ def inplace_add(input, other, alpha):
     return legacy.inplace_add(input, other)
 
 def logsumexp(input, dim, keepdim):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.logsumexp_op(input, dim, keepdim)
     input_max = legacy.reduce_max(input, dim, True)
     input_exp = exp(sub(input, input_max))
@@ -1651,8 +1562,6 @@ def inplace_exponential(self, lambd, generator):
     return legacy.expo(self, lambd, generator)
 
 def im2col(input, kernel_size, dilation=1, padding=0, stride=1):
-    if ENABLE_PYBOOST and not ON_A1 and not ON_ORANGE_PI:
-        return pyboost.im2col_ext_op(input, kernel_size, dilation, padding, stride)
     out = legacy.im2_col(input, kernel_size, stride, dilation, padding)
     out_shape = out.shape[:1] + (-1,) + out.shape[-1:]
     out = reshape(out, out_shape)
@@ -1661,10 +1570,15 @@ def im2col(input, kernel_size, dilation=1, padding=0, stride=1):
 def upsample_nearest2d(input, output_size, scale_factors):
     if ENABLE_PYBOOST:
         return pyboost.upsample_nearest2d_op(input, output_size, scale_factors)
-    return legacy.upsample_nearest2d(input, scale_factor, align_corners)
+    if output_size is None:
+        tuple_len = py_min(len(input.shape) - 2, len(scale_factors))
+        output_size = tuple([math.floor(input.shape[i + 2] * scale_factors[i])
+                        for i in range(tuple_len)])
+
+    return legacy.resize_nearest_neighbor(input, output_size, False, False)
 
 def addmm(input, mat1, mat2, alpha=1.0, beta=1.0):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.addmm_op(input, mat1, mat2, alpha, beta)
     return add(mul(input, beta), mul(matmul(mat1, mat2), alpha))
 
@@ -1680,7 +1594,7 @@ def adaptive_avg_pool1d(input, output_size):
     return legacy.adaptive_avg_pool1d(input, output_size)
 
 def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.conv3d_ext_op(input, weight, bias, stride, padding, dilation, groups)
     pad_mode = 'pad'
     pad = padding
@@ -1717,7 +1631,7 @@ def outer(input, other):
     return legacy.outer(input, other)
 
 def addcmul(input, tensor1, tensor2, value=1.0):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.addcmul_op(input, tensor1, tensor2, value)
     return legacy.add(mul(mul(tensor1, tensor2), value), input)
 
@@ -1732,7 +1646,7 @@ def reciprocal(input):
     return legacy.reciprocal(input)
 
 def index_add_ext(input, dim, index, source, alpha):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.index_add_ext_op(input, dim, index, source, alpha)
     if alpha != 1:
         source = mul(alpha, source)
@@ -1759,13 +1673,16 @@ def pixel_shuffle(input, upscale_factor):
     return legacy.pixel_shuffle(input, upscale_factor)
 
 def view_as_complex(input):
-    if ON_ORANGE_PI:
-        input = clone(input)
     real_part, imag_part = chunk(input, 2, -1)
     return legacy.complex(squeeze(real_part, -1), squeeze(imag_part, -1))
 
-def rms_norm(input, weight, eps=1e-5):
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+def rms_norm(input, normalized_shape, weight, eps=1e-5):
+    if eps is None:
+        eps = mindtorch.finfo(input.dtype).eps
+    if weight is None:
+        weight = ones(normalized_shape, dtype=input.dtype)
+
+    if ENABLE_PYBOOST:
         return pyboost.rms_norm_impl(input, weight, eps)[0]
     input_dtype = input.dtype
     input = cast(input, mindspore.float32)
@@ -1937,7 +1854,7 @@ def linalg_qr(input_x, mode):
 
 def bernoulli(input, generator):
     seed, offset = generator._step(12)
-    if ENABLE_PYBOOST and not ON_ORANGE_PI:
+    if ENABLE_PYBOOST:
         return pyboost.bernoulli_ext_op(input, seed, offset)
     uniform = rand_like(input, generator, input.dtype)
     result = cast(less(uniform, input), input.dtype)
@@ -2034,7 +1951,6 @@ def repeat_kv(hidden_states, n_rep: int):
     return reshape(hidden_states, batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
-# @mindspore.jit(capture_mode='ast', backend='ms_backend', dynamic=1, fullgraph=True)
 def sdpa(query, key, value, attn_mask=None, dropout_p=0.0,
         is_causal=False, scale=None, enable_gqa=False):
     L, S = query.shape[-2], key.shape[-2]
@@ -2065,7 +1981,7 @@ def sdpa(query, key, value, attn_mask=None, dropout_p=0.0,
     attn_weight = mul(matmul(query, transpose_view(key, -2, -1)), scale_factor)
     attn_weight = add(attn_weight, attn_bias)
     attn_weight = softmax(attn_weight, -1)
-    # attn_weight = dropout(attn_weight, dropout_p, seed)
+    attn_weight = dropout(attn_weight, dropout_p)
     return matmul(attn_weight, value)
 
 
@@ -2271,3 +2187,74 @@ def setitem(self, index, value):
 
     inplace_index_put(self_viewed, remain_indexes, value, False) # accumulate=False
     return self
+
+def isin(elements, test_elements, invert=False):
+    elements_shape = elements.shape
+    elements = expand_dims(reshape(elements, (-1,)), -1)
+    if not isinstance(test_elements, numbers.Number):
+        test_elements = reshape(test_elements, (-1,))
+    included = eq(elements, test_elements)
+    # ops.reduce_sum only supports float
+    res = cast(sum(included, -1, False, None), mindtorch.bool_)
+    if invert:
+        res = logical_not(res)
+    return reshape(res, elements_shape)
+
+def custom_circular_pad(x, pad):
+
+    ndim = x.ndim
+    n_pad_dims = len(pad) // 2
+    assert n_pad_dims <= ndim, "填充参数超过了张量的维度"
+
+    # 按从最后维度向前处理填充
+    for dim in range(ndim-1, ndim-1-n_pad_dims, -1):
+        # 当前维度的左右填充量
+        idx = 2 * (ndim - 1 - dim)  # 在pad元组中的起始位置
+        left_pad = pad[idx]
+        right_pad = pad[idx + 1]
+        
+        if left_pad == 0 and right_pad == 0:
+            continue  # 跳过该维度
+            
+        size = x.shape[dim]  # 当前维度的原始长度
+        new_size = left_pad + size + right_pad
+        
+        # 生成循环索引: (index - left_pad) mod size
+        index = fmod_scalar(add(arange(0, new_size, 1, mindspore.int64), new_size - left_pad), size)
+        index = (index + x.shape[dim]) % x.shape[dim]
+        x = index_select(x, dim, index)
+
+    return x
+
+def pad(input, pad, mode='constant', value=None):
+    if isinstance(pad, tuple):
+        pad = tuple(p if isinstance(p, int) else p.item() for p in pad)
+
+    new_pad = ()
+    for idx, pad_v in enumerate(pad):
+        if not isinstance(pad_v, int):
+            pad_v = pad_v.item()
+        if pad_v < 0:
+            dim = input.ndim - 1 - idx // 2
+            input = narrow(input, dim, 0, input.shape[dim] + pad_v)
+            pad_v = 0
+        new_pad += (pad_v,)
+    if sum(new_pad) == 0:
+        return input
+    if mode == 'circular':
+        return custom_circular_pad(input, pad)
+    elif mode == 'reflect':
+        return pad_v3(input, new_pad, mode)
+    if value is None:
+        value = 0
+    if mode == "replicate":
+        mode = "edge"
+        return pad_v3(input, new_pad, mode)
+    if input.dtype.is_floating_point:
+        value = float(value)
+    elif input.dtype == mindtorch.bool:
+        value = bool(value)
+    elif input.dtype in [mindtorch.int32, mindtorch.int64]:
+        value = int(value)
+
+    return pad_v3(input, new_pad, mode, value)

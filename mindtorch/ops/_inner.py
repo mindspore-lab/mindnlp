@@ -1,4 +1,6 @@
 """inner ops"""
+import mindspore
+from mindspore import ops, mint
 import mindtorch
 from mindtorch.executor import execute
 
@@ -17,6 +19,7 @@ def npu_clear_float_status_v2(status):
 def all_finite(inputs):
     return execute('all_finite', inputs)
 
+
 def custom_masked_scatter_vec(input, mask, source):    
     indices = mindtorch.nonzero(mask)
 
@@ -28,8 +31,6 @@ def custom_masked_scatter_vec(input, mask, source):
     return out
 
 def masked_scatter(input, mask, source):
-    if input.device.type == 'cuda':
-        return custom_masked_scatter_vec(input, mask, source)
     return execute('masked_scatter', input, mask, source)
 
 __all__ = [

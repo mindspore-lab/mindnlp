@@ -13,18 +13,41 @@ DEFAULT_DTYPE = mindspore.float32
 MS27 = '.'.join(mindspore.__version__.split('.')[:2]) >= '2.7'
 FLASH_ATTN_MASK_VALID = int(os.environ.get('FLASH_ATTN_MASK_VALID', 1))
 
+
+def strtobool(val):
+    """Convert a string representation of truth to true (1) or false (0).
+
+    True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values are 'n', 'no', 'f', 'false', 'off', and '0'.
+    Raises ValueError if 'val' is anything else.
+    """
+    val = val.lower()
+    if val in {"y", "yes", "t", "true", "on", "1"}:
+        return 1
+    if val in {"n", "no", "f", "false", "off", "0"}:
+        return 0
+    raise ValueError(f"invalid truth value {val!r}")
+
+
+def parse_flag_from_env(key, default=False):
+    try:
+        value = os.environ[key]
+    except KeyError:
+        # KEY isn't set, default to `default`.
+        _value = default
+    else:
+        # KEY is set, convert it to True or False.
+        try:
+            _value = strtobool(value)
+        except ValueError:
+            # More values are supported, but let's keep the message simple.
+            raise ValueError(f"If set, {key} must be yes or no.")
+    return _value
+
 # OP backend select
-USE_PYBOOST = True
-CPU_USE_NUMPY_OP = bool(os.environ.get('CPU_USE_NUMPY', False))
+ENABLE_DISPATCH = parse_flag_from_env('ENABLE_DISPATCH', True)
+ENABLE_PYBOOST = parse_flag_from_env('ENABLE_PYBOOST', True)
+CPU_USE_NUMPY_OP = parse_flag_from_env('CPU_USE_NUMPY', False)
 
-def set_pyboost(mode: bool):
-    """set global pyboost"""
-    global USE_PYBOOST
-    USE_PYBOOST = mode
-
-def use_pyboost():
-    """set global pyboost"""
-    return USE_PYBOOST
 
 def set_cpu_use_numpy(mode: bool):
     """set global pyboost"""

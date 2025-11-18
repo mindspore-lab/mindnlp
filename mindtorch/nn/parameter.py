@@ -10,11 +10,8 @@ import mindtorch
 
 class Parameter(Tensor):
     grad = None
-    _grad_fn = None
-
     def __init__(self, input_data=None, requires_grad=True, **kwargs):
         super().__init__(input_data)
-        self._device = input_data._device
         self.meta = False
         self.param_info = ParamInfo()
         self.param_info.name = str(uuid.uuid4())
@@ -24,7 +21,6 @@ class Parameter(Tensor):
 
     def __deepcopy__(self, memodict):
         new_obj = Parameter(self)
-        new_obj._device = self.device
         return new_obj
 
     def __parameter__(self): # only for O2

@@ -6,7 +6,7 @@ import mindspore
 from mindspore._c_expression import _empty_instance
 from mindspore.ops.auto_generate.gen_ops_prim import Empty
 import mindtorch
-from .._op_prim.cpu import legacy
+from .._op_prim.cpu import legacy, pyboost
 
 empty_op = Empty().set_device('CPU')
 def empty(size, dtype):
@@ -124,22 +124,7 @@ def transpose_view(input, dim0, dim1):
     return legacy.transpose(input, tuple(ranks))
 
 def matmul(self, other):
-    if self.ndim > 2:
-        if self.ndim == other.ndim:
-            return legacy.batch_mat_mul(self, other, False, False)
-        else:
-            self_shape = self.shape
-            other_shape = other.shape
-            if other.ndim == 2:
-                self = reshape(self, (-1, self_shape[-1]))
-                out = legacy.mat_mul(self, other, False, False)
-                return reshape(out, (*self_shape[:-1], out.shape[-1]))
-            if self.ndim == 2:
-                other = reshape(other, (-1, other_shape[-1]))
-                out = legacy.mat_mul(self, other, False, False)
-                return reshape(out, (*other_shape[:-1], out.shape[-1]))
-    
-    return legacy.mat_mul(self, other, False, False)
+    return pyboost.matmul_ext_op(self, other)
 
 def div(input, other):
     return legacy.div(input, other)
@@ -592,7 +577,20 @@ def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, traini
 def tanh(input):
     return legacy.tanh(input)
 
-def dropout(input, p, seed, offset):
+def dropout(input, p, training=True):
+    """
+    Returns a tensor with dropout applied element-wise.
+
+    Args:
+        input (Tensor): The input tensor.
+        p (float): The dropout probability.
+        seed (int): The random seed.
+
+    Returns:
+        Tensor: The tensor with dropout applied.
+    """
+    if not training or p==0:
+        return input
     return legacy.dropout(input, 1-p, 0, 0)
 
 def split_tensor(input, split_size_or_sections, dim):
@@ -1259,3 +1257,65 @@ def lerp(input, end, weight):
 
 def smooth_l1_loss(input, target, beta=1.0, reduction='none'):
     return legacy.smooth_l1_loss(input, target, beta, reduction)
+
+def index_select(input, dim, index):
+    return legacy.gather(input, index, dim, 0)
+
+def custom_circular_pad(x, pad):
+
+    ndim = x.ndim
+    n_pad_dims = len(pad) // 2
+    assert n_pad_dims <= ndim, "填充参数超过了张量的维度"
+
+    # 按从最后维度向前处理填充
+    for dim in range(ndim-1, ndim-1-n_pad_dims, -1):
+        # 当前维度的左右填充量
+        idx = 2 * (ndim - 1 - dim)  # 在pad元组中的起始位置
+        left_pad = pad[idx]
+        right_pad = pad[idx + 1]
+        
+        if left_pad == 0 and right_pad == 0:
+            continue  # 跳过该维度
+            
+        size = x.shape[dim]  # 当前维度的原始长度
+        new_size = left_pad + size + right_pad
+        
+        # 生成循环索引: (index - left_pad) mod size
+        index = fmod_scalar(add(arange(0, new_size, 1, mindspore.int64), new_size - left_pad), size)
+        index = (index + x.shape[dim]) % x.shape[dim]
+        x = index_select(x, dim, index)
+
+    return x
+
+def pad(input, pad, mode='constant', value=None):
+    if isinstance(pad, tuple):
+        pad = tuple(p if isinstance(p, int) else p.item() for p in pad)
+
+    new_pad = ()
+    for idx, pad_v in enumerate(pad):
+        if not isinstance(pad_v, int):
+            pad_v = pad_v.item()
+        if pad_v < 0:
+            dim = input.ndim - 1 - idx // 2
+            input = narrow(input, dim, 0, input.shape[dim] + pad_v)
+            pad_v = 0
+        new_pad += (pad_v,)
+    if sum(new_pad) == 0:
+        return input
+    if mode == 'circular':
+        return custom_circular_pad(input, pad)
+    elif mode == 'reflect':
+        return pad_v3(input, new_pad, mode)
+    if value is None:
+        value = 0
+    if mode == "replicate":
+        mode = "edge"
+        return pad_v3(input, new_pad, mode)
+    if input.dtype.is_floating_point:
+        value = float(value)
+    elif input.dtype == mindtorch.bool:
+        value = bool(value)
+    elif input.dtype in [mindtorch.int32, mindtorch.int64]:
+        value = int(value)
+
+    return pad_v3(input, new_pad, mode, value)

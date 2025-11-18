@@ -401,8 +401,8 @@ def _reconstruct_nd_results(results, original_shape, dim, return_inverse, return
 
 
 def unique_consecutive(input, return_inverse=False, return_counts=False, dim=None):
-    if input.device.type == 'cuda':
-        return unique_consecutive_optimized(input, return_inverse, return_counts, dim)
+    # if input.device.type == 'cuda':
+    #     return unique_consecutive_optimized(input, return_inverse, return_counts, dim)
     output, idx, counts = execute('unique_consecutive', input, return_inverse, return_counts, dim)
     if return_inverse and return_counts:
         return output, idx, counts

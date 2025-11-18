@@ -9,8 +9,12 @@ import mindtorch
 
 __all__ = []
 
+def empty(size, dtype):
+    out = Tensor_(init='none', shape=size, dtype=dtype)
+    return mindtorch.Tensor(out)
+
 def arange(start, end, step, dtype):
-    out = Tensor_(shape=(math.ceil((end - start) / step), ), dtype=dtype)
+    out = Tensor_(init='none', shape=(math.ceil((end - start) / step), ), dtype=dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('arange')
@@ -25,19 +29,19 @@ def broadcast_to(input, shape):
             s = input_shape[idx]
         out_shape += (s,)
 
-    out = Tensor_(shape=out_shape, dtype=input.dtype)
+    out = Tensor_(init='none', shape=out_shape, dtype=input.dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('broadcast_to')
 
 def zeros(size, dtype):
-    out = Tensor_(shape=size, dtype=dtype)
+    out = Tensor_(init='none', shape=size, dtype=dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('zeros')
 
 def ones(size, dtype):
-    out = Tensor_(shape=size, dtype=dtype)
+    out = Tensor_(init='none', shape=size, dtype=dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('ones')
@@ -58,8 +62,8 @@ def inplace_normal(input, *args):
 __all__.append('inplace_normal')
 
 def getitem(input, slice):
-    out = input.asnumpy()[slice]
-    out = Tensor_(shape=out.shape, dtype=input.dtype)
+    out = input.numpy()[slice]
+    out = Tensor_(init='none', shape=out.shape, dtype=input.dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('getitem')
@@ -72,8 +76,8 @@ def sub(input, other, alpha):
 __all__.append('sub')
 
 def pad_v3(input, pad, mode, value):
-    out = np.pad(input.asnumpy(), pad, mode, constant_values=value)
-    out = Tensor_(shape=out.shape, dtype=input.dtype)
+    out = np.pad(input.numpy(), pad, mode, constant_values=value)
+    out = Tensor_(init='none', shape=out.shape, dtype=input.dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('pad_v3')
@@ -84,20 +88,20 @@ def abs(input):
 __all__.append('abs')
 
 def cast(input, dtype):
-    out = Tensor_(shape=input.shape, dtype=dtype)
+    out = Tensor_(init='none', shape=input.shape, dtype=dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('cast')
 
 def index_select(input, dim, index):
-    out = np.take(input.asnumpy(), index.asnumpy(), dim)
-    out = Tensor_(shape=out.shape, dtype=input.dtype)
+    out = np.take(input.numpy(), index.numpy(), dim)
+    out = Tensor_(init='none', shape=out.shape, dtype=input.dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('index_select')
 
 def identity(input):
-    out = Tensor_(shape=input.shape, dtype=input.dtype)
+    out = Tensor_(init='none', shape=input.shape, dtype=input.dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('identity')
@@ -119,21 +123,19 @@ def div(input, other):
     else:
         shape = other.shape
         dtype = other.dtype
-    out = Tensor_(shape=shape, dtype=dtype)
+    out = Tensor_(init='none', shape=shape, dtype=dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('div')
 
-def pow_scalar_tensor(input, other):
-    out = Tensor_(shape=other.shape, dtype=other.dtype)
+def pow(input, other):
+    out = Tensor_(init='none', shape=other.shape, dtype=other.dtype)
     return mindtorch.Tensor(out)
-
-__all__.append('pow_scalar_tensor')
 
 def concat(tensors, dim):
     shape = list(tensors[0].shape)
     shape[dim] = sum([t.shape[dim] for t in tensors])
-    out = Tensor_(shape=tuple(shape), dtype=tensors[0].dtype)
+    out = Tensor_(init='none', shape=tuple(shape), dtype=tensors[0].dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('concat')
@@ -144,7 +146,7 @@ def tril(input, k):
 __all__.append('tril')
 
 def reshape(input, shape):
-    out = Tensor_(shape=tuple(shape), dtype=input.dtype)
+    out = Tensor_(init='none', shape=tuple(shape), dtype=input.dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('reshape')
@@ -162,7 +164,7 @@ def linalg_vector_norm(input, p, dim, keepdim, dtype):
             new_shape.append(s)
     if dtype is None:
         dtype = input.dtype
-    out = Tensor_(shape=tuple(new_shape), dtype=dtype)
+    out = Tensor_(init='none', shape=tuple(new_shape), dtype=dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('linalg_vector_norm')
@@ -173,7 +175,7 @@ __all__.append('erfinv')
 
 
 def stop_gradient(input):
-    out = Tensor_(shape=input.shape, dtype=input.dtype)
+    out = Tensor_(init='none', shape=input.shape, dtype=input.dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('stop_gradient')
@@ -183,18 +185,18 @@ def log(input):
 __all__.append('log')
 
 def mul(input, other):
-    out = Tensor_(shape=input.shape, dtype=input.dtype)
+    out = Tensor_(init='none', shape=input.shape, dtype=input.dtype)
     return mindtorch.Tensor(out)
 __all__.append('mul')
 
 def randn(size, generator, dtype):
-    out = Tensor_(shape=size, dtype=dtype)
+    out = Tensor_(init='none', shape=size, dtype=dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('randn')
 
 def zeros_like(input, *args, **kwargs):
-    out = Tensor_(shape=input.shape, dtype=input.dtype)
+    out = Tensor_(init='none', shape=input.shape, dtype=input.dtype)
     return mindtorch.Tensor(out)
 __all__.append('zeros_like')
 
@@ -210,7 +212,7 @@ def expand_dims(input, dim):
     input_shape = list(input.shape)
     input_shape.insert(dim, 1)
 
-    out = Tensor_(shape=tuple(input_shape), dtype=input.dtype)
+    out = Tensor_(init='none', shape=tuple(input_shape), dtype=input.dtype)
     return mindtorch.Tensor(out)
 
 
@@ -236,7 +238,7 @@ __all__.append('triu')
 def fill_scalar(size, fill_value, dtype):
     if dtype is None:
         dtype = mindtorch.get_default_dtype()
-    out = Tensor_(shape=size, dtype=dtype)
+    out = Tensor_(init='none', shape=size, dtype=dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('fill_scalar')
@@ -247,7 +249,7 @@ def sqrt(input):
 __all__.append('sqrt')
 
 def normal_float_float(mean, std, size, dtype, geneartor):
-    out = Tensor_(shape=size, dtype=dtype)
+    out = Tensor_(init='none', shape=size, dtype=dtype)
     return mindtorch.Tensor(out)
 
 
@@ -256,7 +258,7 @@ __all__.append('normal_float_float')
 def stack(tensors, dim):
     x_shape = list(tensors[0].shape)
     x_shape.insert(dim, len(tensors))
-    out = Tensor_(shape=tuple(x_shape), dtype=tensors[0].dtype)
+    out = Tensor_(init='none', shape=tuple(x_shape), dtype=tensors[0].dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('stack')
@@ -268,8 +270,8 @@ def argmax_with_value(input, dim, keepdim):
     else:
         out_shape.pop(dim)
 
-    indices = Tensor_(shape=out_shape, dtype=mindtorch.int64)
-    values = Tensor_(shape=out_shape, dtype=input.dtype)
+    indices = Tensor_(init='none', shape=out_shape, dtype=mindtorch.int64)
+    values = Tensor_(init='none', shape=out_shape, dtype=input.dtype)
 
     return mindtorch.Tensor(indices), mindtorch.Tensor(values)
 
@@ -278,7 +280,7 @@ __all__.append('argmax_with_value')
 def tile(input, dims):
     input_shape = input.shape
     out_shape = [input_shape[i] * dims[i] for i in range(input.ndim)]
-    out = Tensor_(shape=tuple(out_shape), dtype=input.dtype)
+    out = Tensor_(init='none', shape=tuple(out_shape), dtype=input.dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('tile')
@@ -291,7 +293,7 @@ def flatten(input, start_dim, end_dim):
         end_dim = end_dim + input.ndim
 
     flatten_shape = input_shape[:start_dim] + input_shape[start_dim:end_dim+1] + input_shape[end_dim+1:]
-    out = Tensor_(shape=tuple(flatten_shape), dtype=input.dtype)
+    out = Tensor_(init='none', shape=tuple(flatten_shape), dtype=input.dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('flatten')
@@ -311,7 +313,7 @@ def squeeze(input, dim):
         if idx not in dim and s != 1:
             new_shape += (s,)
 
-    out = Tensor_(shape=tuple(new_shape), dtype=input.dtype)
+    out = Tensor_(init='none', shape=tuple(new_shape), dtype=input.dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('squeeze')
@@ -322,7 +324,7 @@ def exp(input):
 __all__.append('exp')
 
 def rand(size, generator, dtype):
-    out = Tensor_(shape=size, dtype=dtype)
+    out = Tensor_(init='none', shape=size, dtype=dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('rand')

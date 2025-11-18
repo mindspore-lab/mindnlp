@@ -989,7 +989,6 @@ class TypedStorage:
         return self._getitem(idx)
 
     def _getitem(self, idx):
-        print(idx)
         if self._untyped_storage.device.type == "meta":
             raise NotImplementedError("Not available for 'meta' device type")
 

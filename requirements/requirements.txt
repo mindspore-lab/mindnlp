@@ -22,7 +22,6 @@ pretty_midi
 scipy
 pyctcdecode
 pytesseract
-gensim
 evaluate
 g2p-en
 nltk==3.8.1
@@ -38,3 +37,4 @@ transformers
 peft
 diffusers
 timeout_decorator
+torch

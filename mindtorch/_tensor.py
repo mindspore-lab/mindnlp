@@ -8,10 +8,6 @@ from mindspore.common.tensor import _TensorMeta
 from mindspore._c_expression.typing import Type
 from mindspore._c_expression import ParamInfo # pylint: disable=no-name-in-module
 from mindspore._c_expression import typing
-try:
-    from mindspore.common._stub_tensor import StubTensor, _stub_method
-except:
-    class StubTensor: pass
 
 try:
     from mindspore._c_expression import TensorPy as Tensor_
@@ -24,11 +20,21 @@ from ._bind import get_device_in_context, device_, get_default_dtype
 from ._utils import _rebuild_tensor_v2
 from ._C.size import Size
 from .configs import DEVICE_TARGET, cpu_use_numpy, ON_ORANGE_PI
+from .executor import execute
 
 device_map = {
     'cpu': 'CPU',
     'npu': 'Ascend',
     'cuda': 'GPU'
+}
+
+device_cache = {
+    'CPU': device_('cpu'),
+    'Ascend': device_('npu'),
+    'Ascend:0': device_('npu'),
+    'GPU': device_('cuda'),
+    'GPU:0': device_('cuda'),
+    'Meta': device_('meta')
 }
 
 if DEVICE_TARGET == 'Ascend':
@@ -110,19 +116,8 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False):
         out = Tensor(data)
         return out
 
-    # if isinstance(data, list):
-    #     new_data = []
-    #     for d in data:
-    #         if isinstance(d, Tensor):
-    #             d = d.item()
-    #         new_data.append(d)
-    #     data = new_data
-
     if device is None:
         device = get_device_in_context()
-
-    if isinstance(device, (str, int)):
-        device = device_(device)
 
     if isinstance(data, float) and data == float('-inf'):
         data = mindtorch.finfo(get_default_dtype()).min
@@ -134,10 +129,7 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False):
     else:
         tensor = Tensor(data)
 
-    if DEVICE_TARGET == 'Ascend' and device.type == 'cuda':
-        device.type = 'npu'
-    if device.type not in ['meta', 'cpu']:
-        tensor = tensor.to(device)
+    tensor = tensor.to(device)
     if requires_grad:
         tensor.requires_grad_(requires_grad)
     return tensor
@@ -149,6 +141,16 @@ def is_tensor(x):
     return isinstance(x, Tensor)
 
 class TensorPlaceHolder:
+
+    @property
+    def requires_grad(self):
+        return self._requires_grad
+
+    @requires_grad.setter
+    def requires_grad(self, value=True):
+        if not isinstance(value, bool):
+            raise TypeError("The argument `requires_grad` must be bool type")
+        self._requires_grad = value
 
     def cpu(self):
         return super(Tensor, self).to('CPU')
@@ -166,10 +168,7 @@ class TensorPlaceHolder:
         return ops.from_numpy(array)
 
     def __reduce_ex__(self, protocol):
-        if isinstance(self, StubTensor):
-            data = Tensor_(self.stub_sync())
-        else:
-            data = Tensor_(self)
+        data = Tensor_(self)
         storage_offset = 0
         size = data._shape
         stride = data.stride()
@@ -187,6 +186,8 @@ class TensorPlaceHolder:
         return self.shape[0]
 
     def __repr__(self) -> str:
+        if self.is_meta:
+            return f'Tensor(shape={self.shape}, dtype={self.dtype}, value= ..., device={self.device})'
         return Tensor_.__repr__(self)[:-1] + f', device={self.device})'
 
     def __format__(self, format_spec):
@@ -213,12 +214,7 @@ class TensorPlaceHolder:
                 new_slices += (s,)
             slices = new_slices
 
-        if self.device.type == 'meta':
-            out = ops.getitem_np(self, slices)
-        elif self.device.type == 'cpu':
-            return ops.getitem(self, slices)
-        else:
-            out = ops.tensor_getitem(self, slices)
+        out = execute('getitem', self, slices)
 
         return out
 
@@ -236,21 +232,8 @@ class TensorPlaceHolder:
                     s = list(s)
                 new_slices += (s,)
             slices = new_slices
-        if not isinstance(value, Tensor):
-            value = tensor(value, dtype=self.dtype, device=self.device)
-        else:
-            value = value.to(self.dtype)
 
-        if 1 in value.shape and self[slices].ndim != value.ndim:
-            value = value.squeeze()
-
-        if self.device.type == 'meta':
-            return self
-
-        if self.device.type == 'npu' and not ON_ORANGE_PI:
-            out = ops.tensor_setitem(self, slices, value)
-        else:
-            out = ops.setitem(self, slices, value)
+        out = execute('setitem', self, slices, value)
         return self
 
     def __add__(self, other):
@@ -264,7 +247,7 @@ class TensorPlaceHolder:
         return ops.add(self, other)
 
     def __radd__(self, other):
-        return ops.add(other, self)
+        return execute('add', other, self, device_position=1)
 
     def __div__(self, other):
         # if 0 in self.shape:
@@ -274,10 +257,10 @@ class TensorPlaceHolder:
         return ops.div(self, other)
 
     def __rshift__(self, other):
-        return ops.bitwise_right_shift(self, other)
+        return execute('bitwise_right_shift', other, self, device_position=1)
 
     def __rtruediv__ (self, other):
-        return ops.div(other, self)
+        return execute('div', other, self, device_position=1)
 
     def __ne__(self, other):
         if isinstance(other, list):
@@ -297,7 +280,7 @@ class TensorPlaceHolder:
     def __rmul__(self, other):
         if isinstance(other, (str, list)):
             return self.item() * other
-        return self.__mul__(other)
+        return execute('mul', other, self, device_position=1)
 
     def __abs__(self):
         return ops.abs(self)
@@ -312,7 +295,7 @@ class TensorPlaceHolder:
         return ops.pow(self, other)
 
     def __rpow__(self, other):
-        return ops.pow(other, self)
+        return execute('pow', other, self, device_position=1)
 
     def __sub__(self, other):
         # if 0 in self.shape:
@@ -325,7 +308,7 @@ class TensorPlaceHolder:
         return ops.sub(self, other)
 
     def __rsub__(self, other):
-        return ops.sub(other, self)
+        return execute('sub', other, self, device_position=1)
 
     def __eq__(self, other):
         if other is None:
@@ -889,36 +872,25 @@ class TensorPlaceHolder:
     # Tensor.cdouble
 
 
-    @property
-    def data(self):
-        out = Tensor(self)
-        out._base = self
-        return out
+    # @property
+    # def data(self):
+    #     out = Tensor(self)
+    #     out._base = self
+    #     return out
 
-    @data.setter
-    def data(self, new_value):
-        if isinstance(self, StubTensor) and isinstance(new_value, StubTensor):
-            self.stub = new_value.stub
-        else:
-            # if self.device.type == 'cpu' and new_value.device.type == 'cpu' \
-            #     and self.shape == new_value.shape and self.dtype == new_value.dtype:
-            #     src_ct = ctypes.c_void_p(new_value.data_ptr())
-            #     dst_ct = ctypes.c_void_p(self.data_ptr())
-            #     ctypes.memmove(dst_ct, src_ct, self.nbytes)
-            # else:
-            if getattr(self, '_base', None) is not None:
-                self._base.assign_value(new_value)
-            self.assign_value(new_value)
+    # @data.setter
+    # def data(self, new_value):
+    #     # if self.device.type == 'cpu' and new_value.device.type == 'cpu' \
+    #     #     and self.shape == new_value.shape and self.dtype == new_value.dtype:
+    #     #     src_ct = ctypes.c_void_p(new_value.data_ptr())
+    #     #     dst_ct = ctypes.c_void_p(self.data_ptr())
+    #     #     ctypes.memmove(dst_ct, src_ct, self.nbytes)
+    #     # else:
+    #     if getattr(self, '_base', None) is not None:
+    #         self._base.assign_value(new_value)
+    #     self.assign_value(new_value)
 
     # Tensor.data_ptr
-    def data_ptr(self):
-        if self.device.type in ['cpu']:
-            self.dyn_shape()
-        # ptr = self._data_ptr()
-        return self._data_ptr()
-
-    def dyn_shape(self):
-        return ops.dyn_shape(self)
 
     # Tensor.deg2rad
     def deg2rad(self):
@@ -1329,7 +1301,7 @@ class TensorPlaceHolder:
 
     # Tensor.is_contiguous
     def is_contiguous(self, memory_format=None):
-        return super(Tensor, self).is_contiguous(self)
+        return super(Tensor, self).is_contiguous()
 
     # Tensor.is_complex
     def is_complex(self):
@@ -1722,7 +1694,7 @@ class TensorPlaceHolder:
 
     # Tensor.numel
     def numel(self):
-        return math.prod(self.shape)
+        return super(Tensor, self)._size
 
     # Tensor.nelement
     nelement = numel
@@ -1747,8 +1719,15 @@ class TensorPlaceHolder:
 
     # Tensor.numpy
     def numpy(self):
-        assert self.device.type == 'cpu'
-        return self.asnumpy()
+        assert self._device in ['CPU', 'Meta']
+        return super(Tensor, self).asnumpy()
+
+    def __array__(self, dtype=None):
+        """support create numpy array from tensor."""
+        if dtype is None:
+            return self.numpy()
+        return self.numpy().astype(dtype, copy=False)
+
 
     def mindspore(self):
         return mindspore.Tensor(self._data)
@@ -2188,32 +2167,17 @@ class TensorPlaceHolder:
 
     # Tensor.to
     def _move_to(self, device, non_blocking=False):
-        if device.type == 'meta':
-            out = Tensor(Tensor_(shape=self.shape, dtype=self.dtype))
-            return out
-        
-        if device.type == 'cpu':
-            out = Tensor(self.asnumpy())
+        if device in ['meta', 'Meta']:
+            out = Tensor(shape=self.shape, dtype=self.dtype, init='none')
             return out
 
-        if self.device == device:
-            return self
+        if device in device_map:
+            device_str = device_map[device]
         else:
-            if DEVICE_TARGET == 'Ascend' and device.type == 'cuda':
-                device.type = 'npu'
-            device_str = device_map[device.type]
-            # if device_str == 'Ascend':
-            #     out = ops.empty_like(self, device=device)
-            #     ACL_MEMCPY_HOST_TO_DEVICE = 1
-            #     ret = acl.rt.memcpy(out.data_ptr(), self.nbytes, self.data_ptr(), self.nbytes, ACL_MEMCPY_HOST_TO_DEVICE)
-            # else:
-            # self.data_sync(True)
-            if self.device.type == 'cpu':
-                self.data_ptr()
-            data = super(Tensor, self).to(device_str, non_blocking=non_blocking)
-
-            out = Tensor(data)
-            return out
+            device_str = device
+        if device == self._device:
+            return self
+        return super(Tensor, self).to(device_str, non_blocking=non_blocking)
 
     def to(self, *args, **kwargs):
         non_blocking = kwargs.get('non_blocking', False)
@@ -2228,20 +2192,19 @@ class TensorPlaceHolder:
 
         for arg in args:
             if isinstance(arg, device_):
-                out = out._move_to(arg, non_blocking)
+                out = out._move_to(arg.type, non_blocking)
             elif isinstance(arg, int):
                 device = device_(arg)
-                out = out._move_to(device, non_blocking)
+                out = out._move_to(device.type, non_blocking)
             elif isinstance(arg, str):
-                device = device_(arg)
-                out = out._move_to(device, non_blocking)
+                out = out._move_to(arg, non_blocking)
             elif isinstance(arg, mindspore.common.dtype.Type):
                 if out.dtype == arg:
                     return out
                 else:
                     out = ops.cast(out, arg)
             elif isinstance(arg, Tensor):
-                out = out._move_to(arg.device, non_blocking)
+                out = out._move_to(arg._device, non_blocking)
                 if out.dtype == arg:
                     return out
                 else:
@@ -2502,25 +2465,24 @@ class TensorPlaceHolder:
 
     @property
     def shape(self):
-        if isinstance(self, StubTensor):
-            if self.stub is not None:
-                stub_shape = self.stub.get_shape()
-            else:
-                stub_shape = self.tensor.shape
-            return Size(stub_shape)
         return Size(self._shape)
 
     @property
     def is_meta(self):
-        return False
+        return self.data_ptr() == 0
 
     @property
     def _device(self):
-        return super(Tensor, self).device
+        device = super(Tensor, self).device
+        if device == 'CPU' and self.is_meta:
+            return 'Meta'
+        # if ':' in device:
+        #     return device.split(':')[0]
+        return device
 
     @property
     def device(self):
-        return device_(self._device)
+        return device_cache[self._device]
 
     def _convert_numpy_slices(self, key):
         """递归转换 key 中的 NumPy 整数为内置 int"""
@@ -2566,8 +2528,7 @@ class TensorPlaceHolder:
         return ops.floor_divide(self, other)
 
     def __rfloordiv__(self, other):
-        return ops.floor_divide(other, self)
-
+        return execute('floor_div', other, self, device_position=1)
 
     def __ifloordiv__(self, other):
         return ops.floor_divide(self, other)
@@ -2603,8 +2564,6 @@ def enable_mindspore_patch():
 
     for fn in fn_keys:
         setattr(Tensor, fn, getattr(TensorPlaceHolder, fn))
-        if StubTensor is not None:
-            setattr(StubTensor, fn, getattr(TensorPlaceHolder, fn))
 
 
 def _rebuild_from_type_v2(func, new_type, args, state):
