@@ -185,7 +185,14 @@ def log(input):
 __all__.append('log')
 
 def mul(input, other):
-    out = Tensor_(init='none', shape=input.shape, dtype=input.dtype)
+    if isinstance(input, mindtorch.Tensor):
+        shape = input.shape
+        dtype = input.dtype
+    else:
+        shape = other.shape
+        dtype = other.dtype
+
+    out = Tensor_(init='none', shape=shape, dtype=dtype)
     return mindtorch.Tensor(out)
 __all__.append('mul')
 
@@ -394,3 +401,17 @@ def select(condition, input, other):
 
 def logical_not(input):
     return input
+
+def pad(input, pad, mode='constant', value=None):
+    size = input.shape
+    if len(pad) == 2:
+        new_size = size[:-1] + (size[-1] + sum(pad),)
+    elif len(pad) == 4:
+        new_size = size[:-2] + (size[-2] + pad[2] + pad[3], size[-1] + pad[0] + pad[1])
+    elif len(pad) == 6:
+        new_size = size[:-3] + (size[-3] + pad[4] + pad[5], size[-2] + pad[2] + pad[3], size[-1] + pad[0] + pad[1])
+    else:
+        raise ValueError('pad size must be 2, 4 or 6')
+ 
+    out = Tensor_(init='none', shape=new_size, dtype=input.dtype)
+    return mindtorch.Tensor(out)

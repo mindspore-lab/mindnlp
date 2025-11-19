@@ -433,7 +433,7 @@ def eq(input, other):
         return pyboost.equal_op(input, other)
     return legacy.equal(input, other)
 
-
+py_sum = sum
 def sum(input, dim, keepdim, dtype):
     """
     Returns the sum of elements over a specified dimension.
@@ -765,6 +765,11 @@ def arange(start, end, step, dtype):
         out = cast(out, dtype)
     return out
 
+def full_like(input, fill_value, dtype=None):
+    if fill_value == -math.inf:
+        fill_value = mindtorch.finfo(input.dtype).min
+    return pyboost.full_like_op(input, fill_value, dtype)
+
 def fill_scalar(input, value, dtype):
     if ENABLE_PYBOOST:
         return pyboost.fill_scalar_op(input, value, dtype)
@@ -1090,7 +1095,7 @@ def sin(input):
         return pyboost.sin_op(input)
     return legacy.sin(input)
 
-def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, training=False, momentum=0.1, epsilon=1e-5):
+def batch_norm(input, weight, bias, running_mean=None, running_var=None, training=False, momentum=0.1, epsilon=1e-5):
     if running_mean is None:
         running_mean = ones(input.shape[1], dtype=input.dtype)
     if running_var is None:
@@ -1100,8 +1105,8 @@ def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, traini
     if bias is None:
         bias = zeros(input.shape[1], dtype=input.dtype)
     if ENABLE_PYBOOST:
-        return pyboost.batch_norm_ext_op(input, weight, bias, running_mean, runnning_var, training, momentum, epsilon)
-    return legacy.batch_norm(input, weight, bias, running_mean, runnning_var, training, epsilon, momentum, 'NCHW')
+        return pyboost.batch_norm_ext_op(input, weight, bias, running_mean, running_var, training, momentum, epsilon)
+    return legacy.batch_norm(input, weight, bias, running_mean, running_var, training, epsilon, momentum, 'NCHW')
 
 def silu(input):
     if ENABLE_PYBOOST:
@@ -2239,7 +2244,7 @@ def pad(input, pad, mode='constant', value=None):
             input = narrow(input, dim, 0, input.shape[dim] + pad_v)
             pad_v = 0
         new_pad += (pad_v,)
-    if sum(new_pad) == 0:
+    if py_sum(new_pad) == 0:
         return input
     if mode == 'circular':
         return custom_circular_pad(input, pad)
@@ -2250,11 +2255,11 @@ def pad(input, pad, mode='constant', value=None):
     if mode == "replicate":
         mode = "edge"
         return pad_v3(input, new_pad, mode)
-    if input.dtype.is_floating_point:
-        value = float(value)
-    elif input.dtype == mindtorch.bool:
-        value = bool(value)
-    elif input.dtype in [mindtorch.int32, mindtorch.int64]:
-        value = int(value)
+    # if input.dtype.is_floating_point:
+    #     value = float(value)
+    # elif input.dtype == mindtorch.bool:
+    #     value = bool(value)
+    # elif input.dtype in [mindtorch.int32, mindtorch.int64]:
+    #     value = int(value)
 
     return pad_v3(input, new_pad, mode, value)
