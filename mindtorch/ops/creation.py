@@ -200,9 +200,7 @@ def full(size, fill_value, *, out=None, dtype=None, layout=None, device=None, re
 
 # full_like
 def full_like(input, fill_value, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=None):
-    if dtype is None:
-        dtype = input.dtype
-    return full(input.shape, fill_value, dtype=dtype, layout=layout, device=input.device)
+    return execute('full_like', input, fill_value, dtype=dtype)
 
 # quantize_per_tensor
 

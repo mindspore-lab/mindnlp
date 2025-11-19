@@ -2273,3 +2273,6 @@ def pad(input, pad, mode='constant', value=None):
         else:
             raise ValueError(f"Pad filling mode must be 'constant' 'circular' 'reflect' or 'replicate'.")
     return out
+
+def full_like(input, fill_value, dtype=None):
+    return pyboost.full_like_op(input, fill_value, dtype)
