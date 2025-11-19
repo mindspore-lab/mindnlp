@@ -91,11 +91,6 @@ class device():
     def __hash__(self):
         return hash(self.type) ^ hash(self.index)
 
-    def __gt__(self, other):
-        if self.type == 'cpu':
-            return False
-        return True
-
     def __enter__(self):
         # self.prev_idx = torch.cuda._exchange_device(self.idx)
         mindtorch._bind.set_device_in_context(self)
@@ -201,8 +196,6 @@ class Generator:
             Current seed and offset.
         """
         outs = self._generator(STEP, (self._seed, self._offset, step,))[:2]
-        for o in outs:
-            o._device = self.device
         return outs
 
 default_generator = Generator()

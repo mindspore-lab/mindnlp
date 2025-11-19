@@ -200,15 +200,15 @@ def div(input, other, *, rounding_mode=None):
             rounding_mode
         )
     else:
-        if not isinstance(other, numbers.Number) and not isinstance(input, numbers.Number):
-            if other.device != input.device:
-                device = max([input.device, other.device])
-                other = other.to(device)
-                input = input.to(device)
-            if other.dtype != input.dtype:
-                dtype = min([input.dtype, other.dtype])
-                other = other.to(dtype)
-                input = input.to(dtype)
+        # if not isinstance(other, numbers.Number) and not isinstance(input, numbers.Number):
+        #     if other.device != input.device:
+        #         device = max([input.device, other.device])
+        #         other = other.to(device)
+        #         input = input.to(device)
+        #     if other.dtype != input.dtype:
+        #         dtype = min([input.dtype, other.dtype])
+        #         other = other.to(dtype)
+        #         input = input.to(dtype)
         output = execute("div", input, other)
     return output
 
@@ -386,17 +386,6 @@ def logical_xor(input, other):
 
 # mul
 def mul(input, other):
-    if not isinstance(other, numbers.Number) and other.device != input.device:
-        device = max([input.device, other.device])
-        other = other.to(device)
-        input = input.to(device)
-    if not isinstance(other, numbers.Number) and other.dtype != input.dtype:
-        if other.dtype == mindtorch.bool:
-            other = other.to(input.dtype)
-        else:
-            dtype = min([input.dtype, other.dtype])
-            other = other.to(dtype)
-            input = input.to(dtype)
     #  and isinstance(input, torch.Tensor):
     #     return execute("muls", input, other)
     return execute("mul", input, other)
@@ -440,9 +429,9 @@ def positive(input):
 
 # pow
 def pow(input, exponent):
-    if isinstance(input, mindtorch.Tensor) and isinstance(exponent, numbers.Number):
+    if isinstance(exponent, numbers.Number):
         return execute("pow_tensor_scalar", input, exponent)
-    if isinstance(input, numbers.Number) and isinstance(exponent, mindtorch.Tensor):
+    if isinstance(input, numbers.Number):
         return execute("pow_scalar_tensor", input, exponent)
     return execute("pow", input, exponent)
 
@@ -469,9 +458,9 @@ def reciprocal(input):
 
 # remainder
 def remainder(input, other):
-    if isinstance(input, mindtorch.Tensor) and isinstance(other, numbers.Number):
+    if isinstance(other, numbers.Number):
         return execute("remainder_tensor_scalar", input, other)
-    if isinstance(input, numbers.Number) and isinstance(other, mindtorch.Tensor):
+    if isinstance(input, numbers.Number):
         return execute("remainder_scalar_tensor", input, other)
     return execute("remainder_tensor_tensor", input, other)
 
@@ -533,14 +522,6 @@ def square(input):
 
 # sub
 def sub(input, other, *, alpha=1, out=None):
-    if not isinstance(input, numbers.Number) and not isinstance(other, numbers.Number):
-        device = max(input.device, other.device)
-        input = input.to(device)
-        other = other.to(device)
-    elif isinstance(input, numbers.Number):
-        device = other.device
-    else:
-        device = input.device
     output = execute("sub", input, other, alpha)
     if out is None:
         return output
@@ -574,13 +555,12 @@ def trunc(input):
 
 # xlogy
 def xlogy(input, other):
-    if isinstance(input, mindtorch.Tensor) and isinstance(other, mindtorch.Tensor):
-        return execute("xlogy", input, other)
-    if isinstance(input, mindtorch.Tensor) and isinstance(other, (float, int, bool)):
+    if isinstance(other, (float, int, bool)):
         return execute("xlogy_scalar_other", input, other)
-    if isinstance(input, (float, int, bool)) and isinstance(other, mindtorch.Tensor):
+    if isinstance(input, (float, int, bool)):
         return execute("xlogy_scalar_self", input, other)
-    raise TypeError(f"For 'xlogy', at least one of input and other should be Tensor.")
+    return execute("xlogy", input, other)
+    # raise TypeError(f"For 'xlogy', at least one of input and other should be Tensor.")
 
 # relu
 def relu(input):

@@ -30,7 +30,7 @@ matmulInteger = BatchMatMulV2()
 
 
 def quantize_mat(mat: Tensor) -> Tuple[Tensor, Tensor]:
-    max_val = (ops.max(ops.abs(mat), dim=-1)[0] / 127.0).to(dtype=mat.dtype)
+    max_val = (ops.max(ops.abs(mat), -1)[0] / 127.0).to(dtype=mat.dtype)
     mat = (mat / max_val[..., None]).to(dtype=mindspore.int8)
     return mat, max_val
 
@@ -53,7 +53,7 @@ def decomposition(mat: Tensor, unq_idx: Tensor, t: Tensor):
 
 
 def get_unq_idx_topk(mat: Tensor, k: int = 64):
-    idx = ops.topk(ops.max(mat.view(-1, mat.shape[-1]).abs(), dim=-2)[0], k, dim=-1)[1]
+    idx = ops.topk(ops.max(mat.view(-1, mat.shape[-1]).abs(), -2)[0], k, dim=-1)[1]
     t = ops.ones((mat.shape[-1]), dtype=mat.dtype)
     t = t.copy()
     if ON_ORANGE_PI:
@@ -64,7 +64,7 @@ def get_unq_idx_topk(mat: Tensor, k: int = 64):
 
 
 def get_unq_idx_thres(mat: Tensor, threshold: float = 6.0):
-    k = ops.max(mat.view(-1, mat.shape[-1]).abs(), dim=-2)[0] >= threshold
+    k = ops.max(mat.view(-1, mat.shape[-1]).abs(), -2)[0] >= threshold
     return ops.nonzero(k).view(-1), k
 
 
@@ -113,7 +113,7 @@ class W8X8Linear(nn.Module):
         self.scales = None
         if act_max is not None:
             self.scales = (
-                (act_max.pow(alpha) / ops.max(ori_w.abs(), dim=0)[0].pow(1 - alpha))
+                (act_max.pow(alpha) / ops.max(ori_w.abs(), 0)[0].pow(1 - alpha))
                 .clamp(min=1e-5)
                 .to(dtype=ori_w.dtype)
             )

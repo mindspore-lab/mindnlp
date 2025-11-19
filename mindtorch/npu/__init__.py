@@ -90,6 +90,7 @@ class device:
 def _try_initial_ascend():
     x = mindtorch.tensor(1, device='npu')
     _ = x + 0
+    synchronize()
 
 def mem_get_info(device=None):
     if not isinstance(device, int):

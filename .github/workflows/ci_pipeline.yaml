@@ -35,6 +35,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip==24.0
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
         pip install -r requirements/pylint_requirements.txt
     # - name: Install MindSpore
     #   shell: bash
@@ -122,6 +123,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip==24.0
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
         pip install -r requirements/requirements.txt
     - name: Install MindSpore
       shell: bash
@@ -132,7 +134,7 @@ jobs:
         pip install mindspore
     - name: Test with pytest
       run: |
-        pip install transformers==4.56.2
+        pip install transformers==4.57.1
         cd tests
         git clone -b v4.56.2 https://github.com/huggingface/transformers
         cd ..

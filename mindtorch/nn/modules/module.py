@@ -719,7 +719,6 @@ class Module:
             with mindtorch.no_grad():
                 param_applied = fn(param)
             p_should_use_set_data = compute_should_use_set_data(param, param_applied)
-
             # subclasses may have multiple child tensors so we need to use swap_tensors
             p_should_use_swap_tensors = should_use_swap_tensors
 

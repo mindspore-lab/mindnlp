@@ -9,7 +9,7 @@ from mindtorch.executor import execute
 from mindtorch._C import default_generator
 from mindtorch.nn.modules.utils import _pair
 
-from ..configs import ON_A2, ON_A1, ON_ORANGE_PI, FLASH_ATTN_MASK_VALID
+from ..configs import ON_A1
 
 generator_step_ = 12
 
@@ -47,9 +47,6 @@ def elu(input, alpha=1.0):
     return execute('elu', input, alpha)
 
 def glu(input, dim=-1):
-    if input.device.type == 'cuda':
-        x, y = input.chunk(2, dim)
-        return x * sigmoid(y)
     return execute('glu', input, dim)
 
 def softplus(input, beta=1, threshold=20):
@@ -80,42 +77,13 @@ def hardshrink(input, lambd=0.5):
     return execute('hard_shrink', input, lambd)
 
 def avg_pool1d(input, kernel_size, stride, padding=0, ceil_mode=False, count_include_pad=True):
-    """
-    Perform 1D average pooling on the input array of shape (N, C, L) without using explicit for loops.
-
-    Parameters:
-    - input_array (numpy array): The input array to be pooled, shape (N, C, L).
-    - pool_size (int): The size of the pooling window.
-    - stride (int): The stride of the pooling window.
-    - padding (int): The amount of zero-padding to add to both sides of the input array.
-    - ceil_mode (bool): If True, use ceil instead of floor to compute the output length.
-    - count_include_pad (bool): If True, include padding in the average calculation.
-
-    Returns:
-    - numpy array: The result of the average pooling operation.
-    """
     return execute('avg_pool1d', input, kernel_size, stride, padding, ceil_mode, count_include_pad)
 
 def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=None):
-    """
-    Perform 2D average pooling on the input array.
-
-    Parameters:
-    - input_array (numpy array): The input array to be pooled, shape (N, C, H, W).
-    - pool_size (tuple): The size of the pooling window (pool_height, pool_width).
-    - stride (tuple): The stride of the pooling window (stride_height, stride_width).
-    - padding (int or tuple): The amount of zero-padding to add to all sides of the input array.
-    - ceil_mode (bool): If True, use ceil instead of floor to compute the output length.
-    - count_include_pad (bool): If True, include padding in the average calculation.
-
-    Returns:
-    - numpy array: The result of the average pooling operation.
-    """
     return execute('avg_pool2d', input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
 def avg_pool3d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=None):
-    return ops.avg_pool3d(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
-
+    return execute('avg_pool3d', input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
 def adaptive_avg_pool1d(input, output_size):
     return execute('adaptive_avg_pool1d', input, output_size)
@@ -124,12 +92,7 @@ def adaptive_avg_pool2d(input, output_size):
     return execute('adaptive_avg_pool2d', input, output_size)
 
 def dropout(input, p=0.5, training=True, inplace=False):
-    if not training or p==0:
-        return input
-    seed, offset = default_generator._step(generator_step_)
-    seed._device = input.device
-    offset._device = input.device
-    out, _ = execute('dropout', input, p, seed, offset)
+    out = execute('dropout', input, p, training)
     if inplace:
         input.copy_(out)
         return input
@@ -145,9 +108,6 @@ def linear(input, weight, bias=None):
     return execute('dense', input, weight, bias)
 
 def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean', pos_weight=None):
-    if input.shape != target.shape:
-        target = target.unsqueeze(1).expand_as(input).to(input.dtype)
-    
     return execute('binary_cross_entropy_with_logits', input, target, weight, pos_weight, reduction)
 
 def gumbel_softmax(logits: mindtorch.Tensor, tau: float = 1, hard: bool = False, eps: float = 1e-10, dim: int = -1) -> mindtorch.Tensor:
@@ -184,11 +144,7 @@ def embedding(input, weight, padding_idx=None, max_norm=None, norm_type=2.0, sca
     return execute('embedding', input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq)
 
 def rms_norm(input, normalized_shape, weight, eps=None):
-    if eps is None:
-        eps = mindtorch.finfo(input.dtype).eps
-    if weight is None:
-        weight = mindtorch.ones(normalized_shape, dtype=input.dtype, device=input.device)
-    return execute('rms_norm', input, weight, eps)
+    return execute('rms_norm', input, normalized_shape, weight, eps)
 
 def fast_gelu(x):
     return ops.fast_gelu(x)
@@ -201,140 +157,13 @@ def apply_rotary_pos_emb(query, key, cos, sin, position_ids, cos_format=0):
         query, key, cos, sin, position_ids, cos_format
     )
 
-def custom_circular_pad(x, pad):
-    """手动实现 torch.nn.functional.pad 的 circular 模式。
-    
-    参数:
-        x: 输入张量，形状为 (B, C, D1, D2, ...)
-        pad: 填充参数，格式为 (left_N, right_N, left_{N-1}, right_{N-1}, ..., left_1, right_1)
-              表示从最后维度开始向前定义填充大小
-    
-    返回:
-        循环填充后的张量
-    """
-    ndim = x.dim()
-    n_pad_dims = len(pad) // 2
-    assert n_pad_dims <= ndim, "填充参数超过了张量的维度"
-    
-    # 按从最后维度向前处理填充
-    for dim in range(ndim-1, ndim-1-n_pad_dims, -1):
-        # 当前维度的左右填充量
-        idx = 2 * (ndim - 1 - dim)  # 在pad元组中的起始位置
-        left_pad = pad[idx]
-        right_pad = pad[idx + 1]
-        
-        if left_pad == 0 and right_pad == 0:
-            continue  # 跳过该维度
-            
-        size = x.shape[dim]  # 当前维度的原始长度
-        new_size = left_pad + size + right_pad
-        
-        # 生成循环索引: (index - left_pad) mod size
-        index = (mindtorch.arange(new_size, device=x.device) + new_size - left_pad) % size
-        index = (index + x.shape[dim]) % x.shape[dim]
-        x = mindtorch.index_select(x, dim, index)
-
-    return x
-
-def _reflection_pad(input, pad):
-    """reflection pad"""
-    out = input
-    if len(pad) == 2:
-        out = execute('reflection_pad_1d', input, pad)
-    elif len(pad) == 4:
-        out = execute('reflection_pad_2d', input, pad)
-    else:
-        out = execute('reflection_pad_3d', input, pad)
-    return out
-
-def _replication_pad(input, pad):
-    """replication pad"""
-    out = input
-    if len(pad) == 2:
-        out = execute('replication_pad_1d', input, pad)
-    elif len(pad) == 4:
-        out = execute('replication_pad_2d', input, pad)
-    else:
-        out = execute('replication_pad_3d', input, pad)
-    return out
-
-def _circular_pad(input_x, padding):
-    """circular pad"""
-    if isinstance(padding, tuple):
-        padding = mindtorch.tensor(padding, dtype=mindtorch.int64, device=input_x.device)
-    elif isinstance(padding, list):
-        padding = mindtorch.tensor(padding, dtype=mindtorch.int64, device=input_x.device)
-    is_expand = False
-    if padding.shape[0] // 2 + 1 == input_x.ndim:
-        input_x = input_x.expand_dims(0)
-        is_expand = True
-    out = execute('pad_v3', input_x, padding, "circular", None)
-    if is_expand:
-        out = out.squeeze(0)
-    return out
-
 def pad(input, pad, mode='constant', value=None):
-    if isinstance(pad, tuple):
-        pad = tuple(p if isinstance(p, int) else p.item() for p in pad)
-
-    if input.device.type in ['cpu', 'meta', 'cuda'] or ON_A1:
-        new_pad = ()
-        for idx, pad_v in enumerate(pad):
-            if not isinstance(pad_v, int):
-                pad_v = pad_v.item()
-            if pad_v < 0:
-                dim = input.ndim - 1 - idx // 2
-                input = input.narrow(dim, 0, input.shape[dim] + pad_v)
-                pad_v = 0
-            new_pad += (pad_v,)
-        if sum(new_pad) == 0:
-            return input
-        if mode == 'circular':
-            return custom_circular_pad(input, pad)
-        elif mode == 'reflect':
-            return execute('pad_v3', input, new_pad, mode)
-        if value is None:
-            value = 0
-        if mode == "replicate":
-            mode = "edge"
-            return execute('pad_v3', input, new_pad, mode)
-        if input.dtype.is_floating_point:
-            value = float(value)
-        elif input.dtype == mindtorch.bool:
-            value = bool(value)
-        elif input.dtype in [mindtorch.int32, mindtorch.int64]:
-            value = int(value)
-        if input.device.type == 'cuda' and mode == 'constant' and value == 0 and len(new_pad) > 6:
-            paddings = ()
-            for i in range(input.ndim-1, -1, -1):
-                paddings += ((new_pad[2*i], new_pad[2*i+1]),)
-            return execute('pad', input, paddings)
-        return execute('pad_v3', input, new_pad, mode, value)
-    out = input
-    if (isinstance(pad, tuple) and not pad):
-        return out
-    if sum(pad) == 0:
-        return out
-    if mode == "constant":
-        value = 0 if value is None else value
-        out = execute('constant_pad_nd', input, pad, value)
-    else:
-        if value is not None and value != 0:
-            raise ValueError(f"Padding mode {mode} doesn\'t take in value argument.")
-        if mode == "circular":
-            out = _circular_pad(input, pad)
-        elif mode == "reflect":
-            out = _reflection_pad(input, pad)
-        elif mode == "replicate":
-            out = _replication_pad(input, pad)
-        else:
-            raise ValueError(f"Pad filling mode must be 'constant' 'circular' 'reflect' or 'replicate'.")
-    return out
+    return execute('pad', input, pad, mode, value)
 
 def nll_loss(input, target, weight=None, ignore_index=-100, reduction='mean'):
-    if input.device.type in ['npu', 'cpu']:
-        return _nllloss_nd(input, target, weight, ignore_index, reduction)
-    return _inner_nll_loss(input, target, weight, ignore_index, reduction)
+    # if input.device.type in ['npu', 'cpu']:
+    return _nllloss_nd(input, target, weight, ignore_index, reduction)
+    # return _inner_nll_loss(input, target, weight, ignore_index, reduction)
 
 def _inner_nll_loss(inputs, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     ndim = inputs.ndim
@@ -408,7 +237,7 @@ def _nllloss_nd(input, target, weight=None, ingore_index=-100, reduction='mean')
     class_dim = 0 if input_dim == 1 else 1
     n_classes = input.shape[class_dim]
     if weight is None:
-        weight = mindtorch.ones(n_classes, dtype=input.dtype, device=input.device)
+        weight = mindtorch.ones(n_classes, dtype=input.dtype, device=input._device)
     if input_dim < 1:
         raise ValueError(f"input dim should be less than 1, but got {input_dim}")
     if input_dim != 1 and input.shape[0] != target.shape[0]:
@@ -769,16 +598,6 @@ def normalize(input, p=2.0, dim=1, eps=1e-6):
     return input / mindtorch.norm(input, p=p, dim=dim, keepdim=True)
 
 def batch_norm(input, running_mean, running_var, weight=None, bias=None, training=False, momentum=0.1, eps=1e-05):
-
-    if running_mean is None:
-        running_mean = mindtorch.ones(input.shape[1], dtype=input.dtype, device=input.device)
-    if running_var is None:
-        running_var = mindtorch.zeros(input.shape[1], dtype=input.dtype, device=input.device)
-    if weight is None:
-        weight = mindtorch.ones(input.shape[1], dtype=input.dtype, device=input.device)
-    if bias is None:
-        bias = mindtorch.zeros(input.shape[1], dtype=input.dtype, device=input.device)
-
     return execute(
         'batch_norm',
         input,
@@ -805,34 +624,6 @@ def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     if isinstance(padding, str):
         return execute('conv3d_padding', input, weight, bias, stride, padding, dilation, groups)
     return execute('conv3d', input, weight, bias, stride, padding, dilation, groups)
-
-    pad_mode = 'pad'
-    pad = padding
-    if isinstance(padding, (tuple, list)):
-        pad = (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2])
-    elif isinstance(padding, int):
-        pad = (padding,) * 6
-    if not isinstance(padding, (int, tuple, list)):
-        pad_mode = padding
-        pad = (0,) * 6
-
-    out_channels = weight.shape[0]
-    kernel_size = weight.shape[2:]
-    conv3d_op = ops.Conv3D(out_channels,
-                            kernel_size,
-                            mode=1,
-                            pad_mode=pad_mode,
-                            pad=pad,
-                            stride=tuple(stride),
-                            dilation=dilation,
-                            group=groups)
-    output = conv3d_op(input, weight)
-                            
-    if bias is not None:
-        output = ops.bias_add(output, bias)
-    return output
-
-
 
 def conv_transpose1d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
     x_2d = input.unsqueeze(2)  # (batch, in_channels, 1, L_in)
@@ -868,37 +659,6 @@ def _deconv_output_length(pad_mode, filter_size, stride_size, dilation_size, pad
 
 def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
     return execute('conv_transpose2d', input, weight, bias, stride, padding, output_padding, groups, dilation)
-
-    # pad_mode = 'pad'
-    # pad = padding
-    # if isinstance(padding, tuple):
-    #     pad = (0, 0, padding[0], padding[0])
-    # elif isinstance(padding, int):
-    #     pad = (0, 0) + (padding,) * 2
-    # if not isinstance(padding, (int, tuple)):
-    #     pad_mode = padding
-    #     pad = (0,) * 4
-
-    # in_channel, out_channels = weight.shape[0], weight.shape[1] * groups
-    # kernel_size = weight.shape[2:]
-
-    # conv2d_transpose_op = ops.Conv2DTranspose(out_channel=out_channels,
-    #                                             kernel_size=kernel_size,
-    #                                             mode=1,
-    #                                             pad_mode=pad_mode,
-    #                                             pad=pad,
-    #                                             stride=stride,
-    #                                             dilation=dilation,
-    #                                             group=groups)
-    # n, _, h, w = input.shape
-    # h_add = _deconv_output_length(pad_mode, kernel_size[0], stride[0], dilation[0], pad[0] + pad[1])
-    # w_add = _deconv_output_length(pad_mode, kernel_size[1], stride[1], dilation[1], pad[2] + pad[3])
-
-    # out = conv2d_transpose_op(input, weight,
-    #                           (n, out_channels, h * stride[0] + h_add, w * stride[1] + w_add))
-    # if bias is not None:
-    #     out = ops.bias_add(out, bias)
-    # return out
 
 def conv_transpose3d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
     if input.device.type == 'npu':
@@ -985,31 +745,7 @@ def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode
 
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
-    if weight is None:
-        weight = mindtorch.ones([input.shape[1]], dtype=input.dtype, device=input.device)
-    if bias is None:
-        bias = mindtorch.zeros([input.shape[1]], dtype=input.dtype, device=input.device)
-    if input.device.type == 'npu' and not ON_ORANGE_PI:
-        return execute('group_norm', input, num_groups, weight, bias, eps)[0]
-
-    input_shape = input.shape
-    N = input_shape[0]
-    C = input_shape[1]
-    input_reshaped = input.view(1, N * num_groups, -1 if N!=0 else 1)
-    outputs = batch_norm(input_reshaped, None, None, None, None, True, 0., eps)
-    out = outputs.view(input_shape)
-    affine_param_shape = [1] * input.ndim
-    affine_param_shape[1] = C
-    affine_param_shape = tuple(affine_param_shape)
-    if weight is not None and bias is not None:
-        out = mindtorch.addcmul(bias.view(affine_param_shape), out, weight.view(affine_param_shape), value=1)
-
-    elif weight is not None:
-        out = out.mul(weight.view(affine_param_shape))
-    elif bias is not None:
-        out = out.add(bias.view(affine_param_shape))
-    return out
-
+    return execute('group_norm', input, num_groups, weight, bias, eps)[0]
 
 def _in_projection(
     q,
@@ -1130,100 +866,10 @@ def _in_projection_packed(
             b_q, b_k, b_v = b.chunk(3)
         return linear(q, w_q, b_q), linear(k, w_k, b_k), linear(v, w_v, b_v)
 
-def repeat_kv(hidden_states, n_rep: int):
-    """
-    This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
-    num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)
-    """
-    if ON_A2:
-        return mindtorch.repeat_interleave(hidden_states, dim=1, repeats=n_rep)
-    batch, num_key_value_heads, slen, head_dim = hidden_states.shape
-    if n_rep == 1:
-        return hidden_states
-    hidden_states = hidden_states.unsqueeze(2).expand(batch, num_key_value_heads, n_rep, slen, head_dim)
-    return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
-
-
-ATTN_MASK_NPU_CACHE = {}
-
-
-def get_attn_mask_npu(device):
-    """Get or create attention mask for the specified device."""
-    if device not in ATTN_MASK_NPU_CACHE:
-        ATTN_MASK_NPU_CACHE[device] = mindtorch.ones(2048, 2048, dtype=mindtorch.bool, device=device).triu(diagonal=1)
-    return ATTN_MASK_NPU_CACHE[device]
 
 def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0,
         is_causal=False, scale=None, enable_gqa=False) -> mindtorch.Tensor:
-
-    L, S = query.size(-2), key.size(-2)
-    scale_factor = 1 / math.sqrt(query.size(-1)) if scale is None else scale
-
-
-    if query.dtype != mindtorch.float32 and query.device.type == 'npu' and ON_A2:
-        if attn_mask is not None and not is_causal:
-            if FLASH_ATTN_MASK_VALID == 1:
-                attn_mask = ~attn_mask
-            else:
-                attn_mask = attn_mask.bool()
-
-        sparse_mode = 0
-
-        if is_causal:
-            assert attn_mask is None
-            attn_mask = get_attn_mask_npu(query.device)
-            sparse_mode = 3
-
-        head_num = query.shape[1]
-        if enable_gqa and is_causal:
-            output = execute('prompt_flash_attention', query, key, value, attn_mask,
-                             actual_seq_lengths=None, actual_seq_lengths_kv=None, pse_shift=None,
-                             deq_scale1=None, quant_scale1=None, deq_scale2=None, quant_scale2=None,
-                             quant_offset2=None, num_heads=head_num, scale_value=scale_factor,
-                             pre_tokens=2147483647, next_tokens=0, input_layout='BNSD',
-                             num_key_value_heads=key.shape[1], sparse_mode=sparse_mode, inner_precise=1)
-            # output = execute('incre_flash_attention', query, [key], [value], attn_mask,
-            #                  actual_seq_lengths=None, pse_shift=None, dequant_scale1=None, quant_scale1=None,
-            #                  dequant_scale2=None, quant_scale2=None, quant_offset2=None, antiquant_scale=None,
-            #                  antiquant_offset=None, block_table=None, kv_padding_size=None, num_heads=head_num,
-            #                  input_layout='BNSD', scale_value=scale_factor, num_key_value_heads=key.shape[1],
-            #                  block_size=0, inner_precise=1)
-            return output
-        else:
-            output = execute('flash_attention_score', query, key, value, head_num=head_num, input_layout='BNSD', real_shift=None, padding_mask=None, attn_mask=attn_mask,
-                            scale_value=scale_factor, keep_prob=1 - dropout_p, pre_tokens=2147483647, next_tokens=2147483647, inner_precise=0,
-                            drop_mask=None, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=sparse_mode)
-
-            sfm_max, sfm_sum, sfm_out, atten_out = output
-
-            return atten_out
-
-    if enable_gqa:
-        key = repeat_kv(key, query.size(-3) // key.size(-3)).contiguous()
-        value = repeat_kv(value, query.size(-3) // value.size(-3)).contiguous()
-    
-    attn_bias_shape = (L, S) if attn_mask is None else attn_mask.shape
-    attn_bias = mindtorch.zeros(attn_bias_shape, dtype=query.dtype, device=query.device)
-
-    if is_causal:
-        assert attn_mask is None
-        temp_mask = mindtorch.ones(L, S, dtype=mindtorch.bool, device=query.device).tril(diagonal=0)
-        attn_bias = attn_bias.masked_fill(temp_mask.logical_not(), mindtorch.finfo(attn_bias.dtype).min)
-        attn_bias.to(query.dtype)
-
-    if attn_mask is not None:
-        if attn_mask.dtype == mindtorch.bool:
-            if attn_mask.ndim == 3:
-                attn_mask = attn_mask.squeeze(0)
-            attn_bias = attn_bias.masked_fill(attn_mask.logical_not(), mindtorch.finfo(attn_bias.dtype).min)
-        else:
-            attn_bias = attn_mask + attn_bias
-        
-    attn_weight = query @ key.transpose(-2, -1) * scale_factor
-    attn_weight += attn_bias
-    attn_weight = softmax(attn_weight, dim=-1)
-    attn_weight = dropout(attn_weight, dropout_p, training=True)
-    return attn_weight @ value
+    return execute('sdpa', query, key, value, attn_mask, dropout_p, is_causal, scale, enable_gqa)
 
 
 def _mha_shape_check(query, key, value, key_padding_mask, attn_mask, num_heads):

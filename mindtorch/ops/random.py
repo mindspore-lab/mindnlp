@@ -2,8 +2,8 @@
 import mindtorch
 from mindtorch._C import default_generator
 from mindtorch.executor import execute
-from .._bind import get_default_dtype, get_device_in_context
-from ..configs import ON_A1, ON_ORANGE_PI
+from .._bind import get_default_dtype
+from .utils import check_device
 
 generator_step_ = 12
 
@@ -26,30 +26,30 @@ def multinomial(input, num_samples, replacement=False, *, generator=None, out=No
         num_samples = num_samples.item()
     if generator is None:
         generator = default_generator
-    if input.device.type == 'npu' and not ON_ORANGE_PI:
-        output = execute("multinomial", input, num_samples, replacement, generator)
+    # if input.device.type == 'npu' and not ON_ORANGE_PI:
+    output = execute("multinomial", input, num_samples, replacement, generator)
 
-    else:
-        if replacement:
-            # with replacement
-            cumulative_probs = mindtorch.cumsum(input, dim=-1)
-            uniform_samples = rand(*input.shape[:-1] + (num_samples,), device=input.device)
-            if cumulative_probs.dtype == mindtorch.float16:
-                cumulative_probs = cumulative_probs.astype(mindtorch.float32)
-            samples = mindtorch.searchsorted(cumulative_probs, uniform_samples, right=True)
-        else:
-            # without replacement
-            n_dist = 1
-            if input.ndim > 1:
-                n_dist = input.shape[-2]
-            random_uniform = rand(*(n_dist * input.shape[-1],), device=input.device)
-            if n_dist != 1:
-                random_uniform = random_uniform.reshape(n_dist, input.shape[-1])
+    # else:
+    #     if replacement:
+    #         # with replacement
+    #         cumulative_probs = mindtorch.cumsum(input, dim=-1)
+    #         uniform_samples = rand(*input.shape[:-1] + (num_samples,), device=input.device)
+    #         if cumulative_probs.dtype == mindtorch.float16:
+    #             cumulative_probs = cumulative_probs.astype(mindtorch.float32)
+    #         samples = mindtorch.searchsorted(cumulative_probs, uniform_samples, right=True)
+    #     else:
+    #         # without replacement
+    #         n_dist = 1
+    #         if input.ndim > 1:
+    #             n_dist = input.shape[-2]
+    #         random_uniform = rand(*(n_dist * input.shape[-1],), device=input.device)
+    #         if n_dist != 1:
+    #             random_uniform = random_uniform.reshape(n_dist, input.shape[-1])
 
-            vals = mindtorch.div(mindtorch.log(random_uniform), input + 1e-10)
-            _, samples = mindtorch.topk(vals, num_samples)
+    #         vals = mindtorch.div(mindtorch.log(random_uniform), input + 1e-10)
+    #         _, samples = mindtorch.topk(vals, num_samples)
     
-        output = samples.astype(mindtorch.int64)
+    #     output = samples.astype(mindtorch.int64)
 
     if out is None:
         return output
@@ -65,15 +65,11 @@ def normal(mean=0.0, std=1.0, *, size=None, generator=None, out=None,
 
     if dtype is None:
         dtype = get_default_dtype()
-    if device is None:
-        if out is None:
-            device = get_device_in_context()
-        else:
-            device = out.device
+    
+    device = check_device(device)
 
     is_mean_tensor = isinstance(mean, mindtorch.Tensor)
     is_std_tensor = isinstance(std, mindtorch.Tensor)
-
 
     if is_mean_tensor and is_std_tensor:
         output = execute("normal_tensor_tensor", mean, std, size, dtype, generator, device=device)
@@ -104,10 +100,7 @@ def rand(
     requires_grad=False,
     pin_memory=False
 ):
-    if device is None:
-        device = get_device_in_context()
-    if isinstance(device, str):
-        device = mindtorch.device(device)
+    device = check_device(device)
     if dtype is None:
         dtype = get_default_dtype()
     if not generator:
@@ -139,9 +132,7 @@ def rand_like(
     memory_format=None
 ):
     if device is None:
-        device = input.device
-    if isinstance(device, str):
-        device = mindtorch.device(device)
+        device = input._device
 
     if dtype is None:
         dtype = input.dtype
@@ -168,10 +159,7 @@ def randint(
 ):
     if dtype is None:
         dtype = mindtorch.int64
-    if device is None:
-        device = get_device_in_context()
-    if isinstance(device, str):
-        device = mindtorch.device(device)
+    device = check_device(device)
 
     if generator is None:
         generator = default_generator
@@ -208,9 +196,7 @@ def randint_like(
     if high == 0:
         low, high = 0, low
     if device is None:
-        device = input.device
-    if isinstance(device, str):
-        device = mindtorch.device(device)
+        device = input._device
 
     if dtype is None:
         dtype = input.dtype
@@ -241,10 +227,7 @@ def randn(
     requires_grad=False,
     pin_memory=False
 ):
-    if device is None:
-        device = get_device_in_context()
-    if isinstance(device, str):
-        device = mindtorch.device(device)
+    device = check_device(device)
 
     if dtype is None:
         dtype = get_default_dtype()
@@ -277,9 +260,7 @@ def randn_like(
     memory_format=None
 ):
     if device is None:
-        device = input.device
-    if isinstance(device, str):
-        device = mindtorch.device(device)
+        device = input._device
 
     if dtype is None:
         dtype = input.dtype
@@ -304,10 +285,7 @@ def randperm(
     requires_grad=False,
     pin_memory=False
 ):
-    if device is None:
-        device = get_device_in_context()
-    if isinstance(device, str):
-        device = mindtorch.device(device)
+    device = check_device(device)
 
     if not generator:
         generator = default_generator

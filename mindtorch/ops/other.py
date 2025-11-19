@@ -62,11 +62,11 @@ def broadcast_shapes(*shapes):
 
 # bucketize
 def bucketize(input, boundaries, *, out_int32=False, right=False, out=None):
-    if isinstance(boundaries, mindtorch.Tensor):
-        boundaries = boundaries.tolist()
+    # if isinstance(boundaries, mindtorch.Tensor):
+    #     boundaries = boundaries.tolist()
     
-    if not boundaries:
-        return mindtorch.zeros_like(input)
+    # if not boundaries:
+    #     return mindtorch.zeros_like(input)
     out = execute('bucketize', input, boundaries, right)
     if out_int32:
         return out.to(mindtorch.int32)
@@ -107,8 +107,8 @@ def cumprod(input, dim, *, dtype=None, out=None):
 # cumsum
 def cumsum(input, dim=None, dtype=None, **kwargs):
     dim = kwargs.pop('axis', dim)
-    if input.dtype in [mindtorch.int64, mindtorch.bool]:
-        return execute('cumsum', input.int(), dim, None).long()
+    # if input.dtype in [mindtorch.int64, mindtorch.bool]:
+    #     return execute('cumsum', input.int(), dim, None).long()
     if dtype is not None and dtype == mindtorch.int64:
         return execute('cumsum', input, dim, None).long()
     return execute('cumsum', input, dim, dtype)
@@ -152,8 +152,8 @@ def my_diag(input_tensor, diagonal=0):
         raise RuntimeError("输入张量必须是一维或二维")
 
 def diag(input, diagonal=0, *, out=None):
-    if input.device.type == 'cuda':
-        return my_diag(input, diagonal)
+    # if input.device.type == 'cuda':
+    #     return my_diag(input, diagonal)
     return execute('diag', input, diagonal)
 
 # diag_embed
@@ -763,7 +763,7 @@ def meshgrid(*tensors, indexing=None):
         tensors = tensors[0]
     if indexing is None:
         indexing = 'ij'
-    return execute('meshgrid', tensors, indexing)
+    return execute('meshgrid', tensors, indexing, device_from_list=True)
 
 
 # lcm

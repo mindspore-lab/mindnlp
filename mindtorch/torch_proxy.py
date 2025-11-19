@@ -10,102 +10,69 @@ from mindtorch.configs import DEVICE_TARGET
 
 TORCH_VERSION = '2.7.1+dev'
 
-class RedirectFinder(importlib.abc.MetaPathFinder):
-    def __init__(self, redirect_map):
-        # 重定向规则：被代理模块 -> 实际模块
-        self.redirect_map = redirect_map
+# mindtorch/__init__.py
+import sys
+import importlib.abc
+import importlib.util
 
+class MindTorchFinder(importlib.abc.MetaPathFinder):
+    """
+    自定义查找器，用于拦截对 'torch' 模块的导入。
+    """
     def find_spec(self, fullname, path, target=None):
-        # 识别需要重定向的模块
-        for proxy_prefix, target_prefix in self.redirect_map.items():
-            if fullname == proxy_prefix or fullname.startswith(proxy_prefix + "."):
-                # 计算实际模块名
-                target_name = fullname.replace(proxy_prefix, target_prefix, 1)
-                if DEVICE_TARGET == 'Ascend':
-                    target_name = target_name.replace('cuda', 'npu')
-                try:
-                    importlib.import_module(target_name)
-                except Exception as e:
-                    raise e
-
-                return importlib.machinery.ModuleSpec(
-                    name=fullname,
-                    loader=RedirectLoader(target_name),
-                    is_package=self._is_package(target_name),
-                )
+        # 仅当导入的模块名为 'torch' 时进行拦截
+        if fullname == "torch" or fullname == 'torch_npu' or fullname.startswith("torch."):
+            # 创建一个模块规范，并指定由自定义的加载器来加载
+            # 注意：这里的 `__name__` 是 'mindtorch'，我们需要返回代表 'torch' 的规范
+            spec = importlib.util.spec_from_loader(fullname, MindTorchLoader())
+            return spec
+        # 对于其他模块，不进行处理，交由其他查找器
         return None
 
-    def _is_package(self, module_name):
-        # 检测模块是否为包（包含子模块）
-        try:
-            module = importlib.import_module(module_name)
-            return hasattr(module, "__path__")
-        except ImportError:
-            return False
 
-
-class RedirectLoader(importlib.abc.Loader):
-    def __init__(self, target_name):
-        self.target_name = target_name
-
+class MindTorchLoader(importlib.abc.Loader):
+    """
+    自定义加载器，当导入 'torch' 时，返回 mindtorch 模块对象。
+    """
     def create_module(self, spec):
-        # 创建代理模块对象
-        module = ModuleType(spec.name)
-        module.__spec__ = spec
-        module.__path__ = []
-        module.__loader__ = self
-        module.__package__ = spec.name
-        return module
+        """
+        创建模块对象。这里直接返回已导入的 mindtorch 模块本身。
+        """
+        fullname = spec.name
+        
+        if fullname == "torch":
+            # 顶层 torch 模块直接返回 mindtorch
+            return sys.modules["mindtorch"]
+        elif fullname == 'torch_npu':
+            return importlib.import_module('mindtorch.npu')
+
+        # 处理子模块：将 torch.xxx 映射到 mindtorch.xxx
+        submodule_name = fullname.replace("torch.", "mindtorch.", 1)
+        
+        try:
+            # 尝试导入对应的 mindtorch 子模块
+            submodule = importlib.import_module(submodule_name)
+            return submodule
+        except ImportError:
+            # 如果 mindtorch 没有对应的子模块，可以选择返回 None 或创建虚拟模块
+            return None
 
     def exec_module(self, module):
-        # 动态设置__class__以代理属性访问
-        class ProxyModule(type(module)):
-            def __getattr__(_, name):
-                # 动态导入实际模块中的属性
-                if DEVICE_TARGET == 'Ascend':
-                    name = name.replace('cuda', 'npu')
-                try:
-                    target_module = importlib.import_module(self.target_name)
-                except ImportError as e:
-                    raise AttributeError(f"Target module {self.target_name} could not be imported: {e}") from e
-                except Exception as e:
-                    raise e
+        """
+        执行模块。因为 'torch' 模块实际上是已经加载好的 mindtorch 模块，
+        所以这里不需要再执行额外的初始化代码。
+        重要：避免重新执行模块代码，否则可能导致状态重置或无限递归。
+        """
+        # 可以在这里添加一些日志或轻量级的检查，但通常留空
+        pass
 
-                # 处理子模块导入 (e.g. torch.nn -> mindtorch.nn)
-                if hasattr(target_module, name):
-                    return getattr(target_module, name)
+# 将自定义查找器添加到 sys.meta_path 的开头，使其具有最高优先级
 
-                # 处理从子模块导入 (e.g. from torch.nn import Module)
-                try:
-                    submodule_name = f"{self.target_name}.{name}"
-                    return importlib.import_module(submodule_name)
-                except ImportError as e:
-                    raise AttributeError(
-                        f"Module '{self.target_name}' has no attribute '{name}'"
-                    )
-
-            def __setattr__(_, name, value):
-                try:
-                    target_module = importlib.import_module(self.target_name)
-                    if not hasattr(target_module, name):
-                        return
-                except Exception as e:
-                    raise e
-                return super().__setattr__(name, value)
-
-        # 继承原始模块的特殊属性
-        module.__class__ = ProxyModule
-
-
-# 配置重定向规则
-REDIRECT_MAP = {
-    "torch": "mindtorch",
-}
-if DEVICE_TARGET == 'Ascend':
-    REDIRECT_MAP["torch_npu"] = 'mindtorch.npu'
-
+# 以下是你的 mindtorch 库的原有代码和接口...
+# 例如：from .tensor import Tensor, ...
+# 确保 mindtorch 的 API 与 PyTorch 保持一致。
 def initialize_torch_proxy():
-    sys.meta_path.insert(0, RedirectFinder(REDIRECT_MAP))
+    sys.meta_path.insert(0, MindTorchFinder())
     import torch
     torch.__version__ = TORCH_VERSION
 

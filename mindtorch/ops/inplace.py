@@ -6,8 +6,6 @@ from mindtorch.executor import execute
 generator_step_ = 12
 
 def inplace_copy(self, other):
-    if self.device != other.device:
-        other = other.to(self.device)
     execute('inplace_copy', self, other)
     return self
 
@@ -32,7 +30,7 @@ def inplace_normal(input, mean=0, std=1, *, generator=None):
     if isinstance(std, mindtorch.Tensor):
         std = std.item()
 
-    execute('inplace_normal', input, mean, std, generator, device=input.device)
+    execute('inplace_normal', input, mean, std, generator, device=input._device)
     return input
 
 # uniform_
@@ -62,7 +60,7 @@ def inplace_uniform(input, *args, **kwargs):
 
 def inplace_add(input, other, alpha):
     if isinstance(other, numbers.Number):
-        other = mindtorch.tensor(other, dtype=input.dtype, device=input.device)
+        other = mindtorch.tensor(other, dtype=input.dtype, device=input._device)
     execute('inplace_add', input, other, alpha)
     return input
 
@@ -70,14 +68,14 @@ def inplace_add(input, other, alpha):
 def inplace_random(self, from_=0, to=None, *, generator=None):
     if not generator:
         generator = default_generator
-    execute('inplace_random', self, from_, to, generator, device=self.device)
+    execute('inplace_random', self, from_, to, generator, device=self._device)
 
     return self
 
 def inplace_exponential(self, lambd, generator):
     if not generator:
         generator = default_generator
-    execute('inplace_exponential', self, lambd, generator, device=self.device)
+    execute('inplace_exponential', self, lambd, generator, device=self._device)
     return self
 
 def inplace_fill_diagonal(input, value, wrap):

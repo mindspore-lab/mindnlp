@@ -1,3 +1,6 @@
+import mindtorch
+from .._bind import get_device_in_context
+
 from .. import _dtype
 
 def sum_to(x, shape):
@@ -27,3 +30,12 @@ py2dtype = {
     int: _dtype.int64,
     float: _dtype.float32,
 }
+
+def check_device(device):
+    if device is None:
+        device = get_device_in_context()
+    if isinstance(device, int):
+        device = mindtorch.device(device)
+    if not isinstance(device, str):
+        device = device.type
+    return device

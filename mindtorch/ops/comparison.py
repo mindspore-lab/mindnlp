@@ -18,8 +18,6 @@ def argsort(input, dim=-1, descending=False, stable=False):
 
 # eq
 def eq(input, other):
-    if not isinstance(other, numbers.Number) and other.device != input.device:
-        other = other.to(input.device)
     return execute('eq', input, other)
 
 # equal
@@ -42,31 +40,16 @@ def greater(input, other):
 def isclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
     if not isinstance(atol, numbers.Number):
         atol = atol.item()
-    if ON_ORANGE_PI:
-        input = input.cpu()
-        other = other.cpu()
     return execute('isclose', input, other, rtol, atol, equal_nan)
-    
+
 
 # isfinite
 def isfinite(input):
     return execute('isfinite', input)
 
 # isin
-def in1d(ar1, ar2, invert=False):
-    ar1 = mindtorch.unsqueeze(ar1.ravel(), -1)
-    if not isinstance(ar2, numbers.Number):
-        ar2 = ar2.ravel()
-    included = mindtorch.eq(ar1, ar2)
-    # ops.reduce_sum only supports float
-    res = mindtorch.sum(included.to(mindtorch.float32), -1).to(mindtorch.bool_)
-    if invert:
-        res = mindtorch.logical_not(res)
-    return res
-
 def isin(elements, test_elements, invert=False):
-    res = in1d(elements, test_elements, invert=invert)
-    return mindtorch.reshape(res, elements.shape)
+    return execute('isin', elements, test_elements, invert)
 
 # isinf
 def isinf(input):
@@ -102,14 +85,10 @@ def less(input, other):
 
 # maximum
 def maximum(input, other):
-    if isinstance(other, mindtorch.Tensor) and other.device != input.device:
-        other = other.to(input.device)
     return execute('maximum', input, other)
 
 # minimum
 def minimum(input, other):
-    if other.device != input.device:
-        other = other.to(input.device)
     return execute('minimum', input, other)
 
 # fmax
