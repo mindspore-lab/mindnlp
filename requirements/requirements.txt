@@ -38,3 +38,4 @@ peft
 diffusers
 timeout_decorator
 torch
+ftfy
