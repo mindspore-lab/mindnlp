@@ -2016,3 +2016,6 @@ def strided_slice_update(x, begin, end, strides, updates,
     #     if (shrink_axis_mask >> i) & 1:
     #         x_updated = mindtorch.squeeze(x_updated, dim=i)
     return x_updated
+
+def mish(input):
+    return legacy.mish(input)

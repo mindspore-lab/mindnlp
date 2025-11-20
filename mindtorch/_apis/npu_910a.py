@@ -2277,3 +2277,8 @@ def pad(input, pad, mode='constant', value=None):
     #     value = int(value)
 
     return pad_v3(input, new_pad, mode, value)
+
+def mish(input):
+    if ENABLE_PYBOOST:
+        return pyboost.mish_ext_op(input)
+    return legacy.mish(input)

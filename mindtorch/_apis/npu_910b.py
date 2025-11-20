@@ -2279,3 +2279,8 @@ def pad(input, pad, mode='constant', value=None):
 
 def full_like(input, fill_value, dtype=None):
     return pyboost.full_like_op(input, fill_value, dtype)
+
+def mish(input):
+    if ENABLE_PYBOOST:
+        return pyboost.mish_ext_op(input)
+    return legacy.mish(input)
