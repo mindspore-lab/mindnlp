@@ -37,7 +37,7 @@ def silu(input, inplace=False):
         return input
     return execute('silu', input)
 
-def mish(input):
+def mish(input, inplace=False):
     return execute('mish', input)
 
 def relu6(input):

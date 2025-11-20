@@ -2210,3 +2210,8 @@ def isin(elements, test_elements, invert=False):
     if invert:
         res = logical_not(res)
     return reshape(res, elements_shape)
+
+def mish(input):
+    if ENABLE_PYBOOST:
+        return pyboost.mish_ext_op(input)
+    return legacy.mish(input)
