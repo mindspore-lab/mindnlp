@@ -62,13 +62,13 @@ def inplace_normal(input, *args):
 __all__.append('inplace_normal')
 
 def getitem(input, slice):
-    out = input.numpy()[slice]
+    out = np.zeros(input.shape)[slice]
     out = Tensor_(init='none', shape=out.shape, dtype=input.dtype)
     return mindtorch.Tensor(out)
 
 __all__.append('getitem')
 
-def sub(input, other, alpha):
+def sub(input, other, alpha=1.0):
     if isinstance(input, mindtorch.Tensor):
         return input
     return other
@@ -76,7 +76,7 @@ def sub(input, other, alpha):
 __all__.append('sub')
 
 def pad_v3(input, pad, mode, value):
-    out = np.pad(input.numpy(), pad, mode, constant_values=value)
+    out = np.pad(np.zeros(input.shape), pad, mode, constant_values=value)
     out = Tensor_(init='none', shape=out.shape, dtype=input.dtype)
     return mindtorch.Tensor(out)
 
@@ -94,7 +94,7 @@ def cast(input, dtype):
 __all__.append('cast')
 
 def index_select(input, dim, index):
-    out = np.take(input.numpy(), index.numpy(), dim)
+    out = np.take(np.zeros(input.shape), np.zeros(index.shape, dtype=np.int64), dim)
     out = Tensor_(init='none', shape=out.shape, dtype=input.dtype)
     return mindtorch.Tensor(out)
 
@@ -146,6 +146,9 @@ def tril(input, k):
 __all__.append('tril')
 
 def reshape(input, shape):
+    if -1 in shape:
+        out = np.zeros(input.shape).reshape(shape)
+        shape = out.shape
     out = Tensor_(init='none', shape=tuple(shape), dtype=input.dtype)
     return mindtorch.Tensor(out)
 
@@ -414,4 +417,20 @@ def pad(input, pad, mode='constant', value=None):
         raise ValueError('pad size must be 2, 4 or 6')
  
     out = Tensor_(init='none', shape=new_size, dtype=input.dtype)
+    return mindtorch.Tensor(out)
+
+def setitem(self, slice, value):
+    return self
+
+def meshgrid(args, lambd):
+    res = np.meshgrid(*args, indexing=lambd)
+    outs = ()
+    for r in res:
+        out = Tensor_(init='none', shape=r.shape, dtype=args[0].dtype)
+        out = mindtorch.Tensor(out)
+        outs += (out,)
+    return outs
+
+def permute(input, dims):
+    out = Tensor_(init='none', shape=dims, dtype=input.dtype)
     return mindtorch.Tensor(out)

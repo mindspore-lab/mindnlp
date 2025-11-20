@@ -98,7 +98,6 @@ class PySafeSlice:
         if not SUPPORT_BF16 and self.info["dtype"] == "BF16":
             array = array.astype(np.float16)
         tensor = mindtorch.from_numpy(array)
-        tensor._ptr = array.ctypes.data
         return tensor
 
     @property

@@ -59,8 +59,6 @@ def inplace_uniform(input, *args, **kwargs):
     return input
 
 def inplace_add(input, other, alpha):
-    if isinstance(other, numbers.Number):
-        other = mindtorch.tensor(other, dtype=input.dtype, device=input._device)
     execute('inplace_add', input, other, alpha)
     return input
 

@@ -19,7 +19,7 @@ from . import ops, _dtype
 from ._bind import get_device_in_context, device_, get_default_dtype
 from ._utils import _rebuild_tensor_v2
 from ._C.size import Size
-from .configs import DEVICE_TARGET, cpu_use_numpy, ON_ORANGE_PI
+from .configs import DEVICE_TARGET
 from .executor import execute
 
 device_map = {
@@ -159,7 +159,11 @@ class TensorPlaceHolder:
         return super(Tensor, self).to('Ascend', non_blocking=non_blocking)
 
     def cuda(self, device=None, non_blocking=False):
-        return super(Tensor, self).to('GPU', non_blocking=non_blocking)
+        if DEVICE_TARGET == 'Ascend':
+            device_type = 'Ascend'
+        else:
+            device_type = 'GPU'
+        return super(Tensor, self).to(device_type, non_blocking=non_blocking)
 
     def __array_wrap__(self, array):
         if array.dtype == bool:
@@ -215,7 +219,6 @@ class TensorPlaceHolder:
             slices = new_slices
 
         out = execute('getitem', self, slices)
-
         return out
 
     def __setitem__(self, slices, value):
@@ -1725,8 +1728,8 @@ class TensorPlaceHolder:
     def __array__(self, dtype=None):
         """support create numpy array from tensor."""
         if dtype is None:
-            return self.numpy()
-        return self.numpy().astype(dtype, copy=False)
+            return self.asnumpy()
+        return self.asnumpy().astype(dtype, copy=False)
 
 
     def mindspore(self):
@@ -2175,6 +2178,10 @@ class TensorPlaceHolder:
             device_str = device_map[device]
         else:
             device_str = device
+
+        if DEVICE_TARGET == 'Ascend' and device_str == 'GPU':
+            device_str = 'Ascend'
+
         if device == self._device:
             return self
         return super(Tensor, self).to(device_str, non_blocking=non_blocking)

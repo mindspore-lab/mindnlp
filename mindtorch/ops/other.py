@@ -62,11 +62,6 @@ def broadcast_shapes(*shapes):
 
 # bucketize
 def bucketize(input, boundaries, *, out_int32=False, right=False, out=None):
-    # if isinstance(boundaries, mindtorch.Tensor):
-    #     boundaries = boundaries.tolist()
-    
-    # if not boundaries:
-    #     return mindtorch.zeros_like(input)
     out = execute('bucketize', input, boundaries, right)
     if out_int32:
         return out.to(mindtorch.int32)
