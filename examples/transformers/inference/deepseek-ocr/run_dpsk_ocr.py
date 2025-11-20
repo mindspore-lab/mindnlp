@@ -2,7 +2,7 @@ import mindspore
 import mindnlp
 from transformers import AutoModel, AutoTokenizer
 
-model_name = 'lvyufeng/DeepSeek-OCR-Community-Latest'
+model_name = 'lvyufeng/DeepSeek-OCR'
 
 
 tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)

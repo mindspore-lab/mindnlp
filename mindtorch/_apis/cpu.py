@@ -156,6 +156,8 @@ def pad_v3(input, new_pad, mode, value=None, contiguous=True):
 def cumsum(self, dim, dtype):
     if self.shape[dim] == 0:
         return mindspore.tensor([], dtype=self.dtype)
+    if self.dtype == mindspore.int64:
+        return cast(legacy.cum_sum(cast(self, mindspore.int32), dim, False, False), mindspore.int64)
     return legacy.cum_sum(self, dim, False, False)
 
 def reduce_any(input, axis, keepdims):
@@ -1228,7 +1230,7 @@ def search_sorted(sorted_sequence, values, sorter, dtype, right):
     return legacy.search_sorted(sorted_sequence, values, sorter, dtype, right)
 
 def scatter_nd_update(input, indices, updates):
-    return legacy.scatter_nd_update(input, indices, updates, True)
+    return legacy.scatter_nd_update(input, indices, cast(updates, input.dtype), True)
 
 def triu_indices(row, col, offset, dtype):
     return legacy.triu_indices(row, col, offset, dtype)

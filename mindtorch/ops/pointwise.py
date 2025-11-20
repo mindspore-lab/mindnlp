@@ -432,7 +432,7 @@ def pow(input, exponent):
     if isinstance(exponent, numbers.Number):
         return execute("pow_tensor_scalar", input, exponent)
     if isinstance(input, numbers.Number):
-        return execute("pow_scalar_tensor", input, exponent)
+        return execute("pow_scalar_tensor", input, exponent, device_position=1)
     return execute("pow", input, exponent)
 
 

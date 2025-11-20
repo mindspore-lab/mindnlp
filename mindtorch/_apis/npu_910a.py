@@ -1124,7 +1124,7 @@ def sqrt(input):
     return legacy.sqrt(input)
 
 def masked_scatter(input, mask, value):
-    return legacy.masked_scatter(input, mask, value)
+    return legacy.masked_scatter(input, mask, cast(value, input.dtype))
 
 def neg(input):
     if ENABLE_PYBOOST:
@@ -1532,6 +1532,8 @@ def unique_dim(input, sorted, return_inverse, dim):
     return legacy.unique_dim(input, sorted, return_inverse, dim)
 
 def inplace_add(input, other, alpha):
+    if isinstance(other, numbers.Number):
+        other = mindspore.Tensor(other, dtype=input.dtype)
     if ENABLE_PYBOOST:
         return pyboost.inplace_add_ext_op(input, other, alpha)
     return legacy.inplace_add(input, other)
@@ -1788,6 +1790,11 @@ def log2(input):
     return legacy.log2(input)
 
 def bucketize(input, boundaries, right=False):
+    if isinstance(boundaries, mindtorch.Tensor):
+        boundaries = boundaries.tolist()
+    
+    if not boundaries:
+        return zeros_like(input)
     epsilon_ = 0. if right else 1.e-6
     boundaries = [boundary + epsilon_ for boundary in boundaries]
     return legacy.bucketize(input, boundaries)
@@ -2095,6 +2102,7 @@ def _process_dim_in_multi_dim_index(prev_result, orig_tensor, index, dim, indexe
                 result = _do_select(prev_result, dim, index.item(), dim_index, prev_shape)
                 del prev_shape[dim]
                 return result, dim, remain_indexes, prev_shape
+
             # process index with Tensor bool type
             result = expand_dims(prev_result, dim)
             index_for_bool = tensor_1d if index else empty_tensor_1d
@@ -2102,6 +2110,12 @@ def _process_dim_in_multi_dim_index(prev_result, orig_tensor, index, dim, indexe
             prev_shape.insert(dim, 1)
             dim += 1
             return result, dim, remain_indexes, prev_shape
+
+        if index.dtype == mindtorch.bool and prev_result.ndim == 1:
+            result = masked_select(prev_result, index)
+            dim += 1
+            return result, dim, remain_indexes, prev_shape
+
         _record_tensor_index(index, remain_indexes, dim)
         dim += 1
         return result, dim, remain_indexes, prev_shape

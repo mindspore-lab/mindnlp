@@ -31,7 +31,7 @@ def execute(func_name, *args, **kwargs):
     device_type = kwargs.pop('device', None)
 
     if device_type is None:
-        if ENABLE_DISPATCH:
+        if ENABLE_DISPATCH or 'inplace' in func_name:
             if device_from_list:
                 device_type = args[0][0]._device
             else:

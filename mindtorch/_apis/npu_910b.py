@@ -1527,6 +1527,9 @@ def unique_dim(input, sorted, return_inverse, dim):
     return legacy.unique_dim(input, sorted, return_inverse, dim)
 
 def inplace_add(input, other, alpha):
+    if isinstance(other, numbers.Number):
+        other = mindspore.Tensor(other, dtype=input.dtype)
+
     if ENABLE_PYBOOST:
         return pyboost.inplace_add_ext_op(input, other, alpha)
     return legacy.inplace_add(input, other)
