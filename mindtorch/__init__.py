@@ -182,5 +182,3 @@ __version__ = 'test_version_no_value'
 from .torch_proxy import initialize_torch_proxy, setup_metadata_patch
 initialize_torch_proxy()
 setup_metadata_patch()
-
-
