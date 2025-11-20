@@ -172,7 +172,7 @@ from .func import vmap
 from .storage import UntypedStorage, Storage, TypedStorage
 
 from . import _dynamo, library
-from . import profiler, cuda, npu, amp, compiler, jit, version, __future__, overrides, \
+from . import profiler, cuda, npu, xpu, mps, amp, compiler, jit, version, __future__, overrides, \
     return_types, linalg, fx, backends, nn, fft, _jit_internal, utils, optim, testing, _ops
 from ._lowrank import svd_lowrank
 from .random import get_rng_state, initial_seed, manual_seed, seed, set_rng_state
@@ -182,4 +182,3 @@ __version__ = 'test_version_no_value'
 from .torch_proxy import initialize_torch_proxy, setup_metadata_patch
 initialize_torch_proxy()
 setup_metadata_patch()
-
