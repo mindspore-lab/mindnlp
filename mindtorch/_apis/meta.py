@@ -13,6 +13,9 @@ def empty(size, dtype):
     out = Tensor_(init='none', shape=size, dtype=dtype)
     return mindtorch.Tensor(out)
 
+def empty_like(input, dtype):
+    return empty(input.shape, input.dtype)
+
 def arange(start, end, step, dtype):
     out = Tensor_(init='none', shape=(math.ceil((end - start) / step), ), dtype=dtype)
     return mindtorch.Tensor(out)
@@ -197,6 +200,10 @@ def mul(input, other):
 
     out = Tensor_(init='none', shape=shape, dtype=dtype)
     return mindtorch.Tensor(out)
+
+def inplace_mul(input, other):
+    return input
+
 __all__.append('mul')
 
 def randn(size, generator, dtype):
