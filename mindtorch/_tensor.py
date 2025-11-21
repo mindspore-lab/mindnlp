@@ -220,7 +220,7 @@ class TensorPlaceHolder:
 
     def __repr__(self) -> str:
         self.data_sync(True)
-        return Tensor_.__repr__(self)[:-1] + f', device={self.device})'
+        return Tensor_.__repr__(self)
 
     def __format__(self, format_spec):
         return np.ndarray.__format__(self.asnumpy(), format_spec)
