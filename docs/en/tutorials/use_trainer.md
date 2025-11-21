@@ -13,7 +13,7 @@ The following is a code snippet that instantiate a `TrainingArugments` object:
 
 
 ```python
-from mindnlp.engine import TrainingArguments
+from transformers import TrainingArguments
 
 training_args = TrainingArguments(
     output_dir="../../output",
@@ -127,7 +127,7 @@ The `Trainer` in MindNLP accepts configurations from a `TrainingArgument` object
 Assume you have defined the `model`, `dataset_train`, `dataset_val` and a function `compute_metrics`, for example as in the [Quick Start](./quick_start.md) tutorial, a `Trainer` object can be created using the following code:
 
 ```python
-from mindnlp.engine import Trainer
+from transformers import Trainer
 
 trainer = Trainer(
     model=model,
