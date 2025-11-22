@@ -10,7 +10,6 @@ ON_A1 = SOC == 'ascend910'
 ON_A2 = SOC in ['ascend910b', 'ascend910_93']
 ON_ORANGE_PI = '310b' in SOC
 DEFAULT_DTYPE = mindspore.float32
-MS27 = '.'.join(mindspore.__version__.split('.')[:2]) >= '2.7'
 FLASH_ATTN_MASK_VALID = int(os.environ.get('FLASH_ATTN_MASK_VALID', 1))
 
 
@@ -47,7 +46,7 @@ def parse_flag_from_env(key, default=False):
 ENABLE_DISPATCH = parse_flag_from_env('ENABLE_DISPATCH', True)
 ENABLE_PYBOOST = parse_flag_from_env('ENABLE_PYBOOST', True)
 CPU_USE_NUMPY_OP = parse_flag_from_env('CPU_USE_NUMPY', False)
-
+ENABLE_FLASH_ATTENTION = parse_flag_from_env('ENABLE_FLASH_ATTENTION', False)
 
 def set_cpu_use_numpy(mode: bool):
     """set global pyboost"""

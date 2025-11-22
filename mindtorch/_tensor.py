@@ -1,12 +1,8 @@
-import gc
-import math
-import ctypes
+import numbers
 import numpy as np
 import mindspore
 from mindspore import Tensor
 from mindspore.common.tensor import _TensorMeta
-from mindspore._c_expression.typing import Type
-from mindspore._c_expression import ParamInfo # pylint: disable=no-name-in-module
 from mindspore._c_expression import typing
 
 try:
@@ -19,7 +15,7 @@ from . import ops, _dtype
 from ._bind import get_device_in_context, device_, get_default_dtype
 from ._utils import _rebuild_tensor_v2
 from ._C.size import Size
-from .configs import DEVICE_TARGET
+from .configs import DEVICE_TARGET, ENABLE_DISPATCH
 from .executor import execute
 
 device_map = {
@@ -153,12 +149,18 @@ class TensorPlaceHolder:
         self._requires_grad = value
 
     def cpu(self):
+        if not ENABLE_DISPATCH:
+            return self
         return super(Tensor, self).to('CPU')
 
     def npu(self, device=None, non_blocking=False):
+        if not ENABLE_DISPATCH:
+            return self
         return super(Tensor, self).to('Ascend', non_blocking=non_blocking)
 
     def cuda(self, device=None, non_blocking=False):
+        if not ENABLE_DISPATCH:
+            return self
         if DEVICE_TARGET == 'Ascend':
             device_type = 'Ascend'
         else:
@@ -198,11 +200,20 @@ class TensorPlaceHolder:
         return np.ndarray.__format__(self.asnumpy(), format_spec)
 
     def __iter__(self):
-        if self.ndim == 0:
+        self_ndim = self.ndim
+        if self_ndim == 0:
             yield self
         else:
-            for i in range(len(self)):
-                yield self[i]
+            if self_ndim == 1:
+                result = self.asnumpy()
+            else:
+                result = self.unbind(0)
+            # return iter(result)
+            for i in result:
+                # if self_ndim == 1:
+                #     yield i.item()
+                # else:
+                yield i
 
     def __getitem__(self, slices):
         slices = self._convert_numpy_slices(slices)
@@ -380,11 +391,7 @@ class TensorPlaceHolder:
 
     # Tensor.new_empty
     def new_empty(self, size, *, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False):
-        if dtype is None:
-            dtype = self.dtype
-        if device is None:
-            device = self.device
-        return ops.empty(*size, dtype=dtype, device=device, requires_grad=requires_grad, pin_memory=pin_memory)
+        return execute('new_empty', self, size, dtype, device)
 
     # Tensor.new_ones
     def new_ones(self, *size, dtype=None, device=None, requires_grad=False, layout=None, pin_memory=False, **kwargs):
@@ -774,8 +781,6 @@ class TensorPlaceHolder:
 
     # Tensor.copy_
     def copy_(self, value):
-        if self.dtype != value.dtype:
-            value = value.to(self.dtype)
         return ops.inplace_copy(self, value)
 
     # Tensor.conj
@@ -1226,7 +1231,7 @@ class TensorPlaceHolder:
 
     # Tensor.index_add_
     def index_add_(self, dim, index, source, *, alpha=1):
-        return self.copy_(ops.index_add(self, dim, index, source, alpha=alpha))
+        return execute('inplace_index_add', self, dim, index, source, alpha=alpha)
 
     # Tensor.index_add
     def index_add(self, dim, index, source, *, alpha=1):
@@ -1541,7 +1546,8 @@ class TensorPlaceHolder:
 
     # Tensor.masked_fill_
     def masked_fill_(self, mask, value):
-        return self.copy_(ops.masked_fill(self, mask, value))
+        # return self.copy_(ops.masked_fill(self, mask, value))
+        return execute('inplace_masked_fill', self, mask, value)
 
     # Tensor.masked_fill
     def masked_fill(self, mask, value):
@@ -1623,7 +1629,7 @@ class TensorPlaceHolder:
 
     # Tensor.mul_
     def mul_(self, other):
-        return self.copy_(ops.mul(self, other))
+        return execute('inplace_mul', self, other)
 
     # Tensor.multiply
     multiply = mul
@@ -1914,7 +1920,10 @@ class TensorPlaceHolder:
 
     # Tensor.scatter_
     def scatter_(self, dim, index, src):
-        return self.copy_(ops.scatter(self, dim, index, src))
+        # return self.copy_(ops.scatter(self, dim, index, src))
+        if isinstance(src, numbers.Number):
+            return execute("inplace_scatter_value", self, dim, index, src)
+        return execute("inplace_scatter_src", self, dim, index, src)
 
     # Tensor.scatter_add_
     def scatter_add_(self, dim, index, src):
@@ -2170,6 +2179,8 @@ class TensorPlaceHolder:
 
     # Tensor.to
     def _move_to(self, device, non_blocking=False):
+        if not ENABLE_DISPATCH:
+            return self
         if device in ['meta', 'Meta']:
             out = Tensor(shape=self.shape, dtype=self.dtype, init='none')
             return out
@@ -2349,13 +2360,11 @@ class TensorPlaceHolder:
             dtype_str = dtype_str.replace('_tensor', self.device.type) \
                 if self.device.type != 'cpu' else dtype_str.replace('._tensor', '')
             return dtype_str
-        return self.to(dtype, non_blocking=non_blocking)
+        return execute('cast', self, dtype)
 
     # Tensor.type_as
     def type_as(self, tensor):
         out = self.type(tensor.dtype)
-        if self.device != tensor.device:
-            out = out.to(tensor.device)
         return out
 
     # Tensor.unbind
@@ -2442,12 +2451,6 @@ class TensorPlaceHolder:
     def detach_(self):
         self.requires_grad_(False)
         return self
-
-    def stub_sync(self):
-        if self.stub:
-            self.tensor = self.stub.get_value()
-            self.stub = None
-        return self.tensor
 
     @property
     def is_cuda(self):

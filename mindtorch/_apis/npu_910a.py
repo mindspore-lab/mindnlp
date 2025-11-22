@@ -3,8 +3,6 @@ import numbers
 import mindspore
 import mindtorch
 import numpy as np
-from mindspore._c_expression import _empty_instance
-
 from mindtorch._C import default_generator
 from ..configs import ENABLE_PYBOOST
 from .._op_prim.ascend import legacy, pyboost
@@ -12,7 +10,14 @@ from .._op_prim.ascend import legacy, pyboost
 generator_step_ = 12
 
 def empty(size, dtype):
-    return _empty_instance(size, dtype=dtype, device='Ascend')
+    return pyboost.empty_op(size, dtype=dtype, device='npu')
+    # return _empty_instance(size, dtype=dtype, device='Ascend')
+
+def empty_like(input, dtype):
+    return pyboost.empty_like_op(input, dtype, device='npu')
+
+def new_empty(input, size, dtype, device):
+    return pyboost.new_empty_op(input, size, dtype, device)
 
 def reshape(x, shape):
     """
@@ -204,6 +209,9 @@ def mul(input, other):
     if ENABLE_PYBOOST:
         return pyboost.mul_op(input, other)
     return legacy.mul(input, other)
+
+def inplace_mul(self, other):
+    return pyboost.inplace_mul_op(self, other)
 
 def dense(input, weight, bias=None):
     """
@@ -532,6 +540,11 @@ def masked_fill(input, mask, value):
     if ENABLE_PYBOOST:
         return pyboost.masked_fill_op(input, mask, value)
     return legacy.masked_fill(input, mask, value)
+
+def inplace_masked_fill(input, mask, value):
+    if isinstance(value, numbers.Number):
+        return pyboost.inplace_masked_fill_scalar_op(input, mask, value)
+    return pyboost.inplace_masked_fill_tensor_op(input, mask, value)
 
 def isin(input, test_elements, assume_unique=False, invert=False):
     """
@@ -1124,7 +1137,10 @@ def sqrt(input):
     return legacy.sqrt(input)
 
 def masked_scatter(input, mask, value):
-    return legacy.masked_scatter(input, mask, cast(value, input.dtype))
+    return legacy.masked_scatter(input, mask, value)
+
+def inplace_masked_scatter(input, mask, value):
+    return pyboost.inplace_masked_scatter_op(input, mask, value)
 
 def neg(input):
     if ENABLE_PYBOOST:
@@ -1526,6 +1542,13 @@ def scatter_value(input, dim, index, src, reduce='none'):
         return pyboost.scatter_value_op(input, dim, index, src, reduce)
     return legacy.scatter(input, dim, index, src, reduce)
 
+def inplace_scatter_value(input, dim, index, src):
+    return pyboost.inplace_scatter_value_op(input, dim, index, src)
+
+def inplace_scatter_src(input, dim, index, src):
+    return pyboost.inplace_scatter_src_op(input, dim, index, src)
+
+
 def unique_dim(input, sorted, return_inverse, dim):
     if ENABLE_PYBOOST:
         return pyboost.unique_dim_op(input, sorted, return_inverse, dim)
@@ -1659,6 +1682,9 @@ def index_add_ext(input, dim, index, source, alpha):
         source = mul(alpha, source)
     return legacy.index_add(input, cast(index, mindspore.int32), source, dim, True, True)
 
+def inplace_index_add(input, dim, index, source, alpha):
+    return pyboost.inplace_index_add_op(input, dim, index, source, alpha)
+
 def polar(abs, angle):
     if ENABLE_PYBOOST:
         return pyboost.polar_op(abs, angle)
@@ -1682,6 +1708,9 @@ def pixel_shuffle(input, upscale_factor):
 def view_as_complex(input):
     real_part, imag_part = chunk(input, 2, -1)
     return legacy.complex(squeeze(real_part, -1), squeeze(imag_part, -1))
+
+def view_as_real(input):
+    return pyboost.real_view_op(input)
 
 def rms_norm(input, normalized_shape, weight, eps=1e-5):
     if eps is None:
@@ -1891,17 +1920,75 @@ def histc(input, bins=100, min=0, max=0):
 def dist_comm_barrier(group):
     return pyboost.dist_comm_barrier_op(group)
 
-def new_empty(input, size, dtype):
-    return pyboost.new_empty_op(input, size, dtype, 'Ascend')
-
 def new_ones(input, size, dtype):
     return pyboost.new_ones_op(input, size, dtype)
 
 def kl_div(input, target, reduction, log_target):
     return pyboost.kl_div_op(input, target, reduction, log_target)
 
-def repeat_interleave_int(input, repeats, dim, output_size):
-    return pyboost.repeat_interleave_int_op(input, repeats, dim, output_size)
+def repeat_interleave_int(input_tensor, repeats, dim, output_size):
+    if dim is None:
+        input_tensor = flatten(input_tensor, 0, -1)
+        dim = 0
+
+    # 确保 dim 是有效的维度
+    if dim < 0:
+        dim += input_tensor.dim()
+
+    # 将 repeats 统一转换为 LongTensor 并确保其在正确的设备上
+    if isinstance(repeats, int):
+        repeats_tensor = mindspore.tensor([repeats], dtype=mindtorch.long)
+        uniform_repeat = True
+    elif isinstance(repeats, (list, tuple)):
+        repeats_tensor = mindspore.tensor(repeats, dtype=mindtorch.long)
+        uniform_repeat = False
+    elif isinstance(repeats, mindtorch.Tensor):
+        repeats_tensor = cast(repeats, dtype=mindtorch.long)
+        uniform_repeat = False
+    else:
+        raise TypeError("repeats must be an int, a list, or a mindtorch.Tensor")
+
+    # 获取输入张量在目标维度上的大小
+    dim_size = input_tensor.shape[dim] 
+
+    if uniform_repeat:
+        # ✅ 优化路径：当所有元素重复次数相同时，使用 expand 和 reshape 避免循环
+        # 此方法利用广播机制，非常高效
+        unsqueezed_tensor = expand_dims(input_tensor, dim + 1)
+        expanded_shape = list(input_tensor.shape)
+        expanded_shape[dim] = -1
+        expanded_shape.insert(dim + 1, repeats_tensor.item())
+        expanded_tensor = broadcast_to(unsqueezed_tensor, expanded_shape)
+        
+        final_shape = list(input_tensor.shape)
+        final_shape[dim] *= repeats_tensor.item()
+        output = reshape(expanded_tensor, final_shape)
+    else:
+        # 🔄 当重复次数不同时，需要构建索引
+        # 检查 repeats_tensor 的长度是否与目标维度的长度匹配
+        if len(repeats_tensor) != dim_size:
+            raise ValueError(f"repeats must have length {dim_size} along dimension {dim}, but got {len(repeats_tensor)}")
+        
+        # 生成索引：例如 repeats_tensor = [2, 3, 1] -> index = [0, 0, 1, 1, 1, 2]
+        # 使用 cumsum 计算总重复次数以预分配空间
+        total_repeats = sum(repeats_tensor, 0, False, None).item()
+        index = zeros(total_repeats, dtype=mindtorch.long)
+        
+        # 计算每个块的起始位置
+        # start_positions = mindtorch.cat([mindtorch.tensor([0], device=input_tensor.device), mindtorch.cumsum(repeats_tensor, dim=0)[:-1]])
+        
+        # 使用 scatter 或高级索引填充（这里用循环填充，但可考虑更底层的优化）
+        # 注意：对于非常大的非均匀重复，此部分可能成为瓶颈
+        current_pos = 0
+        for i in range(dim_size):
+            repeat_count = repeats_tensor[i].item()
+            if repeat_count > 0:
+                index[current_pos:current_pos + repeat_count] = i
+            current_pos += repeat_count
+
+        output = index_select(input_tensor, dim, index)
+
+    return output
 
 def repeat_interleave_tensor(input, repeats, dim, output_size):
     return pyboost.repeat_interleave_tensor_op(input, repeats, dim, output_size)
@@ -1971,7 +2058,7 @@ def sdpa(query, key, value, attn_mask=None, dropout_p=0.0,
     if enable_gqa:
         key = contiguous(repeat_kv(key, query.shape[-3] // key.shape[-3]))
         value = contiguous(repeat_kv(value, query.shape[-3] // value.shape[-3]))
-    
+
     attn_bias_shape = (L, S) if attn_mask is None else attn_mask.shape
     attn_bias = zeros(attn_bias_shape, dtype=query.dtype)
 
@@ -2249,6 +2336,10 @@ def pad(input, pad, mode='constant', value=None):
     if isinstance(pad, tuple):
         pad = tuple(p if isinstance(p, int) else p.item() for p in pad)
 
+    if mode == "constant":
+        value = 0 if value is None else value
+        return constant_pad_nd(input, pad, value)
+
     new_pad = ()
     for idx, pad_v in enumerate(pad):
         if not isinstance(pad_v, int):
@@ -2282,3 +2373,21 @@ def mish(input):
     if ENABLE_PYBOOST:
         return pyboost.mish_ext_op(input)
     return legacy.mish(input)
+
+
+def _get_unfold_indices(input_shape, dimension, size, step):
+    if dimension < 0:
+        dimension += len(input_shape)
+    indices = []
+    for i in range(0, input_shape[dimension] - size + 1, step):
+        indices.append(list(range(i, i + size)))
+
+    return indices, dimension
+
+
+def unfold(input, dimension, size, step):
+    _indices, _dimension = _get_unfold_indices(input.shape, dimension, size, step)
+    indices = mindspore.tensor(_indices)
+    output = gather(input, indices, _dimension, 0)
+    output = transpose_view(output, _dimension + 1, -1)
+    return output

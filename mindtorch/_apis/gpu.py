@@ -1332,3 +1332,6 @@ def pad(input, pad, mode='constant', value=None):
             paddings += ((new_pad[2*i], new_pad[2*i+1]),)
         return pad(input, paddings)
     return pad_v3(input, new_pad, mode, value)
+
+def mish(input):
+    return legacy.mish(input)

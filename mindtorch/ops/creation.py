@@ -172,9 +172,7 @@ def empty(*size, out=None, dtype=None, layout=None, device=None,
 
 # empty_like
 def empty_like(input, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=None):
-    if device is None:
-        device = input._device
-    return empty(input.shape, dtype=input.dtype, layout=layout, device=device)
+    return execute('empty_like', input, dtype, device=device)
 
 # empty_strided
 

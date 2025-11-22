@@ -25,13 +25,15 @@ api_map = {
 }
 
 
+DISPATCH_WHITE_LIST = ['inplace_zero', 'inplace_fill_scalar']
+
 def execute(func_name, *args, **kwargs):
     device_from_list = kwargs.pop('device_from_list', False)
     device_position = kwargs.pop('device_position', 0)
     device_type = kwargs.pop('device', None)
 
     if device_type is None:
-        if ENABLE_DISPATCH or 'inplace' in func_name:
+        if ENABLE_DISPATCH or func_name in DISPATCH_WHITE_LIST:
             if device_from_list:
                 device_type = args[0][0]._device
             else:

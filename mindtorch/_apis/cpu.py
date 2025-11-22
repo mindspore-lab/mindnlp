@@ -3,16 +3,14 @@ import numbers
 import math
 import numpy as np
 import mindspore
-from mindspore._c_expression import _empty_instance
-from mindspore.ops.auto_generate.gen_ops_prim import Empty
 import mindtorch
 from .._op_prim.cpu import legacy, pyboost
 
-empty_op = Empty().set_device('CPU')
 def empty(size, dtype):
-    if mindtorch.configs.MS27:
-        return empty_op(size, dtype=dtype, device='CPU')
-    return _empty_instance(size, dtype=dtype, device='CPU')
+    return pyboost.empty_op(size, dtype=dtype, device='CPU')
+
+def empty_like(input, dtype):
+    return pyboost.empty_like_op(input, dtype, device='CPU')
 
 def inplace_normal(input, mean, std, generator_):
     out = np.random.normal(mean, std, input.shape).astype(mindtorch.dtype2np[input.dtype])
@@ -24,7 +22,9 @@ def select_ext_view(input, dim, index):
     return pyboost.select_ext_view_op(input, dim, index)
 
 def inplace_copy(input, value):
-    return pyboost.inplace_copy_op(input, value)
+    # return pyboost.inplace_copy_op(input, value)
+    input.data = value
+    return input
 
 
 def fill_scalar(size, fill_value, dtype):
@@ -126,6 +126,9 @@ def div(input, other):
 
 def mul(input, other):
     return legacy.mul(input, other)
+
+def inplace_mul(input, other):
+    return inplace_copy(input, mul(input, other))
 
 def reduce_all(input, axis, keepdims):
     return legacy.reduce_all(input, axis, keepdims)
@@ -387,6 +390,9 @@ def masked_fill(input, mask, value):
     if input.dtype.is_floating_point and isinstance(value, numbers.Number):
         value = float(value)
     return legacy.masked_fill(input, mask, value)
+
+def inplace_masked_fill(input, mask, value):
+    return inplace_copy(input, masked_fill(input, mask, value))
 
 py_sum = sum
 def sum(input, dim, keepdim, dtype):
@@ -859,7 +865,8 @@ def upsample_bilinear2d(input, size=None, scale_factor=None, align_corners=False
     return legacy.resize_bilinear_v2(input, size, align_corners, not align_corners)
 
 def unstack_view(input, dim):
-    return legacy.unstack(input, dim, input.shape[dim])
+    # return legacy.unstack(input, dim, input.shape[dim])
+    return pyboost.unstack_ext_view_op(input, dim)
 
 def triu(input, diagonal=0):
     return legacy.triu(input, diagonal)

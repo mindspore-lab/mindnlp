@@ -266,10 +266,10 @@ def select(input, dim, index):
 
 # scatter
 def scatter(input, dim, index, src):
-    if input.dtype == mindspore.bool_:
-        return execute("scatter", input.int(), dim, index, src.int()).bool()
+    # if input.dtype == mindspore.bool_:
+    #     return execute("scatter", input.int(), dim, index, src.int()).bool()
 
-    if not isinstance(src, mindtorch.Tensor):
+    if isinstance(src, numbers.Number):
         return execute("scatter_value", input, dim, index, src)
     return execute("scatter", input, dim, index, src)
 
