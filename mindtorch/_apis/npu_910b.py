@@ -146,7 +146,7 @@ def layer_norm(input, normalized_shape, weight, bias, eps=1e-5):
         Tensor: The normalized tensor.
     """
     if ENABLE_PYBOOST:
-        return pyboost.layer_norm_ext_op(input, normalized_shape, weight, bias, eps)
+        return pyboost.layer_norm_ext_op(input, normalized_shape, weight, bias, eps)[0]
     if weight is not None:
         begin_axis = input.ndim - weight.ndim
     else:
