@@ -865,47 +865,36 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
 
 def sdpa(query, key, value, attn_mask=None, dropout_p=0.0,
         is_causal=False, scale=None, enable_gqa=False):
-    if ENABLE_FLASH_ATTENTION:
-        return sdpa_manual(query, key, value, attn_mask, dropout_p, is_causal, scale, enable_gqa)
-
+    L, S = query.shape[-2], key.shape[-2]
     scale_factor = 1 / math.sqrt(query.shape[-1]) if scale is None else scale
 
-    if attn_mask is not None and not is_causal:
-        if FLASH_ATTN_MASK_VALID == 1:
-            attn_mask = bitwise_not(attn_mask)
-        else:
-            attn_mask = cast(attn_mask, mindspore.bool_)
+    if enable_gqa:
+        key = contiguous(repeat_kv(key, query.shape[-3] // key.shape[-3]))
+        value = contiguous(repeat_kv(value, query.shape[-3] // value.shape[-3]))
 
-    sparse_mode = 0
+    attn_bias_shape = (L, S) if attn_mask is None else attn_mask.shape
+    attn_bias = zeros(attn_bias_shape, dtype=query.dtype)
 
     if is_causal:
         assert attn_mask is None
-        attn_mask = get_attn_mask_npu('Ascend')
-        sparse_mode = 3
+        temp_mask = tril(ones((L, S), dtype=mindtorch.bool), diagonal=0)
+        attn_bias = masked_fill(attn_bias, logical_not(temp_mask), mindtorch.finfo(attn_bias.dtype).min)
 
-    head_num = query.shape[1]
-    if enable_gqa and is_causal:
-        output = prompt_flash_attention(query, key, value, attn_mask,
-                            actual_seq_lengths=None, actual_seq_lengths_kv=None, pse_shift=None,
-                            deq_scale1=None, quant_scale1=None, deq_scale2=None, quant_scale2=None,
-                            quant_offset2=None, num_heads=head_num, scale_value=scale_factor,
-                            pre_tokens=2147483647, next_tokens=0, input_layout='BNSD',
-                            num_key_value_heads=key.shape[1], sparse_mode=sparse_mode, inner_precise=1)
-        # output = execute('incre_flash_attention', query, [key], [value], attn_mask,
-        #                  actual_seq_lengths=None, pse_shift=None, dequant_scale1=None, quant_scale1=None,
-        #                  dequant_scale2=None, quant_scale2=None, quant_offset2=None, antiquant_scale=None,
-        #                  antiquant_offset=None, block_table=None, kv_padding_size=None, num_heads=head_num,
-        #                  input_layout='BNSD', scale_value=scale_factor, num_key_value_heads=key.shape[1],
-        #                  block_size=0, inner_precise=1)
-        return output
-    else:
-        output = flash_attention_score(query, key, value, head_num=head_num, input_layout='BNSD', real_shift=None, padding_mask=None, attn_mask=attn_mask,
-                        scale_value=scale_factor, keep_prob=1 - dropout_p, pre_tokens=2147483647, next_tokens=2147483647, inner_precise=0,
-                        drop_mask=None, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=sparse_mode)
+    if attn_mask is not None:
+        if attn_mask.dtype == mindtorch.bool:
+            if attn_mask.ndim == 3:
+                attn_mask = squeeze(attn_mask, 0)
+            else:
+                attn_mask = attn_mask
+            attn_bias = masked_fill(attn_bias, logical_not(attn_mask), mindtorch.finfo(attn_bias.dtype).min)
+        else:
+            attn_bias = add(attn_mask, attn_bias)
 
-        sfm_max, sfm_sum, sfm_out, atten_out = output
-
-        return atten_out
+    attn_weight = mul(matmul(query, transpose_view(key, -2, -1)), scale_factor)
+    attn_weight = add(attn_weight, attn_bias)
+    attn_weight = softmax(attn_weight, -1)
+    attn_weight = dropout(attn_weight, dropout_p)
+    return matmul(attn_weight, value)
 
 def unstack_view(input, dim):
     return legacy.unstack(input, dim, input.shape[dim])
