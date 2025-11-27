@@ -25,7 +25,7 @@ def clean_repeated_substrings(text):
 
 model_name_or_path = "lvyufeng/HunyuanOCR"
 processor = AutoProcessor.from_pretrained(model_name_or_path, use_fast=False, trust_remote_code=True)
-img_path = "image_ocr.jpg"
+img_path = "examples/image_ocr.jpg"
 image_inputs = Image.open(img_path)
 messages1 = [
     {"role": "system", "content": ""},
