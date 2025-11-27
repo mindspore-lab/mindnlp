@@ -1,0 +1,13 @@
+gradio==5.31.0
+mindspore>=2.7.1
+mindnlp
+transformers
+tokenizers
+accelerate
+einops
+addict 
+easydict
+torchvision
+PyMuPDF
+hf_transfer
+qwen_vl_utils

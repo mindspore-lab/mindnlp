@@ -415,6 +415,8 @@ inplace_masked_fill_scalar_op = InplaceMaskedFillScalar().set_device('Ascend')
 
 inplace_masked_fill_tensor_op = InplaceMaskedFillTensor().set_device('Ascend')
 
+inplace_masked_scatter_op = InplaceMaskedScatter().set_device('Ascend')
+
 inplace_mul_op = InplaceMul().set_device('Ascend')
 
 inplace_muls_op = InplaceMuls().set_device('Ascend')

@@ -6,10 +6,18 @@ import numpy as np
 from mindspore._c_expression import _empty_instance
 from ..configs import ENABLE_PYBOOST
 from .._op_prim.ascend import legacy, pyboost
+from .._op_prim import cpu
 
 
 def empty(size, dtype):
     return _empty_instance(size, dtype=dtype, device='Ascend')
+
+def empty_like(input, dtype):
+    return pyboost.empty_like_op(input, dtype, device='npu')
+
+def new_empty(input, size, dtype, device):
+    return pyboost.new_empty_op(input, size, dtype, device)
+
 
 def reshape(x, shape):
     """
@@ -55,7 +63,7 @@ def select_ext_view(input, dim, index):
         Tensor: The selected slice.
     """
     if ENABLE_PYBOOST:
-        input = clone(input)
+        # input = clone(input)
         return pyboost.select_ext_view_op(input, dim, index)
     else:
         return legacy.select_view(input, index, dim)
@@ -88,42 +96,42 @@ def slice(input, dim, start, end, step):
     Returns:
         Tensor: The sliced tensor.
     """
-    if step == 1:
-        return pyboost.slice_ext_view_op(input, dim, start, end, step)
-    # ndim = input.ndim
-    # begins = [0] * ndim
-    # ends = [i for i in input.shape]
-    # strides = [1] * ndim
-    # begins[dim] = start
-    # ends[dim] = end
-    # strides[dim] = step
-    # print(input.shape)
-    # print(tuple(begins), tuple(ends), tuple(strides))
-    # print(legacy.strided_slice(input, tuple(begins), tuple(ends), tuple(strides), 0, 0, 0, 0, 0))
-    # return legacy.strided_slice(input, tuple(begins), tuple(ends), tuple(strides), 0, 0, 0, 0, 0)
-    if end < 0:
-        end = input.shape[dim] + end
+    # if step == 1:
+    return pyboost.slice_ext_view_op(input, dim, start, end, step)
+    # # ndim = input.ndim
+    # # begins = [0] * ndim
+    # # ends = [i for i in input.shape]
+    # # strides = [1] * ndim
+    # # begins[dim] = start
+    # # ends[dim] = end
+    # # strides[dim] = step
+    # # print(input.shape)
+    # # print(tuple(begins), tuple(ends), tuple(strides))
+    # # print(legacy.strided_slice(input, tuple(begins), tuple(ends), tuple(strides), 0, 0, 0, 0, 0))
+    # # return legacy.strided_slice(input, tuple(begins), tuple(ends), tuple(strides), 0, 0, 0, 0, 0)
+    # if end < 0:
+    #     end = input.shape[dim] + end
     
-    # 2. 计算新视图的大小（size）
-    new_size = list(input.size())
-    # 新维度上的长度计算考虑了步长
-    new_size[dim] = (end - start + step - 1) // step  # 向上取整计算元素个数
-    if new_size[dim] <= 0:
-        raise RuntimeError(f"Calculated size for dimension {dim} is non-positive after slicing.")
+    # # 2. 计算新视图的大小（size）
+    # new_size = list(input.size())
+    # # 新维度上的长度计算考虑了步长
+    # new_size[dim] = (end - start + step - 1) // step  # 向上取整计算元素个数
+    # if new_size[dim] <= 0:
+    #     raise RuntimeError(f"Calculated size for dimension {dim} is non-positive after slicing.")
 
-    # 3. 计算新的步长（stride）和存储偏移量（storage_offset）
-    old_strides = input.stride()
-    new_strides = list(old_strides)
-    # 在目标维度上，新步长 = 原步长 * 步长（step）
-    new_strides[dim] = old_strides[dim] * step
-    # 新的存储偏移量 = 原偏移量 + 起始索引 * 目标维度的原步长
-    new_storage_offset = input.storage_offset() + start * old_strides[dim]
+    # # 3. 计算新的步长（stride）和存储偏移量（storage_offset）
+    # old_strides = input.stride()
+    # new_strides = list(old_strides)
+    # # 在目标维度上，新步长 = 原步长 * 步长（step）
+    # new_strides[dim] = old_strides[dim] * step
+    # # 新的存储偏移量 = 原偏移量 + 起始索引 * 目标维度的原步长
+    # new_storage_offset = input.storage_offset() + start * old_strides[dim]
 
-    # 4. 使用 as_strided 创建新视图
-    # 关键：as_strided 通过直接定义新张量的尺寸、步长和存储偏移量来创建一个视图，而不复制数据。
-    sliced_tensor = as_strided_manual(input, size=tuple(new_size), stride=tuple(new_strides), storage_offset=new_storage_offset)
+    # # 4. 使用 as_strided 创建新视图
+    # # 关键：as_strided 通过直接定义新张量的尺寸、步长和存储偏移量来创建一个视图，而不复制数据。
+    # sliced_tensor = as_strided_manual(input, size=tuple(new_size), stride=tuple(new_strides), storage_offset=new_storage_offset)
 
-    return sliced_tensor
+    # return sliced_tensor
 
 def as_strided_manual(self, size, stride, storage_offset=None):
     if len(size) != len(stride):
@@ -193,7 +201,7 @@ def layer_norm(input, normalized_shape, weight, bias, eps=1e-5):
         Tensor: The normalized tensor.
     """
     if ENABLE_PYBOOST:
-        return pyboost.layer_norm_ext_op(input, normalized_shape, weight, bias, eps)
+        return cast(pyboost.layer_norm_ext_op(input, normalized_shape, weight, bias, eps)[0], input.dtype)
     if weight is not None:
         begin_axis = input.ndim - weight.ndim
     else:
@@ -258,6 +266,10 @@ def mul(input, other):
     if ENABLE_PYBOOST:
         return pyboost.mul_op(input, other)
     return legacy.mul(input, other)
+
+def inplace_mul(self, other):
+    return pyboost.inplace_mul_op(self, other)
+
 
 def dense(input, weight, bias=None):
     """
@@ -363,7 +375,7 @@ def softmax(input, axis=-1):
         Tensor: The softmax of the input tensor.
     """
     if ENABLE_PYBOOST:
-        return pyboost.softmax_impl(input, axis)
+        return cast(pyboost.softmax_impl(input, axis), input.dtype)
     return legacy.softmax(input, axis)
 
 def permute(input, axes=None):
@@ -595,6 +607,12 @@ def masked_fill(input, mask, value):
         return pyboost.masked_fill_op(input, mask, value)
     return legacy.masked_fill(input, mask, value)
 
+def inplace_masked_fill(input, mask, value):
+    if isinstance(value, numbers.Number):
+        return pyboost.inplace_masked_fill_scalar_op(input, mask, value)
+    return pyboost.inplace_masked_fill_tensor_op(input, mask, value)
+
+
 def isin(input, test_elements, assume_unique=False, invert=False):
     """
     Checks if elements of input tensor are in test_elements.
@@ -618,6 +636,69 @@ def pad_v3(input, new_pad, mode, value=None, contiguous=True):
         out = legacy.pad_v3(input, new_pad, int(value), mode, contiguous)
         return cast(out, mindspore.bool_)
     return legacy.pad_v3(input, new_pad, value, mode, contiguous)
+
+def custom_circular_pad(x, pad):
+
+    ndim = x.ndim
+    n_pad_dims = len(pad) // 2
+    assert n_pad_dims <= ndim, "填充参数超过了张量的维度"
+
+    # 按从最后维度向前处理填充
+    for dim in range(ndim-1, ndim-1-n_pad_dims, -1):
+        # 当前维度的左右填充量
+        idx = 2 * (ndim - 1 - dim)  # 在pad元组中的起始位置
+        left_pad = pad[idx]
+        right_pad = pad[idx + 1]
+        
+        if left_pad == 0 and right_pad == 0:
+            continue  # 跳过该维度
+            
+        size = x.shape[dim]  # 当前维度的原始长度
+        new_size = left_pad + size + right_pad
+        
+        # 生成循环索引: (index - left_pad) mod size
+        index = fmod_scalar(add(arange(0, new_size, 1, mindspore.int64), new_size - left_pad), size)
+        index = (index + x.shape[dim]) % x.shape[dim]
+        x = index_select(x, dim, index)
+
+    return x
+
+def pad(input, pad, mode='constant', value=None):
+    if isinstance(pad, tuple):
+        pad = tuple(p if isinstance(p, int) else p.item() for p in pad)
+
+    if mode == "constant":
+        value = 0 if value is None else value
+        return constant_pad_nd(input, pad, value)
+
+    new_pad = ()
+    for idx, pad_v in enumerate(pad):
+        if not isinstance(pad_v, int):
+            pad_v = pad_v.item()
+        if pad_v < 0:
+            dim = input.ndim - 1 - idx // 2
+            input = narrow(input, dim, 0, input.shape[dim] + pad_v)
+            pad_v = 0
+        new_pad += (pad_v,)
+    if py_sum(new_pad) == 0:
+        return input
+    if mode == 'circular':
+        return custom_circular_pad(input, pad)
+    elif mode == 'reflect':
+        return pad_v3(input, new_pad, mode)
+    if value is None:
+        value = 0
+    if mode == "replicate":
+        mode = "edge"
+        return pad_v3(input, new_pad, mode)
+    # if input.dtype.is_floating_point:
+    #     value = float(value)
+    # elif input.dtype == mindtorch.bool:
+    #     value = bool(value)
+    # elif input.dtype in [mindtorch.int32, mindtorch.int64]:
+    #     value = int(value)
+
+    return pad_v3(input, new_pad, mode, value)
 
 def log_softmax(input, axis=-1, dtype=None):
     """
@@ -732,6 +813,10 @@ def clamp_scalar(value, min_value, max_value):
     return value
 
 def cumsum(self, dim, dtype):
+    if self.dtype == mindspore.int64:
+        self = cast(self, mindspore.int32)
+    if ENABLE_PYBOOST:
+        return pyboost.cumsum_ext_op(self, dim, dtype)
     if self.shape[dim] == 0:
         return mindtorch.tensor([], dtype=self.dtype, device=self.device)
     return legacy.cum_sum(self, dim, False, False)
@@ -747,7 +832,19 @@ def concat(tensors, axis):
     return legacy.concat(tensors, axis)
 
 def gather_d(input, dim, index):
-    return legacy.gather_d(input, dim, index)
+    idx = meshgrid([arange(0, s, 1, mindspore.int64) for s in index.shape], 'ij')
+    
+    # 替换目标维度的索引
+    new_idx = ()
+    for ix, i in enumerate(idx):
+        if ix == dim:
+            new_idx += (index,)
+        else:
+            new_idx += (i,)
+    
+    # 使用高级索引提取数据
+    return getitem(input, new_idx)
+
 
 def gather_nd(input, indices):
     return legacy.gather_nd(input, indices)
@@ -781,7 +878,8 @@ def index(input, index):
     return legacy.index(input, index)
 
 def scatter(input, dim, index, src):
-    return legacy.tensor_scatter_elements(input, index, cast(src, input.dtype), dim, "none")
+    # return legacy.tensor_scatter_elements(input, index, cast(src, input.dtype), dim, "none")
+    return pyboost.scatter_op(input, dim, index, src)
 
 def tril(input, diagonal=0):
     if ENABLE_PYBOOST:
@@ -813,6 +911,7 @@ def tile(input, multiples):
 
 def arange(start, end, step, dtype):
     out = legacy.range(start, end, step, 100000)
+    # out = mindspore.Tensor(np.arange(start, end, step))
     if dtype is not None:
         out = cast(out, dtype)
     return out
@@ -1154,6 +1253,9 @@ def sqrt(input):
 
 def masked_scatter(input, mask, value):
     return legacy.masked_scatter(input, mask, value)
+
+def inplace_masked_scatter(input, mask, value):
+    return pyboost.inplace_masked_scatter_op(input, mask, value)
 
 def neg(input):
     return legacy.neg(input)
@@ -1547,12 +1649,22 @@ def scatter_value(input, dim, index, src, reduce='none'):
         return pyboost.scatter_value_op(input, dim, index, src, reduce)
     return legacy.scatter(input, dim, index, src, reduce)
 
+def inplace_scatter_value(input, dim, index, src):
+    return pyboost.inplace_scatter_value_op(input, dim, index, src)
+
+def inplace_scatter_src(input, dim, index, src):
+    return pyboost.inplace_scatter_src_op(input, dim, index, src)
+
+
 def unique_dim(input, sorted, return_inverse, dim):
     if ENABLE_PYBOOST:
         return pyboost.unique_dim_op(input, sorted, return_inverse, dim)
     return legacy.unique_dim(input, sorted, return_inverse, dim)
 
 def inplace_add(input, other, alpha):
+    if isinstance(other, numbers.Number):
+        other = mindspore.Tensor(other, dtype=input.dtype)
+
     if ENABLE_PYBOOST:
         return pyboost.inplace_add_ext_op(input, other, alpha)
     return legacy.inplace_add(input, other)
@@ -1669,9 +1781,9 @@ def polar(abs, angle):
     return legacy.polar(abs, angle)
 
 def upsample_linear1d(input, output_size, scale_factor, align_corners=False):
-    if ENABLE_PYBOOST:
-        return pyboost.upsample_linear1d_op(input, output_size, scale_factor, align_corners)
-    return legacy.upsample_linear1d(input, output_size, scale_factor, align_corners)
+    coordinate_transformation_mode = "align_corners" if align_corners else "half_pixel"
+    return cpu.legacy.resize_linear1_d(input, output_size, coordinate_transformation_mode)
+
 
 def grid_sampler_2d(input, grid, mode='bilinear', padding_mode='zeros', align_corners=False):
     if ENABLE_PYBOOST:
@@ -1684,8 +1796,12 @@ def pixel_shuffle(input, upscale_factor):
     return legacy.pixel_shuffle(input, upscale_factor)
 
 def view_as_complex(input):
+    input = clone(input)
     real_part, imag_part = chunk(input, 2, -1)
     return legacy.complex(squeeze(real_part, -1), squeeze(imag_part, -1))
+
+def view_as_real(input):
+    return pyboost.real_view_op(input)
 
 def rms_norm(input, normalized_shape, weight, eps=1e-5):
     if eps is None:
@@ -1989,7 +2105,7 @@ def sdpa(query, key, value, attn_mask=None, dropout_p=0.0,
     attn_weight = mul(matmul(query, transpose_view(key, -2, -1)), scale_factor)
     attn_weight = add(attn_weight, attn_bias)
     attn_weight = softmax(attn_weight, -1)
-    # attn_weight = dropout(attn_weight, dropout_p, seed)
+    attn_weight = dropout(attn_weight, dropout_p)
     return matmul(attn_weight, value)
 
 
@@ -2207,3 +2323,25 @@ def isin(elements, test_elements, invert=False):
     if invert:
         res = logical_not(res)
     return reshape(res, elements_shape)
+
+def mish(input):
+    if ENABLE_PYBOOST:
+        return pyboost.mish_ext_op(input)
+    return legacy.mish(input)
+
+def _get_unfold_indices(input_shape, dimension, size, step):
+    if dimension < 0:
+        dimension += len(input_shape)
+    indices = []
+    for i in range(0, input_shape[dimension] - size + 1, step):
+        indices.append(list(range(i, i + size)))
+
+    return indices, dimension
+
+
+def unfold(input, dimension, size, step):
+    _indices, _dimension = _get_unfold_indices(input.shape, dimension, size, step)
+    indices = mindspore.tensor(_indices)
+    output = gather(input, indices, _dimension, 0)
+    output = transpose_view(output, _dimension + 1, -1)
+    return output

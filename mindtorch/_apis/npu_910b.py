@@ -6,13 +6,19 @@ import numpy as np
 from mindspore._c_expression import _empty_instance
 
 from mindtorch._C import default_generator
-from ..configs import ENABLE_PYBOOST, FLASH_ATTN_MASK_VALID
+from ..configs import ENABLE_PYBOOST, FLASH_ATTN_MASK_VALID, ENABLE_FLASH_ATTENTION
 from .._op_prim.ascend import legacy, pyboost
 
 generator_step_ = 12
 
 def empty(size, dtype):
     return _empty_instance(size, dtype=dtype, device='Ascend')
+
+def empty_like(input, dtype):
+    return pyboost.empty_like_op(input, dtype, device='npu')
+
+def new_empty(input, size, dtype, device):
+    return pyboost.new_empty_op(input, size, dtype, device)
 
 def reshape(x, shape):
     """
@@ -140,7 +146,7 @@ def layer_norm(input, normalized_shape, weight, bias, eps=1e-5):
         Tensor: The normalized tensor.
     """
     if ENABLE_PYBOOST:
-        return pyboost.layer_norm_ext_op(input, normalized_shape, weight, bias, eps)
+        return pyboost.layer_norm_ext_op(input, normalized_shape, weight, bias, eps)[0]
     if weight is not None:
         begin_axis = input.ndim - weight.ndim
     else:
@@ -205,6 +211,9 @@ def mul(input, other):
     if ENABLE_PYBOOST:
         return pyboost.mul_op(input, other)
     return legacy.mul(input, other)
+
+def inplace_mul(self, other):
+    return inplace_copy(self, mul(self, other))
 
 def dense(input, weight, bias=None):
     """
@@ -434,7 +443,7 @@ def eq(input, other):
         return pyboost.equal_op(input, other)
     return legacy.equal(input, other)
 
-
+py_sum = sum
 def sum(input, dim, keepdim, dtype):
     """
     Returns the sum of elements over a specified dimension.
@@ -451,7 +460,7 @@ def sum(input, dim, keepdim, dtype):
         return pyboost.sum_ext_op(input, dim, keepdim, dtype)
     return legacy.reduce_sum(input.astype(dtype), dim, keepdim)
 
-def dropout(input, p, training):
+def dropout(input, p, training=True):
     """
     Returns a tensor with dropout applied element-wise.
 
@@ -533,6 +542,13 @@ def masked_fill(input, mask, value):
     if ENABLE_PYBOOST:
         return pyboost.masked_fill_op(input, mask, value)
     return legacy.masked_fill(input, mask, value)
+
+
+def inplace_masked_fill(input, mask, value):
+    if isinstance(value, numbers.Number):
+        return pyboost.inplace_masked_fill_scalar_op(input, mask, value)
+    return pyboost.inplace_masked_fill_tensor_op(input, mask, value)
+
 
 def isin(input, test_elements, assume_unique=False, invert=False):
     """
@@ -1122,6 +1138,9 @@ def sqrt(input):
 def masked_scatter(input, mask, value):
     return legacy.masked_scatter(input, mask, value)
 
+def inplace_masked_scatter(input, mask, value):
+    return pyboost.inplace_masked_scatter_op(input, mask, value)
+
 def neg(input):
     if ENABLE_PYBOOST:
         return pyboost.neg_op(input)
@@ -1521,12 +1540,22 @@ def scatter_value(input, dim, index, src, reduce='none'):
         return pyboost.scatter_value_op(input, dim, index, src, reduce)
     return legacy.scatter(input, dim, index, src, reduce)
 
+def inplace_scatter_value(input, dim, index, src):
+    return pyboost.inplace_scatter_value_op(input, dim, index, src)
+
+def inplace_scatter_src(input, dim, index, src):
+    return pyboost.inplace_scatter_src_op(input, dim, index, src)
+
+
 def unique_dim(input, sorted, return_inverse, dim):
     if ENABLE_PYBOOST:
         return pyboost.unique_dim_op(input, sorted, return_inverse, dim)
     return legacy.unique_dim(input, sorted, return_inverse, dim)
 
 def inplace_add(input, other, alpha):
+    if isinstance(other, numbers.Number):
+        other = mindspore.Tensor(other, dtype=input.dtype)
+
     if ENABLE_PYBOOST:
         return pyboost.inplace_add_ext_op(input, other, alpha)
     return legacy.inplace_add(input, other)
@@ -1649,6 +1678,10 @@ def index_add_ext(input, dim, index, source, alpha):
         source = mul(alpha, source)
     return legacy.index_add(input, cast(index, mindspore.int32), source, dim, True, True)
 
+def inplace_index_add(input, dim, index, source, alpha):
+    return pyboost.inplace_index_add_op(input, dim, index, source, alpha)
+
+
 def polar(abs, angle):
     if ENABLE_PYBOOST:
         return pyboost.polar_op(abs, angle)
@@ -1672,6 +1705,9 @@ def pixel_shuffle(input, upscale_factor):
 def view_as_complex(input):
     real_part, imag_part = chunk(input, 2, -1)
     return legacy.complex(squeeze(real_part, -1), squeeze(imag_part, -1))
+
+def view_as_real(input):
+    return pyboost.real_view_op(input)
 
 def rms_norm(input, normalized_shape, weight, eps=1e-5):
     if eps is None:
@@ -1876,9 +1912,6 @@ def histc(input, bins=100, min=0, max=0):
 def dist_comm_barrier(group):
     return pyboost.dist_comm_barrier_op(group)
 
-def new_empty(input, size, dtype):
-    return pyboost.new_empty_op(input, size, dtype, 'Ascend')
-
 def new_ones(input, size, dtype):
     return pyboost.new_ones_op(input, size, dtype)
 
@@ -1953,8 +1986,44 @@ def get_attn_mask_npu(device):
     return ATTN_MASK_NPU_CACHE[device]
 
 
+def sdpa_manual(query, key, value, attn_mask=None, dropout_p=0.0,
+        is_causal=False, scale=None, enable_gqa=False):
+    L, S = query.shape[-2], key.shape[-2]
+    scale_factor = 1 / math.sqrt(query.shape[-1]) if scale is None else scale
+
+    if enable_gqa:
+        key = contiguous(repeat_kv(key, query.shape[-3] // key.shape[-3]))
+        value = contiguous(repeat_kv(value, query.shape[-3] // value.shape[-3]))
+    
+    attn_bias_shape = (L, S) if attn_mask is None else attn_mask.shape
+    attn_bias = zeros(attn_bias_shape, dtype=query.dtype)
+
+    if is_causal:
+        assert attn_mask is None
+        temp_mask = tril(ones((L, S), dtype=mindtorch.bool), diagonal=0)
+        attn_bias = masked_fill(attn_bias, logical_not(temp_mask), mindtorch.finfo(attn_bias.dtype).min)
+
+    if attn_mask is not None:
+        if attn_mask.dtype == mindtorch.bool:
+            if attn_mask.ndim == 3:
+                attn_mask = squeeze(attn_mask, 0)
+            else:
+                attn_mask = attn_mask
+            attn_bias = masked_fill(attn_bias, logical_not(attn_mask), mindtorch.finfo(attn_bias.dtype).min)
+        else:
+            attn_bias = add(attn_mask, attn_bias)
+
+    attn_weight = mul(matmul(query, transpose_view(key, -2, -1)), scale_factor)
+    attn_weight = add(attn_weight, attn_bias)
+    attn_weight = softmax(attn_weight, -1)
+    attn_weight = dropout(attn_weight, dropout_p)
+    return matmul(attn_weight, value)
+
+
 def sdpa(query, key, value, attn_mask=None, dropout_p=0.0,
         is_causal=False, scale=None, enable_gqa=False):
+    if ENABLE_FLASH_ATTENTION:
+        return sdpa_manual(query, key, value, attn_mask, dropout_p, is_causal, scale, enable_gqa)
 
     scale_factor = 1 / math.sqrt(query.shape[-1]) if scale is None else scale
 
@@ -2256,7 +2325,7 @@ def pad(input, pad, mode='constant', value=None):
     out = input
     if (isinstance(pad, tuple) and not pad):
         return out
-    if sum(pad) == 0:
+    if py_sum(pad) == 0:
         return out
     if mode == "constant":
         value = 0 if value is None else value
@@ -2276,3 +2345,25 @@ def pad(input, pad, mode='constant', value=None):
 
 def full_like(input, fill_value, dtype=None):
     return pyboost.full_like_op(input, fill_value, dtype)
+
+def mish(input):
+    if ENABLE_PYBOOST:
+        return pyboost.mish_ext_op(input)
+    return legacy.mish(input)
+
+def _get_unfold_indices(input_shape, dimension, size, step):
+    if dimension < 0:
+        dimension += len(input_shape)
+    indices = []
+    for i in range(0, input_shape[dimension] - size + 1, step):
+        indices.append(list(range(i, i + size)))
+
+    return indices, dimension
+
+
+def unfold(input, dimension, size, step):
+    _indices, _dimension = _get_unfold_indices(input.shape, dimension, size, step)
+    indices = mindspore.tensor(_indices)
+    output = gather(input, indices, _dimension, 0)
+    output = transpose_view(output, _dimension + 1, -1)
+    return output

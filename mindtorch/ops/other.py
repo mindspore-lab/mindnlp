@@ -62,11 +62,6 @@ def broadcast_shapes(*shapes):
 
 # bucketize
 def bucketize(input, boundaries, *, out_int32=False, right=False, out=None):
-    # if isinstance(boundaries, mindtorch.Tensor):
-    #     boundaries = boundaries.tolist()
-    
-    # if not boundaries:
-    #     return mindtorch.zeros_like(input)
     out = execute('bucketize', input, boundaries, right)
     if out_int32:
         return out.to(mindtorch.int32)
@@ -779,87 +774,11 @@ def ravel(input):
 
 
 # repeat_interleave
-def efficient_repeat_interleave(input_tensor, repeats, dim=None):
-    """
-    高效实现 mindtorch.repeat_interleave 的功能，支持 repeats 为 int 或 list/tensor。
-    
-    参数:
-        input_tensor (Tensor): 输入张量。
-        repeats (int 或 list 或 Tensor): 每个元素的重复次数。
-        dim (int, optional): 沿着哪个维度进行重复。如果为None，则先将输入张量展平。
-    
-    返回:
-        Tensor: 重复后的张量。
-    """
-    if dim is None:
-        input_tensor = input_tensor.flatten()
-        dim = 0
-
-    # 确保 dim 是有效的维度
-    if dim < 0:
-        dim += input_tensor.dim()
-
-    # 将 repeats 统一转换为 LongTensor 并确保其在正确的设备上
-    if isinstance(repeats, int):
-        repeats_tensor = mindtorch.tensor([repeats], device=input_tensor.device, dtype=mindtorch.long)
-        uniform_repeat = True
-    elif isinstance(repeats, (list, tuple)):
-        repeats_tensor = mindtorch.tensor(repeats, device=input_tensor.device, dtype=mindtorch.long)
-        uniform_repeat = False
-    elif isinstance(repeats, mindtorch.Tensor):
-        repeats_tensor = repeats.to(device=input_tensor.device, dtype=mindtorch.long)
-        uniform_repeat = False
-    else:
-        raise TypeError("repeats must be an int, a list, or a mindtorch.Tensor")
-
-    # 获取输入张量在目标维度上的大小
-    dim_size = input_tensor.size(dim)
-    
-    if uniform_repeat:
-        # ✅ 优化路径：当所有元素重复次数相同时，使用 expand 和 reshape 避免循环
-        # 此方法利用广播机制，非常高效
-        unsqueezed_tensor = input_tensor.unsqueeze(dim + 1)
-        expanded_shape = list(input_tensor.shape)
-        expanded_shape[dim] = -1
-        expanded_shape.insert(dim + 1, repeats_tensor.item())
-        expanded_tensor = unsqueezed_tensor.expand(*expanded_shape)
-        
-        final_shape = list(input_tensor.shape)
-        final_shape[dim] *= repeats_tensor.item()
-        output = expanded_tensor.reshape(*final_shape)
-    else:
-        # 🔄 当重复次数不同时，需要构建索引
-        # 检查 repeats_tensor 的长度是否与目标维度的长度匹配
-        if len(repeats_tensor) != dim_size:
-            raise ValueError(f"repeats must have length {dim_size} along dimension {dim}, but got {len(repeats_tensor)}")
-        
-        # 生成索引：例如 repeats_tensor = [2, 3, 1] -> index = [0, 0, 1, 1, 1, 2]
-        # 使用 cumsum 计算总重复次数以预分配空间
-        total_repeats = repeats_tensor.sum().item()
-        index = mindtorch.zeros(total_repeats, dtype=mindtorch.long, device=input_tensor.device)
-        
-        # 计算每个块的起始位置
-        # start_positions = mindtorch.cat([mindtorch.tensor([0], device=input_tensor.device), mindtorch.cumsum(repeats_tensor, dim=0)[:-1]])
-        
-        # 使用 scatter 或高级索引填充（这里用循环填充，但可考虑更底层的优化）
-        # 注意：对于非常大的非均匀重复，此部分可能成为瓶颈
-        current_pos = 0
-        for i in range(dim_size):
-            repeat_count = repeats_tensor[i].item()
-            if repeat_count > 0:
-                index[current_pos:current_pos + repeat_count] = i
-            current_pos += repeat_count
-
-        output = input_tensor.index_select(dim, index)
-
-    return output
-
 def repeat_interleave(input, repeats, dim=None, *, output_size=None):
-    if input.device.type == 'npu' and ON_A2:
-        if isinstance(repeats, int):
-            return execute('repeat_interleave_int', input, repeats, dim, None)
-        return execute('repeat_interleave_tensor', input, repeats, dim, None)
-    return efficient_repeat_interleave(input, repeats, dim)
+    if isinstance(repeats, int):
+        return execute('repeat_interleave_int', input, repeats, dim, None)
+    return execute('repeat_interleave_tensor', input, repeats, dim, None)
+    # return efficient_repeat_interleave(input, repeats, dim)
 
 
 # roll
@@ -956,9 +875,10 @@ def unflatten(x, dim, sizes):
 
 # view_as_real
 def view_as_real(input):
-    real_part = input.real.unsqueeze(-1)
-    imag_part = input.imag.unsqueeze(-1)
-    return mindtorch.concat((real_part, imag_part), -1)
+    # real_part = input.real.unsqueeze(-1)
+    # imag_part = input.imag.unsqueeze(-1)
+    # return mindtorch.concat((real_part, imag_part), -1)
+    return execute('view_as_real', input)
 
 
 # view_as_complex
@@ -1095,12 +1015,7 @@ def _get_unfold_indices(input_shape, dimension, size, step):
 
 
 def unfold(input, dimension, size, step):
-    _indices, _dimension = _get_unfold_indices(input.shape, dimension, size, step)
-    indices = mindtorch.tensor(_indices, device=input.device)
-    output = execute('gather', input, indices, _dimension, 0)
-    output = mindtorch.moveaxis(output, _dimension + 1, -1)
-    return output
-
+    return execute('unfold', input, dimension, size, step)
 
 def contiguous(input):
     return execute('contiguous', input)
