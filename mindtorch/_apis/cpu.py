@@ -864,6 +864,39 @@ def acos(x):
 def upsample_bilinear2d(input, size=None, scale_factor=None, align_corners=False):
     return legacy.resize_bilinear_v2(input, size, align_corners, not align_corners)
 
+def sdpa(query, key, value, attn_mask=None, dropout_p=0.0,
+        is_causal=False, scale=None, enable_gqa=False):
+    L, S = query.shape[-2], key.shape[-2]
+    scale_factor = 1 / math.sqrt(query.shape[-1]) if scale is None else scale
+
+    if enable_gqa:
+        key = contiguous(repeat_kv(key, query.shape[-3] // key.shape[-3]))
+        value = contiguous(repeat_kv(value, query.shape[-3] // value.shape[-3]))
+
+    attn_bias_shape = (L, S) if attn_mask is None else attn_mask.shape
+    attn_bias = zeros(attn_bias_shape, dtype=query.dtype)
+
+    if is_causal:
+        assert attn_mask is None
+        temp_mask = tril(ones((L, S), dtype=mindtorch.bool), diagonal=0)
+        attn_bias = masked_fill(attn_bias, logical_not(temp_mask), mindtorch.finfo(attn_bias.dtype).min)
+
+    if attn_mask is not None:
+        if attn_mask.dtype == mindtorch.bool:
+            if attn_mask.ndim == 3:
+                attn_mask = squeeze(attn_mask, 0)
+            else:
+                attn_mask = attn_mask
+            attn_bias = masked_fill(attn_bias, logical_not(attn_mask), mindtorch.finfo(attn_bias.dtype).min)
+        else:
+            attn_bias = add(attn_mask, attn_bias)
+
+    attn_weight = mul(matmul(query, transpose_view(key, -2, -1)), scale_factor)
+    attn_weight = add(attn_weight, attn_bias)
+    attn_weight = softmax(attn_weight, -1)
+    attn_weight = dropout(attn_weight, dropout_p)
+    return matmul(attn_weight, value)
+
 def unstack_view(input, dim):
     # return legacy.unstack(input, dim, input.shape[dim])
     return pyboost.unstack_ext_view_op(input, dim)
