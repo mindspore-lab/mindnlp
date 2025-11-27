@@ -856,6 +856,57 @@ def acos(x):
 def upsample_bilinear2d(input, size=None, scale_factor=None, align_corners=False):
     return legacy.resize_bilinear_v2(input, size, align_corners, not align_corners)
 
+def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
+    if weight is None:
+        weight = ones([input.shape[1]], dtype=input.dtype)
+    if bias is None:
+        bias = zeros([input.shape[1]], dtype=input.dtype)
+    return legacy.group_norm(input, num_groups, eps, affine)
+
+def sdpa(query, key, value, attn_mask=None, dropout_p=0.0,
+        is_causal=False, scale=None, enable_gqa=False):
+    if ENABLE_FLASH_ATTENTION:
+        return sdpa_manual(query, key, value, attn_mask, dropout_p, is_causal, scale, enable_gqa)
+
+    scale_factor = 1 / math.sqrt(query.shape[-1]) if scale is None else scale
+
+    if attn_mask is not None and not is_causal:
+        if FLASH_ATTN_MASK_VALID == 1:
+            attn_mask = bitwise_not(attn_mask)
+        else:
+            attn_mask = cast(attn_mask, mindspore.bool_)
+
+    sparse_mode = 0
+
+    if is_causal:
+        assert attn_mask is None
+        attn_mask = get_attn_mask_npu('Ascend')
+        sparse_mode = 3
+
+    head_num = query.shape[1]
+    if enable_gqa and is_causal:
+        output = prompt_flash_attention(query, key, value, attn_mask,
+                            actual_seq_lengths=None, actual_seq_lengths_kv=None, pse_shift=None,
+                            deq_scale1=None, quant_scale1=None, deq_scale2=None, quant_scale2=None,
+                            quant_offset2=None, num_heads=head_num, scale_value=scale_factor,
+                            pre_tokens=2147483647, next_tokens=0, input_layout='BNSD',
+                            num_key_value_heads=key.shape[1], sparse_mode=sparse_mode, inner_precise=1)
+        # output = execute('incre_flash_attention', query, [key], [value], attn_mask,
+        #                  actual_seq_lengths=None, pse_shift=None, dequant_scale1=None, quant_scale1=None,
+        #                  dequant_scale2=None, quant_scale2=None, quant_offset2=None, antiquant_scale=None,
+        #                  antiquant_offset=None, block_table=None, kv_padding_size=None, num_heads=head_num,
+        #                  input_layout='BNSD', scale_value=scale_factor, num_key_value_heads=key.shape[1],
+        #                  block_size=0, inner_precise=1)
+        return output
+    else:
+        output = flash_attention_score(query, key, value, head_num=head_num, input_layout='BNSD', real_shift=None, padding_mask=None, attn_mask=attn_mask,
+                        scale_value=scale_factor, keep_prob=1 - dropout_p, pre_tokens=2147483647, next_tokens=2147483647, inner_precise=0,
+                        drop_mask=None, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=sparse_mode)
+
+        sfm_max, sfm_sum, sfm_out, atten_out = output
+
+        return atten_out
+
 def unstack_view(input, dim):
     return legacy.unstack(input, dim, input.shape[dim])
 
