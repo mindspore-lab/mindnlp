@@ -409,7 +409,7 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-5):
         weight = mindtorch.ones(normalized_shape, dtype=input.dtype, device=input.device)
     if bias is None:
         bias = mindtorch.zeros(normalized_shape, dtype=input.dtype, device=input.device)
-    return execute('layer_norm', input, normalized_shape, weight, bias, eps)[0]
+    return execute('layer_norm', input, normalized_shape, weight, bias, eps)
 
 
 def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corners=None, recompute_scale_factor=None, antialias=False):

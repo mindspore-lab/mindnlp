@@ -5,7 +5,7 @@ if SOC == 'ascend910':
     npu = npu_910a
 elif SOC in ['ascend910b', 'ascend910_93']:
     npu = npu_910b
-elif SOC in ['ascend310b1', 'ascend310b4']:
+elif SOC in ['ascend310b', 'ascend310b1', 'ascend310b4']:
     npu = npu_310b
 elif SOC == 'ascend310p':
     npu = npu_310p
@@ -27,25 +27,38 @@ api_map = {
 
 DISPATCH_WHITE_LIST = ['inplace_zero', 'inplace_fill_scalar']
 
-def execute(func_name, *args, **kwargs):
-    device_from_list = kwargs.pop('device_from_list', False)
-    device_position = kwargs.pop('device_position', 0)
-    device_type = kwargs.pop('device', None)
+if ENABLE_DISPATCH:
+    def execute(func_name, *args, **kwargs):
+        device_from_list = kwargs.pop('device_from_list', False)
+        device_position = kwargs.pop('device_position', 0)
+        device_type = kwargs.pop('device', None)
 
-    if device_type is None:
-        if ENABLE_DISPATCH or func_name in DISPATCH_WHITE_LIST:
+        if device_type is None:
             if device_from_list:
                 device_type = args[0][0]._device
             else:
                 device_type = args[device_position]._device
-        else:
+
+        func = getattr(api_map[device_type], func_name, None)
+        if func is None:
+            raise RuntimeError(
+                f"No implementation for function: {func_name} on {device_type}."
+            )
+        return func(*args, **kwargs)
+else:
+    def execute(func_name, *args, **kwargs):
+        device_from_list = kwargs.pop('device_from_list', False)
+        device_position = kwargs.pop('device_position', 0)
+        device_type = kwargs.pop('device', None)
+
+        if device_type is None:
             device_type = DEVICE_TARGET
 
-    # # func = self._registry[device_type].get(func_name, None)
-    func = getattr(api_map[device_type], func_name, None)
-    # func = getattr(api_map['Ascend'], func_name, None)
-    if func is None:
-        raise RuntimeError(
-            f"No implementation for function: {func_name} on {device_type}."
-        )
-    return func(*args, **kwargs)
+        # # func = self._registry[device_type].get(func_name, None)
+        func = getattr(api_map[device_type], func_name, None)
+        # func = getattr(api_map['Ascend'], func_name, None)
+        if func is None:
+            raise RuntimeError(
+                f"No implementation for function: {func_name} on {device_type}."
+            )
+        return func(*args, **kwargs)

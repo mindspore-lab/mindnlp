@@ -54,8 +54,17 @@ if platform.system().lower() == 'linux' and mindspore.get_context('device_target
     if SOC in ('ascend910', 'ascend310b'):
         # context.set_context(ascend_config={"precision_mode": "allow_mix_precision"})
         mindspore.device_context.ascend.op_precision.precision_mode('allow_mix_precision')
-    if SOC == 'ascend310b' and disable_multi_thread is not None:
-        disable_multi_thread()
+    # if SOC == 'ascend310b' and disable_multi_thread is not None:
+    #     disable_multi_thread()
+    if SOC == 'ascend310b':
+        # export MAX_COMPILE_CORE_NUMBER=1
+        # export TE_PARALLEL_COMPILER=1
+        os.environ["MAX_COMPILE_CORE_NUMBER"] = '1'
+        os.environ["TE_PARALLEL_COMPILER"] = '1'
+        mindspore.device_context.ascend.op_debug.execute_timeout(200)
+        mindspore.runtime.dispatch_threads_num(1)
+        mindspore.device_context.cpu.op_tuning.threads_num(1)
+
 
 pi = math.pi
 layout = object

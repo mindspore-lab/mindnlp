@@ -4,6 +4,7 @@ import mindtorch
 from transformers import AutoModel, AutoTokenizer
 # from mindspore._c_expression import _framework_profiler_step_start
 # from mindspore._c_expression import _framework_profiler_step_end
+
 model_name = 'lvyufeng/DeepSeek-OCR'
 
 tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
@@ -17,8 +18,6 @@ prompt = "<image>\n<|grounding|>Convert the document to markdown. "
 # wget "https://hf-mirror.com/datasets/hf-internal-testing/fixtures_got_ocr/resolve/main/image_ocr.jpg"
 image_file = 'image_ocr.jpg'
 output_path = './'
-
-
 
 # infer(self, tokenizer, prompt='', image_file='', output_path = ' ', base_size = 1024, image_size = 640, crop_mode = True, test_compress = False, save_results = False):
 

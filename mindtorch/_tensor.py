@@ -1538,7 +1538,7 @@ class TensorPlaceHolder:
 
     # Tensor.masked_scatter_
     def masked_scatter_(self, mask, tensor):
-        return self.copy_(ops.masked_scatter(self, mask, tensor))
+        return execute('inplace_masked_scatter', self, mask, tensor)
 
     # Tensor.masked_scatter
     def masked_scatter(self, mask, tensor):
