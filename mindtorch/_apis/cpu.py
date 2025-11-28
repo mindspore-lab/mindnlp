@@ -864,6 +864,14 @@ def acos(x):
 def upsample_bilinear2d(input, size=None, scale_factor=None, align_corners=False):
     return legacy.resize_bilinear_v2(input, size, align_corners, not align_corners)
 
+def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
+    if weight is None:
+        weight = ones([input.shape[1]], dtype=input.dtype)
+    if bias is None:
+        bias = zeros([input.shape[1]], dtype=input.dtype)
+
+    return pyboost.group_norm_op(input, num_groups, weight, bias, eps)
+
 def sdpa(query, key, value, attn_mask=None, dropout_p=0.0,
         is_causal=False, scale=None, enable_gqa=False):
     L, S = query.shape[-2], key.shape[-2]
