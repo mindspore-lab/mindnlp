@@ -864,6 +864,70 @@ def acos(x):
 def upsample_bilinear2d(input, size=None, scale_factor=None, align_corners=False):
     return legacy.resize_bilinear_v2(input, size, align_corners, not align_corners)
 
+def repeat_interleave_int(input_tensor, repeats, dim, output_size):
+    if dim is None:
+        input_tensor = flatten(input_tensor, 0, -1)
+        dim = 0
+
+    # 确保 dim 是有效的维度
+    if dim < 0:
+        dim += input_tensor.dim()
+
+    # 将 repeats 统一转换为 LongTensor 并确保其在正确的设备上
+    if isinstance(repeats, int):
+        repeats_tensor = mindspore.tensor([repeats], dtype=mindtorch.long)
+        uniform_repeat = True
+    elif isinstance(repeats, (list, tuple)):
+        repeats_tensor = mindspore.tensor(repeats, dtype=mindtorch.long)
+        uniform_repeat = False
+    elif isinstance(repeats, mindtorch.Tensor):
+        repeats_tensor = cast(repeats, dtype=mindtorch.long)
+        uniform_repeat = False
+    else:
+        raise TypeError("repeats must be an int, a list, or a mindtorch.Tensor")
+
+    # 获取输入张量在目标维度上的大小
+    dim_size = input_tensor.shape[dim] 
+
+    if uniform_repeat:
+        # ✅ 优化路径：当所有元素重复次数相同时，使用 expand 和 reshape 避免循环
+        # 此方法利用广播机制，非常高效
+        unsqueezed_tensor = expand_dims(input_tensor, dim + 1)
+        expanded_shape = list(input_tensor.shape)
+        expanded_shape[dim] = -1
+        expanded_shape.insert(dim + 1, repeats_tensor.item())
+        expanded_tensor = broadcast_to(unsqueezed_tensor, expanded_shape)
+        
+        final_shape = list(input_tensor.shape)
+        final_shape[dim] *= repeats_tensor.item()
+        output = reshape(expanded_tensor, final_shape)
+    else:
+        # 🔄 当重复次数不同时，需要构建索引
+        # 检查 repeats_tensor 的长度是否与目标维度的长度匹配
+        if len(repeats_tensor) != dim_size:
+            raise ValueError(f"repeats must have length {dim_size} along dimension {dim}, but got {len(repeats_tensor)}")
+        
+        # 生成索引：例如 repeats_tensor = [2, 3, 1] -> index = [0, 0, 1, 1, 1, 2]
+        # 使用 cumsum 计算总重复次数以预分配空间
+        total_repeats = sum(repeats_tensor, 0, False, None).item()
+        index = zeros(total_repeats, dtype=mindtorch.long)
+        
+        # 计算每个块的起始位置
+        # start_positions = mindtorch.cat([mindtorch.tensor([0], device=input_tensor.device), mindtorch.cumsum(repeats_tensor, dim=0)[:-1]])
+        
+        # 使用 scatter 或高级索引填充（这里用循环填充，但可考虑更底层的优化）
+        # 注意：对于非常大的非均匀重复，此部分可能成为瓶颈
+        current_pos = 0
+        for i in range(dim_size):
+            repeat_count = repeats_tensor[i].item()
+            if repeat_count > 0:
+                index[current_pos:current_pos + repeat_count] = i
+            current_pos += repeat_count
+
+        output = index_select(input_tensor, dim, index)
+
+    return output
+
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if weight is None:
         weight = ones([input.shape[1]], dtype=input.dtype)
