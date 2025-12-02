@@ -911,7 +911,7 @@ def stack(tensors, axis=0):
 
 def narrow(input, dim, start, length):
     if ENABLE_PYBOOST:
-        return pyboost.narrow_op(input, dim, start, length)
+        return pyboost.narrow_view_op(input, dim, start, length)
     begin = [0] * input.ndim
     size = [i for i in input.shape]
     begin[dim] = start
@@ -1431,9 +1431,7 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if bias is None:
         bias = zeros([input.shape[1]], dtype=input.dtype)
 
-    if ENABLE_PYBOOST:
-        return pyboost.group_norm_op(input, num_groups, weight, bias, eps)
-    return legacy.group_norm(input, num_groups, eps, affine)
+    return pyboost.group_norm_op(input, num_groups, weight, bias, eps)
 
 def nllloss_2d(input, target, weight, reduction='mean', ignore_index=-100):
     if ENABLE_PYBOOST:
@@ -2391,3 +2389,12 @@ def unfold(input, dimension, size, step):
     output = gather(input, indices, _dimension, 0)
     output = transpose_view(output, _dimension + 1, -1)
     return output
+
+def scatter_add_ext(input, dim, index, src):
+    return pyboost.scatter_add_ext_op(input, dim, index, src)
+
+def dist_comm_all_reduce(input, op_type, group):
+    return pyboost.dist_comm_all_reduce_op(input, op_type, group)
+
+def dist_comm_gather(input, gather_list, rank_size, dst, rank_id, group):
+    return pyboost.dist_comm_gather_op(input, gather_list, rank_size, dst, rank_id, group)

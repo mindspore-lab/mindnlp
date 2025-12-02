@@ -3607,7 +3607,7 @@ def gather(
     group_dst = _canonicalize_group_rank(group, dst, group_dst, return_global=False)
     my_global_rank = get_rank()
     _validate_output_list_for_rank(my_global_rank, global_dst, gather_list)
-    output_tensors = [gather_list] if global_dst == my_global_rank else []
+    output_tensors = [gather_list]
     input_tensors = [tensor]
 
     opts = GatherOptions()

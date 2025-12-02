@@ -15,7 +15,6 @@ else:
 api_map = {
     'CPU': numpy if cpu_use_numpy() else cpu,
     'Ascend': npu,
-    'Ascend:0': npu,
     'Meta': meta,
     'GPU': gpu,
     'cpu': numpy if cpu_use_numpy() else cpu,
@@ -38,6 +37,7 @@ if ENABLE_DISPATCH:
                 device_type = args[0][0]._device
             else:
                 device_type = args[device_position]._device
+            device_type = device_type[:device_type.find(':')] if ':' in device_type else device_type
 
         func = getattr(api_map[device_type], func_name, None)
         if func is None:
