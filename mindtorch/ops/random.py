@@ -227,8 +227,10 @@ def randn(
     layout=None,
     device=None,
     requires_grad=False,
-    pin_memory=False
+    pin_memory=False,
+    **kwargs
 ):
+    size = kwargs.get("size", size)
     device = check_device(device)
 
     if dtype is None:
@@ -319,5 +321,6 @@ __all__ = [
     "randint_like",
     "gamma"
 ]
+
 
 
