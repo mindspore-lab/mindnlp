@@ -27,9 +27,7 @@ device_map = {
 device_cache = {
     'CPU': device_('cpu'),
     'Ascend': device_('npu'),
-    'Ascend:0': device_('npu'),
     'GPU': device_('cuda'),
-    'GPU:0': device_('cuda'),
     'Meta': device_('meta')
 }
 
@@ -106,7 +104,7 @@ def __init__(self, *args, **kwargs):
 
 Tensor.__init__ = __init__
 
-def tensor(data, *, dtype=None, device=None, requires_grad=False):
+def tensor(data, *, dtype=None, device=None, requires_grad=False, pin_memory=False):
     if isinstance(data, Tensor):
         UserWarning("To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than mindtorch.tensor(sourceTensor).")
         out = Tensor(data)
@@ -2193,7 +2191,7 @@ class TensorPlaceHolder:
         if DEVICE_TARGET == 'Ascend' and device_str == 'GPU':
             device_str = 'Ascend'
 
-        if device == self._device:
+        if device_str == self._device:
             return self
         return super(Tensor, self).to(device_str, non_blocking=non_blocking)
 
@@ -2486,8 +2484,8 @@ class TensorPlaceHolder:
         device = super(Tensor, self).device
         if device == 'CPU' and self.is_meta:
             return 'Meta'
-        # if ':' in device:
-        #     return device.split(':')[0]
+        if ':' in device:
+            return device.split(':')[0]
         return device
 
     @property

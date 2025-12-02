@@ -171,6 +171,13 @@ def _nnpack_available():
 def _running_with_deploy():
     return False
 
+def ms_run_check():
+    try:
+        x = mindspore.mint.empty(1)
+        x.__str__()
+    except:
+        pass
+
 from .autograd import *
 from .serialization import load, save
 from ._bind import get_default_dtype, set_default_dtype, get_default_device, is_autocast_enabled, set_autocast_enabled, \
@@ -188,6 +195,8 @@ from .random import get_rng_state, initial_seed, manual_seed, seed, set_rng_stat
 
 __version__ = 'test_version_no_value'
 
+
 from .torch_proxy import initialize_torch_proxy, setup_metadata_patch
 initialize_torch_proxy()
 setup_metadata_patch()
+ms_run_check()
