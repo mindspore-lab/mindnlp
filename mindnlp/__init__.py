@@ -24,10 +24,20 @@ if os.environ.get('HF_ENDPOINT', None) is None:
 
 # set mindnlp.core to torch
 import mindtorch
-from .utils.safetensors_patch import setup_safetensors_patch
-setup_safetensors_patch()
 
-from . import transformers
-from . import diffusers
+# Patch safetensors, transformers and diffusers if they are installed
+# This will automatically patch when import mindnlp
+from .patch import apply_all_patches
+from .patch.safetensors import setup_safetensors_module
+from .patch.transformers import setup_transformers_module
+from .patch.diffusers import setup_diffusers_module
+
+# Apply patches
+apply_all_patches()
+
+# Setup backward compatibility modules
+setup_safetensors_module()
+setup_transformers_module()
+setup_diffusers_module()
 
 __version__ = '0.6.0'
