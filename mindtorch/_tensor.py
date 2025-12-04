@@ -1955,7 +1955,8 @@ class TensorPlaceHolder:
 
 
     # Tensor.share_memory_
-
+    def share_memory_(self):
+        return self
 
     # Tensor.short
     def short(self):
