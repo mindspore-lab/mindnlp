@@ -878,23 +878,15 @@ class TensorPlaceHolder:
     # Tensor.cdouble
 
 
-    # @property
-    # def data(self):
-    #     out = Tensor(self)
-    #     out._base = self
-    #     return out
+    @property
+    def data(self):
+        if self.is_meta:
+            return self
+        return super(Tensor, self).data
 
-    # @data.setter
-    # def data(self, new_value):
-    #     # if self.device.type == 'cpu' and new_value.device.type == 'cpu' \
-    #     #     and self.shape == new_value.shape and self.dtype == new_value.dtype:
-    #     #     src_ct = ctypes.c_void_p(new_value.data_ptr())
-    #     #     dst_ct = ctypes.c_void_p(self.data_ptr())
-    #     #     ctypes.memmove(dst_ct, src_ct, self.nbytes)
-    #     # else:
-    #     if getattr(self, '_base', None) is not None:
-    #         self._base.assign_value(new_value)
-    #     self.assign_value(new_value)
+    @data.setter
+    def data(self, new_value):
+        self.assign_value(new_value)
 
     # Tensor.data_ptr
 
@@ -1955,7 +1947,8 @@ class TensorPlaceHolder:
 
 
     # Tensor.share_memory_
-
+    def share_memory_(self):
+        return self
 
     # Tensor.short
     def short(self):
@@ -2483,12 +2476,12 @@ class TensorPlaceHolder:
 
     @property
     def is_meta(self):
-        return self.data_ptr() == 0
+        return self.init == 'meta'
 
     @property
     def _device(self):
         device = super(Tensor, self).device
-        if device == 'CPU' and self.is_meta:
+        if self.is_meta:
             return 'Meta'
         if ':' in device:
             return device.split(':')[0]
