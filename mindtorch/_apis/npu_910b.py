@@ -4,6 +4,7 @@ import mindspore
 import mindtorch
 import numpy as np
 from mindspore._c_expression import _empty_instance
+from mindspore.ops.composite.multitype_ops._compile_utils import _tensor_setitem
 
 from mindtorch._C import default_generator
 from ..configs import ENABLE_PYBOOST, FLASH_ATTN_MASK_VALID, ENABLE_FLASH_ATTENTION
@@ -213,7 +214,9 @@ def mul(input, other):
     return legacy.mul(input, other)
 
 def inplace_mul(self, other):
-    return inplace_copy(self, mul(self, other))
+    if isinstance(other, numbers.Number):
+        return pyboost.inplace_muls_op(self, other)
+    return pyboost.inplace_mul_op(self, other)
 
 def dense(input, weight, bias=None):
     """
@@ -705,6 +708,11 @@ def concat(tensors, axis):
 
 def gather_d(input, dim, index):
     if ENABLE_PYBOOST:
+        if input.dtype.is_complex:
+            input_imag, input_real = imag(input), real(input)
+            gathered_real = pyboost.gather_d_op(input_real, dim, index)
+            gathered_imag = pyboost.gather_d_op(input_imag, dim, index)
+            return legacy.complex(gathered_real, gathered_imag)
         return pyboost.gather_d_op(input, dim, index)
     return legacy.gather_d(input, dim, index)
 
@@ -1191,6 +1199,9 @@ def avg_pool2d(input, kernel_size, stride, padding=0, ceil_mode=False, count_inc
     if ENABLE_PYBOOST:
         return pyboost.avg_pool2d_op(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
+def avg_pool3d(input, kernel_size, stride, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=None):
+    return pyboost.avg_pool3d_ext_op(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
+
 def conj(input):
     if ENABLE_PYBOOST:
         return pyboost.conj_op(input)
@@ -1378,7 +1389,66 @@ def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_paddi
         out = legacy.bias_add(out, bias, 'NCHW')
     return out
 
-
+def conv_transpose3d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
+    in_channel, out_channel = weight.shape[0], weight.shape[1]
+    kernel_size = weight.shape[2:]
+    # conv_transpose3d_op = ops.Conv3DTranspose(
+    #     in_channel,
+    #     out_channel,
+    #     kernel_size,
+    #     mode=1,
+    #     pad_mode='valid',
+    #     pad=padding,
+    #     stride=stride,
+    #     dilation=dilation,
+    #     group=1,
+    #     output_padding=output_padding,
+    #     data_format="NCDHW"
+    # )
+    input_dtype = input.dtype
+    if groups > 1:
+        outputs = ()
+        for i in range(groups):
+            output = legacy.conv3_d_transpose(
+                cast(input, mindspore.float16),
+                cast(weight, mindspore.float16),
+                in_channel,
+                out_channel,
+                kernel_size,
+                1,
+                'valid',
+                padding,
+                stride,
+                dilation,
+                1,
+                output_padding,
+                "NCDHW"
+            )
+            output = cast(output, input_dtype)
+            if bias is not None:
+                output = add(output, bias)
+            outputs = outputs + (output,)
+        out = concat(outputs, 1)
+    else:
+        out = legacy.conv3_d_transpose(
+            cast(input, mindspore.float16),
+            cast(weight, mindspore.float16),
+            in_channel,
+            out_channel,
+            kernel_size,
+            1,
+            'valid',
+            padding,
+            stride,
+            dilation,
+            1,
+            output_padding,
+            "NCDHW"
+        )
+        out = cast(out, input_dtype)
+        if bias is not None:
+            out = add(out, bias)
+    return out
 
 def relu(input):
     if ENABLE_PYBOOST:
@@ -1546,6 +1616,10 @@ def inplace_scatter_value(input, dim, index, src):
 def inplace_scatter_src(input, dim, index, src):
     return pyboost.inplace_scatter_src_op(input, dim, index, src)
 
+def inplace_scatter_reduce(input, dim, index, src, reduce):
+    if isinstance(src, numbers.Number):
+        return pyboost.inplace_scatter_value_reduce_op(input, dim, index, src, reduce)
+    return pyboost.inplace_scatter_src_reduce_op(input, dim, index, src, reduce)
 
 def unique_dim(input, sorted, return_inverse, dim):
     if ENABLE_PYBOOST:
@@ -1602,6 +1676,16 @@ def upsample_nearest2d(input, output_size, scale_factors):
     if ENABLE_PYBOOST:
         return pyboost.upsample_nearest2d_op(input, output_size, scale_factors)
     return legacy.upsample_nearest2d(input, scale_factor, align_corners)
+
+def upsample_nearest3d(input, output_size, scale_factors):
+    if ENABLE_PYBOOST:
+        return pyboost.upsample_nearest3d_op(input, output_size, scale_factors)
+    if output_size is None:
+        tuple_len = py_min(len(input.shape) - 2, len(scale_factors))
+        output_size = tuple([math.floor(input.shape[i + 2] * scale_factors[i])
+                        for i in range(tuple_len)])
+
+    return legacy.resize_nearest_neighbor(input, output_size, False, False)
 
 def addmm(input, mat1, mat2, alpha=1.0, beta=1.0):
     if ENABLE_PYBOOST:
@@ -1702,12 +1786,38 @@ def pixel_shuffle(input, upscale_factor):
         return pyboost.pixel_shuffle_op(input, upscale_factor)
     return legacy.pixel_shuffle(input, upscale_factor)
 
+def pixel_unshuffle(x, downscale_factor):
+    batch_size, channels, height, width = x.shape
+
+    # 计算新的尺寸
+    new_height = height // downscale_factor
+    new_width = width // downscale_factor
+    new_channels = channels * (downscale_factor ** 2)
+
+    # 第一步：重塑张量，将空间维度分解为小块
+    # 形状: (N, C, H, W) -> (N, C, new_height, downscale_factor, new_width, downscale_factor)
+    x = reshape(x, (batch_size, channels, new_height, downscale_factor, new_width, downscale_factor))
+
+    # 第二步：置换维度，将下采样因子维度移到通道维度之后
+    # 形状: (N, C, new_height, downscale_factor, new_width, downscale_factor) 
+    #    -> (N, C, downscale_factor, downscale_factor, new_height, new_width)
+    x = permute(x, (0, 1, 3, 5, 2, 4))
+
+    # 第三步：重塑张量，合并通道和下采样因子维度
+    # 形状: (N, C, downscale_factor, downscale_factor, new_height, new_width)
+    #    -> (N, C * downscale_factor^2, new_height, new_width)
+    x = reshape(x, (batch_size, new_channels, new_height, new_width))
+
+    return x
+
 def view_as_complex(input):
     real_part, imag_part = chunk(input, 2, -1)
     return legacy.complex(squeeze(real_part, -1), squeeze(imag_part, -1))
 
 def view_as_real(input):
-    return pyboost.real_view_op(input)
+    real_part = expand_dims(real(input), -1)
+    imag_part = expand_dims(imag(input), -1)
+    return concat((real_part, imag_part), -1)
 
 def rms_norm(input, normalized_shape, weight, eps=1e-5):
     if eps is None:
@@ -2231,6 +2341,9 @@ def getitem(self, index):
 
 
 def setitem(self, index, value):
+    return _tensor_setitem(self, index, value)
+
+def setitem_manual(self, index, value):
     """Handle tensor setitem"""
     if not isinstance(value, mindspore.Tensor):
         if isinstance(value, (bool, int, float)):

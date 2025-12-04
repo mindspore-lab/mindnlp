@@ -867,7 +867,9 @@ def triu_indices(row, col, offset=0, *, dtype=mindtorch.long, device='cpu', layo
 
 # unflatten
 def unflatten(x, dim, sizes):
-    new_shape = x.shape[:dim] + sizes
+    if dim < 0:
+        dim += x.ndim
+    new_shape = x.shape[:dim] + sizes + x.shape[dim + 1:]
     return x.reshape(new_shape)
 
 # vander

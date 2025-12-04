@@ -122,7 +122,7 @@ def compile(fn=None, *args, **kwargs):
 
 
 def use_deterministic_algorithms(mode, *, warn_only=False):
-    mindspore.set_context(deterministic='ON' if mode else 'OFF')
+    mindspore.set_context(deterministic='ON')
 
 def is_grad_enabled():
     return _pynative_executor.enable_grad()
@@ -199,4 +199,3 @@ __version__ = 'test_version_no_value'
 from .torch_proxy import initialize_torch_proxy, setup_metadata_patch
 initialize_torch_proxy()
 setup_metadata_patch()
-ms_run_check()

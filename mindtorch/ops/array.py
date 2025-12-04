@@ -154,7 +154,7 @@ def movedim(x, source, destination):
         >>> print(output.shape)
         (4, 3, 5)
     """
-    return movedim(x, source, destination)
+    return swapaxes(x, source, destination)
 
 # moveaxis
 def moveaxis(a, source, destination):
