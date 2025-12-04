@@ -1,0 +1,994 @@
+(MindSpore) [ma-user work]$pip install https://ms-release.obs.cn-north-4.myhuaweicloud.com/2.4.10/MindSpore/unified/aarch64/mindspore-2.4.10-cp39-cp39-linux_aarch64.whl --trusted-host ms-release.obs.cn-north-4.myhuaweicloud.com -i https://pypi.tuna.tsinghua.edu.cn/simple
+Looking in indexes: https://pypi.tuna.tsinghua.edu.cn/simple
+Collecting mindspore==2.4.10
+  Downloading https://ms-release.obs.cn-north-4.myhuaweicloud.com/2.4.10/MindSpore/unified/aarch64/mindspore-2.4.10-cp39-cp39-linux_aarch64.whl (336.3 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━ 336.3/336.3 MB 8.3 MB/s eta 0:00:00
+Requirement already satisfied: numpy<2.0.0,>=1.20.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindspore==2.4.10) (1.26.1)
+Requirement already satisfied: protobuf>=3.13.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindspore==2.4.10) (3.20.3)
+Requirement already satisfied: asttokens>=2.0.4 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindspore==2.4.10) (2.4.1)
+Requirement already satisfied: pillow>=6.2.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindspore==2.4.10) (11.1.0)
+Requirement already satisfied: scipy>=1.5.4 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindspore==2.4.10) (1.11.3)
+Requirement already satisfied: packaging>=20.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindspore==2.4.10) (23.2)
+Requirement already satisfied: psutil>=5.6.1 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindspore==2.4.10) (5.9.5)
+Requirement already satisfied: astunparse>=1.6.3 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindspore==2.4.10) (1.6.3)
+Requirement already satisfied: safetensors>=0.4.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindspore==2.4.10) (0.5.3)
+Requirement already satisfied: six>=1.12.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from asttokens>=2.0.4->mindspore==2.4.10) (1.16.0)
+Requirement already satisfied: wheel<1.0,>=0.23.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from astunparse>=1.6.3->mindspore==2.4.10) (0.41.2)
+DEPRECATION: moxing-framework 2.1.16.2ae09d45 has a non-standard version number. pip 24.0 will enforce this behaviour change. A possible replacement is to upgrade to a newer version of moxing-framework or contact the author to suggest that they release a version with a conforming version number. Discussion can be found at https://github.com/pypa/pip/issues/12063
+Installing collected packages: mindspore
+  Attempting uninstall: mindspore
+    Found existing installation: mindspore 2.3.0
+    Uninstalling mindspore-2.3.0:
+      Successfully uninstalled mindspore-2.3.0
+Successfully installed mindspore-2.4.10
+(MindSpore) [ma-user work]$python mindNLPAlbert.py Traceback (most recent call last):  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/accelerate/utils/mindformers.py", line 13, in <module>
+    from mindformers.experimental.model import LlamaForCausalLM  # pylint: disable=import-error
+ModuleNotFoundError: No module named 'mindformers.experimental'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ma-user/work/mindNLPAlbert.py", line 3, in <module>
+    from mindnlp.transformers import AutoTokenizer,AlbertTokenizer, AlbertForSequenceClassification
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/__init__.py", line 47, in <module>
+    from mindnlp import transformers
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/__init__.py", line 16, in <module>
+    from . import models, pipelines
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/__init__.py", line 19, in <module>
+    from . import (
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/albert/__init__.py", line 16, in <module>
+    from . import tokenization_albert, tokenization_albert_fast, configuration_albert, modeling_albert
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/albert/modeling_albert.py", line 46, in <module>
+    from ...modeling_utils import PreTrainedModel
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/modeling_utils.py", line 74, in <module>
+    from ..accelerate import infer_auto_device_map
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/accelerate/__init__.py", line 2, in <module>
+    from .utils import (
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/accelerate/utils/__init__.py", line 43, in <module>
+    from .mindformers import (
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/accelerate/utils/mindformers.py", line 19, in <module>
+    raise ValueError('cannot found `mindformers.experimental`, please install dev version by\n'
+ValueError: cannot found `mindformers.experimental`, please install dev version by
+`pip install git+https://gitee.com/mindspore/mindformers` 
+or remove mindformers by 
+`pip uninstall mindformers`
+(MindSpore) [ma-user work]$pip install git+https://gitee.com/mindspore/mindformers
+Looking in indexes: http://100.125.0.76:32021/repository/pypi/simple
+Collecting git+https://gitee.com/mindspore/mindformers
+  Cloning https://gitee.com/mindspore/mindformers to /tmp/pip-req-build-banwfptc
+  Running command git clone --filter=blob:none --quiet https://gitee.com/mindspore/mindformers /tmp/pip-req-build-banwfptc
+  Resolved https://gitee.com/mindspore/mindformers to commit e7b83ea0ad6254eb647eb8a1e2182c4540fe3b36
+  Preparing metadata (setup.py) ... done
+Requirement already satisfied: setuptools in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindformers==1.3.2) (68.2.2)
+Collecting sentencepiece>=0.2.0 (from mindformers==1.3.2)
+  Downloading http://100.125.0.76:32021/repository/pypi/packages/a3/69/e96ef68261fa5b82379fdedb325ceaf1d353c6e839ec346d8244e0da5f2f/sentencepiece-0.2.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (1.3 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 62.2 MB/s eta 0:00:00
+Requirement already satisfied: ftfy>=6.1.1 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindformers==1.3.2) (6.1.1)
+Requirement already satisfied: regex>=2022.10.31 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindformers==1.3.2) (2023.10.3)
+Requirement already satisfied: tqdm>=4.65.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindformers==1.3.2) (4.67.1)
+Requirement already satisfied: pyyaml>=6.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindformers==1.3.2) (6.0.1)
+Requirement already satisfied: jieba>=0.42.1 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindformers==1.3.2) (0.42.1)
+Requirement already satisfied: rouge_chinese>=1.0.3 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindformers==1.3.2) (1.0.3)
+Requirement already satisfied: nltk>=2.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindformers==1.3.2) (3.8.1)
+Collecting mindpet==1.0.4 (from mindformers==1.3.2)
+  Downloading http://100.125.0.76:32021/repository/pypi/packages/05/7c/3266e061b7dd74c17ce7556dde55456cedb9a931959998d2ff30c2bd4e51/mindpet-1.0.4-py3-none-any.whl (83 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━ 83.9/83.9 kB 24.3 MB/s eta 0:00:00
+Requirement already satisfied: opencv-python-headless in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindformers==1.3.2) (4.8.1.78)
+Collecting pyarrow==12.0.1 (from mindformers==1.3.2)
+  Downloading http://100.125.0.76:32021/repository/pypi/packages/8b/14/dbda2f416906090824e5b58134ebef504065798bbcc98c929ce712be80ed/pyarrow-12.0.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (36.4 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━ 36.4/36.4 MB 62.0 MB/s eta 0:00:00
+Collecting tokenizers==0.15.0 (from mindformers==1.3.2)
+  Downloading http://100.125.0.76:32021/repository/pypi/packages/14/cf/883acc48862589f9d54c239a9108728db5b75cd6c0949b92c72aae8e044c/tokenizers-0.15.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (3.8 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.8/3.8 MB 78.5 MB/s eta 0:00:00
+Requirement already satisfied: astunparse>=1.6.3 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindformers==1.3.2) (1.6.3)
+Requirement already satisfied: numpy<2.0.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindformers==1.3.2) (1.26.1)
+Collecting datasets==2.18.0 (from mindformers==1.3.2)
+  Downloading http://100.125.0.76:32021/repository/pypi/packages/95/fc/661a7f06e8b7d48fcbd3f55423b7ff1ac3ce59526f146fda87a1e1788ee4/datasets-2.18.0-py3-none-any.whl (510 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━ 510.5/510.5 kB 64.7 MB/s eta 0:00:00
+Collecting tiktoken (from mindformers==1.3.2)
+  Downloading http://100.125.0.76:32021/repository/pypi/packages/33/35/2792b7dcb8b150d2767322637513c73a3e80833c19212efea80b31087894/tiktoken-0.9.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (1.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.1/1.1 MB 70.0 MB/s eta 0:00:00
+Requirement already satisfied: jinja2 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindformers==1.3.2) (3.1.2)
+Collecting setproctitle (from mindformers==1.3.2)
+  Downloading http://100.125.0.76:32021/repository/pypi/packages/14/0c/a1e1a0554c1261a754eeadef03149115c10e59c1514e254e8532d5639fd5/setproctitle-1.3.5-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (31 kB)
+Requirement already satisfied: safetensors in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindformers==1.3.2) (0.5.3)
+Requirement already satisfied: mindspore~=2.4.1 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindformers==1.3.2) (2.4.10)
+Requirement already satisfied: filelock in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from datasets==2.18.0->mindformers==1.3.2) (3.12.4)
+Collecting pyarrow-hotfix (from datasets==2.18.0->mindformers==1.3.2)
+  Downloading http://100.125.0.76:32021/repository/pypi/packages/e4/f4/9ec2222f5f5f8ea04f66f184caafd991a39c8782e31f5b0266f101cb68ca/pyarrow_hotfix-0.6-py3-none-any.whl (7.9 kB)
+Requirement already satisfied: dill<0.3.9,>=0.3.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from datasets==2.18.0->mindformers==1.3.2) (0.3.8)
+Requirement already satisfied: pandas in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from datasets==2.18.0->mindformers==1.3.2) (2.1.2)
+Requirement already satisfied: requests>=2.19.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from datasets==2.18.0->mindformers==1.3.2) (2.32.3)
+Requirement already satisfied: xxhash in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from datasets==2.18.0->mindformers==1.3.2) (3.5.0)
+Requirement already satisfied: multiprocess in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from datasets==2.18.0->mindformers==1.3.2) (0.70.16)
+Requirement already satisfied: fsspec<=2024.2.0,>=2023.1.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from fsspec[http]<=2024.2.0,>=2023.1.0->datasets==2.18.0->mindformers==1.3.2) (2023.10.0)
+Requirement already satisfied: aiohttp in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from datasets==2.18.0->mindformers==1.3.2) (3.11.13)
+Requirement already satisfied: huggingface-hub>=0.19.4 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from datasets==2.18.0->mindformers==1.3.2) (0.29.2)
+Requirement already satisfied: packaging in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from datasets==2.18.0->mindformers==1.3.2) (23.2)
+Requirement already satisfied: click in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindpet==1.0.4->mindformers==1.3.2) (8.1.7)
+Requirement already satisfied: wheel<1.0,>=0.23.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from astunparse>=1.6.3->mindformers==1.3.2) (0.41.2)
+Requirement already satisfied: six<2.0,>=1.6.1 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from astunparse>=1.6.3->mindformers==1.3.2) (1.16.0)
+Requirement already satisfied: wcwidth>=0.2.5 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from ftfy>=6.1.1->mindformers==1.3.2) (0.2.8)
+Requirement already satisfied: protobuf>=3.13.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindspore~=2.4.1->mindformers==1.3.2) (3.20.3)
+Requirement already satisfied: asttokens>=2.0.4 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindspore~=2.4.1->mindformers==1.3.2) (2.4.1)
+Requirement already satisfied: pillow>=6.2.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindspore~=2.4.1->mindformers==1.3.2) (11.1.0)
+Requirement already satisfied: scipy>=1.5.4 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindspore~=2.4.1->mindformers==1.3.2) (1.11.3)
+Requirement already satisfied: psutil>=5.6.1 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from mindspore~=2.4.1->mindformers==1.3.2) (5.9.5)
+Requirement already satisfied: joblib in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from nltk>=2.0->mindformers==1.3.2) (1.3.2)
+Requirement already satisfied: MarkupSafe>=2.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from jinja2->mindformers==1.3.2) (2.1.3)
+Requirement already satisfied: aiohappyeyeballs>=2.3.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from aiohttp->datasets==2.18.0->mindformers==1.3.2) (2.5.0)
+Requirement already satisfied: aiosignal>=1.1.2 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from aiohttp->datasets==2.18.0->mindformers==1.3.2) (1.3.2)
+Requirement already satisfied: async-timeout<6.0,>=4.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from aiohttp->datasets==2.18.0->mindformers==1.3.2) (5.0.1)
+Requirement already satisfied: attrs>=17.3.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from aiohttp->datasets==2.18.0->mindformers==1.3.2) (23.1.0)
+Requirement already satisfied: frozenlist>=1.1.1 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from aiohttp->datasets==2.18.0->mindformers==1.3.2) (1.5.0)
+Requirement already satisfied: multidict<7.0,>=4.5 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from aiohttp->datasets==2.18.0->mindformers==1.3.2) (6.1.0)
+Requirement already satisfied: propcache>=0.2.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from aiohttp->datasets==2.18.0->mindformers==1.3.2) (0.3.0)
+Requirement already satisfied: yarl<2.0,>=1.17.0 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from aiohttp->datasets==2.18.0->mindformers==1.3.2) (1.18.3)
+Requirement already satisfied: typing-extensions>=3.7.4.3 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from huggingface-hub>=0.19.4->datasets==2.18.0->mindformers==1.3.2) (4.8.0)
+Requirement already satisfied: charset-normalizer<4,>=2 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from requests>=2.19.0->datasets==2.18.0->mindformers==1.3.2) (3.3.1)
+Requirement already satisfied: idna<4,>=2.5 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from requests>=2.19.0->datasets==2.18.0->mindformers==1.3.2) (3.4)
+Requirement already satisfied: urllib3<3,>=1.21.1 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from requests>=2.19.0->datasets==2.18.0->mindformers==1.3.2) (2.0.7)
+Requirement already satisfied: certifi>=2017.4.17 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from requests>=2.19.0->datasets==2.18.0->mindformers==1.3.2) (2023.7.22)
+Requirement already satisfied: python-dateutil>=2.8.2 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from pandas->datasets==2.18.0->mindformers==1.3.2) (2.8.2)
+Requirement already satisfied: pytz>=2020.1 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from pandas->datasets==2.18.0->mindformers==1.3.2) (2023.3.post1)
+Requirement already satisfied: tzdata>=2022.1 in /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages (from pandas->datasets==2.18.0->mindformers==1.3.2) (2023.3)
+Building wheels for collected packages: mindformers
+  Building wheel for mindformers (setup.py) ... done
+  Created wheel for mindformers: filename=mindformers-1.3.2-py3-none-any.whl size=1823754 sha256=40a152181e7d8abf527f172238844247ba7955a8dee33b1cef2f02bbc995e9a6
+  Stored in directory: /tmp/pip-ephem-wheel-cache-kcb8b1mg/wheels/40/94/52/9835458d6a1da05e7e6184cbfcfc44a841d1408c431ae04f01
+Successfully built mindformers
+DEPRECATION: moxing-framework 2.1.16.2ae09d45 has a non-standard version number. pip 24.0 will enforce this behaviour change. A possible replacement is to upgrade to a newer version of moxing-framework or contact the author to suggest that they release a version with a conforming version number. Discussion can be found at https://github.com/pypa/pip/issues/12063
+Installing collected packages: sentencepiece, setproctitle, pyarrow-hotfix, pyarrow, mindpet, tiktoken, tokenizers, datasets, mindformers
+  Attempting uninstall: sentencepiece
+    Found existing installation: sentencepiece 0.1.99
+    Uninstalling sentencepiece-0.1.99:
+      Successfully uninstalled sentencepiece-0.1.99
+  Attempting uninstall: pyarrow
+    Found existing installation: pyarrow 19.0.1
+    Uninstalling pyarrow-19.0.1:
+      Successfully uninstalled pyarrow-19.0.1
+  Attempting uninstall: mindpet
+    Found existing installation: mindpet 1.0.2
+    Uninstalling mindpet-1.0.2:
+      Successfully uninstalled mindpet-1.0.2
+  Attempting uninstall: tokenizers
+    Found existing installation: tokenizers 0.19.1
+    Uninstalling tokenizers-0.19.1:
+      Successfully uninstalled tokenizers-0.19.1
+  Attempting uninstall: datasets
+    Found existing installation: datasets 3.3.2
+    Uninstalling datasets-3.3.2:
+      Successfully uninstalled datasets-3.3.2
+  Attempting uninstall: mindformers
+    Found existing installation: mindformers 0.8.0
+    Uninstalling mindformers-0.8.0:
+      Successfully uninstalled mindformers-0.8.0
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+mindnlp 0.4.0 requires tokenizers==0.19.1, but you have tokenizers 0.15.0 which is incompatible.
+Successfully installed datasets-2.18.0 mindformers-1.3.2 mindpet-1.0.4 pyarrow-12.0.1 pyarrow-hotfix-0.6 sentencepiece-0.2.0 setproctitle-1.3.5 tiktoken-0.9.0 tokenizers-0.15.0
+(MindSpore) [ma-user work]$python mindNLPAlbert.py Traceback (most recent call last):
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/accelerate/utils/mindformers.py", line 17, in <module>
+    from mindformers.experimental.parallel_core.pynative import get_optimizer  # pylint: disable=import-error
+ImportError: cannot import name 'get_optimizer' from 'mindformers.experimental.parallel_core.pynative' (/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindformers/experimental/parallel_core/pynative/__init__.py)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ma-user/work/mindNLPAlbert.py", line 3, in <module>
+    from mindnlp.transformers import AutoTokenizer,AlbertTokenizer, AlbertForSequenceClassification
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/__init__.py", line 47, in <module>
+    from mindnlp import transformers
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/__init__.py", line 16, in <module>
+    from . import models, pipelines
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/__init__.py", line 19, in <module>
+    from . import (
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/albert/__init__.py", line 16, in <module>
+    from . import tokenization_albert, tokenization_albert_fast, configuration_albert, modeling_albert
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/albert/modeling_albert.py", line 46, in <module>
+    from ...modeling_utils import PreTrainedModel
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/modeling_utils.py", line 74, in <module>
+    from ..accelerate import infer_auto_device_map
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/accelerate/__init__.py", line 2, in <module>
+    from .utils import (
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/accelerate/utils/__init__.py", line 43, in <module>
+    from .mindformers import (
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/accelerate/utils/mindformers.py", line 19, in <module>
+    raise ValueError('cannot found `mindformers.experimental`, please install dev version by\n'
+ValueError: cannot found `mindformers.experimental`, please install dev version by
+`pip install git+https://gitee.com/mindspore/mindformers` 
+or remove mindformers by 
+`pip uninstall mindformers`
+(MindSpore) [ma-user work]$pip uninstall mindformers
+Found existing installation: mindformers 1.3.2
+Uninstalling mindformers-1.3.2:
+  Would remove:
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/README.md
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/codellama/finetune_codellama_34b_16p.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/codellama/finetune_codellama_34b_32p.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/codellama/predict_codellama_34b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/codellama/pretrain_codellama_34b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/cogvlm2/finetune_cogvlm2_video_llama3_chat_13b_lora.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/cogvlm2/predict_cogvlm2_image_llama3_chat_19b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/cogvlm2/predict_cogvlm2_video_llama3_chat_13b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/convert_config/run_convert.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/convert_config/run_reversed_convert.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/general/run_general_task.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm2/finetune_glm2_6b_fp16.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm2/lora_glm2_6b_fp16.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm2/predict_glm2_6b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm2/run_glm2_6b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm2/run_glm2_6b_finetune_2k_800T_A2_64G.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm2/run_glm2_6b_finetune_2k_800_32G.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm2/run_glm2_6b_finetune_800T_A2_64G.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm2/run_glm2_6b_finetune_800_32G.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm2/run_glm2_6b_finetune_eval.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm2/run_glm2_6b_lora_2k_800T_A2_64G.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm2/run_glm2_6b_lora_2k_800_32G.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm2/run_glm2_6b_lora_800T_A2_64G.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm2/run_glm2_6b_lora_800_32G.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm2/run_glm2_6b_lora_eval.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm3/finetune_glm3_6b_bf16.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm3/predict_glm3_6b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm3/run_glm3_6b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm3/run_glm3_6b_finetune_2k_800T_A2_64G.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm3/run_glm3_6b_finetune_800T_A2_64G.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm3/run_glm3_6b_multiturn_finetune_800T_A2_64G.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm4/finetune_glm4_9b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/glm4/predict_glm4_9b_chat.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/gpt2/finetune_gpt2_small_fp16.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/gpt2/finetune_gpt2_small_lora_fp16.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/gpt2/finetune_gpt2_small_txtcls_fp16.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/gpt2/predict_gpt2_small_fp16.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/gpt2/pretrain_gpt2_13b_fp16.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/gpt2/pretrain_gpt2_small_fp16.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/gpt2/run_gpt2.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/gpt2/run_gpt2_13b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/gpt2/run_gpt2_13b_910b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/gpt2/run_gpt2_52b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/gpt2/run_gpt2_lora.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/gpt2/run_gpt2_txtcls.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/gpt2/run_gpt2_xl.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/gpt2/run_gpt2_xl_lora.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/finetune_llama2_13b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/finetune_llama2_13b_bf16.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/finetune_llama2_70b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/finetune_llama2_70b_bf16_32p.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/finetune_llama2_70b_bf16_64p.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/finetune_llama2_7b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/finetune_llama2_7b_bf16.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/finetune_llama2_7b_prefixtuning.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/finetune_llama2_7b_ptuning2.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/lora_llama2_13b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/lora_llama2_7b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/predict_llama2_13b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/predict_llama2_13b_ptq.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/predict_llama2_13b_rtn.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/predict_llama2_13b_smooth_quant.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/predict_llama2_70b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/predict_llama2_70b_rtn.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/predict_llama2_70b_smooth_quant.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/predict_llama2_7b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/predict_llama2_7b_prefixtuning.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/predict_llama2_7b_ptuning2.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/predict_llama2_7b_slora.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/pretrain_llama2_13b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/pretrain_llama2_13b_auto_parallel.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/pretrain_llama2_13b_bf16.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/pretrain_llama2_70b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/pretrain_llama2_70b_auto_parallel.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/pretrain_llama2_70b_bf16_32p.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/pretrain_llama2_70b_bf16_64p.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/pretrain_llama2_7b.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/pretrain_llama2_7b_auto_parallel.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/llama2/pretrain_llama2_7b_bf16.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/configs/whisper/finetune_whisper_large_v3.yaml
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindformers-1.3.2.dist-info/*
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindformers/*
+Proceed (Y/n)? y
+  Successfully uninstalled mindformers-1.3.2
+(MindSpore) [ma-user work]$python mindNLPAlbert.py 
+Building prefix dict from the default dictionary ...
+Dumping model to file cache /tmp/jieba.cache
+Loading model cost 1.324 seconds.
+Prefix dict has been built successfully.
+Traceback (most recent call last):
+  File "/home/ma-user/work/mindNLPAlbert.py", line 3, in <module>
+    from mindnlp.transformers import AutoTokenizer,AlbertTokenizer, AlbertForSequenceClassification
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/__init__.py", line 47, in <module>
+    from mindnlp import transformers
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/__init__.py", line 16, in <module>
+    from . import models, pipelines
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/__init__.py", line 19, in <module>
+    from . import (
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/rag/__init__.py", line 15, in <module>
+    from . import configuration_rag, modeling_rag, retrieval_rag, tokenization_rag
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/rag/modeling_rag.py", line 29, in <module>
+    from .retrieval_rag import RagRetriever
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/rag/retrieval_rag.py", line 32, in <module>
+    from datasets import Dataset, load_dataset, load_from_disk
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/datasets/__init__.py", line 18, in <module>
+    from .arrow_dataset import Dataset
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/datasets/arrow_dataset.py", line 66, in <module>
+    from . import config
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/datasets/config.py", line 135, in <module>
+    importlib.import_module("soundfile").__libsndfile_version__
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/soundfile-0.12.1-py3.9.egg/soundfile.py", line 17, in <module>
+    from _soundfile import ffi as _ffi
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/soundfile-0.12.1-py3.9.egg/_soundfile.py", line 2, in <module>
+    import _cffi_backend
+ModuleNotFoundError: No module named '_cffi_backend'
+(MindSpore) [ma-user work]$ pip install cffi
+Looking in indexes: http://100.125.0.76:32021/repository/pypi/simple
+Requirement already satisfied: cffi in /home/ma-user/modelarts-dev/ma-cli (1.15.0)
+Requirement already satisfied: pycparser in /home/ma-user/modelarts-dev/ma-cli (from cffi) (2.21)
+DEPRECATION: moxing-framework 2.1.16.2ae09d45 has a non-standard version number. pip 24.0 will enforce this behaviour change. A possible replacement is to upgrade to a newer version of moxing-framework or contact the author to suggest that they release a version with a conforming version number. Discussion can be found at https://github.com/pypa/pip/issues/12063
+(MindSpore) [ma-user work]$python mindNLPAlbert.py 
+Building prefix dict from the default dictionary ...
+Loading model from cache /tmp/jieba.cache
+Loading model cost 1.258 seconds.
+Prefix dict has been built successfully.
+Traceback (most recent call last):
+  File "/home/ma-user/work/mindNLPAlbert.py", line 3, in <module>
+    from mindnlp.transformers import AutoTokenizer,AlbertTokenizer, AlbertForSequenceClassification
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/__init__.py", line 47, in <module>
+    from mindnlp import transformers
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/__init__.py", line 16, in <module>
+    from . import models, pipelines
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/__init__.py", line 19, in <module>
+    from . import (
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/rag/__init__.py", line 15, in <module>
+    from . import configuration_rag, modeling_rag, retrieval_rag, tokenization_rag
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/rag/modeling_rag.py", line 29, in <module>
+    from .retrieval_rag import RagRetriever
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/rag/retrieval_rag.py", line 32, in <module>
+    from datasets import Dataset, load_dataset, load_from_disk
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/datasets/__init__.py", line 18, in <module>
+    from .arrow_dataset import Dataset
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/datasets/arrow_dataset.py", line 66, in <module>
+    from . import config
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/datasets/config.py", line 135, in <module>
+    importlib.import_module("soundfile").__libsndfile_version__
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/soundfile-0.12.1-py3.9.egg/soundfile.py", line 17, in <module>
+    from _soundfile import ffi as _ffi
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/soundfile-0.12.1-py3.9.egg/_soundfile.py", line 2, in <module>
+    import _cffi_backend
+ModuleNotFoundError: No module named '_cffi_backend'
+(MindSpore) [ma-user work]$ pip uninstall cffi
+Found existing installation: cffi 1.15.0
+Uninstalling cffi-1.15.0:
+  Would remove:
+    /home/ma-user/modelarts-dev/ma-cli/_cffi_backend.cpython-37m-aarch64-linux-gnu.so
+    /home/ma-user/modelarts-dev/ma-cli/cffi-1.15.0.dist-info/*
+    /home/ma-user/modelarts-dev/ma-cli/cffi.libs/libffi-2a6f5b63.so.8.1.0
+    /home/ma-user/modelarts-dev/ma-cli/cffi/*
+Proceed (Y/n)? y
+  Successfully uninstalled cffi-1.15.0
+(MindSpore) [ma-user work]$ pip install cffi
+Looking in indexes: http://100.125.0.76:32021/repository/pypi/simple
+Collecting cffi
+  Downloading http://100.125.0.76:32021/repository/pypi/packages/42/7a/9d086fab7c66bd7c4d0f27c57a1b6b068ced810afc498cc8c49e0088661c/cffi-1.17.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (447 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━ 447.2/447.2 kB 58.3 MB/s eta 0:00:00
+Requirement already satisfied: pycparser in /home/ma-user/modelarts-dev/ma-cli (from cffi) (2.21)
+DEPRECATION: moxing-framework 2.1.16.2ae09d45 has a non-standard version number. pip 24.0 will enforce this behaviour change. A possible replacement is to upgrade to a newer version of moxing-framework or contact the author to suggest that they release a version with a conforming version number. Discussion can be found at https://github.com/pypa/pip/issues/12063
+Installing collected packages: cffi
+Successfully installed cffi-1.17.1
+(MindSpore) [ma-user work]$python mindNLPAlbert.py 
+Building prefix dict from the default dictionary ...
+Loading model from cache /tmp/jieba.cache
+Loading model cost 1.269 seconds.
+Prefix dict has been built successfully.
+Traceback (most recent call last):
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/soundfile-0.12.1-py3.9.egg/soundfile.py", line 161, in <module>
+    import _soundfile_data  # ImportError if this doesn't exist
+ModuleNotFoundError: No module named '_soundfile_data'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/soundfile-0.12.1-py3.9.egg/soundfile.py", line 170, in <module>
+    raise OSError('sndfile library not found using ctypes.util.find_library')
+OSError: sndfile library not found using ctypes.util.find_library
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ma-user/work/mindNLPAlbert.py", line 3, in <module>
+    from mindnlp.transformers import AutoTokenizer,AlbertTokenizer, AlbertForSequenceClassification
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/__init__.py", line 47, in <module>
+    from mindnlp import transformers
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/__init__.py", line 16, in <module>
+    from . import models, pipelines
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/__init__.py", line 19, in <module>
+    from . import (
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/rag/__init__.py", line 15, in <module>
+    from . import configuration_rag, modeling_rag, retrieval_rag, tokenization_rag
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/rag/modeling_rag.py", line 29, in <module>
+    from .retrieval_rag import RagRetriever
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/rag/retrieval_rag.py", line 32, in <module>
+    from datasets import Dataset, load_dataset, load_from_disk
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/datasets/__init__.py", line 18, in <module>
+    from .arrow_dataset import Dataset
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/datasets/arrow_dataset.py", line 66, in <module>
+    from . import config
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/datasets/config.py", line 135, in <module>
+    importlib.import_module("soundfile").__libsndfile_version__
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/soundfile-0.12.1-py3.9.egg/soundfile.py", line 192, in <module>
+    _snd = _ffi.dlopen(_explicit_libname)
+OSError: cannot load library 'libsndfile.so': libsndfile.so: cannot open shared object file: No such file or directory
+(MindSpore) [ma-user work]$yum install libsndfile1
+Error: This command has to be run under the root user.
+(MindSpore) [ma-user work]$sudo yum install libsndfile1
+Last metadata expiration check: 498 days, 11:12:19 ago on Fri Oct 27 11:23:05 2023.
+No match for argument: libsndfile1
+Error: Unable to find a match
+(MindSpore) [ma-user work]$pip uninstall soundfile
+Found existing installation: soundfile 0.12.1
+Uninstalling soundfile-0.12.1:
+  Would remove:
+    /home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/soundfile-0.12.1-py3.9.egg
+Proceed (Y/n)? y
+  Successfully uninstalled soundfile-0.12.1
+(MindSpore) [ma-user work]$python mindNLPAlbert.py 
+Building prefix dict from the default dictionary ...
+Loading model from cache /tmp/jieba.cache
+Loading model cost 1.265 seconds.
+Prefix dict has been built successfully.
+100%|██████████████████████████| 25.0/25.0 [00:00<00:00, 111kB/s]
+100%|█████████████████████████| 742k/742k [00:00<00:00, 1.20MB/s]
+1.25MB [00:00, 2.56MB/s]
+684B [00:00, 2.16MB/s]                                           
+/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/tokenization_utils_base.py:1526: FutureWarning: `clean_up_tokenization_spaces` was not set. It will be set to `True` by default. This behavior will be depracted, and will be then set to `False` by default. 
+  warnings.warn(
+100%|████████████████████████| 45.2M/45.2M [00:50<00:00, 942kB/s]
+Some weights of AlbertForSequenceClassification were not initialized from the model checkpoint at albert/albert-base-v1 and are newly initialized: ['classifier.bias', 'classifier.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+Text: I am a little confused on all of the models of the 88-89 bonnevilles.I have heard of the LE SE LSE SSE SSEI. Could someone tell me thedifferences are far as features or performance. I am also curious toknow what the book value is for prefereably the 89 model. And how muchless than book value can you usually get them for. In other words howmuch are they in demand this time of year. I have heard that the mid-springearly summer is the best time to buy.
+True Label: rec.autos
+Predicted Label: alt.atheism
+Prediction: Incorrect
+
+Text: I'm not familiar at all with the format of these X-Face:thingies, butafter seeing them in some folks' headers, I've *got* to *see* them (andmaybe make one of my own)!I've got dpg-viewon my Linux box (which displays uncompressed X-Faces)and I've managed to compile [un]compface too... but now that I'm *looking*for them, I can't seem to find any X-Face:'s in anyones news headers!  :-(Could you, would you, please send me your X-Face:headerI know* I'll probably get a little swamped, but I can handle it.  ...I hope.
+True Label: comp.windows.x
+Predicted Label: alt.atheism
+Prediction: Incorrect
+
+Text: In a word, yes.
+True Label: alt.atheism
+Predicted Label: alt.atheism
+Prediction: Correct
+
+Text: They were attacking the Iraqis to drive them out of Kuwait,a country whose citizens have close blood and business tiesto Saudi citizens.  And me thinks if the US had not helped outthe Iraqis would have swallowed Saudi Arabia, too (or at least the eastern oilfields).  And no Muslim country was doingmuch of anything to help liberate Kuwait and protect SaudiArabia; indeed, in some masses of citizens were demonstratingin favor of that butcher Saddam (who killed lotsa Muslims),just because he was killing, raping, and looting relativelyrich Muslims and also thumbing his nose at the West.So how would have *you* defended Saudi Arabia and rolledback the Iraqi invasion, were you in charge of Saudi Arabia???I think that it is a very good idea to not have governments have anofficial religion (de facto or de jure), because with human naturelike it is, the ambitious and not the pious will always be theones who rise to power.  There are just too many people in thisworld (or any country) for the citizens to really know if a leader is really devout or if he is just a slick operator.You make it sound like these guys are angels, Ilyess.  (In yourclarinet posting you edited out some stuff; was it the following???)Friday's New York Times reported that this group definitely ismore conservative than even Sheikh Baz and his followers (whothink that the House of Saud does not rule the country conservativelyenough).  The NYT reported that, besides complaining that thegovernment was not conservative enough, they have:     - asserted that the (approx. 500,000) Shiites in the Kingdom       are apostates, a charge that under Saudi (and Islamic) law       brings the death penalty.       Diplomatic guy (Sheikh bin Jibrin), isn't he Ilyess?   - called for severe punishment of the 40 or so women who   drove in public a while back to protest the ban on       women driving.  The guy from the group who said this,    Abdelhamoud al-Toweijri, said that these women should    be fired from their jobs, jailed, and branded as         prostitutes.    Is this what you want to see happen, Ilyess?  I've       heard many Muslims say that the ban on women driving     has no basis in the Qur'an, the ahadith, etc.   Yet these folks not only like the ban, they want         these women falsely called prostitutes?          If I were you, I'd choose my heroes wisely,      Ilyess, not just reflexively rally behind        anyone who hates anyone you hate.     - say that women should not be allowed to work.  - say that TV and radio are too immoral in the Kingdom.Now, the House of Saud is neither my least nor my most favorite governmenton earth; I think they restrict religious and political reedom a lot, amongother things.  I just think that the most likely replacementsfor them are going to be a lot worse for the citizens of the country.But I think the House of Saud is feeling the heat lately.  In thelast six months or so I've read there have been stepped up harassingby the muttawain (religious police---*not* government) of Western womennot fully veiled (something stupid for women to do, IMO, because itsends the wrong signals about your morality).  And I've read thatthey've cracked down on the few, home-based expartiate religiousgatherings, and even posted rewards in (government-owned) newspapersoffering money for anyone who turns in a group of expartiates whodare worship in their homes or any other secret place. So thegovernment has grown even more intolerant to try to take some ofthe wind out of the sails of the more-conservative opposition.As unislamic as some of these things are, they're just a smalltaste of what would happen if these guys overthrow the House ofSaud, like they're trying to in the long run.Is this really what you (and Rached and others in the generalwest-is-evil-zionists-rule-hate-west-or-you-are-a-puppet crowd)want, Ilyess?
+True Label: talk.politics.mideast
+Predicted Label: alt.atheism
+Prediction: Incorrect
+
+Downloading readme: 734B [00:00, 2.15kB/s]                       
+Repo card metadata block was not found. Setting CardData to empty.
+Downloading data: 100%|█████| 14.8M/14.8M [00:08<00:00, 1.83MB/s]
+Downloading data: 100%|█████| 8.91M/8.91M [00:03<00:00, 2.47MB/s]
+Generating train split: 11314 examples [00:00, 127929.31 examples/s]
+Generating test split: 7532 examples [00:00, 200991.85 examples/s]
+dataset: DatasetDict({
+    train: Dataset({
+        features: ['text', 'label', 'label_text'],
+        num_rows: 11314
+    })
+    test: Dataset({
+        features: ['text', 'label', 'label_text'],
+        num_rows: 7532
+    })
+})
+Repo card metadata block was not found. Setting CardData to empty.
+dataset: DatasetDict({
+    train: Dataset({
+        features: ['text', 'label', 'label_text'],
+        num_rows: 11314
+    })
+    test: Dataset({
+        features: ['text', 'label', 'label_text'],
+        num_rows: 7532
+    })
+})
+encoded_dataset: DatasetDict({
+    train: Dataset({
+        features: ['text', 'label', 'label_text', 'input_ids', 'token_type_ids', 'attention_mask'],
+        num_rows: 11314
+    })
+    test: Dataset({
+        features: ['text', 'label', 'label_text', 'input_ids', 'token_type_ids', 'attention_mask'],
+        num_rows: 7532
+    })
+})
+<mindspore.dataset.engine.iterators.DictIterator object at 0xfffd941e42b0>
+  0%|                                   | 0/4245 [00:00<?, ?it/s]{'loss': 2.9946, 'learning_rate': 1.995288574793875e-05, 'epoch': 0.01}
+{'loss': 2.9886, 'learning_rate': 1.9905771495877505e-05, 'epoch': 0.01}
+{'loss': 2.9802, 'learning_rate': 1.9858657243816254e-05, 'epoch': 0.02}
+{'loss': 2.9997, 'learning_rate': 1.9811542991755008e-05, 'epoch': 0.03}
+{'loss': 2.9929, 'learning_rate': 1.976442873969376e-05, 'epoch': 0.04}
+{'loss': 2.9947, 'learning_rate': 1.971731448763251e-05, 'epoch': 0.04}
+{'loss': 2.9801, 'learning_rate': 1.967020023557126e-05, 'epoch': 0.05}
+{'loss': 2.9885, 'learning_rate': 1.9623085983510014e-05, 'epoch': 0.06}
+{'loss': 2.9588, 'learning_rate': 1.9575971731448763e-05, 'epoch': 0.06}
+{'loss': 2.9253, 'learning_rate': 1.9528857479387517e-05, 'epoch': 0.07}
+{'loss': 2.9067, 'learning_rate': 1.948174322732627e-05, 'epoch': 0.08}
+{'loss': 2.8734, 'learning_rate': 1.943462897526502e-05, 'epoch': 0.08}
+{'loss': 2.8918, 'learning_rate': 1.938751472320377e-05, 'epoch': 0.09}
+{'loss': 2.8893, 'learning_rate': 1.9340400471142523e-05, 'epoch': 0.1}
+{'loss': 2.8693, 'learning_rate': 1.9293286219081272e-05, 'epoch': 0.11}
+{'loss': 2.8104, 'learning_rate': 1.9246171967020026e-05, 'epoch': 0.11}
+{'loss': 2.8417, 'learning_rate': 1.919905771495878e-05, 'epoch': 0.12}
+{'loss': 2.8272, 'learning_rate': 1.915194346289753e-05, 'epoch': 0.13}
+{'loss': 2.7627, 'learning_rate': 1.910482921083628e-05, 'epoch': 0.13}
+{'loss': 2.7589, 'learning_rate': 1.905771495877503e-05, 'epoch': 0.14}
+{'loss': 2.7467, 'learning_rate': 1.901060070671378e-05, 'epoch': 0.15}
+{'loss': 2.7249, 'learning_rate': 1.8963486454652535e-05, 'epoch': 0.16}
+{'loss': 2.7779, 'learning_rate': 1.8916372202591284e-05, 'epoch': 0.16}
+{'loss': 2.6691, 'learning_rate': 1.8869257950530038e-05, 'epoch': 0.17}
+{'loss': 2.6295, 'learning_rate': 1.8822143698468788e-05, 'epoch': 0.18}
+{'loss': 2.7362, 'learning_rate': 1.877502944640754e-05, 'epoch': 0.18}
+{'loss': 2.5766, 'learning_rate': 1.872791519434629e-05, 'epoch': 0.19}
+{'loss': 2.696, 'learning_rate': 1.8680800942285044e-05, 'epoch': 0.2}
+{'loss': 2.6637, 'learning_rate': 1.8633686690223794e-05, 'epoch': 0.2}
+{'loss': 2.5966, 'learning_rate': 1.8586572438162547e-05, 'epoch': 0.21}
+{'loss': 2.5944, 'learning_rate': 1.8539458186101297e-05, 'epoch': 0.22}
+{'loss': 2.6356, 'learning_rate': 1.849234393404005e-05, 'epoch': 0.23}
+{'loss': 2.6385, 'learning_rate': 1.84452296819788e-05, 'epoch': 0.23}
+{'loss': 2.6487, 'learning_rate': 1.8398115429917553e-05, 'epoch': 0.24}
+{'loss': 2.561, 'learning_rate': 1.8351001177856303e-05, 'epoch': 0.25}
+{'loss': 2.6091, 'learning_rate': 1.8303886925795052e-05, 'epoch': 0.25}
+{'loss': 2.6735, 'learning_rate': 1.8256772673733806e-05, 'epoch': 0.26}
+{'loss': 2.5227, 'learning_rate': 1.820965842167256e-05, 'epoch': 0.27}
+{'loss': 2.5965, 'learning_rate': 1.816254416961131e-05, 'epoch': 0.28}
+{'loss': 2.486, 'learning_rate': 1.8115429917550062e-05, 'epoch': 0.28}
+{'loss': 2.6101, 'learning_rate': 1.806831566548881e-05, 'epoch': 0.29}
+{'loss': 2.4855, 'learning_rate': 1.802120141342756e-05, 'epoch': 0.3}
+{'loss': 2.6034, 'learning_rate': 1.7974087161366315e-05, 'epoch': 0.3}
+{'loss': 2.4797, 'learning_rate': 1.7926972909305068e-05, 'epoch': 0.31}
+{'loss': 2.4212, 'learning_rate': 1.7879858657243818e-05, 'epoch': 0.32}
+{'loss': 2.4477, 'learning_rate': 1.783274440518257e-05, 'epoch': 0.33}
+{'loss': 2.5574, 'learning_rate': 1.778563015312132e-05, 'epoch': 0.33}
+{'loss': 2.5368, 'learning_rate': 1.773851590106007e-05, 'epoch': 0.34}
+{'loss': 2.5413, 'learning_rate': 1.7691401648998824e-05, 'epoch': 0.35}
+{'loss': 2.4152, 'learning_rate': 1.7644287396937577e-05, 'epoch': 0.35}
+{'loss': 2.4536, 'learning_rate': 1.7597173144876327e-05, 'epoch': 0.36}
+{'loss': 2.4456, 'learning_rate': 1.755005889281508e-05, 'epoch': 0.37}
+{'loss': 2.4348, 'learning_rate': 1.750294464075383e-05, 'epoch': 0.37}
+{'loss': 2.3614, 'learning_rate': 1.745583038869258e-05, 'epoch': 0.38}
+{'loss': 2.3518, 'learning_rate': 1.7408716136631333e-05, 'epoch': 0.39}
+{'loss': 2.413, 'learning_rate': 1.7361601884570082e-05, 'epoch': 0.4}
+{'loss': 2.3661, 'learning_rate': 1.7314487632508836e-05, 'epoch': 0.4}
+{'loss': 2.3632, 'learning_rate': 1.726737338044759e-05, 'epoch': 0.41}
+{'loss': 2.3688, 'learning_rate': 1.722025912838634e-05, 'epoch': 0.42}
+{'loss': 2.3527, 'learning_rate': 1.717314487632509e-05, 'epoch': 0.42}
+{'loss': 2.378, 'learning_rate': 1.712603062426384e-05, 'epoch': 0.43}
+{'loss': 2.3755, 'learning_rate': 1.707891637220259e-05, 'epoch': 0.44}
+{'loss': 2.3734, 'learning_rate': 1.7031802120141345e-05, 'epoch': 0.45}
+{'loss': 2.2904, 'learning_rate': 1.6984687868080098e-05, 'epoch': 0.45}
+{'loss': 2.2639, 'learning_rate': 1.6937573616018848e-05, 'epoch': 0.46}
+{'loss': 2.3959, 'learning_rate': 1.6890459363957597e-05, 'epoch': 0.47}
+{'loss': 2.2694, 'learning_rate': 1.684334511189635e-05, 'epoch': 0.47}
+{'loss': 2.2443, 'learning_rate': 1.67962308598351e-05, 'epoch': 0.48}
+{'loss': 2.2561, 'learning_rate': 1.6749116607773854e-05, 'epoch': 0.49}
+{'loss': 2.3604, 'learning_rate': 1.6702002355712607e-05, 'epoch': 0.49}
+{'loss': 2.2604, 'learning_rate': 1.6654888103651357e-05, 'epoch': 0.5}
+{'loss': 2.2287, 'learning_rate': 1.6607773851590106e-05, 'epoch': 0.51}
+{'loss': 2.2184, 'learning_rate': 1.656065959952886e-05, 'epoch': 0.52}
+{'loss': 2.3084, 'learning_rate': 1.651354534746761e-05, 'epoch': 0.52}
+{'loss': 2.2958, 'learning_rate': 1.6466431095406363e-05, 'epoch': 0.53}
+{'loss': 2.2041, 'learning_rate': 1.6419316843345112e-05, 'epoch': 0.54}
+{'loss': 2.2698, 'learning_rate': 1.6372202591283866e-05, 'epoch': 0.54}
+{'loss': 2.2158, 'learning_rate': 1.6325088339222615e-05, 'epoch': 0.55}
+{'loss': 2.3343, 'learning_rate': 1.627797408716137e-05, 'epoch': 0.56}
+{'loss': 2.2124, 'learning_rate': 1.623085983510012e-05, 'epoch': 0.57}
+{'loss': 2.2794, 'learning_rate': 1.618374558303887e-05, 'epoch': 0.57}
+{'loss': 2.1739, 'learning_rate': 1.613663133097762e-05, 'epoch': 0.58}
+{'loss': 2.1585, 'learning_rate': 1.6089517078916375e-05, 'epoch': 0.59}
+{'loss': 2.2099, 'learning_rate': 1.6042402826855124e-05, 'epoch': 0.59}
+{'loss': 2.2353, 'learning_rate': 1.5995288574793878e-05, 'epoch': 0.6}
+{'loss': 2.2311, 'learning_rate': 1.5948174322732627e-05, 'epoch': 0.61}
+{'loss': 2.2032, 'learning_rate': 1.590106007067138e-05, 'epoch': 0.61}
+{'loss': 2.1507, 'learning_rate': 1.585394581861013e-05, 'epoch': 0.62}
+{'loss': 2.1187, 'learning_rate': 1.580683156654888e-05, 'epoch': 0.63}
+{'loss': 2.2958, 'learning_rate': 1.5759717314487633e-05, 'epoch': 0.64}
+{'loss': 2.2303, 'learning_rate': 1.5712603062426387e-05, 'epoch': 0.64}
+{'loss': 2.1122, 'learning_rate': 1.5665488810365136e-05, 'epoch': 0.65}
+{'loss': 2.1545, 'learning_rate': 1.561837455830389e-05, 'epoch': 0.66}
+{'loss': 2.058, 'learning_rate': 1.557126030624264e-05, 'epoch': 0.66}
+{'loss': 2.1072, 'learning_rate': 1.552414605418139e-05, 'epoch': 0.67}
+{'loss': 2.1222, 'learning_rate': 1.5477031802120142e-05, 'epoch': 0.68}
+{'loss': 2.0514, 'learning_rate': 1.5429917550058896e-05, 'epoch': 0.69}
+{'loss': 2.0618, 'learning_rate': 1.5382803297997645e-05, 'epoch': 0.69}
+{'loss': 2.1909, 'learning_rate': 1.53356890459364e-05, 'epoch': 0.7}
+{'loss': 2.0361, 'learning_rate': 1.528857479387515e-05, 'epoch': 0.71}
+{'loss': 2.0664, 'learning_rate': 1.52414605418139e-05, 'epoch': 0.71}
+{'loss': 2.0312, 'learning_rate': 1.519434628975265e-05, 'epoch': 0.72}
+{'loss': 1.9411, 'learning_rate': 1.5147232037691405e-05, 'epoch': 0.73}
+{'loss': 2.1069, 'learning_rate': 1.5100117785630154e-05, 'epoch': 0.73}
+{'loss': 2.0093, 'learning_rate': 1.5053003533568906e-05, 'epoch': 0.74}
+{'loss': 2.1033, 'learning_rate': 1.5005889281507658e-05, 'epoch': 0.75}
+{'loss': 2.1802, 'learning_rate': 1.4958775029446409e-05, 'epoch': 0.76}
+{'loss': 2.0965, 'learning_rate': 1.4911660777385159e-05, 'epoch': 0.76}
+{'loss': 2.0452, 'learning_rate': 1.486454652532391e-05, 'epoch': 0.77}
+{'loss': 2.0893, 'learning_rate': 1.4817432273262664e-05, 'epoch': 0.78}
+{'loss': 2.1165, 'learning_rate': 1.4770318021201415e-05, 'epoch': 0.78}
+{'loss': 2.1192, 'learning_rate': 1.4723203769140167e-05, 'epoch': 0.79}
+{'loss': 2.0502, 'learning_rate': 1.4676089517078918e-05, 'epoch': 0.8}
+{'loss': 1.9907, 'learning_rate': 1.4628975265017668e-05, 'epoch': 0.81}
+{'loss': 2.018, 'learning_rate': 1.458186101295642e-05, 'epoch': 0.81}
+{'loss': 1.9687, 'learning_rate': 1.453474676089517e-05, 'epoch': 0.82}
+{'loss': 2.1228, 'learning_rate': 1.4487632508833924e-05, 'epoch': 0.83}
+{'loss': 1.8787, 'learning_rate': 1.4440518256772676e-05, 'epoch': 0.83}
+{'loss': 1.9863, 'learning_rate': 1.4393404004711427e-05, 'epoch': 0.84}
+{'loss': 2.1089, 'learning_rate': 1.4346289752650177e-05, 'epoch': 0.85}
+{'loss': 2.043, 'learning_rate': 1.4299175500588928e-05, 'epoch': 0.86}
+{'loss': 1.8254, 'learning_rate': 1.425206124852768e-05, 'epoch': 0.86}
+{'loss': 1.9818, 'learning_rate': 1.4204946996466433e-05, 'epoch': 0.87}
+{'loss': 1.9141, 'learning_rate': 1.4157832744405185e-05, 'epoch': 0.88}
+{'loss': 1.9262, 'learning_rate': 1.4110718492343936e-05, 'epoch': 0.88}
+{'loss': 1.9235, 'learning_rate': 1.4063604240282686e-05, 'epoch': 0.89}
+{'loss': 1.9285, 'learning_rate': 1.4016489988221437e-05, 'epoch': 0.9}
+{'loss': 1.9884, 'learning_rate': 1.3969375736160189e-05, 'epoch': 0.9}
+{'loss': 2.0568, 'learning_rate': 1.392226148409894e-05, 'epoch': 0.91}
+{'loss': 1.9205, 'learning_rate': 1.3875147232037694e-05, 'epoch': 0.92}
+{'loss': 1.8579, 'learning_rate': 1.3828032979976445e-05, 'epoch': 0.93}
+{'loss': 1.948, 'learning_rate': 1.3780918727915195e-05, 'epoch': 0.93}
+{'loss': 2.0039, 'learning_rate': 1.3733804475853946e-05, 'epoch': 0.94}
+{'loss': 1.9272, 'learning_rate': 1.3686690223792698e-05, 'epoch': 0.95}
+{'loss': 1.8781, 'learning_rate': 1.363957597173145e-05, 'epoch': 0.95}
+{'loss': 1.9348, 'learning_rate': 1.3592461719670203e-05, 'epoch': 0.96}
+{'loss': 2.0473, 'learning_rate': 1.3545347467608954e-05, 'epoch': 0.97}
+{'loss': 1.8395, 'learning_rate': 1.3498233215547704e-05, 'epoch': 0.98}
+{'loss': 1.9884, 'learning_rate': 1.3451118963486455e-05, 'epoch': 0.98}
+{'loss': 1.9068, 'learning_rate': 1.3404004711425207e-05, 'epoch': 0.99}
+{'loss': 1.7655, 'learning_rate': 1.3356890459363958e-05, 'epoch': 1.0}
+ 33%|███████▉                | 1414/4245 [11:58<19:28,  2.42it/s]  File "/home/ma-user/work/mindNLPAlbert.py", line 132, in <module>
+    trainer.train()
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/engine/trainer/base.py", line 755, in train
+    return inner_training_loop(
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/engine/trainer/base.py", line 1107, in _inner_training_loop
+    tr_loss_step, grads = self.training_step(model, inputs)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/engine/trainer/base.py", line 1382, in training_step
+    loss, grads = self.grad_fn(inputs)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindspore/ops/composite/base.py", line 642, in after_grad
+    return grad_(fn_, weights)(*args, **kwargs)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindspore/common/api.py", line 188, in wrapper
+    results = fn(*arg, **kwargs)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindspore/ops/composite/base.py", line 617, in after_grad
+    run_args, res = self._pynative_forward_run(fn, grad_, weights, *args, **kwargs)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindspore/ops/composite/base.py", line 674, in _pynative_forward_run
+    outputs = fn(*args, **kwargs)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/engine/trainer/base.py", line 1374, in forward
+    return self.compute_loss(model, inputs)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/engine/trainer/base.py", line 1396, in compute_loss
+    outputs = model(**inputs)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/core/nn/modules/module.py", line 391, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/core/nn/modules/module.py", line 402, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/albert/modeling_albert.py", line 1565, in forward
+    outputs = self.albert(
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/core/nn/modules/module.py", line 391, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/core/nn/modules/module.py", line 402, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindnlp/transformers/models/albert/modeling_albert.py", line 929, in forward
+    buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to((batch_size, seq_length))
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindspore/common/tensor.py", line 1584, in broadcast_to
+    return tensor_operator_registry.get('broadcast_to')(self, shape)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindspore/ops/auto_generate/gen_ops_def.py", line 1081, in broadcast_to
+    return broadcast_to_impl(input, shape)
+  File "/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/mindspore/ops/auto_generate/pyboost_inner_prim.py", line 137, in __call__
+    return _convert_stub(super().__call__(input, shape))
+  File "<string>", line 4, in <module>
+  {'eval_loss': 1.934226155281067, 'eval_runtime': 121.8348, 'eval_samples_per_second': 7.732, 'eval_steps_per_second': 0.969, 'epoch': 1.0}
+{'loss': 1.8706, 'learning_rate': 1.330977620730271e-05, 'epoch': 1.0}                                                            
+{'loss': 1.9159, 'learning_rate': 1.3262661955241463e-05, 'epoch': 1.01}
+{'loss': 1.8223, 'learning_rate': 1.3215547703180213e-05, 'epoch': 1.02}
+{'loss': 1.8048, 'learning_rate': 1.3168433451118964e-05, 'epoch': 1.02}
+{'loss': 1.9046, 'learning_rate': 1.3121319199057716e-05, 'epoch': 1.03}
+{'loss': 2.047, 'learning_rate': 1.3074204946996467e-05, 'epoch': 1.04}
+{'loss': 1.794, 'learning_rate': 1.3027090694935219e-05, 'epoch': 1.05}
+{'loss': 1.856, 'learning_rate': 1.2979976442873969e-05, 'epoch': 1.05}
+{'loss': 1.9468, 'learning_rate': 1.2932862190812724e-05, 'epoch': 1.06}
+{'loss': 1.8067, 'learning_rate': 1.2885747938751473e-05, 'epoch': 1.07}
+{'loss': 1.9848, 'learning_rate': 1.2838633686690225e-05, 'epoch': 1.07}
+{'loss': 1.9787, 'learning_rate': 1.2791519434628976e-05, 'epoch': 1.08}
+{'loss': 1.7619, 'learning_rate': 1.2744405182567728e-05, 'epoch': 1.09}
+{'loss': 1.9363, 'learning_rate': 1.2697290930506478e-05, 'epoch': 1.1}
+{'loss': 1.8154, 'learning_rate': 1.2650176678445233e-05, 'epoch': 1.1}
+{'loss': 1.7923, 'learning_rate': 1.2603062426383982e-05, 'epoch': 1.11}
+{'loss': 2.0117, 'learning_rate': 1.2555948174322734e-05, 'epoch': 1.12}
+{'loss': 1.9168, 'learning_rate': 1.2508833922261485e-05, 'epoch': 1.12}
+{'loss': 1.8136, 'learning_rate': 1.2461719670200237e-05, 'epoch': 1.13}
+{'loss': 1.9701, 'learning_rate': 1.2414605418138987e-05, 'epoch': 1.14}
+{'loss': 1.7979, 'learning_rate': 1.2367491166077738e-05, 'epoch': 1.14}
+{'loss': 1.5671, 'learning_rate': 1.2320376914016491e-05, 'epoch': 1.15}
+{'loss': 1.8255, 'learning_rate': 1.2273262661955243e-05, 'epoch': 1.16}
+{'loss': 1.8027, 'learning_rate': 1.2226148409893994e-05, 'epoch': 1.17}
+{'loss': 1.8137, 'learning_rate': 1.2179034157832746e-05, 'epoch': 1.17}
+{'loss': 1.748, 'learning_rate': 1.2131919905771496e-05, 'epoch': 1.18}
+{'loss': 1.7853, 'learning_rate': 1.2084805653710247e-05, 'epoch': 1.19}
+{'loss': 1.8007, 'learning_rate': 1.2037691401648999e-05, 'epoch': 1.19}
+{'loss': 1.8309, 'learning_rate': 1.1990577149587752e-05, 'epoch': 1.2}
+{'loss': 1.9758, 'learning_rate': 1.1943462897526503e-05, 'epoch': 1.21}
+{'loss': 1.9097, 'learning_rate': 1.1896348645465255e-05, 'epoch': 1.22}
+{'loss': 1.7768, 'learning_rate': 1.1849234393404005e-05, 'epoch': 1.22}
+{'loss': 1.8001, 'learning_rate': 1.1802120141342756e-05, 'epoch': 1.23}
+{'loss': 1.7812, 'learning_rate': 1.1755005889281508e-05, 'epoch': 1.24}
+{'loss': 1.7163, 'learning_rate': 1.1707891637220261e-05, 'epoch': 1.24}
+{'loss': 1.81, 'learning_rate': 1.1660777385159012e-05, 'epoch': 1.25}
+{'loss': 1.9075, 'learning_rate': 1.1613663133097764e-05, 'epoch': 1.26}
+{'loss': 1.5918, 'learning_rate': 1.1566548881036514e-05, 'epoch': 1.27}
+{'loss': 1.828, 'learning_rate': 1.1519434628975265e-05, 'epoch': 1.27}
+{'loss': 1.8371, 'learning_rate': 1.1472320376914017e-05, 'epoch': 1.28}
+{'loss': 1.8861, 'learning_rate': 1.1425206124852768e-05, 'epoch': 1.29}
+{'loss': 1.6801, 'learning_rate': 1.1378091872791521e-05, 'epoch': 1.29}
+{'loss': 1.898, 'learning_rate': 1.1330977620730273e-05, 'epoch': 1.3}
+{'loss': 1.6902, 'learning_rate': 1.1283863368669023e-05, 'epoch': 1.31}
+{'loss': 1.731, 'learning_rate': 1.1236749116607774e-05, 'epoch': 1.31}
+{'loss': 1.7859, 'learning_rate': 1.1189634864546526e-05, 'epoch': 1.32}
+{'loss': 1.6359, 'learning_rate': 1.1142520612485277e-05, 'epoch': 1.33}
+{'loss': 1.9486, 'learning_rate': 1.1095406360424029e-05, 'epoch': 1.34}
+{'loss': 1.9364, 'learning_rate': 1.1048292108362782e-05, 'epoch': 1.34}
+{'loss': 1.8847, 'learning_rate': 1.1001177856301532e-05, 'epoch': 1.35}
+{'loss': 1.7944, 'learning_rate': 1.0954063604240283e-05, 'epoch': 1.36}
+{'loss': 1.7532, 'learning_rate': 1.0906949352179035e-05, 'epoch': 1.36}
+{'loss': 1.7355, 'learning_rate': 1.0859835100117786e-05, 'epoch': 1.37}
+{'loss': 1.6636, 'learning_rate': 1.0812720848056538e-05, 'epoch': 1.38}
+{'loss': 1.7203, 'learning_rate': 1.0765606595995291e-05, 'epoch': 1.39}
+{'loss': 1.66, 'learning_rate': 1.071849234393404e-05, 'epoch': 1.39}
+{'loss': 1.6902, 'learning_rate': 1.0671378091872792e-05, 'epoch': 1.4}
+{'loss': 1.5835, 'learning_rate': 1.0624263839811544e-05, 'epoch': 1.41}
+{'loss': 1.6698, 'learning_rate': 1.0577149587750295e-05, 'epoch': 1.41}
+{'loss': 1.8361, 'learning_rate': 1.0530035335689047e-05, 'epoch': 1.42}
+{'loss': 1.7245, 'learning_rate': 1.0482921083627797e-05, 'epoch': 1.43}
+{'loss': 1.821, 'learning_rate': 1.043580683156655e-05, 'epoch': 1.43}
+{'loss': 1.7687, 'learning_rate': 1.0388692579505301e-05, 'epoch': 1.44}
+{'loss': 1.7007, 'learning_rate': 1.0341578327444053e-05, 'epoch': 1.45}
+{'loss': 1.5068, 'learning_rate': 1.0294464075382804e-05, 'epoch': 1.46}
+{'loss': 1.64, 'learning_rate': 1.0247349823321556e-05, 'epoch': 1.46}
+{'loss': 1.916, 'learning_rate': 1.0200235571260306e-05, 'epoch': 1.47}
+{'loss': 1.6733, 'learning_rate': 1.0153121319199059e-05, 'epoch': 1.48}
+{'loss': 1.8821, 'learning_rate': 1.010600706713781e-05, 'epoch': 1.48}
+{'loss': 1.6846, 'learning_rate': 1.0058892815076562e-05, 'epoch': 1.49}
+{'loss': 1.647, 'learning_rate': 1.0011778563015313e-05, 'epoch': 1.5}
+{'loss': 1.7158, 'learning_rate': 9.964664310954065e-06, 'epoch': 1.51}
+{'loss': 1.568, 'learning_rate': 9.917550058892816e-06, 'epoch': 1.51}
+{'loss': 1.7618, 'learning_rate': 9.870435806831568e-06, 'epoch': 1.52}
+{'loss': 1.6675, 'learning_rate': 9.82332155477032e-06, 'epoch': 1.53}
+{'loss': 1.5742, 'learning_rate': 9.77620730270907e-06, 'epoch': 1.53}
+{'loss': 1.7907, 'learning_rate': 9.729093050647822e-06, 'epoch': 1.54}
+{'loss': 1.6222, 'learning_rate': 9.681978798586574e-06, 'epoch': 1.55}
+{'loss': 1.5817, 'learning_rate': 9.634864546525324e-06, 'epoch': 1.55}
+{'loss': 1.6249, 'learning_rate': 9.587750294464077e-06, 'epoch': 1.56}
+{'loss': 1.7486, 'learning_rate': 9.540636042402828e-06, 'epoch': 1.57}
+{'loss': 1.7109, 'learning_rate': 9.493521790341578e-06, 'epoch': 1.58}
+{'loss': 1.6359, 'learning_rate': 9.446407538280331e-06, 'epoch': 1.58}
+{'loss': 1.7983, 'learning_rate': 9.399293286219083e-06, 'epoch': 1.59}
+{'loss': 1.8121, 'learning_rate': 9.352179034157833e-06, 'epoch': 1.6}
+{'loss': 1.5678, 'learning_rate': 9.305064782096584e-06, 'epoch': 1.6}
+{'loss': 1.6605, 'learning_rate': 9.257950530035337e-06, 'epoch': 1.61}
+{'loss': 1.6769, 'learning_rate': 9.210836277974087e-06, 'epoch': 1.62}
+{'loss': 1.4976, 'learning_rate': 9.163722025912839e-06, 'epoch': 1.63}
+{'loss': 1.6349, 'learning_rate': 9.116607773851592e-06, 'epoch': 1.63}
+{'loss': 1.6199, 'learning_rate': 9.069493521790342e-06, 'epoch': 1.64}
+{'loss': 1.6215, 'learning_rate': 9.022379269729093e-06, 'epoch': 1.65}
+{'loss': 1.6123, 'learning_rate': 8.975265017667846e-06, 'epoch': 1.65}
+{'loss': 1.5007, 'learning_rate': 8.928150765606596e-06, 'epoch': 1.66}
+{'loss': 1.4372, 'learning_rate': 8.881036513545348e-06, 'epoch': 1.67}
+{'loss': 1.7341, 'learning_rate': 8.8339222614841e-06, 'epoch': 1.67}
+{'loss': 1.6567, 'learning_rate': 8.78680800942285e-06, 'epoch': 1.68}
+{'loss': 1.5624, 'learning_rate': 8.739693757361602e-06, 'epoch': 1.69}
+{'loss': 1.5854, 'learning_rate': 8.692579505300354e-06, 'epoch': 1.7}
+{'loss': 1.5873, 'learning_rate': 8.645465253239105e-06, 'epoch': 1.7}
+{'loss': 1.5115, 'learning_rate': 8.598351001177857e-06, 'epoch': 1.71}
+{'loss': 1.6174, 'learning_rate': 8.551236749116608e-06, 'epoch': 1.72}
+{'loss': 1.436, 'learning_rate': 8.50412249705536e-06, 'epoch': 1.72}
+{'loss': 1.7209, 'learning_rate': 8.457008244994111e-06, 'epoch': 1.73}
+{'loss': 1.6428, 'learning_rate': 8.409893992932863e-06, 'epoch': 1.74}
+{'loss': 1.4833, 'learning_rate': 8.362779740871614e-06, 'epoch': 1.75}
+{'loss': 1.7402, 'learning_rate': 8.315665488810366e-06, 'epoch': 1.75}
+{'loss': 1.5804, 'learning_rate': 8.268551236749117e-06, 'epoch': 1.76}
+{'loss': 1.6905, 'learning_rate': 8.221436984687869e-06, 'epoch': 1.77}
+{'loss': 1.7076, 'learning_rate': 8.17432273262662e-06, 'epoch': 1.77}
+{'loss': 1.6038, 'learning_rate': 8.127208480565372e-06, 'epoch': 1.78}
+{'loss': 1.5418, 'learning_rate': 8.080094228504123e-06, 'epoch': 1.79}
+{'loss': 1.6592, 'learning_rate': 8.032979976442875e-06, 'epoch': 1.8}
+{'loss': 1.4188, 'learning_rate': 7.985865724381626e-06, 'epoch': 1.8}
+{'loss': 1.5273, 'learning_rate': 7.938751472320378e-06, 'epoch': 1.81}
+{'loss': 1.5125, 'learning_rate': 7.89163722025913e-06, 'epoch': 1.82}
+{'loss': 1.6153, 'learning_rate': 7.84452296819788e-06, 'epoch': 1.82}
+{'loss': 1.5599, 'learning_rate': 7.797408716136632e-06, 'epoch': 1.83}
+{'loss': 1.5748, 'learning_rate': 7.750294464075384e-06, 'epoch': 1.84}
+{'loss': 1.6111, 'learning_rate': 7.703180212014135e-06, 'epoch': 1.84}
+{'loss': 1.5648, 'learning_rate': 7.656065959952887e-06, 'epoch': 1.85}
+{'loss': 1.595, 'learning_rate': 7.6089517078916374e-06, 'epoch': 1.86}
+{'loss': 1.4616, 'learning_rate': 7.56183745583039e-06, 'epoch': 1.87}
+{'loss': 1.3282, 'learning_rate': 7.514723203769141e-06, 'epoch': 1.87}
+{'loss': 1.5174, 'learning_rate': 7.467608951707892e-06, 'epoch': 1.88}
+{'loss': 1.5724, 'learning_rate': 7.420494699646644e-06, 'epoch': 1.89}
+{'loss': 1.5629, 'learning_rate': 7.373380447585396e-06, 'epoch': 1.89}
+{'loss': 1.5239, 'learning_rate': 7.3262661955241465e-06, 'epoch': 1.9}
+{'loss': 1.7579, 'learning_rate': 7.279151943462898e-06, 'epoch': 1.91}
+{'loss': 1.4297, 'learning_rate': 7.23203769140165e-06, 'epoch': 1.92}
+{'loss': 1.6632, 'learning_rate': 7.184923439340401e-06, 'epoch': 1.92}
+{'loss': 1.6051, 'learning_rate': 7.1378091872791525e-06, 'epoch': 1.93}
+{'loss': 1.4817, 'learning_rate': 7.090694935217905e-06, 'epoch': 1.94}
+{'loss': 1.566, 'learning_rate': 7.0435806831566555e-06, 'epoch': 1.94}
+{'loss': 1.4524, 'learning_rate': 6.996466431095407e-06, 'epoch': 1.95}
+{'loss': 1.5737, 'learning_rate': 6.949352179034159e-06, 'epoch': 1.96}
+{'loss': 1.6593, 'learning_rate': 6.90223792697291e-06, 'epoch': 1.96}
+{'loss': 1.4787, 'learning_rate': 6.8551236749116615e-06, 'epoch': 1.97}
+{'loss': 1.5985, 'learning_rate': 6.808009422850412e-06, 'epoch': 1.98}
+{'loss': 1.5656, 'learning_rate': 6.7608951707891645e-06, 'epoch': 1.99}
+{'loss': 1.5111, 'learning_rate': 6.713780918727916e-06, 'epoch': 1.99}
+{'loss': 1.4442, 'learning_rate': 6.666666666666667e-06, 'epoch': 2.0}
+{'eval_loss': 1.64035165309906, 'eval_runtime': 96.028, 'eval_samples_per_second': 9.81, 'eval_steps_per_second': 1.229, 'epoch': 2.0}
+{'loss': 1.4239, 'learning_rate': 6.619552414605419e-06, 'epoch': 2.01}                                                           
+{'loss': 1.5397, 'learning_rate': 6.5724381625441705e-06, 'epoch': 2.01}
+{'loss': 1.5361, 'learning_rate': 6.525323910482921e-06, 'epoch': 2.02}
+{'loss': 1.5718, 'learning_rate': 6.4782096584216735e-06, 'epoch': 2.03}
+{'loss': 1.5439, 'learning_rate': 6.431095406360425e-06, 'epoch': 2.04}
+{'loss': 1.479, 'learning_rate': 6.383981154299176e-06, 'epoch': 2.04}
+{'loss': 1.4308, 'learning_rate': 6.336866902237927e-06, 'epoch': 2.05}
+{'loss': 1.6827, 'learning_rate': 6.2897526501766795e-06, 'epoch': 2.06}
+{'loss': 1.4118, 'learning_rate': 6.24263839811543e-06, 'epoch': 2.06}
+{'loss': 1.485, 'learning_rate': 6.195524146054182e-06, 'epoch': 2.07}
+{'loss': 1.6287, 'learning_rate': 6.148409893992934e-06, 'epoch': 2.08}
+{'loss': 1.4601, 'learning_rate': 6.101295641931685e-06, 'epoch': 2.08}
+{'loss': 1.5838, 'learning_rate': 6.054181389870436e-06, 'epoch': 2.09}
+{'loss': 1.4472, 'learning_rate': 6.0070671378091885e-06, 'epoch': 2.1}
+{'loss': 1.3862, 'learning_rate': 5.959952885747939e-06, 'epoch': 2.11}
+{'loss': 1.6133, 'learning_rate': 5.912838633686691e-06, 'epoch': 2.11}
+{'loss': 1.6568, 'learning_rate': 5.865724381625441e-06, 'epoch': 2.12}
+{'loss': 1.326, 'learning_rate': 5.818610129564194e-06, 'epoch': 2.13}
+{'loss': 1.6088, 'learning_rate': 5.771495877502945e-06, 'epoch': 2.13}
+{'loss': 1.5843, 'learning_rate': 5.724381625441696e-06, 'epoch': 2.14}
+{'loss': 1.462, 'learning_rate': 5.677267373380448e-06, 'epoch': 2.15}
+{'loss': 1.5061, 'learning_rate': 5.6301531213192e-06, 'epoch': 2.16}
+{'loss': 1.3882, 'learning_rate': 5.58303886925795e-06, 'epoch': 2.16}
+{'loss': 1.5251, 'learning_rate': 5.535924617196703e-06, 'epoch': 2.17}
+{'loss': 1.4952, 'learning_rate': 5.488810365135454e-06, 'epoch': 2.18}
+{'loss': 1.4892, 'learning_rate': 5.441696113074205e-06, 'epoch': 2.18}
+{'loss': 1.6042, 'learning_rate': 5.394581861012956e-06, 'epoch': 2.19}
+{'loss': 1.4758, 'learning_rate': 5.347467608951709e-06, 'epoch': 2.2}
+{'loss': 1.5867, 'learning_rate': 5.300353356890459e-06, 'epoch': 2.2}
+{'loss': 1.5673, 'learning_rate': 5.253239104829211e-06, 'epoch': 2.21}
+{'loss': 1.6257, 'learning_rate': 5.206124852767963e-06, 'epoch': 2.22}
+{'loss': 1.4875, 'learning_rate': 5.159010600706714e-06, 'epoch': 2.23}
+{'loss': 1.5995, 'learning_rate': 5.111896348645465e-06, 'epoch': 2.23}
+{'loss': 1.484, 'learning_rate': 5.064782096584218e-06, 'epoch': 2.24}
+{'loss': 1.5324, 'learning_rate': 5.017667844522968e-06, 'epoch': 2.25}
+{'loss': 1.4282, 'learning_rate': 4.97055359246172e-06, 'epoch': 2.25}
+{'loss': 1.51, 'learning_rate': 4.923439340400471e-06, 'epoch': 2.26}
+{'loss': 1.4225, 'learning_rate': 4.876325088339223e-06, 'epoch': 2.27}
+{'loss': 1.5825, 'learning_rate': 4.829210836277974e-06, 'epoch': 2.28}
+{'loss': 1.6643, 'learning_rate': 4.782096584216726e-06, 'epoch': 2.28}
+{'loss': 1.3955, 'learning_rate': 4.734982332155477e-06, 'epoch': 2.29}
+{'loss': 1.4971, 'learning_rate': 4.687868080094229e-06, 'epoch': 2.3}
+{'loss': 1.6081, 'learning_rate': 4.64075382803298e-06, 'epoch': 2.3}
+{'loss': 1.4412, 'learning_rate': 4.593639575971732e-06, 'epoch': 2.31}
+{'loss': 1.4726, 'learning_rate': 4.546525323910483e-06, 'epoch': 2.32}
+{'loss': 1.3144, 'learning_rate': 4.499411071849235e-06, 'epoch': 2.33}
+{'loss': 1.5704, 'learning_rate': 4.452296819787986e-06, 'epoch': 2.33}
+{'loss': 1.6508, 'learning_rate': 4.405182567726738e-06, 'epoch': 2.34}
+{'loss': 1.7181, 'learning_rate': 4.358068315665489e-06, 'epoch': 2.35}
+{'loss': 1.5822, 'learning_rate': 4.310954063604241e-06, 'epoch': 2.35}
+{'loss': 1.5158, 'learning_rate': 4.2638398115429916e-06, 'epoch': 2.36}
+{'loss': 1.5237, 'learning_rate': 4.216725559481744e-06, 'epoch': 2.37}
+{'loss': 1.2985, 'learning_rate': 4.1696113074204954e-06, 'epoch': 2.37}
+{'loss': 1.4391, 'learning_rate': 4.122497055359246e-06, 'epoch': 2.38}
+{'loss': 1.3929, 'learning_rate': 4.0753828032979984e-06, 'epoch': 2.39}
+{'loss': 1.3628, 'learning_rate': 4.028268551236749e-06, 'epoch': 2.4}
+{'loss': 1.4164, 'learning_rate': 3.981154299175501e-06, 'epoch': 2.4}
+{'loss': 1.3494, 'learning_rate': 3.934040047114253e-06, 'epoch': 2.41}
+{'loss': 1.4616, 'learning_rate': 3.886925795053004e-06, 'epoch': 2.42}
+{'loss': 1.397, 'learning_rate': 3.839811542991755e-06, 'epoch': 2.42}
+{'loss': 1.4567, 'learning_rate': 3.7926972909305066e-06, 'epoch': 2.43}
+{'loss': 1.4427, 'learning_rate': 3.745583038869258e-06, 'epoch': 2.44}
+{'loss': 1.4795, 'learning_rate': 3.69846878680801e-06, 'epoch': 2.45}
+{'loss': 1.3985, 'learning_rate': 3.651354534746761e-06, 'epoch': 2.45}
+{'loss': 1.2249, 'learning_rate': 3.6042402826855126e-06, 'epoch': 2.46}
+{'loss': 1.6071, 'learning_rate': 3.5571260306242637e-06, 'epoch': 2.47}
+{'loss': 1.4251, 'learning_rate': 3.5100117785630156e-06, 'epoch': 2.47}
+{'loss': 1.4917, 'learning_rate': 3.462897526501767e-06, 'epoch': 2.48}
+{'loss': 1.2912, 'learning_rate': 3.415783274440518e-06, 'epoch': 2.49}
+{'loss': 1.4848, 'learning_rate': 3.36866902237927e-06, 'epoch': 2.49}
+{'loss': 1.3776, 'learning_rate': 3.321554770318021e-06, 'epoch': 2.5}
+{'loss': 1.3616, 'learning_rate': 3.2744405182567727e-06, 'epoch': 2.51}
+{'loss': 1.4622, 'learning_rate': 3.2273262661955246e-06, 'epoch': 2.52}
+{'loss': 1.3345, 'learning_rate': 3.1802120141342757e-06, 'epoch': 2.52}
+{'loss': 1.5207, 'learning_rate': 3.133097762073027e-06, 'epoch': 2.53}
+{'loss': 1.4474, 'learning_rate': 3.0859835100117787e-06, 'epoch': 2.54}
+{'loss': 1.4421, 'learning_rate': 3.0388692579505302e-06, 'epoch': 2.54}
+{'loss': 1.2, 'learning_rate': 2.9917550058892817e-06, 'epoch': 2.55}
+{'loss': 1.5218, 'learning_rate': 2.9446407538280332e-06, 'epoch': 2.56}
+{'loss': 1.4568, 'learning_rate': 2.8975265017667847e-06, 'epoch': 2.57}
+{'loss': 1.568, 'learning_rate': 2.8504122497055362e-06, 'epoch': 2.57}
+{'loss': 1.4935, 'learning_rate': 2.8032979976442877e-06, 'epoch': 2.58}
+{'loss': 1.371, 'learning_rate': 2.7561837455830392e-06, 'epoch': 2.59}
+{'loss': 1.5419, 'learning_rate': 2.7090694935217903e-06, 'epoch': 2.59}
+{'loss': 1.4674, 'learning_rate': 2.6619552414605422e-06, 'epoch': 2.6}
+{'loss': 1.4457, 'learning_rate': 2.6148409893992937e-06, 'epoch': 2.61}
+{'loss': 1.34, 'learning_rate': 2.567726737338045e-06, 'epoch': 2.61}
+{'loss': 1.3917, 'learning_rate': 2.5206124852767967e-06, 'epoch': 2.62}
+{'loss': 1.3072, 'learning_rate': 2.473498233215548e-06, 'epoch': 2.63}
+{'loss': 1.5005, 'learning_rate': 2.4263839811542993e-06, 'epoch': 2.64}
+{'loss': 1.4246, 'learning_rate': 2.379269729093051e-06, 'epoch': 2.64}
+{'loss': 1.2906, 'learning_rate': 2.3321554770318023e-06, 'epoch': 2.65}
+{'loss': 1.3543, 'learning_rate': 2.285041224970554e-06, 'epoch': 2.66}
+{'loss': 1.2792, 'learning_rate': 2.2379269729093053e-06, 'epoch': 2.66}
+{'loss': 1.3097, 'learning_rate': 2.190812720848057e-06, 'epoch': 2.67}
+{'loss': 1.442, 'learning_rate': 2.1436984687868083e-06, 'epoch': 2.68}
+{'loss': 1.3148, 'learning_rate': 2.0965842167255594e-06, 'epoch': 2.69}
+{'loss': 1.4021, 'learning_rate': 2.0494699646643113e-06, 'epoch': 2.69}
+{'loss': 1.4178, 'learning_rate': 2.002355712603063e-06, 'epoch': 2.7}
+{'loss': 1.2951, 'learning_rate': 1.955241460541814e-06, 'epoch': 2.71}
+{'loss': 1.4155, 'learning_rate': 1.9081272084805654e-06, 'epoch': 2.71}
+{'loss': 1.3039, 'learning_rate': 1.861012956419317e-06, 'epoch': 2.72}
+{'loss': 1.3348, 'learning_rate': 1.8138987043580686e-06, 'epoch': 2.73}
+{'loss': 1.5269, 'learning_rate': 1.76678445229682e-06, 'epoch': 2.73}
+{'loss': 1.456, 'learning_rate': 1.7196702002355714e-06, 'epoch': 2.74}
+{'loss': 1.291, 'learning_rate': 1.6725559481743227e-06, 'epoch': 2.75}
+{'loss': 1.4496, 'learning_rate': 1.6254416961130742e-06, 'epoch': 2.76}
+{'loss': 1.4898, 'learning_rate': 1.578327444051826e-06, 'epoch': 2.76}
+{'loss': 1.4579, 'learning_rate': 1.5312131919905772e-06, 'epoch': 2.77}
+{'loss': 1.5109, 'learning_rate': 1.4840989399293287e-06, 'epoch': 2.78}
+{'loss': 1.393, 'learning_rate': 1.4369846878680802e-06, 'epoch': 2.78}
+{'loss': 1.3775, 'learning_rate': 1.3898704358068315e-06, 'epoch': 2.79}
+{'loss': 1.4783, 'learning_rate': 1.3427561837455832e-06, 'epoch': 2.8}
+{'loss': 1.2595, 'learning_rate': 1.2956419316843347e-06, 'epoch': 2.81}
+{'loss': 1.3582, 'learning_rate': 1.248527679623086e-06, 'epoch': 2.81}
+{'loss': 1.2581, 'learning_rate': 1.2014134275618375e-06, 'epoch': 2.82}
+{'loss': 1.6671, 'learning_rate': 1.154299175500589e-06, 'epoch': 2.83}
+{'loss': 1.2716, 'learning_rate': 1.1071849234393405e-06, 'epoch': 2.83}
+{'loss': 1.2645, 'learning_rate': 1.060070671378092e-06, 'epoch': 2.84}
+{'loss': 1.5729, 'learning_rate': 1.0129564193168433e-06, 'epoch': 2.85}
+{'loss': 1.4087, 'learning_rate': 9.65842167255595e-07, 'epoch': 2.86}
+{'loss': 1.2857, 'learning_rate': 9.187279151943463e-07, 'epoch': 2.86}
+{'loss': 1.282, 'learning_rate': 8.716136631330977e-07, 'epoch': 2.87}
+{'loss': 1.2097, 'learning_rate': 8.244994110718493e-07, 'epoch': 2.88}
+{'loss': 1.3122, 'learning_rate': 7.773851590106007e-07, 'epoch': 2.88}
+{'loss': 1.3597, 'learning_rate': 7.302709069493522e-07, 'epoch': 2.89}
+{'loss': 1.3839, 'learning_rate': 6.831566548881037e-07, 'epoch': 2.9}
+{'loss': 1.5166, 'learning_rate': 6.360424028268551e-07, 'epoch': 2.9}
+{'loss': 1.3991, 'learning_rate': 5.889281507656066e-07, 'epoch': 2.91}
+{'loss': 1.4307, 'learning_rate': 5.418138987043581e-07, 'epoch': 2.92}
+{'loss': 1.3694, 'learning_rate': 4.946996466431095e-07, 'epoch': 2.93}
+{'loss': 1.3242, 'learning_rate': 4.4758539458186104e-07, 'epoch': 2.93}
+{'loss': 1.4505, 'learning_rate': 4.004711425206125e-07, 'epoch': 2.94}
+{'loss': 1.4278, 'learning_rate': 3.53356890459364e-07, 'epoch': 2.95}
+{'loss': 1.3563, 'learning_rate': 3.0624263839811545e-07, 'epoch': 2.95}
+{'loss': 1.4091, 'learning_rate': 2.5912838633686695e-07, 'epoch': 2.96}
+{'loss': 1.5412, 'learning_rate': 2.120141342756184e-07, 'epoch': 2.97}
+{'loss': 1.2831, 'learning_rate': 1.6489988221436985e-07, 'epoch': 2.98}
+{'loss': 1.4771, 'learning_rate': 1.1778563015312134e-07, 'epoch': 2.98}
+{'loss': 1.3773, 'learning_rate': 7.06713780918728e-08, 'epoch': 2.99}
+{'loss': 1.2446, 'learning_rate': 2.3557126030624265e-08, 'epoch': 3.0}
+{'eval_loss': 1.5596660375595093, 'eval_runtime': 98.0142, 'eval_samples_per_second': 9.611, 'eval_steps_per_second': 1.204, 'epoch': 3.0}
+{'train_runtime': 2262.6642, 'train_samples_per_second': 15.009, 'train_steps_per_second': 1.876, 'train_loss': 1.8279571971286732, 'epoch': 3.0}
+100%|████████████████████████| 4245/4245 [37:42<00:00,  1.88it/s]
+100%|██████████████████████████| 942/942 [01:37<00:00,  9.63it/s]
+Evaluation results: {'eval_loss': 1.5596660375595093, 'eval_runtime': 98.2249, 'eval_samples_per_second': 9.59, 'eval_steps_per_second': 1.201, 'epoch': 3.0}
+Text: I am a little confused on all of the models of the 88-89 bonnevilles.I have heard of the LE SE LSE SSE SSEI. Could someone tell me thedifferences are far as features or performance. I am also curious toknow what the book value is for prefereably the 89 model. And how muchless than book value can you usually get them for. In other words howmuch are they in demand this time of year. I have heard that the mid-springearly summer is the best time to buy.
+True Label: rec.autos
+Predicted Label: misc.forsale
+Prediction: Incorrect
+Text: I'm not familiar at all with the format of these X-Face:thingies, butafter seeing them in some folks' headers, I've *got* to *see* them (andmaybe make one of my own)!I've got dpg-viewon my Linux box (which displays uncompressed X-Faces)and I've managed to compile [un]compface too... but now that I'm *looking*for them, I can't seem to find any X-Face:'s in anyones news headers!  :-(Could you, would you, please send me your X-Face:headerI know* I'll probably get a little swamped, but I can handle it.  ...I hope.
+True Label: comp.windows.x
+Predicted Label: comp.windows.x
+Prediction: Correct
+Text: In a word, yes.
+True Label: alt.atheism
+Predicted Label: talk.politics.misc
+Prediction: Incorrect
+Text: They were attacking the Iraqis to drive them out of Kuwait,a country whose citizens have close blood and business tiesto Saudi citizens.  And me thinks if the US had not helped outthe Iraqis would have swallowed Saudi Arabia, too (or at least the eastern oilfields).  And no Muslim country was doingmuch of anything to help liberate Kuwait and protect SaudiArabia; indeed, in some masses of citizens were demonstratingin favor of that butcher Saddam (who killed lotsa Muslims),just because he was killing, raping, and looting relativelyrich Muslims and also thumbing his nose at the West.So how would have *you* defended Saudi Arabia and rolledback the Iraqi invasion, were you in charge of Saudi Arabia???I think that it is a very good idea to not have governments have anofficial religion (de facto or de jure), because with human naturelike it is, the ambitious and not the pious will always be theones who rise to power.  There are just too many people in thisworld (or any country) for the citizens to really know if a leader is really devout or if he is just a slick operator.You make it sound like these guys are angels, Ilyess.  (In yourclarinet posting you edited out some stuff; was it the following???)Friday's New York Times reported that this group definitely ismore conservative than even Sheikh Baz and his followers (whothink that the House of Saud does not rule the country conservativelyenough).  The NYT reported that, besides complaining that thegovernment was not conservative enough, they have:     - asserted that the (approx. 500,000) Shiites in the Kingdom       are apostates, a charge that under Saudi (and Islamic) law       brings the death penalty.       Diplomatic guy (Sheikh bin Jibrin), isn't he Ilyess?   - called for severe punishment of the 40 or so women who   drove in public a while back to protest the ban on       women driving.  The guy from the group who said this,    Abdelhamoud al-Toweijri, said that these women should    be fired from their jobs, jailed, and branded as         prostitutes.    Is this what you want to see happen, Ilyess?  I've       heard many Muslims say that the ban on women driving     has no basis in the Qur'an, the ahadith, etc.   Yet these folks not only like the ban, they want         these women falsely called prostitutes?          If I were you, I'd choose my heroes wisely,      Ilyess, not just reflexively rally behind        anyone who hates anyone you hate.     - say that women should not be allowed to work.  - say that TV and radio are too immoral in the Kingdom.Now, the House of Saud is neither my least nor my most favorite governmenton earth; I think they restrict religious and political reedom a lot, amongother things.  I just think that the most likely replacementsfor them are going to be a lot worse for the citizens of the country.But I think the House of Saud is feeling the heat lately.  In thelast six months or so I've read there have been stepped up harassingby the muttawain (religious police---*not* government) of Western womennot fully veiled (something stupid for women to do, IMO, because itsends the wrong signals about your morality).  And I've read thatthey've cracked down on the few, home-based expartiate religiousgatherings, and even posted rewards in (government-owned) newspapersoffering money for anyone who turns in a group of expartiates whodare worship in their homes or any other secret place. So thegovernment has grown even more intolerant to try to take some ofthe wind out of the sails of the more-conservative opposition.As unislamic as some of these things are, they're just a smalltaste of what would happen if these guys overthrow the House ofSaud, like they're trying to in the long run.Is this really what you (and Rached and others in the generalwest-is-evil-zionists-rule-hate-west-or-you-are-a-puppet crowd)want, Ilyess?
+True Label: talk.politics.mideast
+Predicted Label: talk.politics.mideast
+Prediction: Correct
