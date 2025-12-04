@@ -451,7 +451,7 @@ def layer_norm(input, normalized_shape, weight, bias, eps=1e-5):
         begin_axis = input.ndim - weight.ndim
     else:
         begin_axis = -1
-    return legacy.layer_norm(input, weight, bias, begin_axis, begin_axis, eps)
+    return legacy.layer_norm(input, weight, bias, begin_axis, begin_axis, eps)[0]
 
 def argmin_with_value(input, axis, keep_dims):
     return legacy.arg_min_with_value(input, axis, keep_dims)
@@ -1155,6 +1155,30 @@ def pixel_shuffle(input, upscale_factor):
     input = reshape(input, (pre + (c, upscale_factor * h, upscale_factor * w)))
     return input
 
+def pixel_unshuffle(x, downscale_factor):
+    batch_size, channels, height, width = x.shape
+    
+    # 计算新的尺寸
+    new_height = height // downscale_factor
+    new_width = width // downscale_factor
+    new_channels = channels * (downscale_factor ** 2)
+    
+    # 第一步：重塑张量，将空间维度分解为小块
+    # 形状: (N, C, H, W) -> (N, C, new_height, downscale_factor, new_width, downscale_factor)
+    x = reshape(x, (batch_size, channels, new_height, downscale_factor, new_width, downscale_factor))
+    
+    # 第二步：置换维度，将下采样因子维度移到通道维度之后
+    # 形状: (N, C, new_height, downscale_factor, new_width, downscale_factor) 
+    #    -> (N, C, downscale_factor, downscale_factor, new_height, new_width)
+    x = permute(x, (0, 1, 3, 5, 2, 4))
+    
+    # 第三步：重塑张量，合并通道和下采样因子维度
+    # 形状: (N, C, downscale_factor, downscale_factor, new_height, new_width)
+    #    -> (N, C * downscale_factor^2, new_height, new_width)
+    x = reshape(x, (batch_size, new_channels, new_height, new_width))
+
+    return x
+
 def rms_norm(input, weight, eps=1e-5):
     input_dtype = input.dtype
     input = cast(input, mindspore.float32)
@@ -1388,6 +1412,18 @@ def custom_circular_pad(x, pad):
 
     return x
 
+
+def _reflection_pad(input, pad):
+    """reflection pad"""
+    out = input
+    if len(pad) == 2:
+        out = pyboost.reflection_pad_1d_op(input, pad)
+    elif len(pad) == 4:
+        out = pyboost.reflection_pad_2d_op(input, pad)
+    else:
+        out = pyboost.reflection_pad_3d_op(input, pad)
+    return out
+
 def pad(input, pad, mode='constant', value=None):
     if isinstance(pad, tuple):
         pad = tuple(p if isinstance(p, int) else p.item() for p in pad)
@@ -1406,7 +1442,8 @@ def pad(input, pad, mode='constant', value=None):
     if mode == 'circular':
         return custom_circular_pad(input, pad)
     elif mode == 'reflect':
-        return pad_v3(input, new_pad, mode)
+        # return pad_v3(input, new_pad, mode)
+        return _reflection_pad(input, pad)
     if value is None:
         value = 0
     if mode == "replicate":
@@ -1675,7 +1712,7 @@ def moveaxis(a, source, destination):
 
     return a
 
-def cumprod(x, axis=0, exclusive=False, reverse=False):
+def _cumprod(x, axis=0, exclusive=False, reverse=False):
     x = np.array(x)
     if reverse:
         x = np.flip(x, axis=axis)
@@ -1777,8 +1814,8 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
                 advanced_indices.append((index, s, ellipsis_mask != 0))
 
     if do_update and not advanced_indices:
-        if 0 in updates.shape:
-            return tensor
+        # if 0 in updates.shape:
+        #     return tensor
         return strided_slice_update(
             tensor,
             begin,
@@ -1897,7 +1934,7 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
     )
     axis = dims[0]
     if len(dims) > 1:
-        index_scaling = cumprod(dim_sizes, reverse=True, exclusive=True)
+        index_scaling = _cumprod(dim_sizes, reverse=True, exclusive=True)
 
         def _tensordot(a, b):
             # TODO(b/168657656): This function should be replaced by
@@ -1943,10 +1980,8 @@ def legacy_getitem(self, slice_spec):
 
 def setitem(a, slice_spec, updates):
     """Implementation of ndarray._with_index_*."""
-    if isinstance(updates, numbers.Number):
-        updates = mindspore.tensor(updates)
-    if 0 in updates.shape:
-        return a
+    # if 0 in updates.shape:
+    #     return a
     if (
         isinstance(slice_spec, bool)
         or (
@@ -2131,3 +2166,6 @@ def strided_slice_update(x, begin, end, strides, updates,
 
 def mish(input):
     return legacy.mish(input)
+
+def upsample_nearest3d(input, output_size, scale_factors):
+    return pyboost.upsample_nearest3d_op(input, output_size, scale_factors)

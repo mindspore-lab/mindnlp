@@ -82,7 +82,7 @@ def avg_pool1d(input, kernel_size, stride, padding=0, ceil_mode=False, count_inc
 def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=None):
     return execute('avg_pool2d', input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
-def avg_pool3d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=None):
+def avg_pool3d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=0):
     return execute('avg_pool3d', input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
 def adaptive_avg_pool1d(input, output_size):
@@ -506,12 +506,12 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corne
         return execute('upsample_nearest3d', input, output_size, scale_factors)
 
     if input.dim() == 3 and mode == "nearest-exact":
-        return torch._C._nn._upsample_nearest_exact1d(input, output_size, scale_factors)
+        warnings.warn('interpolate do not support `nearest-exact` for 3-D input, use `nearest` instead.')
+        return execute('upsample_nearest1d', input, output_size, scale_factors)
     if input.dim() == 4 and mode == "nearest-exact":
-        nearest_exact = _get_cache_prim(ops.ResizeNearestNeighborV2)(
-            align_corners=False,
-            half_pixel_centers=True)
-        return nearest_exact(input, output_size)
+        warnings.warn('interpolate do not support `nearest-exact` for 4-D input, use `nearest` instead.')
+        return execute('upsample_nearest2d', input, output_size, scale_factors)
+
     if input.dim() == 5 and mode == "nearest-exact":
         warnings.warn('interpolate do not support `nearest-exact` for 5-D input, use `nearest` instead.')
         return execute('upsample_nearest3d', input, output_size, scale_factors)
@@ -661,57 +661,7 @@ def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_paddi
     return execute('conv_transpose2d', input, weight, bias, stride, padding, output_padding, groups, dilation)
 
 def conv_transpose3d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
-    if input.device.type == 'npu':
-        in_channel, out_channel = weight.shape[0], weight.shape[1]
-        kernel_size = weight.shape[2:]
-        conv_transpose3d_op = ops.Conv3DTranspose(
-            in_channel,
-            out_channel,
-            kernel_size,
-            mode=1,
-            pad_mode='valid',
-            pad=padding,
-            stride=stride,
-            dilation=dilation,
-            group=1,
-            output_padding=output_padding,
-            data_format="NCDHW"
-        )
-        if groups > 1:
-            outputs = ()
-            for i in range(groups):
-                output = conv_transpose3d_op(input.half(), weight.half())            
-                if bias is not None:
-                    output = output + bias
-                outputs = outputs + (output,)
-            out = ops.concat(outputs, 1)
-        else:
-            out = conv_transpose3d_op(input, weight)
-            if bias is not None:
-                out = out + bias
-        return out
-    else:
-        in_channel, out_channel = weight.shape[0], weight.shape[1] * groups
-        kernel_size = weight.shape[2:]
-        conv_transpose3d_op = ops.Conv3DTranspose(
-            in_channel,
-            out_channel,
-            kernel_size,
-            mode=1,
-            pad_mode='valid',
-            pad=padding,
-            stride=stride,
-            dilation=dilation,
-            group=groups,
-            output_padding=output_padding,
-            data_format="NCDHW"
-        )
-
-        out = conv_transpose3d_op(input, weight)
-        if bias is not None:
-            out = out + bias
-        return out
-
+    return execute('conv_transpose3d', input, weight, bias, stride, padding, output_padding, groups, dilation)
 
 def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):
     input_ndim = input.ndim
@@ -1419,7 +1369,7 @@ def pixel_shuffle(input, upscale_factor):
     return execute('pixel_shuffle', input, upscale_factor)
 
 def pixel_unshuffle(input, downscale_factor):
-    return ops.pixel_unshuffle(input, downscale_factor)
+    return execute('pixel_unshuffle', input, downscale_factor)
 
 def getWH(input):
     """Get [W, H] tensor from input"""

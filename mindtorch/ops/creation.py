@@ -37,6 +37,8 @@ def zeros(*size, out=None, dtype=None, layout=None, device=None, requires_grad=F
     size = kwargs.pop('size', size)
     if dtype is None:
         dtype = get_default_dtype()
+    if isinstance(dtype, type):
+        dtype = mindtorch.py2dtype[dtype]
     device = check_device(device)
     if len(size) > 0 and isinstance(size[0], (tuple, list)):
         size = size[0]
