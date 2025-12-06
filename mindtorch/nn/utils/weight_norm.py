@@ -14,7 +14,8 @@
 # ============================================================================
 r"""Weight Normalization from https://arxiv.org/abs/1602.07868."""
 from typing import Any, TypeVar
-from ..parameter import Parameter
+from typing_extensions import deprecated
+from ..parameter import Parameter, UninitializedParameter
 from ..modules import Module
 from ... import ops
 
@@ -43,12 +44,6 @@ def _weight_norm(weight_v, weight_g, dim):
 
 
 class WeightNorm:
-
-    r"""
-    The 'WeightNorm' class implements weight normalization for neural network modules. It provides methods to compute normalized weights, apply weight normalization to a cell, wrap a function, and remove
-    weight bias from a cell. The class also contains an initializer for the name and dimension of the weight parameters, as well as a method to compute the weight using the normalized parameters. Additionally, it
-    includes a method to remove the weight bias and a wrapper function for transposing cell_id to cell. 
-    """
     name: str
     dim: int
 
@@ -60,16 +55,22 @@ class WeightNorm:
 
     # TODO Make return type more specific
     def compute_weight(self, module: Module) -> Any:
-        g = getattr(module, self.name + '_g')
-        v = getattr(module, self.name + '_v')
-        return Parameter(_weight_norm(v, g, self.dim))
+        g = getattr(module, self.name + "_g")
+        v = getattr(module, self.name + "_v")
+        return _weight_norm(v, g, self.dim)
 
     @staticmethod
-    def apply(module, name: str, dim: int) -> 'WeightNorm':
-        for k, hook in module._forward_pre_hooks.items():
+    @deprecated(
+        "`torch.nn.utils.weight_norm` is deprecated "
+        "in favor of `torch.nn.utils.parametrizations.weight_norm`.",
+        category=FutureWarning,
+    )
+    def apply(module, name: str, dim: int) -> "WeightNorm":
+        for hook in module._forward_pre_hooks.values():
             if isinstance(hook, WeightNorm) and hook.name == name:
-                raise RuntimeError("Cannot register two weight_norm hooks on "
-                                   "the same parameter {}".format(name))
+                raise RuntimeError(
+                    f"Cannot register two weight_norm hooks on the same parameter {name}"
+                )
 
         if dim is None:
             dim = -1
@@ -77,16 +78,19 @@ class WeightNorm:
         fn = WeightNorm(name, dim)
 
         weight = getattr(module, name)
-        # if isinstance(weight, UninitializedParameter):
-        #     raise ValueError(
-        #         'The module passed to `WeightNorm` can\'t have uninitialized parameters. '
-        #         'Make sure to run the dummy forward before applying weight normalization')
+        if isinstance(weight, UninitializedParameter):
+            raise ValueError(
+                "The module passed to `WeightNorm` can't have uninitialized parameters. "
+                "Make sure to run the dummy forward before applying weight normalization"
+            )
         # remove w from parameter list
         del module._parameters[name]
 
         # add g and v as new parameters and express w as g/||v|| * v
-        module.register_parameter(name + '_g', Parameter(norm_except_dim(weight, 2, dim)))
-        module.register_parameter(name + '_v', Parameter(weight))
+        module.register_parameter(
+            name + "_g", Parameter(norm_except_dim(weight, 2, dim).data)
+        )
+        module.register_parameter(name + "_v", Parameter(weight.data))
         setattr(module, name, fn.compute_weight(module))
 
         # recompute weight before every forward()
@@ -94,29 +98,21 @@ class WeightNorm:
 
         return fn
 
-    def wrapper_func(self, cell, func):
-        r"""
-        wrapper_func where used to transpose cell_id to cell
-        """
-        def new_func(_, inputs):
-            nonlocal cell
-            return func(cell, inputs)
-        return new_func
-
     def remove(self, module: Module) -> None:
         weight = self.compute_weight(module)
         delattr(module, self.name)
-        del module._parameters[self.name + '_g']
-        del module._parameters[self.name + '_v']
-        setattr(module, self.name, weight)
+        del module._parameters[self.name + "_g"]
+        del module._parameters[self.name + "_v"]
+        setattr(module, self.name, Parameter(weight.data))
 
     def __call__(self, module: Module, inputs: Any) -> None:
         setattr(module, self.name, self.compute_weight(module))
 
 
-T_module = TypeVar('T_module', bound=Module)
+T_module = TypeVar("T_module", bound=Module)
 
-def weight_norm(module: T_module, name: str = 'weight', dim: int = 0) -> T_module:
+
+def weight_norm(module: T_module, name: str = "weight", dim: int = 0) -> T_module:
     r"""Apply weight normalization to a parameter in the given module.
 
     .. math::
@@ -138,7 +134,7 @@ def weight_norm(module: T_module, name: str = 'weight', dim: int = 0) -> T_modul
 
     .. warning::
 
-        This function is deprecated.  Use :func:`mindtorch.nn.utils.parametrizations.weight_norm`
+        This function is deprecated.  Use :func:`torch.nn.utils.parametrizations.weight_norm`
         which uses the modern parametrization API.  The new ``weight_norm`` is compatible
         with ``state_dict`` generated from old ``weight_norm``.
 
@@ -150,11 +146,11 @@ def weight_norm(module: T_module, name: str = 'weight', dim: int = 0) -> T_modul
           https://github.com/pytorch/pytorch/issues/102999
 
         * To remove the weight normalization reparametrization, use
-          :func:`mindtorch.nn.utils.parametrize.remove_parametrizations`.
+          :func:`torch.nn.utils.parametrize.remove_parametrizations`.
 
         * The weight is no longer recomputed once at module forward; instead, it will
           be recomputed on every access.  To restore the old behavior, use
-          :func:`mindtorch.nn.utils.parametrize.cached` before invoking the module
+          :func:`torch.nn.utils.parametrize.cached` before invoking the module
           in question.
 
     Args:
@@ -171,16 +167,17 @@ def weight_norm(module: T_module, name: str = 'weight', dim: int = 0) -> T_modul
         >>> m
         Linear(in_features=20, out_features=40, bias=True)
         >>> m.weight_g.size()
-        mindtorch.Size([40, 1])
+        torch.Size([40, 1])
         >>> m.weight_v.size()
-        mindtorch.Size([40, 20])
+        torch.Size([40, 20])
 
     """
     WeightNorm.apply(module, name, dim)
     return module
 
-def remove_weight_norm(module: T_module, name: str = 'weight') -> T_module:
-    r"""Removes the weight normalization reparameterization from a module.
+
+def remove_weight_norm(module: T_module, name: str = "weight") -> T_module:
+    r"""Remove the weight normalization reparameterization from a module.
 
     Args:
         module (Module): containing module
@@ -196,5 +193,4 @@ def remove_weight_norm(module: T_module, name: str = 'weight') -> T_module:
             del module._forward_pre_hooks[k]
             return module
 
-    raise ValueError("weight_norm of '{}' not found in {}"
-                     .format(name, module))
+    raise ValueError(f"weight_norm of '{name}' not found in {module}")

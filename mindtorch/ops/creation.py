@@ -96,6 +96,9 @@ def arange(start=0, end=None, step=1, *, out=None, dtype=None, layout=None, devi
         start, end = 0, int(start)
     if dtype is None:
         dtype = mindtorch.py2dtype[type(start)]
+    
+    if dtype == mindtorch.float64:
+        dtype = mindtorch.float32
 
     device = check_device(device)
 
@@ -181,8 +184,8 @@ def empty_like(input, *, dtype=None, layout=None, device=None, requires_grad=Fal
 
 # full
 def full(size, fill_value, *, out=None, dtype=None, layout=None, device=None, requires_grad=False):
-    # if dtype is None:
-    #     dtype = get_default_dtype()
+    if dtype is None:
+        dtype = get_default_dtype()
     device = check_device(device)
     if not isinstance(device, str):
         device = device.type

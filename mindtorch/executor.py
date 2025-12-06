@@ -1,5 +1,6 @@
+
 from ._apis import cpu, gpu, meta, numpy, npu_910a, npu_910b, npu_310b, npu_310p
-from .configs import CPU_USE_NUMPY_OP, SOC, ENABLE_DISPATCH, DEVICE_TARGET
+from .configs import CPU_USE_NUMPY_OP, SOC, ENABLE_DISPATCH, DEVICE_TARGET, CAPTURE_INF_NAN
 
 if SOC == 'ascend910':
     npu = npu_910a
@@ -24,6 +25,7 @@ api_map = {
 }
 
 DISPATCH_WHITE_LIST = ['inplace_zero', 'inplace_fill_scalar']
+SKIP_NAN_CHECK = ['empty', 'empty_like']
 
 if ENABLE_DISPATCH:
     def execute(func_name, *args, **kwargs):
@@ -65,4 +67,17 @@ else:
             raise RuntimeError(
                 f"No implementation for function: {func_name} on {device_type}."
             )
+        if CAPTURE_INF_NAN:
+            outs = func(*args, **kwargs)
+            if func_name in SKIP_NAN_CHECK:
+                return outs
+
+            isfinite_op = getattr(api_map[device_type], 'isfinite')
+            if isinstance(outs, tuple):
+                for out in outs:
+                    assert isfinite_op(out).asnumpy().all()
+            else:
+                assert isfinite_op(outs).asnumpy().all()
+            return outs
+
         return func(*args, **kwargs)

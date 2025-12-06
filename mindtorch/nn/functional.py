@@ -82,7 +82,7 @@ def avg_pool1d(input, kernel_size, stride, padding=0, ceil_mode=False, count_inc
 def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=None):
     return execute('avg_pool2d', input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
-def avg_pool3d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=0):
+def avg_pool3d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=None):
     return execute('avg_pool3d', input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
 def adaptive_avg_pool1d(input, output_size):

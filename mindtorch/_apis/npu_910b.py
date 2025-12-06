@@ -1,5 +1,6 @@
 import math
 import numbers
+import warnings
 import mindspore
 import mindtorch
 import numpy as np
@@ -1380,6 +1381,8 @@ def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_paddi
     return out
 
 def conv_transpose3d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
+    warnings.warn('conv_transposed3d only support float16 on MindSpore, mindtorch will do autocast + nan_to_num to void inf/nan, please check the precision if the result is not good.')
+
     in_channel, out_channel = weight.shape[0], weight.shape[1]
     kernel_size = weight.shape[2:]
     # conv_transpose3d_op = ops.Conv3DTranspose(
@@ -1438,6 +1441,7 @@ def conv_transpose3d(input, weight, bias=None, stride=1, padding=0, output_paddi
         out = cast(out, input_dtype)
         if bias is not None:
             out = add(out, bias)
+    out = nan_to_num(out, 0., 0., 0.)
     return out
 
 def relu(input):
@@ -1880,6 +1884,8 @@ def dynamic_rnn(x, w, b, seq_length, init_h, init_c):
                               'LSTM', 'UNIDIRECTIONAL', 1, False, 1.0, -1.0, 0, True, 'tanh', 0.0, True)
 
 def nan_to_num(input, nan=0.0, posinf=None, neginf=None):
+    if ENABLE_PYBOOST:
+        return pyboost.nan_to_num_impl(input, nan, posinf, neginf)
     return legacy.nan_to_num(input, nan, posinf, neginf)
 
 def round(input, decimals):
@@ -2131,14 +2137,14 @@ def sdpa_manual(query, key, value, attn_mask=None, dropout_p=0.0,
 
 def sdpa(query, key, value, attn_mask=None, dropout_p=0.0,
         is_causal=False, scale=None, enable_gqa=False):
-    if ENABLE_FLASH_ATTENTION:
+    if not ENABLE_FLASH_ATTENTION:
         return sdpa_manual(query, key, value, attn_mask, dropout_p, is_causal, scale, enable_gqa)
 
     scale_factor = 1 / math.sqrt(query.shape[-1]) if scale is None else scale
 
     if attn_mask is not None and not is_causal:
         if FLASH_ATTN_MASK_VALID == 1:
-            attn_mask = bitwise_not(attn_mask)
+            attn_mask = attn_mask == 0.0
         else:
             attn_mask = cast(attn_mask, mindspore.bool_)
 
@@ -2501,3 +2507,6 @@ def raw_adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, be
 
 def inplace_sub(input, other):
     return pyboost.inplace_sub_ext_op(input, other)
+
+def isfinite(input):
+    return pyboost.isfinite_op(input)

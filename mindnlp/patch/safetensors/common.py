@@ -254,7 +254,7 @@ def safe_save_file(tensor_dict, filename, metadata=None):
     return safetensors.numpy.save_file(tensor_dict, filename, metadata)
 
 
-def safe_load_file(filename, device):
+def safe_load_file(filename, device = 'cpu'):
     """
     Loads a safetensors file into torch format.
 

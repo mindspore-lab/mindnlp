@@ -715,7 +715,9 @@ class TensorPlaceHolder:
         return self.to(mindspore.uint8)
 
     # Tensor.broadcast_to
-    def broadcast_to(self, shape):
+    def broadcast_to(self, *shape):
+        if isinstance(shape[0], (tuple, list)):
+            shape = shape[0]
         return ops.broadcast_to(self, shape)
 
     # Tensor.cauchy_
@@ -1309,7 +1311,7 @@ class TensorPlaceHolder:
 
     # Tensor.is_floating_point
     def is_floating_point(self):
-        return isinstance(self.dtype, typing.Float)
+        return isinstance(self.dtype, (typing.Float, typing.BFloat))
 
     # Tensor.is_inference
 
