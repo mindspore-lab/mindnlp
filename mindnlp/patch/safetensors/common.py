@@ -254,6 +254,36 @@ def safe_save_file(tensor_dict, filename, metadata=None):
     return safetensors.numpy.save_file(tensor_dict, filename, metadata)
 
 
+def safe_load_file(filename, device):
+    """
+    Loads a safetensors file into torch format.
+
+    Args:
+        filename (`str`, or `os.PathLike`):
+            The name of the file which contains the tensors
+        device (`Union[str, int]`, *optional*, defaults to `cpu`):
+            The device where the tensors need to be located after load.
+            available options are all regular torch device locations.
+
+    Returns:
+        `Dict[str, torch.Tensor]`: dictionary that contains name as key, value as `torch.Tensor`
+
+    Example:
+
+    ```python
+    from safetensors.torch import load_file
+
+    file_path = "./my_folder/bert.safetensors"
+    loaded = load_file(file_path)
+    ```
+    """
+    result = {}
+    with fast_safe_open(filename, framework="pt", device=device) as f:
+        for k in f.keys():
+            result[k] = f.get_tensor(k)
+    return result
+    
+
 def _tobytes(tensor, name):
     return tensor.tobytes()
 
@@ -271,6 +301,7 @@ def patch_safetensors_common():
         
         # Patch torch.save_file
         torch.save_file = safe_save_file
+        torch.load_file = safe_load_file
         torch._tobytes = _tobytes
     except ImportError:
         pass

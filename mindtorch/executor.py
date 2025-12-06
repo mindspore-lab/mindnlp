@@ -56,6 +56,7 @@ else:
                 device_type = args[0][0].init
             else:
                 device_type = args[device_position].init
+
         if device_type is None or device_type not in ('meta', 'Meta'):
             device_type = DEVICE_TARGET
 
