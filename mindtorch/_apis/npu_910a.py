@@ -1903,10 +1903,6 @@ def round(input, decimals):
         return pyboost.round_op(input, decimals)
     return legacy.round(input, decimals)
 
-def fftn(input, s=None, dim=None, norm=None):
-    if ENABLE_PYBOOST:
-        return pyboost.fftn_op(input, s, dim, norm)
-
 def eye(n, m=None, dtype=None):
     if ENABLE_PYBOOST:
         return pyboost.eye_op(n, m, dtype)
@@ -2567,3 +2563,20 @@ def npu_get_float_status_v2(state):
 
 def npu_clear_float_status_v2(state):
     return pyboost.npu_clear_float_status_v2_op(state)
+
+def fftshift(input, dim):
+    return pyboost.fftshift_op(input, dim)
+
+def ifftshift(input, dim):
+    return pyboost.ifftshift_op(input, dim)
+
+def search_sorted(sorted_sequence, values, sorter, dtype, right):
+    if isinstance(values, numbers.Number):
+        values = mindspore.Tensor(values)
+    return pyboost.searchsorted_impl(sorted_sequence, values, sorter, dtype, right)
+
+def ifftn(input, s, dim, norm):
+    return pyboost.ifftn_op(input, s, dim, norm)
+
+def fftn(input, s, dim, norm):
+    return pyboost.fftn_op(input, s, dim, norm)
