@@ -114,6 +114,7 @@ dtype2np = {
     float16 : np.float16,
     float32 : np.float32,
     float64 : np.float64,
+    None: None
 }
 
 if not ON_A1:

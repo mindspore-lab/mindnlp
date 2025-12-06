@@ -1,24 +1,20 @@
-try:
-    from mindspore._c_expression import TensorPy as Tensor_
-except:
-    from mindspore._c_expression import Tensor as Tensor_
-
 import math
 import numpy as np
+import mindspore
 import mindtorch
 
 __all__ = []
 
 def empty(size, dtype):
-    out = Tensor_(init='none', shape=size, dtype=dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=size, dtype=dtype)
+    return out
 
 def empty_like(input, dtype):
     return empty(input.shape, input.dtype)
 
 def arange(start, end, step, dtype):
-    out = Tensor_(init='none', shape=(math.ceil((end - start) / step), ), dtype=dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=(math.ceil((end - start) / step), ), dtype=dtype)
+    return out
 
 __all__.append('arange')
 
@@ -32,20 +28,20 @@ def broadcast_to(input, shape):
             s = input_shape[idx]
         out_shape += (s,)
 
-    out = Tensor_(init='none', shape=out_shape, dtype=input.dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=out_shape, dtype=input.dtype)
+    return out
 
 __all__.append('broadcast_to')
 
 def zeros(size, dtype):
-    out = Tensor_(init='none', shape=size, dtype=dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=size, dtype=dtype)
+    return out
 
 __all__.append('zeros')
 
 def ones(size, dtype):
-    out = Tensor_(init='none', shape=size, dtype=dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=size, dtype=dtype)
+    return out
 
 __all__.append('ones')
 
@@ -66,8 +62,8 @@ __all__.append('inplace_normal')
 
 def getitem(input, slice):
     out = np.zeros(input.shape)[slice]
-    out = Tensor_(init='none', shape=out.shape, dtype=input.dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=out.shape, dtype=input.dtype)
+    return out
 
 __all__.append('getitem')
 
@@ -80,8 +76,8 @@ __all__.append('sub')
 
 def pad_v3(input, pad, mode, value):
     out = np.pad(np.zeros(input.shape), pad, mode, constant_values=value)
-    out = Tensor_(init='none', shape=out.shape, dtype=input.dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=out.shape, dtype=input.dtype)
+    return out
 
 __all__.append('pad_v3')
 
@@ -91,21 +87,21 @@ def abs(input):
 __all__.append('abs')
 
 def cast(input, dtype):
-    out = Tensor_(init='none', shape=input.shape, dtype=dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=input.shape, dtype=dtype)
+    return out
 
 __all__.append('cast')
 
 def index_select(input, dim, index):
     out = np.take(np.zeros(input.shape), np.zeros(index.shape, dtype=np.int64), dim)
-    out = Tensor_(init='none', shape=out.shape, dtype=input.dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=out.shape, dtype=input.dtype)
+    return out
 
 __all__.append('index_select')
 
 def identity(input):
-    out = Tensor_(init='none', shape=input.shape, dtype=input.dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=input.shape, dtype=input.dtype)
+    return out
 
 __all__.append('identity')
 
@@ -126,20 +122,20 @@ def div(input, other):
     else:
         shape = other.shape
         dtype = other.dtype
-    out = Tensor_(init='none', shape=shape, dtype=dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=shape, dtype=dtype)
+    return out
 
 __all__.append('div')
 
 def pow(input, other):
-    out = Tensor_(init='none', shape=other.shape, dtype=other.dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=other.shape, dtype=other.dtype)
+    return out
 
 def concat(tensors, dim):
     shape = list(tensors[0].shape)
     shape[dim] = sum([t.shape[dim] for t in tensors])
-    out = Tensor_(init='none', shape=tuple(shape), dtype=tensors[0].dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=tuple(shape), dtype=tensors[0].dtype)
+    return out
 
 __all__.append('concat')
 
@@ -152,8 +148,8 @@ def reshape(input, shape):
     if -1 in shape:
         out = np.zeros(input.shape).reshape(shape)
         shape = out.shape
-    out = Tensor_(init='none', shape=tuple(shape), dtype=input.dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=tuple(shape), dtype=input.dtype)
+    return out
 
 __all__.append('reshape')
 
@@ -170,8 +166,8 @@ def linalg_vector_norm(input, p, dim, keepdim, dtype):
             new_shape.append(s)
     if dtype is None:
         dtype = input.dtype
-    out = Tensor_(init='none', shape=tuple(new_shape), dtype=dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=tuple(new_shape), dtype=dtype)
+    return out
 
 __all__.append('linalg_vector_norm')
 
@@ -181,8 +177,8 @@ __all__.append('erfinv')
 
 
 def stop_gradient(input):
-    out = Tensor_(init='none', shape=input.shape, dtype=input.dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=input.shape, dtype=input.dtype)
+    return out
 
 __all__.append('stop_gradient')
 
@@ -198,8 +194,8 @@ def mul(input, other):
         shape = other.shape
         dtype = other.dtype
 
-    out = Tensor_(init='none', shape=shape, dtype=dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=shape, dtype=dtype)
+    return out
 
 def inplace_mul(input, other):
     return input
@@ -207,14 +203,14 @@ def inplace_mul(input, other):
 __all__.append('mul')
 
 def randn(size, generator, dtype):
-    out = Tensor_(init='none', shape=size, dtype=dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=size, dtype=dtype)
+    return out
 
 __all__.append('randn')
 
 def zeros_like(input, *args, **kwargs):
-    out = Tensor_(init='none', shape=input.shape, dtype=input.dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=input.shape, dtype=input.dtype)
+    return out
 __all__.append('zeros_like')
 
 def inplace_add(input, other, alpha):
@@ -229,8 +225,8 @@ def expand_dims(input, dim):
     input_shape = list(input.shape)
     input_shape.insert(dim, 1)
 
-    out = Tensor_(init='none', shape=tuple(input_shape), dtype=input.dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=tuple(input_shape), dtype=input.dtype)
+    return out
 
 
 def floor_div(input, other):
@@ -255,8 +251,8 @@ __all__.append('triu')
 def fill_scalar(size, fill_value, dtype):
     if dtype is None:
         dtype = mindtorch.get_default_dtype()
-    out = Tensor_(init='none', shape=size, dtype=dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=size, dtype=dtype)
+    return out
 
 __all__.append('fill_scalar')
 
@@ -266,8 +262,8 @@ def sqrt(input):
 __all__.append('sqrt')
 
 def normal_float_float(mean, std, size, dtype, geneartor):
-    out = Tensor_(init='none', shape=size, dtype=dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=size, dtype=dtype)
+    return out
 
 
 __all__.append('normal_float_float')
@@ -275,8 +271,8 @@ __all__.append('normal_float_float')
 def stack(tensors, dim):
     x_shape = list(tensors[0].shape)
     x_shape.insert(dim, len(tensors))
-    out = Tensor_(init='none', shape=tuple(x_shape), dtype=tensors[0].dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=tuple(x_shape), dtype=tensors[0].dtype)
+    return out
 
 __all__.append('stack')
 
@@ -287,18 +283,18 @@ def argmax_with_value(input, dim, keepdim):
     else:
         out_shape.pop(dim)
 
-    indices = Tensor_(init='none', shape=out_shape, dtype=mindtorch.int64)
-    values = Tensor_(init='none', shape=out_shape, dtype=input.dtype)
+    indices = mindspore.Tensor(init='meta', shape=out_shape, dtype=mindtorch.int64)
+    values = mindspore.Tensor(init='meta', shape=out_shape, dtype=input.dtype)
 
-    return mindtorch.Tensor(indices), mindtorch.Tensor(values)
+    return indices, values
 
 __all__.append('argmax_with_value')
 
 def tile(input, dims):
     input_shape = input.shape
     out_shape = [input_shape[i] * dims[i] for i in range(input.ndim)]
-    out = Tensor_(init='none', shape=tuple(out_shape), dtype=input.dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=tuple(out_shape), dtype=input.dtype)
+    return out
 
 __all__.append('tile')
 
@@ -310,8 +306,8 @@ def flatten(input, start_dim, end_dim):
         end_dim = end_dim + input.ndim
 
     flatten_shape = input_shape[:start_dim] + input_shape[start_dim:end_dim+1] + input_shape[end_dim+1:]
-    out = Tensor_(init='none', shape=tuple(flatten_shape), dtype=input.dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=tuple(flatten_shape), dtype=input.dtype)
+    return out
 
 __all__.append('flatten')
 
@@ -330,8 +326,8 @@ def squeeze(input, dim):
         if idx not in dim and s != 1:
             new_shape += (s,)
 
-    out = Tensor_(init='none', shape=tuple(new_shape), dtype=input.dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=tuple(new_shape), dtype=input.dtype)
+    return out
 
 __all__.append('squeeze')
 
@@ -341,8 +337,8 @@ def exp(input):
 __all__.append('exp')
 
 def rand(size, generator, dtype):
-    out = Tensor_(init='none', shape=size, dtype=dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=size, dtype=dtype)
+    return out
 
 __all__.append('rand')
 
@@ -423,8 +419,8 @@ def pad(input, pad, mode='constant', value=None):
     else:
         raise ValueError('pad size must be 2, 4 or 6')
  
-    out = Tensor_(init='none', shape=new_size, dtype=input.dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=new_size, dtype=input.dtype)
+    return out
 
 def setitem(self, slice, value):
     return self
@@ -433,11 +429,11 @@ def meshgrid(args, lambd):
     res = np.meshgrid(*args, indexing=lambd)
     outs = ()
     for r in res:
-        out = Tensor_(init='none', shape=r.shape, dtype=args[0].dtype)
-        out = mindtorch.Tensor(out)
+        out = mindspore.Tensor(init='meta', shape=r.shape, dtype=args[0].dtype)
+        out = out
         outs += (out,)
     return outs
 
 def permute(input, dims):
-    out = Tensor_(init='none', shape=dims, dtype=input.dtype)
-    return mindtorch.Tensor(out)
+    out = mindspore.Tensor(init='meta', shape=dims, dtype=input.dtype)
+    return out

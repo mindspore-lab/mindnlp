@@ -4,7 +4,7 @@ from mindspore.communication import GlobalComm
 
 import mindtorch
 from mindtorch import nn, distributed as dist
-from ..utils import logging
+from ...utils import logging
 
 logger = logging.get_logger(__name__)
 

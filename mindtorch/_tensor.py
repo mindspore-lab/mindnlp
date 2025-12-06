@@ -159,6 +159,7 @@ class TensorPlaceHolder:
     def cuda(self, device=None, non_blocking=False):
         if not ENABLE_DISPATCH:
             return self
+
         if DEVICE_TARGET == 'Ascend':
             device_type = 'Ascend'
         else:
@@ -202,11 +203,7 @@ class TensorPlaceHolder:
         if self_ndim == 0:
             yield self
         else:
-            if self_ndim == 1:
-                result = self.asnumpy()
-            else:
-                result = self.unbind(0)
-            # return iter(result)
+            result = self.unbind(0)
             for i in result:
                 # if self_ndim == 1:
                 #     yield i.item()
@@ -275,7 +272,7 @@ class TensorPlaceHolder:
         return execute('div', other, self, device_position=1)
 
     def __ne__(self, other):
-        if isinstance(other, list):
+        if isinstance(other, (list, str)):
             return True
         return ops.ne(self, other)
 
@@ -317,12 +314,14 @@ class TensorPlaceHolder:
         return ops.sub(self, other)
 
     def __isub__(self, other):
-        return ops.sub(self, other)
+        return execute('inplace_sub', self, other)
 
     def __rsub__(self, other):
         return execute('sub', other, self, device_position=1)
 
     def __eq__(self, other):
+        if isinstance(other, (list, str)):
+            return False
         if other is None:
             return False
         return ops.eq(self, other)
@@ -878,23 +877,15 @@ class TensorPlaceHolder:
     # Tensor.cdouble
 
 
-    # @property
-    # def data(self):
-    #     out = Tensor(self)
-    #     out._base = self
-    #     return out
+    @property
+    def data(self):
+        if self.is_meta:
+            return self
+        return super(Tensor, self).data
 
-    # @data.setter
-    # def data(self, new_value):
-    #     # if self.device.type == 'cpu' and new_value.device.type == 'cpu' \
-    #     #     and self.shape == new_value.shape and self.dtype == new_value.dtype:
-    #     #     src_ct = ctypes.c_void_p(new_value.data_ptr())
-    #     #     dst_ct = ctypes.c_void_p(self.data_ptr())
-    #     #     ctypes.memmove(dst_ct, src_ct, self.nbytes)
-    #     # else:
-    #     if getattr(self, '_base', None) is not None:
-    #         self._base.assign_value(new_value)
-    #     self.assign_value(new_value)
+    @data.setter
+    def data(self, new_value):
+        self.assign_value(new_value)
 
     # Tensor.data_ptr
 
@@ -1311,7 +1302,7 @@ class TensorPlaceHolder:
 
     # Tensor.is_complex
     def is_complex(self):
-        return False
+        return self.dtype in [mindtorch.complex64, mindtorch.complex128]
 
     # Tensor.is_conj
 
@@ -1612,7 +1603,7 @@ class TensorPlaceHolder:
 
     # Tensor.movedim
     def movedim(self, source, destination):
-        return ops.movedim(source, destination)
+        return ops.movedim(self, source, destination)
 
     # Tensor.moveaxis
     moveaxis = movedim
@@ -1726,7 +1717,8 @@ class TensorPlaceHolder:
 
     # Tensor.numpy
     def numpy(self):
-        assert self._device in ['CPU', 'Meta']
+        if ENABLE_DISPATCH:
+            assert self._device in ['CPU', 'Meta']
         return super(Tensor, self).asnumpy()
 
     def __array__(self, dtype=None):
@@ -1934,7 +1926,8 @@ class TensorPlaceHolder:
 
     # Tensor.scatter_reduce_
     def scatter_reduce_(self, dim, index, src, reduce, *, include_self=True):
-        return self.copy_(ops.scatter_reduce(self, dim, index, src))
+        # return execute('inplace_scatter_reduce', self, dim, index, src, reduce)
+        return self.copy_(self.scatter_reduce(dim, index, src, reduce))
 
 
     # Tensor.scatter_reduce
@@ -1953,7 +1946,8 @@ class TensorPlaceHolder:
 
 
     # Tensor.share_memory_
-
+    def share_memory_(self):
+        return self
 
     # Tensor.short
     def short(self):
@@ -2054,6 +2048,9 @@ class TensorPlaceHolder:
     # Tensor.split
     def split(self, split_size, dim=0):
         return ops.split(self, split_size, dim)
+
+    def split_with_sizes(self, split_size_or_sections, dim=0):
+        return execute('split_with_size', self, split_size_or_sections, dim)
 
     # Tensor.sparse_mask
 
@@ -2179,6 +2176,7 @@ class TensorPlaceHolder:
     def _move_to(self, device, non_blocking=False):
         if not ENABLE_DISPATCH:
             return self
+
         if device in ['meta', 'Meta']:
             out = Tensor(shape=self.shape, dtype=self.dtype, init='none')
             return out
@@ -2477,13 +2475,15 @@ class TensorPlaceHolder:
 
     @property
     def is_meta(self):
-        return self.data_ptr() == 0
+        return self.init == 'meta'
 
     @property
     def _device(self):
-        device = super(Tensor, self).device
-        if device == 'CPU' and self.is_meta:
+        if self.is_meta:
             return 'Meta'
+        if not ENABLE_DISPATCH:
+            return DEVICE_TARGET
+        device = super(Tensor, self).device
         if ':' in device:
             return device.split(':')[0]
         return device

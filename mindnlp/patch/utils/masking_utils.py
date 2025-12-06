@@ -17,6 +17,7 @@ from typing import Callable, Optional, Union
 
 import mindtorch
 from mindtorch.nn import functional as F
+from mindtorch.configs import SOC
 
 # Register a fake type to avoid crashing for annotations and `isinstance` checks
 BlockMask = mindtorch.Tensor
@@ -475,7 +476,10 @@ def eager_mask(
         allow_torch_fix=False,
         **kwargs,
     )
-    min_dtype = mindtorch.finfo(dtype).min
+    if SOC == 'ascend910':
+        min_dtype = -10000.0
+    else:
+        min_dtype = mindtorch.finfo(dtype).min
     # we need 0s where the tokens should be taken into account, and -inf otherwise (mask is already of boolean type)
     mask = mindtorch.where(mask, mindtorch.tensor(0.0, device=mask.device, dtype=dtype), min_dtype)
     return mask

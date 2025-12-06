@@ -1,5 +1,5 @@
 from ._apis import cpu, gpu, meta, numpy, npu_910a, npu_910b, npu_310b, npu_310p
-from .configs import cpu_use_numpy, SOC, ENABLE_DISPATCH, DEVICE_TARGET
+from .configs import CPU_USE_NUMPY_OP, SOC, ENABLE_DISPATCH, DEVICE_TARGET
 
 if SOC == 'ascend910':
     npu = npu_910a
@@ -13,16 +13,15 @@ else:
     raise ValueError(f'Unsupported SOC: {SOC}')
 
 api_map = {
-    'CPU': numpy if cpu_use_numpy() else cpu,
+    'CPU': numpy if CPU_USE_NUMPY_OP else cpu,
     'Ascend': npu,
     'Meta': meta,
     'GPU': gpu,
-    'cpu': numpy if cpu_use_numpy() else cpu,
+    'cpu': numpy if CPU_USE_NUMPY_OP else cpu,
     'npu': npu,
     'cuda': gpu,
     'meta': meta,
 }
-
 
 DISPATCH_WHITE_LIST = ['inplace_zero', 'inplace_fill_scalar']
 
@@ -51,12 +50,17 @@ else:
         device_position = kwargs.pop('device_position', 0)
         device_type = kwargs.pop('device', None)
 
+        # for device = meta
         if device_type is None:
+            if device_from_list:
+                device_type = args[0][0].init
+            else:
+                device_type = args[device_position].init
+
+        if device_type is None or device_type not in ('meta', 'Meta'):
             device_type = DEVICE_TARGET
 
-        # # func = self._registry[device_type].get(func_name, None)
         func = getattr(api_map[device_type], func_name, None)
-        # func = getattr(api_map['Ascend'], func_name, None)
         if func is None:
             raise RuntimeError(
                 f"No implementation for function: {func_name} on {device_type}."

@@ -3,9 +3,8 @@ from threading import Thread
 from typing import Optional
 
 import numpy as np
-from mindspore import ops
-
-from mindnlp.engine import set_seed
+import mindtorch
+from mindtorch import manual_seed
 from mindnlp.transformers import MusicgenForConditionalGeneration, MusicgenProcessor
 from mindnlp.transformers.generation.streamers import BaseStreamer
 
@@ -146,7 +145,7 @@ def generate_audio(text_prompt, audio_length_in_s=10.0, play_steps_in_s=2.0, see
     inputs = processor(
         text=text_prompt,
         padding=True,
-        return_tensors="ms",
+        return_tensors="pt",
     )
 
     streamer = MusicgenStreamer(model, play_steps=play_steps)

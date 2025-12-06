@@ -38,10 +38,11 @@ def _create_namespace_links():
         import transformers
         source_path = os.path.dirname(transformers.__file__)
     except ImportError:
-        # 如果 transformers 未安装则自动安装
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "transformers"])
-        import transformers
-        source_path = os.path.dirname(transformers.__file__)
+        # 如果 transformers 未安装则跳过创建链接
+        # transformers 现在作为可选依赖，需要通过 extras 安装
+        print("transformers not installed, skipping namespace link creation. "
+              "Install with 'pip install mindnlp[transformers]' to enable this feature.")
+        return
 
     # 清理旧链接
     if os.path.exists(target_dir):
@@ -173,14 +174,10 @@ setup(
         'mindspore>=2.7.1',
         'tqdm',
         'requests',
-        'accelerate>=1.6.0', # hf dependency
-        'transformers>=4.55.0', # hf dependency
-        'peft>=0.15.2', # hf dependency
         'datasets', # hf dependency
         'evaluate', # hf dependency
         'tokenizers', # hf dependency
         'safetensors', # hf dependency
-        'diffusers', # hf dependency
         'sentencepiece',
         'regex',
         'addict',
@@ -190,6 +187,22 @@ setup(
         'pillow>=10.0.0',
         'ftfy'
     ],
+    extras_require={
+        'transformers': [
+            'accelerate>=1.6.0', # hf dependency
+            'transformers>=4.55.0',
+            'peft>=0.15.2', # hf dependency
+        ],
+        'diffusers': [
+            'diffusers',
+        ],
+        'all': [
+            'accelerate>=1.6.0', # hf dependency
+            'transformers>=4.55.0',
+            'peft>=0.15.2', # hf dependency
+            'diffusers',
+        ],
+    },
     classifiers=[
         'License :: OSI Approved :: Apache Software License'
     ]

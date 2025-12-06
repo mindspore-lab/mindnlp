@@ -3,9 +3,8 @@ from threading import Thread
 from typing import Optional
 
 import numpy as np
-from mindspore import ops
-
-from mindnlp.engine import set_seed
+import mindtorch
+from mindtorch import manual_seed
 from mindnlp.transformers import MusicgenForConditionalGeneration, MusicgenProcessor
 from mindnlp.transformers.generation.streamers import BaseStreamer
 
@@ -102,7 +101,7 @@ class MusicgenStreamer(BaseStreamer):
         if self.token_cache is None:
             self.token_cache = value
         else:
-            self.token_cache = ops.concat([self.token_cache, value[:, None]], axis=-1)
+            self.token_cache = mindtorch.concat([self.token_cache, value[:, None]], axis=-1)
 
         if self.token_cache.shape[-1] % self.play_steps == 0:
             audio_values = self.apply_delay_pattern_mask(self.token_cache)
@@ -148,7 +147,7 @@ def generate_audio(text_prompt, audio_length_in_s=10.0, play_steps_in_s=2.0, see
     inputs = processor(
         text=text_prompt,
         padding=True,
-        return_tensors="ms",
+        return_tensors="pt",
     )
 
     streamer = MusicgenStreamer(model, play_steps=play_steps)
@@ -161,7 +160,7 @@ def generate_audio(text_prompt, audio_length_in_s=10.0, play_steps_in_s=2.0, see
     thread = Thread(target=model.generate, kwargs=generation_kwargs)
     thread.start()
 
-    set_seed(seed)
+    manual_seed(seed)
     for new_audio in streamer:
         print(f"Sample of length: {round(new_audio.shape[0] / sampling_rate, 2)} seconds")
         yield sampling_rate, new_audio
