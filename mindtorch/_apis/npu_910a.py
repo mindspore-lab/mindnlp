@@ -4,7 +4,7 @@ import mindspore
 import mindtorch
 import numpy as np
 
-from mindspore.ops.composite.multitype_ops._compile_utils import _tensor_setitem
+from mindspore.ops.composite.multitype_ops._compile_utils import _tensor_setitem, _tensor_getitem
 from mindtorch._C import default_generator
 from ..configs import ENABLE_PYBOOST
 from .._op_prim.ascend import legacy, pyboost
@@ -146,7 +146,7 @@ def layer_norm(input, normalized_shape, weight, bias, eps=1e-5):
         Tensor: The normalized tensor.
     """
     if ENABLE_PYBOOST:
-        return cast(pyboost.layer_norm_ext_op(input, normalized_shape, weight, bias, eps)[0], input.dtype)
+        return pyboost.layer_norm_ext_op(input, normalized_shape, weight, bias, eps)[0]
     if weight is not None:
         begin_axis = input.ndim - weight.ndim
     else:
@@ -878,17 +878,7 @@ def rand(size, generator, dtype):
 
 def inplace_uniform(input, from_, to, generator):
     seed, offset = generator._step(12)
-    if ENABLE_PYBOOST:
-        return pyboost.uniform_ext_op(input, from_, to, seed, offset)
-
-    if input.dtype.is_floating_point:
-        out = legacy.uniform_real(input.shape, 0, 0)
-        value = legacy.add(legacy.mul(out, (legacy.sub(to, from_))), from_)
-    else:
-        value = legacy.uniform_int(input.shape,
-                                    mindspore.tensor(from_, dtype=mindspore.int32),
-                                    mindspore.tensor(to, dtype=mindspore.int32), 0, 0)
-    input.assign_value(legacy.cast(value, input.dtype))
+    return pyboost.inplace_uniform_op(input, from_, to, seed, offset)
 
 def bitwise_or_tensor(input, other):
     if ENABLE_PYBOOST:
@@ -1757,8 +1747,17 @@ def outer(input, other):
 
 def addcmul(input, tensor1, tensor2, value=1.0):
     if ENABLE_PYBOOST:
+        if isinstance(value, numbers.Number):
+            value = mindspore.Tensor(value, dtype=input.dtype)
         return pyboost.addcmul_op(input, tensor1, tensor2, value)
     return legacy.add(mul(mul(tensor1, tensor2), value), input)
+
+def addcdiv(input, tensor1, tensor2, value=1.0):
+    if ENABLE_PYBOOST:
+        if isinstance(value, numbers.Number):
+            value = mindspore.Tensor(value, dtype=input.dtype)
+        return pyboost.addcdiv_op(input, tensor1, tensor2, value)
+    return legacy.add(mul(div(tensor1, tensor2), value), input)
 
 def prelu(input, weight):
     if ENABLE_PYBOOST:
@@ -2112,7 +2111,7 @@ def repeat_interleave_int(input_tensor, repeats, dim, output_size):
     return output
 
 def repeat_interleave_tensor(input, repeats, dim, output_size):
-    return pyboost.repeat_interleave_tensor_op(input, repeats, dim, output_size)
+    return repeat_interleave_int(input, repeats, dim, output_size)
 
 def triu_indices(row, col, offset, dtype):
     return legacy.triu_indices(row, col, offset, dtype)
@@ -2197,12 +2196,17 @@ def sdpa(query, key, value, attn_mask=None, dropout_p=0.0,
             attn_bias = masked_fill(attn_bias, logical_not(attn_mask), mindtorch.finfo(attn_bias.dtype).min)
         else:
             attn_bias = add(attn_mask, attn_bias)
-
+    query_dtype = query.dtype
+    query = cast(query, mindspore.float32)
+    key = cast(key, mindspore.float32)
+    value = cast(value, mindspore.float32)
     attn_weight = mul(matmul(query, transpose_view(key, -2, -1)), scale_factor)
     attn_weight = add(attn_weight, attn_bias)
     attn_weight = softmax(attn_weight, -1)
     attn_weight = dropout(attn_weight, dropout_p)
-    return matmul(attn_weight, value)
+    out = matmul(attn_weight, value)
+    out = cast(out, query_dtype)
+    return out
 
 
 tensor_1d = mindspore.Tensor([0], dtype=mindtorch.int64)
@@ -2351,6 +2355,9 @@ def _process_multi_dim_index(self, indexes, remain_indexes, indexed_dims):
 
 
 def getitem(self, index):
+    return _tensor_getitem(self, index)
+
+def getitem_manual(self, index):
     """Handle tensor getitem"""
     if isinstance(index, bool):
         self_viewed = expand_dims(self, 0)
@@ -2540,3 +2547,21 @@ def dist_comm_gather(input, gather_list, rank_size, dst, rank_id, group):
 def inplace_random(input, from_val=0, to_val=None, generator=None):
     seed, offset = generator._step(12)
     return pyboost.inplace_random_op(input, from_val, to_val, seed, offset)
+
+def raw_sgd(param, grad, lr, dampening, weight_decay, nesterov, accum, momentum, stat):
+    return legacy.sgd(param, grad, lr, accum, momentum, stat, dampening, weight_decay, nesterov)
+
+def raw_adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad):
+    return legacy.adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad, False, False)
+
+def inplace_sub(input, other):
+    return pyboost.inplace_sub_ext_op(input, other)
+
+def depend(*args):
+    return legacy.depend(*args)
+
+def npu_get_float_status_v2(state):
+    return pyboost.npu_get_float_status_v2_op(state)
+
+def npu_clear_float_status_v2(state):
+    return pyboost.npu_clear_float_status_v2_op(state)

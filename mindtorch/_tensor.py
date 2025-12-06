@@ -204,12 +204,11 @@ class TensorPlaceHolder:
             yield self
         else:
             result = self.unbind(0)
-            # return iter(result)
             for i in result:
-                if self_ndim == 1:
-                    yield i.item()
-                else:
-                    yield i
+                # if self_ndim == 1:
+                #     yield i.item()
+                # else:
+                yield i
 
     def __getitem__(self, slices):
         slices = self._convert_numpy_slices(slices)
@@ -315,7 +314,7 @@ class TensorPlaceHolder:
         return ops.sub(self, other)
 
     def __isub__(self, other):
-        return ops.sub(self, other)
+        return execute('inplace_sub', self, other)
 
     def __rsub__(self, other):
         return execute('sub', other, self, device_position=1)
@@ -2480,9 +2479,11 @@ class TensorPlaceHolder:
 
     @property
     def _device(self):
-        device = super(Tensor, self).device
         if self.is_meta:
             return 'Meta'
+        if not ENABLE_DISPATCH:
+            return DEVICE_TARGET
+        device = super(Tensor, self).device
         if ':' in device:
             return device.split(':')[0]
         return device

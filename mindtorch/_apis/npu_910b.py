@@ -876,17 +876,7 @@ def rand(size, generator, dtype):
 
 def inplace_uniform(input, from_, to, generator):
     seed, offset = generator._step(12)
-    if ENABLE_PYBOOST:
-        return pyboost.uniform_ext_op(input, from_, to, seed, offset)
-
-    if input.dtype.is_floating_point:
-        out = legacy.uniform_real(input.shape, 0, 0)
-        value = legacy.add(legacy.mul(out, (legacy.sub(to, from_))), from_)
-    else:
-        value = legacy.uniform_int(input.shape,
-                                    mindspore.tensor(from_, dtype=mindspore.int32),
-                                    mindspore.tensor(to, dtype=mindspore.int32), 0, 0)
-    input.assign_value(legacy.cast(value, input.dtype))
+    return pyboost.inplace_uniform_op(input, from_, to, seed, offset)
 
 def bitwise_or_tensor(input, other):
     if ENABLE_PYBOOST:
@@ -1742,8 +1732,17 @@ def outer(input, other):
 
 def addcmul(input, tensor1, tensor2, value=1.0):
     if ENABLE_PYBOOST:
-        return pyboost.addcmul_op(input, tensor1, tensor2, value)
+        if isinstance(value, numbers.Number):
+            value = mindspore.Tensor(value, dtype=input.dtype)
+        return pyboost.addcmul_ext_op(input, tensor1, tensor2, value)
     return legacy.add(mul(mul(tensor1, tensor2), value), input)
+
+def addcdiv(input, tensor1, tensor2, value=1.0):
+    if ENABLE_PYBOOST:
+        if isinstance(value, numbers.Number):
+            value = mindspore.Tensor(value, dtype=input.dtype)
+        return pyboost.addcdiv_ext_op(input, tensor1, tensor2, value)
+    return legacy.add(mul(div(tensor1, tensor2), value), input)
 
 def prelu(input, weight):
     if ENABLE_PYBOOST:
@@ -2480,3 +2479,25 @@ def unfold(input, dimension, size, step):
     output = gather(input, indices, _dimension, 0)
     output = transpose_view(output, _dimension + 1, -1)
     return output
+
+def scatter_add_ext(input, dim, index, src):
+    return pyboost.scatter_add_ext_op(input, dim, index, src)
+
+def dist_comm_all_reduce(input, op_type, group):
+    return pyboost.dist_comm_all_reduce_op(input, op_type, group)
+
+def dist_comm_gather(input, gather_list, rank_size, dst, rank_id, group):
+    return pyboost.dist_comm_gather_op(input, gather_list, rank_size, dst, rank_id, group)
+
+def inplace_random(input, from_val=0, to_val=None, generator=None):
+    seed, offset = generator._step(12)
+    return pyboost.inplace_random_op(input, from_val, to_val, seed, offset)
+
+def raw_sgd(param, grad, lr, dampening, weight_decay, nesterov, accum, momentum, stat):
+    return legacy.sgd(param, grad, lr, accum, momentum, stat, dampening, weight_decay, nesterov)
+
+def raw_adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad):
+    return legacy.adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad, False, False)
+
+def inplace_sub(input, other):
+    return pyboost.inplace_sub_ext_op(input, other)
