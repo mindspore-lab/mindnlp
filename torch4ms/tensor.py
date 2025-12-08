@@ -100,7 +100,7 @@ class Tensor:
         return object.__new__(cls)
 
     def __str__(self):
-        return f'torchax.Tensor({self._elem})'
+        return f'torch4ms.Tensor({self._elem})'
 
     __repr__ = __str__
 
@@ -181,11 +181,11 @@ class Tensor:
             **kwargs: 传递给MindSpore函数的关键字参数
 
         Returns:
-            转换后的torchax.Tensor结果
+            转换后的torch4ms.Tensor结果
         """
         # 在内部MindSpore张量上调用函数
         res = ms_function(self._elem, *args, **kwargs)
-        # 将结果转换回torchax.Tensor
+        # 将结果转换回torch4ms.Tensor
         return self._env.ms2t_iso(res)
 
     def apply_mindspore_(self, ms_function, *args, **kwargs):
@@ -200,13 +200,13 @@ def debug_accuracy(func, args, kwargs, current_output):
     """
     调试PyTorch和MindSpore结果的精度差异
 
-    比较PyTorch原生执行和torchax执行结果之间的数值差异，用于验证转换的准确性。
+    比较PyTorch原生执行和torch4ms执行结果之间的数值差异，用于验证转换的准确性。
 
     Args:
         func: PyTorch函数
         args: 函数参数
         kwargs: 关键字参数
-        current_output: torchax执行的结果
+        current_output: torch4ms执行的结果
 
     Returns:
         bool: 如果结果在容限范围内则返回True，否则返回False
@@ -372,7 +372,7 @@ def _name_of_func(func_or_name):
 
 
 # 支持的张量构造函数集合 - MindSpore实现
-# 这些是常见的张量创建函数，torchax会拦截这些函数并使用MindSpore实现
+# 这些是常见的张量创建函数，torch4ms会拦截这些函数并使用MindSpore实现
 TENSOR_CONSTRUCTORS = {
     "ones",  # 创建全1张量
     "zeros",  # 创建全0张量
@@ -395,7 +395,7 @@ class RuntimeProperty:
     """
     运行时属性管理类
 
-    管理torchax的运行时配置，包括设备网格、随机数生成器和自动混合精度数据类型等。
+    管理torch4ms的运行时配置，包括设备网格、随机数生成器和自动混合精度数据类型等。
 
     Attributes:
         mesh: 设备网格配置，用于并行计算
@@ -641,7 +641,7 @@ class Environment(contextlib.ContextDecorator):
         """
         # 导入算子实现模块
         # 注意：这里需要替换为MindSpore相关的操作实现
-        # from torchax.ops import maten, mtorch, mdist, mvision_nms
+        # from torch4ms.ops import maten, mtorch, mdist, mvision_nms
 
         # 加载预注册的算子
         # 将原来基于PyTorch函数对象的注册改为基于操作名称字符串
@@ -766,15 +766,15 @@ class Environment(contextlib.ContextDecorator):
         # 处理设备转换
         if not self._is_same_device(the_tensor, new_device):
             if isinstance(the_tensor, Tensor):
-                # 从torchax张量转换到MindSpore张量并移动设备
+                # 从torch4ms张量转换到MindSpore张量并移动设备
                 ms_tensor = the_tensor.mindspore()
                 # 在MindSpore中移动设备
                 res = ms_tensor.to(device=new_device)
-                # 包装回torchax Tensor，安全获取requires_grad属性
+                # 包装回torch4ms Tensor，安全获取requires_grad属性
                 requires_grad = getattr(the_tensor, 'requires_grad', False)
                 res = Tensor(res, self, requires_grad=requires_grad)
             elif isinstance(the_tensor, MSTensor):
-                # 从MindSpore张量转换到torchax张量
+                # 从MindSpore张量转换到torch4ms张量
                 res = Tensor(the_tensor.to(device=new_device), self, requires_grad=False)
             else:
                 # 对于其他类型，尝试直接转换
@@ -782,7 +782,7 @@ class Environment(contextlib.ContextDecorator):
                     # 转换数据类型
                     if new_dtype is not None:
                         the_tensor = the_tensor.astype(new_dtype)
-                    # 包装为torchax Tensor
+                    # 包装为torch4ms Tensor
                     res = Tensor(the_tensor, self, requires_grad=False)
                 except Exception as e:
                     logger.warning(f"Failed to convert tensor to new device: {e}")
@@ -791,7 +791,7 @@ class Environment(contextlib.ContextDecorator):
         # 处理数据类型转换
         if new_dtype is not None and hasattr(res, 'dtype') and res.dtype != new_dtype:
             if isinstance(res, Tensor):
-                # 对torchax张量使用astype
+                # 对torch4ms张量使用astype
                 res = res.apply_mindspore(ops.cast, new_dtype)
             elif hasattr(res, 'astype'):
                 # 对其他张量类型使用astype
@@ -906,11 +906,11 @@ class Environment(contextlib.ContextDecorator):
             t for t in list(args) if isinstance(t, (Tensor, ms_Tensor))
         ]
 
-        def is_not_torchax_tensor(x):
+        def is_not_torch4ms_tensor(x):
             return not isinstance(x, Tensor) and not isinstance(x, View)
 
-        # 如果所有张量参数都不是torchax张量，尝试使用原生处理
-        if tensor_args and all(is_not_torchax_tensor(t) for t in tensor_args):
+        # 如果所有张量参数都不是torch4ms张量，尝试使用原生处理
+        if tensor_args and all(is_not_torch4ms_tensor(t) for t in tensor_args):
             # 这里可以添加兼容层处理或抛出异常
             raise NotImplementedError(f"Native execution not implemented for {op_name_str}")
 
@@ -1031,7 +1031,7 @@ class Environment(contextlib.ContextDecorator):
             val: 要移动的值（可以是模块、张量或其他类型）
 
         Returns:
-            转换为torchax环境的值
+            转换为torch4ms环境的值
         """
         # 处理神经网络模块
         # MindSpore的Module处理逻辑需要单独实现
@@ -1040,11 +1040,11 @@ class Environment(contextlib.ContextDecorator):
         #   with self:
         #     return val.to("mindspore")
 
-        # 已经是torchax张量，直接返回
+        # 已经是torch4ms张量，直接返回
         if isinstance(val, Tensor):
             return val
 
-        # MindSpore张量转换为torchax张量
+        # MindSpore张量转换为torch4ms张量
         from mindspore import Tensor as MSTensor
         if isinstance(val, MSTensor):
             return Tensor(val, self)
@@ -1054,7 +1054,7 @@ class Environment(contextlib.ContextDecorator):
 
     def to_xla(self, values):
         """
-        将值树结构转换为torchax环境中的值
+        将值树结构转换为torch4ms环境中的值
 
         注意：这里支持MindSpore张量和其他类型的转换
 
@@ -1062,7 +1062,7 @@ class Environment(contextlib.ContextDecorator):
             values: 包含各种值的树结构
 
         Returns:
-            转换后的树结构，其中MindSpore张量转换为torchax.Tensor
+            转换后的树结构，其中MindSpore张量转换为torch4ms.Tensor
         """
 
         # 简单的递归映射实现，替代torch_pytree
@@ -1078,7 +1078,7 @@ class Environment(contextlib.ContextDecorator):
         return res
 
     def t2ms_iso(self, tensors):
-        """将torchax Tensor转换为MindSpore张量
+        """将torch4ms Tensor转换为MindSpore张量
 
         此函数不会复制数据，只是简单地解包内部的MindSpore张量
         注意：iso是"isomorphic"（同构）的缩写
@@ -1096,7 +1096,7 @@ class Environment(contextlib.ContextDecorator):
                     x, Tensor) and not isinstance(x, View):
                 if hasattr(x, 'squeeze') and x.squeeze().ndim == 0:
                     return x.item()
-            # 确保是torchax张量或视图
+            # 确保是torch4ms张量或视图
             assert isinstance(x, Tensor) or isinstance(x, View), (
                 f"Expect a Tensor or a View but got {type(x)}; usually this means there is a mixed math between MindSporeTensor and other tensor types"
             )
@@ -1126,16 +1126,16 @@ class Environment(contextlib.ContextDecorator):
         return res
 
     def ms2t_iso(self, ms_values):
-        """将MindSpore张量转换为torchax Tensor
+        """将MindSpore张量转换为torch4ms Tensor
 
-        此函数不会复制数据，只是用torchax Tensor包装MindSpore张量
+        此函数不会复制数据，只是用torch4ms Tensor包装MindSpore张量
         注意：iso是"isomorphic"（同构）的缩写
 
         Args:
             ms_values: 要转换的MindSpore张量或包含MindSpore张量的树结构
 
         Returns:
-            转换后的torchax.Tensor或包含torchax.Tensor的树结构
+            转换后的torch4ms.Tensor或包含torch4ms.Tensor的树结构
         """
 
         # 简单的递归映射实现，替代torch_pytree
@@ -1149,7 +1149,7 @@ class Environment(contextlib.ContextDecorator):
                 return map_fn(obj)
             return obj
 
-        # 在树结构中仅对MindSpore张量应用转换，创建新的torchax.Tensor
+        # 在树结构中仅对MindSpore张量应用转换，创建新的torch4ms.Tensor
         return tree_map(ms_values, lambda x: Tensor(x, self))
 
     def ms2t_copy(self, args):
