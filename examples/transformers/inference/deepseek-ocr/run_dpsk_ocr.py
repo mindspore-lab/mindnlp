@@ -12,6 +12,7 @@ model = AutoModel.from_pretrained(model_name, _attn_implementation='eager', dtyp
                                   trust_remote_code=True, use_safetensors=True, device_map='auto')
 model = model.eval()
 
+model.combine_moe()
 
 # prompt = "<image>\nFree OCR. "
 prompt = "<image>\n<|grounding|>Convert the document to markdown. "
