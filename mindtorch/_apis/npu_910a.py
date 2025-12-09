@@ -459,8 +459,6 @@ def sum(input, dim, keepdim, dtype):
         Tensor: The tensor with summed elements.
     """
     if ENABLE_PYBOOST:
-        if dtype is None:
-            dtype = input.dtype
         return pyboost.sum_ext_op(input, dim, keepdim, dtype)
     return legacy.reduce_sum(input.astype(dtype), dim, keepdim)
 
