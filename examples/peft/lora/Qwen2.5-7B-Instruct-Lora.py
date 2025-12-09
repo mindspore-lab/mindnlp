@@ -71,6 +71,7 @@ args = TrainingArguments(
     save_steps=100,
     learning_rate=1e-4,
     save_on_each_node=True,
+    # fp16=True
     # gradient_checkpointing=True
 )
 

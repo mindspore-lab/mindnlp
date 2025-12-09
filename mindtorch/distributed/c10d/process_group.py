@@ -83,7 +83,7 @@ class ProcessGroup:
         return backend_type_to_string(self.backend_type)
 
     def set_backend(self, device_type, backend_type: BackendType, backend: Optional[Any] = None):
-        self.device = device_type
+        self.device = device_type.type
         self.device_type_to_backend[device_type] = backend_type
         self.device_types.add(device_type)
         
@@ -142,7 +142,7 @@ class ProcessGroup:
         tensor = input_tensors[0]
         gather_list = output_tensors[0]
 
-        _, work = execute('dist_comm_gather', tensor, gather_list, self._size, opts.rootRank, self._rank, self._name, device=self.device)
+        _, work = execute('dist_comm_gather', tensor, gather_list, self._size, opts.groupRank, self._rank, self._name, device=self.device)
         return work
 
     def scatter(self, output_tensors: List[Tensor], input_tensors: List[List[Tensor]], opts: Any) -> Any:

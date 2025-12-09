@@ -68,7 +68,29 @@ def bucketize(input, boundaries, *, out_int32=False, right=False, out=None):
     return out
 
 # cartesian_prod
-
+def cartesian_prod(*tensors):
+    """
+    手动实现 torch.cartesian_prod 的功能
+    参数:
+        tensors: 输入的一维张量序列
+    返回:
+        笛卡尔积结果张量，形状为 (M, len(tensors))，其中 M 为所有张量长度的乘积
+    """
+    # 检查输入张量是否均为一维
+    for i, t in enumerate(tensors):
+        if t.dim() != 1:
+            raise ValueError(f"所有输入张量必须为一维张量，但第 {i} 个张量的维度为 {t.dim()}")
+    
+    # 为每个输入张量调用 meshgrid，设置 indexing='ij' 确保按索引顺序（笛卡尔积所需）
+    grid_tensors = mindtorch.meshgrid(*tensors, indexing='ij')
+    
+    # 将每个网格张量展平
+    flattened_tensors = [t.flatten() for t in grid_tensors]
+    
+    # 沿新维度（维度1）堆叠展平后的张量
+    result = mindtorch.stack(flattened_tensors, dim=1)
+    
+    return result
 
 # cdist
 def cdist(x1, x2, p=2.0, compute_mode="use_mm_for_euclid_dist_if_necessary"):
@@ -867,7 +889,9 @@ def triu_indices(row, col, offset=0, *, dtype=mindtorch.long, device='cpu', layo
 
 # unflatten
 def unflatten(x, dim, sizes):
-    new_shape = x.shape[:dim] + sizes
+    if dim < 0:
+        dim += x.ndim
+    new_shape = x.shape[:dim] + sizes + x.shape[dim + 1:]
     return x.reshape(new_shape)
 
 # vander
@@ -993,7 +1017,7 @@ def contains(self, key):
     Raises:
         None
     """
-    eq_res = eq(self, key)
+    eq_res = mindtorch.eq(self, key)
     res = any(eq_res)
     return bool(res)
 
@@ -1078,5 +1102,6 @@ __all__ = [
     'bucketize',
     'cosine_similarity',
     'detach',
-    'histc'
+    'histc',
+    'cartesian_prod'
 ]

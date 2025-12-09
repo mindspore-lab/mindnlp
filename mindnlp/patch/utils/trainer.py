@@ -3,6 +3,7 @@ from typing import Union, Any, Optional
 from transformers.training_args import OptimizerNames
 from accelerate.utils import DistributedType
 
+import mindspore
 import mindtorch
 from mindtorch import nn, autograd
 

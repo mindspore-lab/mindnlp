@@ -66,17 +66,18 @@ def mul(input, other):
 
 __all__.append('mul')
 
-def sub_ext(input, other, alpha):
+def sub(input, other, alpha=1):
     if not isinstance(input, numbers.Number):
         input = input.numpy()
     elif not isinstance(other, numbers.Number):
         other = other.numpy()
-    out = np.subtract(input, other * alpha)
+    if alpha == 1:
+        out = np.subtract(input, other)
+    else:
+        out = np.subtract(input, other * alpha)
     if not isinstance(out, np.ndarray):
         out = np.array(out)
     return mindtorch.Tensor.from_numpy(out)
-
-__all__.append('sub_ext')
 
 def clamp_scalar(input, min, max):
     out = np.clip(input.numpy(), min, max)
@@ -608,7 +609,7 @@ def embedding(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_fre
 
 __all__.append('embedding')
 
-def randn(size, seed, offset, dtype):
+def randn(size, generator, dtype):
     out = np.random.randn(*size).astype(mindtorch.dtype2np[dtype])
     return mindtorch.Tensor.from_numpy(out)
 
@@ -1162,3 +1163,11 @@ def log2(input):
     return mindtorch.Tensor.from_numpy(out)
 
 __all__.append('log2')
+
+def inplace_zero(input):
+    inplace_copy(input, zeros_like(input))
+    return input
+
+def cumprod(input, dim, dtype):
+    out = np.cumprod(input.asnumpy(), dim, mindtorch.dtype2np[dtype])
+    return mindtorch.Tensor.from_numpy(out)

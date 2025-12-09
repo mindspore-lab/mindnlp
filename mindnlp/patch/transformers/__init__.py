@@ -1,0 +1,39 @@
+"""
+Transformers patches
+
+This module automatically registers and applies patches for transformers library.
+Importing this module will trigger patch registration.
+"""
+
+import sys
+from ..registry import register_transformers_patch, apply_transformers_patches
+from ..common import setup_missing_library_error_module
+from mindnlp.utils.import_utils import _LazyModule
+
+# Import version-specific patches to trigger registration
+from . import common, v4_55, v4_56
+
+
+def setup_transformers_module():
+    """Setup mindnlp.transformers module to redirect to patched transformers"""
+    try:
+        import transformers
+    except ImportError:
+        setup_missing_library_error_module('transformers')
+        return
+    
+    # Apply patches first (if not already applied)
+    apply_transformers_patches()
+    
+    # Redirect mindnlp.transformers to transformers for backward compatibility
+    # This allows old code using 'from mindnlp.transformers import ...' to still work
+    transformers_module_name = 'mindnlp.transformers'
+    if transformers_module_name not in sys.modules or not isinstance(sys.modules[transformers_module_name], _LazyModule):
+        sys.modules[transformers_module_name] = _LazyModule(
+            'transformers',
+            transformers.__file__,
+            transformers._import_structure,
+            module_spec=None,  # Will be set by _LazyModule
+            extra_objects={"__version__": transformers.__version__},
+        )
+

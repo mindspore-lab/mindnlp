@@ -22,7 +22,7 @@ class GradScaler(mindtorch.amp.GradScaler):
     )
     def __init__(
         self,
-        init_scale: float = 2.0**16,
+        init_scale: float = 2.0**10,
         growth_factor: float = 2.0,
         backoff_factor: float = 0.5,
         growth_interval: int = 2000,

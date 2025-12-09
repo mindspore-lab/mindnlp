@@ -1,3 +1,7 @@
+"""
+Common patches for safetensors
+"""
+
 import json
 import mmap
 from typing import OrderedDict
@@ -14,6 +18,8 @@ if SUPPORT_BF16:
     from mindspore.common.np_dtype import bfloat16  # pylint: disable=import-error
 else:
     from ml_dtypes import bfloat16
+
+from ..registry import register_safetensors_patch
 
 MAGIC_NUMBER = 0x1950A86A20F9469CFC6C
 PROTOCOL_VERSION = 1001
@@ -248,13 +254,54 @@ def safe_save_file(tensor_dict, filename, metadata=None):
     return safetensors.numpy.save_file(tensor_dict, filename, metadata)
 
 
+def safe_load_file(filename, device = 'cpu'):
+    """
+    Loads a safetensors file into torch format.
+
+    Args:
+        filename (`str`, or `os.PathLike`):
+            The name of the file which contains the tensors
+        device (`Union[str, int]`, *optional*, defaults to `cpu`):
+            The device where the tensors need to be located after load.
+            available options are all regular torch device locations.
+
+    Returns:
+        `Dict[str, torch.Tensor]`: dictionary that contains name as key, value as `torch.Tensor`
+
+    Example:
+
+    ```python
+    from safetensors.torch import load_file
+
+    file_path = "./my_folder/bert.safetensors"
+    loaded = load_file(file_path)
+    ```
+    """
+    result = {}
+    with fast_safe_open(filename, framework="pt", device=device) as f:
+        for k in f.keys():
+            result[k] = f.get_tensor(k)
+    return result
+    
+
 def _tobytes(tensor, name):
     return tensor.tobytes()
 
 
-def setup_safetensors_patch():
-    safetensors.safe_open = fast_safe_open
-    from safetensors import torch
-
-    torch.save_file = safe_save_file
-    torch._tobytes = _tobytes
+@register_safetensors_patch(">=0.0.0", priority=10,
+                           description="Patch safetensors safe_open and torch.save_file")
+def patch_safetensors_common():
+    """safetensors 通用补丁"""
+    try:
+        import safetensors
+        from safetensors import torch
+        
+        # Patch safe_open
+        safetensors.safe_open = fast_safe_open
+        
+        # Patch torch.save_file
+        torch.save_file = safe_save_file
+        torch.load_file = safe_load_file
+        torch._tobytes = _tobytes
+    except ImportError:
+        pass

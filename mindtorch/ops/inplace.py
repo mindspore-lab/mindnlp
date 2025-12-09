@@ -10,14 +10,14 @@ def inplace_copy(self, other):
     return self
 
 def inplace_zero(input):
-    execute('inplace_zero', input)
+    execute('inplace_zero', input, device=input._device)
     return input
 
 def inplace_fill(input, value):
     if isinstance(value, (int, float, bool)):
-        execute('inplace_fill_scalar', input, value)
+        execute('inplace_fill_scalar', input, value, device=input._device)
     else:
-        execute('inplace_fill_tensor', input, value)
+        execute('inplace_fill_tensor', input, value, device=input._device)
 
     return input
 
@@ -54,7 +54,7 @@ def inplace_uniform(input, *args, **kwargs):
     if generator_ is None:
         generator_ = default_generator
 
-    execute("inplace_uniform", input, from_, to_, generator_)
+    execute("inplace_uniform", input, from_, to_, generator_, device=input._device)
 
     return input
 

@@ -38,6 +38,8 @@ def arccosh(input):
 
 # add
 def add(input, other, *, alpha=1):
+    if isinstance(input, numbers.Number):
+        return execute("add", input, other, alpha, device_position=1)
     return execute("add", input, other, alpha)
 
 # addcdiv

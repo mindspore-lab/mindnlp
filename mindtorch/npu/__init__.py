@@ -16,7 +16,7 @@ from mindspore.communication import GlobalComm, get_group_size
 import mindtorch
 from mindtorch.executor import execute
 from ..configs import SUPPORT_BF16, ON_A1
-from . import random
+from . import random, amp
 
 FloatTensor = mindtorch.FloatTensor
 HalfTensor = mindtorch.FloatTensor
