@@ -2,8 +2,8 @@
 # !pip install mindspore==2.4
 # !export LD_PRELOAD=$LD_PRELOAD:/home/ma-user/anaconda3/envs/MindSpore/lib/python3.9/site-packages/torch.libs/libgomp-74ff64e9.so.1.0.0
 # !yum install libsndfile
-from mindnlp.transformers import BlenderbotSmallForConditionalGeneration, BlenderbotSmallTokenizer
-from mindnlp.engine  import Trainer, TrainingArguments
+from mindhf.transformers import BlenderbotSmallForConditionalGeneration, BlenderbotSmallTokenizer
+from mindhf.engine  import Trainer, TrainingArguments
 from datasets import load_dataset, load_from_disk
 import mindspore as ms
 import os

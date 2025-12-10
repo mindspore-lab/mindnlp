@@ -1,8 +1,8 @@
 import warnings
 
 warnings.warn(
-    "The usage 'from mindnlp.transformers import xx' is deprecated. "
-    "Please use 'import mindnlp; from transformers import xxx' instead.",
+    "The usage 'from mindhf.transformers import xx' is deprecated. "
+    "Please use 'import mindhf; from transformers import xxx' instead.",
     DeprecationWarning,
     stacklevel=2
 )

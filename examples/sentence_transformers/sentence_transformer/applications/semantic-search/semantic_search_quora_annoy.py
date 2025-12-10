@@ -30,7 +30,7 @@ import csv
 import os
 import pickle
 import time
-import mindnlp
+import mindhf
 
 import torch
 from annoy import AnnoyIndex

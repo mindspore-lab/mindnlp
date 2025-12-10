@@ -2,7 +2,7 @@ import os
 import numpy as np
 from PIL import Image
 import mindtorch
-import mindnlp
+import mindhf
 from transformers import AutoProcessor
 from qwen_vl_utils import process_vision_info  # 请确保该模块在你的环境可用
 from transformers import AutoModel

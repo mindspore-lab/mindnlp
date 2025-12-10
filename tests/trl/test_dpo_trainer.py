@@ -21,7 +21,7 @@ import mindspore
 from datasets import Dataset, features, load_dataset
 from parameterized import parameterized
 from PIL import Image
-from mindnlp.transformers import (
+from mindhf.transformers import (
     AutoModelForCausalLM,
     AutoModelForSeq2SeqLM,
     AutoModelForVision2Seq,
@@ -29,8 +29,8 @@ from mindnlp.transformers import (
     AutoTokenizer,
 )
 
-from mindnlp.trl import DPOConfig, DPOTrainer, FDivergenceType
-from mindnlp.trl.trainer.dpo_trainer import _build_tokenized_answer, _truncate_tokens
+from mindhf.trl import DPOConfig, DPOTrainer, FDivergenceType
+from mindhf.trl.trainer.dpo_trainer import _build_tokenized_answer, _truncate_tokens
  
 
 def is_peft_available():
@@ -338,7 +338,7 @@ class DPOTrainerTester(unittest.TestCase):
 
     @require_peft
     def test_dpo_trainer_without_providing_ref_model_with_lora(self):
-        from mindnlp.peft import LoraConfig
+        from mindhf.peft import LoraConfig
 
         lora_config = LoraConfig(
             r=16,
@@ -538,7 +538,7 @@ class DPOTrainerTester(unittest.TestCase):
 
     @require_peft
     def test_dpo_lora_save(self):
-        from mindnlp.peft import LoraConfig, get_peft_model
+        from mindhf.peft import LoraConfig, get_peft_model
 
         lora_config = LoraConfig(
             r=16,
@@ -623,7 +623,7 @@ class DPOTrainerTester(unittest.TestCase):
 
     @require_peft
     def test_dpo_lora_tags(self):
-        from mindnlp.peft import LoraConfig
+        from mindhf.peft import LoraConfig
 
         model_id = "trl-internal-testing/tiny-random-LlamaForCausalLM"
         tokenizer = AutoTokenizer.from_pretrained(model_id)
@@ -704,7 +704,7 @@ class DPOTrainerTester(unittest.TestCase):
 
     @require_peft
     def test_dpo_lora_force_use_ref(self):
-        from mindnlp.peft import LoraConfig, get_peft_model
+        from mindhf.peft import LoraConfig, get_peft_model
 
         lora_config = LoraConfig(
             r=16,

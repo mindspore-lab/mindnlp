@@ -1,4 +1,4 @@
-from mindnlp.dataset import load_dataset
+from mindhf.dataset import load_dataset
 
 
 def get_squad_dataset(tokenizer, batch_size):

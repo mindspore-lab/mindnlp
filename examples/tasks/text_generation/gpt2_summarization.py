@@ -9,9 +9,9 @@ import json
 from tqdm import tqdm
 import random
 from datetime import datetime
-from mindnlp.core import nn, ops
-from mindnlp.core.nn import CrossEntropyLoss
-from mindnlp.transformers import GPT2Config, GPT2LMHeadModel, BertTokenizer
+from mindhf.core import nn, ops
+from mindhf.core.nn import CrossEntropyLoss
+from mindhf.transformers import GPT2Config, GPT2LMHeadModel, BertTokenizer
 from mindspore import Tensor, Parameter, ops
 from mindspore.train.serialization import save_checkpoint
 from os.path import join

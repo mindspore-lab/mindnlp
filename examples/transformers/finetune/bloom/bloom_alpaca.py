@@ -1,9 +1,9 @@
 from mindspore import ops
 
-from mindnlp.transformers import BloomTokenizerFast, BloomForCausalLM
-from mindnlp.engine import TrainingArguments, Trainer
-from mindnlp.dataset import load_dataset, BaseMapFunction
-from mindnlp.amp import autocast
+from mindhf.transformers import BloomTokenizerFast, BloomForCausalLM
+from mindhf.engine import TrainingArguments, Trainer
+from mindhf.dataset import load_dataset, BaseMapFunction
+from mindhf.amp import autocast
 
 class ModifiedTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):

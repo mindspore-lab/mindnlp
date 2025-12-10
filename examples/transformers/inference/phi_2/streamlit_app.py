@@ -1,5 +1,5 @@
 import streamlit as st
-from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
+from mindhf.transformers import AutoTokenizer, AutoModelForCausalLM
 
 # Load the Phi 2 model and tokenizer
 tokenizer = AutoTokenizer.from_pretrained(

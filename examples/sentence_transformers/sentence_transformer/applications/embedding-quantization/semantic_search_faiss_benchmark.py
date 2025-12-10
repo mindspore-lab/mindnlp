@@ -1,4 +1,4 @@
-import mindnlp
+import mindhf
 from datasets import load_dataset
 
 from sentence_transformers import SentenceTransformer

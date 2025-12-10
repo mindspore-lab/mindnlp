@@ -1,8 +1,8 @@
 import mindspore
-from mindnlp.transformers import LlamaTokenizer, LlamaForCausalLM, StaticCache
-from mindnlp.core import ops
-from mindnlp.configs import set_pyboost, ON_ORANGE_PI
-from mindnlp.quant.smooth_quant import quantize, w8x8
+from mindhf.transformers import LlamaTokenizer, LlamaForCausalLM, StaticCache
+from mindhf.core import ops
+from mindhf.configs import set_pyboost, ON_ORANGE_PI
+from mindhf.quant.smooth_quant import quantize, w8x8
 import time
 
 if ON_ORANGE_PI:

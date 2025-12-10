@@ -31,7 +31,7 @@ mk_new_dir() {
 
 write_checksum() {
     cd "$OUTPUT_PATH" || exit
-    PACKAGE_LIST=$(ls mindnlp-*.whl) || exit
+    PACKAGE_LIST=$(ls mindhf-*.whl) || exit
     for PACKAGE_NAME in $PACKAGE_LIST; do
         echo $PACKAGE_NAME
         sha256sum -b "$PACKAGE_NAME" >"$PACKAGE_NAME.sha256"
@@ -47,4 +47,4 @@ mv ${BASEPATH}/dist/*whl ${OUTPUT_PATH}
 write_checksum
 
 
-echo "------Successfully created mindnlp package------"
+echo "------Successfully created mindhf package------"

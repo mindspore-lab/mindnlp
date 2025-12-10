@@ -2,7 +2,7 @@ import os
 import numpy as np
 import mindspore as ms
 from mindspore import context, nn, Tensor, Parameter
-from mindnlp.transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
+from mindhf.transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
 from datasets import load_dataset as hf_load_dataset
 from mindspore.dataset import GeneratorDataset
 

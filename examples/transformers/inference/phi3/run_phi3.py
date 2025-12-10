@@ -1,5 +1,5 @@
 import mindspore
-from mindnlp.transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+from mindhf.transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
 mindspore.set_seed(0)
 

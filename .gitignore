@@ -141,7 +141,8 @@ download.txt
 cmp/
 *.zip
 
-# mindnlp cache
+# mindhf/mindnlp cache
+.mindhf/
 .mindnlp/
 
 # txt files
@@ -153,9 +154,9 @@ RuntimeProfiler*
 
 checkpoint-*/
 data*/
-!mindnlp/data/
-!mindtorch/utils/data/
-!mindnlp/dataset/
+!src/mindnlp/data/
+!src/mindtorch/utils/data/
+!src/mindnlp/dataset/
 !docs/api/data/
 !data2vec/
 *config.json

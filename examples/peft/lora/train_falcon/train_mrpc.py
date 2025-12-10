@@ -13,12 +13,12 @@ from mindspore.nn import AdamWeightDecay
 
 from mrpc_dataset import load_examples, get_dataloader_from_ds
 
-from mindnlp.transformers import (
+from mindhf.transformers import (
     AutoConfig,
     AutoTokenizer,
     AutoModelForSequenceClassification,
 )
-from mindnlp.peft import (
+from mindhf.peft import (
     get_peft_model,
     LoraConfig,
 )

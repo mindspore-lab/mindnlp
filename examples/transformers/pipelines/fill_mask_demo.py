@@ -1,4 +1,4 @@
-from mindnlp.transformers import pipeline
+from mindhf.transformers import pipeline
 
 unmasker = pipeline('fill-mask', model='distilbert-base-uncased')
 output=unmasker("Hello I'm a [MASK] model.")

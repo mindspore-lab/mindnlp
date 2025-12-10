@@ -1,7 +1,7 @@
 import scipy
 import mindspore
 from IPython.display import Audio
-from mindnlp.transformers.models.bark import BarkModel, BarkProcessor
+from mindhf.transformers.models.bark import BarkModel, BarkProcessor
 
 
 voice_preset = None

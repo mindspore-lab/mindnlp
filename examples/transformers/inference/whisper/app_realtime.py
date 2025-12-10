@@ -2,7 +2,7 @@ import gradio as gr
 import time
 import numpy as np
 import mindspore
-from mindnlp.transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+from mindhf.transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
 ms_dtype = mindspore.float16
 MODEL_NAME = "openai/whisper-large-v3-turbo"

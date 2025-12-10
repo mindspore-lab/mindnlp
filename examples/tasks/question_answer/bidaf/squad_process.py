@@ -23,7 +23,7 @@ import mindspore
 import mindspore.dataset as ds
 from mindspore.dataset import transforms, text
 
-from mindnlp.transforms import BasicTokenizer
+from mindhf.transforms import BasicTokenizer
 
 def SQuAD1_Process(dataset, char_vocab, word_vocab=None,\
                    tokenizer=BasicTokenizer(True),\

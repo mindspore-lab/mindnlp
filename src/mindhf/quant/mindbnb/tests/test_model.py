@@ -19,7 +19,7 @@ import mindspore
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from integrations.quantization_bnb_8bit import quant_8bit
-from mindnlp.transformers import AutoModelForCausalLM, AutoTokenizer
+from mindhf.transformers import AutoModelForCausalLM, AutoTokenizer
 
 mindspore.set_context(device_target="GPU")
 

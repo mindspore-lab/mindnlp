@@ -1,5 +1,5 @@
-from mindnlp.transformers import BigBirdPegasusForConditionalGeneration, AutoTokenizer
-from mindnlp.engine import Trainer, TrainingArguments
+from mindhf.transformers import BigBirdPegasusForConditionalGeneration, AutoTokenizer
+from mindhf.engine import Trainer, TrainingArguments
 from datasets import load_dataset, load_from_disk
 import mindspore as ms
 import os

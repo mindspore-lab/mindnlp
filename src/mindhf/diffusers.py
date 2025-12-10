@@ -1,8 +1,8 @@
 import warnings
 
 warnings.warn(
-    "The usage 'from mindnlp.diffusers import xx' is deprecated. "
-    "Please use 'import mindnlp; from diffusers import xxx' instead.",
+    "The usage 'from mindhf.diffusers import xx' is deprecated. "
+    "Please use 'import mindhf; from diffusers import xxx' instead.",
     DeprecationWarning,
     stacklevel=2
 )

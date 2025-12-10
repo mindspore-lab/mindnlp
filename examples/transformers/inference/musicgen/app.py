@@ -5,8 +5,8 @@ from typing import Optional
 import numpy as np
 import mindtorch
 from mindtorch import manual_seed
-from mindnlp.transformers import MusicgenForConditionalGeneration, MusicgenProcessor
-from mindnlp.transformers.generation.streamers import BaseStreamer
+from mindhf.transformers import MusicgenForConditionalGeneration, MusicgenProcessor
+from mindhf.transformers.generation.streamers import BaseStreamer
 
 import gradio as gr
 

@@ -3,8 +3,8 @@ Fine-Tune SantaCoder on code/text dataset
 """
 import argparse
 import os
-from mindnlp.peft import LoraConfig, get_peft_model
-from mindnlp.transformers import (
+from mindhf.peft import LoraConfig, get_peft_model
+from mindhf.transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
     AutoConfig,

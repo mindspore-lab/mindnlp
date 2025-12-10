@@ -1,6 +1,6 @@
 import mindspore
 from mindspore.communication import init
-from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
+from mindhf.transformers import AutoTokenizer, AutoModelForCausalLM
 
 model_id = "LLM-Research/Meta-Llama-3-8B-Instruct"
 

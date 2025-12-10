@@ -1,8 +1,8 @@
 import gradio as gr
 import mindspore
-from mindnlp.transformers import AutoModelForCausalLM, AutoTokenizer
-from mindnlp.transformers import StoppingCriteria, StoppingCriteriaList, TextIteratorStreamer
-from mindnlp.quant.smooth_quant import quantize, w8x8
+from mindhf.transformers import AutoModelForCausalLM, AutoTokenizer
+from mindhf.transformers import StoppingCriteria, StoppingCriteriaList, TextIteratorStreamer
+from mindhf.quant.smooth_quant import quantize, w8x8
 from threading import Thread
 
 # Loading the tokenizer and model from Hugging Face's model hub.

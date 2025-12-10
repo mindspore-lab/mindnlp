@@ -22,11 +22,11 @@ import os
 if os.environ.get('HF_ENDPOINT', None) is None:
     os.environ["HF_ENDPOINT"] = 'https://hf-mirror.com'
 
-# set mindnlp.core to torch
+# set mindhf.core to torch
 import mindtorch
 
 # Patch safetensors, transformers and diffusers if they are installed
-# This will automatically patch when import mindnlp
+# This will automatically patch when import mindhf
 from .patch import apply_all_patches
 from .patch.safetensors import setup_safetensors_module
 from .patch.transformers import setup_transformers_module

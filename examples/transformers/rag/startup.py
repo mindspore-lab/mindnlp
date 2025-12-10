@@ -21,7 +21,7 @@ from langchain.text_splitter import CharacterTextSplitter
 import streamlit as st
 
 import mindspore
-from mindnlp.transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from mindhf.transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
 from embedding import EmbeddingsFunAdapter
 from text import TextLoader

@@ -1,8 +1,8 @@
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 import mindspore
-import mindnlp
-from mindnlp import core
+import mindhf
+from mindhf import core
 from transformers import AutoConfig, AutoModelForCausalLM
 from janus.models import MultiModalityCausalLM, VLChatProcessor
 from PIL import Image

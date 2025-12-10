@@ -12,7 +12,7 @@ from mindspore.dataset import Cifar10Dataset, GeneratorDataset
 from mindspore.dataset.vision import Resize, ToTensor, Normalize
 from mindspore.dataset.transforms import TypeCast
 import mindspore.common.dtype as mstype
-from mindnlp.transformers import CLIPImageProcessor, AltCLIPVisionModel, AltCLIPVisionConfig
+from mindhf.transformers import CLIPImageProcessor, AltCLIPVisionModel, AltCLIPVisionConfig
 from sklearn.metrics import accuracy_score, f1_score
 
 context.set_context(mode=context.PYNATIVE_MODE,

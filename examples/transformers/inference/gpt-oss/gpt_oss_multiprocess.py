@@ -1,5 +1,5 @@
 from mindtorch import distributed as dist
-import mindnlp
+import mindhf
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 dist.init_process_group('hccl')

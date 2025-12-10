@@ -4,8 +4,8 @@ import random
 import mindspore as ms
 from mindspore import nn, ops, Tensor, set_seed
 from mindspore.dataset import GeneratorDataset
-from mindnlp.transformers import AutoModelForSeq2SeqLM, BartphoTokenizer
-from mindnlp.engine import Trainer, TrainingArguments, TrainerCallback
+from mindhf.transformers import AutoModelForSeq2SeqLM, BartphoTokenizer
+from mindhf.engine import Trainer, TrainingArguments, TrainerCallback
 from datasets import load_dataset
 
 import evaluate

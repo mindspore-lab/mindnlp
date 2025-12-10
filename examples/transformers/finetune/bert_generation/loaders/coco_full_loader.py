@@ -7,8 +7,8 @@ from mindformers import CLIPProcessor
 from mindspore.dataset.vision import Inter
 from PIL import Image
 from tqdm import tqdm
-from mindnlp.transformers import CLIPModel
-from mindnlp.transformers import BertGenerationTokenizer
+from mindhf.transformers import CLIPModel
+from mindhf.transformers import BertGenerationTokenizer
 import copy
 from pycocotools.coco import COCO
 import urllib.request

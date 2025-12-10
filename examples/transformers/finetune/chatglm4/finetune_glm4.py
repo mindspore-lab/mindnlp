@@ -9,9 +9,9 @@ from mindspore.train import Model, LossMonitor, TimeMonitor, Callback
 from mindspore.train.callback import CheckpointConfig, ModelCheckpoint
 from mindspore.nn import AdamWeightDecay
 from mindspore.dataset import GeneratorDataset
-from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
+from mindhf.transformers import AutoTokenizer, AutoModelForCausalLM
 from mindspore import context
-from mindnlp.core import no_grad
+from mindhf.core import no_grad
 
 # 设置上下文，使用Ascend设备
 context.set_context(device_target="Ascend", device_id=0)

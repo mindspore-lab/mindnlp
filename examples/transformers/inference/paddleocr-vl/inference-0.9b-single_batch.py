@@ -1,5 +1,5 @@
 import mindspore
-import mindnlp
+import mindhf
 from transformers import AutoModel, AutoProcessor, AutoTokenizer
 from transformers.image_utils import load_image
 

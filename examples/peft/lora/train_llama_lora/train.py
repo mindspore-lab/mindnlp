@@ -10,9 +10,9 @@ from typing import List
 from tqdm import tqdm 
 from mindspore import nn
 from mindspore.nn import AdamWeightDecay
-from mindnlp.transformers import LlamaForCausalLM, LlamaConfig, LlamaForSequenceClassification, LlamaPreTrainedModel
-from mindnlp.transformers import LlamaTokenizer
-from mindnlp.peft import (
+from mindhf.transformers import LlamaForCausalLM, LlamaConfig, LlamaForSequenceClassification, LlamaPreTrainedModel
+from mindhf.transformers import LlamaTokenizer
+from mindhf.peft import (
     get_peft_config,
     get_peft_model,
     LoraConfig,

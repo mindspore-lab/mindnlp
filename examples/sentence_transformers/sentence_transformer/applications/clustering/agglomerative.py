@@ -3,7 +3,7 @@ This is a simple application for sentence embeddings: clustering
 
 Sentences are mapped to sentence embeddings and then agglomerative clustering with a threshold is applied.
 """
-import mindnlp
+import mindhf
 from sklearn.cluster import AgglomerativeClustering
 
 from sentence_transformers import SentenceTransformer

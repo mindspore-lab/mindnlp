@@ -1,4 +1,4 @@
-from mindnlp import core
+from mindhf import core
 import gradio as gr
 from janus.janusflow.models import MultiModalityCausalLM, VLChatProcessor
 from PIL import Image

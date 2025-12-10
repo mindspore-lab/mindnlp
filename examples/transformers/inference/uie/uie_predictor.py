@@ -5,7 +5,7 @@ import numpy as np
 import math
 import argparse
 import mindspore
-from mindnlp.transformers import UIE, UIEM
+from mindhf.transformers import UIE, UIEM
 
 from tokenizer import ErnieMTokenizerFast
 from utils import logger, get_bool_ids_greater_than, get_span, get_id_and_prob, cut_chinese_sent, dbc2sbc
@@ -72,7 +72,7 @@ class UIEPredictor(object):
             self._tokenizer = ErnieMTokenizerFast.from_pretrained(
                 self._task_path)
         else:
-            from mindnlp.transformers import BertTokenizerFast
+            from mindhf.transformers import BertTokenizerFast
             self._tokenizer = BertTokenizerFast.from_pretrained(
                 self._task_path)
 

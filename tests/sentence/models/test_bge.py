@@ -1,6 +1,6 @@
 import mindspore
 from mindspore import Tensor
-from mindnlp.sentence import SentenceTransformer
+from mindhf.sentence import SentenceTransformer
 import numpy as np
 
 def test_bge_model():
