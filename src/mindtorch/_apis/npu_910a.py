@@ -1536,6 +1536,8 @@ def cdist(x1, x2, p):
     return legacy.cdist(x1, x2, float(p))
 
 def unstack_view(input, dim):
+    if input.shape[dim] == 0:
+        return tuple()
     if ENABLE_PYBOOST:
         return pyboost.unstack_ext_view_op(input, dim)
     return legacy.unstack(input, dim, input.shape[dim])
