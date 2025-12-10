@@ -1,5 +1,5 @@
 import mindspore
-from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
+from mindhf.transformers import AutoTokenizer, AutoModelForCausalLM
 import faulthandler
 
 faulthandler.enable()

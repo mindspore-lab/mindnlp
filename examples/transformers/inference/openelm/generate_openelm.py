@@ -11,7 +11,7 @@ import argparse
 from typing import Optional, Union
 import mindspore
 
-from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
+from mindhf.transformers import AutoTokenizer, AutoModelForCausalLM
 
 
 def generate(

@@ -1,6 +1,6 @@
 import os
 import PIL.Image
-import mindnlp
+import mindhf
 import torch
 import numpy as np
 from transformers import AutoModelForCausalLM, AutoConfig

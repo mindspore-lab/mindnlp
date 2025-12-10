@@ -24,9 +24,9 @@ from mindspore import nn, ops, Parameter, Tensor
 from mindspore.common.initializer import One, Zero
 from mindspore.ops._tracefunc import trace
 from mindspore.ops._primitive_cache import _get_cache_prim
-from mindnlp.parallel.tensor_parallel.utils import get_group_size
+from mindhf.parallel.tensor_parallel.utils import get_group_size
 
-from mindnlp.parallel.tensor_parallel.layers import (
+from mindhf.parallel.tensor_parallel.layers import (
     ParallelEmbedding,
     RowParallelLinear,
     ColumnParallelLinear,

@@ -1,7 +1,7 @@
 import math
 from mindspore import nn, ops
 from mindspore.common.initializer import initializer, HeUniform, Uniform, _calculate_fan_in_and_fan_out
-from mindnlp.models import BertModel, BertLMPredictionHead
+from mindhf.models import BertModel, BertLMPredictionHead
 
 class BertOnlyMLMHead(nn.Module):
     def __init__(self, config):

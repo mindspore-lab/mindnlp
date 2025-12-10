@@ -1,7 +1,7 @@
 import gradio as gr
 import mindspore
-from mindnlp.transformers import AutoModelForCausalLM, AutoTokenizer
-from mindnlp.transformers import TextIteratorStreamer
+from mindhf.transformers import AutoModelForCausalLM, AutoTokenizer
+from mindhf.transformers import TextIteratorStreamer
 from threading import Thread
 
 # Loading the tokenizer and model from Hugging Face's model hub.

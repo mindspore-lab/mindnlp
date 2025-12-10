@@ -1,4 +1,4 @@
-from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
+from mindhf.transformers import AutoTokenizer, AutoModelForCausalLM
 
 tokenizer = AutoTokenizer.from_pretrained("sunzeyeah/pangu-350M-sft")
 model = AutoModelForCausalLM.from_pretrained("sunzeyeah/pangu-350M-sft")

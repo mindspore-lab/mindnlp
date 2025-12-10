@@ -1,6 +1,6 @@
 import mindspore
-from mindnlp.core import no_grad
-from mindnlp.transformers import AutoModelForCausalLM, AutoTokenizer
+from mindhf.core import no_grad
+from mindhf.transformers import AutoModelForCausalLM, AutoTokenizer
 from mindspore._c_expression import _framework_profiler_step_start
 from mindspore._c_expression import _framework_profiler_step_end
 

@@ -1,6 +1,6 @@
 import mindspore
-from mindnlp.transformers import LlamaTokenizer, LlamaForCausalLM, StaticCache
-from mindnlp.core import ops
+from mindhf.transformers import LlamaTokenizer, LlamaForCausalLM, StaticCache
+from mindhf.core import ops
 import time
 
 prompts = [

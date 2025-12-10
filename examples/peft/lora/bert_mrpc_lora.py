@@ -11,16 +11,16 @@ from mindspore import nn
 from mindspore.nn import AdamWeightDecay
 from mindspore.dataset import RandomSampler, DistributedSampler, NumpySlicesDataset, SequentialSampler
 
-from mindnlp.models.mobilebert.mobilebert import MobileBertForSequenceClassification
-from mindnlp.models.mobilebert.mobilebert_config import MobileBertConfig
-from mindnlp.transforms.tokenizers.bert_tokenizer import BertTokenizer
-from mindnlp.models import BertModel, BertConfig, BertForSequenceClassification
+from mindhf.models.mobilebert.mobilebert import MobileBertForSequenceClassification
+from mindhf.models.mobilebert.mobilebert_config import MobileBertConfig
+from mindhf.transforms.tokenizers.bert_tokenizer import BertTokenizer
+from mindhf.models import BertModel, BertConfig, BertForSequenceClassification
 
-from mindnlp.transforms import RobertaTokenizer
-from mindnlp.models import RobertaConfig, RobertaForSequenceClassification
-from mindnlp import load_dataset, process
-from mindnlp.dataset import MRPC
-from mindnlp.peft import (
+from mindhf.transforms import RobertaTokenizer
+from mindhf.models import RobertaConfig, RobertaForSequenceClassification
+from mindhf import load_dataset, process
+from mindhf.dataset import MRPC
+from mindhf.peft import (
     get_peft_config,
     get_peft_model,
     LoraConfig,

@@ -21,12 +21,12 @@ from mindspore import nn, Tensor
 from mindspore.common import dtype as mstype
 from mindspore.common.initializer import XavierUniform
 from mindspore.dataset.text.utils import Vocab
-from mindnlp.engine.trainer import Trainer
-from mindnlp.metrics import Accuracy
-from mindnlp.modules.embeddings import Glove
-from mindnlp import load_dataset, process
+from mindhf.engine.trainer import Trainer
+from mindhf.metrics import Accuracy
+from mindhf.modules.embeddings import Glove
+from mindhf import load_dataset, process
 
-from mindnlp.transforms import BasicTokenizer
+from mindhf.transforms import BasicTokenizer
 
 
 class FasttextModel(nn.Module):

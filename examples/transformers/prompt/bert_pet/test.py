@@ -3,7 +3,7 @@ import os
 
 import mindspore
 from mindspore import ops
-from mindnlp.models import BertModel, BertConfig
+from mindhf.models import BertModel, BertConfig
 import numpy as np
 
 def from_dict(json_object):

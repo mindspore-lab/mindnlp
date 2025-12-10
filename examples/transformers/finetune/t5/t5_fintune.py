@@ -23,7 +23,7 @@ from mindspore.dataset import GeneratorDataset, Dataset
 from tqdm import tqdm
 
 sys.path.append("..")
-from mindnlp.transformers import (
+from mindhf.transformers import (
     T5ForConditionalGeneration,
     T5Tokenizer
 )

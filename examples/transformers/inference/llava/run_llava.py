@@ -1,7 +1,7 @@
 from PIL import Image
 import requests
 import mindspore
-from mindnlp.transformers import AutoProcessor, LlavaForConditionalGeneration
+from mindhf.transformers import AutoProcessor, LlavaForConditionalGeneration
 
 model = LlavaForConditionalGeneration.from_pretrained("AI-Research/llava-1.5-7b-hf", mirror='modelers', ms_dtype=mindspore.float16)
 processor = AutoProcessor.from_pretrained("AI-Research/llava-1.5-7b-hf", mirror='modelers')

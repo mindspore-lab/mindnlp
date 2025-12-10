@@ -1,5 +1,5 @@
-from mindnlp.transformers import GenerationConfig
-from mindnlp.transformers import Pipeline, pipeline
+from mindhf.transformers import GenerationConfig
+from mindhf.transformers import Pipeline, pipeline
 
 class GeneratorBase:
     def generate(self, query: str, parameters: dict) -> str:

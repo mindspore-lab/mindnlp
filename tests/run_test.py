@@ -1,10 +1,16 @@
 import os
 import sys
 
+# Add src directory to Python path to allow importing packages
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+src_path = os.path.join(project_root, 'src')
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
+
 import pytest
 import mindspore
-import mindnlp
-from mindnlp import transformers
+import mindhf
+from mindhf import transformers
 
 mindspore.set_context(pynative_synchronize=True)
 mindspore.runtime.launch_blocking()

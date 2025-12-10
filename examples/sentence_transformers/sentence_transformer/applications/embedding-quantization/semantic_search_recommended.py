@@ -10,7 +10,7 @@ import time
 
 import faiss
 import numpy as np
-import mindnlp
+import mindhf
 from datasets import load_dataset
 from usearch.index import Index
 

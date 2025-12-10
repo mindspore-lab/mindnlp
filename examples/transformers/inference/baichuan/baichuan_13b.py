@@ -1,6 +1,6 @@
 import mindspore as ms
-from mindnlp.transformers import BaiChuanForCausalLM, BaiChuanTokenizer
-from mindnlp.transformers.generation.utils import GenerationConfig
+from mindhf.transformers import BaiChuanForCausalLM, BaiChuanTokenizer
+from mindhf.transformers.generation.utils import GenerationConfig
 
 tokenizer = BaiChuanTokenizer.from_pretrained("baichuan-inc/Baichuan-13B-Chat")
 model = BaiChuanForCausalLM.from_pretrained("baichuan-inc/Baichuan-13B-Chat",

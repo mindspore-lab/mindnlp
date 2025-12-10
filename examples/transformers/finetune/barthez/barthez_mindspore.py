@@ -7,8 +7,8 @@ import mindspore as ms
 from mindspore import nn, ops, Tensor, context
 from mindspore.dataset import GeneratorDataset
 import pandas as pd
-from mindnlp.transformers import AutoTokenizer, AutoModelForSequenceClassification
-from mindnlp.engine import Trainer, TrainingArguments
+from mindhf.transformers import AutoTokenizer, AutoModelForSequenceClassification
+from mindhf.engine import Trainer, TrainingArguments
 from datasets import load_dataset
 from sklearn.metrics import accuracy_score, f1_score, precision_recall_fscore_support
 

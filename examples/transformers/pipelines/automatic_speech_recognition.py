@@ -1,5 +1,5 @@
 import mindspore
-from mindnlp.transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+from mindhf.transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 from datasets import load_dataset
 
 

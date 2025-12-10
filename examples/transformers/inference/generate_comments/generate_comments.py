@@ -40,7 +40,7 @@ import os
 from tqdm import tqdm
 import argparse
 import astroid
-from mindnlp.transformers import pipeline
+from mindhf.transformers import pipeline
 
 ARGS = None
 

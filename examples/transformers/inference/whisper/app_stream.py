@@ -6,7 +6,7 @@ import gradio as gr
 import numpy as np
 import mindspore
 from mindspore.dataset.audio import Resample
-from mindnlp.transformers import pipeline, AutoProcessor
+from mindhf.transformers import pipeline, AutoProcessor
 from silero_vad_mindspore import load
 
 MODEL_NAME = "openai/whisper-large-v3"

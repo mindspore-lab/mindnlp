@@ -1,5 +1,5 @@
 from mindspore import ops
-from mindnlp.transformers import AutoModel, AutoTokenizer, AutoModelForSequenceClassification
+from mindhf.transformers import AutoModel, AutoTokenizer, AutoModelForSequenceClassification
 
 hf_token = 'your_hf_token'
 

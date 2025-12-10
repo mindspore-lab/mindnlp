@@ -1,6 +1,6 @@
 from mindtorch import nn
 
-from mindnlp.transformers import PreTrainedModel
+from mindhf.transformers import PreTrainedModel
 
 from .custom_configuration import CustomConfig, NoSuperInitConfig
 

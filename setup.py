@@ -28,11 +28,6 @@ from setuptools.command.build_py import build_py
 from setuptools.command.install import install
 
 def _create_namespace_links():
-    # 获取目标路径 (site-packages/mindnlp/transformers)
-    install_lib = sysconfig.get_path("purelib")  # 兼容虚拟环境
-    target_dir = os.path.join(install_lib, "mindnlp", "transformers")
-
-    print('target_dir', target_dir)
     # 获取源路径 (site-packages/transformers)
     try:
         import transformers
@@ -41,22 +36,50 @@ def _create_namespace_links():
         # 如果 transformers 未安装则跳过创建链接
         # transformers 现在作为可选依赖，需要通过 extras 安装
         print("transformers not installed, skipping namespace link creation. "
-              "Install with 'pip install mindnlp[transformers]' to enable this feature.")
+              "Install with 'pip install mindhf[transformers]' to enable this feature.")
         return
 
+    install_lib = sysconfig.get_path("purelib")  # 兼容虚拟环境
+    
+    # 创建 mindhf/transformers 链接
+    target_dir_hf = os.path.join(install_lib, "mindhf", "transformers")
+    print('Creating link for mindhf/transformers:', target_dir_hf)
+    
     # 清理旧链接
-    if os.path.exists(target_dir):
-        if os.path.islink(target_dir) or sys.platform == "win32":
-            os.remove(target_dir)
+    if os.path.exists(target_dir_hf):
+        if os.path.islink(target_dir_hf) or sys.platform == "win32":
+            os.remove(target_dir_hf)
         else:
-            shutil.rmtree(target_dir)
+            shutil.rmtree(target_dir_hf)
 
     # 创建符号链接
     if sys.platform == "win32":
         # Windows 需管理员权限或开发者模式
-        subprocess.check_call(f'mklink /J "{target_dir}" "{source_path}"', shell=True)
+        subprocess.check_call(f'mklink /J "{target_dir_hf}" "{source_path}"', shell=True)
     else:
-        os.symlink(source_path, target_dir, target_is_directory=True)
+        os.symlink(source_path, target_dir_hf, target_is_directory=True)
+    
+    # 创建 mindnlp/transformers 链接（向后兼容）
+    target_dir_nlp = os.path.join(install_lib, "mindnlp", "transformers")
+    print('Creating link for mindnlp/transformers:', target_dir_nlp)
+    
+    # 确保 mindnlp 目录存在
+    mindnlp_dir = os.path.join(install_lib, "mindnlp")
+    if not os.path.exists(mindnlp_dir):
+        os.makedirs(mindnlp_dir, exist_ok=True)
+    
+    # 清理旧链接
+    if os.path.exists(target_dir_nlp):
+        if os.path.islink(target_dir_nlp) or sys.platform == "win32":
+            os.remove(target_dir_nlp)
+        else:
+            shutil.rmtree(target_dir_nlp)
+
+    # 创建符号链接
+    if sys.platform == "win32":
+        subprocess.check_call(f'mklink /J "{target_dir_nlp}" "{source_path}"', shell=True)
+    else:
+        os.symlink(source_path, target_dir_nlp, target_is_directory=True)
 
 class CustomInstall(install):
     def run(self):
@@ -76,6 +99,8 @@ def clean():
         func(path)
     if os.path.exists(os.path.join(cur_dir, 'build')):
         shutil.rmtree(os.path.join(cur_dir, 'build'), onerror=readonly_handler)
+    if os.path.exists(os.path.join(cur_dir, 'mindhf.egg-info')):
+        shutil.rmtree(os.path.join(cur_dir, 'mindhf.egg-info'), onerror=readonly_handler)
     if os.path.exists(os.path.join(cur_dir, 'mindnlp.egg-info')):
         shutil.rmtree(os.path.join(cur_dir, 'mindnlp.egg-info'), onerror=readonly_handler)
 
@@ -125,20 +150,28 @@ class EggInfo(egg_info):
     """Egg info."""
     def run(self):
         super().run()
+        egg_info_dir = os.path.join(cur_dir, 'mindhf.egg-info')
+        if os.path.exists(egg_info_dir):
+            update_permissions(egg_info_dir)
         egg_info_dir = os.path.join(cur_dir, 'mindnlp.egg-info')
-        update_permissions(egg_info_dir)
+        if os.path.exists(egg_info_dir):
+            update_permissions(egg_info_dir)
 
 
 class BuildPy(build_py):
     """BuildPy."""
     def run(self):
         super().run()
-        mindarmour_dir = os.path.join(pkg_dir, 'lib', 'mindnlp')
-        update_permissions(mindarmour_dir)
+        mindhf_dir = os.path.join(pkg_dir, 'lib', 'mindhf')
+        if os.path.exists(mindhf_dir):
+            update_permissions(mindhf_dir)
+        mindnlp_dir = os.path.join(pkg_dir, 'lib', 'mindnlp')
+        if os.path.exists(mindnlp_dir):
+            update_permissions(mindnlp_dir)
 
 
 setup(
-    name="mindnlp",
+    name="mindhf",
     version=version,
     author="MindSpore Team",
     url="https://github.com/mindlab-ai/mindnlp/tree/master/",
@@ -148,16 +181,20 @@ setup(
     },
     description=get_description(),
     license='Apache 2.0',
-    packages=find_packages(include=['mindnlp', 'mindtorch']),
+    packages=find_packages(where='src', include=['mindhf', 'mindnlp', 'mindtorch', 'torch4ms']),
     include_package_data=True,
     package_dir={
-        "mindnlp": "mindnlp",
-        "mindtorch": "mindtorch",
+        "mindhf": "src/mindhf",
+        "mindnlp": "src/mindnlp",
+        "mindtorch": "src/mindtorch",
+        "torch4ms": "src/torch4ms",
     },
     package_data={
-        'mindnlp': ['*.py', '*/*.py', '*/*/*.py', '*/*/*/*.py', '*/*/*/*/*.py', '*/*/*/*/*/*.py',
+        'mindhf': ['*.py', '*/*.py', '*/*/*.py', '*/*/*/*.py', '*/*/*/*/*.py', '*/*/*/*/*/*.py',
                     '*.cu', '*/*.cu', '*/*/*.cu', '*/*/*/*.cu', '*/*/*/*/*.cu'],
-        'mindtorch': ['*.py', '*/*.py', '*/*/*.py', '*/*/*/*.py', '*/*/*/*/*.py', '*/*/*/*/*/*.py']
+        'mindnlp': ['*.py', '*/*.py', '*/*/*.py', '*/*/*/*.py', '*/*/*/*/*.py', '*/*/*/*/*/*.py'],
+        'mindtorch': ['*.py', '*/*.py', '*/*/*.py', '*/*/*/*.py', '*/*/*/*/*.py', '*/*/*/*/*/*.py'],
+        'torch4ms': ['*.py', '*/*.py', '*/*/*.py', '*/*/*/*.py', '*/*/*/*/*.py', '*/*/*/*/*/*.py']
     },
     cmdclass={
         'egg_info': EggInfo,
@@ -207,4 +244,4 @@ setup(
         'License :: OSI Approved :: Apache Software License'
     ]
 )
-print(find_packages())
+print(find_packages(where='src'))

@@ -1,5 +1,5 @@
 import mindtorch
-import mindnlp
+import mindhf
 from transformers import AutoProcessor
 from transformers import AutoModel
 from PIL import Image

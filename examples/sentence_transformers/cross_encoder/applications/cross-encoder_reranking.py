@@ -10,7 +10,7 @@ Then, we re-rank the hits from the Bi-Encoder (retriever) using a Cross-Encoder 
 import os
 import pickle
 import time
-import mindnlp
+import mindhf
 
 from datasets import load_dataset
 from sentence_transformers import CrossEncoder, SentenceTransformer, util
