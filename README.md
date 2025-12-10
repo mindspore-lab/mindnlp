@@ -1,7 +1,7 @@
-# <center> MindNLP
+# <center> MindHF
 
 <p align="center">
-    <a href="https://mindnlp.cqu.ai/en/latest/">
+    <a href="https://mindhf.cqu.ai/en/latest/">
         <img alt="docs" src="https://img.shields.io/badge/docs-latest-blue">
     </a>
     <a href="https://github.com/mindspore-lab/mindnlp/blob/master/LICENSE">
@@ -18,11 +18,15 @@
     </a>
 </p>
 
+**MindHF** stands for **MindSpore + HuggingFace**, representing seamless compatibility with the HuggingFace ecosystem. The name also embodies **Harmonious & Fluid**, symbolizing our commitment to balancing compatibility with high performance. MindHF enables you to leverage the best of both worlds: the rich HuggingFace model ecosystem and MindSpore's powerful acceleration capabilities.
+
+> **Note**: MindHF (formerly MindNLP) is the new name for this project. The `mindnlp` package name is still available for backward compatibility, but we recommend using `mindhf` going forward.
+
 ## Table of Contents
 
-- [ MindNLP](#-mindnlp)
+- [ MindHF](#-mindhf)
   - [Table of Contents](#table-of-contents)
-  - [News 📢](#news-)
+  - [Features ✨](#features-)
   - [Installation](#installation)
       - [Install from Pypi](#install-from-pypi)
       - [Daily build](#daily-build)
@@ -37,98 +41,116 @@
   - [Acknowledgement](#acknowledgement)
   - [Citation](#citation)
 
-## News 📢
+## Features ✨
 
-* ⚡ **MindNLP Core support Pytorch compatible:** To meet ecosystem compatibility requirements, we provide the `mindnlp.core` module to support compatibility with PyTorch interfaces. This module is built upon MindSpore's foundational APIs and operators, enabling model development using syntax similar to PyTorch. It also supports taking over torch interfaces through a Proxy, allowing the use of MindSpore for acceleration on Ascend hardware without the need for code modifications. The specific usage is as follows:
+### 1. 🤗 Full HuggingFace Compatibility
 
-    ```python
-    import mindnlp # import mindnlp lib will enable proxy automaticlly
-    import torch
-    from torch import nn
+MindHF provides seamless compatibility with the HuggingFace ecosystem, enabling you to run any Transformers/Diffusers models on MindSpore across all hardware platforms (GPU/Ascend/CPU) without code modifications.
 
-    # all torch.xx apis will be mapped to mindnlp.core.xx
-    net = nn.Linear(10, 5)
-    x = torch.randn(3, 10)
-    out = net(x)
-    print(out.shape)
-    # core.Size([3, 5])
-    ```
+#### Direct HuggingFace Library Usage
 
-    It is particularly noteworthy that MindNLP supports several features not yet available in MindSpore, which enables better support for model serialization, heterogeneous computing, and other scenarios:
-    1. ​Dispatch Mechanism Support: Operators are dispatched to the appropriate backend based on Tensor.device.
-    2. ​Meta Device Support: Allows for shape inference without performing actual computations.
-    3. ​Numpy as CPU Backend: Supports using NumPy as a CPU backend for acceleration.
-    4. ​Tensor.to for Heterogeneous Data Movement: Facilitates the movement of data across different devices using `Tensor.to`.
+You can directly use native HuggingFace libraries (transformers, diffusers, etc.) with MindSpore acceleration:
 
-* 🔥 **Fully compatible with 🤗HuggingFace:** It enables seamless execution of any Transformers/Diffusers models on MindSpore across all hardware platforms (GPU/Ascend/CPU).
-    
-    You may still invoke models through MindNLP as shown in the example code below:
+**For HuggingFace Transformers:**
 
-    ```python
-    from mindnlp.transformers import AutoTokenizer, AutoModel
+```python
+import mindspore
+import mindhf
+from transformers import pipeline
 
-    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-    model = AutoModel.from_pretrained("bert-base-uncased")
+chat = [
+    {"role": "system", "content": "You are a sassy, wise-cracking robot as imagined by Hollywood circa 1986."},
+    {"role": "user", "content": "Hey, can you tell me any fun things to do in New York?"}
+]
 
-    inputs = tokenizer("Hello world!", return_tensors='ms')
-    outputs = model(**inputs)
-    ```
+pipeline = pipeline(task="text-generation", model="Qwen/Qwen3-8B", ms_dtype=mindspore.bfloat16, device_map="auto")
+response = pipeline(chat, max_new_tokens=512)
+print(response[0]["generated_text"][-1]["content"])
+```
 
-    You can also directly use the native HuggingFace library(like transformers, diffusers, etc.) via the following approach as demonstrated in the example code:
+**For HuggingFace Diffusers:**
 
-    - For huggingface transformers:
+```python
+import mindspore
+import mindhf
+from diffusers import DiffusionPipeline
 
-    ```python
-    import mindspore
-    import mindnlp
-    from transformers import pipeline
+pipeline = DiffusionPipeline.from_pretrained("stable-diffusion-v1-5/stable-diffusion-v1-5", ms_dtype=mindspore.float16, device_map='cuda')
+pipeline("An image of a squirrel in Picasso style").images[0]
+```
 
-    chat = [
-        {"role": "system", "content": "You are a sassy, wise-cracking robot as imagined by Hollywood circa 1986."},
-        {"role": "user", "content": "Hey, can you tell me any fun things to do in New York?"}
-    ]
+#### MindHF Native Interface
 
-    pipeline = pipeline(task="text-generation", model="Qwen/Qwen3-8B", ms_dtype=mindspore.bfloat16, device_map="auto")
-    response = pipeline(chat, max_new_tokens=512)
-    print(response[0]["generated_text"][-1]["content"])
-    ```
+You can also use MindHF's native interface for better integration:
 
-    - For huggingface diffuers:
+```python
+from mindhf.transformers import AutoTokenizer, AutoModel
 
-    ```python
-    import mindspore
-    import mindnlp
-    from diffusers import DiffusionPipeline
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+model = AutoModel.from_pretrained("bert-base-uncased")
 
-    pipeline = DiffusionPipeline.from_pretrained("stable-diffusion-v1-5/stable-diffusion-v1-5", ms_dtype=mindspore.float16, device_map='cuda')
-    pipeline("An image of a squirrel in Picasso style").images[0]
-    ```
+inputs = tokenizer("Hello world!", return_tensors='ms')
+outputs = model(**inputs)
+```
 
-Notice ⚠️: Due to differences in autograd and parallel execution mechanisms, any training or distributed execution code must utilize the interfaces provided by MindNLP.
+> **Note**: Due to differences in autograd and parallel execution mechanisms, any training or distributed execution code must utilize the interfaces provided by MindHF.
+
+### 2. ⚡ High-Performance Features Powered by MindSpore
+
+MindHF leverages MindSpore's powerful capabilities to deliver exceptional performance and unique features:
+
+#### PyTorch-Compatible API with MindSpore Acceleration
+
+MindHF provides `mindtorch` (accessible via `mindhf.core`) for PyTorch-compatible interfaces, enabling seamless migration from PyTorch code while benefiting from MindSpore's acceleration on Ascend hardware:
+
+```python
+import mindhf  # Automatically enables proxy for torch APIs
+import torch
+from torch import nn
+
+# All torch.xx APIs are automatically mapped to mindhf.core.xx (via mindtorch)
+net = nn.Linear(10, 5)
+x = torch.randn(3, 10)
+out = net(x)
+print(out.shape)  # core.Size([3, 5])
+```
+
+#### Advanced Features Beyond Standard MindSpore
+
+MindHF extends MindSpore with several advanced features for better model development:
+
+1. **Dispatch Mechanism**: Operators are automatically dispatched to the appropriate backend based on `Tensor.device`, enabling seamless multi-device execution.
+2. **Meta Device Support**: Perform shape inference and memory planning without actual computations, significantly speeding up model development and debugging.
+3. **NumPy as CPU Backend**: Use NumPy as a CPU backend for acceleration, providing better compatibility and performance on CPU devices.
+4. **Heterogeneous Data Movement**: Enhanced `Tensor.to()` for efficient data movement across different devices (CPU/GPU/Ascend).
+
+These features enable better support for model serialization, heterogeneous computing, and complex deployment scenarios.
 
 ## Installation
 
 #### Install from Pypi
 
-You can install the official version of MindNLP which is uploaded to pypi.
+You can install the official version of MindHF which is uploaded to pypi.
 
 ```bash
-pip install mindnlp
+pip install mindhf
 ```
+
+> **Note**: The `mindnlp` package name is still available for backward compatibility, but we recommend using `mindhf` going forward.
 
 #### Daily build
 
-You can download MindNLP daily wheel from [here](https://repo.mindspore.cn/mindspore-lab/mindnlp/newest/any/).
+You can download MindHF daily wheel from [here](https://repo.mindspore.cn/mindspore-lab/mindhf/newest/any/).
 
 #### Install from source
 
-To install MindNLP from source, please run:
+To install MindHF from source, please run:
 
 ```bash
-pip install git+https://github.com/mindspore-lab/mindnlp.git
+pip install git+https://github.com/mindspore-lab/mindhf.git
 # or
-git clone https://github.com/mindspore-lab/mindnlp.git
-cd mindnlp
+git clone https://github.com/mindspore-lab/mindhf.git
+cd mindhf
 bash scripts/build_and_reinstall.sh
 ```
 
@@ -141,25 +163,16 @@ bash scripts/build_and_reinstall.sh
 | 0.2.x           | >=2.1.0           | >=3.8, <=3.9             |
 | 0.3.x           | >=2.1.0, <=2.3.1  | >=3.8, <=3.9             |
 | 0.4.x           | >=2.2.x, <=2.5.0  | >=3.9, <=3.11            |
-| 0.5.0           | >=2.5.0, <=2.7.0  | >=3.10, <=3.11           |
+| 0.5.x           | >=2.5.0, <=2.7.0  | >=3.10, <=3.11           |
+
+| MindHF version | MindSpore version | Supported Python version |
+|-----------------|-------------------|--------------------------|
 | 0.6.x           | >=2.7.1.            | >=3.10, <=3.11           |
-
-## Introduction
-
-MindNLP is an open source NLP library based on MindSpore. It supports a platform for solving natural language processing tasks, containing many common approaches in NLP. It can help researchers and developers to construct and train models more conveniently and rapidly.
-
-The master branch works with **MindSpore master**.
-
-#### Major Features
-
-- **Comprehensive data processing**: Several classical NLP datasets are packaged into friendly module for easy use, such as Multi30k, SQuAD, CoNLL, etc.
-- **Friendly NLP model toolset**: MindNLP provides various configurable components. It is friendly to customize models using MindNLP.
-- **Easy-to-use engine**: MindNLP simplified the complicated training process in MindSpore. It supports Trainer and Evaluator interfaces to train and evaluate models easily.
 
 
 ## Supported models
 
-Since there are too many supported models, please check [here](https://mindnlp.cqu.ai/supported_models)
+Since there are too many supported models, please check [here](https://mindhf.cqu.ai/supported_models)
 
 <!-- ## Tutorials
 
@@ -178,7 +191,7 @@ The dynamic version is still under development, if you find any issue or have an
 
 ## MindSpore NLP SIG
 
-MindSpore NLP SIG (Natural Language Processing Special Interest Group) is the main development team of the MindNLP framework. It aims to collaborate with developers from both industry and academia who are interested in research, application development, and the practical implementation of natural language processing. Our goal is to create the best NLP framework based on the domestic framework MindSpore. Additionally, we regularly hold NLP technology sharing sessions and offline events. Interested developers can join our SIG group using the QR code below.
+MindSpore NLP SIG (Natural Language Processing Special Interest Group) is the main development team of the MindHF framework. It aims to collaborate with developers from both industry and academia who are interested in research, application development, and the practical implementation of natural language processing. Our goal is to create the best NLP framework based on the domestic framework MindSpore. Additionally, we regularly hold NLP technology sharing sessions and offline events. Interested developers can join our SIG group using the QR code below.
 
 <div align="center">
     <img src="./assets/qrcode_qq_group.jpg" width="250" />
@@ -197,10 +210,11 @@ and develop their own new semantic segmentation methods.
 If you find this project useful in your research, please consider citing:
 
 ```latex
-@misc{mindnlp2022,
-    title={{MindNLP}: Easy-to-use and high-performance NLP and LLM framework based on MindSpore},
-    author={MindNLP Contributors},
-    howpublished = {\url{https://github.com/mindlab-ai/mindnlp}},
-    year={2022}
+@misc{mindhf2022,
+    title={{MindHF}: Easy-to-use and high-performance NLP and LLM framework based on MindSpore},
+    author={MindHF Contributors},
+    howpublished = {\url{https://github.com/mindspore-lab/mindnlp}},
+    year={2022},
+    note={Formerly known as MindNLP}
 }
 ```
