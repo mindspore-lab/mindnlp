@@ -2899,6 +2899,96 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     return ms.Tensor.from_numpy(Y)
 
 
+def upsample_nearest2d(input, output_size, scale_factors):
+    """
+    Upsample input tensor using nearest neighbor interpolation.
+    
+    Args:
+        input: Input tensor
+        output_size: Target output size (H, W) or None
+        scale_factors: Scale factors for upsampling (h_scale, w_scale) or None
+    
+    Returns:
+        Upsampled tensor
+    """
+    if output_size is None:
+        # Calculate output size from scale factors
+        if scale_factors is None:
+            raise ValueError("Either output_size or scale_factors must be provided")
+        input_shape = input.shape
+        if isinstance(scale_factors, (list, tuple)):
+            h_scale = scale_factors[0]
+            w_scale = scale_factors[1] if len(scale_factors) > 1 else scale_factors[0]
+        else:
+            h_scale = w_scale = scale_factors
+        output_h = int(input_shape[2] * h_scale)
+        output_w = int(input_shape[3] * w_scale)
+        output_size = (output_h, output_w)
+    else:
+        if isinstance(output_size, (list, tuple)):
+            output_size = tuple(output_size)
+        else:
+            output_size = (output_size, output_size)
+    
+    # Use MindSpore's ResizeNearestNeighbor op
+    resize = _get_cache_prim(ops.ResizeNearestNeighbor)(output_size).set_device('CPU')
+    return resize(input)
+
+
+def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
+    """
+    Group Normalization over a mini-batch of inputs.
+    
+    Args:
+        input: Input tensor with shape (N, C, *)
+        num_groups: Number of groups to divide channels into
+        weight: Optional scale tensor of shape (C,)
+        bias: Optional shift tensor of shape (C,)
+        eps: Small value for numerical stability
+    
+    Returns:
+        Normalized tensor with same shape as input
+    """
+    input_np = input.asnumpy()
+    N, C = input_np.shape[0], input_np.shape[1]
+    
+    # Reshape input to (N, num_groups, -1) for group-wise normalization
+    if np.prod(input_np.shape) != 0:
+        inp_view = input_np.reshape((N, num_groups, -1))
+        # Compute mean and variance for each group
+        mean = np.mean(inp_view, axis=-1, keepdims=True)
+        var = np.var(inp_view, axis=-1, ddof=0, keepdims=True)
+        # Normalize
+        Y = (inp_view - mean) / np.sqrt(var + eps)
+        # Reshape back to original shape
+        Y = Y.reshape(input_np.shape)
+    else:
+        Y = input_np.copy()
+    
+    # Apply weight and bias if provided
+    if weight is not None:
+        weight_np = weight.asnumpy() if hasattr(weight, 'asnumpy') else weight
+        # Expand weight to match input dimensions
+        if len(Y.shape) > 2:
+            expand_dims = [0] + [idx + 2 for idx in range(input_np.ndim - 2)]
+            for dim in expand_dims:
+                weight_np = np.expand_dims(weight_np, dim)
+        Y = Y * weight_np
+    
+    if bias is not None:
+        bias_np = bias.asnumpy() if hasattr(bias, 'asnumpy') else bias
+        # Expand bias to match input dimensions
+        if len(Y.shape) > 2:
+            expand_dims = [0] + [idx + 2 for idx in range(input_np.ndim - 2)]
+            for dim in expand_dims:
+                bias_np = np.expand_dims(bias_np, dim)
+        Y = Y + bias_np
+    
+    if not isinstance(Y, np.ndarray):
+        Y = np.array(Y)
+    return ms.Tensor.from_numpy(Y)
+
+
 def split_with_size(tensor, split_size_or_sections, dim):
     out = np.array_split(tensor.asnumpy(), np.cumsum(split_size_or_sections[:-1]), dim)
     out = [ms.Tensor.from_numpy(o) for o in out]
