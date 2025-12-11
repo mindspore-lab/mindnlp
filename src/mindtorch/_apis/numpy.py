@@ -69,6 +69,20 @@ def arange(start, end, step, dtype):
     return ArangeFunction.apply(start, end, step, dtype)
 
 
+class LinspaceFunction(Function):
+    @staticmethod
+    def forward(ctx, start, end, steps, dtype):
+        result = ms.Tensor.from_numpy(np.linspace(start, end, steps, dtype=mindtorch.dtype2np[dtype]))
+        return result
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        return None, None, None, None
+
+def linspace(start, end, steps, dtype):
+    return LinspaceFunction.apply(start, end, steps, dtype)
+
+
 class DivFunction(Function):
     @staticmethod
     def forward(ctx, input, other):
@@ -2001,6 +2015,36 @@ def less_equal(input, other):
     return LessEqualFunction.apply(input, other)
 
 
+class TrilFunction(Function):
+    @staticmethod
+    def forward(ctx, input, diagonal=0):
+        input_np = input.numpy()
+        # Use numpy's tril function
+        out = np.tril(input_np, k=diagonal)
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
+        result = ms.Tensor.from_numpy(out)
+        ctx.save_for_backward(input)
+        ctx.diagonal = diagonal
+        return result
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, = ctx.saved_tensors
+        grad_input = None
+        if ctx.needs_input_grad[0]:
+            # tril backward: only pass gradient to lower triangular part
+            grad_output_np = grad_output.numpy()
+            grad_input_np = np.tril(grad_output_np, k=ctx.diagonal)
+            if not isinstance(grad_input_np, np.ndarray):
+                grad_input_np = np.array(grad_input_np)
+            grad_input = ms.Tensor.from_numpy(grad_input_np)
+        return grad_input, None
+
+def tril(input, diagonal=0):
+    return TrilFunction.apply(input, diagonal)
+
+
 def tril_ext(input, diagonal):
     out = np.tril(input.asnumpy(), diagonal)
     return ms.Tensor.from_numpy(out)
@@ -2551,6 +2595,96 @@ def upsample_bilinear2d(input, output_size, scale_factors, align_corners):
     return resize(input, output_size)
 
 
+def upsample_nearest2d(input, output_size, scale_factors):
+    """
+    Upsample input tensor using nearest neighbor interpolation.
+    
+    Args:
+        input: Input tensor
+        output_size: Target output size (H, W) or None
+        scale_factors: Scale factors for upsampling (h_scale, w_scale) or None
+    
+    Returns:
+        Upsampled tensor
+    """
+    if output_size is None:
+        # Calculate output size from scale factors
+        if scale_factors is None:
+            raise ValueError("Either output_size or scale_factors must be provided")
+        input_shape = input.shape
+        if isinstance(scale_factors, (list, tuple)):
+            h_scale = scale_factors[0]
+            w_scale = scale_factors[1] if len(scale_factors) > 1 else scale_factors[0]
+        else:
+            h_scale = w_scale = scale_factors
+        output_h = int(input_shape[2] * h_scale)
+        output_w = int(input_shape[3] * w_scale)
+        output_size = (output_h, output_w)
+    else:
+        if isinstance(output_size, (list, tuple)):
+            output_size = tuple(output_size)
+        else:
+            output_size = (output_size, output_size)
+    
+    # Use MindSpore's ResizeNearestNeighbor op
+    resize = _get_cache_prim(ops.ResizeNearestNeighbor)(output_size).set_device('CPU')
+    return resize(input)
+
+
+def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
+    """
+    Group Normalization over a mini-batch of inputs.
+    
+    Args:
+        input: Input tensor with shape (N, C, *)
+        num_groups: Number of groups to divide channels into
+        weight: Optional scale tensor of shape (C,)
+        bias: Optional shift tensor of shape (C,)
+        eps: Small value for numerical stability
+    
+    Returns:
+        Normalized tensor with same shape as input
+    """
+    input_np = input.asnumpy()
+    N, C = input_np.shape[0], input_np.shape[1]
+    
+    # Reshape input to (N, num_groups, -1) for group-wise normalization
+    if np.prod(input_np.shape) != 0:
+        inp_view = input_np.reshape((N, num_groups, -1))
+        # Compute mean and variance for each group
+        mean = np.mean(inp_view, axis=-1, keepdims=True)
+        var = np.var(inp_view, axis=-1, ddof=0, keepdims=True)
+        # Normalize
+        Y = (inp_view - mean) / np.sqrt(var + eps)
+        # Reshape back to original shape
+        Y = Y.reshape(input_np.shape)
+    else:
+        Y = input_np.copy()
+    
+    # Apply weight and bias if provided
+    if weight is not None:
+        weight_np = weight.asnumpy() if hasattr(weight, 'asnumpy') else weight
+        # Expand weight to match input dimensions
+        if len(Y.shape) > 2:
+            expand_dims = [0] + [idx + 2 for idx in range(input_np.ndim - 2)]
+            for dim in expand_dims:
+                weight_np = np.expand_dims(weight_np, dim)
+        Y = Y * weight_np
+    
+    if bias is not None:
+        bias_np = bias.asnumpy() if hasattr(bias, 'asnumpy') else bias
+        # Expand bias to match input dimensions
+        if len(Y.shape) > 2:
+            expand_dims = [0] + [idx + 2 for idx in range(input_np.ndim - 2)]
+            for dim in expand_dims:
+                bias_np = np.expand_dims(bias_np, dim)
+        Y = Y + bias_np
+    
+    if not isinstance(Y, np.ndarray):
+        Y = np.array(Y)
+    return ms.Tensor.from_numpy(Y)
+
+
 def split_with_size(tensor, split_size_or_sections, dim):
     out = np.array_split(tensor.asnumpy(), np.cumsum(split_size_or_sections[:-1]), dim)
     out = [ms.Tensor.from_numpy(o) for o in out]
@@ -2661,6 +2795,8 @@ class GeluFunction(Function):
             # Exact GELU: 0.5 * x * (1 + erf(x / sqrt(2)))
             M_SQRT1_2 = 1.0 / np.sqrt(2.0)
             out = 0.5 * input_np * (1 + scipy.special.erf(input_np * M_SQRT1_2))
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
         result = ms.Tensor.from_numpy(out)
         ctx.save_for_backward(input)
         ctx.approximate = approximate
@@ -2708,6 +2844,108 @@ class GeluFunction(Function):
 
 def gelu(input, approximate='none'):
     return GeluFunction.apply(input, approximate)
+
+
+class SiluFunction(Function):
+    @staticmethod
+    def forward(ctx, input):
+        input_np = input.asnumpy()
+        # SiLU(x) = x * sigmoid(x)
+        # Use numerically stable sigmoid computation
+        # For large positive x, sigmoid(x) ≈ 1, so SiLU(x) ≈ x
+        # For large negative x, sigmoid(x) ≈ 0, so SiLU(x) ≈ 0
+        # Use: sigmoid(x) = np.where(x >= 0, 1 / (1 + np.exp(-x)), np.exp(x) / (1 + np.exp(x)))
+        # But for very large x, we can use approximation
+        sigmoid_x = np.where(input_np >= 0, 
+                            1 / (1 + np.exp(-np.clip(input_np, -500, 500))),
+                            np.exp(np.clip(input_np, -500, 500)) / (1 + np.exp(np.clip(input_np, -500, 500))))
+        # For very large positive values (>= 20), sigmoid is effectively 1, so SiLU(x) = x
+        # For very large negative values (<= -20), sigmoid is effectively 0, so SiLU(x) = 0
+        # Use direct computation for these cases to avoid numerical errors
+        if isinstance(input_np, np.ndarray):
+            large_positive = input_np >= 20
+            large_negative = input_np <= -20
+            out = np.where(large_positive, input_np,
+                          np.where(large_negative, 0.0,
+                                  input_np * sigmoid_x))
+            sigmoid_x = np.where(large_positive, 1.0,
+                                np.where(large_negative, 0.0, sigmoid_x))
+        else:
+            # Scalar case
+            if input_np >= 20:
+                out = input_np
+                sigmoid_x = 1.0
+            elif input_np <= -20:
+                out = 0.0
+                sigmoid_x = 0.0
+            else:
+                out = input_np * sigmoid_x
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
+        result = ms.Tensor.from_numpy(out)
+        ctx.save_for_backward(input)
+        ctx.sigmoid_x = sigmoid_x
+        return result
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, = ctx.saved_tensors
+        grad_input = None
+        if ctx.needs_input_grad[0]:
+            input_np = input.asnumpy()
+            sigmoid_x_np = ctx.sigmoid_x
+            # SiLU'(x) = sigmoid(x) + x * sigmoid'(x)
+            # sigmoid'(x) = sigmoid(x) * (1 - sigmoid(x))
+            sigmoid_derivative = sigmoid_x_np * (1 - sigmoid_x_np)
+            grad_input = grad_output.asnumpy() * (sigmoid_x_np + input_np * sigmoid_derivative)
+            if not isinstance(grad_input, np.ndarray):
+                grad_input = np.array(grad_input)
+            grad_input = ms.Tensor.from_numpy(grad_input)
+        return grad_input
+
+def silu(input):
+    return SiluFunction.apply(input)
+
+
+def swish(input):
+    # Swish is an alias for SiLU
+    return SiluFunction.apply(input)
+
+
+class MishFunction(Function):
+    @staticmethod
+    def forward(ctx, input):
+        input_np = input.asnumpy()
+        # Mish(x) = x * tanh(softplus(x))
+        # softplus(x) = ln(1 + exp(x))
+        softplus_x = np.log(1 + np.exp(input_np))
+        tanh_softplus = np.tanh(softplus_x)
+        out = input_np * tanh_softplus
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
+        result = ms.Tensor.from_numpy(out)
+        ctx.save_for_backward(input)
+        return result
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, = ctx.saved_tensors
+        grad_input = None
+        if ctx.needs_input_grad[0]:
+            input_np = input.asnumpy()
+            # Mish'(x) = tanh(softplus(x)) + x * sech^2(softplus(x)) * sigmoid(x)
+            softplus_x = np.log(1 + np.exp(input_np))
+            tanh_softplus = np.tanh(softplus_x)
+            sigmoid_x = 1 / (1 + np.exp(-input_np))
+            sech_squared = 1 - tanh_softplus * tanh_softplus
+            grad_input = grad_output.asnumpy() * (tanh_softplus + input_np * sech_squared * sigmoid_x)
+            if not isinstance(grad_input, np.ndarray):
+                grad_input = np.array(grad_input)
+            grad_input = ms.Tensor.from_numpy(grad_input)
+        return grad_input
+
+def mish(input):
+    return MishFunction.apply(input)
 
 
 class NegFunction(Function):
@@ -2842,7 +3080,14 @@ class TransposeViewFunction(Function):
     @staticmethod
     def forward(ctx, input, dim0, dim1):
         # Swap dimensions dim0 and dim1
-        ranks = list(range(input.ndim))
+        # Handle negative dimensions
+        ndim = input.ndim
+        dim0 = dim0 if dim0 >= 0 else dim0 + ndim
+        dim1 = dim1 if dim1 >= 0 else dim1 + ndim
+        # Check bounds
+        if dim0 < 0 or dim0 >= ndim or dim1 < 0 or dim1 >= ndim:
+            raise IndexError(f"Dimension out of range: dim0={dim0}, dim1={dim1}, ndim={ndim}")
+        ranks = list(range(ndim))
         ranks[dim0], ranks[dim1] = ranks[dim1], ranks[dim0]
         out = np.transpose(input.asnumpy(), ranks)
         result = ms.Tensor.from_numpy(out)
