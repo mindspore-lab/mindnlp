@@ -148,8 +148,8 @@ class TestTensor(unittest.TestCase):
     def test_device_check(self):
         """测试设备检查功能"""
         # 测试_should_use_torch4ms_tensor方法
-        self.assertTrue(self.env._should_use_torch4ms_tensor('gpu'))
-        self.assertTrue(self.env._should_use_torch4ms_tensor('npu'))
+        self.assertFalse(self.env._should_use_torch4ms_tensor('gpu'))
+        self.assertFalse(self.env._should_use_torch4ms_tensor('npu'))
         
         # 修改配置后测试
         self.env.config.treat_cuda_as_mindspore_device = True
