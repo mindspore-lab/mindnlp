@@ -4,7 +4,8 @@ import mindtorch
 from transformers import AutoModel, AutoTokenizer
 # from mindspore._c_expression import _framework_profiler_step_start
 # from mindspore._c_expression import _framework_profiler_step_end
-
+import faulthandler
+faulthandler.enable()
 model_name = 'lvyufeng/DeepSeek-OCR'
 
 tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)

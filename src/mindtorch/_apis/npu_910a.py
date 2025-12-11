@@ -694,6 +694,8 @@ def cumsum(self, dim, dtype):
     return legacy.cum_sum(self, dim, False, False)
 
 def reduce_any(input, axis, keepdims):
+    if axis is None:
+        axis = ()
     if ENABLE_PYBOOST:
         return pyboost.reduce_any_impl(input, axis, keepdims)
     return legacy.reduce_any(input, axis, keepdims)

@@ -237,7 +237,7 @@ def _nllloss_nd(input, target, weight=None, ingore_index=-100, reduction='mean')
     class_dim = 0 if input_dim == 1 else 1
     n_classes = input.shape[class_dim]
     if weight is None:
-        weight = mindtorch.ones(n_classes, dtype=input.dtype, device=input._device)
+        weight = mindtorch.ones(n_classes, dtype=input.dtype, device=input.init)
     if input_dim < 1:
         raise ValueError(f"input dim should be less than 1, but got {input_dim}")
     if input_dim != 1 and input.shape[0] != target.shape[0]:
