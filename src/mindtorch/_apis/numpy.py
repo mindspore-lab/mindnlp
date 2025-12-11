@@ -102,11 +102,11 @@ class DivFunction(Function):
             if ctx.is_other_number:
                 other_val = ctx.saved_tensors[1] if len(ctx.saved_tensors) > 1 and ctx.saved_tensors[1] is not None else 1.0
                 grad_input = grad_output.asnumpy() / other_val
-            else:
-                grad_input = grad_output.asnumpy() / other.asnumpy()
-            if not isinstance(grad_input, np.ndarray):
-                grad_input = np.array(grad_input)
-            grad_input = ms.Tensor.from_numpy(grad_input)
+        else:
+            grad_input = grad_output.asnumpy() / other.asnumpy()
+        if not isinstance(grad_input, np.ndarray):
+            grad_input = np.array(grad_input)
+        grad_input = ms.Tensor.from_numpy(grad_input)
         
         if ctx.needs_input_grad[1] and not ctx.is_other_number and other is not None:
             if ctx.is_input_number:
@@ -287,6 +287,35 @@ class ClampScalarFunction(Function):
 
 def clamp_scalar(input, min, max):
     return ClampScalarFunction.apply(input, min, max)
+
+
+class ReluFunction(Function):
+    @staticmethod
+    def forward(ctx, input):
+        input_np = input.numpy()
+        out = np.maximum(0, input_np)
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
+        result = ms.Tensor.from_numpy(out)
+        ctx.save_for_backward(input)
+        return result
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, = ctx.saved_tensors
+        grad_input = None
+        if ctx.needs_input_grad[0]:
+            input_np = input.numpy()
+            grad_output_np = grad_output.numpy()
+            # ReLU backward: grad = grad_output if input > 0, else 0
+            grad_input_np = grad_output_np * (input_np > 0).astype(grad_output_np.dtype)
+            if not isinstance(grad_input_np, np.ndarray):
+                grad_input_np = np.array(grad_input_np)
+            grad_input = ms.Tensor.from_numpy(grad_input_np)
+        return grad_input
+
+def relu(input):
+    return ReluFunction.apply(input)
 
 
 class AddFunction(Function):
@@ -1474,7 +1503,11 @@ def inplace_fill_scalar(input, value):
     out = np.full_like(input.asnumpy(), value)
     # Directly modify tensor data
     input_np = input.asnumpy()
-    input_np[:] = out
+    # Handle 0-dimensional arrays (scalars)
+    if input_np.ndim == 0:
+        input_np[()] = out
+    else:
+        input_np[:] = out
     return input
 
 
@@ -1482,7 +1515,11 @@ def inplace_fill_tensor(input, value):
     out = np.full_like(input.asnumpy(), value)
     # Directly modify tensor data
     input_np = input.asnumpy()
-    input_np[:] = out
+    # Handle 0-dimensional arrays (scalars)
+    if input_np.ndim == 0:
+        input_np[()] = out
+    else:
+        input_np[:] = out
     return input
 
 
@@ -1490,7 +1527,11 @@ def inplace_normal(input, mean, std, generator_):
     out = np.random.normal(mean, std, input.shape).astype(mindtorch.dtype2np[input.dtype])
     # Directly modify tensor data
     input_np = input.asnumpy()
-    input_np[:] = out
+    # Handle 0-dimensional arrays (scalars)
+    if input_np.ndim == 0:
+        input_np[()] = out
+    else:
+        input_np[:] = out
     return input
 
 
@@ -1553,7 +1594,11 @@ def inplace_copy(input, other):
     # Directly modify tensor data using numpy
     input_np = input.asnumpy()
     other_np = other.asnumpy()
-    input_np[:] = other_np
+    # Handle 0-dimensional arrays (scalars)
+    if input_np.ndim == 0:
+        input_np[()] = other_np
+    else:
+        input_np[:] = other_np
     return input
 
 
@@ -1878,7 +1923,11 @@ def inplace_masked_fill(input, mask, value):
     mask_np = mask.asnumpy() if hasattr(mask, 'numpy') else mask
     out = np.where(mask_np, value, input_np)
     # Directly modify tensor data
-    input_np[:] = out
+    # Handle 0-dimensional arrays (scalars)
+    if input_np.ndim == 0:
+        input_np[()] = out
+    else:
+        input_np[:] = out
     return input
 
 
@@ -1967,6 +2016,31 @@ def embedding(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_fre
     return ms.Tensor.from_numpy(out)
 
 
+class RandFunction(Function):
+    @staticmethod
+    def forward(ctx, size, generator, dtype):
+        if dtype is None:
+            dtype = mindtorch.float32
+        # Handle empty size (0-dimensional tensor)
+        if size == [] or size == ():
+            result_np = np.random.random()
+        else:
+            # Generate random numbers in [0, 1) using numpy
+            result_np = np.random.random(size)
+        result_np = np.array(result_np).astype(mindtorch.dtype2np[dtype])
+        result = ms.Tensor.from_numpy(result_np)
+        # rand is not differentiable
+        return result
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        # rand is not differentiable
+        return None, None, None
+
+def rand(size, generator, dtype):
+    return RandFunction.apply(size, generator, dtype)
+
+
 def randn(size, generator, dtype):
     out = np.random.randn(*size).astype(mindtorch.dtype2np[dtype])
     return ms.Tensor.from_numpy(out)
@@ -1981,11 +2055,15 @@ def erfinv(input):
 
 def inplace_add_ext(input, other, alpha):
     if not isinstance(other, numbers.Number):
-        other = other.asnumpy()
-    out = input.asnumpy() + other * alpha
+        other = other.numpy()
+    out = input.numpy() + other * alpha
     # Directly modify tensor data
-    input_np = input.asnumpy()
-    input_np[:] = out
+    input_np = input.numpy()
+    # Handle 0-dimensional arrays (scalars)
+    if input_np.ndim == 0:
+        input_np[()] = out
+    else:
+        input_np[:] = out
     return input
 
 
@@ -2013,6 +2091,58 @@ class InplaceSubFunction(Function):
 
 def inplace_sub(input, other):
     return InplaceSubFunction.apply(input, other)
+
+
+class InplaceMulFunction(Function):
+    @staticmethod
+    def forward(ctx, input, other):
+        input_np = input.asnumpy()
+        if not isinstance(other, numbers.Number):
+            other_np = other.asnumpy()
+        else:
+            other_np = other
+        out_np = input_np * other_np
+        # Directly modify tensor data
+        # Handle 0-dimensional arrays (scalars)
+        if input_np.ndim == 0:
+            input_np[()] = out_np
+        else:
+            input_np[:] = out_np
+        return input
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        # inplace operations don't need backward
+        return None, None
+
+def inplace_mul(input, other):
+    return InplaceMulFunction.apply(input, other)
+
+
+class InplaceAddFunction(Function):
+    @staticmethod
+    def forward(ctx, input, other, alpha=1):
+        input_np = input.asnumpy()
+        if not isinstance(other, numbers.Number):
+            other_np = other.asnumpy()
+        else:
+            other_np = other
+        out_np = input_np + other_np * alpha
+        # Directly modify tensor data
+        # Handle 0-dimensional arrays (scalars)
+        if input_np.ndim == 0:
+            input_np[()] = out_np
+        else:
+            input_np[:] = out_np
+        return input
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        # inplace operations don't need backward
+        return None, None, None
+
+def inplace_add(input, other, alpha=1):
+    return InplaceAddFunction.apply(input, other, alpha)
 
 
 class PowTensorScalarFunction(Function):
@@ -3534,7 +3664,11 @@ def log2(input):
 def inplace_zero(input):
     input_np = input.asnumpy()
     other_np = np.zeros_like(input_np)
-    input_np[:] = other_np
+    # Handle 0-dimensional arrays (scalars)
+    if input_np.ndim == 0:
+        input_np[()] = other_np
+    else:
+        input_np[:] = other_np
     return input
 
 def cumprod(input, dim, dtype):

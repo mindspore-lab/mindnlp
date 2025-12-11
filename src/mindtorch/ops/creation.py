@@ -185,7 +185,7 @@ def empty_like(input, *, dtype=None, layout=None, device=None, requires_grad=Fal
 # full
 def full(size, fill_value, *, out=None, dtype=None, layout=None, device=None, requires_grad=False):
     if dtype is None:
-        dtype = get_default_dtype()
+        dtype = mindtorch.py2dtype[type(fill_value)]
     device = check_device(device)
     if not isinstance(device, str):
         device = device.type
