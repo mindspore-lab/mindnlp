@@ -2608,6 +2608,7 @@ def lin_space_ext(start, end, steps, dtype):
     return ms.Tensor.from_numpy(out)
 
 
+<<<<<<< HEAD
 def upsample_nearest2d(input, output_size, scale_factors):
     """
     Upsample input tensor using nearest neighbor interpolation.
@@ -2899,40 +2900,243 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     return ms.Tensor.from_numpy(Y)
 
 
+=======
+>>>>>>> fix c class
 def upsample_nearest2d(input, output_size, scale_factors):
     """
     Upsample input tensor using nearest neighbor interpolation.
     
     Args:
-        input: Input tensor
+        input: Input tensor of shape (N, C, H, W)
         output_size: Target output size (H, W) or None
         scale_factors: Scale factors for upsampling (h_scale, w_scale) or None
     
     Returns:
         Upsampled tensor
     """
+    from scipy import ndimage
+    
+    input_np = input.asnumpy()
+    N, C, H, W = input_np.shape
+    
     if output_size is None:
         # Calculate output size from scale factors
         if scale_factors is None:
             raise ValueError("Either output_size or scale_factors must be provided")
-        input_shape = input.shape
         if isinstance(scale_factors, (list, tuple)):
             h_scale = scale_factors[0]
             w_scale = scale_factors[1] if len(scale_factors) > 1 else scale_factors[0]
         else:
             h_scale = w_scale = scale_factors
-        output_h = int(input_shape[2] * h_scale)
-        output_w = int(input_shape[3] * w_scale)
+        output_h = int(H * h_scale)
+        output_w = int(W * w_scale)
         output_size = (output_h, output_w)
     else:
         if isinstance(output_size, (list, tuple)):
-            output_size = tuple(output_size)
+            output_h, output_w = output_size[0], output_size[1]
         else:
-            output_size = (output_size, output_size)
+            output_h = output_w = output_size
     
-    # Use MindSpore's ResizeNearestNeighbor op
-    resize = _get_cache_prim(ops.ResizeNearestNeighbor)(output_size).set_device('CPU')
-    return resize(input)
+    # Calculate zoom factors
+    zoom_h = output_h / H
+    zoom_w = output_w / W
+    
+    # Upsample each channel using scipy.ndimage.zoom
+    output_np = np.zeros((N, C, output_h, output_w), dtype=input_np.dtype)
+    for n in range(N):
+        for c in range(C):
+            output_np[n, c] = ndimage.zoom(input_np[n, c], (zoom_h, zoom_w), order=0, mode='nearest')
+    
+    return ms.Tensor.from_numpy(output_np)
+
+
+def upsample_bilinear2d(input, output_size, scale_factors, align_corners):
+    """
+    Upsample input tensor using bilinear interpolation.
+    
+    Args:
+        input: Input tensor of shape (N, C, H, W)
+        output_size: Target output size (H, W)
+        scale_factors: Scale factors (not used when output_size is provided)
+        align_corners: Whether to align corners
+    
+    Returns:
+        Upsampled tensor
+    """
+    from scipy import ndimage
+    
+    input_np = input.asnumpy()
+    N, C, H, W = input_np.shape
+    
+    if isinstance(output_size, (list, tuple)):
+        output_h, output_w = output_size[0], output_size[1]
+    else:
+        output_h = output_w = output_size
+    
+    # Calculate zoom factors
+    zoom_h = output_h / H
+    zoom_w = output_w / W
+    
+    # Upsample each channel using scipy.ndimage.zoom with bilinear interpolation (order=1)
+    output_np = np.zeros((N, C, output_h, output_w), dtype=input_np.dtype)
+    for n in range(N):
+        for c in range(C):
+            output_np[n, c] = ndimage.zoom(input_np[n, c], (zoom_h, zoom_w), order=1, mode='nearest')
+    
+    return ms.Tensor.from_numpy(output_np)
+
+
+def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
+    """
+    2D convolution operation implemented using numpy.
+    
+    Args:
+        input: Input tensor of shape (N, C_in, H, W)
+        weight: Weight tensor of shape (C_out, C_in/groups, kH, kW)
+        bias: Optional bias tensor of shape (C_out,)
+        stride: Stride for convolution (int or tuple)
+        padding: Padding mode ('valid', 'same') or padding value (int or tuple)
+        dilation: Dilation rate (int or tuple)
+        groups: Number of groups for grouped convolution
+    
+    Returns:
+        Output tensor of shape (N, C_out, H_out, W_out)
+    """
+    from scipy import signal
+    
+    input_np = input.asnumpy()
+    weight_np = weight.asnumpy()
+    
+    # Handle different input dimensions
+    if input_np.ndim == 3:
+        # Add batch dimension if missing: (C, H, W) -> (1, C, H, W)
+        input_np = input_np[np.newaxis, :]
+        N = 1
+        squeeze_output = True
+    else:
+        N = input_np.shape[0]
+        squeeze_output = False
+    
+    N, C_in, H, W = input_np.shape
+    C_out, C_in_per_group, kH, kW = weight_np.shape
+    
+    # Normalize stride and dilation
+    if isinstance(stride, int):
+        stride_h, stride_w = stride, stride
+    elif isinstance(stride, (tuple, list)):
+        if len(stride) == 2:
+            stride_h, stride_w = stride[0], stride[1]
+        elif len(stride) == 4:
+            stride_h, stride_w = stride[2], stride[3]
+        else:
+            stride_h, stride_w = stride[0], stride[0]
+    else:
+        stride_h, stride_w = 1, 1
+    
+    if isinstance(dilation, int):
+        dilation_h, dilation_w = dilation, dilation
+    elif isinstance(dilation, (tuple, list)):
+        if len(dilation) == 2:
+            dilation_h, dilation_w = dilation[0], dilation[1]
+        elif len(dilation) == 4:
+            dilation_h, dilation_w = dilation[2], dilation[3]
+        else:
+            dilation_h, dilation_w = dilation[0], dilation[0]
+    else:
+        dilation_h, dilation_w = 1, 1
+    
+    # Calculate effective kernel size with dilation
+    eff_kH = (kH - 1) * dilation_h + 1
+    eff_kW = (kW - 1) * dilation_w + 1
+    
+    # Handle padding
+    if isinstance(padding, str):
+        if padding == 'valid':
+            pad_h, pad_w = 0, 0
+        elif padding == 'same':
+            # Calculate padding to maintain output size
+            pad_h = max(0, (H - 1) * stride_h + eff_kH - H) // 2
+            pad_w = max(0, (W - 1) * stride_w + eff_kW - W) // 2
+        else:
+            raise ValueError(f"Unsupported padding mode: {padding}")
+    elif isinstance(padding, int):
+        pad_h, pad_w = padding, padding
+    elif isinstance(padding, (tuple, list)):
+        if len(padding) == 2:
+            pad_h, pad_w = padding[0], padding[1]
+        elif len(padding) == 4:
+            pad_h, pad_w = padding[0], padding[2]  # (top, bottom, left, right) -> (top, left)
+        else:
+            raise ValueError(f"padding must be int, 2-tuple, or 4-tuple, got {padding}")
+    else:
+        pad_h, pad_w = 0, 0
+    
+    # Pad input if needed
+    if pad_h > 0 or pad_w > 0:
+        input_padded = np.pad(input_np, ((0, 0), (0, 0), (pad_h, pad_h), (pad_w, pad_w)), mode='constant')
+    else:
+        input_padded = input_np
+    
+    # Calculate output dimensions
+    H_out = (H + 2 * pad_h - eff_kH) // stride_h + 1
+    W_out = (W + 2 * pad_w - eff_kW) // stride_w + 1
+    
+    # Initialize output
+    output_np = np.zeros((N, C_out, H_out, W_out), dtype=input_np.dtype)
+    
+    # Perform convolution for each batch and output channel
+    for n in range(N):
+        for c_out in range(C_out):
+            # Determine which input channels to use based on groups
+            group_id = c_out // (C_out // groups)
+            c_in_start = group_id * C_in_per_group
+            c_in_end = (group_id + 1) * C_in_per_group
+            
+            # Sum over input channels in this group
+            conv_result = np.zeros((H_out, W_out), dtype=input_np.dtype)
+            for c_in in range(c_in_start, c_in_end):
+                # Get kernel for this input-output channel pair
+                kernel = weight_np[c_out, c_in - c_in_start]
+                
+                # Apply dilation to kernel
+                if dilation_h > 1 or dilation_w > 1:
+                    dilated_kernel = np.zeros((eff_kH, eff_kW), dtype=kernel.dtype)
+                    dilated_kernel[::dilation_h, ::dilation_w] = kernel
+                    kernel = dilated_kernel
+                
+                # Flip kernel for convolution (cross-correlation)
+                kernel_flipped = np.flipud(np.fliplr(kernel))
+                
+                # Perform 2D convolution using scipy.signal.convolve2d
+                conv_channel = signal.convolve2d(
+                    input_padded[n, c_in],
+                    kernel_flipped,
+                    mode='valid'
+                )
+                
+                # Apply stride by subsampling
+                if stride_h > 1 or stride_w > 1:
+                    conv_channel = conv_channel[::stride_h, ::stride_w]
+                
+                    # Ensure output size matches (handle edge cases)
+                    h_end = H_out if H_out < conv_channel.shape[0] else conv_channel.shape[0]
+                    w_end = W_out if W_out < conv_channel.shape[1] else conv_channel.shape[1]
+                    h_slice = slice(0, h_end)
+                    w_slice = slice(0, w_end)
+                    conv_result[h_slice, w_slice] += conv_channel[h_slice, w_slice]
+            
+            output_np[n, c_out] = conv_result
+    
+    # Add bias if provided
+    if bias is not None:
+        bias_np = bias.asnumpy() if hasattr(bias, 'asnumpy') else bias
+        output_np = output_np + bias_np[None, :, None, None]
+    
+    # Remove batch dimension if input was 3D
+    if squeeze_output:
+        output_np = output_np[0]
+    
+    return ms.Tensor.from_numpy(output_np)
 
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
