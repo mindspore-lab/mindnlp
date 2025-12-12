@@ -35,7 +35,7 @@ datamodel_code_generator
 einops
 transformers
 peft
-diffusers
+diffusers==0.35.2
 timeout_decorator
 torch
 ftfy
