@@ -28,7 +28,7 @@ __all__ = [
     "t2ms",
 ]
 
-# Try to import checkpoint functions, but handle case when Flax is not available
+# Import checkpoint functions using MindSpore implementation
 try:
     from .checkpoint import save_checkpoint, load_checkpoint
     # Only add to __all__ and namespace if import successful
@@ -36,10 +36,10 @@ try:
 except (ImportError, AttributeError):
     # Define dummy functions that raise helpful errors when called
     def save_checkpoint(*args, **kwargs):
-        raise ImportError("Flax and JAX are required for save_checkpoint functionality")
+        raise ImportError("MindSpore is required for save_checkpoint functionality")
     
     def load_checkpoint(*args, **kwargs):
-        raise ImportError("Flax and JAX are required for load_checkpoint functionality")
+        raise ImportError("MindSpore is required for load_checkpoint functionality")
 
 # Import mapping functions from ops module
 from .ops.mappings import t2ms
@@ -113,6 +113,48 @@ unsupported_dtype = [torch.quint8]
 import torch4ms.device_module
 
 torch._register_device_module("mindspore", torch4ms.device_module)
+
+# 添加monkey patch来处理torch.tensor等构造函数中的'mindspore'设备参数
+import functools
+
+def patch_tensor_constructors():
+    """
+    修补PyTorch张量构造函数，以正确处理'mindspore'设备参数
+    """
+    # 定义需要修补的张量构造函数
+    constructors_to_patch = [
+        'tensor', 'eye', 'ones', 'zeros', 'randn', 'rand', 
+        'randint', 'full', 'arange', 'empty', 'empty_like', 
+        'ones_like', 'zeros_like'
+    ]
+    
+    def patch_constructor(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            # 检查是否使用了'mindspore'设备
+            device = kwargs.get('device')
+            if device and str(device).lower() == 'mindspore':
+                # 移除device参数，避免PyTorch设备检查失败
+                kwargs.pop('device')
+                # 使用当前模块中定义的default_env函数
+                env = default_env()
+                
+                # 直接调用env的_handle_tensor_constructor方法，确保结果包装为torch4ms.Tensor
+                # 添加一个特殊标记，明确指示这是来自monkey patch的调用
+                op_name_str = func.__name__
+                result = env._handle_tensor_constructor(op_name_str, args, kwargs, force_mindspore=True)
+                return result
+            return func(*args, **kwargs)
+        return wrapper
+    
+    # 应用补丁
+    for constructor_name in constructors_to_patch:
+        if hasattr(torch, constructor_name):
+            original_func = getattr(torch, constructor_name)
+            setattr(torch, constructor_name, patch_constructor(original_func))
+
+# 应用补丁
+patch_tensor_constructors()
 
 
 def enable_accuracy_mode():
