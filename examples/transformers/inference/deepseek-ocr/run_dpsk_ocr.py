@@ -1,5 +1,5 @@
 import mindspore
-import mindhf
+import mindnlp
 import mindtorch
 from transformers import AutoModel, AutoTokenizer
 # from mindspore._c_expression import _framework_profiler_step_start

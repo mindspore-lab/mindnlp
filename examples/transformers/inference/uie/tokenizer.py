@@ -7,13 +7,13 @@ from shutil import copyfile
 from typing import Any, Dict, List, Optional, Tuple
 
 import sentencepiece as spm
-from mindhf.utils import requires_backends
-from mindhf.transformers import PreTrainedTokenizerFast
-from mindhf.transformers.convert_slow_tokenizer import Converter, SentencePieceExtractor, SLOW_TO_FAST_CONVERTERS
+from mindnlp.utils import requires_backends
+from mindnlp.transformers import PreTrainedTokenizerFast
+from mindnlp.transformers.convert_slow_tokenizer import Converter, SentencePieceExtractor, SLOW_TO_FAST_CONVERTERS
 
 from fast_tokenizer import Tokenizer, normalizers, pretokenizers, postprocessors
 from fast_tokenizer.models import BPE, Unigram
-from mindhf.transformers.tokenization_utils import PreTrainedTokenizer
+from mindnlp.transformers.tokenization_utils import PreTrainedTokenizer
 
 from utils import logger
 

@@ -9,8 +9,8 @@ if src_path not in sys.path:
 
 import pytest
 import mindspore
-import mindhf
-from mindhf import transformers
+import mindnlp
+from mindnlp import transformers
 
 mindspore.set_context(pynative_synchronize=True)
 mindspore.runtime.launch_blocking()

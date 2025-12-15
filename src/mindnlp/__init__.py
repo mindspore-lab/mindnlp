@@ -12,30 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=wrong-import-position
 """
-MindNLP compatibility layer - imports from mindhf for backward compatibility.
+MindNLP library.
 """
-import sys
-import warnings
+import os
 
-# Import everything from mindhf
-import mindhf
+# huggingface env
+if os.environ.get('HF_ENDPOINT', None) is None:
+    os.environ["HF_ENDPOINT"] = 'https://hf-mirror.com'
 
-# Re-export all public attributes from mindhf
-__all__ = mindhf.__all__ if hasattr(mindhf, '__all__') else []
+# set mindnlp.core to torch
+import mindtorch
 
-# Copy all attributes from mindhf to this module
-for attr_name in dir(mindhf):
-    if not attr_name.startswith('_'):
-        setattr(sys.modules[__name__], attr_name, getattr(mindhf, attr_name))
+# Patch safetensors, transformers and diffusers if they are installed
+# This will automatically patch when import mindnlp
+from .patch import apply_all_patches
+from .patch.safetensors import setup_safetensors_module
+from .patch.transformers import setup_transformers_module
+from .patch.diffusers import setup_diffusers_module
 
-# Copy version
-__version__ = mindhf.__version__
+# Apply patches
+apply_all_patches()
 
-# Issue deprecation warning
-warnings.warn(
-    "The 'mindnlp' package name is deprecated. Please use 'mindhf' instead. "
-    "This compatibility layer will be removed in a future version.",
-    DeprecationWarning,
-    stacklevel=2
-)
+# Setup backward compatibility modules
+setup_safetensors_module()
+setup_transformers_module()
+setup_diffusers_module()
+
+__version__ = '0.6.0'

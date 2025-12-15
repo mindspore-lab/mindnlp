@@ -2,8 +2,8 @@ import argparse
 import mindspore
 from mindspore.nn import AdamWeightDecay
 from squad_dataset import get_squad_dataset
-from mindhf.peft import LoraConfig, get_peft_model
-from mindhf.transformers import (
+from mindnlp.peft import LoraConfig, get_peft_model
+from mindnlp.transformers import (
     AutoTokenizer,
     AutoModelForQuestionAnswering,
 )

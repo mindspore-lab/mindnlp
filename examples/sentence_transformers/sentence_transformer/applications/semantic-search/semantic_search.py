@@ -6,7 +6,7 @@ we want to find the most similar sentence in this corpus.
 
 This script outputs for various queries the top 5 most similar sentences in the corpus.
 """
-import mindhf
+import mindnlp
 import torch
 
 from sentence_transformers import SentenceTransformer

@@ -1,6 +1,6 @@
 import gradio as gr
 import mindspore
-from mindhf.transformers import pipeline
+from mindnlp.transformers import pipeline
 
 
 MODEL_NAME = "openai/whisper-large-v3"

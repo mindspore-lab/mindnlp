@@ -1,5 +1,5 @@
 # pylint: disable=missing-module-docstring
-from mindhf.transformers import pipeline
+from mindnlp.transformers import pipeline
 
 # Text Generation Demo
 generator = pipeline(model="openai-community/gpt2")

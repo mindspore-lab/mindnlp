@@ -1,4 +1,4 @@
-from mindhf import core
+from mindnlp import core
 import gradio as gr
 from transformers import AutoConfig, AutoModelForCausalLM
 from janus.models import VLChatProcessor

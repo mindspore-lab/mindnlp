@@ -14,7 +14,7 @@ https://github.com/facebookresearch/faiss
 """
 
 import gzip
-import mindhf
+import mindnlp
 import numpy as np
 import torch
 import tqdm

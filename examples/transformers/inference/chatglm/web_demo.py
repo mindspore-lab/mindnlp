@@ -1,4 +1,4 @@
-from mindhf.transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+from mindnlp.transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import gradio as gr
 import mdtex2html
 

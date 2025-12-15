@@ -1,7 +1,7 @@
 # 此代码基于 [outbreak-sen] 的工作，感谢他的贡献。
 # 原项目链接: [https://github.com/outbreak-sen/blenderbot_small_finetuned/blob/main/blenderbot_small_persona/torchBlenderbotsmallPersona.py]
-from mindhf.transformers import BlenderbotForConditionalGeneration, BlenderbotTokenizer
-from mindhf.engine import Trainer, TrainingArguments
+from mindnlp.transformers import BlenderbotForConditionalGeneration, BlenderbotTokenizer
+from mindnlp.engine import Trainer, TrainingArguments
 from datasets import load_dataset, load_from_disk
 import mindspore as ms
 import os

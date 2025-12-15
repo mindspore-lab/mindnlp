@@ -1,5 +1,5 @@
 # 示例 1: 使用LayoutLMv2处理文档问答
-from mindhf.transformers import pipeline, AutoTokenizer
+from mindnlp.transformers import pipeline, AutoTokenizer
 
 tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-layoutlmv2")
 
@@ -17,7 +17,7 @@ print(outputs)
 # 示例 2: 使用LayoutLM模型和自定义图像处理
 from PIL import Image
 import pytesseract
-from mindhf.transformers import pipeline, AutoTokenizer
+from mindnlp.transformers import pipeline, AutoTokenizer
 
 
 def process_image_and_ocr(image_path):

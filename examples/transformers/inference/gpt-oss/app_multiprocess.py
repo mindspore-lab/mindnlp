@@ -1,5 +1,5 @@
 from mindtorch import distributed as dist
-from mindhf import core
+from mindnlp import core
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
 
 import gradio as gr

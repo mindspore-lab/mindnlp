@@ -21,7 +21,7 @@ which is specifically trained for question answering on the Natural Questions da
 """
 
 import time
-import mindhf
+import mindnlp
 from datasets import load_dataset
 from opensearchpy import OpenSearch, helpers
 from tqdm import tqdm

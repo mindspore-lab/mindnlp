@@ -3,7 +3,7 @@ import json
 import copy
 
 from mindspore.dataset import RandomSampler, DistributedSampler, NumpySlicesDataset, SequentialSampler
-from mindhf.dataset import MRPC
+from mindnlp.dataset import MRPC
 
 class InputExample(object):
     def __init__(self, guid, text_a, text_b=None, label=None):

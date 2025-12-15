@@ -18,7 +18,7 @@
 # limitations under the License.
 # ============================================================================
 import mindspore
-import mindhf
+import mindnlp
 import mindtorch.nn as nn
 import mindtorch.ops as ops
 from typing import Tuple

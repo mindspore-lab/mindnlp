@@ -13,4 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 NUM_CORES=$(nproc)
-pylint --jobs=$NUM_CORES --rcfile=.github/pylint.conf src/mindhf src/mindnlp
+pylint --jobs=$NUM_CORES --rcfile=.github/pylint.conf src/mindnlp
