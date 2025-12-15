@@ -18,17 +18,11 @@ from ._C.size import Size
 from .configs import DEVICE_TARGET, ENABLE_DISPATCH
 from .executor import execute
 
-device_map = {
-    'cpu': 'CPU',
-    'npu': 'Ascend',
-    'cuda': 'GPU'
-}
-
 device_cache = {
-    'CPU': device_('cpu'),
-    'Ascend': device_('npu'),
-    'GPU': device_('cuda'),
-    'Meta': device_('meta')
+    'cpu': device_('cpu'),
+    'npu': device_('npu'),
+    'cuda': device_('cuda'),
+    'meta': device_('meta')
 }
 
 if DEVICE_TARGET == 'Ascend':
@@ -101,6 +95,11 @@ def __init__(self, *args, **kwargs):
         super(Tensor, self).__init__(shape=args, dtype=get_default_dtype())
     else:
         super(Tensor, self).__init__(*args, **kwargs)
+    if self.init is None:
+        device = kwargs.pop('device', get_device_in_context())
+        if not isinstance(device, str):
+            device = device.type
+        self.init = device
 
 Tensor.__init__ = __init__
 
@@ -123,6 +122,7 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False, pin_memory=Fal
     else:
         tensor = Tensor(data)
 
+    tensor.init = device if isinstance(device, str) else device.type
     tensor = tensor.to(device)
     if requires_grad:
         tensor.requires_grad_(requires_grad)
@@ -149,12 +149,17 @@ class TensorPlaceHolder:
     def cpu(self):
         if not ENABLE_DISPATCH:
             return self
-        return super(Tensor, self).to('CPU')
+        out = super(Tensor, self).to('CPU')
+        out.init = 'cpu'
+        return out
 
     def npu(self, device=None, non_blocking=False):
         if not ENABLE_DISPATCH:
             return self
-        return super(Tensor, self).to('Ascend', non_blocking=non_blocking)
+        out = super(Tensor, self).to('Ascend', non_blocking=non_blocking)
+        out.init = 'npu'
+        return out
+
 
     def cuda(self, device=None, non_blocking=False):
         if not ENABLE_DISPATCH:
@@ -162,9 +167,13 @@ class TensorPlaceHolder:
 
         if DEVICE_TARGET == 'Ascend':
             device_type = 'Ascend'
+            device = 'npu'
         else:
             device_type = 'GPU'
-        return super(Tensor, self).to(device_type, non_blocking=non_blocking)
+            device = 'cuda'
+        out = super(Tensor, self).to(device_type, non_blocking=non_blocking)
+        out.init = device
+        return out
 
     def __array_wrap__(self, array):
         if array.dtype == bool:
@@ -883,11 +892,14 @@ class TensorPlaceHolder:
     def data(self):
         if self.is_meta:
             return self
-        return super(Tensor, self).data
+        out = super(Tensor, self).data
+        out.init = self.init
+        return out
 
     @data.setter
     def data(self, new_value):
         self.assign_value(new_value)
+        self.init = new_value.init
 
     # Tensor.data_ptr
 
@@ -1719,9 +1731,11 @@ class TensorPlaceHolder:
 
     # Tensor.numpy
     def numpy(self):
-        if ENABLE_DISPATCH:
-            assert self._device in ['CPU', 'Meta']
-        return super(Tensor, self).asnumpy()
+        assert self.init == 'cpu'
+        return Tensor_.asnumpy(self)
+
+    def asnumpy(self):
+        return Tensor_.asnumpy(self)
 
     def __array__(self, dtype=None):
         """support create numpy array from tensor."""
@@ -2179,21 +2193,18 @@ class TensorPlaceHolder:
         if not ENABLE_DISPATCH:
             return self
 
-        if device in ['meta', 'Meta']:
-            out = Tensor(shape=self.shape, dtype=self.dtype, init='none')
+        if device == 'meta':
+            out = Tensor(shape=self.shape, dtype=self.dtype, init='meta')
             return out
 
-        if device in device_map:
-            device_str = device_map[device]
-        else:
-            device_str = device
+        if DEVICE_TARGET == 'Ascend' and device == 'cuda':
+            device = 'npu'
 
-        if DEVICE_TARGET == 'Ascend' and device_str == 'GPU':
-            device_str = 'Ascend'
-
-        if device_str == self._device:
+        if device == self.init:
             return self
-        return super(Tensor, self).to(device_str, non_blocking=non_blocking)
+        out = super(Tensor, self).to(device, non_blocking=non_blocking)
+        out.init = device
+        return out
 
     def to(self, *args, **kwargs):
         non_blocking = kwargs.get('non_blocking', False)
@@ -2220,7 +2231,7 @@ class TensorPlaceHolder:
                 else:
                     out = ops.cast(out, arg)
             elif isinstance(arg, Tensor):
-                out = out._move_to(arg._device, non_blocking)
+                out = out._move_to(arg.init, non_blocking)
                 if out.dtype == arg:
                     return out
                 else:
@@ -2480,19 +2491,8 @@ class TensorPlaceHolder:
         return self.init == 'meta'
 
     @property
-    def _device(self):
-        if self.is_meta:
-            return 'Meta'
-        if not ENABLE_DISPATCH:
-            return DEVICE_TARGET
-        device = super(Tensor, self).device
-        if ':' in device:
-            return device.split(':')[0]
-        return device
-
-    @property
     def device(self):
-        return device_cache[self._device]
+        return device_cache[self.init]
 
     def _convert_numpy_slices(self, key):
         """递归转换 key 中的 NumPy 整数为内置 int"""
@@ -2526,6 +2526,7 @@ class TensorPlaceHolder:
 
     def __deepcopy__(self, memodict):
         new_obj = Tensor(self)
+        new_obj.init = self.init
         return new_obj
 
     def __matmul__(self, other):

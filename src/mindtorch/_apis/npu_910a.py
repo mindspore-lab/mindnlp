@@ -694,6 +694,8 @@ def cumsum(self, dim, dtype):
     return legacy.cum_sum(self, dim, False, False)
 
 def reduce_any(input, axis, keepdims):
+    if axis is None:
+        axis = ()
     if ENABLE_PYBOOST:
         return pyboost.reduce_any_impl(input, axis, keepdims)
     return legacy.reduce_any(input, axis, keepdims)
@@ -1946,7 +1948,7 @@ def bucketize(input, boundaries, right=False):
         return zeros_like(input)
     epsilon_ = 0. if right else 1.e-6
     boundaries = [boundary + epsilon_ for boundary in boundaries]
-    return legacy.bucketize(input, boundaries)
+    return cast(legacy.bucketize(input, boundaries), mindspore.int64)
 
 def inplace_fill_diagonal(input, fill_value, wrap):
     if ENABLE_PYBOOST:
@@ -2457,7 +2459,7 @@ def custom_circular_pad(x, pad):
         
         # 生成循环索引: (index - left_pad) mod size
         index = fmod_scalar(add(arange(0, new_size, 1, mindspore.int64), new_size - left_pad), size)
-        index = (index + x.shape[dim]) % x.shape[dim]
+        index = fmod_scalar(add(index, x.shape[dim]), x.shape[dim])
         x = index_select(x, dim, index)
 
     return x

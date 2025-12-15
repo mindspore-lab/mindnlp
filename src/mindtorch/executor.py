@@ -14,10 +14,6 @@ else:
     raise ValueError(f'Unsupported SOC: {SOC}')
 
 api_map = {
-    'CPU': numpy if CPU_USE_NUMPY_OP else cpu,
-    'Ascend': npu,
-    'Meta': meta,
-    'GPU': gpu,
     'cpu': numpy if CPU_USE_NUMPY_OP else cpu,
     'npu': npu,
     'cuda': gpu,
@@ -35,17 +31,22 @@ if ENABLE_DISPATCH:
 
         if device_type is None:
             if device_from_list:
-                device_type = args[0][0]._device
+                device_type = args[0][0].init
             else:
-                device_type = args[device_position]._device
-            device_type = device_type[:device_type.find(':')] if ':' in device_type else device_type
+                device_type = args[device_position].init
 
         func = getattr(api_map[device_type], func_name, None)
         if func is None:
             raise RuntimeError(
                 f"No implementation for function: {func_name} on {device_type}."
             )
-        return func(*args, **kwargs)
+        outs = func(*args, **kwargs)
+        if isinstance(outs, (tuple, list)):
+            for out in outs:
+                out.init = device_type
+        else:
+            outs.init = device_type
+        return outs
 else:
     def execute(func_name, *args, **kwargs):
         device_from_list = kwargs.pop('device_from_list', False)

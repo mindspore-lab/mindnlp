@@ -43,8 +43,8 @@ def parse_flag_from_env(key, default=False):
     return _value
 
 # OP backend select
-ENABLE_DISPATCH = parse_flag_from_env('ENABLE_DISPATCH', False)
+ENABLE_DISPATCH = parse_flag_from_env('ENABLE_DISPATCH', True)
 ENABLE_PYBOOST = parse_flag_from_env('ENABLE_PYBOOST', True)
-CPU_USE_NUMPY_OP = parse_flag_from_env('CPU_USE_NUMPY', False)
+CPU_USE_NUMPY_OP = parse_flag_from_env('CPU_USE_NUMPY', DEVICE_TARGET != 'CPU')
 ENABLE_FLASH_ATTENTION = parse_flag_from_env('ENABLE_FLASH_ATTENTION', False)
 CAPTURE_INF_NAN = parse_flag_from_env('CAPTURE_INF_NAN', False)

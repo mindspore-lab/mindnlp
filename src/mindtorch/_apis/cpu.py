@@ -46,6 +46,15 @@ def zeros_like(input, dtype):
         return legacy.zeros_like(input)
     return legacy.cast(legacy.zeros_like(input), dtype)
 
+def full_like(input, fill_value, dtype=None):
+    if dtype is None:
+        dtype = input.dtype
+    size = input.shape
+    if isinstance(fill_value, numbers.Number):
+        return fill_scalar(size, fill_value, dtype)
+    else:
+        return fill_tensor(size, fill_value, dtype)
+
 def tensor_shape(input):
     return legacy.tensor_shape(input)
 

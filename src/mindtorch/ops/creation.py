@@ -21,7 +21,7 @@ def as_strided(self, size, stride, storage_offset=None):
 # from_numpy
 def from_numpy(ndarray):
     out = mindtorch.Tensor.from_numpy(ndarray)
-    out._from_numpy = True
+    out.init = 'cpu'
     return out
 
 # frombuffer
@@ -185,7 +185,7 @@ def empty_like(input, *, dtype=None, layout=None, device=None, requires_grad=Fal
 # full
 def full(size, fill_value, *, out=None, dtype=None, layout=None, device=None, requires_grad=False):
     if dtype is None:
-        dtype = get_default_dtype()
+        dtype = mindtorch.py2dtype[type(fill_value)]
     device = check_device(device)
     if not isinstance(device, str):
         device = device.type
