@@ -1,1 +1,0 @@
-:::mindnlp.transformers.models.table_transformer

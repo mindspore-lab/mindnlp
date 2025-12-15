@@ -1,9 +1,0 @@
-:::mindnlp.transformers.models.bart.configuration_bart.BartConfig
-:::mindnlp.transformers.models.bart.modeling_bart.BartForCausalLM
-:::mindnlp.transformers.models.bart.modeling_bart.BartForConditionalGeneration
-:::mindnlp.transformers.models.bart.modeling_bart.BartForQuestionAnswering
-:::mindnlp.transformers.models.bart.modeling_bart.BartForSequenceClassification
-:::mindnlp.transformers.models.bart.modeling_bart.BartModel
-:::mindnlp.transformers.models.bart.modeling_bart.BartPreTrainedModel
-:::mindnlp.transformers.models.bart.tokenization_bart.BartTokenizer
-:::mindnlp.transformers.models.bart.tokenization_bart_fast.BartTokenizerFast
