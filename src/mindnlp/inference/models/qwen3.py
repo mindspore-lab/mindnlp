@@ -1,7 +1,7 @@
+from transformers import Qwen3Config
 import mindtorch
 from mindtorch import nn
 import mindtorch.distributed as dist
-from transformers import Qwen3Config
 
 from ..layers.activation import SiluAndMul
 from ..layers.attention import Attention

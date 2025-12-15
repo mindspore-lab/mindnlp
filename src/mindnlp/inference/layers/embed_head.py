@@ -21,7 +21,7 @@ class VocabParallelEmbedding(nn.Module):
         else:
             self.tp_rank = 0
             self.tp_size = 1
-            
+
         assert num_embeddings % self.tp_size == 0
         self.num_embeddings = num_embeddings
         self.num_embeddings_per_partition = self.num_embeddings // self.tp_size

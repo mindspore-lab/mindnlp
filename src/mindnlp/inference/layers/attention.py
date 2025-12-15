@@ -1,12 +1,12 @@
 import mindtorch
 from mindtorch import nn
-import triton
-import triton.language as tl
 
 from ..utils.context import get_context
 
 
 def store_kvcache(key: mindtorch.Tensor, value: mindtorch.Tensor, k_cache: mindtorch.Tensor, v_cache: mindtorch.Tensor, slot_mapping: mindtorch.Tensor):
+    # pylint: disable=undefined-variable
+    # These are conditionally imported from flash_attn or other backends
     N, num_heads, head_dim = key.shape
     D = num_heads * head_dim
     assert key.stride(-1) == 1 and value.stride(-1) == 1
@@ -40,12 +40,15 @@ class Attention(nn.Module):
         if context.is_prefill:
             if context.block_tables is not None:    # prefix cache
                 k, v = k_cache, v_cache
+            # pylint: disable=undefined-variable
             o = flash_attn_varlen_func(q, k, v,
                                        max_seqlen_q=context.max_seqlen_q, cu_seqlens_q=context.cu_seqlens_q,
                                        max_seqlen_k=context.max_seqlen_k, cu_seqlens_k=context.cu_seqlens_k,
                                        softmax_scale=self.scale, causal=True, block_table=context.block_tables)
         else:    # decode
-            o = flash_attn_with_kvcache(q.unsqueeze(1), k_cache, v_cache,
-                                        cache_seqlens=context.context_lens, block_table=context.block_tables, 
+            # flash_attn_with_kvcache is conditionally imported from flash_attn
+            # pylint: disable=undefined-variable
+            o = flash_attn_with_kvcache(q.unsqueeze(1), k_cache, v_cache,  # noqa: F821
+                                        cache_seqlens=context.context_lens, block_table=context.block_tables,
                                         softmax_scale=self.scale, causal=True)
         return o

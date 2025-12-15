@@ -1,9 +1,9 @@
 # FILE: nanovllm/layers/linear.py
+from typing import Optional, List
 import mindtorch
 from mindtorch import nn
 import mindtorch.nn.functional as F
 import mindtorch.distributed as dist
-from typing import Optional, List
 
 
 def divide(numerator, denominator):
@@ -122,13 +122,13 @@ class QKVParallelLinear(ColumnParallelLinear):
         self.head_size = head_size
         self.total_num_heads = total_num_heads
         self.total_num_kv_heads = total_num_kv_heads or total_num_heads
-        
+
         # This layer's __init__ is called before the parent's, so we need to get tp_size here too
         if dist.is_initialized():
             tp_size = dist.get_world_size()
         else:
             tp_size = 1
-            
+
         self.num_heads = divide(self.total_num_heads, tp_size)
         self.num_kv_heads = divide(self.total_num_kv_heads, tp_size)
         input_size = hidden_size
@@ -184,4 +184,3 @@ class RowParallelLinear(LinearBase):
         if self.tp_size > 1:
             dist.all_reduce(y)
         return y
-

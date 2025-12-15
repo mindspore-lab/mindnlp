@@ -17,9 +17,9 @@ def setup_diffusers_module():
     except ImportError:
         setup_missing_library_error_module('diffusers', 'mindnlp.diffusers')
         return
-    
+
     apply_diffusers_patches()
-    
+
     # Redirect mindnlp.diffusers to diffusers
     if 'mindnlp.diffusers' not in sys.modules:
         sys.modules['mindnlp.diffusers'] = diffusers

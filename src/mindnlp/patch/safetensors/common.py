@@ -10,7 +10,6 @@ import safetensors
 from safetensors import SafetensorError
 
 import mindspore
-
 import mindtorch
 from mindtorch.configs import SUPPORT_BF16, SOC
 
@@ -19,6 +18,7 @@ if SUPPORT_BF16:
 else:
     from ml_dtypes import bfloat16
 
+# pylint: disable=wrong-import-position
 from ..registry import register_safetensors_patch
 
 MAGIC_NUMBER = 0x1950A86A20F9469CFC6C
@@ -105,6 +105,7 @@ class PySafeSlice:
             array = array.astype(np.float16)
         tensor = mindtorch.from_numpy(array)
         if SOC == 'ascend310b':
+            # pylint: disable=bad-super-call
             tensor = super(mindspore.Tensor, tensor).to('Ascend', non_blocking=True)
         return tensor
 
@@ -282,7 +283,7 @@ def safe_load_file(filename, device = 'cpu'):
         for k in f.keys():
             result[k] = f.get_tensor(k)
     return result
-    
+
 
 def _tobytes(tensor, name):
     return tensor.tobytes()
@@ -293,12 +294,11 @@ def _tobytes(tensor, name):
 def patch_safetensors_common():
     """safetensors 通用补丁"""
     try:
-        import safetensors
         from safetensors import torch
-        
+
         # Patch safe_open
         safetensors.safe_open = fast_safe_open
-        
+
         # Patch torch.save_file
         torch.save_file = safe_save_file
         torch.load_file = safe_load_file
