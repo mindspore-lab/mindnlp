@@ -3336,6 +3336,31 @@ def sigmoid(input):
     return SigmoidFunction.apply(input)
 
 
+class TanhFunction(Function):
+    @staticmethod
+    def forward(ctx, input):
+        input_np = input.asnumpy()
+        out = np.tanh(input_np)
+        result = ms.Tensor.from_numpy(out)
+        ctx.save_for_backward(result)  # Save output for backward
+        return result
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        output, = ctx.saved_tensors
+        grad_input = None
+        if ctx.needs_input_grad[0]:
+            # tanh'(x) = 1 - tanh(x)^2
+            grad_input = grad_output.asnumpy() * (1 - output.asnumpy() * output.asnumpy())
+            if not isinstance(grad_input, np.ndarray):
+                grad_input = np.array(grad_input)
+            grad_input = ms.Tensor.from_numpy(grad_input)
+        return grad_input
+
+def tanh(input):
+    return TanhFunction.apply(input)
+
+
 class GeluFunction(Function):
     @staticmethod
     def forward(ctx, input, approximate='none'):

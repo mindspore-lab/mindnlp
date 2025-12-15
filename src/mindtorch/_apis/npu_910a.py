@@ -2105,8 +2105,8 @@ def repeat_interleave_int(input_tensor, repeats, dim, output_size):
         for i in range(dim_size):
             repeat_count = repeats_tensor[i].item()
             if repeat_count > 0:
-                index[current_pos:current_pos + repeat_count] = i
-            current_pos += repeat_count
+                setitem(index, (py_slice(current_pos, add(current_pos, repeat_count))), i)
+            current_pos = add(current_pos, repeat_count)
 
         output = index_select(input_tensor, dim, index)
 
