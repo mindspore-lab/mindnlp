@@ -1,2 +1,0 @@
-:::mindnlp.transformers.models.speech_encoder_decoder.configuration_speech_encoder_decoder
-:::mindnlp.transformers.models.speech_encoder_decoder.modeling_speech_encoder_decoder
