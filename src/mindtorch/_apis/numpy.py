@@ -57,6 +57,8 @@ def zeros(size, dtype):
 class ArangeFunction(Function):
     @staticmethod
     def forward(ctx, start, end, step, dtype):
+        if step == 0:
+            raise ValueError("arange step must not be zero")
         result = ms.Tensor.from_numpy(np.arange(start, end, step, mindtorch.dtype2np[dtype]))
         return result
     
@@ -982,6 +984,53 @@ def normal(shape):
     return ms.Tensor.from_numpy(out)
 
 
+def normal_float_float(mean, std, size, dtype, generator):
+    """Normal distribution with scalar mean/std on numpy backend."""
+    # generator is unused for numpy backend
+    out = np.random.normal(mean, std, size).astype(mindtorch.dtype2np[dtype])
+    return ms.Tensor.from_numpy(out)
+
+
+def upsample_bicubic2d(input, size=None, scale_factor=None, align_corners=False):
+    """
+    Bicubic upsample for CPU/numpy backend using scipy (order=3).
+    Input: NCHW Tensor; Output: NCHW Tensor.
+    """
+    x_np = input.asnumpy()  # NCHW
+    n, c, h, w = x_np.shape
+
+    if size is None:
+        if scale_factor is None:
+            raise ValueError("Either size or scale_factor must be provided")
+        if isinstance(scale_factor, (tuple, list)):
+            if len(scale_factor) != 2:
+                raise ValueError("scale_factor for 2d upsample must have length 2")
+            scale_h, scale_w = scale_factor
+        else:
+            scale_h = scale_w = scale_factor
+        new_h = max(1, int(round(h * scale_h)))
+        new_w = max(1, int(round(w * scale_w)))
+    else:
+        if not isinstance(size, (tuple, list)) or len(size) != 2:
+            raise ValueError("size for 2d upsample must have length 2 (H, W)")
+        new_h, new_w = size
+
+    # zoom factors
+    zoom_h = new_h / h
+    zoom_w = new_w / w
+
+    out_np = np.empty((n, c, new_h, new_w), dtype=x_np.dtype)
+    for i in range(n):
+        for j in range(c):
+            out_np[i, j] = scipy.ndimage.zoom(
+                x_np[i, j], zoom=(zoom_h, zoom_w), order=3, mode="reflect", prefilter=True
+            )
+
+    # For single-batch single-channel, squeeze to 2D to match PIL expectations in pipelines
+    if n == 1 and c == 1:
+        return ms.Tensor(out_np[0, 0])
+    return ms.Tensor(out_np)
+
 def pad_v3(input_x, padding, mode='constant', value=None):
     pad_op = ops.PadV3(mode=mode, paddings_contiguous=True).set_device('CPU')
     if input_x.dtype == mindtorch.bool:
@@ -1161,7 +1210,12 @@ class ConcatFunction(Function):
         
         return (None,) + tuple(grad_inputs)
 
-def concat(tensors, dim):
+def concat(tensors, dim=None, axis=None):
+    # Support both dim and axis for compatibility
+    if axis is not None:
+        dim = axis
+    if dim is None:
+        dim = 0
     if isinstance(tensors, (list, tuple)):
         return ConcatFunction.apply(dim, *tensors)
     else:

@@ -105,7 +105,10 @@ def arange(start=0, end=None, step=1, *, out=None, dtype=None, layout=None, devi
     start = start.item() if isinstance(start, (mindtorch.Tensor, np.integer)) else start
     end = end.item() if isinstance(end, (mindtorch.Tensor, np.integer)) else end
     step = step.item() if isinstance(step, (mindtorch.Tensor, np.integer)) else step
-    step = type(start)(step)
+    # 保持步长精度，避免将浮点步长强制转为整数导致为0
+    step = float(step)
+    if step == 0:
+        raise ValueError("arange step must not be zero")
 
     output = execute('arange', start, end, step, dtype, device=device)
     if out is None:

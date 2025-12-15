@@ -38,4 +38,3 @@ def setup_transformers_module():
     transformers_module_name_nlp = 'mindnlp.transformers'
     if transformers_module_name_nlp not in sys.modules or not isinstance(sys.modules[transformers_module_name_nlp], _LazyModule):
         sys.modules[transformers_module_name_nlp] = lazy_module
-

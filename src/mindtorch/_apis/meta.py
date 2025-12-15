@@ -178,7 +178,12 @@ def pow(input, other):
     out = mindspore.Tensor(init='meta', shape=other.shape, dtype=other.dtype)
     return out
 
-def concat(tensors, dim):
+def concat(tensors, dim=None, axis=None):
+    # Support both dim and axis for compatibility
+    if axis is not None:
+        dim = axis
+    if dim is None:
+        dim = 0
     shape = list(tensors[0].shape)
     shape[dim] = sum([t.shape[dim] for t in tensors])
     out = mindspore.Tensor(init='meta', shape=tuple(shape), dtype=tensors[0].dtype)
@@ -314,6 +319,40 @@ def normal_float_float(mean, std, size, dtype, geneartor):
 
 
 __all__.append('normal_float_float')
+
+
+def split_with_size(tensor, split_size_or_sections, dim=0):
+    """
+    Meta backend: return meta tensors with correct shapes for split_with_size.
+    """
+    dim = int(dim)
+    full_shape = list(tensor.shape)
+    total = full_shape[dim]
+
+    if isinstance(split_size_or_sections, int):
+        size = split_size_or_sections
+        if size <= 0:
+            raise ValueError("split_size must be > 0")
+        split_sizes = []
+        remaining = total
+        while remaining > 0:
+            split_sizes.append(min(size, remaining))
+            remaining -= size
+    elif isinstance(split_size_or_sections, (list, tuple)):
+        split_sizes = list(split_size_or_sections)
+        if sum(split_sizes) != total:
+            raise ValueError("sum of split_sizes must equal tensor size along dim")
+    else:
+        raise TypeError("split_size_or_sections must be int, list or tuple")
+
+    outputs = []
+    for sz in split_sizes:
+        out_shape = list(full_shape)
+        out_shape[dim] = sz
+        outputs.append(mindspore.Tensor(init='meta', shape=tuple(out_shape), dtype=tensor.dtype))
+    return outputs
+
+__all__.append('split_with_size')
 
 def stack(tensors, dim):
     x_shape = list(tensors[0].shape)

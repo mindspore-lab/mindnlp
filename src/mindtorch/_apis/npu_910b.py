@@ -2527,3 +2527,40 @@ def ifftn(input, s, dim, norm):
 
 def fftn(input, s, dim, norm):
     return pyboost.fftn_op(input, s, dim, norm)
+
+def selu(input):
+    """SELU activation: scale * elu(x, alpha) where alpha=1.67326324, scale=1.05070098"""
+    SELU_ALPHA = 1.67326324
+    SELU_SCALE = 1.05070098
+    if ENABLE_PYBOOST:
+        return pyboost.mul_op(legacy.elu(input, SELU_ALPHA), SELU_SCALE)
+    return legacy.mul(legacy.elu(input, SELU_ALPHA), SELU_SCALE)
+
+def celu(input, alpha):
+    """CELU activation: max(0, x) + min(0, alpha * (exp(x/alpha) - 1))"""
+    if alpha == 0:
+        raise ZeroDivisionError("ZeroDivisionError: alpha cannot be 0 for CELU")
+    return elu(input, alpha)
+
+def hardsigmoid(input):
+    """Hardsigmoid activation: clamp((x + 3) / 6, 0, 1)"""
+    x_plus_3 = add(input, 3.0)
+    x_div_6 = div(x_plus_3, 6.0)
+    return clamp_scalar(x_div_6, 0.0, 1.0)
+
+def fast_gelu(x):
+    """Fast GELU approximation"""
+    return gelu(x, approximate='tanh')
+
+def swiglu(x, dim=-1):
+    """Swish-Gated Linear Unit: swish(x[..., :d]) * x[..., d:] where d = x.shape[dim] // 2"""
+    split_size = x.shape[dim] // 2
+    x1, x2 = legacy.split(x, split_size, dim)
+    if ENABLE_PYBOOST:
+        return pyboost.mul_op(silu(x1), x2)
+    return legacy.mul(silu(x1), x2)
+
+def rotary_position_embedding(x, cos, sin, mode=0):
+    """Rotary Position Embedding"""
+    import mindspore
+    return mindspore.ops.auto_generate.gen_ops_def.apply_rotary_pos_emb_(x, cos, sin, mode)
