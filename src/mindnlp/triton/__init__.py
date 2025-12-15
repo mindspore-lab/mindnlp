@@ -2,7 +2,7 @@
 from functools import lru_cache
 import mindspore
 from mindtorch import ops
-from mindhf.utils import is_triton_available
+from mindnlp.utils import is_triton_available
 
 if is_triton_available():
     from triton.backends.driver import DriverBase

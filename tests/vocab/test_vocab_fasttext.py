@@ -14,7 +14,7 @@
 # ============================================================================
 """Test Fasttext Vocab"""
 import pytest
-from mindhf.vocab import Vocab
+from mindnlp.vocab import Vocab
 
 
 @pytest.mark.download

@@ -1,8 +1,8 @@
 from mindspore.dataset import GeneratorDataset as ds_GeneratorDataset
 import numpy as np
 from sklearn.metrics import accuracy_score
-from mindhf.engine import TrainingArguments, Trainer
-from mindhf.transformers import AutoImageProcessor, BeitForImageClassification
+from mindnlp.engine import TrainingArguments, Trainer
+from mindnlp.transformers import AutoImageProcessor, BeitForImageClassification
 import mindspore
 from mindspore import Tensor
 from mindspore.dataset.transforms.py_transforms import Compose

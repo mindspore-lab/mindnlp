@@ -11,12 +11,12 @@ import mindspore
 from mindspore.common.api import _no_grad
 
 from tqdm import tqdm
-from mindhf.core.optim import AdamW
-from mindhf import evaluate
-from mindhf.dataset import load_dataset
-from mindhf.transformers import AutoModelForSequenceClassification, AutoTokenizer
-from mindhf.transformers.optimization import get_linear_schedule_with_warmup
-from mindhf.peft import (
+from mindnlp.core.optim import AdamW
+from mindnlp import evaluate
+from mindnlp.dataset import load_dataset
+from mindnlp.transformers import AutoModelForSequenceClassification, AutoTokenizer
+from mindnlp.transformers.optimization import get_linear_schedule_with_warmup
+from mindnlp.peft import (
     get_peft_model,
     PeftType,
     LoraConfig,
@@ -65,7 +65,7 @@ print(next(datasets['train'].create_dict_iterator()))
 # In[6]:
 
 
-from mindhf.dataset import BaseMapFunction
+from mindnlp.dataset import BaseMapFunction
 
 class MapFunc(BaseMapFunction):
     def __call__(self, sentence1, sentence2, label, idx):
@@ -121,7 +121,7 @@ lr_scheduler = get_linear_schedule_with_warmup(
 # In[ ]:
 
 
-from mindhf.core import value_and_grad
+from mindnlp.core import value_and_grad
 def forward_fn(**batch):
     outputs = model(**batch)
     loss = outputs.loss

@@ -1,5 +1,5 @@
-from mindhf.transformers import BlenderbotSmallForConditionalGeneration, BlenderbotSmallTokenizer
-from mindhf.engine import Trainer, TrainingArguments
+from mindnlp.transformers import BlenderbotSmallForConditionalGeneration, BlenderbotSmallTokenizer
+from mindnlp.engine import Trainer, TrainingArguments
 from datasets import load_dataset, load_from_disk
 import mindspore as ms
 import os

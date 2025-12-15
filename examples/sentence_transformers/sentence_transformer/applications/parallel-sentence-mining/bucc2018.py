@@ -13,7 +13,7 @@ https://github.com/facebookresearch/faiss
 import os
 import pickle
 from collections import defaultdict
-import mindhf
+import mindnlp
 import numpy as np
 import torch
 from bitext_mining_utils import kNN, score_candidates

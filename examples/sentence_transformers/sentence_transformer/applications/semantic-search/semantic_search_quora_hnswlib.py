@@ -25,7 +25,7 @@ import csv
 import os
 import pickle
 import time
-import mindhf
+import mindnlp
 
 import hnswlib
 

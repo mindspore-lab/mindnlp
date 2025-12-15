@@ -7,12 +7,12 @@ from mindspore import nn
 from mindspore.nn import AdamWeightDecay
 from mindspore.dataset import  NumpySlicesDataset, SequentialSampler
 
-from mindhf.models import BertTokenizer, BertConfig, MSBertForSequenceClassification
+from mindnlp.models import BertTokenizer, BertConfig, MSBertForSequenceClassification
 
 from mindspore.communication import init, get_rank, get_group_size
 from mindspore.train import Model
 from mindspore.train import LossMonitor
-from mindhf.dataset import load_dataset
+from mindnlp.dataset import load_dataset
 
 
 

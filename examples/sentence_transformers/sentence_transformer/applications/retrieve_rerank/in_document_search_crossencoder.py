@@ -20,7 +20,7 @@ Note: Requires NLTK: `pip install nltk`
 import time
 
 from nltk import sent_tokenize
-import mindhf
+import mindnlp
 from sentence_transformers import CrossEncoder
 
 # As document, we take the first two section from the Wikipedia article about Europe

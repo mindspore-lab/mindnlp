@@ -5,8 +5,8 @@ import jsonlines
 import numpy as np
 import datasets
 from datasets import load_from_disk, load_dataset
-from mindhf.transformers import AutoModelForCausalLM, AutoTokenizer
-from mindhf.transformers.generation import GenerationConfig
+from mindnlp.transformers import AutoModelForCausalLM, AutoTokenizer
+from mindnlp.transformers.generation import GenerationConfig
 
 
 ANS_RE = re.compile(r"#### (\-?[0-9\.\,]+)")

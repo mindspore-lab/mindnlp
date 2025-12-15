@@ -1,4 +1,4 @@
-from mindhf.dataset import load_dataset
+from mindnlp.dataset import load_dataset
 
 # DATA_PATH = "/home/daiyuxin/neoming_convbert/dev/mindnlp/llm/parallel/convbert/.mindnlp/datasets/squad"
 

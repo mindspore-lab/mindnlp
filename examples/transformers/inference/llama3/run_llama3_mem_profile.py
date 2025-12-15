@@ -3,7 +3,7 @@ import psutil
 import gc
 from memory_profiler import profile
 import mindspore
-from mindhf.transformers import AutoTokenizer, AutoModelForCausalLM
+from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
 
 model_id = "LLM-Research/Meta-Llama-3-8B-Instruct"
 

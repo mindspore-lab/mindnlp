@@ -1,6 +1,6 @@
 import os
 import gradio as gr
-import mindhf
+import mindnlp
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 
 MODEL_NAME = "openai/gpt-oss-20b"

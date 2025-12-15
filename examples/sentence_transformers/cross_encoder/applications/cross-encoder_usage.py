@@ -5,7 +5,7 @@ It output then the most similar sentences for the given query.
 """
 
 import numpy as np
-import mindhf
+import mindnlp
 from sentence_transformers.cross_encoder import CrossEncoder
 
 # Pre-trained cross encoder

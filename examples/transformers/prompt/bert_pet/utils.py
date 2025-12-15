@@ -14,7 +14,7 @@ from typing import List
 
 import numpy as np
 import mindspore
-from mindhf.models import BertConfig
+from mindnlp.models import BertConfig
 
 from BertForMaskedLM import BertForMaskedLM
 from Template import HardTemplate

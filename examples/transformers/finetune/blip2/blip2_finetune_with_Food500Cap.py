@@ -1,6 +1,6 @@
-from mindhf.transformers import Blip2ForConditionalGeneration, Blip2Processor
-from mindhf.core.optim import AdamW
-from mindhf.core import value_and_grad
+from mindnlp.transformers import Blip2ForConditionalGeneration, Blip2Processor
+from mindnlp.core.optim import AdamW
+from mindnlp.core import value_and_grad
 
 import mindspore as ms
 from mindspore.dataset import GeneratorDataset
