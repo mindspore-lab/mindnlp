@@ -2608,7 +2608,6 @@ def lin_space_ext(start, end, steps, dtype):
     return ms.Tensor.from_numpy(out)
 
 
-<<<<<<< HEAD
 def upsample_nearest2d(input, output_size, scale_factors):
     """
     Upsample input tensor using nearest neighbor interpolation.
@@ -2900,8 +2899,6 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     return ms.Tensor.from_numpy(Y)
 
 
-=======
->>>>>>> fix c class
 def upsample_nearest2d(input, output_size, scale_factors):
     """
     Upsample input tensor using nearest neighbor interpolation.

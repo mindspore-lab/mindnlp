@@ -6,7 +6,7 @@ import mindtorch.nn.functional as F
 class SiluAndMul(nn.Module):
 
     def __init__(self):
-        super().__init__()
+        super().__init__()  # pylint: disable=useless-parent-delegation
 
     @mindtorch.compile
     def forward(self, x: mindtorch.Tensor) -> mindtorch.Tensor:

@@ -1,8 +1,8 @@
 # FILE: nanovllm/layers/rotary_embedding.py
 from functools import lru_cache
+from typing import Optional, Dict
 import mindtorch
 from mindtorch import nn
-from typing import Optional, Dict
 
 
 def apply_rotary_emb(

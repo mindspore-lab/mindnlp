@@ -4,10 +4,9 @@ Versioned Patch Registry
 Provides a registry system for managing version-specific patches.
 """
 
-from packaging import version, specifiers
-from typing import Dict, List, Callable, Optional, NamedTuple
+from typing import List, Callable, Optional, NamedTuple
 import warnings
-import sys
+from packaging import version, specifiers
 
 
 class PatchInfo(NamedTuple):
@@ -30,13 +29,13 @@ class VersionedPatchRegistry:
     - 补丁依赖
     - 错误隔离
     """
-    
+
     def __init__(self, library_name: str):
         self.library_name = library_name
         self._patches: List[PatchInfo] = []
         self._applied_patches: set = set()
-    
-    def register(self, 
+
+    def register(self,
                  version_spec: str,
                  patch_func: Callable,
                  priority: int = 0,
@@ -44,7 +43,7 @@ class VersionedPatchRegistry:
                  description: str = ""):
         """
         注册补丁
-        
+
         Args:
             version_spec: 版本规范，如 ">=4.56.0,<4.57.0" 或 "~=4.56.0"
             patch_func: 补丁函数
@@ -61,11 +60,11 @@ class VersionedPatchRegistry:
             name=patch_name,
             description=description or patch_name
         ))
-    
+
     def apply_patches(self, current_version: str, verbose: bool = False):
         """
         根据当前版本应用匹配的补丁
-        
+
         Args:
             current_version: 当前库版本
             verbose: 是否输出详细信息
@@ -76,9 +75,9 @@ class VersionedPatchRegistry:
             warnings.warn(
                 f"Invalid version '{current_version}' for {self.library_name}, "
                 "skipping patches"
-            )
+                )
             return
-        
+
         # 筛选匹配版本的补丁
         applicable_patches = []
         for patch in self._patches:
@@ -91,17 +90,17 @@ class VersionedPatchRegistry:
                     f"Invalid version spec '{patch.version_spec}' for patch "
                     f"'{patch.name}', skipping"
                 )
-        
+
         if not applicable_patches:
             return
-        
+
         # 按优先级排序（高优先级先执行）
         applicable_patches.sort(key=lambda x: x.priority, reverse=True)
-        
+
         # 应用补丁（处理依赖）
         applied = set()
         failed = set()
-        
+
         for patch in applicable_patches:
             # 检查依赖是否都已应用
             missing_deps = [dep for dep in patch.depends_on if dep not in applied]
@@ -110,7 +109,7 @@ class VersionedPatchRegistry:
                     f"Patch '{patch.name}' skipped: missing dependencies: {missing_deps}"
                 )
                 continue
-            
+
             # 应用补丁
             try:
                 patch.func()
@@ -122,7 +121,7 @@ class VersionedPatchRegistry:
                     f"Failed to apply patch '{patch.name}': {e}",
                     stacklevel=2
                 )
-    
+
     def get_applied_patches(self):
         """获取已应用的补丁列表"""
         return list(self._applied_patches)
@@ -134,12 +133,12 @@ _diffusers_registry = VersionedPatchRegistry("diffusers")
 _safetensors_registry = VersionedPatchRegistry("safetensors")
 
 
-def register_transformers_patch(version_spec: str, priority: int = 0, 
+def register_transformers_patch(version_spec: str, priority: int = 0,
                                 depends_on: Optional[List[str]] = None,
                                 description: str = ""):
     """
     装饰器：注册 transformers 补丁
-    
+
     使用示例:
         @register_transformers_patch(">=4.56.0,<4.57.0", priority=10)
         def patch_pre_trained_model():

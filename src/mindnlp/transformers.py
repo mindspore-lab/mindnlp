@@ -8,5 +8,6 @@ warnings.warn(
 )
 
 # Setup backward compatibility: redirect to patched transformers
+# pylint: disable=wrong-import-position
 from .patch.transformers import setup_transformers_module
 setup_transformers_module()

@@ -1,7 +1,7 @@
 # FILE: nanovllm/layers/layernorm.py
+from typing import Optional, Tuple, Union
 import mindtorch
 from mindtorch import nn
-from typing import Optional, Tuple, Union
 
 
 class RMSNorm(nn.Module):

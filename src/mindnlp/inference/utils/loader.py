@@ -1,8 +1,8 @@
 import os
 from glob import glob
+from safetensors import safe_open
 import mindtorch
 from mindtorch import nn
-from safetensors import safe_open
 
 
 def default_weight_loader(param: nn.Parameter, loaded_weight: mindtorch.Tensor):

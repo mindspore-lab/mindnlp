@@ -12,7 +12,7 @@ def patch_diffusers_common():
     """diffusers 通用补丁"""
     try:
         import diffusers
-        
+
         patch_dtype_wrapper(
             diffusers.pipelines.pipeline_utils.DiffusionPipeline,
             'from_pretrained'

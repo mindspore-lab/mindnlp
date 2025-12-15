@@ -1,7 +1,7 @@
 # FILE: nanovllm/utils/context.py
 from dataclasses import dataclass
-import mindtorch
 from typing import Optional
+import mindtorch
 
 
 @dataclass

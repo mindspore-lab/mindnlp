@@ -4,6 +4,8 @@ import numbers
 import warnings
 from typing import Optional, Tuple, List
 
+import mindspore
+from mindspore import ops
 import mindtorch
 from mindtorch.executor import execute
 from mindtorch._C import default_generator

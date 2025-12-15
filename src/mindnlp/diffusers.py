@@ -8,5 +8,6 @@ warnings.warn(
 )
 
 # Setup backward compatibility: apply patches
+# pylint: disable=wrong-import-position
 from .patch.diffusers import setup_diffusers_module
 setup_diffusers_module()
