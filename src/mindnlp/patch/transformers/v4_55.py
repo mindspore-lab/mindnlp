@@ -17,4 +17,3 @@ def patch_pre_trained_model_v4_55():
         'from_pretrained',
         [transformers.modeling_utils.restore_default_torch_dtype]
     )
-

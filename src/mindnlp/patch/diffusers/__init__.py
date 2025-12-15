@@ -23,4 +23,3 @@ def setup_diffusers_module():
     # Redirect mindnlp.diffusers to diffusers
     if 'mindnlp.diffusers' not in sys.modules:
         sys.modules['mindnlp.diffusers'] = diffusers
-

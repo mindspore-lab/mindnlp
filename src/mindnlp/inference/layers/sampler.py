@@ -3,10 +3,6 @@ from mindtorch import nn
 
 
 class Sampler(nn.Module):
-
-    def __init__(self):
-        super().__init__()  # pylint: disable=useless-parent-delegation
-
     def forward(self, logits: mindtorch.Tensor, temperatures: mindtorch.Tensor):
         logits = logits.to(mindtorch.float)
         greedy_tokens = logits.argmax(dim=-1)

@@ -74,4 +74,3 @@ def patch_common_features():
     # Patch cache utils
     transformers.cache_utils.DynamicLayer.update = dynamic_layer_update
     transformers.cache_utils.DynamicSlidingWindowLayer.update = dynamic_sliding_window_layer_update
-

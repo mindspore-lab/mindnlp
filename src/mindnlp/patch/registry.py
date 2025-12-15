@@ -237,4 +237,3 @@ def apply_all_patches(verbose: bool = False):
     apply_safetensors_patches(verbose=verbose)
     apply_transformers_patches(verbose=verbose)
     apply_diffusers_patches(verbose=verbose)
-

@@ -23,4 +23,3 @@ def patch_diffusers_common():
         )
     except ImportError:
         pass
-
