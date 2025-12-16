@@ -2506,6 +2506,8 @@ def raw_adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, be
     return legacy.adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad, False, False)
 
 def inplace_sub(input, other):
+    if type(other) == int:
+        other = mindspore.Tensor(other)
     return pyboost.inplace_sub_ext_op(input, other)
 
 def isfinite(input):
