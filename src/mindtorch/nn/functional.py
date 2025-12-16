@@ -696,7 +696,7 @@ def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode
 
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
-    return execute('group_norm', input, num_groups, weight, bias, eps)[0]
+    return execute('group_norm', input, num_groups, weight, bias, eps)
 
 def _in_projection(
     q,

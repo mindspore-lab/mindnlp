@@ -1507,7 +1507,7 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if bias is None:
         bias = zeros([input.shape[1]], dtype=input.dtype)
 
-    return pyboost.group_norm_op(input, num_groups, weight, bias, eps)
+    return pyboost.group_norm_op(input, num_groups, weight, bias, eps)[0]
 
 def nllloss_2d(input, target, weight, reduction='mean', ignore_index=-100):
     if ENABLE_PYBOOST:

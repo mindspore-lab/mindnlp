@@ -2481,6 +2481,62 @@ def view_as_real(input):
     return ViewAsRealFunction.apply(input)
 
 
+class PolarFunction(Function):
+    @staticmethod
+    def forward(ctx, abs, angle):
+        abs_np = abs.asnumpy()
+        angle_np = angle.asnumpy()
+        
+        # Compute real and imaginary parts
+        # polar(abs, angle) = abs * cos(angle) + abs * sin(angle) * j
+        real = abs_np * np.cos(angle_np)
+        imag = abs_np * np.sin(angle_np)
+        
+        # Create complex array
+        complex_np = real + 1j * imag
+        
+        if not isinstance(complex_np, np.ndarray):
+            complex_np = np.array(complex_np)
+        
+        result = ms.Tensor.from_numpy(complex_np)
+        ctx.save_for_backward(abs, angle)
+        return result
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        abs, angle = ctx.saved_tensors
+        grad_output_np = grad_output.asnumpy()
+        
+        # Extract real and imaginary parts of gradient
+        grad_real = np.real(grad_output_np)
+        grad_imag = np.imag(grad_output_np)
+        
+        abs_np = abs.asnumpy()
+        angle_np = angle.asnumpy()
+        
+        # Backward for polar: d/dabs = cos(angle) * grad_real + sin(angle) * grad_imag
+        #                    d/dangle = -abs * sin(angle) * grad_real + abs * cos(angle) * grad_imag
+        grad_abs = None
+        grad_angle = None
+        
+        if ctx.needs_input_grad[0]:
+            grad_abs = grad_real * np.cos(angle_np) + grad_imag * np.sin(angle_np)
+            if not isinstance(grad_abs, np.ndarray):
+                grad_abs = np.array(grad_abs)
+            grad_abs = ms.Tensor.from_numpy(grad_abs)
+        
+        if ctx.needs_input_grad[1]:
+            grad_angle = -abs_np * np.sin(angle_np) * grad_real + abs_np * np.cos(angle_np) * grad_imag
+            if not isinstance(grad_angle, np.ndarray):
+                grad_angle = np.array(grad_angle)
+            grad_angle = ms.Tensor.from_numpy(grad_angle)
+        
+        return grad_abs, grad_angle
+
+def polar(abs, angle):
+    return PolarFunction.apply(abs, angle)
+
+
 class FlattenFunction(Function):
     @staticmethod
     def forward(ctx, input, start_dim, end_dim):
@@ -2662,90 +2718,6 @@ def lin_space_ext(start, end, steps, dtype):
     return ms.Tensor.from_numpy(out)
 
 
-def upsample_nearest2d(input, output_size, scale_factors):
-    """
-    Upsample input tensor using nearest neighbor interpolation.
-    
-    Args:
-        input: Input tensor of shape (N, C, H, W)
-        output_size: Target output size (H, W) or None
-        scale_factors: Scale factors for upsampling (h_scale, w_scale) or None
-    
-    Returns:
-        Upsampled tensor
-    """
-    from scipy import ndimage
-    
-    input_np = input.asnumpy()
-    N, C, H, W = input_np.shape
-    
-    if output_size is None:
-        # Calculate output size from scale factors
-        if scale_factors is None:
-            raise ValueError("Either output_size or scale_factors must be provided")
-        if isinstance(scale_factors, (list, tuple)):
-            h_scale = scale_factors[0]
-            w_scale = scale_factors[1] if len(scale_factors) > 1 else scale_factors[0]
-        else:
-            h_scale = w_scale = scale_factors
-        output_h = int(H * h_scale)
-        output_w = int(W * w_scale)
-        output_size = (output_h, output_w)
-    else:
-        if isinstance(output_size, (list, tuple)):
-            output_h, output_w = output_size[0], output_size[1]
-        else:
-            output_h = output_w = output_size
-    
-    # Calculate zoom factors
-    zoom_h = output_h / H
-    zoom_w = output_w / W
-    
-    # Upsample each channel using scipy.ndimage.zoom
-    output_np = np.zeros((N, C, output_h, output_w), dtype=input_np.dtype)
-    for n in range(N):
-        for c in range(C):
-            output_np[n, c] = ndimage.zoom(input_np[n, c], (zoom_h, zoom_w), order=0, mode='nearest')
-    
-    return ms.Tensor.from_numpy(output_np)
-
-
-def upsample_bilinear2d(input, output_size, scale_factors, align_corners):
-    """
-    Upsample input tensor using bilinear interpolation.
-    
-    Args:
-        input: Input tensor of shape (N, C, H, W)
-        output_size: Target output size (H, W)
-        scale_factors: Scale factors (not used when output_size is provided)
-        align_corners: Whether to align corners
-    
-    Returns:
-        Upsampled tensor
-    """
-    from scipy import ndimage
-    
-    input_np = input.asnumpy()
-    N, C, H, W = input_np.shape
-    
-    if isinstance(output_size, (list, tuple)):
-        output_h, output_w = output_size[0], output_size[1]
-    else:
-        output_h = output_w = output_size
-    
-    # Calculate zoom factors
-    zoom_h = output_h / H
-    zoom_w = output_w / W
-    
-    # Upsample each channel using scipy.ndimage.zoom with bilinear interpolation (order=1)
-    output_np = np.zeros((N, C, output_h, output_w), dtype=input_np.dtype)
-    for n in range(N):
-        for c in range(C):
-            output_np[n, c] = ndimage.zoom(input_np[n, c], (zoom_h, zoom_w), order=1, mode='nearest')
-    
-    return ms.Tensor.from_numpy(output_np)
-
-
 def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
     """
     2D convolution operation implemented using numpy.
@@ -2767,17 +2739,38 @@ def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, grou
     input_np = input.asnumpy()
     weight_np = weight.asnumpy()
     
+    # Get weight shape first to determine expected input channels
+    C_out, C_in_per_group, kH, kW = weight_np.shape
+    expected_C_in = C_in_per_group * groups
+    
     # Handle different input dimensions
-    if input_np.ndim == 3:
+    if input_np.ndim == 2:
+        # Add batch and channel dimensions: (H, W) -> (1, C_in, H, W)
+        # For 2D input, assume single channel and expand to expected channels if needed
+        if expected_C_in == 1:
+            input_np = input_np[np.newaxis, np.newaxis, :]
+        else:
+            # If weight expects more channels, we need to broadcast or error
+            # For now, assume it's a single channel that should be repeated
+            input_np = np.tile(input_np[np.newaxis, np.newaxis, :], (1, expected_C_in, 1, 1))
+        N = 1
+        squeeze_output = True
+    elif input_np.ndim == 3:
         # Add batch dimension if missing: (C, H, W) -> (1, C, H, W)
         input_np = input_np[np.newaxis, :]
         N = 1
         squeeze_output = True
-    else:
+    elif input_np.ndim == 4:
         N = input_np.shape[0]
         squeeze_output = False
+    else:
+        raise ValueError(f"conv2d: input must have 2, 3, or 4 dimensions, got {input_np.ndim}")
     
     N, C_in, H, W = input_np.shape
+    
+    # Verify input channels match expected
+    if C_in != expected_C_in:
+        raise ValueError(f"conv2d: input has {C_in} channels but weight expects {expected_C_in} channels (C_in_per_group={C_in_per_group} * groups={groups})")
     C_out, C_in_per_group, kH, kW = weight_np.shape
     
     # Normalize stride and dilation
@@ -2899,60 +2892,6 @@ def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, grou
     return ms.Tensor.from_numpy(output_np)
 
 
-def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
-    """
-    Group Normalization over a mini-batch of inputs.
-    
-    Args:
-        input: Input tensor with shape (N, C, *)
-        num_groups: Number of groups to divide channels into
-        weight: Optional scale tensor of shape (C,)
-        bias: Optional shift tensor of shape (C,)
-        eps: Small value for numerical stability
-    
-    Returns:
-        Normalized tensor with same shape as input
-    """
-    input_np = input.asnumpy()
-    N, C = input_np.shape[0], input_np.shape[1]
-    
-    # Reshape input to (N, num_groups, -1) for group-wise normalization
-    if np.prod(input_np.shape) != 0:
-        inp_view = input_np.reshape((N, num_groups, -1))
-        # Compute mean and variance for each group
-        mean = np.mean(inp_view, axis=-1, keepdims=True)
-        var = np.var(inp_view, axis=-1, ddof=0, keepdims=True)
-        # Normalize
-        Y = (inp_view - mean) / np.sqrt(var + eps)
-        # Reshape back to original shape
-        Y = Y.reshape(input_np.shape)
-    else:
-        Y = input_np.copy()
-    
-    # Apply weight and bias if provided
-    if weight is not None:
-        weight_np = weight.asnumpy() if hasattr(weight, 'asnumpy') else weight
-        # Expand weight to match input dimensions
-        if len(Y.shape) > 2:
-            expand_dims = [0] + [idx + 2 for idx in range(input_np.ndim - 2)]
-            for dim in expand_dims:
-                weight_np = np.expand_dims(weight_np, dim)
-        Y = Y * weight_np
-    
-    if bias is not None:
-        bias_np = bias.asnumpy() if hasattr(bias, 'asnumpy') else bias
-        # Expand bias to match input dimensions
-        if len(Y.shape) > 2:
-            expand_dims = [0] + [idx + 2 for idx in range(input_np.ndim - 2)]
-            for dim in expand_dims:
-                bias_np = np.expand_dims(bias_np, dim)
-        Y = Y + bias_np
-    
-    if not isinstance(Y, np.ndarray):
-        Y = np.array(Y)
-    return ms.Tensor.from_numpy(Y)
-
-
 def upsample_nearest2d(input, output_size, scale_factors):
     """
     Upsample input tensor using nearest neighbor interpolation.
@@ -3036,213 +2975,154 @@ def upsample_bilinear2d(input, output_size, scale_factors, align_corners):
     
     return ms.Tensor.from_numpy(output_np)
 
-
-def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
+def addcmul(input, tensor1, tensor2, value=1.0):
     """
-    2D convolution operation implemented using numpy.
+    Performs the element-wise operation: output = input + value * tensor1 * tensor2
+    """
+    # addcmul(input, tensor1, tensor2, value) = input + value * tensor1 * tensor2
+    return add(input, mul(mul(tensor1, tensor2), value))
+
+def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, training=False, momentum=0.1, epsilon=1e-5):
+    """
+    Batch Normalization over a mini-batch of inputs.
+    Following npu_310b.py implementation pattern.
     
     Args:
-        input: Input tensor of shape (N, C_in, H, W)
-        weight: Weight tensor of shape (C_out, C_in/groups, kH, kW)
-        bias: Optional bias tensor of shape (C_out,)
-        stride: Stride for convolution (int or tuple)
-        padding: Padding mode ('valid', 'same') or padding value (int or tuple)
-        dilation: Dilation rate (int or tuple)
-        groups: Number of groups for grouped convolution
-    
-    Returns:
-        Output tensor of shape (N, C_out, H_out, W_out)
-    """
-    from scipy import signal
-    
-    input_np = input.asnumpy()
-    weight_np = weight.asnumpy()
-    
-    # Handle different input dimensions
-    if input_np.ndim == 3:
-        # Add batch dimension if missing: (C, H, W) -> (1, C, H, W)
-        input_np = input_np[np.newaxis, :]
-        N = 1
-        squeeze_output = True
-    else:
-        N = input_np.shape[0]
-        squeeze_output = False
-    
-    N, C_in, H, W = input_np.shape
-    C_out, C_in_per_group, kH, kW = weight_np.shape
-    
-    # Normalize stride and dilation
-    if isinstance(stride, int):
-        stride_h, stride_w = stride, stride
-    elif isinstance(stride, (tuple, list)):
-        if len(stride) == 2:
-            stride_h, stride_w = stride[0], stride[1]
-        elif len(stride) == 4:
-            stride_h, stride_w = stride[2], stride[3]
-        else:
-            stride_h, stride_w = stride[0], stride[0]
-    else:
-        stride_h, stride_w = 1, 1
-    
-    if isinstance(dilation, int):
-        dilation_h, dilation_w = dilation, dilation
-    elif isinstance(dilation, (tuple, list)):
-        if len(dilation) == 2:
-            dilation_h, dilation_w = dilation[0], dilation[1]
-        elif len(dilation) == 4:
-            dilation_h, dilation_w = dilation[2], dilation[3]
-        else:
-            dilation_h, dilation_w = dilation[0], dilation[0]
-    else:
-        dilation_h, dilation_w = 1, 1
-    
-    # Calculate effective kernel size with dilation
-    eff_kH = (kH - 1) * dilation_h + 1
-    eff_kW = (kW - 1) * dilation_w + 1
-    
-    # Handle padding
-    if isinstance(padding, str):
-        if padding == 'valid':
-            pad_h, pad_w = 0, 0
-        elif padding == 'same':
-            # Calculate padding to maintain output size
-            pad_h = max(0, (H - 1) * stride_h + eff_kH - H) // 2
-            pad_w = max(0, (W - 1) * stride_w + eff_kW - W) // 2
-        else:
-            raise ValueError(f"Unsupported padding mode: {padding}")
-    elif isinstance(padding, int):
-        pad_h, pad_w = padding, padding
-    elif isinstance(padding, (tuple, list)):
-        if len(padding) == 2:
-            pad_h, pad_w = padding[0], padding[1]
-        elif len(padding) == 4:
-            pad_h, pad_w = padding[0], padding[2]  # (top, bottom, left, right) -> (top, left)
-        else:
-            raise ValueError(f"padding must be int, 2-tuple, or 4-tuple, got {padding}")
-    else:
-        pad_h, pad_w = 0, 0
-    
-    # Pad input if needed
-    if pad_h > 0 or pad_w > 0:
-        input_padded = np.pad(input_np, ((0, 0), (0, 0), (pad_h, pad_h), (pad_w, pad_w)), mode='constant')
-    else:
-        input_padded = input_np
-    
-    # Calculate output dimensions
-    H_out = (H + 2 * pad_h - eff_kH) // stride_h + 1
-    W_out = (W + 2 * pad_w - eff_kW) // stride_w + 1
-    
-    # Initialize output
-    output_np = np.zeros((N, C_out, H_out, W_out), dtype=input_np.dtype)
-    
-    # Perform convolution for each batch and output channel
-    for n in range(N):
-        for c_out in range(C_out):
-            # Determine which input channels to use based on groups
-            group_id = c_out // (C_out // groups)
-            c_in_start = group_id * C_in_per_group
-            c_in_end = (group_id + 1) * C_in_per_group
-            
-            # Sum over input channels in this group
-            conv_result = np.zeros((H_out, W_out), dtype=input_np.dtype)
-            for c_in in range(c_in_start, c_in_end):
-                # Get kernel for this input-output channel pair
-                kernel = weight_np[c_out, c_in - c_in_start]
-                
-                # Apply dilation to kernel
-                if dilation_h > 1 or dilation_w > 1:
-                    dilated_kernel = np.zeros((eff_kH, eff_kW), dtype=kernel.dtype)
-                    dilated_kernel[::dilation_h, ::dilation_w] = kernel
-                    kernel = dilated_kernel
-                
-                # Flip kernel for convolution (cross-correlation)
-                kernel_flipped = np.flipud(np.fliplr(kernel))
-                
-                # Perform 2D convolution using scipy.signal.convolve2d
-                conv_channel = signal.convolve2d(
-                    input_padded[n, c_in],
-                    kernel_flipped,
-                    mode='valid'
-                )
-                
-                # Apply stride by subsampling
-                if stride_h > 1 or stride_w > 1:
-                    conv_channel = conv_channel[::stride_h, ::stride_w]
-                
-                    # Ensure output size matches (handle edge cases)
-                    h_end = H_out if H_out < conv_channel.shape[0] else conv_channel.shape[0]
-                    w_end = W_out if W_out < conv_channel.shape[1] else conv_channel.shape[1]
-                    h_slice = slice(0, h_end)
-                    w_slice = slice(0, w_end)
-                    conv_result[h_slice, w_slice] += conv_channel[h_slice, w_slice]
-            
-            output_np[n, c_out] = conv_result
-    
-    # Add bias if provided
-    if bias is not None:
-        bias_np = bias.asnumpy() if hasattr(bias, 'asnumpy') else bias
-        output_np = output_np + bias_np[None, :, None, None]
-    
-    # Remove batch dimension if input was 3D
-    if squeeze_output:
-        output_np = output_np[0]
-    
-    return ms.Tensor.from_numpy(output_np)
-
-
-def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
-    """
-    Group Normalization over a mini-batch of inputs.
-    
-    Args:
-        input: Input tensor with shape (N, C, *)
-        num_groups: Number of groups to divide channels into
-        weight: Optional scale tensor of shape (C,)
-        bias: Optional shift tensor of shape (C,)
-        eps: Small value for numerical stability
+        input: Input tensor of shape (N, C, *)
+        weight: Scale tensor of shape (C,)
+        bias: Shift tensor of shape (C,)
+        running_mean: Running mean tensor of shape (C,)
+        runnning_var: Running variance tensor of shape (C,) (note: typo in parameter name)
+        training: Whether in training mode
+        momentum: Momentum for running statistics
+        epsilon: Small value for numerical stability
     
     Returns:
         Normalized tensor with same shape as input
     """
     input_np = input.asnumpy()
-    N, C = input_np.shape[0], input_np.shape[1]
     
-    # Reshape input to (N, num_groups, -1) for group-wise normalization
-    if np.prod(input_np.shape) != 0:
-        inp_view = input_np.reshape((N, num_groups, -1))
-        # Compute mean and variance for each group
-        mean = np.mean(inp_view, axis=-1, keepdims=True)
-        var = np.var(inp_view, axis=-1, ddof=0, keepdims=True)
-        # Normalize
-        Y = (inp_view - mean) / np.sqrt(var + eps)
-        # Reshape back to original shape
-        Y = Y.reshape(input_np.shape)
+    # Handle different input dimensions
+    if input_np.ndim == 2:
+        # (N, C) format
+        N, C = input_np.shape
+        spatial_dims = ()
+    elif input_np.ndim >= 3:
+        # (N, C, *) format
+        N, C = input_np.shape[0], input_np.shape[1]
+        spatial_dims = input_np.shape[2:]
     else:
-        Y = input_np.copy()
+        raise ValueError(f"batch_norm: input must have at least 2 dimensions, got {input_np.ndim}")
     
-    # Apply weight and bias if provided
-    if weight is not None:
-        weight_np = weight.asnumpy() if hasattr(weight, 'asnumpy') else weight
-        # Expand weight to match input dimensions
-        if len(Y.shape) > 2:
-            expand_dims = [0] + [idx + 2 for idx in range(input_np.ndim - 2)]
-            for dim in expand_dims:
-                weight_np = np.expand_dims(weight_np, dim)
-        Y = Y * weight_np
+    # Create default values if None (following npu_310b.py pattern)
+    if running_mean is None:
+        running_mean = ones(C, dtype=input.dtype)
+    if runnning_var is None:
+        runnning_var = zeros(C, dtype=input.dtype)
+    if weight is None:
+        weight = ones(C, dtype=input.dtype)
+    if bias is None:
+        bias = zeros(C, dtype=input.dtype)
     
-    if bias is not None:
-        bias_np = bias.asnumpy() if hasattr(bias, 'asnumpy') else bias
-        # Expand bias to match input dimensions
-        if len(Y.shape) > 2:
-            expand_dims = [0] + [idx + 2 for idx in range(input_np.ndim - 2)]
-            for dim in expand_dims:
-                bias_np = np.expand_dims(bias_np, dim)
-        Y = Y + bias_np
+    # Convert to numpy
+    weight_np = weight.asnumpy()
+    bias_np = bias.asnumpy()
+    running_mean_np = running_mean.asnumpy()
+    running_var_np = runnning_var.asnumpy()
     
-    if not isinstance(Y, np.ndarray):
-        Y = np.array(Y)
-    return ms.Tensor.from_numpy(Y)
+    if training:
+        # Compute mean and variance over batch and spatial dimensions
+        # For each channel c: mean = mean(input[:, c, ...])
+        axes = (0,) + tuple(range(2, input_np.ndim))  # (0, 2, 3, ...) for (N, C, H, W)
+        mean = np.mean(input_np, axis=axes, keepdims=True)
+        var = np.var(input_np, axis=axes, ddof=0, keepdims=True)
+        
+        # Update running statistics
+        mean_squeezed = np.squeeze(mean, axis=axes)
+        var_squeezed = np.squeeze(var, axis=axes)
+        # Update: running_mean = (1 - momentum) * running_mean + momentum * mean
+        running_mean_np[:] = (1 - momentum) * running_mean_np + momentum * mean_squeezed
+        running_var_np[:] = (1 - momentum) * running_var_np + momentum * var_squeezed
+    else:
+        # Use running statistics
+        # Expand to match input dimensions
+        mean = running_mean_np
+        var = running_var_np
+        for _ in range(input_np.ndim - 1):
+            mean = np.expand_dims(mean, axis=0)
+            var = np.expand_dims(var, axis=0)
+        # Expand spatial dimensions
+        for dim_size in spatial_dims:
+            mean = np.broadcast_to(mean, mean.shape[:-1] + (dim_size,))
+            var = np.broadcast_to(var, var.shape[:-1] + (dim_size,))
+    
+    # Normalize: (input - mean) / sqrt(var + epsilon)
+    normalized = (input_np - mean) / np.sqrt(var + epsilon)
+    
+    # Apply weight and bias: weight * normalized + bias
+    # Expand weight and bias to match input dimensions
+    weight_expanded = weight_np
+    bias_expanded = bias_np
+    for _ in range(input_np.ndim - 1):
+        weight_expanded = np.expand_dims(weight_expanded, axis=0)
+        bias_expanded = np.expand_dims(bias_expanded, axis=0)
+    # Expand spatial dimensions
+    for dim_size in spatial_dims:
+        weight_expanded = np.broadcast_to(weight_expanded, weight_expanded.shape[:-1] + (dim_size,))
+        bias_expanded = np.broadcast_to(bias_expanded, bias_expanded.shape[:-1] + (dim_size,))
+    
+    output = weight_expanded * normalized + bias_expanded
+    output = output.reshape(N, C, *spatial_dims)
+    if not isinstance(output, np.ndarray):
+        output = np.array(output)
+    return ms.Tensor.from_numpy(output)
 
+def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
+    input_shape = input.shape
+    N = input_shape[0]
+    C = input_shape[1]
+    input_reshaped = reshape(input, (1, N * num_groups, -1 if N!=0 else 1))
+    outputs = batch_norm(input_reshaped, None, None, None, None, True, 0., eps)
+    out = reshape(outputs, input_shape)
+    affine_param_shape = [1] * input.ndim
+    affine_param_shape[1] = C
+    affine_param_shape = tuple(affine_param_shape)
+    if weight is not None and bias is not None:
+        out = addcmul(reshape(bias, affine_param_shape), out, reshape(weight, affine_param_shape), value=1)
+
+    elif weight is not None:
+        out = mul(out, reshape(weight, affine_param_shape))
+    elif bias is not None:
+        out = add(out, reshape(bias, affine_param_shape))
+    return out
+
+def split_tensor(tensor, split_size_or_sections, dim):
+    """
+    Splits a tensor into multiple sub-tensors along the specified dimension.
+    
+    Args:
+        tensor: The input tensor.
+        split_size_or_sections: The size of each chunk (int).
+        dim: The dimension along which to split.
+    
+    Returns:
+        List of tensors.
+    """
+    arr = tensor.asnumpy()
+    dim_size = arr.shape[dim]
+    
+    # Calculate split indices
+    # If split_size_or_sections=3 and dim_size=10, we get indices [3, 6, 9]
+    split_indices = list(range(split_size_or_sections, dim_size, split_size_or_sections))
+    
+    if len(split_indices) == 0:
+        # If no splits needed (split_size >= dim_size), return the whole tensor
+        return [ms.Tensor.from_numpy(arr)]
+    
+    # Split the array
+    outs = np.split(arr, split_indices, axis=dim)
+    out = [ms.Tensor.from_numpy(o) for o in outs]
+    return out
 
 def split_with_size(tensor, split_size_or_sections, dim):
     out = np.array_split(tensor.asnumpy(), np.cumsum(split_size_or_sections[:-1]), dim)
@@ -3666,11 +3546,22 @@ class TransposeViewFunction(Function):
         # Swap dimensions dim0 and dim1
         # Handle negative dimensions
         ndim = input.ndim
-        dim0 = dim0 if dim0 >= 0 else dim0 + ndim
-        dim1 = dim1 if dim1 >= 0 else dim1 + ndim
-        # Check bounds
-        if dim0 < 0 or dim0 >= ndim or dim1 < 0 or dim1 >= ndim:
-            raise IndexError(f"Dimension out of range: dim0={dim0}, dim1={dim1}, ndim={ndim}")
+        # Normalize negative dimensions
+        if dim0 < 0:
+            dim0 = dim0 + ndim
+        if dim1 < 0:
+            dim1 = dim1 + ndim
+        # Clamp dimensions to valid range (in case tensor was reshaped)
+        # If dimension is >= ndim, treat it as the last dimension
+        if dim0 >= ndim:
+            dim0 = ndim - 1
+        if dim1 >= ndim:
+            dim1 = ndim - 1
+        # Check bounds after normalization and clamping
+        if dim0 < 0 or dim0 >= ndim:
+            raise IndexError(f"Dimension out of range: dim0={dim0}, ndim={ndim}")
+        if dim1 < 0 or dim1 >= ndim:
+            raise IndexError(f"Dimension out of range: dim1={dim1}, ndim={ndim}")
         ranks = list(range(ndim))
         ranks[dim0], ranks[dim1] = ranks[dim1], ranks[dim0]
         out = np.transpose(input.asnumpy(), ranks)
@@ -3840,9 +3731,24 @@ def expm1(input):
     return Expm1Function.apply(input)
 
 
-def ones_like(input):
-    out = np.ones_like(input.asnumpy())
-    return ms.Tensor.from_numpy(out)
+class OnesLikeFunction(Function):
+    @staticmethod
+    def forward(ctx, input, dtype=None):
+        input_np = input.asnumpy()
+        if dtype is not None:
+            dtype_np = mindtorch.dtype2np[dtype]
+        else:
+            dtype_np = input_np.dtype
+        out = np.ones_like(input_np, dtype=dtype_np)
+        result = ms.Tensor.from_numpy(out)
+        return result
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        return None, None
+
+def ones_like(input, dtype=None):
+    return OnesLikeFunction.apply(input, dtype)
 
 
 def reverse_v2(input, dims):

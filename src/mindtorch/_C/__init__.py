@@ -86,7 +86,13 @@ class device():
     def __eq__(self, __value):
         if not isinstance(__value, device):
             return False
-        return hash(self) == hash(__value)
+        
+        if DEVICE_TARGET == 'Ascend':
+            eq_device = self.type == __value.type or (self.type == 'cuda' and __value.type == 'npu') or (self.type == 'npu' and __value.type == 'cuda')
+        else:
+            eq_device = self.type == __value.type
+        eq_index = self.index == __value.index
+        return eq_device and eq_index
 
     def __hash__(self):
         return hash(self.type) ^ hash(self.index)

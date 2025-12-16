@@ -193,6 +193,9 @@ from . import profiler, cuda, npu, xpu, mps, amp, compiler, jit, version, __futu
 from ._lowrank import svd_lowrank
 from .random import get_rng_state, initial_seed, manual_seed, seed, set_rng_state
 
+if mindspore.get_context('device_target') == 'Ascend':
+    cuda = npu
+
 __version__ = 'test_version_no_value'
 
 
