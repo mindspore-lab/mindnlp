@@ -11,7 +11,7 @@ elif SOC in ['ascend310b', 'ascend310b1', 'ascend310b4']:
 elif SOC == 'ascend310p':
     npu = npu_310p
 else:
-    raise ValueError(f'Unsupported SOC: {SOC}')
+    npu = npu_910a
 
 api_map = {
     'cpu': numpy if CPU_USE_NUMPY_OP else cpu,
