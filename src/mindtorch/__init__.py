@@ -32,6 +32,8 @@ from mindspore.runtime import Stream
 from mindspore.common.api import _pynative_executor
 from mindspore._c_expression import MSContext # pylint: disable=no-name-in-module, import-error
 
+_pynative_executor.set_grad_flag(True)
+
 # for huawei cloud modelarts
 if 'RANK_TABLE_FILE' in os.environ:
     del os.environ['RANK_TABLE_FILE']
@@ -189,7 +191,7 @@ from .storage import UntypedStorage, Storage, TypedStorage
 
 from . import _dynamo, library
 from . import profiler, cuda, npu, xpu, mps, amp, compiler, jit, version, __future__, overrides, \
-    return_types, linalg, fx, backends, nn, fft, _jit_internal, utils, optim, testing, _ops
+    return_types, linalg, fx, backends, nn, fft, _jit_internal, utils, optim, testing, _ops, accelerator
 from ._lowrank import svd_lowrank
 from .random import get_rng_state, initial_seed, manual_seed, seed, set_rng_state
 

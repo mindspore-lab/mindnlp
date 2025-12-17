@@ -1,3 +1,4 @@
+import warnings
 import numbers
 import numpy as np
 import mindspore
@@ -38,7 +39,9 @@ DTYPE_ELEMENT_SIZE_MAP = {
     mindspore.int16: 2,
     mindspore.bfloat16: 2,
     mindspore.float16: 2,
-    mindspore.bool_: 1
+    mindspore.bool_: 1,
+    mindspore.uint8: 1,
+    mindspore.int8: 1
 }
 
 class TypedTensorMeta(_TensorMeta):
@@ -135,6 +138,27 @@ def is_tensor(x):
     return isinstance(x, Tensor)
 
 class TensorPlaceHolder:
+
+    @property
+    def grad(self):
+        if not self.is_leaf and self.requires_grad:
+            warnings.warn(
+                "The .grad attribute of a Tensor that is not a leaf Tensor is being accessed. "
+                "Its .grad attribute won't be populated during autograd.backward(). "
+                "If you indeed want the .grad field to be populated for a non-leaf Tensor, "
+                "use .retain_grad() on the non-leaf Tensor."
+            )
+        return self._grad
+
+    @grad.setter
+    def grad(self, value):
+        self._grad = value
+
+    @property
+    def grad_fn(self):
+        if self._grad_node and self._grad_node.is_leaf():
+            return None
+        return self._grad_node
 
     @property
     def requires_grad(self):
@@ -1331,11 +1355,7 @@ class TensorPlaceHolder:
     # Tensor.is_leaf
     @property
     def is_leaf(self):
-        if not self.requires_grad:
-            return True
-        if self.requires_grad and hasattr(self, 'param_info'):
-            return True
-        return False
+        return self._is_leaf
 
     # Tensor.is_pinned
     def is_pinned(self):
@@ -2547,8 +2567,8 @@ class TensorPlaceHolder:
     def __mod__(self, other):
         return ops.fmod(self, other)
 
-    def backward(self):
-        return self
+    def backward(self, gradient=None, retain_graph=None, create_graph=False, inputs=None):
+        mindtorch.autograd.backward(self, gradient, retain_graph, create_graph, inputs=inputs)
 
     def log_softmax(self, dim):
         return ops.log_softmax(self, dim)

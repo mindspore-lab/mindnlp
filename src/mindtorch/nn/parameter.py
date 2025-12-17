@@ -9,7 +9,6 @@ from mindspore.common._stub_tensor import StubTensor
 import mindtorch
 
 class Parameter(Tensor):
-    grad = None
     def __init__(self, input_data=None, requires_grad=True, **kwargs):
         super().__init__(input_data)
         self.meta = False

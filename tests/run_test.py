@@ -12,8 +12,18 @@ import mindspore
 import mindnlp
 from mindnlp import transformers
 
-mindspore.set_context(pynative_synchronize=True)
-mindspore.runtime.launch_blocking()
+if mindspore.get_context("device_target") == "GPU":
+    os.environ["TRANSFORMERS_TEST_DEVICE"] = "cuda"
+elif mindspore.get_context("device_target") == "Ascend":
+    os.environ["TRANSFORMERS_TEST_DEVICE"] = "npu"
+elif mindspore.get_context("device_target") == "CPU":
+    os.environ["TRANSFORMERS_TEST_DEVICE"] = "cpu"
+else:
+    raise ValueError(f"Unsupported device target: {mindspore.get_context('device_target')}")
+
+
+if os.environ.get('TEST_LAUNCH_BLOCKING', 'False').strip().lower() == 'true':
+    mindspore.runtime.launch_blocking()
 
 def run_tests():
     """
@@ -28,12 +38,8 @@ def run_tests():
     pytest_args = sys.argv[1:]
     # not support sdpa/loss.backward/torchscript/torch.fx/torch.compile
     skip_ut = "not sdpa " \
-        "and not headmasking " \
-        "and not gradient_checkpointing " \
-        "and not retain_grad " \
         "and not data_parallel " \
         "and not model_parallelism " \
-        "and not with_static_cache " \
         "and not compile " \
         "and not compilation " \
         "and not torchscript " \
