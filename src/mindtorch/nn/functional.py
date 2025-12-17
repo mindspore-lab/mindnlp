@@ -611,20 +611,20 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None, trainin
         eps
     )[0]
 
-def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     if isinstance(padding, str):
-        return execute('conv1d_padding', input, weight, bias, stride, padding, dilation, groups)
-    return execute('conv1d', input, weight, bias, stride, padding, dilation, groups)
+        return execute('conv1d_padding', input, weight, bias, stride, padding, dilation, groups, training)
+    return execute('conv1d', input, weight, bias, stride, padding, dilation, groups, training)
 
-def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     if isinstance(padding, str):
-        return execute('conv2d_padding', input, weight, bias, stride, padding, dilation, groups)
-    return execute('conv2d', input, weight, bias, stride, padding, dilation, groups)
+        return execute('conv2d_padding', input, weight, bias, stride, padding, dilation, groups, training)
+    return execute('conv2d', input, weight, bias, stride, padding, dilation, groups, training)
 
-def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     if isinstance(padding, str):
-        return execute('conv3d_padding', input, weight, bias, stride, padding, dilation, groups)
-    return execute('conv3d', input, weight, bias, stride, padding, dilation, groups)
+        return execute('conv3d_padding', input, weight, bias, stride, padding, dilation, groups, training)
+    return execute('conv3d', input, weight, bias, stride, padding, dilation, groups, training)
 
 def conv_transpose1d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
     x_2d = input.unsqueeze(2)  # (batch, in_channels, 1, L_in)

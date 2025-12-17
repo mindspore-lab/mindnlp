@@ -154,6 +154,9 @@ class TensorPlaceHolder:
     def grad(self, value):
         self._grad = value
 
+    def retain_grad(self):
+        return self._retain_grad()
+
     @property
     def grad_fn(self):
         if self._grad_node and self._grad_node.is_leaf():
@@ -1911,9 +1914,9 @@ class TensorPlaceHolder:
         return self
 
     # Tensor.retains_grad
-    @property
-    def retains_grad(self):
-        return not self.is_leaf and self._retain_grad
+    # @property
+    # def retains_grad(self):
+    #     return not self.is_leaf and self._retain_grad
 
     # Tensor.roll
     def roll(self, shifts, dims=None):
@@ -2583,8 +2586,6 @@ class TensorPlaceHolder:
     def is_nested(self):
         return False
 
-    def retain_grad(self):
-        pass
 
 def enable_mindspore_patch():
     fn_keys = list(TensorPlaceHolder.__dict__)

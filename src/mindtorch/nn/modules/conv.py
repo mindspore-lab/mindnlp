@@ -257,9 +257,10 @@ class Conv1d(_ConvNd):
                 _single(0),
                 self.dilation,
                 self.groups,
+                self.training,
             )
         return F.conv1d(
-            input, weight, bias, self.stride, self.padding, self.dilation, self.groups
+            input, weight, bias, self.stride, self.padding, self.dilation, self.groups, self.training
         )
 
     def forward(self, input: Tensor) -> Tensor:
@@ -314,9 +315,10 @@ class Conv2d(_ConvNd):
                 _pair(0),
                 self.dilation,
                 self.groups,
+                self.training,
             )
         return F.conv2d(
-            input, weight, bias, self.stride, self.padding, self.dilation, self.groups
+            input, weight, bias, self.stride, self.padding, self.dilation, self.groups, self.training
         )
 
     def forward(self, input: Tensor) -> Tensor:
@@ -371,9 +373,10 @@ class Conv3d(_ConvNd):
                 _triple(0),
                 self.dilation,
                 self.groups,
+                self.training,
             )
         return F.conv3d(
-            input, weight, bias, self.stride, self.padding, self.dilation, self.groups
+            input, weight, bias, self.stride, self.padding, self.dilation, self.groups, self.training
         )
 
     def forward(self, input: Tensor) -> Tensor:
