@@ -1050,12 +1050,12 @@ def flatten(input, start_dim, end_dim):
     input_shape[start_dim:end_dim] = [-1]
     return legacy.reshape(input, tuple(input_shape))
 
-def conv2d_padding(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
+def conv2d_padding(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1, training=True):
     if ENABLE_PYBOOST:
         return pyboost.conv2d_padding_op(input, weight, bias, stride, padding, dilation, groups)
     return conv2d_legacy(input, weight, bias, stride, padding, dilation, groups)
 
-def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
+def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1, training=True):
     if ENABLE_PYBOOST:
         return pyboost.conv2d_ext_op(input, weight, bias, stride, padding, dilation, groups)
     return conv2d_legacy(input, weight, bias, stride, padding, dilation, groups)
@@ -1236,7 +1236,7 @@ def roll(input, shifts, axis):
         return pyboost.roll_impl(input, shifts, axis)
     return legacy.roll(input, shifts, axis)
 
-def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     if ENABLE_PYBOOST:
         return pyboost.conv1d_ext_op(input, weight, bias, stride, padding, dilation, groups)
     return conv1d_legacy(input, weight, bias, stride, padding, dilation, groups)
@@ -1701,7 +1701,7 @@ def adaptive_avg_pool1d(input, output_size):
         return pyboost.adaptive_avg_pool1d_op(input, output_size)
     return legacy.adaptive_avg_pool1d(input, output_size)
 
-def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     if ENABLE_PYBOOST:
         return pyboost.conv3d_ext_op(input, weight, bias, stride, padding, dilation, groups)
     pad_mode = 'pad'

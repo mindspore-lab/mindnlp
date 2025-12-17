@@ -1,10 +1,9 @@
-import ctypes
 import numbers
 import numpy as np
 import scipy
+import mindspore as ms
 from mindspore import ops
 from mindspore import _Function as Function
-import mindspore as ms
 import mindtorch
 
 __all__ = []
@@ -2687,12 +2686,14 @@ class LogFunction(Function):
     @staticmethod
     def forward(ctx, input):
         out = np.log(input.asnumpy())
+        if input.dtype == ms.int64:
+            out = out.astype(np.float32)
         if not isinstance(out, np.ndarray):
             out = np.array(out)
         result = ms.Tensor.from_numpy(out)
         ctx.save_for_backward(input)
         return result
-    
+
     @staticmethod
     def backward(ctx, grad_output):
         input, = ctx.saved_tensors
