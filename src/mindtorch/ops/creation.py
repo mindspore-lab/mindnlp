@@ -58,6 +58,8 @@ def zeros(*size, out=None, dtype=None, layout=None, device=None, requires_grad=F
 
 # zeros_like
 def zeros_like(input, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=None):
+    if device is not None:
+        device = check_device(device)
     return execute('zeros_like', input, dtype, device=device)
 
 # ones
@@ -86,8 +88,8 @@ def ones(*size, out=None, dtype=None, layout=None, device=None, requires_grad=Fa
 
 # ones_like
 def ones_like(input, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=None):
-    if isinstance(device, str):
-        device = mindtorch.device(device)
+    if device is not None:
+        device = check_device(device)
     return execute('ones_like', input, dtype, device=device)
 
 # arange
@@ -206,6 +208,8 @@ def full(size, fill_value, *, out=None, dtype=None, layout=None, device=None, re
 
 # full_like
 def full_like(input, fill_value, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=None):
+    if device is not None:
+        device = check_device(device)
     return execute('full_like', input, fill_value, dtype=dtype)
 
 # quantize_per_tensor

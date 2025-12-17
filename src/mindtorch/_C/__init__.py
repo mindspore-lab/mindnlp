@@ -46,6 +46,12 @@ class device():
     def __init__(self, type=None, index=None):
         if type is not None:
             if isinstance(type, str):
+                if type == 'Ascend':
+                    type = 'npu'
+                elif type == 'GPU':
+                    type = 'cuda'
+                elif type == 'CPU':
+                    type = 'cpu'
                 if ':' in type:
                     if index is not None:
                         raise ValueError("`type` must not include an index because index was "
