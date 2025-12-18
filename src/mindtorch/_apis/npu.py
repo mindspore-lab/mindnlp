@@ -1115,12 +1115,12 @@ def flatten(input, start_dim, end_dim):
     input_shape[start_dim:end_dim] = [-1]
     return legacy.reshape(input, tuple(input_shape))
 
-def conv2d_padding(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
+def conv2d_padding(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1, training=True):
     if ENABLE_PYBOOST and not ON_ORANGE_PI:
         return pyboost.conv2d_padding_op(input, weight, bias, stride, padding, dilation, groups)
     return conv2d_legacy(input, weight, bias, stride, padding, dilation, groups)
 
-def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
+def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1, training=True):
     if ENABLE_PYBOOST and not ON_ORANGE_PI:
         return pyboost.conv2d_ext_op(input, weight, bias, stride, padding, dilation, groups)
     return conv2d_legacy(input, weight, bias, stride, padding, dilation, groups)
