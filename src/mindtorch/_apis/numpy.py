@@ -2719,7 +2719,7 @@ def lin_space_ext(start, end, steps, dtype):
     return ms.Tensor.from_numpy(out)
 
 
-def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
+def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1, training=True):
     """
     2D convolution operation implemented using numpy.
     
@@ -2987,9 +2987,9 @@ def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, traini
     """
     Batch Normalization over a mini-batch of inputs.
     Following npu_310b.py implementation pattern.
-    
+
     Args:
-        input: Input tensor of shape (N, C, *)
+        input: Input tensor of shape (N, C, ...)
         weight: Scale tensor of shape (C,)
         bias: Shift tensor of shape (C,)
         running_mean: Running mean tensor of shape (C,)
@@ -2997,25 +2997,21 @@ def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, traini
         training: Whether in training mode
         momentum: Momentum for running statistics
         epsilon: Small value for numerical stability
-    
+
     Returns:
         Normalized tensor with same shape as input
     """
     input_np = input.asnumpy()
-    
-    # Handle different input dimensions
-    if input_np.ndim == 2:
-        # (N, C) format
-        N, C = input_np.shape
-        spatial_dims = ()
-    elif input_np.ndim >= 3:
-        # (N, C, *) format
-        N, C = input_np.shape[0], input_np.shape[1]
-        spatial_dims = input_np.shape[2:]
-    else:
-        raise ValueError(f"batch_norm: input must have at least 2 dimensions, got {input_np.ndim}")
-    
-    # Create default values if None (following npu_310b.py pattern)
+    ndim = input_np.ndim
+
+    if ndim < 2:
+        raise ValueError(f"batch_norm: input must have at least 2 dimensions, got {ndim}")
+
+    N = input_np.shape[0]
+    C = input_np.shape[1]
+    spatial_shape = input_np.shape[2:]
+
+    # Create default values if None
     if running_mean is None:
         running_mean = ones(C, dtype=input.dtype)
     if runnning_var is None:
@@ -3024,73 +3020,81 @@ def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, traini
         weight = ones(C, dtype=input.dtype)
     if bias is None:
         bias = zeros(C, dtype=input.dtype)
-    
+
     # Convert to numpy
     weight_np = weight.asnumpy()
     bias_np = bias.asnumpy()
     running_mean_np = running_mean.asnumpy()
     running_var_np = runnning_var.asnumpy()
-    
+
     if training:
-        # Compute mean and variance over batch and spatial dimensions
-        # For each channel c: mean = mean(input[:, c, ...])
-        axes = (0,) + tuple(range(2, input_np.ndim))  # (0, 2, 3, ...) for (N, C, H, W)
+        # Compute mean and variance over batch and spatial dimensions for each channel
+        axes = (0,) + tuple(range(2, ndim))  # (0,2,3,..)
         mean = np.mean(input_np, axis=axes, keepdims=True)
         var = np.var(input_np, axis=axes, ddof=0, keepdims=True)
-        
-        # Update running statistics
+
+        # Update running stats
         mean_squeezed = np.squeeze(mean, axis=axes)
         var_squeezed = np.squeeze(var, axis=axes)
-        # Update: running_mean = (1 - momentum) * running_mean + momentum * mean
         running_mean_np[:] = (1 - momentum) * running_mean_np + momentum * mean_squeezed
         running_var_np[:] = (1 - momentum) * running_var_np + momentum * var_squeezed
     else:
-        # Use running statistics
-        # Expand to match input dimensions
-        mean = running_mean_np
-        var = running_var_np
-        for _ in range(input_np.ndim - 1):
-            mean = np.expand_dims(mean, axis=0)
-            var = np.expand_dims(var, axis=0)
-        # Expand spatial dimensions
-        for dim_size in spatial_dims:
-            mean = np.broadcast_to(mean, mean.shape[:-1] + (dim_size,))
-            var = np.broadcast_to(var, var.shape[:-1] + (dim_size,))
-    
-    # Normalize: (input - mean) / sqrt(var + epsilon)
+        # Use running statistics and reshape to (1, C, 1, 1, ...)
+        rep = ndim - 2 if ndim > 2 else 0
+        expand_shape = (1, C) + (1,) * rep
+        mean = running_mean_np.reshape(expand_shape)
+        var = running_var_np.reshape(expand_shape)
+
+    # Normalize
     normalized = (input_np - mean) / np.sqrt(var + epsilon)
-    
-    # Apply weight and bias: weight * normalized + bias
-    # Expand weight and bias to match input dimensions
-    weight_expanded = weight_np
-    bias_expanded = bias_np
-    for _ in range(input_np.ndim - 1):
-        weight_expanded = np.expand_dims(weight_expanded, axis=0)
-        bias_expanded = np.expand_dims(bias_expanded, axis=0)
-    # Expand spatial dimensions
-    for dim_size in spatial_dims:
-        weight_expanded = np.broadcast_to(weight_expanded, weight_expanded.shape[:-1] + (dim_size,))
-        bias_expanded = np.broadcast_to(bias_expanded, bias_expanded.shape[:-1] + (dim_size,))
-    
-    output = weight_expanded * normalized + bias_expanded
-    output = output.reshape(N, C, *spatial_dims)
-    if not isinstance(output, np.ndarray):
-        output = np.array(output)
+
+    # Apply weight and bias: reshape to (1, C, 1, 1, ...)
+    rep = ndim - 2 if ndim > 2 else 0
+    weight_reshaped = weight_np.reshape((1, C) + (1,) * rep)
+    bias_reshaped = bias_np.reshape((1, C) + (1,) * rep)
+
+    output = normalized * weight_reshaped + bias_reshaped
+
+    # Ensure dtype and return
+    output = output.astype(input_np.dtype)
     return ms.Tensor.from_numpy(output)
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
+    """
+    Implements Group Normalization by reshaping and calling batch_norm.
+    This function reshapes input of shape (N, C, *spatial) into
+    (N * num_groups, C // num_groups, -1) so that batch_norm computes
+    mean/var across the correct axes, then reshapes back.
+    """
     input_shape = input.shape
     N = input_shape[0]
     C = input_shape[1]
-    input_reshaped = reshape(input, (1, N * num_groups, -1 if N!=0 else 1))
-    outputs = batch_norm(input_reshaped, None, None, None, None, True, 0., eps)
+
+    # compute product of spatial dimensions
+    spatial_dims = input_shape[2:]
+    spatial_size = 1
+    for s in spatial_dims:
+        spatial_size *= s
+
+    # reshape to (N * num_groups, C // num_groups, spatial_size)
+    assert C % num_groups == 0, "C must be divisible by num_groups"
+    channels_per_group = C // num_groups
+    input_reshaped = reshape(input, (N * num_groups, channels_per_group, spatial_size if spatial_size != 0 else 1))
+
+    # use batch_norm to compute mean/var over batch and spatial dims for each group-channel
+    outputs = batch_norm(input_reshaped, None, None, None, None, True, 0.0, eps)
+
+    # reshape back to original
     out = reshape(outputs, input_shape)
+
+    # apply affine parameters if provided
     affine_param_shape = [1] * input.ndim
     affine_param_shape[1] = C
     affine_param_shape = tuple(affine_param_shape)
-    if weight is not None and bias is not None:
-        out = addcmul(reshape(bias, affine_param_shape), out, reshape(weight, affine_param_shape), value=1)
 
+    if weight is not None and bias is not None:
+        out = add(out, reshape(bias, affine_param_shape))
+        out = mul(out, reshape(weight, affine_param_shape))
     elif weight is not None:
         out = mul(out, reshape(weight, affine_param_shape))
     elif bias is not None:
