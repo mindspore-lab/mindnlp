@@ -413,7 +413,7 @@ def sum(input, dim, keepdim, dtype):
         return legacy.reduce_sum(input, dim, keepdim, False)
     return legacy.reduce_sum(input.astype(dtype), dim, keepdim, False)
 
-def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
+def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1, training=True):
     pad_mode = 'pad'
     pad = padding
     if isinstance(padding, (tuple, list)):
@@ -446,7 +446,7 @@ def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, grou
         output = legacy.bias_add(output, bias, "NCHW")
     return output
 
-def conv2d_padding(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv2d_padding(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     return conv2d(input, weight, bias, stride, padding, dilation, groups)
 
 def pow_tensor_scalar(input, scalar):
