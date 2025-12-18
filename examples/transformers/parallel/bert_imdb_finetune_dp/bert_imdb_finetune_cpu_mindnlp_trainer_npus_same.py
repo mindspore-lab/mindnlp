@@ -7,11 +7,11 @@ bash bert_imdb_finetune_npu_mindnlp_trainer.sh
 
 import mindspore
 from mindspore.dataset import transforms
-from mindhf.engine import Trainer
-from mindhf.dataset import load_dataset
+from mindnlp.engine import Trainer
+from mindnlp.dataset import load_dataset
 
-from mindhf.accelerate.utils.constants import accelerate_distributed_type
-from mindhf.accelerate.utils.dataclasses import DistributedType
+from mindnlp.accelerate.utils.constants import accelerate_distributed_type
+from mindnlp.accelerate.utils.dataclasses import DistributedType
 
 def main():
     """demo
@@ -23,7 +23,7 @@ def main():
     imdb_train = imdb_ds['train']
     imdb_train.get_dataset_size()
 
-    from mindhf.transformers import AutoTokenizer
+    from mindnlp.transformers import AutoTokenizer
     # tokenizer
     tokenizer = AutoTokenizer.from_pretrained('bert-base-cased')
 
@@ -56,12 +56,12 @@ def main():
 
     next(dataset_train.create_tuple_iterator())
 
-    from mindhf.transformers import AutoModelForSequenceClassification
+    from mindnlp.transformers import AutoModelForSequenceClassification
 
     # set bert config and define parameters for training
     model = AutoModelForSequenceClassification.from_pretrained('bert-base-cased', num_labels=2)
 
-    from mindhf.engine import TrainingArguments
+    from mindnlp.engine import TrainingArguments
     training_args = TrainingArguments(
         output_dir="bert_imdb_finetune_cpu",
         save_strategy="epoch",

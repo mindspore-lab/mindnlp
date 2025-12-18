@@ -1,5 +1,5 @@
 from PIL import Image
-import mindhf
+import mindnlp
 from sentence_transformers import SentenceTransformer, models, util
 
 ###########

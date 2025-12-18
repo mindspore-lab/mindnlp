@@ -2,7 +2,7 @@ import json
 import copy
 
 from mindspore.dataset import NumpySlicesDataset, SequentialSampler
-from mindhf.dataset import load_dataset
+from mindnlp.dataset import load_dataset
 
 
 class InputExample(object):

@@ -3,7 +3,7 @@ from threading import Thread
 import gradio as gr
 import time
 import mindspore
-from mindhf.transformers import MllamaForConditionalGeneration, AutoProcessor, TextIteratorStreamer
+from mindnlp.transformers import MllamaForConditionalGeneration, AutoProcessor, TextIteratorStreamer
 
 ckpt = "LLM-Research/Llama-3.2-11B-Vision-Instruct"
 model = MllamaForConditionalGeneration.from_pretrained(ckpt, ms_dtype=mindspore.float16, mirror='modelscope')

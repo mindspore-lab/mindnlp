@@ -1,5 +1,5 @@
 # pylint: disable=missing-module-docstring
-from mindhf.transformers import pipeline
+from mindnlp.transformers import pipeline
 
 oracle = pipeline(model="deepset/roberta-base-squad2")
 print(oracle(question="Where do I live?", context="My name is Wolfgang and I live in Berlin"))

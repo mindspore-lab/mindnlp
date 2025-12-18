@@ -1,6 +1,6 @@
 import os
 import platform
-from mindhf.transformers import ChatGLM3Tokenizer, AutoModelForCausalLM
+from mindnlp.transformers import ChatGLM3Tokenizer, AutoModelForCausalLM
 
 tokenizer = ChatGLM3Tokenizer.from_pretrained("ZhipuAI/chatglm3-6b", mirror='modelscope', revision='master')
 model = AutoModelForCausalLM.from_pretrained("ZhipuAI/chatglm3-6b", mirror='modelscope', revision='master')

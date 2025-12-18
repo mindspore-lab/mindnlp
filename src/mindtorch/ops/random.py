@@ -134,7 +134,7 @@ def rand_like(
     memory_format=None
 ):
     if device is None:
-        device = input._device
+        device = input.init
 
     if dtype is None:
         dtype = input.dtype
@@ -198,7 +198,7 @@ def randint_like(
     if high == 0:
         low, high = 0, low
     if device is None:
-        device = input._device
+        device = input.init
 
     if dtype is None:
         dtype = input.dtype
@@ -264,7 +264,7 @@ def randn_like(
     memory_format=None
 ):
     if device is None:
-        device = input._device
+        device = input.init
 
     if dtype is None:
         dtype = input.dtype

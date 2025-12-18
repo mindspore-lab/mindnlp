@@ -7,11 +7,12 @@ import torch._dispatch
 # no_dispatch在torch._dispatch模块中
 import mindspore
 import mindspore.numpy as mnp
-import numpy
+import numpy as np
 import itertools
 import torch
 import torch.utils._pytree as torch_pytree
 import torch.utils._mode_utils as mode_utils
+import torch.utils._python_dispatch as torch_dispatch
 from mindspore import Tensor as ms_Tensor
 from mindspore import Parameter
 from mindspore import nn
@@ -130,12 +131,40 @@ class Tensor:
         target_dtype = other.dtype
         return self._env.ms2t_iso(mnp.astype(self._elem, target_dtype))
 
+    __torch_function__ = torch._C._disabled_torch_function_impl
+
+    @classmethod
+    def __torch_dispatch__(cls, func, types, args=(), kwargs=None):
+        """
+        PyTorch的分发机制入口点，捕获对张量的操作
+
+        Args:
+            func: 要执行的PyTorch函数
+            types: 参数类型列表
+            args: 位置参数
+            kwargs: 关键字参数
+
+        Returns:
+            操作结果
+        """
+        # 特殊处理wait_tensor操作
+        if func == torch.ops._c10d_functional.wait_tensor.default:
+            return args[0]._env.dispatch(func, types, args, kwargs)
+        # 特殊处理device操作，返回privateuseone设备
+        if func == torch.ops.prim.device.default:
+            return torch.device('privateuseone', 0)
+        # 确保在torch4ms环境中使用
+        raise AssertionError(
+            'torch4ms Tensors can only do math within the torch4ms environment.'
+            'Please wrap your code with `with torch4ms.default_env()` or '
+            'call torch4ms.enable_globally() before.')
+
     def detach(self):
         # MindSpore中使用stop_gradient方法
         detached_elem = ops.stop_gradient(self._elem)
         return Tensor(detached_elem, self._env, requires_grad=False)
 
-    def numpy(self) -> numpy.ndarray:
+    def numpy(self) -> np.ndarray:
         return self._elem.asnumpy()
 
     def mindspore(self) -> ms_Tensor:
@@ -273,11 +302,12 @@ def _make_debug_msg(is_dispatch, log_args, func, args, kwargs):
     return f"{title}: {_name_of_func(func)} {args_msg} ~ {kwargs_msg}"
 
 
-class MindSporeFunctionHandler:
+class XLAFunctionMode(torch.overrides.TorchFunctionMode):
     """
-    torch4ms的MindSpore函数处理类
+    torch4ms的PyTorch函数模式类
 
-    用于处理函数调用，实现从PyTorch风格API到MindSpore操作的转换。
+    用于拦截和处理PyTorch的函数调用，实现PyTorch函数到JAX函数的转换。
+    继承自PyTorch的TorchFunctionMode以拦截全局函数调用。
 
     Args:
         env: Environment实例，负责实际的操作转换逻辑
@@ -286,41 +316,48 @@ class MindSporeFunctionHandler:
     def __init__(self, env):
         self.env = env
 
-    def handle_function(self,
-                        func_name,
-                        args=(),
-                        kwargs=None):
+    def __torch_function__(self,
+                           func,
+                           types,
+                           args=(),
+                           kwargs=None) -> torch.Tensor:
         """
-        处理函数调用的核心逻辑
+        PyTorch函数钩子，处理所有全局PyTorch函数调用
 
         Args:
-            func_name: 函数名称
+            func: 要执行的PyTorch函数
+            types: 参数类型列表
             args: 位置参数
             kwargs: 关键字参数
 
         Returns:
             转换后的计算结果
         """
-        message = f"FUNCTION: {func_name}"
+        message = f"FUNCTION: {_name_of_func(func)}"
         if self.env.config.debug_print_each_op_operands:
             message = message + "f"
+        message = _make_debug_msg(False,
+                                  self.env.config.debug_print_each_op_operands,
+                                  func, args, kwargs)
+        with log_nested(self.env, message):
+            try:
+                return self.env.dispatch(func, types, args, kwargs)
+            except OperatorNotFound:
+                pass
+            if _name_of_func(func) in (
+                    "rot90"):  # skip rot90 with k%4==0 due to no change
+                if len(args) >= 2 and type(args[1]) == int:
+                    if (args[1]) % 4 == 0:
+                        return args[0]
+            return func(*args, **(kwargs or {}))
 
-        # 使用MindSpore的方式处理操作
-        try:
-            return self.env.dispatch(func_name, args, kwargs)
-        except OperatorNotFound:
-            # 如果操作未找到，尝试使用兼容层或原生处理
-            if func_name == "rot90" and len(args) >= 2 and isinstance(args[1], int):
-                if args[1] % 4 == 0:
-                    return args[0]
-            raise
 
-
-class MindSporeDispatchHandler:
+class XLADispatchMode(torch_dispatch.TorchDispatchMode):
     """
-    torch4ms的MindSpore分发处理类
+    torch4ms的PyTorch分发模式类
 
-    用于处理操作分发，将PyTorch操作转换为对应的MindSpore操作。
+    用于拦截和处理PyTorch的底层分发操作，实现PyTorch操作到JAX操作的转换。
+    继承自PyTorch的TorchDispatchMode以拦截底层算子调用。
 
     Args:
         env: Environment实例，负责实际的操作转换逻辑
@@ -329,26 +366,35 @@ class MindSporeDispatchHandler:
     def __init__(self, env):
         self.env = env
 
-    def handle_dispatch(self, op_name, args=(), kwargs=None):
+    def __torch_dispatch__(self, func, types, args=(), kwargs=None):
         """
-        处理底层操作分发
+        PyTorch分发钩子，处理所有的PyTorch底层操作
 
         Args:
-            op_name: 操作名称
+            func: 要执行的PyTorch函数
+            types: 参数类型列表
             args: 位置参数
             kwargs: 关键字参数
 
         Returns:
             转换后的计算结果
         """
-        # 记录调试信息
         message = _make_debug_msg(True,
                                   self.env.config.debug_print_each_op_operands,
-                                  op_name, args, kwargs)
+                                  func, args, kwargs)
         with log_nested(self.env, message):
-            # 处理不同命名空间的操作
-            return self.env.dispatch(op_name, args, kwargs)
-
+            if isinstance(func, torch._ops.OpOverloadPacket):
+                with self:
+                    return func(*args, **kwargs)
+            # Only functions under these namespaces will be intercepted
+            if func.namespace not in (
+                    "aten",
+                    "_c10d_functional",
+                    "torchvision",
+                    "xla",
+            ):
+                return func(*args, **kwargs)
+            return self.env.dispatch(func, types, args, kwargs)
 
 def _name_of_func(func_or_name):
     """
@@ -509,8 +555,8 @@ class Environment(contextlib.ContextDecorator):
             configuration: 可选的配置对象，默认使用默认配置
         """
         # 初始化MindSpore处理类
-        self._function_handler = MindSporeFunctionHandler(self)
-        self._dispatch_handler = MindSporeDispatchHandler(self)
+        self._function_mode = XLAFunctionMode(self)
+        self._dispatch_mode = XLADispatchMode(self)
 
         # 算子注册表：存储PyTorch到MindSpore的映射
         self._ops = {}
@@ -608,26 +654,26 @@ class Environment(contextlib.ContextDecorator):
         """
         if device is None:
             # 使用配置中的默认设备
-            device = self.config.default_device_target
+            device = torch.get_default_device()
 
         # 标准化设备名称
-        if isinstance(device, str):
-            if ':' in device:
-                device = device.split(':')[0]
-        else:
-            device = str(device)
+        if isinstance(device, torch.device):
+            device = device.type
 
-        # 定义支持的MindSpore设备
-        supported_ms_devices = ['gpu', 'npu']
+        if ':' in device:
+            device = device.split(':')[0]
 
-        # 判断是否使用torch4ms张量
-        if device.lower() in supported_ms_devices:
-            return True
-        elif device.lower() == 'cuda':
-            # 特殊处理CUDA设备
-            return self.config.treat_cuda_as_mindspore_device
-        elif device.lower() == 'meta':
-            return self.enabled
+        match device:
+            case 'cpu':
+                return False
+            case 'cuda':
+                return self.config.treat_cuda_as_mindspore_device
+            case 'mindspore':
+                return True
+            case 'privateuseone':
+                return True
+            case 'meta':
+                return self.enabled
         return False
 
     def load_ops(self):
@@ -814,23 +860,162 @@ class Environment(contextlib.ContextDecorator):
             return generator.initial_seed() % (2 ** 31)
         return self.param.get_and_rotate_prng_key()
 
-    def _handle_tensor_constructor(self, func, args, kwargs):
+    def _handle_tensor_constructor(self, op_name, args, kwargs, force_mindspore=False):
+        """
+        处理张量构造函数的调用
+
+        Args:
+            op_name: 操作名称字符串或函数对象
+            args: 位置参数
+            kwargs: 关键字参数
+            force_mindspore: 强制使用torch4ms张量的标志
+
+        Returns:
+            创建的张量
+        """
+        # 规范化操作名称
+        op_name_str = _name_of_func(op_name) if callable(op_name) else op_name
+        
+        # 获取设备参数
         device = kwargs.get("device")
-        should_use_torch4ms = self._should_use_torch4ms_tensor(device)
+        
+        if force_mindspore:
+            # 强制使用torch4ms张量
+            should_use_torch4ms = True
+        else:
+            should_use_torch4ms = self._should_use_torch4ms_tensor(device)
+        
         if should_use_torch4ms:
-            # don't set default device, let caller set it
+            # 移除device参数，避免PyTorch直接处理
+            if device and str(device).lower() == 'mindspore':
+                kwargs.pop('device', None)
+            
+            # 处理基本张量构造函数的特殊情况
             requires_grad = kwargs.get("requires_grad", False)
-            op = self._get_op_or_decomp(func)
-            if op.needs_env:
-                kwargs['env'] = self
-            if op.is_mindspore_function:
-                (args, kwargs) = self.t2ms_iso((args, kwargs))
-            res = op.func(*args, **kwargs)
+            res = None
+            
+            try:
+                # 尝试获取操作对应的实现
+                op = self._get_op_or_decomp(op_name_str)
+                
+                # 设置环境参数
+                if op.needs_env:
+                    kwargs['env'] = self
+                
+                # 转换参数到MindSpore格式
+                if op.is_mindspore_function:
+                    (args, kwargs) = self.t2ms_iso((args, kwargs))
+                
+                # 执行操作
+                res = op.func(*args, **kwargs)
+            except OperatorNotFound:
+                # 为基本张量构造函数添加直接实现
+                if op_name_str == 'tensor':
+                    # 处理torch.tensor构造函数
+                    data = args[0] if args else kwargs.get('data')
+                    dtype = kwargs.get('dtype')
+                    
+                    # 将数据转换为MindSpore张量
+                    if isinstance(data, (list, tuple)):
+                        data = np.array(data)
+                    if isinstance(data, np.ndarray):
+                        # 如果提供了dtype，转换为对应类型
+                        if dtype:
+                            data = data.astype(mappings.t2ms_dtype(dtype))
+                        res = ms_Tensor(data)
+                    elif isinstance(data, (int, float)):
+                        res = ms_Tensor(np.array([data]))
+                    elif isinstance(data, torch.Tensor):
+                        # 从PyTorch张量转换
+                        res = ms_Tensor(data.detach().numpy())
+                elif op_name_str == 'ones':
+                    # 处理torch.ones构造函数
+                    size = args[0] if args else kwargs.get('size')
+                    dtype = kwargs.get('dtype', torch.float32)
+                    # 先创建默认类型的numpy数组，然后转换为MindSpore张量
+                    np_array = np.ones(size, dtype=np.float32)
+                    res = ms_Tensor(np_array)
+                    # 如果提供了dtype，转换为对应类型
+                    if dtype in mappings.TORCH_DTYPE_TO_MINDSPORE:
+                        res = res.astype(mappings.TORCH_DTYPE_TO_MINDSPORE[dtype])
+                elif op_name_str == 'zeros':
+                    # 处理torch.zeros构造函数
+                    size = args[0] if args else kwargs.get('size')
+                    dtype = kwargs.get('dtype', torch.float32)
+                    # 先创建默认类型的numpy数组，然后转换为MindSpore张量
+                    np_array = np.zeros(size, dtype=np.float32)
+                    res = ms_Tensor(np_array)
+                    # 如果提供了dtype，转换为对应类型
+                    if dtype in mappings.TORCH_DTYPE_TO_MINDSPORE:
+                        res = res.astype(mappings.TORCH_DTYPE_TO_MINDSPORE[dtype])
+                elif op_name_str == 'empty':
+                    # 处理torch.empty构造函数
+                    size = args[0] if args else kwargs.get('size')
+                    dtype = kwargs.get('dtype', torch.float32)
+                    # 先创建默认类型的numpy数组，然后转换为MindSpore张量
+                    np_array = np.empty(size, dtype=np.float32)
+                    res = ms_Tensor(np_array)
+                    # 如果提供了dtype，转换为对应类型
+                    if dtype in mappings.TORCH_DTYPE_TO_MINDSPORE:
+                        res = res.astype(mappings.TORCH_DTYPE_TO_MINDSPORE[dtype])
+                elif op_name_str == 'rand':
+                    # 处理torch.rand构造函数
+                    size = args[0] if args else kwargs.get('size')
+                    dtype = kwargs.get('dtype', torch.float32)
+                    # 先创建默认类型的numpy数组，然后转换为MindSpore张量
+                    np_array = np.random.rand(*size).astype(np.float32)
+                    res = ms_Tensor(np_array)
+                    # 如果提供了dtype，转换为对应类型
+                    if dtype in mappings.TORCH_DTYPE_TO_MINDSPORE:
+                        res = res.astype(mappings.TORCH_DTYPE_TO_MINDSPORE[dtype])
+                elif op_name_str == 'randn':
+                    # 处理torch.randn构造函数
+                    size = args[0] if args else kwargs.get('size')
+                    dtype = kwargs.get('dtype', torch.float32)
+                    # 先创建默认类型的numpy数组，然后转换为MindSpore张量
+                    np_array = np.random.randn(*size).astype(np.float32)
+                    res = ms_Tensor(np_array)
+                    # 如果提供了dtype，转换为对应类型
+                    if dtype in mappings.TORCH_DTYPE_TO_MINDSPORE:
+                        res = res.astype(mappings.TORCH_DTYPE_TO_MINDSPORE[dtype])
+                elif op_name_str == 'full':
+                    # 处理torch.full构造函数
+                    size = args[0] if len(args) > 1 else kwargs.get('size')
+                    fill_value = args[1] if len(args) > 1 else kwargs.get('fill_value')
+                    dtype = kwargs.get('dtype')
+                    if dtype:
+                        fill_value = mappings.t2ms_dtype(dtype)(fill_value)
+                    res = ms_Tensor(np.full(size, fill_value))
+                elif op_name_str == 'arange':
+                    # 处理torch.arange构造函数
+                    start = args[0] if len(args) > 0 else kwargs.get('start', 0)
+                    end = args[1] if len(args) > 1 else kwargs.get('end')
+                    step = args[2] if len(args) > 2 else kwargs.get('step', 1)
+                    dtype = kwargs.get('dtype')
+                    if dtype:
+                        dtype = mappings.t2ms_dtype(dtype)
+                    else:
+                        dtype = np.float32
+                    res = ms_Tensor(np.arange(start, end, step, dtype=dtype))
+            
+            # 包装结果为torch4ms张量
             if isinstance(res, ms_Tensor):
                 res = Tensor(res, self, requires_grad)
+            
             return res
         else:
+            # 如果不应该使用torch4ms张量，使用原生PyTorch处理
             with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
+                # 获取原始PyTorch函数
+                if isinstance(op_name, str):
+                    # 从torch模块获取对应函数
+                    if hasattr(torch, op_name_str):
+                        func = getattr(torch, op_name_str)
+                    else:
+                        raise RuntimeError(f"PyTorch function {op_name_str} not found")
+                else:
+                    func = op_name
+                
                 return func(*args, **kwargs)
 
     def _tensor_to(self, args, kwargs):

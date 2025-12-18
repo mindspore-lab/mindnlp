@@ -1,1 +1,0 @@
-:::mindnlp.transformers.models.megatron_gpt2

@@ -1,5 +1,5 @@
 from mindspore import ops
-from mindhf.transformers import AutoModel, AutoTokenizer
+from mindnlp.transformers import AutoModel, AutoTokenizer
 from mindspore.ops._primitive_cache import _get_cache_prim
 
 def norm(tensor):

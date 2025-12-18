@@ -1,5 +1,5 @@
 import mindspore
-from mindhf.transformers import AutoTokenizer, AutoModelForCausalLM
+from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
 from mindspore._c_expression import _framework_profiler_step_start
 from mindspore._c_expression import _framework_profiler_step_end
 from mindspore._c_expression import update_pijit_default_config

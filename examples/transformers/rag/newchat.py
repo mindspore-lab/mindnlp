@@ -18,7 +18,7 @@ import argparse
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import CharacterTextSplitter
 
-import mindhf
+import mindnlp
 from embedding import EmbeddingsFunAdapter
 from text import TextLoader
 from threading import Thread

@@ -1,7 +1,7 @@
 import os
 import platform
 import signal
-from mindhf.transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+from mindnlp.transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 
 model = AutoModelForSeq2SeqLM.from_pretrained("THUDM/chatglm-6b").half()

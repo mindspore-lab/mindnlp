@@ -1,4 +1,4 @@
-from mindhf.inference import LLM, SamplingParams
+from mindnlp.inference import LLM, SamplingParams
 
 if __name__ == '__main__':
     # MODEL_PATH = "/YOUR/MODEL/PATH"

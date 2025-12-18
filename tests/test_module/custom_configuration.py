@@ -1,4 +1,4 @@
-from mindhf.transformers import PretrainedConfig
+from mindnlp.transformers import PretrainedConfig
 
 
 class CustomConfig(PretrainedConfig):

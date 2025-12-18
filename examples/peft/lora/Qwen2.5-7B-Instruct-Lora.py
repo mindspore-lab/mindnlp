@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # 导入环境
-import mindhf
+import mindnlp
 import mindspore
 
 from datasets import Dataset
@@ -86,7 +86,7 @@ trainer.train()
 
 # 合并加载模型
 
-import mindhf
+import mindnlp
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 from peft import PeftModel

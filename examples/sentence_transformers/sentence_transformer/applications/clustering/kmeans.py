@@ -3,7 +3,7 @@ This is a simple application for sentence embeddings: clustering
 
 Sentences are mapped to sentence embeddings and then k-mean clustering is applied.
 """
-import mindhf
+import mindnlp
 from sklearn.cluster import KMeans
 
 from sentence_transformers import SentenceTransformer

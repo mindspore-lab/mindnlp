@@ -60,10 +60,57 @@ def inplace_normal(input, *args):
 
 __all__.append('inplace_normal')
 
-def getitem(input, slice):
-    out = np.zeros(input.shape)[slice]
-    out = mindspore.Tensor(init='meta', shape=out.shape, dtype=input.dtype)
-    return out
+def getitem(input, slice_spec):
+    # Handle zero-sized dimensions
+    input_shape = input.shape
+    slice_type = type(slice(None))  # Get the slice type
+    
+    # Check if any dimension is 0 and if we're trying to index into it
+    if isinstance(slice_spec, tuple):
+        for i, s in enumerate(slice_spec):
+            if i < len(input_shape) and input_shape[i] == 0:
+                # If dimension is 0, check if we're indexing into it (not just using :)
+                if isinstance(s, int) or (type(s) == slice_type and s != slice(None)):
+                    # Return empty tensor with appropriate shape
+                    # Calculate output shape
+                    output_shape = []
+                    for j, dim_size in enumerate(input_shape):
+                        if j < len(slice_spec):
+                            s_j = slice_spec[j]
+                            if isinstance(s_j, int):
+                                # Integer indexing removes the dimension
+                                continue
+                            elif type(s_j) == slice_type:
+                                # Slice indexing keeps the dimension
+                                start = s_j.start if s_j.start is not None else 0
+                                stop = s_j.stop if s_j.stop is not None else dim_size
+                                step = s_j.step if s_j.step is not None else 1
+                                if start < 0:
+                                    start += dim_size
+                                if stop < 0:
+                                    stop += dim_size
+                                start = max(0, min(start, dim_size))
+                                stop = max(start, min(stop, dim_size))
+                                size = max(0, (stop - start + step - 1) // step)
+                                output_shape.append(size)
+                            else:
+                                output_shape.append(dim_size)
+                        else:
+                            output_shape.append(dim_size)
+                    return mindspore.Tensor(init='meta', shape=tuple(output_shape), dtype=input.dtype)
+    
+    # Try to compute output shape using numpy, but handle errors gracefully
+    try:
+        # Use a dummy array with the same shape to compute output shape
+        dummy = np.zeros(input_shape)
+        out_shape = dummy[slice_spec].shape
+        out = mindspore.Tensor(init='meta', shape=out_shape, dtype=input.dtype)
+        return out
+    except (IndexError, ValueError):
+        # If numpy fails (e.g., zero-sized dimension), compute shape manually
+        # For now, return a tensor with the same shape (this is a fallback)
+        # In practice, this case should be handled by the check above
+        return mindspore.Tensor(init='meta', shape=input_shape, dtype=input.dtype)
 
 __all__.append('getitem')
 
@@ -131,7 +178,12 @@ def pow(input, other):
     out = mindspore.Tensor(init='meta', shape=other.shape, dtype=other.dtype)
     return out
 
-def concat(tensors, dim):
+def concat(tensors, dim=None, axis=None):
+    # Support both dim and axis for compatibility
+    if axis is not None:
+        dim = axis
+    if dim is None:
+        dim = 0
     shape = list(tensors[0].shape)
     shape[dim] = sum([t.shape[dim] for t in tensors])
     out = mindspore.Tensor(init='meta', shape=tuple(shape), dtype=tensors[0].dtype)
@@ -267,6 +319,40 @@ def normal_float_float(mean, std, size, dtype, geneartor):
 
 
 __all__.append('normal_float_float')
+
+
+def split_with_size(tensor, split_size_or_sections, dim=0):
+    """
+    Meta backend: return meta tensors with correct shapes for split_with_size.
+    """
+    dim = int(dim)
+    full_shape = list(tensor.shape)
+    total = full_shape[dim]
+
+    if isinstance(split_size_or_sections, int):
+        size = split_size_or_sections
+        if size <= 0:
+            raise ValueError("split_size must be > 0")
+        split_sizes = []
+        remaining = total
+        while remaining > 0:
+            split_sizes.append(min(size, remaining))
+            remaining -= size
+    elif isinstance(split_size_or_sections, (list, tuple)):
+        split_sizes = list(split_size_or_sections)
+        if sum(split_sizes) != total:
+            raise ValueError("sum of split_sizes must equal tensor size along dim")
+    else:
+        raise TypeError("split_size_or_sections must be int, list or tuple")
+
+    outputs = []
+    for sz in split_sizes:
+        out_shape = list(full_shape)
+        out_shape[dim] = sz
+        outputs.append(mindspore.Tensor(init='meta', shape=tuple(out_shape), dtype=tensor.dtype))
+    return outputs
+
+__all__.append('split_with_size')
 
 def stack(tensors, dim):
     x_shape = list(tensors[0].shape)

@@ -698,6 +698,8 @@ def cumsum(self, dim, dtype):
     return legacy.cum_sum(self, dim, False, False)
 
 def reduce_any(input, axis, keepdims):
+    if axis is None:
+        axis = ()
     if ENABLE_PYBOOST:
         return pyboost.reduce_any_impl(input, axis, keepdims)
     return legacy.reduce_any(input, axis, keepdims)
@@ -1048,12 +1050,12 @@ def flatten(input, start_dim, end_dim):
     input_shape[start_dim:end_dim] = [-1]
     return legacy.reshape(input, tuple(input_shape))
 
-def conv2d_padding(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
+def conv2d_padding(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1, training=True):
     if ENABLE_PYBOOST:
         return pyboost.conv2d_padding_op(input, weight, bias, stride, padding, dilation, groups)
     return conv2d_legacy(input, weight, bias, stride, padding, dilation, groups)
 
-def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
+def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1, training=True):
     if ENABLE_PYBOOST:
         return pyboost.conv2d_ext_op(input, weight, bias, stride, padding, dilation, groups)
     return conv2d_legacy(input, weight, bias, stride, padding, dilation, groups)
@@ -1234,7 +1236,7 @@ def roll(input, shifts, axis):
         return pyboost.roll_impl(input, shifts, axis)
     return legacy.roll(input, shifts, axis)
 
-def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     if ENABLE_PYBOOST:
         return pyboost.conv1d_ext_op(input, weight, bias, stride, padding, dilation, groups)
     return conv1d_legacy(input, weight, bias, stride, padding, dilation, groups)
@@ -1494,8 +1496,8 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if bias is None:
         bias = zeros([input.shape[1]], dtype=input.dtype)
     if ENABLE_PYBOOST:
-        return pyboost.group_norm_op(input, num_groups, weight, bias, eps)
-    return legacy.group_norm(input, num_groups, eps, affine)
+        return pyboost.group_norm_op(input, num_groups, weight, bias, eps)[0]
+    return legacy.group_norm(input, num_groups, eps, affine)[0]
 
 def nllloss_2d(input, target, weight, reduction='mean', ignore_index=-100):
     if ENABLE_PYBOOST:
@@ -1699,7 +1701,7 @@ def adaptive_avg_pool1d(input, output_size):
         return pyboost.adaptive_avg_pool1d_op(input, output_size)
     return legacy.adaptive_avg_pool1d(input, output_size)
 
-def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     if ENABLE_PYBOOST:
         return pyboost.conv3d_ext_op(input, weight, bias, stride, padding, dilation, groups)
     pad_mode = 'pad'
@@ -2504,6 +2506,8 @@ def raw_adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, be
     return legacy.adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad, False, False)
 
 def inplace_sub(input, other):
+    if type(other) == int:
+        other = mindspore.Tensor(other)
     return pyboost.inplace_sub_ext_op(input, other)
 
 def isfinite(input):
@@ -2525,3 +2529,40 @@ def ifftn(input, s, dim, norm):
 
 def fftn(input, s, dim, norm):
     return pyboost.fftn_op(input, s, dim, norm)
+
+def selu(input):
+    """SELU activation: scale * elu(x, alpha) where alpha=1.67326324, scale=1.05070098"""
+    SELU_ALPHA = 1.67326324
+    SELU_SCALE = 1.05070098
+    if ENABLE_PYBOOST:
+        return pyboost.mul_op(legacy.elu(input, SELU_ALPHA), SELU_SCALE)
+    return legacy.mul(legacy.elu(input, SELU_ALPHA), SELU_SCALE)
+
+def celu(input, alpha):
+    """CELU activation: max(0, x) + min(0, alpha * (exp(x/alpha) - 1))"""
+    if alpha == 0:
+        raise ZeroDivisionError("ZeroDivisionError: alpha cannot be 0 for CELU")
+    return elu(input, alpha)
+
+def hardsigmoid(input):
+    """Hardsigmoid activation: clamp((x + 3) / 6, 0, 1)"""
+    x_plus_3 = add(input, 3.0)
+    x_div_6 = div(x_plus_3, 6.0)
+    return clamp_scalar(x_div_6, 0.0, 1.0)
+
+def fast_gelu(x):
+    """Fast GELU approximation"""
+    return gelu(x, approximate='tanh')
+
+def swiglu(x, dim=-1):
+    """Swish-Gated Linear Unit: swish(x[..., :d]) * x[..., d:] where d = x.shape[dim] // 2"""
+    split_size = x.shape[dim] // 2
+    x1, x2 = legacy.split(x, split_size, dim)
+    if ENABLE_PYBOOST:
+        return pyboost.mul_op(silu(x1), x2)
+    return legacy.mul(silu(x1), x2)
+
+def rotary_position_embedding(x, cos, sin, mode=0):
+    """Rotary Position Embedding"""
+    import mindspore
+    return mindspore.ops.auto_generate.gen_ops_def.apply_rotary_pos_emb_(x, cos, sin, mode)

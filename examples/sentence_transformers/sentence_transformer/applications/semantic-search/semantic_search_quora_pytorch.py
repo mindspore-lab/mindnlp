@@ -17,7 +17,7 @@ import csv
 import os
 import pickle
 import time
-import mindhf
+import mindnlp
 
 from sentence_transformers import SentenceTransformer, util
 

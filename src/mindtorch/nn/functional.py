@@ -4,6 +4,7 @@ import numbers
 import warnings
 from typing import Optional, Tuple, List
 
+import mindspore
 import mindtorch
 from mindtorch.executor import execute
 from mindtorch._C import default_generator
@@ -62,13 +63,13 @@ def prelu(input, weight):
     return execute('prelu', input, weight)
 
 def celu(input, alpha=1., inplace=False):
-    return ops.celu(input, alpha)
+    return execute('celu', input, alpha)
 
 def selu(input):
-    return ops.selu(input)
+    return execute('selu', input)
 
 def hardsigmoid(input, inplace=False):
-    return ops.hardsigmoid(input)
+    return execute('hardsigmoid', input)
 
 def hardswish(input: mindtorch.Tensor, inplace: bool = False) -> mindtorch.Tensor:
     return execute('hswish', input)
@@ -147,10 +148,10 @@ def rms_norm(input, normalized_shape, weight, eps=None):
     return execute('rms_norm', input, normalized_shape, weight, eps)
 
 def fast_gelu(x):
-    return ops.fast_gelu(x)
+    return execute('fast_gelu', x)
 
 def swiglu(x, dim=-1):
-    return ops.swiglu(x, dim)
+    return execute('swiglu', x, dim)
 
 def apply_rotary_pos_emb(query, key, cos, sin, position_ids, cos_format=0):
     return mindspore.ops.auto_generate.gen_ops_def.apply_rotary_pos_emb_(
@@ -237,7 +238,7 @@ def _nllloss_nd(input, target, weight=None, ingore_index=-100, reduction='mean')
     class_dim = 0 if input_dim == 1 else 1
     n_classes = input.shape[class_dim]
     if weight is None:
-        weight = mindtorch.ones(n_classes, dtype=input.dtype, device=input._device)
+        weight = mindtorch.ones(n_classes, dtype=input.dtype, device=input.init)
     if input_dim < 1:
         raise ValueError(f"input dim should be less than 1, but got {input_dim}")
     if input_dim != 1 and input.shape[0] != target.shape[0]:
@@ -610,20 +611,20 @@ def batch_norm(input, running_mean, running_var, weight=None, bias=None, trainin
         eps
     )[0]
 
-def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     if isinstance(padding, str):
-        return execute('conv1d_padding', input, weight, bias, stride, padding, dilation, groups)
-    return execute('conv1d', input, weight, bias, stride, padding, dilation, groups)
+        return execute('conv1d_padding', input, weight, bias, stride, padding, dilation, groups, training)
+    return execute('conv1d', input, weight, bias, stride, padding, dilation, groups, training)
 
-def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     if isinstance(padding, str):
-        return execute('conv2d_padding', input, weight, bias, stride, padding, dilation, groups)
-    return execute('conv2d', input, weight, bias, stride, padding, dilation, groups)
+        return execute('conv2d_padding', input, weight, bias, stride, padding, dilation, groups, training)
+    return execute('conv2d', input, weight, bias, stride, padding, dilation, groups, training)
 
-def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     if isinstance(padding, str):
-        return execute('conv3d_padding', input, weight, bias, stride, padding, dilation, groups)
-    return execute('conv3d', input, weight, bias, stride, padding, dilation, groups)
+        return execute('conv3d_padding', input, weight, bias, stride, padding, dilation, groups, training)
+    return execute('conv3d', input, weight, bias, stride, padding, dilation, groups, training)
 
 def conv_transpose1d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
     x_2d = input.unsqueeze(2)  # (batch, in_channels, 1, L_in)
@@ -695,7 +696,7 @@ def max_pool1d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode
 
 
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
-    return execute('group_norm', input, num_groups, weight, bias, eps)[0]
+    return execute('group_norm', input, num_groups, weight, bias, eps)
 
 def _in_projection(
     q,
@@ -1074,8 +1075,8 @@ def multi_head_attention_forward(
     if bias_k is not None and bias_v is not None:
         assert static_k is None, "bias cannot be added to static key."
         assert static_v is None, "bias cannot be added to static value."
-        k = ops.cat([k, bias_k.repeat(1, bsz, 1)])
-        v = ops.cat([v, bias_v.repeat(1, bsz, 1)])
+        k = execute('concat', [k, bias_k.repeat(1, bsz, 1)], axis=0)
+        v = execute('concat', [v, bias_v.repeat(1, bsz, 1)], axis=0)
         if attn_mask is not None:
             attn_mask = pad(attn_mask, (0, 1))
         if key_padding_mask is not None:
@@ -1110,8 +1111,10 @@ def multi_head_attention_forward(
     # add zero attention along batch dimension (now first)
     if add_zero_attn:
         zero_attn_shape = (bsz * num_heads, 1, head_dim)
-        k = ops.cat([k, ops.zeros(zero_attn_shape, dtype=k.dtype)], axis=1)
-        v = ops.cat([v, ops.zeros(zero_attn_shape, dtype=v.dtype)], axis=1)
+        k_zeros = execute('zeros', zero_attn_shape, dtype=k.dtype)
+        v_zeros = execute('zeros', zero_attn_shape, dtype=v.dtype)
+        k = execute('concat', [k, k_zeros], axis=1)
+        v = execute('concat', [v, v_zeros], axis=1)
         if attn_mask is not None:
             attn_mask = pad(attn_mask, (0, 1))
         if key_padding_mask is not None:
@@ -1458,10 +1461,10 @@ def make_attention_mask(
     Returns:
       A `[batch..., 1, len_q, len_kv]` shaped mask for 1d attention.
     """
-    mask = ops.greater_equal(
-        ops.expand_dims(query_input, axis=-1), ops.expand_dims(key_input, axis=-2)
-    )
-    mask = ops.expand_dims(mask, axis=-3)
+    query_expanded = execute('expand_dims', query_input, dim=-1)
+    key_expanded = execute('expand_dims', key_input, dim=-2)
+    mask = execute('greater_equal', query_expanded, key_expanded)
+    mask = execute('expand_dims', mask, dim=-3)
     return mask.astype(dtype)
 
 
@@ -1483,7 +1486,8 @@ def make_causal_mask(
     Returns:
       A `[batch..., 1, len, len]` shaped causal mask for 1d attention.
     """
-    idxs = ops.broadcast_to(ops.arange(x.shape[-1], dtype=mindspore.int32), x.shape)
+    arange_result = execute('arange', 0, x.shape[-1], 1, dtype=mindtorch.int32)
+    idxs = execute('broadcast_to', arange_result, x.shape)
     return make_attention_mask(
         idxs,
         idxs,
@@ -1491,7 +1495,7 @@ def make_causal_mask(
     )
 
 def rotary_position_embedding(x, cos, sin, mode=0):
-    return ops.rotary_position_embedding(x, cos, sin, mode)
+    return execute('rotary_position_embedding', x, cos, sin, mode)
 
 def hardtanh(input, min_val=-1.0, max_val=1.0):
     return execute('hardtanh', input, min_val, max_val)

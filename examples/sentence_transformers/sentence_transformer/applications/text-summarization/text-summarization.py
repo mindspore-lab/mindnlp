@@ -17,7 +17,7 @@ If the New York metropolitan area were a sovereign state, it would have the eigh
 
 Note: Requires NLTK: `pip install nltk`
 """
-import mindhf
+import mindnlp
 import nltk
 import numpy as np
 from LexRank import degree_centrality_scores

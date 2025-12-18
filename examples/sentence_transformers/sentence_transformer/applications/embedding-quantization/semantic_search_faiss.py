@@ -1,5 +1,5 @@
 import time
-import mindhf
+import mindnlp
 
 from datasets import load_dataset
 

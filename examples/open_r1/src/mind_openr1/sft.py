@@ -4,7 +4,7 @@ import sys
 
 import mindspore 
 from mindspore import context as ms_context
-import mindhf
+import mindnlp
 
 import datasets
 import transformers

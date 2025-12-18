@@ -10,7 +10,7 @@ from mindspore import nn, ops, Parameter
 from mindspore.communication import get_group_size
 from mindspore.ops._primitive_cache import _get_cache_prim
 
-from mindhf.parallel.layers import (
+from mindnlp.parallel.layers import (
     ParallelEmbedding,
     RowParallelLinear,
     ColumnParallelLinear,

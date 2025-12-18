@@ -1,6 +1,6 @@
 import mindspore
-from mindhf.transformers import MiniCPM3Tokenizer, MiniCPM3Config, MiniCPM3ForCausalLM
-from mindhf.core import ops
+from mindnlp.transformers import MiniCPM3Tokenizer, MiniCPM3Config, MiniCPM3ForCausalLM
+from mindnlp.core import ops
 
 
 model_id = "OpenBMB/MiniCPM3-4B"

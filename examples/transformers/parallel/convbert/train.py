@@ -3,7 +3,7 @@ import mindspore
 from mindspore import nn
 from mindspore.nn import AdamWeightDecay
 from squad_dataset import get_squad_dataset
-from mindhf.transformers import (
+from mindnlp.transformers import (
     AutoTokenizer,
     MSConvBertForQuestionAnswering,
 )

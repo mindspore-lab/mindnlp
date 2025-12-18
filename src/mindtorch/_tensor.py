@@ -1,3 +1,4 @@
+import warnings
 import numbers
 import numpy as np
 import mindspore
@@ -18,17 +19,11 @@ from ._C.size import Size
 from .configs import DEVICE_TARGET, ENABLE_DISPATCH
 from .executor import execute
 
-device_map = {
-    'cpu': 'CPU',
-    'npu': 'Ascend',
-    'cuda': 'GPU'
-}
-
 device_cache = {
-    'CPU': device_('cpu'),
-    'Ascend': device_('npu'),
-    'GPU': device_('cuda'),
-    'Meta': device_('meta')
+    'cpu': device_('cpu'),
+    'npu': device_('npu'),
+    'cuda': device_('cuda'),
+    'meta': device_('meta')
 }
 
 if DEVICE_TARGET == 'Ascend':
@@ -44,7 +39,9 @@ DTYPE_ELEMENT_SIZE_MAP = {
     mindspore.int16: 2,
     mindspore.bfloat16: 2,
     mindspore.float16: 2,
-    mindspore.bool_: 1
+    mindspore.bool_: 1,
+    mindspore.uint8: 1,
+    mindspore.int8: 1
 }
 
 class TypedTensorMeta(_TensorMeta):
@@ -101,6 +98,11 @@ def __init__(self, *args, **kwargs):
         super(Tensor, self).__init__(shape=args, dtype=get_default_dtype())
     else:
         super(Tensor, self).__init__(*args, **kwargs)
+    if self.init is None:
+        device = kwargs.pop('device', get_device_in_context())
+        if not isinstance(device, str):
+            device = device.type
+        self.init = device
 
 Tensor.__init__ = __init__
 
@@ -123,6 +125,7 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False, pin_memory=Fal
     else:
         tensor = Tensor(data)
 
+    tensor.init = device if isinstance(device, str) else device.type
     tensor = tensor.to(device)
     if requires_grad:
         tensor.requires_grad_(requires_grad)
@@ -137,6 +140,30 @@ def is_tensor(x):
 class TensorPlaceHolder:
 
     @property
+    def grad(self):
+        if not self.is_leaf and self.requires_grad:
+            warnings.warn(
+                "The .grad attribute of a Tensor that is not a leaf Tensor is being accessed. "
+                "Its .grad attribute won't be populated during autograd.backward(). "
+                "If you indeed want the .grad field to be populated for a non-leaf Tensor, "
+                "use .retain_grad() on the non-leaf Tensor."
+            )
+        return self._grad
+
+    @grad.setter
+    def grad(self, value):
+        self._grad = value
+
+    def retain_grad(self):
+        return self._retain_grad()
+
+    @property
+    def grad_fn(self):
+        if self._grad_node and self._grad_node.is_leaf():
+            return None
+        return self._grad_node
+
+    @property
     def requires_grad(self):
         return self._requires_grad
 
@@ -149,12 +176,17 @@ class TensorPlaceHolder:
     def cpu(self):
         if not ENABLE_DISPATCH:
             return self
-        return super(Tensor, self).to('CPU')
+        out = super(Tensor, self).to('CPU')
+        out.init = 'cpu'
+        return out
 
     def npu(self, device=None, non_blocking=False):
         if not ENABLE_DISPATCH:
             return self
-        return super(Tensor, self).to('Ascend', non_blocking=non_blocking)
+        out = super(Tensor, self).to('Ascend', non_blocking=non_blocking)
+        out.init = 'npu'
+        return out
+
 
     def cuda(self, device=None, non_blocking=False):
         if not ENABLE_DISPATCH:
@@ -162,9 +194,13 @@ class TensorPlaceHolder:
 
         if DEVICE_TARGET == 'Ascend':
             device_type = 'Ascend'
+            device = 'npu'
         else:
             device_type = 'GPU'
-        return super(Tensor, self).to(device_type, non_blocking=non_blocking)
+            device = 'cuda'
+        out = super(Tensor, self).to(device_type, non_blocking=non_blocking)
+        out.init = device
+        return out
 
     def __array_wrap__(self, array):
         if array.dtype == bool:
@@ -883,11 +919,14 @@ class TensorPlaceHolder:
     def data(self):
         if self.is_meta:
             return self
-        return super(Tensor, self).data
+        out = super(Tensor, self).data
+        out.init = self.init
+        return out
 
     @data.setter
     def data(self, new_value):
         self.assign_value(new_value)
+        self.init = new_value.init
 
     # Tensor.data_ptr
 
@@ -1319,11 +1358,7 @@ class TensorPlaceHolder:
     # Tensor.is_leaf
     @property
     def is_leaf(self):
-        if not self.requires_grad:
-            return True
-        if self.requires_grad and hasattr(self, 'param_info'):
-            return True
-        return False
+        return self._is_leaf
 
     # Tensor.is_pinned
     def is_pinned(self):
@@ -1719,9 +1754,11 @@ class TensorPlaceHolder:
 
     # Tensor.numpy
     def numpy(self):
-        if ENABLE_DISPATCH:
-            assert self._device in ['CPU', 'Meta']
-        return super(Tensor, self).asnumpy()
+        assert self.init == 'cpu'
+        return Tensor_.asnumpy(self)
+
+    def asnumpy(self):
+        return Tensor_.asnumpy(self)
 
     def __array__(self, dtype=None):
         """support create numpy array from tensor."""
@@ -1877,9 +1914,9 @@ class TensorPlaceHolder:
         return self
 
     # Tensor.retains_grad
-    @property
-    def retains_grad(self):
-        return not self.is_leaf and self._retain_grad
+    # @property
+    # def retains_grad(self):
+    #     return not self.is_leaf and self._retain_grad
 
     # Tensor.roll
     def roll(self, shifts, dims=None):
@@ -2179,21 +2216,18 @@ class TensorPlaceHolder:
         if not ENABLE_DISPATCH:
             return self
 
-        if device in ['meta', 'Meta']:
-            out = Tensor(shape=self.shape, dtype=self.dtype, init='none')
+        if device == 'meta':
+            out = Tensor(shape=self.shape, dtype=self.dtype, init='meta')
             return out
 
-        if device in device_map:
-            device_str = device_map[device]
-        else:
-            device_str = device
+        if DEVICE_TARGET == 'Ascend' and device == 'cuda':
+            device = 'npu'
 
-        if DEVICE_TARGET == 'Ascend' and device_str == 'GPU':
-            device_str = 'Ascend'
-
-        if device_str == self._device:
+        if device == self.init:
             return self
-        return super(Tensor, self).to(device_str, non_blocking=non_blocking)
+        out = super(Tensor, self).to(device, non_blocking=non_blocking)
+        out.init = device
+        return out
 
     def to(self, *args, **kwargs):
         non_blocking = kwargs.get('non_blocking', False)
@@ -2220,7 +2254,7 @@ class TensorPlaceHolder:
                 else:
                     out = ops.cast(out, arg)
             elif isinstance(arg, Tensor):
-                out = out._move_to(arg._device, non_blocking)
+                out = out._move_to(arg.init, non_blocking)
                 if out.dtype == arg:
                     return out
                 else:
@@ -2480,19 +2514,8 @@ class TensorPlaceHolder:
         return self.init == 'meta'
 
     @property
-    def _device(self):
-        if self.is_meta:
-            return 'Meta'
-        if not ENABLE_DISPATCH:
-            return DEVICE_TARGET
-        device = super(Tensor, self).device
-        if ':' in device:
-            return device.split(':')[0]
-        return device
-
-    @property
     def device(self):
-        return device_cache[self._device]
+        return device_cache[self.init]
 
     def _convert_numpy_slices(self, key):
         """递归转换 key 中的 NumPy 整数为内置 int"""
@@ -2526,6 +2549,7 @@ class TensorPlaceHolder:
 
     def __deepcopy__(self, memodict):
         new_obj = Tensor(self)
+        new_obj.init = self.init
         return new_obj
 
     def __matmul__(self, other):
@@ -2546,8 +2570,8 @@ class TensorPlaceHolder:
     def __mod__(self, other):
         return ops.fmod(self, other)
 
-    def backward(self):
-        return self
+    def backward(self, gradient=None, retain_graph=None, create_graph=False, inputs=None):
+        mindtorch.autograd.backward(self, gradient, retain_graph, create_graph, inputs=inputs)
 
     def log_softmax(self, dim):
         return ops.log_softmax(self, dim)
@@ -2562,8 +2586,6 @@ class TensorPlaceHolder:
     def is_nested(self):
         return False
 
-    def retain_grad(self):
-        pass
 
 def enable_mindspore_patch():
     fn_keys = list(TensorPlaceHolder.__dict__)

@@ -1,6 +1,6 @@
 import numpy as np
 
-from mindhf.transformers import Pipeline
+from mindnlp.transformers import Pipeline
 
 
 def softmax(outputs):
