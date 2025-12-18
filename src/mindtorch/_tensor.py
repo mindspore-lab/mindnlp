@@ -2216,10 +2216,16 @@ class TensorPlaceHolder:
         if not ENABLE_DISPATCH:
             return self
 
+        # Accept device strings like 'cuda', 'cuda:0', 'cpu', 'npu', etc.
+        if isinstance(device, str) and ':' in device:
+            # strip device index for backend APIs that only expect the device type
+            device = device.split(':', 1)[0]
+
         if device == 'meta':
             out = Tensor(shape=self.shape, dtype=self.dtype, init='meta')
             return out
 
+        # Map CUDA to NPU on Ascend targets if needed
         if DEVICE_TARGET == 'Ascend' and device == 'cuda':
             device = 'npu'
 
