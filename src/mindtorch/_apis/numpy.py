@@ -280,6 +280,8 @@ class ClampScalarFunction(Function):
     @staticmethod
     def forward(ctx, input, min_val, max_val):
         out = np.clip(input.asnumpy(), min_val, max_val)
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
         result = ms.Tensor.from_numpy(out)
         ctx.save_for_backward(input)
         ctx.min_val = min_val
@@ -1410,6 +1412,12 @@ def non_zero(input):
     out = np.nonzero(input.asnumpy())
     out = np.stack(out, 1)
     return ms.Tensor.from_numpy(out)
+
+
+def non_zero_ext(input):
+    """Return a tuple of 1-D index tensors, one for each dimension, similar to torch.nonzero(as_tuple=True)."""
+    outs = np.nonzero(input.asnumpy())
+    return tuple(ms.Tensor.from_numpy(o) for o in outs)
 
 
 class TileFunction(Function):
