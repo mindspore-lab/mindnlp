@@ -17,6 +17,9 @@ api_map = {
     'npu': npu,
     'cuda': gpu,
     'meta': meta,
+    'Ascend': npu,
+    'GPU': gpu,
+    'CPU': cpu,
 }
 
 DISPATCH_WHITE_LIST = ['inplace_zero', 'inplace_fill_scalar']
@@ -33,6 +36,9 @@ if ENABLE_DISPATCH:
                 device_type = args[0][0].init
             else:
                 device_type = args[device_position].init
+
+        if device_type is None:
+            device_type = DEVICE_TARGET
 
         func = getattr(api_map[device_type], func_name, None)
         if func is None:
