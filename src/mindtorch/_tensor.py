@@ -104,6 +104,7 @@ def __init__(self, *args, **kwargs):
             device = device.type
         self.init = device
 
+
 Tensor.__init__ = __init__
 
 def tensor(data, *, dtype=None, device=None, requires_grad=False, pin_memory=False):
@@ -148,6 +149,8 @@ class TensorPlaceHolder:
                 "If you indeed want the .grad field to be populated for a non-leaf Tensor, "
                 "use .retain_grad() on the non-leaf Tensor."
             )
+        if self._grad is not None:
+            self._grad.init = self.init
         return self._grad
 
     @grad.setter
@@ -1866,8 +1869,6 @@ class TensorPlaceHolder:
         pass
 
     # Tensor.register_hook
-    def register_hook(self, hook):
-        return self._data.register_hook(hook)
 
     # Tensor.register_post_accumulate_grad_hook
 

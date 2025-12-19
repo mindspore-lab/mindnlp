@@ -90,6 +90,7 @@ if has_function:
         def apply(cls, *args, **kwargs):
             init = args[0].init
             outs = super().apply(*args, **kwargs)
+
             if isinstance(outs, (tuple, list)):
                 for out in outs:
                     out.init = init
