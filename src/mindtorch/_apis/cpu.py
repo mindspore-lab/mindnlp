@@ -12,6 +12,46 @@ def empty(size, dtype):
 def empty_like(input, dtype):
     return pyboost.empty_like_op(input, dtype, device='CPU')
 
+def new_empty(input, size, dtype, device):
+    """
+    Create a new empty tensor with the same type as input tensor.
+    
+    Args:
+        input: The input tensor to base the type on
+        size: The size of the new tensor
+        dtype: Optional dtype (if None, use input's dtype)
+        device: Optional device (if None, use input's device or 'CPU')
+    
+    Returns:
+        A new empty tensor with the specified size and dtype/device
+    """
+    # Use input's dtype if dtype is None
+    if dtype is None:
+        dtype = input.dtype
+    
+    # Use input's device if device is None, or default to 'CPU'
+    if device is None:
+        # Try to get device from input, default to 'CPU'
+        if hasattr(input, 'device') and hasattr(input.device, 'type'):
+            device_str = input.device.type
+            if device_str.lower() == 'cpu':
+                device_str = 'CPU'
+        else:
+            device_str = 'CPU'
+    else:
+        # Convert device to string if it's a device object
+        if hasattr(device, 'type'):
+            device_str = device.type
+            if device_str.lower() == 'cpu':
+                device_str = 'CPU'
+        else:
+            device_str = str(device)
+            if device_str.lower() == 'cpu':
+                device_str = 'CPU'
+    
+    # Create empty tensor using pyboost
+    return pyboost.empty_op(size, dtype=dtype, device=device_str)
+
 def inplace_normal(input, mean, std, generator_):
     out = np.random.normal(mean, std, input.shape).astype(mindtorch.dtype2np[input.dtype])
     numpy_to_tensor_overwrite(out, input)
@@ -1339,7 +1379,9 @@ def dropout2d(input_x, p):
     return legacy.dropout2_d(input_x, p)
 
 def linalg_qr(input_x, mode):
-    full_matrices = 'mode' == 'complete'
+    # mode can be 'reduced', 'complete', or 'r'
+    # For 'complete', use full_matrices=True; for 'reduced' or 'r', use full_matrices=False
+    full_matrices = mode == 'complete'
     return legacy.qr(input_x, full_matrices)
 
 def diag(input, diagonal):
