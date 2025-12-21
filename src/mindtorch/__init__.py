@@ -206,7 +206,7 @@ from .storage import UntypedStorage, Storage, TypedStorage
 
 from . import _dynamo, library
 from . import profiler, cuda, npu, xpu, mps, amp, compiler, jit, version, __future__, overrides, \
-    return_types, linalg, fx, backends, nn, fft, _jit_internal, utils, optim, testing, _ops, accelerator
+    return_types, linalg, fx, backends, nn, fft, _jit_internal, utils, optim, testing, _ops, accelerator, special
 from ._lowrank import svd_lowrank
 from .random import get_rng_state, initial_seed, manual_seed, seed, set_rng_state
 

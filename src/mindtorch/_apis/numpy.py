@@ -403,11 +403,6 @@ def add(input, other, alpha=1):
     return AddFunction.apply(input, other, alpha)
 
 
-dyn_shape_op = ops.TensorShape().set_device('CPU')
-def tensor_shape(self):
-    return dyn_shape_op(self)
-
-
 class CastFunction(Function):
     @staticmethod
     def forward(ctx, input, dtype):
@@ -470,7 +465,24 @@ class GetitemFunction(Function):
                 new_slice = slice
         
         input_np = input.asnumpy() if hasattr(input, 'numpy') else input
-        out = input_np[new_slice]
+        
+        # Handle indexing, including 0-dimensional arrays
+        try:
+            out = input_np[new_slice]
+        except IndexError as e:
+            # Handle "too many indices for array: array is 0-dimensional" error
+            if "0-dimensional" in str(e):
+                # For 0D arrays, only empty indexing is valid
+                # If we get this error, the input might have become 0D during processing
+                # Return the scalar value itself
+                if input_np.ndim == 0:
+                    out = input_np
+                else:
+                    # Re-raise if it's not a 0D issue
+                    raise
+            else:
+                raise
+        
         if not isinstance(out, np.ndarray):
             out = np.array(out)
         
@@ -979,7 +991,6 @@ def empty_like(input, dtype=None):
     return EmptyLikeFunction.apply(input, dtype)
 
 
-broadcast_to_op = ops.Primitive('BroadcastTo').set_device('CPU')
 def broadcast_to(input, shape):
     input_np = input.asnumpy()
     # 处理 shape 中为 -1 的情况，自动替换为输入的对应维度
@@ -1011,6 +1022,83 @@ def normal_float_float(mean, std, size, dtype, generator):
     """Normal distribution with scalar mean/std on numpy backend."""
     # generator is unused for numpy backend
     out = np.random.normal(mean, std, size).astype(mindtorch.dtype2np[dtype])
+    return ms.Tensor.from_numpy(out)
+
+
+def normal_tensor_tensor(mean, std, size, dtype, generator):
+    """
+    Generates random numbers from a normal distribution with tensor mean and std.
+    
+    Args:
+        mean: Mean tensor (scalar or tensor)
+        std: Standard deviation tensor (scalar or tensor)
+        size: Output shape
+        dtype: Output data type
+        generator: Random number generator (optional, for compatibility)
+    
+    Returns:
+        Tensor with random numbers from normal distribution
+    """
+    # Extract scalar values from mean and std tensors
+    # Convert to numpy first to avoid .item() errors on multi-element tensors
+    if hasattr(mean, 'asnumpy'):
+        mean_np = mean.asnumpy()
+    elif hasattr(mean, 'numpy'):
+        mean_np = mean.numpy()
+    else:
+        mean_np = np.asarray(mean)
+    
+    # Extract scalar value: if 0D or single element, use item(); otherwise use first element
+    if mean_np.ndim == 0:
+        mean_val = mean_np.item()
+    elif mean_np.size == 1:
+        mean_val = mean_np.flat[0]
+    else:
+        # Multiple elements: use first element (or could broadcast, but item() expects single element)
+        mean_val = float(mean_np.flat[0])
+    
+    if hasattr(std, 'asnumpy'):
+        std_np = std.asnumpy()
+    elif hasattr(std, 'numpy'):
+        std_np = std.numpy()
+    else:
+        std_np = np.asarray(std)
+    
+    # Extract scalar value: if 0D or single element, use item(); otherwise use first element
+    if std_np.ndim == 0:
+        std_val = std_np.item()
+    elif std_np.size == 1:
+        std_val = std_np.flat[0]
+    else:
+        # Multiple elements: use first element
+        std_val = float(std_np.flat[0])
+    
+    # Handle generator if provided
+    if generator is not None:
+        seed, offset = generator._step(12)  # pylint: disable=protected-access
+        # Handle both scalar and tensor seed
+        if hasattr(seed, 'asnumpy'):
+            seed_np = seed.asnumpy()
+            if seed_np.size == 1:
+                np.random.seed(int(seed_np.item() if seed_np.ndim == 0 else seed_np.flat[0]))
+            else:
+                # Use first element if multiple
+                np.random.seed(int(seed_np.flat[0]))
+        elif hasattr(seed, 'item'):
+            try:
+                np.random.seed(seed.item())
+            except ValueError:
+                # Multiple elements, use first
+                seed_np = seed.asnumpy() if hasattr(seed, 'asnumpy') else np.asarray(seed)
+                np.random.seed(int(seed_np.flat[0]))
+        else:
+            np.random.seed(int(seed))
+    
+    # Generate random numbers from normal distribution
+    out = np.random.normal(mean_val, std_val, size)#.astype(mindtorch.dtype2np[dtype])
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+    out = out.astype(mindtorch.dtype2np[dtype])
     return ms.Tensor.from_numpy(out)
 
 
@@ -1466,6 +1554,41 @@ def non_zero_ext(input):
     return tuple(ms.Tensor.from_numpy(o) for o in outs)
 
 
+def count_nonzero(input, dims):
+    """
+    Counts the number of non-zero values in the input tensor along specified dimensions.
+    
+    Args:
+        input: Input tensor
+        dims: Dimension or dimensions to reduce. If None, counts all non-zero values.
+    
+    Returns:
+        Tensor containing the count of non-zero values
+    """
+    input_np = input.asnumpy()
+    
+    # Count non-zero values
+    if dims is None:
+        # Count all non-zero values
+        count = np.count_nonzero(input_np)
+        out = np.array(count, dtype=np.int64)
+    else:
+        # Count along specified dimensions
+        if isinstance(dims, (list, tuple)):
+            # Multiple dimensions
+            count = np.count_nonzero(input_np, axis=tuple(dims))
+        else:
+            # Single dimension
+            count = np.count_nonzero(input_np, axis=dims)
+        
+        if not isinstance(count, np.ndarray):
+            count = np.array(count)
+        # Ensure output is int64
+        out = count.astype(np.int64)
+    
+    return ms.Tensor.from_numpy(out)
+
+
 class TileFunction(Function):
     @staticmethod
     def forward(ctx, input, dims):
@@ -1846,14 +1969,59 @@ def topk(input, k, dim=None, largest=True, sorted=True):
 
 
 def sort_ext(input, dim, descending, stable):
-    sort_op = ops.Sort(dim, descending).set_device('CPU')
-    return sort_op(input)
+    return sort(input, dim, descending, stable)
+
+
+def sort(input, dim, descending, stable):
+    """
+    Sorts the elements of the input tensor along a given dimension.
+    
+    Args:
+        input: Input tensor
+        dim: The dimension to sort along
+        descending: If True, sort in descending order
+        stable: If True, use stable sorting algorithm
+    
+    Returns:
+        Tuple of (values, indices) where:
+        - values: Sorted tensor
+        - indices: Indices of the sorted elements
+    """
+    # INSERT_YOUR_CODE
+    # Use numpy implementation to perform sort
+    input_np = input.asnumpy() if hasattr(input, 'asnumpy') else np.asarray(input)
+
+    # numpy.sort always returns ascending, so for descending sort, negate, sort ascending, then re-negate, or flip.
+    # We need the indices too, so use np.argsort for indices and indexing to get sorted values.
+
+    # Ensure axis is an int and handle None (default is to flatten if None)
+    axis = dim
+    if axis is None:
+        # Flatten input
+        flat_values = np.sort(input_np, axis=None)
+        flat_indices = np.argsort(input_np, axis=None)
+        values = ms.Tensor.from_numpy(flat_values)
+        indices = ms.Tensor.from_numpy(flat_indices.astype(np.int64))
+        return values, indices
+
+    # When descending, sort ascending then reverse results on that axis
+    if descending:
+        sort_indices = np.argsort(input_np, axis=axis)
+        sort_indices = np.flip(sort_indices, axis=axis)
+    else:
+        sort_indices = np.argsort(input_np, axis=axis)
+
+    # np.take_along_axis to gather sorted values along the axis
+    sorted_values = np.take_along_axis(input_np, sort_indices, axis=axis)
+    values = ms.Tensor.from_numpy(sorted_values)
+    indices = ms.Tensor.from_numpy(sort_indices.astype(np.int64))
+    return values, indices
 
 
 class RoundFunction(Function):
     @staticmethod
-    def forward(ctx, input):
-        out = np.round(input.asnumpy())
+    def forward(ctx, input, decimals):
+        out = np.round(input.asnumpy(), decimals)
         if not isinstance(out, np.ndarray):
             out = np.array(out)
         result = ms.Tensor.from_numpy(out)
@@ -1871,8 +2039,8 @@ class RoundFunction(Function):
             grad_input = ms.Tensor.from_numpy(grad_input)
         return grad_input
 
-def round(input):
-    return RoundFunction.apply(input)
+def round(input, decimals):
+    return RoundFunction.apply(input, decimals)
 
 
 def isin(elements, test_elements, assume_unique=False, invert=False):
@@ -2202,6 +2370,48 @@ def randperm_ext(n, seed, offset, dtype):
     return ms.Tensor.from_numpy(out)
 
 
+def randperm(n, generator, dtype):
+    """
+    Returns a random permutation of integers from 0 to n - 1.
+    
+    Args:
+        n: The upper bound (exclusive). Must be positive.
+        generator: Random number generator (optional, for compatibility)
+        dtype: The desired data type of returned tensor. Default: int64.
+    
+    Returns:
+        A random permutation of integers from 0 to n - 1.
+    """
+    # Extract seed from generator if provided
+    if generator is not None:
+        seed, offset = generator._step(12)  # pylint: disable=protected-access
+        # Handle both scalar and tensor seed
+        if hasattr(seed, 'item') and seed.numel() == 1:
+            np.random.seed(seed.item())
+        elif hasattr(seed, 'numpy'):
+            seed_np = seed.asnumpy()
+            if seed_np.size == 1:
+                np.random.seed(int(seed_np.item()))
+            else:
+                # Use first element if multiple
+                np.random.seed(int(seed_np.flat[0]))
+        else:
+            np.random.seed(int(seed))
+    
+    # Generate random permutation
+    out = np.random.permutation(n)
+    
+    # Convert to specified dtype
+    if dtype is not None:
+        dtype_np = mindtorch.dtype2np[dtype]
+        out = out.astype(dtype_np)
+    else:
+        # Default to int64
+        out = out.astype(np.int64)
+    
+    return ms.Tensor.from_numpy(out)
+
+
 def embedding(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq):
     out = np.take(weight.asnumpy(), input.asnumpy(), axis=0)
     return ms.Tensor.from_numpy(out)
@@ -2230,6 +2440,27 @@ class RandFunction(Function):
 
 def rand(size, generator, dtype):
     return RandFunction.apply(size, generator, dtype)
+
+
+def rand_like(input, generator, dtype):
+    """
+    Returns a tensor filled with random numbers from a uniform distribution on [0, 1),
+    with the same shape as input.
+    
+    Args:
+        input: Input tensor to match shape
+        generator: Random number generator (optional, for compatibility)
+        dtype: The desired data type of returned tensor. If None, uses input's dtype.
+    
+    Returns:
+        A tensor with the same shape as input, filled with random numbers
+    """
+    # Use input's dtype if dtype is None
+    if dtype is None:
+        dtype = input.dtype
+    
+    # Call rand with input's shape
+    return rand(input.shape, generator, dtype)
 
 
 def randn(size, generator, dtype):
@@ -2699,11 +2930,6 @@ class FlattenFunction(Function):
 
 def flatten(input, start_dim, end_dim):
     return FlattenFunction.apply(input, start_dim, end_dim)
-
-
-stop_gradient_op = ops.StopGradient().set_device('CPU')
-def stop_gradient(*args):
-    return stop_gradient_op(*args)
 
 
 class FmodScalarFunction(Function):
@@ -4494,6 +4720,53 @@ def mse_loss_ext(input, target, reduction='mean'):
     return ms.Tensor.from_numpy(loss)
 
 
+def mse_loss(input, target, reduction):
+    """
+    Computes the mean squared error (MSE) loss between input and target.
+    
+    Args:
+        input: Input tensor
+        target: Target tensor (must have the same shape as input)
+        reduction: Specifies the reduction to apply to the output:
+            - 'none': no reduction will be applied
+            - 'mean': the sum of the output will be divided by the number of elements
+            - 'sum': the output will be summed
+    
+    Returns:
+        Tensor containing the MSE loss
+    """
+    # Convert to numpy if needed
+    if hasattr(input, 'asnumpy'):
+        input_np = input.asnumpy()
+    else:
+        input_np = np.asarray(input)
+    
+    if hasattr(target, 'asnumpy'):
+        target_np = target.asnumpy()
+    else:
+        target_np = np.asarray(target)
+    
+    if input_np.shape != target_np.shape:
+        raise ValueError(f"Input and target must have the same shape. Got input: {input_np.shape}, target: {target_np.shape}")
+
+    # Compute squared errors: (input - target)^2
+    squared_errors = np.square(input_np - target_np)
+
+    # Apply reduction
+    if reduction == 'mean':
+        loss = np.mean(squared_errors)
+    elif reduction == 'sum':
+        loss = np.sum(squared_errors)
+    elif reduction == 'none':
+        loss = squared_errors
+    else:
+        raise ValueError(f"Reduction must be 'mean', 'sum', or 'none', got '{reduction}'")
+
+    if not isinstance(loss, np.ndarray):
+        loss = np.array(loss)
+    return ms.Tensor.from_numpy(loss)
+
+
 class SquareFunction(Function):
     @staticmethod
     def forward(ctx, input):
@@ -4665,8 +4938,107 @@ def log_softmax(input, dim=-1, dtype=None):
 
 
 def nllloss(input, target, weight=None, reduction='mean', ignore_index=-100):
-    op = ops.NLLLoss(reduction, ignore_index).set_device('CPU')
-    return op(input, target, weight)
+    # INSERT_YOUR_CODE
+    input_np = input.asnumpy()
+    target_np = target.asnumpy()
+
+    # If weight is provided, convert to numpy array
+    if weight is not None:
+        weight_np = weight.asnumpy()
+    else:
+        weight_np = None
+
+    # input: (N, C, ...) or (C, ...) if unbatched
+    # target: (N, ...) or (...), class indices
+
+    # flatten input and target if necessary
+    input_shape = input_np.shape
+    target_shape = target_np.shape
+
+    # For multi-dimensional, reshape as needed
+    n_classes = input_shape[1] if len(input_shape) > 1 else input_shape[0]
+
+    # Broadcast target to flattened indices where possible
+    if input_np.ndim > 2:
+        # For shape (N, C, d1, d2, ...)
+        n = input_np.shape[0]
+        c = input_np.shape[1]
+        rest = input_np.shape[2:]
+        input_flat = input_np.reshape(n, c, -1)
+        target_flat = target_np.reshape(n, -1)
+        out_shape = target_np.shape
+    elif input_np.ndim == 2:
+        n = input_np.shape[0]
+        c = input_np.shape[1]
+        input_flat = input_np
+        target_flat = target_np
+        out_shape = target_np.shape
+    else:
+        # (C,), target is scalar
+        input_flat = input_np[None, :]
+        target_flat = np.expand_dims(target_np, axis=0)
+        out_shape = ()
+        n = 1
+
+    # Get value at the class index, use ignore_index to mask
+    if ignore_index is not None:
+        mask = (target_flat != ignore_index)
+    else:
+        mask = np.ones_like(target_flat, dtype=bool)
+
+    # For each sample, select the log-prob for the true class.
+    # Set to 0 if ignore_index, these will be ignored in reduction
+    nll = np.zeros_like(target_flat, dtype=input_np.dtype)
+    for ix in np.ndindex(target_flat.shape):
+        tgt = target_flat[ix]
+        if mask[ix]:
+            if tgt < 0 or tgt >= n_classes:
+                # Index out of bounds, set as 0 (or could raise)
+                nll[ix] = 0.
+            else:
+                if input_flat.shape == target_flat.shape:
+                    # Rare, input is (d0, d1, ...)
+                    nll[ix] = -input_flat[ix + (tgt,)]
+                elif input_flat.ndim == 2:
+                    # input_flat (N, C), target_flat (N,)
+                    nll[ix] = -input_flat[ix[0], tgt]
+                elif input_flat.ndim == 3:
+                    # input_flat (N, C, d), target_flat (N, d)
+                    nll[ix] = -input_flat[ix[0], tgt, ix[1]]
+                else:
+                    # fallback
+                    nll[ix] = -input_flat[ix[0], tgt]
+        # else: nll[ix] = 0. (already zero)
+
+    # Apply weighting if needed
+    if weight_np is not None:
+        # Broadcast weights by target (for each position)
+        wt = np.zeros_like(target_flat, dtype=input_np.dtype)
+        for ix in np.ndindex(target_flat.shape):
+            tgt = target_flat[ix]
+            if mask[ix] and tgt >= 0 and tgt < len(weight_np):
+                wt[ix] = weight_np[tgt]
+            else:
+                wt[ix] = 0
+        nll = nll * wt
+        total_weight = np.sum(wt[mask])
+    else:
+        total_weight = np.sum(mask)
+
+    # Apply reduction
+    if reduction == 'none':
+        result_np = nll.reshape(out_shape)
+    elif reduction == 'sum':
+        result_np = np.sum(nll)
+    else:  # 'mean' or default
+        if total_weight > 0:
+            result_np = np.sum(nll) / total_weight
+        else:
+            result_np = np.sum(nll)  # Avoid div/0, matches torch.nn.functional nll_loss
+
+    # Convert back to tensor
+    result = ms.Tensor.from_numpy(np.array(result_np))
+    return result
 
 
 def diag_ext(input, diagonal):
@@ -5048,3 +5420,36 @@ def max_pool2d(input, kernel_size, stride=1, padding=0, dilation=1, ceil_mode=Fa
         indices_tensor = ms.Tensor.from_numpy(indices)
         return result, indices_tensor
     return result
+
+
+def _get_unfold_indices(input_shape, dimension, size, step):
+    if dimension < 0:
+        dimension += len(input_shape)
+    indices = []
+    for i in range(0, input_shape[dimension] - size + 1, step):
+        indices.append(list(range(i, i + size)))
+
+    return indices, dimension
+
+
+def unfold(input, dimension, size, step):
+    _indices, _dimension = _get_unfold_indices(input.shape, dimension, size, step)
+    indices = ms.tensor(_indices)
+    output = gather(input, indices, _dimension)
+    output = transpose_view(output, _dimension + 1, -1)
+    return output
+
+
+def stop_gradient(input):
+    """
+    Stops gradient computation (no-op for numpy backend).
+    For numpy backend, this simply returns the input since numpy doesn't support automatic differentiation.
+    
+    Args:
+        input: Input tensor
+    
+    Returns:
+        The input tensor (no gradient computation)
+    """
+    # For numpy backend, stop_gradient is a no-op since numpy doesn't support gradients
+    return input

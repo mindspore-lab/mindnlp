@@ -404,6 +404,72 @@ def log(input):
     return input
 __all__.append('log')
 
+def log1p(input):
+    """
+    Returns log(1 + input) (meta implementation).
+    For meta tensors, this returns a tensor with the same shape and dtype as input.
+    
+    Args:
+        input: Input tensor
+    
+    Returns:
+        Meta tensor with the same shape and dtype as input
+    """
+    out = mindspore.Tensor(init='meta', shape=input.shape, dtype=input.dtype)
+    return out
+
+__all__.append('log1p')
+
+def mean(input, dim=None, keepdim=False, dtype=None):
+    """
+    Computes the mean of input tensor along specified dimensions (meta implementation).
+    
+    Args:
+        input: Input tensor
+        dim: Dimension or dimensions to reduce. If None, reduces all dimensions.
+        keepdim: Whether to keep the reduced dimensions in the output
+        dtype: Optional output dtype. If None, uses input dtype.
+    
+    Returns:
+        Meta tensor containing the mean values
+    """
+    input_shape = input.shape
+    input_dtype = input.dtype if dtype is None else dtype
+    
+    # Handle dim=None: reduce all dimensions
+    if dim is None:
+        if keepdim:
+            # Output shape: all dimensions become 1
+            output_shape = tuple(1 for _ in input_shape)
+        else:
+            # Output shape: scalar (empty tuple)
+            output_shape = ()
+    else:
+        # Handle single dimension or list of dimensions
+        if isinstance(dim, (list, tuple)):
+            dims = list(dim)
+        else:
+            dims = [dim]
+        
+        # Normalize negative dimensions
+        ndim = len(input_shape)
+        dims = [d if d >= 0 else ndim + d for d in dims]
+        
+        # Calculate output shape
+        output_shape = list(input_shape)
+        for d in sorted(dims, reverse=True):
+            if 0 <= d < len(output_shape):
+                if keepdim:
+                    output_shape[d] = 1
+                else:
+                    output_shape.pop(d)
+        output_shape = tuple(output_shape)
+    
+    out = mindspore.Tensor(init='meta', shape=output_shape, dtype=input_dtype)
+    return out
+
+__all__.append('mean')
+
 def mul(input, other):
     if isinstance(input, mindtorch.Tensor):
         shape = input.shape
@@ -441,6 +507,22 @@ __all__.append('ones_like')
 def inplace_add(input, other, alpha):
     return input
 __all__.append('inplace_add')
+
+def inplace_sub(input, other):
+    """
+    In-place subtraction operation: subtracts other from input tensor (meta implementation).
+    For meta tensors, this is a no-op that returns the input.
+    
+    Args:
+        input: Input tensor to subtract from
+        other: Tensor or scalar to subtract
+    
+    Returns:
+        The input tensor (meta implementation returns input unchanged)
+    """
+    return input
+
+__all__.append('inplace_sub')
 
 def clamp_scalar(input, *args):
     return input
@@ -712,3 +794,83 @@ def sign(input):
     return out
 
 __all__.append('sign')
+
+def outer(input, other):
+    """
+    Computes the outer product of two vectors (meta implementation).
+    
+    Args:
+        input: First input tensor (1D vector of shape (m,))
+        other: Second input tensor (1D vector of shape (n,))
+    
+    Returns:
+        Meta tensor of shape (m, n) containing the outer product
+    """
+    # Get input shapes
+    input_shape = input.shape
+    other_shape = other.shape
+    
+    # Flatten inputs to 1D if needed (outer product works on 1D vectors)
+    # If input is not 1D, flatten it
+    if len(input_shape) > 1:
+        input_size = 1
+        for dim in input_shape:
+            input_size *= dim
+    else:
+        input_size = input_shape[0] if input_shape else 1
+    
+    if len(other_shape) > 1:
+        other_size = 1
+        for dim in other_shape:
+            other_size *= dim
+    else:
+        other_size = other_shape[0] if other_shape else 1
+    
+    # Output shape is (input_size, other_size)
+    output_shape = (input_size, other_size)
+    
+    # Determine output dtype (use the more general dtype)
+    # For meta tensors, we can use input's dtype or a common dtype
+    output_dtype = input.dtype
+    
+    out = mindspore.Tensor(init='meta', shape=output_shape, dtype=output_dtype)
+    return out
+
+__all__.append('outer')
+
+def transpose_view(input, dim0, dim1):
+    """
+    Transposes the input tensor along the specified dimensions (meta implementation).
+    Swaps dimensions dim0 and dim1.
+    
+    Args:
+        input: Input tensor
+        dim0: First dimension to swap
+        dim1: Second dimension to swap
+    
+    Returns:
+        Meta tensor with swapped dimensions
+    """
+    input_shape = list(input.shape)
+    ndim = len(input_shape)
+    
+    # Normalize negative dimensions
+    if dim0 < 0:
+        dim0 = ndim + dim0
+    if dim1 < 0:
+        dim1 = ndim + dim1
+    
+    # Validate dimensions
+    if dim0 < 0 or dim0 >= ndim:
+        raise IndexError(f"Dimension out of range: dim0={dim0}, ndim={ndim}")
+    if dim1 < 0 or dim1 >= ndim:
+        raise IndexError(f"Dimension out of range: dim1={dim1}, ndim={ndim}")
+    
+    # Swap dimensions in the shape
+    output_shape = input_shape.copy()
+    output_shape[dim0], output_shape[dim1] = output_shape[dim1], output_shape[dim0]
+    
+    out = mindspore.Tensor(init='meta', shape=tuple(output_shape), dtype=input.dtype)
+    return out
+
+__all__.append('transpose_view')
