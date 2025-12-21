@@ -176,6 +176,10 @@ class TensorPlaceHolder:
             raise TypeError("The argument `requires_grad` must be bool type")
         self._requires_grad = value
 
+    def requires_grad_(self, requires_grad=True):
+        self.requires_grad = requires_grad
+        return self
+
     def cpu(self):
         if not ENABLE_DISPATCH:
             return self
@@ -287,8 +291,6 @@ class TensorPlaceHolder:
     def __add__(self, other):
         # if 0 in self.shape:
         #     return self
-        if self.dtype == mindtorch.bool:
-            return ops.bitwise_or(self, other)
         return ops.add(self, other)
 
     def __iadd__(self, other):
@@ -686,8 +688,8 @@ class TensorPlaceHolder:
         return ops.bernoulli(self, generator=generator)
 
     # Tensor.bernoulli_
-    def bernoulli_(self, *, generator=None):
-        return self.copy_(ops.bernoulli(self, generator=generator))
+    def bernoulli_(self, p=0.5, *, generator=None):
+        return execute('inplace_bernoulli', self, p, generator)
 
     # Tensor.bfloat16
     def bfloat16(self):

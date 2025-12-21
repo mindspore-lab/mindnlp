@@ -2016,11 +2016,15 @@ def linalg_qr(input_x, mode):
     return legacy.qr(input_x, full_matrices)
 
 def bernoulli(input, generator):
-    seed, offset = generator._step(12)
-    if ENABLE_PYBOOST:
-        return pyboost.bernoulli_ext_op(input, seed, offset)
     uniform = rand_like(input, generator, input.dtype)
     result = cast(less(uniform, input), input.dtype)
+    return result
+
+def inplace_bernoulli(input, p, generator):
+    if generator is None:
+        generator = default_generator
+    uniform = rand_like(input, generator, input.dtype)
+    result = cast(less(uniform, p), input.dtype)
     return result
 
 def multinomial(input, num_samples, replacement, generator):
@@ -2557,7 +2561,7 @@ def raw_adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, be
     return legacy.adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad, False, False)
 
 def inplace_sub(input, other):
-    if type(other) == int:
+    if isinstance(other, numbers.Number):
         other = mindspore.Tensor(other)
     return pyboost.inplace_sub_ext_op(input, other)
 

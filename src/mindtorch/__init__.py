@@ -132,6 +132,21 @@ def is_grad_enabled():
 def set_grad_enabled(enable_grad):
     return _pynative_executor.set_enable_grad(enable_grad)
 
+def is_same_size(tensor1, tensor2):
+    """
+    Check if two tensors have the same size.
+    
+    Args:
+        tensor1: First tensor
+        tensor2: Second tensor
+    
+    Returns:
+        bool: True if both tensors have the same shape, False otherwise
+    """
+    if not isinstance(tensor1, Tensor) or not isinstance(tensor2, Tensor):
+        return False
+    return tensor1.shape == tensor2.shape
+
 def typename(obj: _Any, /) -> str:
     """
     String representation of the type of an object.
