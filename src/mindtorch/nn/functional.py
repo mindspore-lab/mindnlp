@@ -668,7 +668,7 @@ def max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode
     input_ndim = input.ndim
     if input_ndim == 3:
         input = input.unsqueeze(1)
-    out = execute('max_pool2d', input, tuple(kernel_size), tuple(stride), padding, dilation, ceil_mode, return_indices)
+    out = execute('max_pool2d', input, kernel_size, stride, padding, dilation, ceil_mode, return_indices)
     if input_ndim == 3:
         out = out.squeeze(1)
     return out

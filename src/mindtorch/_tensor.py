@@ -1,3 +1,5 @@
+import ctypes
+import ml_dtypes
 import warnings
 import numbers
 import numpy as np
@@ -115,6 +117,9 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False, pin_memory=Fal
 
     if device is None:
         device = get_device_in_context()
+
+    if dtype is not None and not isinstance(dtype, typing.Type):
+        dtype = _dtype.py2dtype[dtype]
 
     if isinstance(data, float) and data == float('-inf'):
         data = mindtorch.finfo(get_default_dtype()).min
@@ -1760,10 +1765,34 @@ class TensorPlaceHolder:
     # Tensor.numpy
     def numpy(self):
         assert self.init == 'cpu'
+        if self.dtype == mindtorch.bfloat16:
+            return self.asnumpy_bf16()
         return Tensor_.asnumpy(self)
 
     def asnumpy(self):
+        if self.dtype == mindtorch.bfloat16:
+            return self.asnumpy_bf16()
         return Tensor_.asnumpy(self)
+
+    def asnumpy_bf16(self):
+        assert self.init == 'cpu'
+        # 确保 tensor 是连续内存布局
+        if not self.is_contiguous():
+            self = self.contiguous()
+        
+        # 获取 tensor 的内存地址和元素数量
+        ptr = self.data_ptr()
+        numel = self.numel()
+        
+        # 创建 ctypes 指针
+        ctypes_ptr = ctypes.cast(ptr, ctypes.POINTER(ctypes.c_uint16))
+        
+        # 使用 numpy 的 ctypes 接口直接访问内存
+        np_array = np.ctypeslib.as_array(ctypes_ptr, shape=(numel,))
+
+        # 转换为正确的形状和数据类型
+        return np_array.reshape(self.shape).view(ml_dtypes.bfloat16)
+
 
     def __array__(self, dtype=None):
         """support create numpy array from tensor."""
@@ -1917,9 +1946,9 @@ class TensorPlaceHolder:
         return self
 
     # Tensor.retains_grad
-    # @property
-    # def retains_grad(self):
-    #     return not self.is_leaf and self._retain_grad
+    @property
+    def retains_grad(self):
+        return not self.is_leaf and self._retains_grad
 
     # Tensor.roll
     def roll(self, shifts, dims=None):

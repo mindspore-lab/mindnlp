@@ -2572,5 +2572,4 @@ def swiglu(x, dim=-1):
 
 def rotary_position_embedding(x, cos, sin, mode=0):
     """Rotary Position Embedding"""
-    import mindspore
-    return mindspore.ops.auto_generate.gen_ops_def.apply_rotary_pos_emb_(x, cos, sin, mode)
+    return pyboost.rotary_position_embedding_op(x, cos, sin, mode)

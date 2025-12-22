@@ -96,7 +96,7 @@ def is_available() -> bool:
     return mod.is_available()
 
 
-def current_accelerator(check_available: bool = False) -> mindtorch.device | None:
+def current_accelerator(check_available: bool = False):
     r"""Return the device of the accelerator available at compilation time.
     If no accelerator were available at compilation time, returns None.
     See :ref:`accelerator<accelerators>` for details.
@@ -283,7 +283,7 @@ class device_index:
         ...     pass
     """
 
-    def __init__(self, device: int | None, /) -> None:
+    def __init__(self, device: int) -> None:
         self.idx = device
         self.prev_idx = -1
 
