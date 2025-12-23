@@ -155,7 +155,9 @@ class TensorPlaceHolder:
                 "use .retain_grad() on the non-leaf Tensor."
             )
         if self._grad is not None:
-            self._grad.init = self.init
+            s_grad = self._grad
+            s_grad.init = self.init
+            return s_grad
         return self._grad
 
     @grad.setter

@@ -62,11 +62,129 @@ from .c10d_logger import _exception_logger, _time_logger
 from .constants import default_pg_nccl_timeout, default_pg_timeout
 # from .rendezvous import register_rendezvous_handler, rendezvous  # noqa: F401
 
+# Default first bucket size in bytes (1MB)
+# This is used by DDP to create a smaller first bucket to start communication early
+_DEFAULT_FIRST_BUCKET_BYTES = 1 * 1024 * 1024  # 1MB
+
+
+class Logger:
+    """
+    Logger for DistributedDataParallel (DDP) to track and log DDP-related information.
+    
+    This is a Python implementation for MindSpore since it doesn't have the C++ Logger.
+    It provides a minimal interface compatible with PyTorch's Logger API.
+    """
+    
+    def __init__(self, reducer: Any) -> None:
+        """
+        Initialize the Logger with a reducer.
+        
+        Args:
+            reducer: The reducer instance (can be None or a _Reducer instance)
+        """
+        self.reducer = reducer
+        self._construction_data = {}
+        self._static_graph = False
+        self._comm_hook_name = None
+        self._ddp_logging_data = None
+    
+    def set_construction_data_and_log(
+        self,
+        module_name: str,
+        device_ids: List[int],
+        output_device: int,
+        broadcast_buffers: bool,
+        has_sync_bn: bool,
+        static_graph: bool,
+    ) -> None:
+        """
+        Set logging data that can be got during DistributedDataParallel construction time.
+        
+        Args:
+            module_name: Name of the module class
+            device_ids: List of device IDs
+            output_device: Output device ID
+            broadcast_buffers: Whether to broadcast buffers
+            has_sync_bn: Whether the model has SyncBatchNorm
+            static_graph: Whether using static graph
+        """
+        self._construction_data = {
+            "module_name": module_name,
+            "device_ids": device_ids,
+            "output_device": output_device,
+            "broadcast_buffers": broadcast_buffers,
+            "has_sync_bn": has_sync_bn,
+            "static_graph": static_graph,
+        }
+        self._static_graph = static_graph
+    
+    def set_runtime_stats_and_log(self) -> None:
+        """
+        Set runtime stats and log them.
+        This is called during forward pass to update runtime statistics.
+        """
+        # In MindSpore, we don't have detailed runtime stats collection
+        # This is a no-op for now, but maintains API compatibility
+        pass
+    
+    def set_error_and_log(self, error: str) -> None:
+        """
+        Set error message and log it.
+        
+        Args:
+            error: Error message to log
+        """
+        # Use the module logger defined at the bottom of the file
+        import logging
+        log = logging.getLogger(__name__)
+        log.error(f"DDP Error: {error}")
+    
+    def _set_static_graph(self) -> None:
+        """Set the static graph flag."""
+        self._static_graph = True
+    
+    def _set_comm_hook_name(self, comm_hook: str) -> None:
+        """
+        Set the communication hook name.
+        
+        Args:
+            comm_hook: Name of the communication hook
+        """
+        self._comm_hook_name = comm_hook
+    
+    def _get_ddp_logging_data(self) -> Any:
+        """
+        Get DDP logging data.
+        
+        Returns:
+            An object with strs_map and ints_map attributes containing logging data
+        """
+        # Create a simple object that mimics the DDP logging data structure
+        class DDPLoggingData:
+            def __init__(self):
+                self.strs_map = {}
+                self.ints_map = {}
+        
+        data = DDPLoggingData()
+        data.strs_map = {
+            "module_name": self._construction_data.get("module_name", ""),
+            "comm_hook": self._comm_hook_name or "",
+        }
+        data.ints_map = {
+            "device_ids": self._construction_data.get("device_ids", []),
+            "output_device": self._construction_data.get("output_device", -1),
+            "broadcast_buffers": 1 if self._construction_data.get("broadcast_buffers", False) else 0,
+            "has_sync_bn": 1 if self._construction_data.get("has_sync_bn", False) else 0,
+            "static_graph": 1 if self._static_graph else 0,
+        }
+        return data
+
 
 __all__ = [
     "Backend",
     "BackendConfig",
     "GroupMember",
+    "Logger",
     "P2POp",
     "all_gather",
     "all_gather_coalesced",
@@ -4166,7 +4284,295 @@ def barrier(
         return work
     else:
         work.wait()
-        _pynative_executor.sync()
+        # _pynative_executor.sync()
+
+
+def _verify_params_across_processes(
+    process_group: ProcessGroup,
+    params: List[mindtorch.Tensor],
+    logger: Optional[Any] = None,
+) -> None:
+    """
+    Verify that models across all processes are the same as model on rank 0 with
+    respect to no. of params and matching dtype/size/layout.
+    
+    This is a Python implementation for MindSpore since it doesn't have the C++ version.
+    """
+    if not params:
+        return
+    
+    world_size = process_group.size()
+    rank = process_group.rank()
+    
+    # First verify number of parameters to avoid inconsistent inputs into
+    # broadcast which can cause a crash.
+    # See https://github.com/pytorch/pytorch/issues/73547
+    
+    # Create a tensor with the number of parameters
+    param_size_tensor = mindtorch.tensor([len(params)], dtype=mindtorch.int64, device=params[0].device)
+    
+    # Allgather parameter sizes from all ranks
+    output_tensors = [[mindtorch.empty_like(param_size_tensor) for _ in range(world_size)]]
+    input_tensors = [param_size_tensor]
+    opts = AllgatherOptions()
+    work = process_group.allgather(output_tensors, input_tensors, opts)
+    if work is not None:
+        work.wait()
+    
+    result_size_tensors = output_tensors[0]
+    
+    # Verify all ranks have the same number of parameters
+    for i in range(world_size):
+        param_size_for_rank = int(result_size_tensors[i].item())
+        if param_size_for_rank != len(params):
+            raise RuntimeError(
+                f"DDP expects same model across all ranks, but Rank {rank} has "
+                f"{len(params)} params, while rank {i} has inconsistent {param_size_for_rank} params."
+            )
+    
+    # Continue with parameter shape verification.
+    # For each parameter, verify its shape (dim, sizes, strides) across all ranks
+    for param_idx, t in enumerate(params):
+        # Collect shape information: [dim, size1, size2, ..., stride1, stride2, ...]
+        shape_info = [t.dim()]
+        shape_info.extend(list(t.shape))
+        shape_info.extend(list(t.stride()))
+        
+        # Create a tensor with shape information
+        shape_tensor = mindtorch.tensor(shape_info, dtype=mindtorch.int64, device=t.device)
+        
+        # Allgather shape information from all ranks
+        shape_output_tensors = [[mindtorch.empty_like(shape_tensor) for _ in range(world_size)]]
+        shape_input_tensors = [shape_tensor]
+        opts = AllgatherOptions()
+        work = process_group.allgather(shape_output_tensors, shape_input_tensors, opts)
+        if work is not None:
+            work.wait()
+        
+        shape_result_tensors = shape_output_tensors[0]
+        
+        # Verify all ranks have the same shape information for this parameter
+        local_shape_info = shape_info
+        for i in range(world_size):
+            other_shape_info = shape_result_tensors[i].cpu().tolist()
+            if other_shape_info != local_shape_info:
+                # Extract shape and stride from the shape info
+                other_dim = int(other_shape_info[0])
+                other_shape = tuple(int(x) for x in other_shape_info[1:1+other_dim])
+                other_stride = tuple(int(x) for x in other_shape_info[1+other_dim:])
+                
+                raise RuntimeError(
+                    f"DDP expects same model across all ranks, but Rank {rank} and rank {i} "
+                    f"have different shapes for parameter {param_idx}. "
+                    f"Rank {rank}: shape={t.shape}, stride={t.stride()}, "
+                    f"Rank {i}: shape={other_shape}, stride={other_stride}."
+                )
+
+
+def _broadcast_coalesced(
+    process_group: ProcessGroup,
+    tensors: List[mindtorch.Tensor],
+    buffer_size: int,
+    src: int = 0,
+) -> None:
+    """
+    Broadcast many tensors to all processes in the process group.
+    
+    Small tensors are coalesced into buckets to reduce the number of synchronizations.
+    This is a Python implementation for MindSpore.
+    
+    Args:
+        process_group: The process group to broadcast on
+        tensors: List of tensors to broadcast
+        buffer_size: Maximum size of the buffer used for coalescing (in bytes)
+        src: Source rank to broadcast from (default: 0)
+    """
+    if not tensors:
+        return
+    
+    # Coalesce tensors into buckets based on buffer_size
+    buckets = []
+    current_bucket = []
+    current_bucket_size = 0
+    
+    for tensor in tensors:
+        # Calculate tensor size in bytes
+        tensor_size = tensor.numel() * tensor.element_size()
+        
+        # If adding this tensor would exceed buffer_size, start a new bucket
+        if current_bucket_size + tensor_size > buffer_size and current_bucket:
+            buckets.append(current_bucket)
+            current_bucket = []
+            current_bucket_size = 0
+        
+        current_bucket.append(tensor)
+        current_bucket_size += tensor_size
+    
+    # Add the last bucket if it's not empty
+    if current_bucket:
+        buckets.append(current_bucket)
+    
+    # Broadcast each bucket
+    # Maintain a maximum of 2 in-flight broadcasts to avoid allocating too much memory
+    max_in_flight = 2
+    in_flight = []
+    
+    opts = BroadcastOptions()
+    opts.rootRank = src
+    opts.rootTensor = 0
+    
+    for bucket in buckets:
+        # Wait for oldest broadcast if we have too many in flight
+        if len(in_flight) >= max_in_flight:
+            work = in_flight.pop(0)
+            if work is not None:
+                work.wait()
+        
+        # Broadcast each tensor in the bucket
+        # For simplicity, we broadcast individually rather than coalescing into a single buffer
+        # This works well for MindSpore since we don't have multi-device support
+        for tensor in bucket:
+            opts.asyncOp = len(buckets) > 1 or len(in_flight) > 0
+            work = process_group.broadcast([tensor], opts)
+            if work is not None:
+                if opts.asyncOp:
+                    in_flight.append(work)
+                else:
+                    work.wait()
+    
+    # Wait for all remaining in-flight broadcasts
+    for work in in_flight:
+        if work is not None:
+            work.wait()
+
+
+def _compute_bucket_assignment_by_size(
+    tensors: List[mindtorch.Tensor],
+    bucket_size_limits: List[int],
+    expect_sparse_gradient: Optional[List[bool]] = None,
+    tensor_indices: Optional[List[int]] = None,
+    logger: Optional[Any] = None,
+) -> Tuple[List[List[int]], List[int]]:
+    """
+    Compute bucket assignment for tensors based on their sizes.
+    
+    This function groups tensors into buckets for efficient gradient communication.
+    Tensors are grouped by type and device, and buckets respect size limits.
+    Sparse tensors get their own bucket.
+    
+    This is a Python implementation for MindSpore.
+    
+    Args:
+        tensors: List of tensors to assign to buckets
+        bucket_size_limits: List of bucket size limits in bytes
+        expect_sparse_gradient: Optional list indicating which tensors have sparse gradients
+        tensor_indices: Optional list of tensor indices (if None, uses 0..len(tensors)-1)
+        logger: Optional logger (not used in this implementation)
+    
+    Returns:
+        Tuple of (bucket_indices, per_bucket_size_limits):
+        - bucket_indices: List of lists, where each inner list contains tensor indices in that bucket
+        - per_bucket_size_limits: List of size limits for each bucket
+    """
+    if not tensors:
+        return [], []
+    
+    if expect_sparse_gradient is None:
+        expect_sparse_gradient = [False] * len(tensors)
+    
+    if tensor_indices is None:
+        tensor_indices = list(range(len(tensors)))
+    
+    # Group tensors by (dtype, device) - tensors with same type/device can be in same bucket
+    from collections import defaultdict
+    
+    # Key: (dtype, device), Value: list of (tensor_index, tensor, is_sparse)
+    tensor_groups = defaultdict(list)
+    
+    for i, tensor in enumerate(tensors):
+        # Use tensor indices if provided, otherwise use i
+        tensor_idx = tensor_indices[i] if i < len(tensor_indices) else i
+        is_sparse = expect_sparse_gradient[i] if i < len(expect_sparse_gradient) else False
+        
+        # Create a key based on dtype and device
+        # For MindSpore, we use dtype and device string representation
+        dtype = tensor.dtype
+        device = str(tensor.device) if hasattr(tensor, 'device') else 'cpu'
+        key = (dtype, device)
+        
+        tensor_groups[key].append((tensor_idx, tensor, is_sparse))
+    
+    # Now assign tensors to buckets
+    buckets = []  # List of lists of tensor indices
+    per_bucket_size_limits = []  # List of size limits for each bucket
+    
+    # Process each group separately (tensors of same type/device)
+    for key, group_tensors in tensor_groups.items():
+        # Sort by tensor index to maintain order
+        group_tensors.sort(key=lambda x: x[0])
+        
+        # Get bucket size limit for this group (use first limit, or iterate if multiple)
+        bucket_limit_idx = 0
+        current_bucket = []
+        current_bucket_size = 0
+        
+        for tensor_idx, tensor, is_sparse in group_tensors:
+            # Calculate tensor size in bytes
+            tensor_size = tensor.numel() * tensor.element_size()
+            
+            # Sparse tensors get their own bucket
+            if is_sparse:
+                # Finish current bucket if not empty
+                if current_bucket:
+                    buckets.append(current_bucket)
+                    # Use the current bucket size limit
+                    limit_idx = min(bucket_limit_idx, len(bucket_size_limits) - 1)
+                    per_bucket_size_limits.append(bucket_size_limits[limit_idx])
+                    current_bucket = []
+                    current_bucket_size = 0
+                
+                # Sparse tensor gets its own bucket with no size limit (0)
+                buckets.append([tensor_idx])
+                per_bucket_size_limits.append(0)  # No size limit for sparse
+                continue
+            
+            # Get current bucket size limit
+            if bucket_limit_idx < len(bucket_size_limits):
+                current_limit = bucket_size_limits[bucket_limit_idx]
+            else:
+                # Use last limit if we've exhausted the list
+                current_limit = bucket_size_limits[-1] if bucket_size_limits else float('inf')
+            
+            # If adding this tensor would exceed the limit, start a new bucket
+            if current_bucket_size + tensor_size > current_limit and current_bucket:
+                buckets.append(current_bucket)
+                per_bucket_size_limits.append(current_limit)
+                current_bucket = []
+                current_bucket_size = 0
+                # Move to next bucket size limit if available
+                if bucket_limit_idx + 1 < len(bucket_size_limits):
+                    bucket_limit_idx += 1
+            
+            current_bucket.append(tensor_idx)
+            current_bucket_size += tensor_size
+        
+        # Add the last bucket if not empty
+        if current_bucket:
+            buckets.append(current_bucket)
+            limit_idx = min(bucket_limit_idx, len(bucket_size_limits) - 1)
+            per_bucket_size_limits.append(bucket_size_limits[limit_idx])
+    
+    # Sort buckets by minimum tensor index to maintain order
+    # We need to keep buckets and their corresponding limits together
+    buckets_with_min_idx = [
+        (min(bucket), bucket, limit)
+        for bucket, limit in zip(buckets, per_bucket_size_limits)
+    ]
+    buckets_with_min_idx.sort(key=lambda x: x[0])
+    buckets = [bucket for _, bucket, _ in buckets_with_min_idx]
+    per_bucket_size_limits = [limit for _, _, limit in buckets_with_min_idx]
+    
+    return buckets, per_bucket_size_limits
 
 
 def monitored_barrier(

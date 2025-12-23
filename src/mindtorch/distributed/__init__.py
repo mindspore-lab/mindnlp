@@ -32,23 +32,18 @@ DistStoreError = RuntimeError
 
 if is_available():
     from .c10d import (
-        # _broadcast_coalesced,
-        # _compute_bucket_assignment_by_size,
         # _ControlCollectives,
-        # _DEFAULT_FIRST_BUCKET_BYTES,
         # _make_nccl_premul_sum,
         # _register_builtin_comm_hook,
         # _register_comm_hook,
         # _StoreCollectives,
         # _test_python_store,
-        # _verify_params_across_processes,
         # Backend as _Backend,
         # BuiltinCommHookType,
         # DebugLevel,
         # FileStore,
         # get_debug_level,
         # GradBucket,
-        # Logger,
         PrefixStore,
         ProcessGroup as ProcessGroup,
         # Reducer,
@@ -67,6 +62,11 @@ if is_available():
     # this.
     from .distributed_c10d import *  # noqa: F403
     from .distributed_c10d import (
+        Logger,
+        _compute_bucket_assignment_by_size,
+        _DEFAULT_FIRST_BUCKET_BYTES,
+        _broadcast_coalesced,
+        _verify_params_across_processes,
         _all_gather_base,
         _coalescing_manager,
         _CoalescingManager,

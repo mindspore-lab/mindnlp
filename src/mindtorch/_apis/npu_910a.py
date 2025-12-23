@@ -2556,6 +2556,12 @@ def dist_comm_all_reduce(input, op_type, group):
 def dist_comm_gather(input, gather_list, rank_size, dst, rank_id, group):
     return pyboost.dist_comm_gather_op(input, gather_list, rank_size, dst, rank_id, group)
 
+def dist_comm_all_gather(tensor_list, tensor, rank_size, group):
+    return pyboost.dist_comm_all_gather_op(tensor_list, tensor, rank_size, group)
+
+def dist_comm_broadcast(input, src, rank_id, group):
+    return pyboost.dist_comm_broadcast_op(input, src, rank_id, group)
+
 def inplace_random(input, from_val=0, to_val=None, generator=None):
     seed, offset = generator._step(12)
     return pyboost.inplace_random_op(input, from_val, to_val, seed, offset)
