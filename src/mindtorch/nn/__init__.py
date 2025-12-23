@@ -31,6 +31,7 @@ from mindtorch.nn import (
     utils as utils,
 )
 
+from mindtorch.nn.parallel import DataParallel, DistributedDataParallel
 
 def factory_kwargs(kwargs):
     r"""Return a canonicalized dict of factory kwargs.

@@ -2926,3 +2926,6 @@ class DistributedDataParallel(Module, Joinable):
         loss in place.
         """
         self._ddp_sink_clone = val
+
+class DataParallel(Module):
+    pass
