@@ -106,16 +106,18 @@ def linspace(start, end, steps, dtype):
 class DivFunction(Function):
     @staticmethod
     def forward(ctx, input, other):
-        if not isinstance(input, numbers.Number):
+        if isinstance(input, numbers.Number):
+            other_np = other.asnumpy()
+            input_np = np.array(input, dtype=other_np.dtype)
+        elif isinstance(other, numbers.Number):
             input_np = input.asnumpy()
             if input_np.dtype == np.int64:
                 input_np = input_np.astype(np.int32)
+            other_np = np.array(other, dtype=input_np.dtype)
         else:
-            input_np = input
-        if not isinstance(other, numbers.Number):
+            input_np = input.asnumpy()
             other_np = other.asnumpy()
-        else:
-            other_np = other
+
         out = np.divide(input_np, other_np)
         if not isinstance(out, np.ndarray):
             out = np.array(out)
@@ -125,7 +127,7 @@ class DivFunction(Function):
         ctx.is_input_number = isinstance(input, numbers.Number)
         ctx.is_other_number = isinstance(other, numbers.Number)
         return result
-    
+
     @staticmethod
     def backward(ctx, grad_output):
         input, other = ctx.saved_tensors
