@@ -900,6 +900,7 @@ def bitwise_or_scalar(input, other):
 def bitwise_not(input):
     return pyboost.bitwise_not_op(input)
 
+py_max = max
 def max(input):
     if ENABLE_PYBOOST:
         return pyboost.max_op(input)
@@ -1025,6 +1026,7 @@ def index_select(input, dim, index):
         return pyboost.index_select_op(input, dim, index)
     return legacy.gather(input, index, dim, 0)
 
+py_min = min
 def min(input):
     if ENABLE_PYBOOST:
         return pyboost.min_op(input)
@@ -1491,6 +1493,10 @@ def _cal_dilation(dilation, nd):
 
 def max_pool2d(input, kernel_size, stride=1, padding=0, dilation=1, ceil_mode=False, return_indices=False):
     # out, indices = legacy.max_pool_with_argmax_v2(input, kernel_size, stride, padding, dilation, ceil_mode)
+    if isinstance(kernel_size, list):
+        kernel_size = tuple(kernel_size)
+    if isinstance(stride, list):
+        stride = tuple(stride)
     out, indices = legacy.max_pool_with_indices(input, kernel_size, stride, padding, dilation, ceil_mode)
     if return_indices:
         return out, indices
@@ -1945,7 +1951,7 @@ def bucketize(input, boundaries, right=False):
         boundaries = boundaries.tolist()
     
     if not boundaries:
-        return zeros_like(input)
+        return zeros_like(input, mindspore.int64)
     epsilon_ = 0. if right else 1.e-6
     boundaries = [boundary + epsilon_ for boundary in boundaries]
     return cast(legacy.bucketize(input, boundaries), mindspore.int64)
@@ -2016,11 +2022,15 @@ def linalg_qr(input_x, mode):
     return legacy.qr(input_x, full_matrices)
 
 def bernoulli(input, generator):
-    seed, offset = generator._step(12)
-    if ENABLE_PYBOOST:
-        return pyboost.bernoulli_ext_op(input, seed, offset)
     uniform = rand_like(input, generator, input.dtype)
     result = cast(less(uniform, input), input.dtype)
+    return result
+
+def inplace_bernoulli(input, p, generator):
+    if generator is None:
+        generator = default_generator
+    uniform = rand_like(input, generator, input.dtype)
+    result = cast(less(uniform, p), input.dtype)
     return result
 
 def multinomial(input, num_samples, replacement, generator):
@@ -2532,7 +2542,7 @@ def _get_unfold_indices(input_shape, dimension, size, step):
 
 def unfold(input, dimension, size, step):
     _indices, _dimension = _get_unfold_indices(input.shape, dimension, size, step)
-    indices = mindspore.tensor(_indices)
+    indices = mindspore.tensor(_indices, dtype=mindspore.int64)
     output = gather(input, indices, _dimension, 0)
     output = transpose_view(output, _dimension + 1, -1)
     return output
@@ -2546,6 +2556,12 @@ def dist_comm_all_reduce(input, op_type, group):
 def dist_comm_gather(input, gather_list, rank_size, dst, rank_id, group):
     return pyboost.dist_comm_gather_op(input, gather_list, rank_size, dst, rank_id, group)
 
+def dist_comm_all_gather(tensor_list, tensor, rank_size, group):
+    return pyboost.dist_comm_all_gather_op(tensor_list, tensor, rank_size, group)
+
+def dist_comm_broadcast(input, src, rank_id, group):
+    return pyboost.dist_comm_broadcast_op(input, src, rank_id, group)
+
 def inplace_random(input, from_val=0, to_val=None, generator=None):
     seed, offset = generator._step(12)
     return pyboost.inplace_random_op(input, from_val, to_val, seed, offset)
@@ -2557,7 +2573,7 @@ def raw_adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, be
     return legacy.adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad, False, False)
 
 def inplace_sub(input, other):
-    if type(other) == int:
+    if isinstance(other, numbers.Number):
         other = mindspore.Tensor(other)
     return pyboost.inplace_sub_ext_op(input, other)
 
@@ -2621,5 +2637,60 @@ def swiglu(x, dim=-1):
 
 def rotary_position_embedding(x, cos, sin, mode=0):
     """Rotary Position Embedding"""
-    import mindspore
-    return mindspore.ops.auto_generate.gen_ops_def.apply_rotary_pos_emb_(x, cos, sin, mode)
+    return pyboost.rotary_position_embedding_op(x, cos, sin, mode)
+
+def diagonal(input, offset=0, dim1=-2, dim2=-1):
+    # diagonal with pyboost, but no direct api; use other functions in this file
+
+    # Normalize dims so they are positive
+    ndims = input.ndim
+    dim1_ = dim1 if dim1 >= 0 else ndims + dim1
+    dim2_ = dim2 if dim2 >= 0 else ndims + dim2
+
+    # Move dim1 and dim2 to the last two axes
+    axes = list(range(ndims))
+    d1, d2 = sorted([dim1_, dim2_])
+    rest = [i for i in axes if i not in (d1, d2)]
+    perm = rest + [d1, d2]
+    input_perm = permute(input, tuple(perm))
+
+    shape = input_perm.shape
+    n, m = shape[-2], shape[-1]
+
+    # Compute indices for diagonal extraction
+    if offset >= 0:
+        diag_size = py_min(n, m - offset)
+        i = arange(0, diag_size, 1, dtype=mindspore.int64)
+        j = arange(offset, offset + diag_size, 1, dtype=mindspore.int64)
+    else:
+        diag_size = py_min(n + offset, m)
+        i = arange(-offset, -offset + diag_size, 1, dtype=mindspore.int64)
+        j = arange(0, diag_size, 1, dtype=mindspore.int64)
+
+    # Expand to the batch shape for gather_nd
+    batch_shape = shape[:-2]
+    if batch_shape:
+        # Create a meshgrid for batch indices
+        mesh = [arange(0, s, 1, dtype=mindspore.int64) for s in batch_shape]
+        grids = meshgrid(mesh, 'ij')  # each shape: batch_shape
+        # Flatten
+        flat_grids = [reshape(g, (-1,)) for g in grids]
+        flat_batch_indices = stack(flat_grids, -1)  # (num_batch, num_batch_dims)
+
+        # For each batch index, concat with (i, j)
+        num_batch = flat_batch_indices.shape[0]
+        ij = stack([i, j], -1)  # (diag_size, 2)
+        ij = broadcast_to(expand_dims(ij, 0), (num_batch, diag_size, 2))  # (num_batch, diag_size, 2)
+        batch_idx = broadcast_to(expand_dims(flat_batch_indices, 1), (num_batch, diag_size, len(batch_shape)))  # (num_batch, diag_size, num_batch_dims)
+        gather_idx = concat([batch_idx, ij], -1)  # (num_batch, diag_size, num_batch_dims+2)
+        # Reshape to (?, num_dims)
+        gather_idx = reshape(gather_idx, (-1, len(batch_shape)+2))
+    else:
+        gather_idx = stack([i, j], -1)
+
+    out = gather_nd(input_perm, gather_idx)
+    if batch_shape:
+        out = reshape(out, batch_shape + (diag_size,))
+    return out
+
+    

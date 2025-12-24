@@ -1,5 +1,5 @@
 import os
-from packaging import version
+import warnings
 import mindspore
 from mindspore._c_expression import MSContext # pylint: disable=no-name-in-module, import-error
 
@@ -11,6 +11,10 @@ ON_A2 = SOC in ['ascend910b', 'ascend910_93']
 ON_ORANGE_PI = '310b' in SOC
 DEFAULT_DTYPE = mindspore.float32
 FLASH_ATTN_MASK_VALID = int(os.environ.get('FLASH_ATTN_MASK_VALID', 1))
+
+if ON_A1 or DEVICE_TARGET == 'GPU':
+    warnings.warn('MindSpore on GPU/910A do not support bfloat16, use float16 instead.')
+    mindspore.bfloat16 = mindspore.float16
 
 
 def strtobool(val):

@@ -1,5 +1,106 @@
-from typing import Iterable, List, Union
+from typing import Iterable, List, Optional, Union
+from collections import namedtuple
 import mindtorch
+
+
+# PackedSequence is a NamedTuple-like class for RNN packed sequences
+_PackedSequenceBase = namedtuple('PackedSequence', ['data', 'batch_sizes', 'sorted_indices', 'unsorted_indices'])
+
+
+class PackedSequence(_PackedSequenceBase):
+    r"""Holds the data and list of :attr:`batch_sizes` of a packed sequence.
+
+    All RNN modules accept packed sequences as inputs.
+
+    Note:
+        Instances of this class should never be created manually. They are meant
+        to be instantiated by functions like :func:`pack_padded_sequence`.
+
+        Batch sizes represent the number elements at each sequence step in
+        the batch, not the varying sequence lengths passed to
+        :func:`pack_padded_sequence`.
+
+    Attributes:
+        data (Tensor): Tensor containing packed sequence
+        batch_sizes (Tensor): Tensor of integers holding
+            information about the batch size at each sequence step
+        sorted_indices (Tensor, optional): Tensor of integers holding how this
+            :class:`PackedSequence` is constructed from sequences.
+        unsorted_indices (Tensor, optional): Tensor of integers holding how this
+            to recover the original sequences with correct order.
+    """
+    
+    def __new__(
+        cls,
+        data: mindtorch.Tensor,
+        batch_sizes: Optional[mindtorch.Tensor] = None,
+        sorted_indices: Optional[mindtorch.Tensor] = None,
+        unsorted_indices: Optional[mindtorch.Tensor] = None,
+    ):
+        return super().__new__(cls, data, batch_sizes, sorted_indices, unsorted_indices)
+    
+    def to(self, *args, **kwargs):
+        """Move PackedSequence to device or convert dtype.
+        
+        Supports the same interface as Tensor.to():
+        - to(device)
+        - to(dtype)
+        - to(device, dtype)
+        - to(tensor)  # copies device and dtype from tensor
+        """
+        # Handle different call patterns
+        if len(args) == 0:
+            # No args, just return self
+            return self
+        elif len(args) == 1:
+            arg = args[0]
+            if isinstance(arg, mindtorch.device):
+                # to(device)
+                return PackedSequence(
+                    self.data.to(arg),
+                    self.batch_sizes,  # batch_sizes stays on CPU
+                    self.sorted_indices.to(arg) if self.sorted_indices is not None else None,
+                    self.unsorted_indices.to(arg) if self.unsorted_indices is not None else None,
+                )
+            elif isinstance(arg, (mindtorch.dtype, type(mindtorch.float32))):
+                # to(dtype)
+                return PackedSequence(
+                    self.data.to(arg),
+                    self.batch_sizes,
+                    self.sorted_indices,
+                    self.unsorted_indices,
+                )
+            elif isinstance(arg, mindtorch.Tensor):
+                # to(tensor) - copy device and dtype from tensor
+                return PackedSequence(
+                    self.data.to(arg.device, arg.dtype),
+                    self.batch_sizes,
+                    self.sorted_indices.to(arg.device) if self.sorted_indices is not None else None,
+                    self.unsorted_indices.to(arg.device) if self.unsorted_indices is not None else None,
+                )
+            else:
+                # Try to convert as device string or other
+                return PackedSequence(
+                    self.data.to(arg),
+                    self.batch_sizes,
+                    self.sorted_indices.to(arg) if self.sorted_indices is not None else None,
+                    self.unsorted_indices.to(arg) if self.unsorted_indices is not None else None,
+                )
+        elif len(args) == 2:
+            # to(device, dtype)
+            device, dtype = args
+            return PackedSequence(
+                self.data.to(device, dtype),
+                self.batch_sizes,
+                self.sorted_indices.to(device) if self.sorted_indices is not None else None,
+                self.unsorted_indices.to(device) if self.unsorted_indices is not None else None,
+            )
+        else:
+            raise TypeError(f"to() takes 1 or 2 positional arguments but {len(args)} were given")
+
+
+__all__ = ["PackedSequence", "pad_sequence"]
+
 
 def _pad_sequence(sequences: List[mindtorch.Tensor], batch_first: bool = True, padding_value: float = 0.0, padding_side: str = "right") -> mindtorch.Tensor:
     """

@@ -1,3 +1,4 @@
+import mindtorch
 from ._apis import cpu, gpu, meta, numpy, npu_910a, npu_910b, npu_310b, npu_310p
 from .configs import CPU_USE_NUMPY_OP, SOC, ENABLE_DISPATCH, DEVICE_TARGET, CAPTURE_INF_NAN
 
@@ -48,7 +49,8 @@ if ENABLE_DISPATCH:
         outs = func(*args, **kwargs)
         if isinstance(outs, (tuple, list)):
             for out in outs:
-                out.init = device_type
+                if isinstance(out, mindtorch.Tensor):
+                    out.init = device_type
         else:
             outs.init = device_type
         return outs

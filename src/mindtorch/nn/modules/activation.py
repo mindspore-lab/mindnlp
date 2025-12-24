@@ -1889,7 +1889,7 @@ class LogSoftmax(Module):
         """
         Runs the forward pass.
         """
-        return F.log_softmax(input, self.dim, _stacklevel=5)
+        return F.log_softmax(input, self.dim)
 
     def extra_repr(self) -> str:
         """

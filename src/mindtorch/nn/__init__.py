@@ -30,7 +30,6 @@ from mindtorch.nn import (
     parameter as parameter,
     utils as utils,
 )
-from mindtorch.nn.parallel import DataParallel as DataParallel
 
 
 def factory_kwargs(kwargs):

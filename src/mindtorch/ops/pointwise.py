@@ -195,12 +195,21 @@ def div(input, other, *, rounding_mode=None):
             "For ops.div, rounding_mode value should be None, 'floor' or 'trunc'."
         )
     if rounding_mode:
-        output = execute(
-            "divmod",
-            input,
-            other,
-            rounding_mode
-        )
+        if isinstance(input, numbers.Number) and isinstance(other, numbers.Number):
+            input = mindtorch.tensor(input)
+            output = execute(
+                "divmod",
+                input,
+                other,
+                rounding_mode,
+            )
+        else:
+            output = execute(
+                "divmod",
+                input,
+                other,
+                rounding_mode
+            )
     else:
         # if not isinstance(other, numbers.Number) and not isinstance(input, numbers.Number):
         #     if other.device != input.device:

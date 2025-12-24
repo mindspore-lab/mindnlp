@@ -23,6 +23,26 @@ def empty(size, dtype):
     return EmptyFunction.apply(size, dtype)
 
 
+class NewEmptyFunction(Function):
+    @staticmethod
+    def forward(ctx, input, size, dtype, device):
+        # Use input's dtype if dtype is None
+        if dtype is None:
+            dtype = input.dtype
+        
+        # Create empty tensor with the specified size and dtype
+        result = ms.Tensor.from_numpy(np.empty(size, mindtorch.dtype2np[dtype]))
+        return result
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        # new_empty is a creation function, no backward needed
+        return None, None, None, None
+
+def new_empty(input, size, dtype, device):
+    return NewEmptyFunction.apply(input, size, dtype, device)
+
+
 class OnesFunction(Function):
     @staticmethod
     def forward(ctx, size, dtype):
@@ -86,16 +106,18 @@ def linspace(start, end, steps, dtype):
 class DivFunction(Function):
     @staticmethod
     def forward(ctx, input, other):
-        if not isinstance(input, numbers.Number):
+        if isinstance(input, numbers.Number):
+            other_np = other.asnumpy()
+            input_np = np.array(input, dtype=other_np.dtype)
+        elif isinstance(other, numbers.Number):
             input_np = input.asnumpy()
             if input_np.dtype == np.int64:
                 input_np = input_np.astype(np.int32)
+            other_np = np.array(other, dtype=input_np.dtype)
         else:
-            input_np = input
-        if not isinstance(other, numbers.Number):
+            input_np = input.asnumpy()
             other_np = other.asnumpy()
-        else:
-            other_np = other
+
         out = np.divide(input_np, other_np)
         if not isinstance(out, np.ndarray):
             out = np.array(out)
@@ -105,7 +127,7 @@ class DivFunction(Function):
         ctx.is_input_number = isinstance(input, numbers.Number)
         ctx.is_other_number = isinstance(other, numbers.Number)
         return result
-    
+
     @staticmethod
     def backward(ctx, grad_output):
         input, other = ctx.saved_tensors
@@ -280,6 +302,8 @@ class ClampScalarFunction(Function):
     @staticmethod
     def forward(ctx, input, min_val, max_val):
         out = np.clip(input.asnumpy(), min_val, max_val)
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
         result = ms.Tensor.from_numpy(out)
         ctx.save_for_backward(input)
         ctx.min_val = min_val
@@ -381,16 +405,13 @@ def add(input, other, alpha=1):
     return AddFunction.apply(input, other, alpha)
 
 
-dyn_shape_op = ops.TensorShape().set_device('CPU')
-def tensor_shape(self):
-    return dyn_shape_op(self)
-
-
 class CastFunction(Function):
     @staticmethod
     def forward(ctx, input, dtype):
         if input.dtype == dtype:
             return input
+        if hasattr(dtype, 'dtype'):
+            dtype = dtype.dtype
         out = input.asnumpy().astype(mindtorch.dtype2np[dtype])
         result = ms.Tensor.from_numpy(out)
         ctx.save_for_backward(input)
@@ -446,7 +467,24 @@ class GetitemFunction(Function):
                 new_slice = slice
         
         input_np = input.asnumpy() if hasattr(input, 'numpy') else input
-        out = input_np[new_slice]
+        
+        # Handle indexing, including 0-dimensional arrays
+        try:
+            out = input_np[new_slice]
+        except IndexError as e:
+            # Handle "too many indices for array: array is 0-dimensional" error
+            if "0-dimensional" in str(e):
+                # For 0D arrays, only empty indexing is valid
+                # If we get this error, the input might have become 0D during processing
+                # Return the scalar value itself
+                if input_np.ndim == 0:
+                    out = input_np
+                else:
+                    # Re-raise if it's not a 0D issue
+                    raise
+            else:
+                raise
+        
         if not isinstance(out, np.ndarray):
             out = np.array(out)
         
@@ -955,7 +993,6 @@ def empty_like(input, dtype=None):
     return EmptyLikeFunction.apply(input, dtype)
 
 
-broadcast_to_op = ops.Primitive('BroadcastTo').set_device('CPU')
 def broadcast_to(input, shape):
     input_np = input.asnumpy()
     # 处理 shape 中为 -1 的情况，自动替换为输入的对应维度
@@ -987,6 +1024,83 @@ def normal_float_float(mean, std, size, dtype, generator):
     """Normal distribution with scalar mean/std on numpy backend."""
     # generator is unused for numpy backend
     out = np.random.normal(mean, std, size).astype(mindtorch.dtype2np[dtype])
+    return ms.Tensor.from_numpy(out)
+
+
+def normal_tensor_tensor(mean, std, size, dtype, generator):
+    """
+    Generates random numbers from a normal distribution with tensor mean and std.
+    
+    Args:
+        mean: Mean tensor (scalar or tensor)
+        std: Standard deviation tensor (scalar or tensor)
+        size: Output shape
+        dtype: Output data type
+        generator: Random number generator (optional, for compatibility)
+    
+    Returns:
+        Tensor with random numbers from normal distribution
+    """
+    # Extract scalar values from mean and std tensors
+    # Convert to numpy first to avoid .item() errors on multi-element tensors
+    if hasattr(mean, 'asnumpy'):
+        mean_np = mean.asnumpy()
+    elif hasattr(mean, 'numpy'):
+        mean_np = mean.numpy()
+    else:
+        mean_np = np.asarray(mean)
+    
+    # Extract scalar value: if 0D or single element, use item(); otherwise use first element
+    if mean_np.ndim == 0:
+        mean_val = mean_np.item()
+    elif mean_np.size == 1:
+        mean_val = mean_np.flat[0]
+    else:
+        # Multiple elements: use first element (or could broadcast, but item() expects single element)
+        mean_val = float(mean_np.flat[0])
+    
+    if hasattr(std, 'asnumpy'):
+        std_np = std.asnumpy()
+    elif hasattr(std, 'numpy'):
+        std_np = std.numpy()
+    else:
+        std_np = np.asarray(std)
+    
+    # Extract scalar value: if 0D or single element, use item(); otherwise use first element
+    if std_np.ndim == 0:
+        std_val = std_np.item()
+    elif std_np.size == 1:
+        std_val = std_np.flat[0]
+    else:
+        # Multiple elements: use first element
+        std_val = float(std_np.flat[0])
+    
+    # Handle generator if provided
+    if generator is not None:
+        seed, offset = generator._step(12)  # pylint: disable=protected-access
+        # Handle both scalar and tensor seed
+        if hasattr(seed, 'asnumpy'):
+            seed_np = seed.asnumpy()
+            if seed_np.size == 1:
+                np.random.seed(int(seed_np.item() if seed_np.ndim == 0 else seed_np.flat[0]))
+            else:
+                # Use first element if multiple
+                np.random.seed(int(seed_np.flat[0]))
+        elif hasattr(seed, 'item'):
+            try:
+                np.random.seed(seed.item())
+            except ValueError:
+                # Multiple elements, use first
+                seed_np = seed.asnumpy() if hasattr(seed, 'asnumpy') else np.asarray(seed)
+                np.random.seed(int(seed_np.flat[0]))
+        else:
+            np.random.seed(int(seed))
+    
+    # Generate random numbers from normal distribution
+    out = np.random.normal(mean_val, std_val, size)#.astype(mindtorch.dtype2np[dtype])
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+    out = out.astype(mindtorch.dtype2np[dtype])
     return ms.Tensor.from_numpy(out)
 
 
@@ -1331,6 +1445,30 @@ def matmul(input, other):
     return MatmulFunction.apply(input, other)
 
 
+def bmm(input, other):
+    """
+    Performs batch matrix multiplication of matrices stored in input and other.
+    
+    Args:
+        input: 3D tensor of shape (B, N, M)
+        other: 3D tensor of shape (B, M, P)
+    
+    Returns:
+        3D tensor of shape (B, N, P)
+    """
+    input_np = input.asnumpy()
+    other_np = other.asnumpy()
+    
+    # Use einsum for batch matrix multiplication: 'bij,bjk->bik'
+    # This is equivalent to: for each batch i, compute input[i] @ other[i]
+    result_np = np.einsum('bij,bjk->bik', input_np, other_np)
+    
+    if not isinstance(result_np, np.ndarray):
+        result_np = np.array(result_np)
+    
+    return ms.Tensor.from_numpy(result_np)
+
+
 class MaxFunction(Function):
     @staticmethod
     def forward(ctx, input):
@@ -1370,7 +1508,7 @@ def min(input):
 
 
 
-def randint(from_, to, shape, dtype, generator):
+def randint(from_, to, shape, generator, dtype):
     out = np.random.randint(from_, to, shape, dtype=mindtorch.dtype2np[dtype])
 
     return ms.Tensor.from_numpy(out)
@@ -1409,6 +1547,47 @@ def isclose(input, other, rtol, atol, equal_nan):
 def non_zero(input):
     out = np.nonzero(input.asnumpy())
     out = np.stack(out, 1)
+    return ms.Tensor.from_numpy(out)
+
+
+def non_zero_ext(input):
+    """Return a tuple of 1-D index tensors, one for each dimension, similar to torch.nonzero(as_tuple=True)."""
+    outs = np.nonzero(input.asnumpy())
+    return tuple(ms.Tensor.from_numpy(o) for o in outs)
+
+
+def count_nonzero(input, dims):
+    """
+    Counts the number of non-zero values in the input tensor along specified dimensions.
+    
+    Args:
+        input: Input tensor
+        dims: Dimension or dimensions to reduce. If None, counts all non-zero values.
+    
+    Returns:
+        Tensor containing the count of non-zero values
+    """
+    input_np = input.asnumpy()
+    
+    # Count non-zero values
+    if dims is None:
+        # Count all non-zero values
+        count = np.count_nonzero(input_np)
+        out = np.array(count, dtype=np.int64)
+    else:
+        # Count along specified dimensions
+        if isinstance(dims, (list, tuple)):
+            # Multiple dimensions
+            count = np.count_nonzero(input_np, axis=tuple(dims))
+        else:
+            # Single dimension
+            count = np.count_nonzero(input_np, axis=dims)
+        
+        if not isinstance(count, np.ndarray):
+            count = np.array(count)
+        # Ensure output is int64
+        out = count.astype(np.int64)
+    
     return ms.Tensor.from_numpy(out)
 
 
@@ -1687,6 +1866,28 @@ def inplace_copy(input, other):
     return input
 
 
+def inplace_relu(input):
+    """
+    In-place ReLU operation: applies ReLU (max(0, x)) to input tensor in-place.
+    
+    Args:
+        input: Input tensor to apply ReLU to
+    
+    Returns:
+        The input tensor (modified in-place)
+    """
+    # Compute ReLU: max(0, x)
+    input_np = input.asnumpy()
+    out = np.maximum(0, input_np)
+    # Directly modify tensor data
+    # Handle 0-dimensional arrays (scalars)
+    if input_np.ndim == 0:
+        input_np[()] = out
+    else:
+        input_np[:] = out
+    return input
+
+
 def softmax(input, dim):
     softmax_op = ops.Softmax(dim).set_device('CPU')
     return softmax_op(input)
@@ -1770,14 +1971,59 @@ def topk(input, k, dim=None, largest=True, sorted=True):
 
 
 def sort_ext(input, dim, descending, stable):
-    sort_op = ops.Sort(dim, descending).set_device('CPU')
-    return sort_op(input)
+    return sort(input, dim, descending, stable)
+
+
+def sort(input, dim, descending, stable):
+    """
+    Sorts the elements of the input tensor along a given dimension.
+    
+    Args:
+        input: Input tensor
+        dim: The dimension to sort along
+        descending: If True, sort in descending order
+        stable: If True, use stable sorting algorithm
+    
+    Returns:
+        Tuple of (values, indices) where:
+        - values: Sorted tensor
+        - indices: Indices of the sorted elements
+    """
+    # INSERT_YOUR_CODE
+    # Use numpy implementation to perform sort
+    input_np = input.asnumpy() if hasattr(input, 'asnumpy') else np.asarray(input)
+
+    # numpy.sort always returns ascending, so for descending sort, negate, sort ascending, then re-negate, or flip.
+    # We need the indices too, so use np.argsort for indices and indexing to get sorted values.
+
+    # Ensure axis is an int and handle None (default is to flatten if None)
+    axis = dim
+    if axis is None:
+        # Flatten input
+        flat_values = np.sort(input_np, axis=None)
+        flat_indices = np.argsort(input_np, axis=None)
+        values = ms.Tensor.from_numpy(flat_values)
+        indices = ms.Tensor.from_numpy(flat_indices.astype(np.int64))
+        return values, indices
+
+    # When descending, sort ascending then reverse results on that axis
+    if descending:
+        sort_indices = np.argsort(input_np, axis=axis)
+        sort_indices = np.flip(sort_indices, axis=axis)
+    else:
+        sort_indices = np.argsort(input_np, axis=axis)
+
+    # np.take_along_axis to gather sorted values along the axis
+    sorted_values = np.take_along_axis(input_np, sort_indices, axis=axis)
+    values = ms.Tensor.from_numpy(sorted_values)
+    indices = ms.Tensor.from_numpy(sort_indices.astype(np.int64))
+    return values, indices
 
 
 class RoundFunction(Function):
     @staticmethod
-    def forward(ctx, input):
-        out = np.round(input.asnumpy())
+    def forward(ctx, input, decimals):
+        out = np.round(input.asnumpy(), decimals)
         if not isinstance(out, np.ndarray):
             out = np.array(out)
         result = ms.Tensor.from_numpy(out)
@@ -1795,8 +2041,8 @@ class RoundFunction(Function):
             grad_input = ms.Tensor.from_numpy(grad_input)
         return grad_input
 
-def round(input):
-    return RoundFunction.apply(input)
+def round(input, decimals):
+    return RoundFunction.apply(input, decimals)
 
 
 def isin(elements, test_elements, assume_unique=False, invert=False):
@@ -2126,6 +2372,48 @@ def randperm_ext(n, seed, offset, dtype):
     return ms.Tensor.from_numpy(out)
 
 
+def randperm(n, generator, dtype):
+    """
+    Returns a random permutation of integers from 0 to n - 1.
+    
+    Args:
+        n: The upper bound (exclusive). Must be positive.
+        generator: Random number generator (optional, for compatibility)
+        dtype: The desired data type of returned tensor. Default: int64.
+    
+    Returns:
+        A random permutation of integers from 0 to n - 1.
+    """
+    # Extract seed from generator if provided
+    if generator is not None:
+        seed, offset = generator._step(12)  # pylint: disable=protected-access
+        # Handle both scalar and tensor seed
+        if hasattr(seed, 'item') and seed.numel() == 1:
+            np.random.seed(seed.item())
+        elif hasattr(seed, 'numpy'):
+            seed_np = seed.asnumpy()
+            if seed_np.size == 1:
+                np.random.seed(int(seed_np.item()))
+            else:
+                # Use first element if multiple
+                np.random.seed(int(seed_np.flat[0]))
+        else:
+            np.random.seed(int(seed))
+    
+    # Generate random permutation
+    out = np.random.permutation(n)
+    
+    # Convert to specified dtype
+    if dtype is not None:
+        dtype_np = mindtorch.dtype2np[dtype]
+        out = out.astype(dtype_np)
+    else:
+        # Default to int64
+        out = out.astype(np.int64)
+    
+    return ms.Tensor.from_numpy(out)
+
+
 def embedding(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq):
     out = np.take(weight.asnumpy(), input.asnumpy(), axis=0)
     return ms.Tensor.from_numpy(out)
@@ -2156,9 +2444,73 @@ def rand(size, generator, dtype):
     return RandFunction.apply(size, generator, dtype)
 
 
+def rand_like(input, generator, dtype):
+    """
+    Returns a tensor filled with random numbers from a uniform distribution on [0, 1),
+    with the same shape as input.
+    
+    Args:
+        input: Input tensor to match shape
+        generator: Random number generator (optional, for compatibility)
+        dtype: The desired data type of returned tensor. If None, uses input's dtype.
+    
+    Returns:
+        A tensor with the same shape as input, filled with random numbers
+    """
+    # Use input's dtype if dtype is None
+    if dtype is None:
+        dtype = input.dtype
+    
+    # Call rand with input's shape
+    return rand(input.shape, generator, dtype)
+
+
 def randn(size, generator, dtype):
     out = np.random.randn(*size).astype(mindtorch.dtype2np[dtype])
     return ms.Tensor.from_numpy(out)
+
+
+class BernoulliFunction(Function):
+    @staticmethod
+    def forward(ctx, input, generator):
+        # Extract seed from generator
+        seed, _ = generator._step(12)  # pylint: disable=protected-access
+        # Handle both scalar and tensor seed
+        if hasattr(seed, 'item') and seed.numel() == 1:
+            np.random.seed(seed.item())
+        elif hasattr(seed, 'numpy'):
+            seed_np = seed.asnumpy()
+            if seed_np.size == 1:
+                np.random.seed(int(seed_np.item()))
+            else:
+                # Use first element if multiple
+                np.random.seed(int(seed_np.flat[0]))
+        else:
+            np.random.seed(int(seed))
+        
+        # Get input probabilities as numpy array
+        input_np = input.asnumpy()
+        
+        # Generate uniform random numbers in [0, 1)
+        uniform_random = np.random.random(input_np.shape)
+        
+        # Bernoulli sampling: 1 if uniform_random < input_np, else 0
+        # Convert boolean result to the same dtype as input
+        out = (uniform_random < input_np).astype(input_np.dtype)
+        
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
+        result = ms.Tensor.from_numpy(out)
+        # bernoulli is not differentiable
+        return result
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        # bernoulli is not differentiable
+        return None, None
+
+def bernoulli(input, generator):
+    return BernoulliFunction.apply(input, generator)
 
 
 def erfinv(input):
@@ -2582,11 +2934,6 @@ def flatten(input, start_dim, end_dim):
     return FlattenFunction.apply(input, start_dim, end_dim)
 
 
-stop_gradient_op = ops.StopGradient().set_device('CPU')
-def stop_gradient(*args):
-    return stop_gradient_op(*args)
-
-
 class FmodScalarFunction(Function):
     @staticmethod
     def forward(ctx, input, other):
@@ -2611,6 +2958,53 @@ class FmodScalarFunction(Function):
 
 def fmod_scalar(input, other):
     return FmodScalarFunction.apply(input, other)
+
+
+class FmodTensorFunction(Function):
+    @staticmethod
+    def forward(ctx, input, other):
+        input_np = input.asnumpy()
+        other_np = other.asnumpy()
+        out = np.fmod(input_np, other_np)
+        result = ms.Tensor.from_numpy(out)
+        ctx.save_for_backward(input, other)
+        return result
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, other = ctx.saved_tensors
+        grad_input = None
+        grad_other = None
+        
+        if ctx.needs_input_grad[0]:
+            # fmod(x, y) = x - y * floor(x/y)
+            # d/dx fmod(x, y) = 1 (gradient passes through)
+            grad_input = grad_output.asnumpy()
+            if not isinstance(grad_input, np.ndarray):
+                grad_input = np.array(grad_input)
+            grad_input = ms.Tensor.from_numpy(grad_input)
+        
+        if ctx.needs_input_grad[1]:
+            # d/dy fmod(x, y) = -floor(x/y) (but typically not needed)
+            # For simplicity, we can set it to zero or compute it
+            grad_other = np.zeros_like(other.asnumpy())
+            grad_other = ms.Tensor.from_numpy(grad_other)
+        
+        return grad_input, grad_other
+
+
+def fmod_tensor(input, other):
+    """
+    Computes the element-wise remainder of division (fmod) between two tensors.
+    
+    Args:
+        input: First input tensor
+        other: Second input tensor (can be broadcasted)
+    
+    Returns:
+        Tensor with the element-wise remainder
+    """
+    return FmodTensorFunction.apply(input, other)
 
 
 def argmax_with_value(input, dim, keepdim):
@@ -4038,6 +4432,95 @@ def one_hot_ext(tensor, num_classes=-1):
     out = np.eye(num_classes)[tensor.asnumpy()]
     return ms.Tensor.from_numpy(out)
 
+def one_hot(tensor, num_classes):
+    """
+    Compute one-hot encoding of integer tensor.
+    
+    Args:
+        tensor: Input tensor of integer indices
+        num_classes: Number of classes (depth of one-hot dimension)
+    
+    Returns:
+        One-hot encoded tensor with shape (*, num_classes) where * is the input shape
+    """
+    if num_classes == -1:
+        # Auto-determine num_classes from max value in tensor
+        tensor_np = tensor.asnumpy()
+        num_classes = int(np.max(tensor_np)) + 1
+    
+    # Use numpy's eye to create one-hot encoding
+    tensor_np = tensor.asnumpy()
+    out = np.eye(num_classes, dtype=np.int64)[tensor_np]
+    
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+    return ms.Tensor.from_numpy(out)
+
+
+def logsumexp(input, dim, keepdim=False):
+    """
+    Compute log(sum(exp(input))) along the specified dimension.
+    Uses numerical stability trick: log(sum(exp(x))) = max(x) + log(sum(exp(x - max(x))))
+    
+    Args:
+        input: Input tensor
+        dim: Dimension along which to compute logsumexp
+        keepdim: Whether to keep the reduced dimension
+    
+    Returns:
+        Tensor with logsumexp computed along the specified dimension
+    """
+    input_np = input.asnumpy()
+    
+    # Compute max along the specified dimension with keepdims=True for broadcasting
+    input_max_np = np.max(input_np, axis=dim, keepdims=True)
+    
+    # Subtract max for numerical stability: exp(input - max)
+    input_exp_np = np.exp(input_np - input_max_np)
+    
+    # Sum along the dimension
+    input_sumexp_np = np.sum(input_exp_np, axis=dim, keepdims=keepdim)
+    
+    # Take log
+    input_logsumexp_np = np.log(input_sumexp_np)
+    
+    # Add back the max
+    if not keepdim:
+        # Squeeze the dimension from input_max_np to match the shape
+        input_max_np = np.squeeze(input_max_np, axis=dim)
+    
+    result_np = input_logsumexp_np + input_max_np
+    
+    if not isinstance(result_np, np.ndarray):
+        result_np = np.array(result_np)
+    
+    return ms.Tensor.from_numpy(result_np)
+
+
+def baddbmm(input, batch1, batch2, alpha=1, beta=1):
+    """
+    Performs batch matrix-matrix product of matrices in batch1 and batch2,
+    with input added to the final result.
+    
+    Formula: output = beta * input + alpha * (batch1 @ batch2)
+    
+    Args:
+        input: Tensor to be added (broadcastable with (B, N, P))
+        batch1: First batch of matrices, shape (B, N, M)
+        batch2: Second batch of matrices, shape (B, M, P)
+        alpha: Multiplier for batch1 @ batch2, default 1
+        beta: Multiplier for input, default 1
+    
+    Returns:
+        Tensor of shape (B, N, P)
+    """
+    # Compute batch matrix multiplication: batch1 @ batch2
+    bmm_result = bmm(batch1, batch2)
+    
+    # Scale and add: beta * input + alpha * bmm_result
+    # This matches the cpu.py implementation: add(mul(beta, input), mul(alpha, bmm(batch1, batch2)))
+    return add(mul(beta, input), mul(alpha, bmm_result))
+
 
 class Log1pFunction(Function):
     @staticmethod
@@ -4138,6 +4621,43 @@ def scatter(input, dim, index, src):
     return ScatterFunction.apply(input, dim, index, src)
 
 
+def scatter_add_ext(input, dim, index, src):
+    """
+    Scatter add operation: adds values from src to input at positions specified by index along dimension dim.
+    
+    Args:
+        input: Input tensor
+        dim: Dimension along which to scatter
+        index: Indices where to scatter
+        src: Source tensor with values to add
+    
+    Returns:
+        Output tensor with values added
+    """
+    input_np = input.asnumpy()
+    index_np = index.asnumpy()
+    src_np = src.asnumpy()
+    
+    # Create output as a copy of input
+    out = np.copy(input_np)
+    
+    # Scatter add operation: out[index[i][j][k]][j][k] += src[i][j][k] for dim=0
+    # Use advanced indexing to scatter add values
+    indices_list = []
+    for d in range(input_np.ndim):
+        if d == dim:
+            indices_list.append(index_np)
+        else:
+            # Create meshgrid for other dimensions
+            shape = list(index_np.shape)
+            shape[d] = input_np.shape[d]
+            indices_list.append(np.broadcast_to(np.arange(input_np.shape[d]).reshape([-1 if i == d else 1 for i in range(input_np.ndim)]), shape))
+    
+    # Use np.add.at for in-place addition (handles duplicate indices correctly)
+    np.add.at(out, tuple(indices_list), src_np)
+    
+    return ms.Tensor.from_numpy(out)
+
 
 def layer_norm_ext(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     # 确定需要计算均值和方差的轴
@@ -4196,6 +4716,53 @@ def mse_loss_ext(input, target, reduction='mean'):
         loss = squared_errors
     else:
         raise ValueError("Reduction must be 'mean', 'sum', or 'none'.")
+
+    if not isinstance(loss, np.ndarray):
+        loss = np.array(loss)
+    return ms.Tensor.from_numpy(loss)
+
+
+def mse_loss(input, target, reduction):
+    """
+    Computes the mean squared error (MSE) loss between input and target.
+    
+    Args:
+        input: Input tensor
+        target: Target tensor (must have the same shape as input)
+        reduction: Specifies the reduction to apply to the output:
+            - 'none': no reduction will be applied
+            - 'mean': the sum of the output will be divided by the number of elements
+            - 'sum': the output will be summed
+    
+    Returns:
+        Tensor containing the MSE loss
+    """
+    # Convert to numpy if needed
+    if hasattr(input, 'asnumpy'):
+        input_np = input.asnumpy()
+    else:
+        input_np = np.asarray(input)
+    
+    if hasattr(target, 'asnumpy'):
+        target_np = target.asnumpy()
+    else:
+        target_np = np.asarray(target)
+    
+    if input_np.shape != target_np.shape:
+        raise ValueError(f"Input and target must have the same shape. Got input: {input_np.shape}, target: {target_np.shape}")
+
+    # Compute squared errors: (input - target)^2
+    squared_errors = np.square(input_np - target_np)
+
+    # Apply reduction
+    if reduction == 'mean':
+        loss = np.mean(squared_errors)
+    elif reduction == 'sum':
+        loss = np.sum(squared_errors)
+    elif reduction == 'none':
+        loss = squared_errors
+    else:
+        raise ValueError(f"Reduction must be 'mean', 'sum', or 'none', got '{reduction}'")
 
     if not isinstance(loss, np.ndarray):
         loss = np.array(loss)
@@ -4373,12 +4940,128 @@ def log_softmax(input, dim=-1, dtype=None):
 
 
 def nllloss(input, target, weight=None, reduction='mean', ignore_index=-100):
-    op = ops.NLLLoss(reduction, ignore_index).set_device('CPU')
-    return op(input, target, weight)
+    # INSERT_YOUR_CODE
+    input_np = input.asnumpy()
+    target_np = target.asnumpy()
+
+    # If weight is provided, convert to numpy array
+    if weight is not None:
+        weight_np = weight.asnumpy()
+    else:
+        weight_np = None
+
+    # input: (N, C, ...) or (C, ...) if unbatched
+    # target: (N, ...) or (...), class indices
+
+    # flatten input and target if necessary
+    input_shape = input_np.shape
+    target_shape = target_np.shape
+
+    # For multi-dimensional, reshape as needed
+    n_classes = input_shape[1] if len(input_shape) > 1 else input_shape[0]
+
+    # Broadcast target to flattened indices where possible
+    if input_np.ndim > 2:
+        # For shape (N, C, d1, d2, ...)
+        n = input_np.shape[0]
+        c = input_np.shape[1]
+        rest = input_np.shape[2:]
+        input_flat = input_np.reshape(n, c, -1)
+        target_flat = target_np.reshape(n, -1)
+        out_shape = target_np.shape
+    elif input_np.ndim == 2:
+        n = input_np.shape[0]
+        c = input_np.shape[1]
+        input_flat = input_np
+        target_flat = target_np
+        out_shape = target_np.shape
+    else:
+        # (C,), target is scalar
+        input_flat = input_np[None, :]
+        target_flat = np.expand_dims(target_np, axis=0)
+        out_shape = ()
+        n = 1
+
+    # Get value at the class index, use ignore_index to mask
+    if ignore_index is not None:
+        mask = (target_flat != ignore_index)
+    else:
+        mask = np.ones_like(target_flat, dtype=bool)
+
+    # For each sample, select the log-prob for the true class.
+    # Set to 0 if ignore_index, these will be ignored in reduction
+    nll = np.zeros_like(target_flat, dtype=input_np.dtype)
+    for ix in np.ndindex(target_flat.shape):
+        tgt = target_flat[ix]
+        if mask[ix]:
+            if tgt < 0 or tgt >= n_classes:
+                # Index out of bounds, set as 0 (or could raise)
+                nll[ix] = 0.
+            else:
+                if input_flat.shape == target_flat.shape:
+                    # Rare, input is (d0, d1, ...)
+                    nll[ix] = -input_flat[ix + (tgt,)]
+                elif input_flat.ndim == 2:
+                    # input_flat (N, C), target_flat (N,)
+                    nll[ix] = -input_flat[ix[0], tgt]
+                elif input_flat.ndim == 3:
+                    # input_flat (N, C, d), target_flat (N, d)
+                    nll[ix] = -input_flat[ix[0], tgt, ix[1]]
+                else:
+                    # fallback
+                    nll[ix] = -input_flat[ix[0], tgt]
+        # else: nll[ix] = 0. (already zero)
+
+    # Apply weighting if needed
+    if weight_np is not None:
+        # Broadcast weights by target (for each position)
+        wt = np.zeros_like(target_flat, dtype=input_np.dtype)
+        for ix in np.ndindex(target_flat.shape):
+            tgt = target_flat[ix]
+            if mask[ix] and tgt >= 0 and tgt < len(weight_np):
+                wt[ix] = weight_np[tgt]
+            else:
+                wt[ix] = 0
+        nll = nll * wt
+        total_weight = np.sum(wt[mask])
+    else:
+        total_weight = np.sum(mask)
+
+    # Apply reduction
+    if reduction == 'none':
+        result_np = nll.reshape(out_shape)
+    elif reduction == 'sum':
+        result_np = np.sum(nll)
+    else:  # 'mean' or default
+        if total_weight > 0:
+            result_np = np.sum(nll) / total_weight
+        else:
+            result_np = np.sum(nll)  # Avoid div/0, matches torch.nn.functional nll_loss
+
+    # Convert back to tensor
+    result = ms.Tensor.from_numpy(np.array(result_np))
+    return result
 
 
 def diag_ext(input, diagonal):
     out = np.diag(input.asnumpy(), diagonal)
+    return ms.Tensor.from_numpy(out)
+
+def diag(input, diagonal):
+    """
+    Extract a diagonal or construct a diagonal matrix.
+    
+    Args:
+        input: Input tensor (1D or 2D)
+        diagonal: Diagonal offset (0 = main diagonal, >0 = above, <0 = below)
+    
+    Returns:
+        If input is 1D: returns a 2D diagonal matrix
+        If input is 2D: returns a 1D tensor with diagonal elements
+    """
+    out = np.diag(input.asnumpy(), diagonal)
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
     return ms.Tensor.from_numpy(out)
 
 
@@ -4562,3 +5245,213 @@ def sdpa(query, key, value, attn_mask=None, dropout_p=0.0,
     output = np.matmul(attn_weight, value_np)
     
     return ms.Tensor.from_numpy(output)
+
+
+def linalg_qr(input_x, mode):
+    """
+    Compute the QR decomposition of a matrix.
+    
+    Args:
+        input_x: Input tensor of shape (*, m, n)
+        mode: One of 'reduced', 'complete', or 'r'
+            - 'reduced': Returns Q of shape (*, m, k) and R of shape (*, k, n) where k = min(m, n)
+            - 'complete': Returns Q of shape (*, m, m) and R of shape (*, m, n)
+            - 'r': Returns empty Q and R of shape (*, k, n)
+    
+    Returns:
+        Tuple of (Q, R) tensors
+    """
+    input_np = input_x.asnumpy()
+    
+    # Handle mode parameter
+    if mode == 'complete':
+        # numpy.linalg.qr uses 'full' for complete mode
+        Q_np, R_np = np.linalg.qr(input_np, mode='full')
+        Q = ms.Tensor.from_numpy(Q_np)
+        R = ms.Tensor.from_numpy(R_np)
+        return Q, R
+    elif mode == 'reduced':
+        Q_np, R_np = np.linalg.qr(input_np, mode='reduced')
+        Q = ms.Tensor.from_numpy(Q_np)
+        R = ms.Tensor.from_numpy(R_np)
+        return Q, R
+    elif mode == 'r':
+        # For 'r' mode, compute only R and return empty Q
+        _, R_np = np.linalg.qr(input_np, mode='reduced')
+        # Create empty Q tensor with appropriate shape
+        # Q should be empty, so we create a tensor with shape (0,)
+        Q = ms.Tensor.from_numpy(np.array([], dtype=input_np.dtype).reshape(0))
+        R = ms.Tensor.from_numpy(R_np)
+        return Q, R
+    else:
+        raise ValueError(f"mode must be one of 'reduced', 'complete', or 'r', got {mode}")
+
+
+def max_pool2d(input, kernel_size, stride=1, padding=0, dilation=1, ceil_mode=False, return_indices=False):
+    """
+    Applies a 2D max pooling over an input signal composed of several input planes.
+    
+    Args:
+        input: Input tensor of shape (N, C, H, W)
+        kernel_size: Size of the pooling kernel, can be a single number or a tuple (h, w)
+        stride: Stride of the pooling operation, can be a single number or a tuple (h, w)
+        padding: Padding added to both sides of the input, can be a single number or a tuple (h, w)
+        dilation: Spacing between kernel elements, can be a single number or a tuple (h, w)
+        ceil_mode: If True, will use ceil instead of floor to compute the output shape
+        return_indices: If True, will return the indices along with the outputs
+    
+    Returns:
+        Output tensor, and optionally indices tensor if return_indices=True
+    """
+    input_np = input.asnumpy()
+    
+    # Ensure input is 4D: (N, C, H, W)
+    if input_np.ndim != 4:
+        raise ValueError(f"max_pool2d expects 4D input, got {input_np.ndim}D")
+    
+    N, C, H, W = input_np.shape
+    
+    # Normalize parameters to tuples
+    if isinstance(kernel_size, (int, numbers.Number)):
+        kernel_size = (int(kernel_size), int(kernel_size))
+    else:
+        kernel_size = (int(kernel_size[0]), int(kernel_size[1]))
+    
+    if stride is None:
+        stride = kernel_size
+    elif isinstance(stride, (int, numbers.Number)):
+        stride = (int(stride), int(stride))
+    else:
+        stride = (int(stride[0]), int(stride[1]))
+    
+    if isinstance(padding, (int, numbers.Number)):
+        padding = (int(padding), int(padding))
+    else:
+        padding = (int(padding[0]), int(padding[1]))
+    
+    if isinstance(dilation, (int, numbers.Number)):
+        dilation = (int(dilation), int(dilation))
+    else:
+        dilation = (int(dilation[0]), int(dilation[1]))
+    
+    kh, kw = kernel_size
+    sh, sw = stride
+    ph, pw = padding
+    dh, dw = dilation
+    
+    # Calculate effective kernel size with dilation
+    eff_kh = kh + (kh - 1) * (dh - 1)
+    eff_kw = kw + (kw - 1) * (dw - 1)
+    
+    # Calculate output dimensions
+    if ceil_mode:
+        out_h = int(np.ceil((H + 2 * ph - eff_kh) / sh)) + 1
+        out_w = int(np.ceil((W + 2 * pw - eff_kw) / sw)) + 1
+    else:
+        out_h = int(np.floor((H + 2 * ph - eff_kh) / sh)) + 1
+        out_w = int(np.floor((W + 2 * pw - eff_kw) / sw)) + 1
+    
+    # Adjust output size if needed (handle edge cases)
+    if (out_h - 1) * sh >= H + 2 * ph - eff_kh + 1:
+        out_h -= 1
+    if (out_w - 1) * sw >= W + 2 * pw - eff_kw + 1:
+        out_w -= 1
+    
+    # Pad input
+    if ph > 0 or pw > 0:
+        input_padded = np.pad(input_np, ((0, 0), (0, 0), (ph, ph), (pw, pw)), 
+                              mode='constant', constant_values=-np.inf)
+    else:
+        input_padded = input_np
+    
+    # Initialize output
+    output = np.zeros((N, C, out_h, out_w), dtype=input_np.dtype)
+    indices = None
+    if return_indices:
+        indices = np.zeros((N, C, out_h, out_w), dtype=np.int64)
+    
+    # Perform max pooling
+    for i in range(out_h):
+        for j in range(out_w):
+            h_start = i * sh
+            w_start = j * sw
+            
+            # Extract the pooling window with dilation
+            window = np.full((N, C, kh, kw), -np.inf, dtype=input_np.dtype)
+            window_indices_h = np.zeros((N, C, kh, kw), dtype=np.int64)
+            window_indices_w = np.zeros((N, C, kh, kw), dtype=np.int64)
+            
+            for ki in range(kh):
+                for kj in range(kw):
+                    h_idx = h_start + ki * dh
+                    w_idx = w_start + kj * dw
+                    if 0 <= h_idx < input_padded.shape[2] and 0 <= w_idx < input_padded.shape[3]:
+                        window[:, :, ki, kj] = input_padded[:, :, h_idx, w_idx]
+                        # Convert to original input coordinates (remove padding)
+                        orig_h = h_idx - ph
+                        orig_w = w_idx - pw
+                        window_indices_h[:, :, ki, kj] = orig_h
+                        window_indices_w[:, :, ki, kj] = orig_w
+            
+            # Compute max over the window
+            window_flat = window.reshape(N, C, kh * kw)
+            max_pos_flat = np.argmax(window_flat, axis=2)
+            max_ki = max_pos_flat // kw
+            max_kj = max_pos_flat % kw
+            
+            # Get max values
+            batch_idx = np.arange(N)[:, None]
+            channel_idx = np.arange(C)[None, :]
+            max_vals = window[batch_idx, channel_idx, max_ki, max_kj]
+            output[:, :, i, j] = max_vals
+            
+            # Compute indices if needed
+            if return_indices:
+                # Get the indices of max values in original input
+                max_h = window_indices_h[batch_idx, channel_idx, max_ki, max_kj]
+                max_w = window_indices_w[batch_idx, channel_idx, max_ki, max_kj]
+                # Store as linear index (row * W + col) in the original input
+                # Clamp to valid range
+                max_h = np.clip(max_h, 0, H - 1)
+                max_w = np.clip(max_w, 0, W - 1)
+                indices[:, :, i, j] = max_h * W + max_w
+    
+    result = ms.Tensor.from_numpy(output)
+    
+    if return_indices:
+        indices_tensor = ms.Tensor.from_numpy(indices)
+        return result, indices_tensor
+    return result
+
+
+def _get_unfold_indices(input_shape, dimension, size, step):
+    if dimension < 0:
+        dimension += len(input_shape)
+    indices = []
+    for i in range(0, input_shape[dimension] - size + 1, step):
+        indices.append(list(range(i, i + size)))
+
+    return indices, dimension
+
+
+def unfold(input, dimension, size, step):
+    _indices, _dimension = _get_unfold_indices(input.shape, dimension, size, step)
+    indices = ms.tensor(_indices)
+    output = gather(input, indices, _dimension)
+    output = transpose_view(output, _dimension + 1, -1)
+    return output
+
+
+def stop_gradient(input):
+    """
+    Stops gradient computation (no-op for numpy backend).
+    For numpy backend, this simply returns the input since numpy doesn't support automatic differentiation.
+    
+    Args:
+        input: Input tensor
+    
+    Returns:
+        The input tensor (no gradient computation)
+    """
+    # For numpy backend, stop_gradient is a no-op since numpy doesn't support gradients
+    return input
