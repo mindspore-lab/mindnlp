@@ -5,8 +5,9 @@
 
 import io
 import numpy as np
+import torch
 from PIL import Image
-from typing import Union
+from typing import Union, Dict, Tuple, Any
 from utils.logger import get_logger
 
 
@@ -14,124 +15,246 @@ logger = get_logger(__name__)
 
 
 class ImageProcessor:
-    """图像预处理器"""
+    """
+    图像预处理器
     
-    def __init__(self, target_size: tuple = (448, 448)):
+    功能:
+    1. 支持多种图像输入格式 (bytes/PIL/numpy/路径)
+    2. 智能缩放 (保持宽高比)
+    3. 自适应 Padding (填充至目标尺寸)
+    4. 数值归一化和标准化
+    5. Tensor 转换
+    6. 记录变换信息 (用于坐标还原)
+    """
+    
+    def __init__(
+        self,
+        target_size: Tuple[int, int] = (448, 448),
+        mean: Tuple[float, float, float] = (0.485, 0.456, 0.406),
+        std: Tuple[float, float, float] = (0.229, 0.224, 0.225)
+    ):
         """
         初始化图像处理器
         
         Args:
-            target_size: 目标图像尺寸 (height, width)
+            target_size: 目标图像尺寸 (width, height)
+            mean: 归一化均值 (R, G, B)
+            std: 归一化标准差 (R, G, B)
         """
         self.target_size = target_size
-        logger.info(f"ImageProcessor initialized with target size: {target_size}")
+        self.mean = np.array(mean, dtype=np.float32).reshape(3, 1, 1)
+        self.std = np.array(std, dtype=np.float32).reshape(3, 1, 1)
+        logger.info(f"ImageProcessor initialized: target_size={target_size}, mean={mean}, std={std}")
     
-    def process(self, image_data: Union[bytes, str, np.ndarray, Image.Image]) -> np.ndarray:
+    def process(
+        self,
+        image_data: Union[bytes, str, np.ndarray, Image.Image]
+    ) -> Tuple[torch.Tensor, Dict[str, Any]]:
         """
-        处理图像
+        处理图像并返回 Tensor 和变换信息
         
         Args:
             image_data: 图像数据 (bytes/路径/数组/PIL Image)
             
         Returns:
-            np.ndarray: 处理后的图像数组
+            pixel_values: 处理后的 Tensor [1, 3, H, W]
+            transform_info: 变换信息字典，包含:
+                - original_size: 原始尺寸 (width, height)
+                - resized_size: 缩放后尺寸 (width, height)
+                - target_size: 目标尺寸 (width, height)
+                - scale: 缩放比例
+                - padding: Padding 信息 {left, top, right, bottom}
+                - offset: 图像在画布上的偏移 (x, y)
         """
-        # 1. 加载图像
-        image = self._load_image(image_data)
-        
-        # 2. 图像增强 (可选)
-        image = self._enhance_image(image)
-        
-        # 3. 尺寸归一化
-        image = self._resize_with_padding(image)
-        
-        # 4. 数值归一化
-        image = self._normalize(image)
-        
-        return image
+        try:
+            # 1. 加载图像
+            image = self._load_image(image_data)
+            original_size = image.size  # (width, height)
+            
+            # 2. 智能缩放和 Padding
+            resized_image, padding_info = self._resize_with_padding(image)
+            
+            # 3. 转换为 NumPy 数组
+            image_array = np.array(resized_image, dtype=np.float32)
+            
+            # 4. 归一化 [0, 255] -> [0, 1]
+            image_array = image_array / 255.0
+            
+            # 5. 转换维度 HWC -> CHW
+            image_array = np.transpose(image_array, (2, 0, 1))
+            
+            # 6. 标准化
+            image_array = (image_array - self.mean) / self.std
+            
+            # 7. 转换为 Tensor 并添加 batch 维度
+            pixel_values = torch.from_numpy(image_array).unsqueeze(0)
+            
+            # 8. 构建变换信息
+            transform_info = {
+                'original_size': original_size,
+                'resized_size': padding_info['resized_size'],
+                'target_size': self.target_size,
+                'scale': padding_info['scale'],
+                'padding': padding_info['padding'],
+                'offset': padding_info['offset']
+            }
+            
+            logger.debug(f"Image processed: {original_size} -> {self.target_size}, scale={transform_info['scale']:.4f}")
+            
+            return pixel_values, transform_info
+            
+        except Exception as e:
+            logger.error(f"Failed to process image: {e}")
+            raise
     
     def _load_image(self, image_data: Union[bytes, str, np.ndarray, Image.Image]) -> Image.Image:
-        """加载图像"""
-        if isinstance(image_data, bytes):
-            # 从bytes加载
-            image = Image.open(io.BytesIO(image_data))
-        elif isinstance(image_data, str):
-            # 从文件路径加载
-            image = Image.open(image_data)
-        elif isinstance(image_data, np.ndarray):
-            # 从numpy数组加载
-            image = Image.fromarray(image_data)
-        elif isinstance(image_data, Image.Image):
-            # 已经是PIL Image
-            image = image_data
-        else:
-            raise ValueError(f"Unsupported image data type: {type(image_data)}")
+        """
+        加载图像并转换为 RGB 格式
         
-        # 转换为RGB
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
+        Args:
+            image_data: 图像数据
+            
+        Returns:
+            Image.Image: RGB 格式的 PIL Image
+            
+        Raises:
+            ValueError: 不支持的图像类型
+            IOError: 图像加载失败
+        """
+        try:
+            if isinstance(image_data, bytes):
+                # 从 bytes 加载
+                image = Image.open(io.BytesIO(image_data))
+            elif isinstance(image_data, str):
+                # 从文件路径加载
+                image = Image.open(image_data)
+            elif isinstance(image_data, np.ndarray):
+                # 从 numpy 数组加载
+                # 处理不同的数组形状
+                if len(image_data.shape) == 2:
+                    # 灰度图
+                    image = Image.fromarray(image_data, mode='L')
+                elif len(image_data.shape) == 3:
+                    if image_data.shape[2] == 3:
+                        # RGB
+                        image = Image.fromarray(image_data.astype(np.uint8), mode='RGB')
+                    elif image_data.shape[2] == 4:
+                        # RGBA
+                        image = Image.fromarray(image_data.astype(np.uint8), mode='RGBA')
+                    else:
+                        raise ValueError(f"Unsupported array shape: {image_data.shape}")
+                else:
+                    raise ValueError(f"Unsupported array shape: {image_data.shape}")
+            elif isinstance(image_data, Image.Image):
+                # 已经是 PIL Image
+                image = image_data
+            else:
+                raise ValueError(f"Unsupported image data type: {type(image_data)}")
+            
+            # 统一转换为 RGB
+            if image.mode != 'RGB':
+                if image.mode == 'RGBA':
+                    # RGBA -> RGB (处理透明通道)
+                    background = Image.new('RGB', image.size, (255, 255, 255))
+                    background.paste(image, mask=image.split()[3])  # 使用 alpha 通道作为 mask
+                    image = background
+                else:
+                    # 其他模式直接转换
+                    image = image.convert('RGB')
+            
+            logger.debug(f"Image loaded: size={image.size}, mode={image.mode}")
+            return image
+            
+        except Exception as e:
+            logger.error(f"Failed to load image: {e}")
+            raise IOError(f"Cannot load image: {str(e)}")
+    
+    def _resize_with_padding(self, image: Image.Image) -> Tuple[Image.Image, Dict[str, Any]]:
+        """
+        智能缩放并 padding 到目标尺寸（保持宽高比）
         
-        logger.debug(f"Image loaded: size={image.size}, mode={image.mode}")
-        return image
-    
-    def _enhance_image(self, image: Image.Image) -> Image.Image:
-        """
-        图像增强 (可选)
-        包括去噪、对比度调整等
-        """
-        # TODO: 实现图像增强功能
-        # - 去噪处理
-        # - 对比度调整
-        # - 倾斜校正
-        return image
-    
-    def _resize_with_padding(self, image: Image.Image) -> Image.Image:
-        """
-        智能缩放并padding到目标尺寸
-        保持宽高比
+        Args:
+            image: PIL Image
+            
+        Returns:
+            resized_image: 处理后的图像
+            padding_info: Padding 信息字典
         """
         original_width, original_height = image.size
-        target_height, target_width = self.target_size
+        target_width, target_height = self.target_size
         
         # 计算缩放比例 (保持宽高比)
         scale = min(target_width / original_width, target_height / original_height)
+        
+        # 避免放大小图
+        if scale > 1.0:
+            scale = 1.0
+        
+        # 计算缩放后的尺寸
         new_width = int(original_width * scale)
         new_height = int(original_height * scale)
         
-        # 缩放图像
-        image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        # 缩放图像 (使用 LANCZOS 高质量插值)
+        if scale != 1.0:
+            resized = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        else:
+            resized = image.copy()
         
-        # 创建目标尺寸的画布 (黑色背景)
-        canvas = Image.new('RGB', (target_width, target_height), (0, 0, 0))
+        # 创建目标尺寸的黑色画布
+        canvas = Image.new('RGB', self.target_size, (0, 0, 0))
         
-        # 计算居中位置
+        # 计算居中粘贴的位置
         offset_x = (target_width - new_width) // 2
         offset_y = (target_height - new_height) // 2
         
         # 粘贴缩放后的图像到画布中心
-        canvas.paste(image, (offset_x, offset_y))
+        canvas.paste(resized, (offset_x, offset_y))
         
-        logger.debug(f"Image resized: {original_width}x{original_height} -> {target_width}x{target_height}")
-        return canvas
+        # 构建 padding 信息
+        padding_info = {
+            'resized_size': (new_width, new_height),
+            'scale': scale,
+            'padding': {
+                'left': offset_x,
+                'top': offset_y,
+                'right': target_width - new_width - offset_x,
+                'bottom': target_height - new_height - offset_y
+            },
+            'offset': (offset_x, offset_y)
+        }
+        
+        logger.debug(f"Resize: {original_width}x{original_height} -> {new_width}x{new_height}, "
+                    f"padding=({offset_x},{offset_y}), scale={scale:.4f}")
+        
+        return canvas, padding_info
     
-    def _normalize(self, image: Image.Image) -> np.ndarray:
+    def restore_coordinates(
+        self,
+        boxes: np.ndarray,
+        transform_info: Dict[str, Any]
+    ) -> np.ndarray:
         """
-        数值归一化
-        [0, 255] -> [0, 1] -> 标准化
+        将模型输出的坐标还原到原始图像坐标系
+        
+        Args:
+            boxes: 边界框坐标 [[x1, y1, x2, y2], ...] 或 [[x, y, w, h], ...]
+            transform_info: 变换信息
+            
+        Returns:
+            restored_boxes: 还原后的坐标
         """
-        # 转换为numpy数组
-        image_array = np.array(image).astype(np.float32)
+        boxes = np.array(boxes, dtype=np.float32)
+        if boxes.size == 0:
+            return boxes
         
-        # 归一化到 [0, 1]
-        image_array = image_array / 255.0
+        scale = transform_info['scale']
+        offset_x, offset_y = transform_info['offset']
         
-        # 标准化 (使用ImageNet统计值)
-        mean = np.array([0.485, 0.456, 0.406])
-        std = np.array([0.229, 0.224, 0.225])
-        image_array = (image_array - mean) / std
+        # 减去 padding 偏移
+        boxes[..., 0::2] -= offset_x  # x 坐标
+        boxes[..., 1::2] -= offset_y  # y 坐标
         
-        # 转换维度 [H, W, C] -> [C, H, W]
-        image_array = np.transpose(image_array, (2, 0, 1))
+        # 缩放回原始尺寸
+        boxes = boxes / scale
         
-        logger.debug(f"Image normalized: shape={image_array.shape}, dtype={image_array.dtype}")
-        return image_array
+        return boxes
