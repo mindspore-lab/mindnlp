@@ -79,7 +79,7 @@ def normal(mean=0.0, std=1.0, *, size=None, generator=None, out=None,
         output = execute("normal_float_tensor", mean, std, size, dtype, generator, device=device)
     if out is not None:
         size = out.shape
-    output = execute("normal_float_float", float(mean), float(std), size, dtype, generator, device=device)
+    output = execute("normal_float_float", mean, std, size, dtype, generator, device=device)
 
     if out is None:
         return output
@@ -306,7 +306,8 @@ def randperm(
     return out
 
 def gamma(shape, alpha, beta):
-    return execute('gamma', shape, alpha, beta)
+    device = check_device(None)
+    return execute('gamma', shape, alpha, beta, device=device)
 
 __all__ = [
     "bernoulli",

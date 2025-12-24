@@ -2,17 +2,16 @@ import ctypes
 from typing import Any
 from ._dtype import *
 from ._C import device as device_
-from .configs import ON_A1
+from .configs import ON_A1, ON_A2
 
 DEFAULT_DTYPE, DEFAULT_DEVICE = float32, device_('cpu')
 
 DEVICE_IN_CONTEXT = None
 
 AUTO_CAST_DTYE = {
-    'cuda': float16,
+    'cuda': bfloat16,
     'cpu': float16,
-    'npu': float16,
-    'Ascend': float16
+    'npu': bfloat16,
 }
 
 AUTO_CAST_ENABLED = False

@@ -12,11 +12,56 @@ def empty(size, dtype):
 def empty_like(input, dtype):
     return empty(input.shape, input.dtype)
 
+def new_empty(input, size, dtype, device):
+    """
+    Create a new empty tensor with the same type as input tensor.
+    
+    Args:
+        input: The input tensor to base the type on
+        size: The size of the new tensor
+        dtype: Optional dtype (if None, use input's dtype)
+        device: Optional device (ignored for meta tensors)
+    
+    Returns:
+        A new empty meta tensor with the specified size and dtype
+    """
+    # Use input's dtype if dtype is None
+    if dtype is None:
+        dtype = input.dtype
+    
+    # Create empty meta tensor with the specified size and dtype
+    out = mindspore.Tensor(init='meta', shape=size, dtype=dtype)
+    return out
+
+__all__.append('new_empty')
+
 def arange(start, end, step, dtype):
     out = mindspore.Tensor(init='meta', shape=(math.ceil((end - start) / step), ), dtype=dtype)
     return out
 
 __all__.append('arange')
+
+def linspace(start, end, steps, dtype=None):
+    # Extract scalar values if start/end are tensors
+    if hasattr(start, 'item'):
+        start = start.item()
+    if hasattr(end, 'item'):
+        end = end.item()
+    if hasattr(steps, 'item'):
+        steps = steps.item()
+    
+    # Convert to int for steps
+    steps = int(steps)
+    
+    # Use default dtype if not provided
+    if dtype is None:
+        dtype = mindtorch.get_default_dtype()
+    
+    # linspace creates a 1D tensor with 'steps' elements
+    out = mindspore.Tensor(init='meta', shape=(steps,), dtype=dtype)
+    return out
+
+__all__.append('linspace')
 
 def broadcast_to(input, shape):
     out_shape = ()
@@ -54,6 +99,22 @@ def inplace_fill_scalar(input, value):
     return input
 
 __all__.append('inplace_fill_scalar')
+
+def inplace_fill_tensor(input, value):
+    """
+    In-place fill operation: fills input tensor with value tensor (meta implementation).
+    For meta tensors, this is a no-op that returns the input.
+    
+    Args:
+        input: Input tensor to fill
+        value: Value tensor to fill with
+    
+    Returns:
+        The input tensor (unchanged for meta tensors)
+    """
+    return input
+
+__all__.append('inplace_fill_tensor')
 
 def inplace_normal(input, *args):
     return input
@@ -223,6 +284,111 @@ def linalg_vector_norm(input, p, dim, keepdim, dtype):
 
 __all__.append('linalg_vector_norm')
 
+def linalg_qr(input_x, mode):
+    """
+    Compute the QR decomposition of a matrix (meta implementation).
+    
+    Args:
+        input_x: Input tensor of shape (*, m, n) where * is batch dimensions
+        mode: One of 'reduced', 'complete', or 'r'
+            - 'reduced': Returns Q of shape (*, m, k) and R of shape (*, k, n) where k = min(m, n)
+            - 'complete': Returns Q of shape (*, m, m) and R of shape (*, m, n)
+            - 'r': Returns empty Q and R of shape (*, k, n)
+    
+    Returns:
+        Tuple of (Q, R) meta tensors
+    """
+    input_shape = list(input_x.shape)
+    
+    # Input must be at least 2D
+    if len(input_shape) < 2:
+        raise ValueError(f"linalg_qr: input must be at least 2D, got shape {input_shape}")
+    
+    # Get m and n (last two dimensions)
+    m = input_shape[-2]
+    n = input_shape[-1]
+    k = min(m, n)
+    
+    # Get batch dimensions (all but last two)
+    batch_shape = input_shape[:-2]
+    
+    if mode == 'reduced':
+        # Q shape: (*, m, k), R shape: (*, k, n)
+        Q_shape = tuple(batch_shape + [m, k])
+        R_shape = tuple(batch_shape + [k, n])
+        Q = mindspore.Tensor(init='meta', shape=Q_shape, dtype=input_x.dtype)
+        R = mindspore.Tensor(init='meta', shape=R_shape, dtype=input_x.dtype)
+        return Q, R
+    elif mode == 'complete':
+        # Q shape: (*, m, m), R shape: (*, m, n)
+        Q_shape = tuple(batch_shape + [m, m])
+        R_shape = tuple(batch_shape + [m, n])
+        Q = mindspore.Tensor(init='meta', shape=Q_shape, dtype=input_x.dtype)
+        R = mindspore.Tensor(init='meta', shape=R_shape, dtype=input_x.dtype)
+        return Q, R
+    elif mode == 'r':
+        # Q is empty, R shape: (*, k, n)
+        Q_shape = (0,)  # Empty tensor
+        R_shape = tuple(batch_shape + [k, n])
+        Q = mindspore.Tensor(init='meta', shape=Q_shape, dtype=input_x.dtype)
+        R = mindspore.Tensor(init='meta', shape=R_shape, dtype=input_x.dtype)
+        return Q, R
+    else:
+        raise ValueError(f"mode must be one of 'reduced', 'complete', or 'r', got {mode}")
+
+__all__.append('linalg_qr')
+
+def diag(input, diagonal):
+    """
+    Extract a diagonal or construct a diagonal matrix (meta implementation).
+    
+    Args:
+        input: Input tensor (1D or 2D)
+        diagonal: Diagonal offset (0 = main diagonal, >0 = above, <0 = below)
+    
+    Returns:
+        If input is 1D: returns a 2D diagonal matrix
+        If input is 2D: returns a 1D tensor with diagonal elements
+    """
+    input_shape = input.shape
+    ndim = len(input_shape)
+    
+    if ndim == 1:
+        # 1D input: create 2D diagonal matrix
+        # Output shape: (n + |diagonal|, n + |diagonal|)
+        n = input_shape[0]
+        output_size = n + abs(diagonal)
+        out_shape = (output_size, output_size)
+        out = mindspore.Tensor(init='meta', shape=out_shape, dtype=input.dtype)
+        return out
+    elif ndim == 2:
+        # 2D input: extract diagonal elements
+        # Output shape: 1D tensor with length depending on diagonal offset
+        m, n = input_shape[0], input_shape[1]
+        
+        if diagonal >= 0:
+            # Above or on main diagonal
+            diag_len = min(m, n - diagonal)
+        else:
+            # Below main diagonal
+            diag_len = min(m + diagonal, n)
+        
+        # Ensure non-negative length
+        diag_len = max(0, diag_len)
+        
+        if diag_len == 0:
+            # Empty diagonal
+            out_shape = (0,)
+        else:
+            out_shape = (diag_len,)
+        
+        out = mindspore.Tensor(init='meta', shape=out_shape, dtype=input.dtype)
+        return out
+    else:
+        raise ValueError(f"diag: input must be 1D or 2D, got {ndim}D tensor with shape {input_shape}")
+
+__all__.append('diag')
+
 def erfinv(input):
     return input
 __all__.append('erfinv')
@@ -237,6 +403,72 @@ __all__.append('stop_gradient')
 def log(input):
     return input
 __all__.append('log')
+
+def log1p(input):
+    """
+    Returns log(1 + input) (meta implementation).
+    For meta tensors, this returns a tensor with the same shape and dtype as input.
+    
+    Args:
+        input: Input tensor
+    
+    Returns:
+        Meta tensor with the same shape and dtype as input
+    """
+    out = mindspore.Tensor(init='meta', shape=input.shape, dtype=input.dtype)
+    return out
+
+__all__.append('log1p')
+
+def mean(input, dim=None, keepdim=False, dtype=None):
+    """
+    Computes the mean of input tensor along specified dimensions (meta implementation).
+    
+    Args:
+        input: Input tensor
+        dim: Dimension or dimensions to reduce. If None, reduces all dimensions.
+        keepdim: Whether to keep the reduced dimensions in the output
+        dtype: Optional output dtype. If None, uses input dtype.
+    
+    Returns:
+        Meta tensor containing the mean values
+    """
+    input_shape = input.shape
+    input_dtype = input.dtype if dtype is None else dtype
+    
+    # Handle dim=None: reduce all dimensions
+    if dim is None:
+        if keepdim:
+            # Output shape: all dimensions become 1
+            output_shape = tuple(1 for _ in input_shape)
+        else:
+            # Output shape: scalar (empty tuple)
+            output_shape = ()
+    else:
+        # Handle single dimension or list of dimensions
+        if isinstance(dim, (list, tuple)):
+            dims = list(dim)
+        else:
+            dims = [dim]
+        
+        # Normalize negative dimensions
+        ndim = len(input_shape)
+        dims = [d if d >= 0 else ndim + d for d in dims]
+        
+        # Calculate output shape
+        output_shape = list(input_shape)
+        for d in sorted(dims, reverse=True):
+            if 0 <= d < len(output_shape):
+                if keepdim:
+                    output_shape[d] = 1
+                else:
+                    output_shape.pop(d)
+        output_shape = tuple(output_shape)
+    
+    out = mindspore.Tensor(init='meta', shape=output_shape, dtype=input_dtype)
+    return out
+
+__all__.append('mean')
 
 def mul(input, other):
     if isinstance(input, mindtorch.Tensor):
@@ -265,9 +497,32 @@ def zeros_like(input, *args, **kwargs):
     return out
 __all__.append('zeros_like')
 
+def ones_like(input, *args, dtype=None, **kwargs):
+    if dtype is None:
+        dtype = input.dtype
+    out = mindspore.Tensor(init='meta', shape=input.shape, dtype=dtype)
+    return out
+__all__.append('ones_like')
+
 def inplace_add(input, other, alpha):
     return input
 __all__.append('inplace_add')
+
+def inplace_sub(input, other):
+    """
+    In-place subtraction operation: subtracts other from input tensor (meta implementation).
+    For meta tensors, this is a no-op that returns the input.
+    
+    Args:
+        input: Input tensor to subtract from
+        other: Tensor or scalar to subtract
+    
+    Returns:
+        The input tensor (meta implementation returns input unchanged)
+    """
+    return input
+
+__all__.append('inplace_sub')
 
 def clamp_scalar(input, *args):
     return input
@@ -523,3 +778,99 @@ def meshgrid(args, lambd):
 def permute(input, dims):
     out = mindspore.Tensor(init='meta', shape=dims, dtype=input.dtype)
     return out
+
+def sign(input):
+    """
+    Returns the sign of each element in the input tensor (meta implementation).
+    For meta tensors, this returns a tensor with the same shape and dtype as input.
+    
+    Args:
+        input: Input tensor
+    
+    Returns:
+        Meta tensor with the same shape and dtype as input
+    """
+    out = mindspore.Tensor(init='meta', shape=input.shape, dtype=input.dtype)
+    return out
+
+__all__.append('sign')
+
+def outer(input, other):
+    """
+    Computes the outer product of two vectors (meta implementation).
+    
+    Args:
+        input: First input tensor (1D vector of shape (m,))
+        other: Second input tensor (1D vector of shape (n,))
+    
+    Returns:
+        Meta tensor of shape (m, n) containing the outer product
+    """
+    # Get input shapes
+    input_shape = input.shape
+    other_shape = other.shape
+    
+    # Flatten inputs to 1D if needed (outer product works on 1D vectors)
+    # If input is not 1D, flatten it
+    if len(input_shape) > 1:
+        input_size = 1
+        for dim in input_shape:
+            input_size *= dim
+    else:
+        input_size = input_shape[0] if input_shape else 1
+    
+    if len(other_shape) > 1:
+        other_size = 1
+        for dim in other_shape:
+            other_size *= dim
+    else:
+        other_size = other_shape[0] if other_shape else 1
+    
+    # Output shape is (input_size, other_size)
+    output_shape = (input_size, other_size)
+    
+    # Determine output dtype (use the more general dtype)
+    # For meta tensors, we can use input's dtype or a common dtype
+    output_dtype = input.dtype
+    
+    out = mindspore.Tensor(init='meta', shape=output_shape, dtype=output_dtype)
+    return out
+
+__all__.append('outer')
+
+def transpose_view(input, dim0, dim1):
+    """
+    Transposes the input tensor along the specified dimensions (meta implementation).
+    Swaps dimensions dim0 and dim1.
+    
+    Args:
+        input: Input tensor
+        dim0: First dimension to swap
+        dim1: Second dimension to swap
+    
+    Returns:
+        Meta tensor with swapped dimensions
+    """
+    input_shape = list(input.shape)
+    ndim = len(input_shape)
+    
+    # Normalize negative dimensions
+    if dim0 < 0:
+        dim0 = ndim + dim0
+    if dim1 < 0:
+        dim1 = ndim + dim1
+    
+    # Validate dimensions
+    if dim0 < 0 or dim0 >= ndim:
+        raise IndexError(f"Dimension out of range: dim0={dim0}, ndim={ndim}")
+    if dim1 < 0 or dim1 >= ndim:
+        raise IndexError(f"Dimension out of range: dim1={dim1}, ndim={ndim}")
+    
+    # Swap dimensions in the shape
+    output_shape = input_shape.copy()
+    output_shape[dim0], output_shape[dim1] = output_shape[dim1], output_shape[dim0]
+    
+    out = mindspore.Tensor(init='meta', shape=tuple(output_shape), dtype=input.dtype)
+    return out
+
+__all__.append('transpose_view')

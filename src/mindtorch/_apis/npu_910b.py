@@ -2008,6 +2008,14 @@ def bernoulli(input, generator):
     result = cast(less(uniform, input), input.dtype)
     return result
 
+def inplace_bernoulli(input, p, generator):
+    if generator is None:
+        generator = default_generator
+    uniform = rand_like(input, generator, input.dtype)
+    result = cast(less(uniform, p), input.dtype)
+    return result
+
+
 def multinomial(input, num_samples, replacement, generator):
     seed, offset = generator._step(12)  # pylint: disable=protected-access
     return pyboost.multinomial_ext_op(input, num_samples, replacement, seed, offset)
@@ -2506,7 +2514,7 @@ def raw_adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, be
     return legacy.adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad, False, False)
 
 def inplace_sub(input, other):
-    if type(other) == int:
+    if isinstance(other, numbers.Number):
         other = mindspore.Tensor(other)
     return pyboost.inplace_sub_ext_op(input, other)
 
@@ -2564,5 +2572,4 @@ def swiglu(x, dim=-1):
 
 def rotary_position_embedding(x, cos, sin, mode=0):
     """Rotary Position Embedding"""
-    import mindspore
-    return mindspore.ops.auto_generate.gen_ops_def.apply_rotary_pos_emb_(x, cos, sin, mode)
+    return pyboost.rotary_position_embedding_op(x, cos, sin, mode)

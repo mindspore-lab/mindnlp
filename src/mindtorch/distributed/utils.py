@@ -117,8 +117,8 @@ def _recursive_to(inputs, target_device, use_side_stream_for_tensor_copies):
             if not use_side_stream_for_tensor_copies:
                 return (obj.to(target_device),)
             else:
-                # If the custom module is not registered to torch, stream is not used for acceleration
-                device_mod = getattr(torch, device.type, None)
+                # If the custom module is not registered to mindtorch, stream is not used for acceleration
+                device_mod = getattr(mindtorch, device.type, None)
                 if device.type == "cpu" or device_mod is None:
                     return (obj.to(target_device),)
 

@@ -1,4 +1,3 @@
-import mindspore
 import mindnlp
 import mindtorch
 from transformers import AutoModel, AutoTokenizer
@@ -9,7 +8,7 @@ faulthandler.enable()
 model_name = 'lvyufeng/DeepSeek-OCR'
 
 tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-model = AutoModel.from_pretrained(model_name, _attn_implementation='eager', dtype=mindspore.float16,
+model = AutoModel.from_pretrained(model_name, _attn_implementation='eager', dtype=mindtorch.bfloat16,
                                   trust_remote_code=True, use_safetensors=True, device_map='auto')
 model = model.eval()
 
