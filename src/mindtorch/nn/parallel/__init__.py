@@ -1,3 +1,3 @@
-from .distributed import DistributedDataParallel
+from .distributed import DistributedDataParallel, DataParallel
 
-__all__ = ["DistributedDataParallel"]
+__all__ = ["DistributedDataParallel", "DataParallel"]
