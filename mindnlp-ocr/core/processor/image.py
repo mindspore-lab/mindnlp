@@ -127,8 +127,15 @@ class ImageProcessor:
                 image = Image.open(io.BytesIO(image_data))
             elif isinstance(image_data, str):
                 # 从文件路径加载
+                import os
+                if not os.path.exists(image_data):
+                    raise ValueError(f"Invalid image data: '{image_data}' is not a valid file path")
                 image = Image.open(image_data)
             elif isinstance(image_data, np.ndarray):
+                # 检查数组是否为空
+                if image_data.size == 0 or image_data.shape[0] == 0 or image_data.shape[1] == 0:
+                    raise ValueError("Empty image: array has zero dimensions")
+                    
                 # 从 numpy 数组加载
                 # 处理不同的数组形状
                 if len(image_data.shape) == 2:
@@ -147,6 +154,9 @@ class ImageProcessor:
                     raise ValueError(f"Unsupported array shape: {image_data.shape}")
             elif isinstance(image_data, Image.Image):
                 # 已经是 PIL Image
+                # 检查图像是否为空
+                if image_data.size[0] == 0 or image_data.size[1] == 0:
+                    raise ValueError("Empty image: width or height is zero")
                 image = image_data
             else:
                 raise ValueError(f"Unsupported image data type: {type(image_data)}")
@@ -167,6 +177,8 @@ class ImageProcessor:
             
         except Exception as e:
             logger.error(f"Failed to load image: {e}")
+            if isinstance(e, ValueError):
+                raise
             raise IOError(f"Cannot load image: {str(e)}")
     
     def _resize_with_padding(self, image: Image.Image) -> Tuple[Image.Image, Dict[str, Any]]:
@@ -182,6 +194,10 @@ class ImageProcessor:
         """
         original_width, original_height = image.size
         target_width, target_height = self.target_size
+        
+        # 处理空图像
+        if original_width == 0 or original_height == 0:
+            raise ValueError(f"Invalid image dimensions: {original_width}x{original_height}")
         
         # 计算缩放比例 (保持宽高比)
         scale = min(target_width / original_width, target_height / original_height)

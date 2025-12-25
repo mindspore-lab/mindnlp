@@ -35,21 +35,28 @@ class BatchCollator:
     def collate(
         self,
         images: List[torch.Tensor],
-        transform_infos: List[Dict[str, Any]]
-    ) -> Tuple[torch.Tensor, List[Dict[str, Any]]]:
+        transform_infos: List[Dict[str, Any]] = None
+    ):
         """
         整理批量数据
         
         Args:
-            images: 图像 Tensor 列表 [每个为 [1, 3, H, W]]
-            transform_infos: 变换信息列表
+            images: 图像 Tensor 列表 [每个为 [1, 3, H, W] 或 [3, H, W]]
+            transform_infos: 变换信息列表（可选）
             
         Returns:
-            batch_images: 批量图像 Tensor [B, 3, H, W]
-            transform_infos: 变换信息列表（原样返回）
+            如果 transform_infos 提供:
+                (batch_images, transform_infos): 批量图像 Tensor [B, 3, H, W] 和变换信息
+            否则:
+                batch_images: 批量图像 Tensor [B, 3, H, W]
         """
         if not images:
             raise ValueError("Empty image list")
+        
+        # 检查通道数是否一致
+        channels = [img.shape[0] if img.dim() == 3 else img.shape[1] for img in images]
+        if len(set(channels)) > 1:
+            raise ValueError(f"Inconsistent channel counts: {channels}")
         
         # 移除单个 batch 维度并堆叠
         images = [img.squeeze(0) if img.dim() == 4 else img for img in images]
@@ -59,32 +66,50 @@ class BatchCollator:
         
         logger.debug(f"Collated batch: {len(images)} images, shape={batch_images.shape}")
         
-        return batch_images, transform_infos
+        # 根据是否提供 transform_infos 返回不同格式
+        if transform_infos is not None:
+            return batch_images, transform_infos
+        else:
+            return batch_images
     
     def group_by_size(
         self,
-        images: List[np.ndarray],
-        transform_infos: List[Dict[str, Any]]
-    ) -> List[Tuple[List[np.ndarray], List[Dict[str, Any]]]]:
+        images,
+        transform_infos: List[Dict[str, Any]] = None,
+        max_group_diff: float = None
+    ) -> List:
         """
         按尺寸相似度分组
         
         Args:
-            images: 图像数组列表
-            transform_infos: 变换信息列表
+            images: 图像数组列表或尺寸元组列表 [(width, height), ...]
+            transform_infos: 变换信息列表（可选）
+            max_group_diff: 最大分组差异（可选，默认使用初始化值）
             
         Returns:
-            groups: 分组后的列表 [(images_group, infos_group), ...]
+            groups: 分组后的列表
         """
         if not images:
             return []
         
+        # 使用参数中的 max_group_diff 或默认值
+        group_diff = max_group_diff if max_group_diff is not None else self.max_group_diff
+        
         # 计算每个图像的尺寸（宽高比）
         sizes = []
-        for info in transform_infos:
-            orig_w, orig_h = info['original_size']
-            aspect_ratio = orig_w / max(orig_h, 1)
-            sizes.append((orig_w, orig_h, aspect_ratio))
+        
+        # 支持两种输入格式：带 transform_infos 或直接是尺寸列表
+        if transform_infos is not None:
+            for info in transform_infos:
+                orig_w, orig_h = info['original_size']
+                aspect_ratio = orig_w / max(orig_h, 1)
+                sizes.append((orig_w, orig_h, aspect_ratio))
+        else:
+            # images 是尺寸元组列表
+            for size in images:
+                orig_w, orig_h = size
+                aspect_ratio = orig_w / max(orig_h, 1)
+                sizes.append((orig_w, orig_h, aspect_ratio))
         
         # 按宽高比排序
         sorted_indices = sorted(range(len(sizes)), key=lambda i: sizes[i][2])
@@ -102,35 +127,76 @@ class BatchCollator:
                 # 第一个元素
                 current_aspect = aspect_ratio
                 current_group_images.append(images[idx])
-                current_group_infos.append(transform_infos[idx])
+                if transform_infos is not None:
+                    current_group_infos.append(transform_infos[idx])
             else:
                 # 检查是否应该新建组
-                diff = abs(aspect_ratio - current_aspect) / max(current_aspect, 1)
+                diff = abs(aspect_ratio - current_aspect) / max(current_aspect, 0.001)
                 
-                if diff <= self.max_group_diff:
+                if diff <= group_diff:
                     # 加入当前组
                     current_group_images.append(images[idx])
-                    current_group_infos.append(transform_infos[idx])
+                    if transform_infos is not None:
+                        current_group_infos.append(transform_infos[idx])
                 else:
                     # 保存当前组，开始新组
-                    groups.append((current_group_images, current_group_infos))
+                    if transform_infos is not None:
+                        groups.append((current_group_images, current_group_infos))
+                    else:
+                        groups.append(current_group_images)
                     current_group_images = [images[idx]]
-                    current_group_infos = [transform_infos[idx]]
+                    if transform_infos is not None:
+                        current_group_infos = [transform_infos[idx]]
+                    else:
+                        current_group_infos = []
                     current_aspect = aspect_ratio
         
         # 添加最后一组
         if current_group_images:
-            groups.append((current_group_images, current_group_infos))
+            if transform_infos is not None:
+                groups.append((current_group_images, current_group_infos))
+            else:
+                groups.append(current_group_images)
         
         logger.debug(f"Grouped {len(images)} images into {len(groups)} groups")
         return groups
     
     def smart_padding(
         self,
+        sizes: List[Tuple[int, int]],
+        target_size: Tuple[int, int] = None,
+        alignment: int = 32
+    ) -> Tuple[int, int]:
+        """
+        计算智能 Padding 尺寸
+        
+        Args:
+            sizes: 图像尺寸列表 [(width, height), ...]
+            target_size: 目标尺寸（可选）
+            alignment: 对齐单位（默认32）
+            
+        Returns:
+            padded_size: 对齐后的尺寸 (width, height)
+        """
+        if not sizes:
+            return target_size if target_size else (448, 448)
+        
+        # 找到最大宽高
+        max_width = max(s[0] for s in sizes)
+        max_height = max(s[1] for s in sizes)
+        
+        # 对齐到指定单位
+        padded_width = ((max_width + alignment - 1) // alignment) * alignment
+        padded_height = ((max_height + alignment - 1) // alignment) * alignment
+        
+        return (padded_width, padded_height)
+    
+    def _smart_padding_batch(
+        self,
         images: List[np.ndarray]
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
         """
-        智能 Padding（最小化计算浪费）
+        智能 Padding（最小化计算浪费）- 用于批量图像数组
         
         Args:
             images: 图像数组列表 [每个为 [C, H, W]]
