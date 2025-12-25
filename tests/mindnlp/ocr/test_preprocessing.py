@@ -11,6 +11,12 @@ import io
 from pathlib import Path
 import tempfile
 import yaml
+import sys
+import os
+
+# 直接添加 ocr 模块路径，避免触发 mindnlp 包的加载
+ocr_path = Path(__file__).parent.parent.parent.parent / "src" / "mindnlp" / "ocr"
+sys.path.insert(0, str(ocr_path))
 
 from core.processor.image import ImageProcessor
 from core.processor.prompt import PromptBuilder
