@@ -5,6 +5,17 @@
 from typing import Optional
 from pydantic import BaseModel
 from functools import lru_cache
+import os
+from pathlib import Path
+
+# 加载 .env 文件
+try:
+    from dotenv import load_dotenv
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+except ImportError:
+    pass  # 如果没有安装 python-dotenv，继续使用环境变量
 
 
 class Settings(BaseModel):
@@ -18,6 +29,11 @@ class Settings(BaseModel):
     # 模型配置
     default_model: str = "Qwen/Qwen2-VL-2B-Instruct"
     device: str = "cuda"
+    
+    @property
+    def use_mock_engine(self) -> bool:
+        """是否使用 Mock 引擎（用于测试）"""
+        return os.getenv("OCR_USE_MOCK_ENGINE", "false").lower() in ("true", "1", "yes")
     
     # 图像处理配置
     max_image_size: int = 10 * 1024 * 1024  # 10MB
@@ -33,6 +49,8 @@ class Settings(BaseModel):
     
     class Config:
         env_prefix = "OCR_"
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
 
 @lru_cache()

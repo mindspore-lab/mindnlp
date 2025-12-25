@@ -72,7 +72,16 @@ class VLMOCREngine:
             
             # 2. 图像预处理
             logger.info("Processing image...")
-            processed_image = self.image_processor.process(request.image)
+            
+            # 加载为 PIL Image (Qwen2-VL processor 需要)
+            from PIL import Image
+            import io
+            if isinstance(request.image, bytes):
+                pil_image = Image.open(io.BytesIO(request.image)).convert("RGB")
+            elif isinstance(request.image, str):
+                pil_image = Image.open(request.image).convert("RGB")
+            else:
+                pil_image = request.image
             
             # 3. 构建Prompt
             logger.info(f"Building prompt for task: {request.task_type}")
@@ -84,7 +93,7 @@ class VLMOCREngine:
             )
             
             # 4. 准备模型输入
-            inputs = self._prepare_inputs(processed_image, prompt)
+            inputs = self._prepare_inputs(pil_image, prompt)
             
             # 5. 模型推理
             logger.info("Running model inference...")
@@ -186,20 +195,53 @@ class VLMOCREngine:
         准备模型输入
         
         Args:
-            image: 处理后的图像
+            image: 处理后的图像 (PIL Image)
             prompt: 构建的Prompt
             
         Returns:
             dict: 模型输入字典
         """
-        # 这里使用transformers的标准接口
-        # 具体实现依赖于所使用的VLM模型
-        inputs = self.tokenizer(
-            prompt,
-            return_tensors="pt"
-        )
+        # 检查模型是否有 processor (Qwen2-VL 需要)
+        if hasattr(self.model_loader.model_instance, 'processor') and \
+           self.model_loader.model_instance.processor is not None:
+            # 使用 processor 处理图像和文本
+            processor = self.model_loader.model_instance.processor
+            
+            # 构建消息格式 (Qwen2-VL 格式)
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "image": image},
+                        {"type": "text", "text": prompt}
+                    ]
+                }
+            ]
+            
+            # 应用聊天模板
+            text = processor.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True
+            )
+            
+            # 处理图像和文本
+            inputs = processor(
+                text=[text],
+                images=[image],
+                return_tensors="pt",
+                padding=True
+            )
+        else:
+            # 回退到 tokenizer (用于其他模型)
+            inputs = self.tokenizer(
+                prompt,
+                return_tensors="pt"
+            )
+            inputs['pixel_values'] = image
         
-        # 添加图像输入 (具体格式取决于模型)
-        inputs['pixel_values'] = image
+        # 将输入移动到正确的设备
+        device = next(self.model.parameters()).device
+        inputs = {k: v.to(device) if hasattr(v, 'to') else v for k, v in inputs.items()}
         
         return inputs

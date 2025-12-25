@@ -30,12 +30,20 @@ async def lifespan(app: FastAPI):
     # 启动时初始化
     logger.info("Initializing OCR engine...")
     try:
-        from core.engine import VLMOCREngine
-        _engine = VLMOCREngine(
-            model_name=settings.default_model,
-            device=settings.device
-        )
-        logger.info("OCR engine initialized successfully")
+        if settings.use_mock_engine:
+            # 使用 Mock 引擎（快速启动）
+            logger.info("Using Mock OCR engine for testing...")
+            from core.mock_engine import MockVLMOCREngine
+            _engine = MockVLMOCREngine()
+            logger.info("Mock OCR engine initialized successfully")
+        else:
+            # 使用真实引擎
+            from core.engine import VLMOCREngine
+            _engine = VLMOCREngine(
+                model_name=settings.default_model,
+                device=settings.device
+            )
+            logger.info("OCR engine initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize OCR engine: {e}")
         _engine = None

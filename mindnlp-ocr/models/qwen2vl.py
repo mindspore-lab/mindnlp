@@ -2,10 +2,11 @@
 Qwen2-VL模型封装
 """
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import Qwen2VLForConditionalGeneration, AutoTokenizer, AutoProcessor
 from .base import VLMModelBase
 from typing import Any, Dict
 from utils.logger import get_logger
+import torch
 
 
 logger = get_logger(__name__)
@@ -23,23 +24,42 @@ class Qwen2VLModel(VLMModelBase):
             device: 运行设备
         """
         super().__init__(model_name, device)
+        self.processor = None
         self.load_model()
+        self.load_processor()
         self.load_tokenizer()
     
     def load_model(self):
         """加载Qwen2-VL模型"""
         try:
             logger.info(f"Loading Qwen2-VL model: {self.model_name}")
-            self.model = AutoModelForCausalLM.from_pretrained(
+            self.model = Qwen2VLForConditionalGeneration.from_pretrained(
                 self.model_name,
                 trust_remote_code=True,
-                torch_dtype="auto",
-                device_map=self.device
+                torch_dtype=torch.float16,
+                device_map=self.device if self.device != "cpu" else None
             )
+            if self.device == "cpu":
+                self.model = self.model.to("cpu")
+            self.model.eval()
             logger.info("Qwen2-VL model loaded successfully")
             return self.model
         except Exception as e:
             logger.error(f"Failed to load model: {e}")
+            raise
+    
+    def load_processor(self):
+        """加载Qwen2-VL processor"""
+        try:
+            logger.info(f"Loading Qwen2-VL processor: {self.model_name}")
+            self.processor = AutoProcessor.from_pretrained(
+                self.model_name,
+                trust_remote_code=True
+            )
+            logger.info("Qwen2-VL processor loaded successfully")
+            return self.processor
+        except Exception as e:
+            logger.error(f"Failed to load processor: {e}")
             raise
     
     def load_tokenizer(self):
@@ -89,10 +109,7 @@ class Qwen2VLModel(VLMModelBase):
             
         except Exception as e:
             logger.error(f"Generation failed: {e}")
-            raise
-
-
-# 为了向后兼容，导入torch
+            raise# 为了向后兼容，导入torch
 try:
     import torch
 except ImportError:
