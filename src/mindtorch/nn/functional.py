@@ -245,9 +245,9 @@ def _nllloss_nd(input, target, weight=None, ingore_index=-100, reduction='mean')
         raise ValueError(f"input bacth_size should be equal to target batch_size, but got {input.shape[0]} and "
                          f"{target.shape[0]}")
     if input_dim == 1 or input_dim == 2:
-        return execute('nllloss', input, target, weight, reduction, ingore_index)[0]
+        return execute('nllloss', input, target, weight, reduction, ingore_index)
     if input_dim == 4:
-        return execute('nllloss_2d', input, target, weight, reduction, ingore_index)[0]
+        return execute('nllloss_2d', input, target, weight, reduction, ingore_index)
     # input_dim==3 or input_dim>4
     n = input.shape[0]
     c = input.shape[1]
@@ -261,8 +261,8 @@ def _nllloss_nd(input, target, weight=None, ingore_index=-100, reduction='mean')
     else:
         target = target.view((n, 0, 0))
     if reduction != 'none':
-        return execute('nllloss_2d', input, target, weight, reduction, ingore_index)[0]
-    ret = execute('nllloss_2d', input, target, weight, reduction, ingore_index)[0]
+        return execute('nllloss_2d', input, target, weight, reduction, ingore_index)
+    ret = execute('nllloss_2d', input, target, weight, reduction, ingore_index)
     return ret.view(out_size)
 
 

@@ -15,6 +15,7 @@ FLASH_ATTN_MASK_VALID = int(os.environ.get('FLASH_ATTN_MASK_VALID', 1))
 if ON_A1 or DEVICE_TARGET == 'GPU':
     warnings.warn('MindSpore on GPU/910A do not support bfloat16, use float16 instead.')
     mindspore.bfloat16 = mindspore.float16
+    # mindspore.common.dtype.bfloat16 = mindspore.float16
 
 
 def strtobool(val):
