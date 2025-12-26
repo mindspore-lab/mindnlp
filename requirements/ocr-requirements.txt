@@ -1,0 +1,30 @@
+# MindNLP VLM-OCR依赖列表
+
+# 核心依赖
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.0.0
+python-multipart>=0.0.6
+
+# Transformers和模型
+transformers>=4.36.0
+torch>=2.0.0
+torchvision>=0.15.0
+accelerate>=0.25.0
+
+# 图像处理
+pillow>=10.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# 工具库
+requests>=2.31.0
+pyyaml>=6.0
+
+# 测试
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+httpx>=0.26.0
+
+# 可选依赖 (根据需要安装)
+# qwen-vl-utils  # Qwen2-VL特定工具
