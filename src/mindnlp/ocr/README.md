@@ -64,7 +64,7 @@ src/mindnlp/ocr/
 pip install -r requirements.txt
 
 # OCR 模块额外依赖
-pip install fastapi uvicorn python-multipart pillow python-dotenv
+pip install -r requirements/ocr-requirements.txt
 ```
 
 ### 2. 配置环境变量（可选）
