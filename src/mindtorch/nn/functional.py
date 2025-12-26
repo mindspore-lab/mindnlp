@@ -106,6 +106,8 @@ def dropout2d(input, p=0.5, training=False):
     return out
 
 def linear(input, weight, bias=None):
+    if hasattr(input, 'dtype') and hasattr(weight, 'dtype') and input.dtype != weight.dtype:
+        input = input.to(weight.dtype)
     return execute('dense', input, weight, bias)
 
 def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean', pos_weight=None):

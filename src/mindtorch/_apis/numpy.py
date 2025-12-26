@@ -3133,6 +3133,15 @@ def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, grou
     
     input_np = input.asnumpy()
     weight_np = weight.asnumpy()
+
+    original_dtype = input_np.dtype
+    conv_dtype = original_dtype
+    if original_dtype == np.float16:
+        conv_dtype = np.float32
+
+    if conv_dtype != original_dtype:
+        input_np = input_np.astype(conv_dtype)
+        weight_np = weight_np.astype(conv_dtype)
     
     # Get weight shape first to determine expected input channels
     C_out, C_in_per_group, kH, kW = weight_np.shape
@@ -3230,7 +3239,7 @@ def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, grou
     W_out = (W + 2 * pad_w - eff_kW) // stride_w + 1
     
     # Initialize output
-    output_np = np.zeros((N, C_out, H_out, W_out), dtype=input_np.dtype)
+    output_np = np.zeros((N, C_out, H_out, W_out), dtype=conv_dtype)
     
     # Perform convolution for each batch and output channel
     for n in range(N):
@@ -3241,7 +3250,7 @@ def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, grou
             c_in_end = (group_id + 1) * C_in_per_group
             
             # Sum over input channels in this group
-            conv_result = np.zeros((H_out, W_out), dtype=input_np.dtype)
+            conv_result = np.zeros((H_out, W_out), dtype=conv_dtype)
             for c_in in range(c_in_start, c_in_end):
                 # Get kernel for this input-output channel pair
                 kernel = weight_np[c_out, c_in - c_in_start]
@@ -3278,11 +3287,16 @@ def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, grou
     # Add bias if provided
     if bias is not None:
         bias_np = bias.asnumpy() if hasattr(bias, 'asnumpy') else bias
+        if conv_dtype != bias_np.dtype:
+            bias_np = bias_np.astype(conv_dtype)
         output_np = output_np + bias_np[None, :, None, None]
     
     # Remove batch dimension if input was 3D
     if squeeze_output:
         output_np = output_np[0]
+
+    if conv_dtype != original_dtype:
+        output_np = output_np.astype(original_dtype)
     
     return ms.Tensor.from_numpy(output_np)
 
