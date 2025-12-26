@@ -5455,3 +5455,6 @@ def stop_gradient(input):
     """
     # For numpy backend, stop_gradient is a no-op since numpy doesn't support gradients
     return input
+
+def isfinite(input):
+    return mindtorch.Tensor(np.isfinite(input.asnumpy()))

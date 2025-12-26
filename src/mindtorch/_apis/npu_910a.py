@@ -674,8 +674,8 @@ def randint(low, high, shape, generator, dtype):
     
 def nllloss(input, target, weight, reduction, ingore_index):
     if ENABLE_PYBOOST:
-        return pyboost.nllloss_impl(input, target, weight, reduction, ingore_index)
-    return legacy.nll_loss(input, target, weight, reduction, ingore_index)
+        return pyboost.nllloss_impl(input, target, weight, reduction, ingore_index)[0]
+    return legacy.nll_loss(input, target, weight, reduction, ingore_index)[0]
 
 def clamp_scalar(value, min_value, max_value):
     if ENABLE_PYBOOST:
@@ -1517,8 +1517,8 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
 
 def nllloss_2d(input, target, weight, reduction='mean', ignore_index=-100):
     if ENABLE_PYBOOST:
-        return pyboost.nllloss_2d_op(input, target, weight, reduction, ignore_index)
-    return legacy.nll_loss(input, target, weight, ignore_index, reduction)
+        return pyboost.nllloss_2d_op(input, target, weight, reduction, ignore_index)[0]
+    return legacy.nll_loss(input, target, weight, ignore_index, reduction)[0]
 
 def inplace_relu(input):
     if ENABLE_PYBOOST:

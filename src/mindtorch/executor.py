@@ -26,6 +26,15 @@ api_map = {
 DISPATCH_WHITE_LIST = ['inplace_zero', 'inplace_fill_scalar']
 SKIP_NAN_CHECK = ['empty', 'empty_like']
 
+def ensure_output(outs, device_type):
+    if isinstance(outs, (tuple, list)):
+        for out in outs:
+            if isinstance(out, mindtorch.Tensor):
+                out.init = device_type
+    else:
+        outs.init = device_type
+    return outs
+
 if ENABLE_DISPATCH:
     def execute(func_name, *args, **kwargs):
         device_from_list = kwargs.pop('device_from_list', False)
@@ -47,12 +56,18 @@ if ENABLE_DISPATCH:
                 f"No implementation for function: {func_name} on {device_type}."
             )
         outs = func(*args, **kwargs)
-        if isinstance(outs, (tuple, list)):
-            for out in outs:
-                if isinstance(out, mindtorch.Tensor):
-                    out.init = device_type
-        else:
-            outs.init = device_type
+        outs = ensure_output(outs, device_type)
+        if CAPTURE_INF_NAN:
+            if func_name in SKIP_NAN_CHECK:
+                pass
+            else:
+                isfinite_op = getattr(api_map[device_type], 'isfinite')
+                if isinstance(outs, tuple):
+                    for out in outs:
+                        assert isfinite_op(out).asnumpy().all()
+                else:
+                    assert isfinite_op(outs).asnumpy().all()
+
         return outs
 else:
     def execute(func_name, *args, **kwargs):
