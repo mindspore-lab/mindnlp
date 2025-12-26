@@ -23,8 +23,6 @@ from .executor import execute
 
 device_cache = {
     'cpu': device_('cpu'),
-    # Map npu to cuda when tests expect cuda device.type to be 'cuda'
-    # Keep an explicit 'npu' entry for Ascend targets
     'npu': device_('npu'),
     'cuda': device_('cuda'),
     'meta': device_('meta')
@@ -2557,10 +2555,7 @@ class TensorPlaceHolder:
 
     @property
     def device(self):
-        dev_key = self.init
-        if DEVICE_TARGET == 'Ascend' and dev_key == 'npu':
-            dev_key = 'cuda'
-        return device_cache[dev_key]
+        return device_cache[self.init]
 
     def _convert_numpy_slices(self, key):
         """递归转换 key 中的 NumPy 整数为内置 int"""
@@ -2646,3 +2641,4 @@ def enable_mindspore_patch():
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
     return ret
+
