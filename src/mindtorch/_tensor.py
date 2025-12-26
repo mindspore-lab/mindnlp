@@ -18,7 +18,7 @@ from . import ops, _dtype
 from ._bind import get_device_in_context, device_, get_default_dtype
 from ._utils import _rebuild_tensor_v2
 from ._C.size import Size
-from .configs import DEVICE_TARGET, ENABLE_DISPATCH
+from .configs import DEVICE_TARGET, ENABLE_DISPATCH, ON_A2
 from .executor import execute
 
 device_cache = {
@@ -190,7 +190,10 @@ class TensorPlaceHolder:
     def cpu(self):
         if not ENABLE_DISPATCH:
             return self
-        out = super(Tensor, self).to('CPU')
+        if DEVICE_TARGET == 'GPU':
+            out = super(Tensor, self).move_to('CPU', False)
+        else:
+            out = super(Tensor, self).to('CPU')
         out.init = 'cpu'
         return out
 
@@ -207,13 +210,12 @@ class TensorPlaceHolder:
             return self
 
         if DEVICE_TARGET == 'Ascend':
-            device_type = 'Ascend'
             device = 'npu'
+            out = super(Tensor, self).to('Ascend', non_blocking=non_blocking)
         else:
-            device_type = 'GPU'
-            device = 'cuda'
-        out = super(Tensor, self).to(device_type, non_blocking=non_blocking)
-        out.init = device
+            out = super(Tensor, self).move_to('GPU', not non_blocking)
+
+        out.init = 'cuda'
         return out
 
     def __array_wrap__(self, array):
@@ -1767,12 +1769,12 @@ class TensorPlaceHolder:
     # Tensor.numpy
     def numpy(self):
         assert self.init == 'cpu'
-        if self.dtype == mindtorch.bfloat16:
+        if ON_A2 and self.dtype == mindtorch.bfloat16:
             return self.asnumpy_bf16()
         return Tensor_.asnumpy(self)
 
     def asnumpy(self):
-        if self.dtype == mindtorch.bfloat16:
+        if ON_A2 and self.dtype == mindtorch.bfloat16:
             return self.asnumpy_bf16()
         return Tensor_.asnumpy(self)
 
@@ -2246,7 +2248,30 @@ class TensorPlaceHolder:
         return ops.tile(self, dims)
 
     # Tensor.to
-    def _move_to(self, device, non_blocking=False):
+    def _gpu_move_to(self, device, non_blocking=False):
+        if not ENABLE_DISPATCH:
+            return self
+
+        if device == 'meta':
+            out = Tensor(shape=self.shape, dtype=self.dtype, init='meta')
+            return out
+
+        # Accept device strings like 'cuda', 'cuda:0', 'cpu', 'npu', etc.
+        if isinstance(device, str) and ':' in device:
+            # strip device index for backend APIs that only expect the device type
+            device = device.split(':', 1)[0]
+
+        if device == self.init:
+            return self
+        
+        if device == 'cuda':
+            out = super(Tensor, self).move_to('GPU', not non_blocking)
+        elif device == 'cpu':
+            out = super(Tensor, self).move_to('CPU', not non_blocking)
+        out.init = device
+        return out
+
+    def _npu_move_to(self, device, non_blocking=False):
         if not ENABLE_DISPATCH:
             return self
 
@@ -2265,9 +2290,18 @@ class TensorPlaceHolder:
 
         if device == self.init:
             return self
+        
         out = super(Tensor, self).to(device, non_blocking=non_blocking)
         out.init = device
         return out
+
+    def _move_to(self, device, non_blocking=False):
+        if DEVICE_TARGET == 'GPU':
+            return self._gpu_move_to(device, non_blocking)
+        elif DEVICE_TARGET == 'Ascend':
+            return self._npu_move_to(device, non_blocking)
+        else:
+            return self
 
     def to(self, *args, **kwargs):
         non_blocking = kwargs.get('non_blocking', False)

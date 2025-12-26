@@ -3,8 +3,11 @@ from mindspore.common.dtype import *
 from mindspore._c_expression import typing
 from mindspore._c_expression.typing import Type
 
-from .configs import ON_A1
+from .configs import ON_A1, DEVICE_TARGET
 from ml_dtypes import bfloat16 as np_bfloat16
+
+if DEVICE_TARGET == 'GPU' or not ON_A1:
+    bfloat16 = float16
 
 bool_alias = bool
 float_alias = float
@@ -108,7 +111,8 @@ dtype2np = {
     None: None
 }
 
-if not ON_A1:
+
+if DEVICE_TARGET == 'Ascend' and not ON_A1:
     dtype2np[bfloat16] = np_bfloat16
 
 py2dtype = {
