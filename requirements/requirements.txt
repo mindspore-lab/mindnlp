@@ -40,3 +40,4 @@ timeout_decorator
 torch
 ftfy
 requests_mock
+torchvision
