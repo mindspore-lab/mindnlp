@@ -131,7 +131,7 @@ def tensor(data, *, dtype=None, device=None, requires_grad=False, pin_memory=Fal
     else:
         tensor = Tensor(data)
 
-    tensor.init = device if isinstance(device, str) else device.type
+    tensor.init = 'cpu'
     tensor = tensor.to(device)
     if requires_grad:
         tensor.requires_grad_(requires_grad)

@@ -16,6 +16,7 @@ FloatTensor = mindtorch.FloatTensor
 HalfTensor = mindtorch.FloatTensor
 BFloat16Tensor = mindtorch.BFloat16Tensor
 
+
 def device_count():
     if not is_available():
         return 0
