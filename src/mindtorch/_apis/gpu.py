@@ -5,9 +5,11 @@ from itertools import zip_longest
 import numpy as np
 import mindspore
 from mindspore.ops.composite.multitype_ops._compile_utils import _tensor_setitem_origin, _tensor_getitem_origin
+from mindspore._c_expression import ParamInfo
 
 import mindtorch
 from .._op_prim.gpu import legacy
+from .._op_prim.gpu.inplace_copy_gpu import inplace_copy_gpu_memcpy
 
 try:
     from mindspore._c_expression import TensorPy as Tensor_
@@ -23,17 +25,43 @@ def empty_like(input, dtype=None):
         dtype = input.dtype
     return empty(input.shape, dtype)
 
+def new_empty(input, size, dtype, device):
+    """
+    Create a new empty tensor with the same type as input tensor.
+    
+    Args:
+        input: The input tensor to base the type on
+        size: The size of the new tensor
+        dtype: Optional dtype (if None, use input's dtype)
+        device: Optional device (if None, use input's device or 'GPU')
+    
+    Returns:
+        A new empty tensor with the specified size and dtype/device
+    """
+    # Use input's dtype if dtype is None
+    if dtype is None:
+        dtype = input.dtype
+    
+    # Create empty tensor with the specified size and dtype
+    return empty(size, dtype)
+
 def select_ext_view(input, dim, index):
     return legacy.select_view(input, index, dim)
 
 def inplace_copy(input, value):
-    if value.shape != input.shape:
-        value = legacy.fill_v2(input.shape, value)
-    if input.dtype == mindspore.int64:
-        legacy.copy_with_slice(input, value)
-    else:
-        legacy.inplace_update_v2(input, tuple(range(input.shape[0])), value)
-    return input
+    """
+    Inplace copy operation using direct GPU memory copy (similar to acl.rt.memcpy).
+    Falls back to legacy.assign if direct memory copy is not available.
+    
+    Args:
+        input: The input tensor to be modified in-place
+        value: The value tensor to copy into input
+        
+    Returns:
+        The input tensor (modified in-place)
+    """
+    return inplace_copy_gpu_memcpy(input, value)
+    # Fallback to legacy implementation
 
 def fill_scalar(size, fill_value, dtype):
     if dtype is None:
@@ -76,7 +104,7 @@ def identity(input):
     return legacy.identity(input)
 
 def clone(input):
-    return legacy.identity(input)
+    return input.copy()
 
 py_max = max
 def max(input):
@@ -350,12 +378,16 @@ def select(condition, x, y):
     if 0 in condition.shape:
         return mindspore.Tensor(Tensor_(shape=condition.shape, dtype=Tensor_(x).dtype))
     if isinstance(x, numbers.Number) or x.ndim == 0:
+        if x in (float('inf'), -float('inf')):
+            x = mindtorch.finfo(y.dtype).max if x == float(inf) else mindtorch.finfo(y.dtype).min
         x = fill_scalar(condition.shape, x, None)
     if isinstance(y, numbers.Number) or y.ndim == 0:
+        if y in (float('inf'), -float('inf')):
+            y = mindtorch.finfo(x.dtype).max if y == float(inf) else mindtorch.finfo(x.dtype).min
         y = fill_scalar(condition.shape, y, None)
 
-    return legacy.select(condition, x, y)
-    # return add(mul(condition, x), mul(sub(1, condition), y))
+    # return legacy.select(condition, x, y)
+    return add(mul(condition, x), mul(sub(1, condition), y))
 
 
 def round(input, decimals):
@@ -377,6 +409,9 @@ def inplace_add(input, other, alpha):
 
 def inplace_sub(input, other):
     return inplace_copy(input, legacy.sub(input, other))
+
+def inplace_mul(input, other):
+    return inplace_copy(input, legacy.mul(input, other))
 
 def clamp_scalar(value, min_value, max_value):
     if min_value is not None:
@@ -631,6 +666,9 @@ def scatter(input, dim, index, src):
         src = clone(src)
     return legacy.tensor_scatter_elements(input, index, src, dim, "none")
 
+def scatter_add_ext(input, dim, index, src):
+    return legacy.tensor_scatter_elements(input, index, src, dim, "add")
+
 def batch_norm(input, weight, bias, running_mean=None, running_var=None, training=False, momentum=0.1, epsilon=1e-5):
     if running_mean is None:
         running_mean = ones(input.shape[1], dtype=input.dtype)
@@ -669,7 +707,7 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     outputs = batch_norm(input_reshaped, None, None, None, None, True, 0.0, eps)
 
     # reshape back to original
-    out = reshape(outputs, input_shape)
+    out = reshape(outputs[0], input_shape)
 
     # apply affine parameters if provided
     affine_param_shape = [1] * input.ndim
@@ -1044,6 +1082,14 @@ def unstack_view(input, dim):
 def triu(input, diagonal=0):
     return legacy.triu(input, diagonal)
 
+def inplace_masked_scatter(input, mask, value):
+    indices = non_zero(mask)
+    # 如果 src 是 1D，按顺序取值
+    updates = narrow(reshape(value, (-1,)), 0, 0, indices.shape[0])
+    # 更新 tensor
+    out = scatter_nd_update(input, indices, updates)
+    return out
+
 def masked_scatter(input, mask, value):
     input = clone(input)
     indices = non_zero(mask)
@@ -1098,7 +1144,7 @@ def upsample_nearest2d(input, output_size, scale_factors):
 def upsample_bicubic2d(input, size=None, scale_factor=None, align_corners=False):
     return legacy.resize_bicubic(input, size, align_corners, not align_corners)
 
-def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     pad_mode = 'pad'
     pad = padding
     if isinstance(padding, (tuple, list)):
@@ -1158,6 +1204,63 @@ def view_as_complex(input):
     real_part, imag_part = chunk(input, 2, -1)
     return legacy.complex(squeeze(real_part, -1), squeeze(imag_part, -1))
 
+def view_as_real(input):
+    real_part = expand_dims(real(input), -1)
+    imag_part = expand_dims(imag(input), -1)
+    return concat((real_part, imag_part), -1)
+
+def cross(input, other, dim):
+    return legacy.cross(input, other, dim)
+
+def diag(input, diagonal=0):
+    """
+    Native implementation similar to torch.diag, using setitem, and speedup by vectorized operations.
+    If input is 1D, returns a 2D matrix with input as the k-th diagonal.
+    If input is 2D, returns a 1D tensor of the elements on the specified diagonal.
+    """
+
+    shape = input.shape
+    nd = len(shape)
+    dtype = input.dtype
+
+    if nd == 1:
+        # Place a 1D vector on diagonal
+        length = shape[0]
+        sz = length + abs(diagonal)
+        out = zeros((sz, sz), dtype)
+        if diagonal >= 0:
+            row_idx = np.arange(length)
+            col_idx = row_idx + diagonal
+        else:
+            col_idx = np.arange(length)
+            row_idx = col_idx - diagonal
+        # Prepare index tensors
+        rows = mindspore.Tensor(row_idx, dtype=mindspore.int32)
+        cols = mindspore.Tensor(col_idx, dtype=mindspore.int32)
+        # Create a mesh for all indices (vectorized assignment)
+        # Use setitem/batched-scatter---simulate by tensor_scatter_elements for speed
+        update_val = input if isinstance(input, mindspore.Tensor) else mindspore.Tensor(input)
+        out = legacy.tensor_scatter_elements(out, stack([rows, cols]), update_val, 0)
+        return out
+    elif nd == 2:
+        rows, cols = shape
+        if diagonal >= 0:
+            n = py_min(rows, cols - diagonal)
+            row_idx = np.arange(n)
+            col_idx = row_idx + diagonal
+        else:
+            n = py_min(rows + diagonal, cols)
+            col_idx = np.arange(n)
+            row_idx = col_idx - diagonal
+        rows = mindspore.Tensor(row_idx, dtype=mindspore.int32)
+        cols = mindspore.Tensor(col_idx, dtype=mindspore.int32)
+        # Use advanced getitem in one shot, instead of loop
+        # Gather the diagonal elements (use the legacy.gather_nd)
+        indices = stack([rows, cols], axis=1)
+        return gather_nd(input, indices)
+    else:
+        raise ValueError("input must be 1D or 2D")
+
 def cdist(x1, x2, p):
     return legacy.cdist(x1, x2, float(p))
 
@@ -1181,7 +1284,17 @@ def ctc_loss(log_probs, targets, input_lengths, target_lengths, blank, reduction
     return (loss, log_alpha)
 
 def glu(input, dim=-1):
-    return legacy.glu(input, dim)
+    """
+    Applies the gated linear unit function as described in the paper:
+    "Language Modeling with Gated Convolutional Networks"
+    GLU splits input into two halves along `dim`, output = a * sigmoid(b)
+    """
+    shape = list(input.shape)
+    if shape[dim] % 2 != 0:
+        raise ValueError(f"Dimension {dim} must be even for glu, but got shape {shape}")
+    split_size = shape[dim] // 2
+    a, b = split_with_size(input, [split_size, split_size], dim)
+    return mul(a, sigmoid(b))
 
 def one_hot(tensor, num_classes):
     on_value = mindspore.Tensor(1, dtype=tensor.dtype)
@@ -1195,6 +1308,9 @@ def scatter_value(input, dim, index, src, reduce='none'):
     if isinstance(src, numbers.Number):
         src = fill_scalar(index.shape, src, dtype=input.dtype)
     return legacy.tensor_scatter_elements(input, index, src, dim, reduce)
+
+def inplace_scatter_value(input, dim, index, src):
+    return inplace_copy(input, scatter_value(input, dim, index, src, reduce='none'))
 
 def pixel_shuffle(input, upscale_factor):
     idx = input.shape
@@ -1211,12 +1327,18 @@ def pixel_shuffle(input, upscale_factor):
     input = reshape(input, (pre + (c, upscale_factor * h, upscale_factor * w)))
     return input
 
-def rms_norm(input, weight, eps=1e-5):
+def rms_norm(input, normalized_shape, weight, eps=1e-5):
+    if eps is None:
+        eps = mindtorch.finfo(input.dtype).eps
+    if weight is None:
+        weight = ones(normalized_shape, dtype=input.dtype)
+
     input_dtype = input.dtype
     input = cast(input, mindspore.float32)
     variance = mean(pow(input, 2), -1, True, None)
     input = mul(input, rsqrt(add(variance, eps, 1)))
     return mul(weight, cast(input, input_dtype))
+
 
 def count_nonzero(input, dims):
     return legacy.count_non_zero(input, dims)
@@ -1618,7 +1740,7 @@ def pad(input, pad, mode='constant', value=None):
         mode = "edge"
         return pad_v3(input, new_pad, mode)
     if input.dtype.is_floating_point:
-        value = float(value)
+        value = mindspore.Tensor(value, dtype=input.dtype)
     elif input.dtype == mindtorch.bool:
         value = bool(value)
     elif input.dtype in [mindtorch.int32, mindtorch.int64]:
@@ -1672,8 +1794,8 @@ def setitem(self, index, value):
     out = _tensor_setitem_origin(self, index, value)
     if isinstance(out, tuple):
         out = out[0]
-    self.data = out
-    # legacy.assign(self, out)
+    # self.data = out
+    inplace_copy(self, out)
     return self
 
 def _do_select(self, dim, index, dim_index, self_shape):
