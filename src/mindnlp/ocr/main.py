@@ -17,7 +17,7 @@ def main():
     logger.info(f"Model: {settings.default_model}")
     logger.info(f"Device: {settings.device}")
     logger.info(f"Host: {settings.api_host}:{settings.api_port}")
-    
+
     # 启动服务 (使用factory模式)
     uvicorn.run(
         "api.app:create_app",

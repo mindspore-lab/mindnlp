@@ -14,11 +14,11 @@ logger = get_logger(__name__)
 
 class ResultParser:
     """结果解析器"""
-    
+
     def __init__(self):
         """初始化结果解析器"""
         logger.info("ResultParser initialized")
-    
+
     def parse(
         self,
         text: str,
@@ -27,12 +27,12 @@ class ResultParser:
     ) -> Dict[str, Any]:
         """
         解析文本结果
-        
+
         Args:
             text: 解码后的文本
             output_format: 输出格式
             confidence_threshold: 置信度阈值
-            
+
         Returns:
             dict: 解析后的结构化结果
         """
@@ -42,14 +42,14 @@ class ResultParser:
             return self._parse_markdown_format(text)
         else:
             return self._parse_text_format(text)
-    
+
     def _parse_text_format(self, text: str) -> Dict[str, Any]:
         """解析纯文本格式"""
         return {
             'text': text.strip(),
             'blocks': None
         }
-    
+
     def _parse_json_format(self, text: str, confidence_threshold: float) -> Dict[str, Any]:
         """
         解析JSON格式
@@ -61,7 +61,7 @@ class ResultParser:
             if json_match:
                 json_str = json_match.group(0)
                 data = json.loads(json_str)
-                
+
                 # 解析文本块
                 blocks = []
                 if 'blocks' in data:
@@ -72,10 +72,10 @@ class ResultParser:
                                 'confidence': block_data.get('confidence', 1.0),
                                 'bounding_box': block_data.get('bounding_box')
                             })
-                
+
                 # 合并所有文本
                 full_text = ' '.join([block['text'] for block in blocks])
-                
+
                 return {
                     'text': full_text,
                     'blocks': blocks
@@ -84,11 +84,11 @@ class ResultParser:
                 # 如果没有找到JSON，回退到文本格式
                 logger.warning("No JSON found in output, falling back to text format")
                 return self._parse_text_format(text)
-                
+
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON: {e}")
             return self._parse_text_format(text)
-    
+
     def _parse_markdown_format(self, text: str) -> Dict[str, Any]:
         """解析Markdown格式"""
         return {

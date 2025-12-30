@@ -18,7 +18,7 @@ settings = get_settings()
 class PromptBuilder:
     """
     Prompt构建器
-    
+
     功能:
     1. 从 YAML 文件加载 Prompt 模板
     2. 支持多种任务类型 (general/document/table/formula)
@@ -27,22 +27,22 @@ class PromptBuilder:
     5. 支持自定义 Prompt
     6. 模板变量替换
     """
-    
+
     def __init__(self, template_file: Optional[str] = None):
         """
         初始化Prompt构建器
-        
+
         Args:
             template_file: Prompt 模板文件路径（默认使用 config/prompts.yaml）
         """
         if template_file is None:
             # 默认使用项目根目录下的 prompts.yaml
             template_file = Path(__file__).parent.parent.parent / "config" / "prompts.yaml"
-        
+
         self.template_file = template_file
         self.prompt_templates = self._load_prompt_templates()
         logger.info(f"PromptBuilder initialized with template file: {template_file}")
-    
+
     def build(
         self,
         task_type: str = "general",
@@ -53,14 +53,14 @@ class PromptBuilder:
     ) -> str:
         """
         构建Prompt
-        
+
         Args:
             task_type: 任务类型 (general/document/table/formula)
             output_format: 输出格式 (text/json/markdown)
             language: 语言设置 (auto/zh/en/ja/ko)
             custom_prompt: 自定义Prompt (如果提供则优先使用)
             **kwargs: 额外的模板变量
-            
+
         Returns:
             str: 构建的Prompt
         """
@@ -68,29 +68,29 @@ class PromptBuilder:
         if custom_prompt:
             logger.info("Using custom prompt")
             return self._replace_variables(custom_prompt, **kwargs)
-        
+
         # 获取任务类型对应的 Prompt 模板
         task_prompt = self._get_task_prompt(task_type, language)
-        
+
         # 添加输出格式说明
         format_prompt = self._get_format_prompt(output_format, language)
-        
+
         # 添加语言提示
         language_prompt = self._get_language_prompt(language)
-        
+
         # 组合完整 Prompt
         full_prompt = self._combine_prompts(task_prompt, format_prompt, language_prompt)
-        
+
         # 模板变量替换
         full_prompt = self._replace_variables(full_prompt, **kwargs)
-        
+
         logger.debug(f"Built prompt (task={task_type}, format={output_format}, lang={language}): {full_prompt[:100]}...")
         return full_prompt
-    
+
     def _load_prompt_templates(self) -> Dict:
         """
         从 YAML 文件加载 Prompt 模板
-        
+
         Returns:
             dict: Prompt 模板字典
         """
@@ -100,7 +100,7 @@ class PromptBuilder:
                 with open(self.template_file, 'r', encoding='utf-8') as f:
                     yaml_data = yaml.safe_load(f)
                 logger.info(f"Loaded prompt templates from {self.template_file}")
-                
+
                 # 检查 YAML 结构：如果有 task_prompts 键，说明是分离结构
                 if 'task_prompts' in yaml_data or 'format_prompts' in yaml_data:
                     # 转换为期望的格式
@@ -108,19 +108,19 @@ class PromptBuilder:
                     task_prompts = yaml_data.get('task_prompts', {})
                     format_prompts = yaml_data.get('format_prompts', {})
                     language_prompts = yaml_data.get('language_prompts', {})
-                    
+
                     # 合并任务提示
                     for task_type, lang_dict in task_prompts.items():
                         templates[task_type] = lang_dict
-                    
+
                     # 添加格式提示（特殊键）
                     if format_prompts:
                         templates['__format__'] = format_prompts
-                    
+
                     # 添加语言提示（特殊键）
                     if language_prompts:
                         templates['__language__'] = language_prompts
-                    
+
                     return templates
                 else:
                     # 已经是期望格式
@@ -128,15 +128,15 @@ class PromptBuilder:
             else:
                 logger.warning(f"Template file not found: {self.template_file}, using default templates")
                 return self._get_default_templates()
-                
+
         except Exception as e:
             logger.error(f"Failed to load prompt templates: {e}, using default templates")
             return self._get_default_templates()
-    
+
     def _get_default_templates(self) -> Dict:
         """
         获取默认 Prompt 模板（作为后备）
-        
+
         Returns:
             dict: 默认模板字典
         """
@@ -200,63 +200,63 @@ class PromptBuilder:
                 "auto": ""
             }
         }
-    
+
     def _get_task_prompt(self, task_type: str, language: str = "auto") -> str:
         """
         获取任务类型对应的 Prompt
-        
+
         Args:
             task_type: 任务类型
             language: 语言
-            
+
         Returns:
             str: 任务 Prompt
         """
         if task_type not in self.prompt_templates:
             logger.warning(f"Unknown task type: {task_type}, using 'general'")
             task_type = "general"
-        
+
         task_prompts = self.prompt_templates[task_type]
         return task_prompts.get(language, task_prompts.get("auto", ""))
-    
+
     def _get_format_prompt(self, output_format: str, language: str = "auto") -> str:
         """
         获取输出格式 Prompt
-        
+
         Args:
             output_format: 输出格式
             language: 语言
-            
+
         Returns:
             str: 格式 Prompt
         """
         # 尝试从特殊键 __format__ 获取
-        format_section = self.prompt_templates.get("__format__", 
+        format_section = self.prompt_templates.get("__format__",
                                                    self.prompt_templates.get("output_format", {}))
         format_prompts = format_section.get(output_format, {})
-        
+
         if isinstance(format_prompts, dict):
             return format_prompts.get(language, format_prompts.get("auto", ""))
         return ""
-    
+
     def _get_language_prompt(self, language: str) -> str:
         """
         获取语言提示 Prompt
-        
+
         Args:
             language: 语言
-            
+
         Returns:
             str: 语言 Prompt
         """
         if language == "auto":
             return ""
-        
+
         # 尝试从特殊键 __language__ 获取
-        language_section = self.prompt_templates.get("__language__", 
+        language_section = self.prompt_templates.get("__language__",
                                                      self.prompt_templates.get("language", {}))
         return language_section.get(language, "")
-    
+
     def _combine_prompts(
         self,
         task_prompt: str,
@@ -265,25 +265,25 @@ class PromptBuilder:
     ) -> str:
         """
         组合所有 Prompt 片段
-        
+
         Args:
             task_prompt: 任务 Prompt
             format_prompt: 格式 Prompt
             language_prompt: 语言 Prompt
-            
+
         Returns:
             str: 完整 Prompt
         """
         return f"{task_prompt}{format_prompt}{language_prompt}。"
-    
+
     def _replace_variables(self, prompt: str, **kwargs) -> str:
         """
         替换 Prompt 中的模板变量
-        
+
         Args:
             prompt: Prompt 字符串
             **kwargs: 变量字典
-            
+
         Returns:
             str: 替换后的 Prompt
         """

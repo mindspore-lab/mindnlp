@@ -23,7 +23,7 @@ class TextBlock(BaseModel):
 
 class OCRResponse(BaseModel):
     """OCR响应模型"""
-    
+
     success: bool = Field(..., description="是否成功")
     texts: List[str] = Field(default_factory=list, description="识别的文本列表")
     boxes: List[List[float]] = Field(default_factory=list, description="边界框坐标列表 [[x,y,w,h], ...]")
@@ -33,7 +33,7 @@ class OCRResponse(BaseModel):
     model_name: str = Field(..., description="使用的模型名称")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="额外元数据")
     error: Optional[str] = Field(None, description="错误信息")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -54,13 +54,13 @@ class OCRResponse(BaseModel):
 
 class BatchOCRResponse(BaseModel):
     """批量OCR响应模型"""
-    
+
     success: bool = Field(..., description="是否成功")
     results: List[OCRResponse] = Field(..., description="OCR结果列表")
     total_images: int = Field(..., description="总图像数量")
     total_time: float = Field(..., description="总处理时间 (秒)")
     model_name: str = Field(..., description="使用的模型名称")
-    
+
     class Config:
         json_schema_extra = {
             "example": {

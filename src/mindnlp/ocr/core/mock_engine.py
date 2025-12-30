@@ -14,13 +14,13 @@ except ImportError:
 
 class MockVLMOCREngine:
     """模拟的VLM OCR引擎（用于测试API层）"""
-    
+
     def __init__(self, model_name: str = "qwen2-vl", device: str = "cpu"):
         """初始化mock引擎"""
         self.model_name = model_name
         self.device = device
         self.initialized = True
-    
+
     def predict(
         self,
         image: Union[Image.Image, np.ndarray, str],
@@ -28,11 +28,11 @@ class MockVLMOCREngine:
     ) -> Dict[str, Any]:
         """
         模拟OCR识别
-        
+
         Args:
             image: 输入图像
             options: 识别选项
-            
+
         Returns:
             识别结果
         """
@@ -60,7 +60,7 @@ class MockVLMOCREngine:
             },
             "error": None
         }
-    
+
     def predict_batch(
         self,
         images: List[Union[Image.Image, np.ndarray, str]],
@@ -68,16 +68,16 @@ class MockVLMOCREngine:
     ) -> List[Dict[str, Any]]:
         """
         批量模拟OCR识别
-        
+
         Args:
             images: 输入图像列表
             options: 识别选项
-            
+
         Returns:
             识别结果列表
         """
         return [self.predict(img, options) for img in images]
-    
+
     def is_initialized(self) -> bool:
         """检查引擎是否初始化"""
         return self.initialized

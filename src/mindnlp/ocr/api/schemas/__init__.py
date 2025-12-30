@@ -7,7 +7,7 @@ from .response import OCRResponse, BatchOCRResponse, TextBlock, BoundingBox
 
 __all__ = [
     'OCRRequest',
-    'OCRBatchRequest', 
+    'OCRBatchRequest',
     'OCRURLRequest',
     'OCRResponse',
     'BatchOCRResponse',

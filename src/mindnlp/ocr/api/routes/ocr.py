@@ -4,8 +4,8 @@ OCR预测路由
 
 import time
 from typing import List
-from fastapi import APIRouter, File, UploadFile, Form, HTTPException, Depends
-from ..schemas.request import OCRRequest, OCRBatchRequest, OCRURLRequest
+from fastapi import APIRouter, File, UploadFile, Form, HTTPException
+from ..schemas.request import OCRRequest, OCRURLRequest
 from ..schemas.response import OCRResponse, BatchOCRResponse
 from utils.logger import get_logger
 from config.settings import get_settings
@@ -32,19 +32,19 @@ async def predict_image(
 ):
     """
     单张图像OCR预测
-    
+
     Args:
         file: 上传的图像文件
         output_format: 输出格式 (text/json/markdown)
         language: 语言设置 (auto/zh/en/ja/ko)
         task_type: 任务类型 (general/document/table/formula)
         confidence_threshold: 置信度阈值
-    
+
     Returns:
         OCRResponse: OCR识别结果
     """
     start_time = time.time()
-    
+
     try:
         # 验证文件类型
         if file.content_type not in ["image/jpeg", "image/png", "image/jpg", "image/webp", "image/bmp"]:
@@ -52,25 +52,25 @@ async def predict_image(
                 status_code=400,
                 detail=f"Invalid file type: {file.content_type}. Only image files are allowed."
             )
-        
+
         # 获取引擎
-        engine = get_engine()
-        
+        _engine = get_engine()
+
         # 读取图像数据
         image_bytes = await file.read()
-        
+
         # 构建请求
-        request = OCRRequest(
+        _request = OCRRequest(
             image=image_bytes,
             output_format=output_format,
             language=language,
             task_type=task_type,
             confidence_threshold=confidence_threshold
         )
-        
+
         # 执行OCR (这里暂时返回模拟数据，等待engine.predict实现)
         # result = engine.predict(request)
-        
+
         # 模拟响应
         inference_time = time.time() - start_time
         result = OCRResponse(
@@ -87,9 +87,9 @@ async def predict_image(
                 "task_type": task_type
             }
         )
-        
+
         return result
-        
+
     except HTTPException:
         # 重新抛出HTTPException，不要捕获
         raise
@@ -111,37 +111,37 @@ async def predict_batch(
 ):
     """
     批量图像OCR预测
-    
+
     Args:
         files: 上传的图像文件列表
         output_format: 输出格式 (text/json/markdown)
         language: 语言设置 (auto/zh/en/ja/ko)
         task_type: 任务类型 (general/document/table/formula)
         confidence_threshold: 置信度阈值
-    
+
     Returns:
         BatchOCRResponse: OCR识别结果列表
     """
     start_time = time.time()
-    
+
     try:
         # 获取引擎
-        engine = get_engine()
-        
+        _engine = get_engine()
+
         # 处理每个图像
         results = []
         for file in files:
             image_bytes = await file.read()
-            
+
             # 执行单张OCR
-            request = OCRRequest(
+            _request = OCRRequest(
                 image=image_bytes,
                 output_format=output_format,
                 language=language,
                 task_type=task_type,
                 confidence_threshold=confidence_threshold
             )
-            
+
             # 模拟单张处理
             single_result = OCRResponse(
                 success=True,
@@ -154,9 +154,9 @@ async def predict_batch(
                 metadata={"language": language}
             )
             results.append(single_result)
-        
+
         total_time = time.time() - start_time
-        
+
         return BatchOCRResponse(
             success=True,
             results=results,
@@ -164,7 +164,7 @@ async def predict_batch(
             total_time=total_time,
             model_name=settings.default_model
         )
-        
+
     except HTTPException:
         # 重新抛出HTTPException，不要捕获
         raise
@@ -180,32 +180,32 @@ async def predict_batch(
 async def predict_from_url(request: OCRURLRequest):
     """
     从URL预测OCR
-    
+
     Args:
         request: 包含图像URL的请求
-    
+
     Returns:
         OCRResponse: OCR识别结果
     """
     start_time = time.time()
-    
+
     try:
         # 获取引擎
-        engine = get_engine()
-        
+        _engine = get_engine()
+
         # 下载图像
         from utils.image_utils import download_image_from_url
         image_bytes = download_image_from_url(str(request.image_url))
-        
+
         # 执行OCR
-        ocr_request = OCRRequest(
+        _ocr_request = OCRRequest(
             image=image_bytes,
             output_format=request.output_format,
             language=request.language,
             task_type=request.task_type,
             confidence_threshold=request.confidence_threshold
         )
-        
+
         # 模拟响应
         inference_time = time.time() - start_time
         result = OCRResponse(
@@ -218,9 +218,9 @@ async def predict_from_url(request: OCRURLRequest):
             model_name=settings.default_model,
             metadata={"source": "url"}
         )
-        
+
         return result
-        
+
     except HTTPException:
         # 重新抛出HTTPException，不要捕获
         raise

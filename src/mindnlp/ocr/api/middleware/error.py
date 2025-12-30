@@ -15,20 +15,20 @@ logger = get_logger(__name__)
 def setup_exception_handlers(app: FastAPI):
     """
     配置全局异常处理
-    
+
     Args:
         app: FastAPI应用实例
     """
-    
+
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         """
         HTTP异常处理
-        
+
         Args:
             request: 请求对象
             exc: HTTP异常
-            
+
         Returns:
             JSONResponse: 错误响应
         """
@@ -44,16 +44,16 @@ def setup_exception_handlers(app: FastAPI):
                 }
             }
         )
-    
+
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         """
         请求验证异常处理
-        
+
         Args:
             request: 请求对象
             exc: 验证异常
-            
+
         Returns:
             JSONResponse: 错误响应
         """
@@ -70,16 +70,16 @@ def setup_exception_handlers(app: FastAPI):
                 }
             }
         )
-    
+
     @app.exception_handler(RuntimeError)
     async def runtime_error_handler(request: Request, exc: RuntimeError):
         """
         运行时错误处理
-        
+
         Args:
             request: 请求对象
             exc: 运行时异常
-            
+
         Returns:
             JSONResponse: 错误响应
         """
@@ -95,16 +95,16 @@ def setup_exception_handlers(app: FastAPI):
                 }
             }
         )
-    
+
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
         """
         通用异常处理
-        
+
         Args:
             request: 请求对象
             exc: 异常
-            
+
         Returns:
             JSONResponse: 错误响应
         """
@@ -121,5 +121,5 @@ def setup_exception_handlers(app: FastAPI):
                 }
             }
         )
-    
+
     logger.info("Exception handlers configured")

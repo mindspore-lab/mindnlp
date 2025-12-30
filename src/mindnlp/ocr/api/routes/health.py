@@ -35,7 +35,7 @@ async def health_check():
     """
     健康检查接口
     检查服务是否在运行
-    
+
     Returns:
         HealthResponse: 服务健康状态
     """
@@ -50,12 +50,12 @@ async def ready_check():
     """
     就绪检查接口
     检查服务是否准备好处理请求（引擎已初始化）
-    
+
     Returns:
         ReadyResponse: 服务就绪状态
     """
     try:
-        engine = get_engine()
+        _engine = get_engine()
         return ReadyResponse(
             ready=True,
             engine_status="initialized",

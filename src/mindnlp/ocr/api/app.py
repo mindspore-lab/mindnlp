@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
     启动时初始化引擎，关闭时清理资源
     """
     global _engine
-    
+
     # 启动时初始化
     logger.info("Initializing OCR engine...")
     try:
@@ -47,9 +47,9 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to initialize OCR engine: {e}")
         _engine = None
-    
+
     yield
-    
+
     # 关闭时清理
     logger.info("Shutting down OCR engine...")
     _engine = None
@@ -58,15 +58,15 @@ async def lifespan(app: FastAPI):
 def get_engine():
     """
     依赖注入: 获取全局引擎实例
-    
+
     Returns:
         VLMOCREngine: OCR引擎实例
-        
+
     Raises:
         RuntimeError: 引擎未初始化
     """
     global _engine
-    
+
     # 如果引擎未初始化，尝试创建默认引擎（用于测试环境）
     if _engine is None:
         logger.warning("OCR engine not initialized via lifespan, creating mock engine for testing")
@@ -77,18 +77,18 @@ def get_engine():
         except Exception as e:
             logger.error(f"Failed to create mock OCR engine: {e}")
             raise RuntimeError("OCR Engine not initialized")
-    
+
     return _engine
 
 
 def create_app() -> FastAPI:
     """
     创建FastAPI应用实例
-    
+
     Returns:
         FastAPI: FastAPI应用实例
     """
-    
+
     app = FastAPI(
         title="MindNLP VLM-OCR API",
         description="基于Vision-Language Model的OCR服务",
@@ -97,7 +97,7 @@ def create_app() -> FastAPI:
         redoc_url="/api/redoc",
         lifespan=lifespan
     )
-    
+
     # 配置CORS (开发阶段允许所有来源)
     app.add_middleware(
         CORSMiddleware,
@@ -106,20 +106,20 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         allow_headers=["*"],
     )
-    
+
     # 设置日志系统
     setup_logging()
-    
+
     # 添加日志中间件
     add_logging_middleware(app)
-    
+
     # 设置异常处理
     setup_exception_handlers(app)
-    
+
     # 注册路由
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
     app.include_router(ocr.router, prefix="/api/v1/ocr", tags=["ocr"])
-    
+
     logger.info("FastAPI application created")
-    
+
     return app
