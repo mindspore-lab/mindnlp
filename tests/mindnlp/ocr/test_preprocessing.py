@@ -13,15 +13,35 @@ import tempfile
 import yaml
 import sys
 import os
+from pathlib import Path
 
-# 直接添加 ocr 模块路径，避免触发 mindnlp 包的加载
-ocr_path = Path(__file__).parent.parent.parent.parent / "src" / "mindnlp" / "ocr"
-sys.path.insert(0, str(ocr_path))
+# Mock mindspore 和 mindtorch 以避免依赖问题
+from unittest.mock import MagicMock
 
-from core.processor.image import ImageProcessor
-from core.processor.prompt import PromptBuilder
-from core.processor.batch import BatchCollator
-from core.validator.input import InputValidator
+# 在导入 mindnlp 之前 mock 掉 mindspore 和 mindtorch 所有相关模块
+mock_mindspore = MagicMock()
+mock_mindspore.communication = MagicMock()
+mock_mindspore.communication.GlobalComm = MagicMock()
+
+mock_mindtorch = MagicMock()
+mock_mindtorch.configs = MagicMock()
+mock_mindtorch.configs.SUPPORT_BF16 = False
+mock_mindtorch.configs.SOC = 'mock'
+
+sys.modules['mindspore'] = mock_mindspore
+sys.modules['mindspore.communication'] = mock_mindspore.communication
+sys.modules['mindtorch'] = mock_mindtorch
+sys.modules['mindtorch.serialization'] = MagicMock()
+sys.modules['mindtorch.nn'] = MagicMock()
+sys.modules['mindtorch.nn.parallel'] = MagicMock()
+sys.modules['mindtorch.nn.parallel.distributed'] = MagicMock()
+sys.modules['mindtorch.configs'] = mock_mindtorch.configs
+
+# 使用绝对导入
+from mindnlp.ocr.core.processor.image import ImageProcessor
+from mindnlp.ocr.core.processor.prompt import PromptBuilder
+from mindnlp.ocr.core.processor.batch import BatchCollator
+from mindnlp.ocr.core.validator.input import InputValidator
 
 
 class TestImageProcessor:
