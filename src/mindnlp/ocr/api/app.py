@@ -3,8 +3,8 @@ FastAPI应用入口
 """
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI  # pylint: disable=import-error
+from fastapi.middleware.cors import CORSMiddleware  # pylint: disable=import-error
 from mindnlp.ocr.utils.logger import get_logger
 from mindnlp.ocr.config.settings import get_settings
 from .routes import ocr, health

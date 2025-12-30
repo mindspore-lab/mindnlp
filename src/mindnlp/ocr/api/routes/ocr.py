@@ -4,7 +4,7 @@ OCR预测路由
 
 import time
 from typing import List
-from fastapi import APIRouter, File, UploadFile, Form, HTTPException
+from fastapi import APIRouter, File, UploadFile, Form, HTTPException  # pylint: disable=import-error
 from mindnlp.ocr.utils.logger import get_logger
 from mindnlp.ocr.config.settings import get_settings
 from ..schemas.request import OCRRequest, OCRURLRequest

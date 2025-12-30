@@ -2,10 +2,10 @@
 错误处理中间件
 """
 
-from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi import FastAPI, Request, status  # pylint: disable=import-error
+from fastapi.responses import JSONResponse  # pylint: disable=import-error
+from fastapi.exceptions import RequestValidationError  # pylint: disable=import-error
+from starlette.exceptions import HTTPException as StarletteHTTPException  # pylint: disable=import-error
 from mindnlp.ocr.utils.logger import get_logger
 
 

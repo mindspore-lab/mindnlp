@@ -4,7 +4,7 @@
 
 import time
 import logging
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request  # pylint: disable=import-error
 from mindnlp.ocr.utils.logger import get_logger
 
 

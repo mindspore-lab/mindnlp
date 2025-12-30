@@ -2,7 +2,7 @@
 MindNLP VLM-OCR 服务启动入口
 """
 
-import uvicorn
+import uvicorn  # pylint: disable=import-error
 from mindnlp.ocr.config.settings import get_settings
 from mindnlp.ocr.utils.logger import get_logger
 

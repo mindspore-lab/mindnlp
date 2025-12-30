@@ -2,7 +2,7 @@
 健康检查路由
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter  # pylint: disable=import-error
 from pydantic import BaseModel
 from mindnlp.ocr.utils.logger import get_logger
 
