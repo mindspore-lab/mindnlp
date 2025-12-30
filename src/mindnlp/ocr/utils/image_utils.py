@@ -5,7 +5,6 @@
 import io
 import requests
 from PIL import Image
-from typing import Union
 from .logger import get_logger
 
 
