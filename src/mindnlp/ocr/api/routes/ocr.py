@@ -5,10 +5,10 @@ OCR预测路由
 import time
 from typing import List
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException
-from ..schemas.request import OCRRequest, OCRURLRequest
-from ..schemas.response import OCRResponse, BatchOCRResponse
 from utils.logger import get_logger
 from config.settings import get_settings
+from ..schemas.request import OCRRequest, OCRURLRequest
+from ..schemas.response import OCRResponse, BatchOCRResponse
 
 
 logger = get_logger(__name__)
@@ -95,10 +95,10 @@ async def predict_image(
         raise
     except RuntimeError as e:
         logger.error(f"Engine not ready: {e}")
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail=str(e)) from e
     except Exception as e:
         logger.error(f"OCR prediction failed: {e}")
-        raise HTTPException(status_code=500, detail=f"OCR prediction failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"OCR prediction failed: {str(e)}") from e
 
 
 @router.post("/predict_batch", response_model=BatchOCRResponse)
@@ -170,10 +170,10 @@ async def predict_batch(
         raise
     except RuntimeError as e:
         logger.error(f"Engine not ready: {e}")
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Batch OCR prediction failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Batch OCR prediction failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Batch OCR prediction failed: {str(e)}") from e
 
 
 @router.post("/predict_url", response_model=OCRResponse)
@@ -226,7 +226,7 @@ async def predict_from_url(request: OCRURLRequest):
         raise
     except RuntimeError as e:
         logger.error(f"Engine not ready: {e}")
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail=str(e)) from e
     except Exception as e:
         logger.error(f"URL OCR prediction failed: {e}")
-        raise HTTPException(status_code=500, detail=f"URL OCR prediction failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"URL OCR prediction failed: {str(e)}") from e

@@ -2,10 +2,10 @@
 InternVL模型封装
 """
 
-from transformers import AutoModel, AutoTokenizer
-from .base import VLMModelBase
 from typing import Any, Dict
+from transformers import AutoModel, AutoTokenizer
 from utils.logger import get_logger
+from .base import VLMModelBase
 
 
 logger = get_logger(__name__)
@@ -67,7 +67,7 @@ class InternVLModel(VLMModelBase):
         Returns:
             生成的token ids
         """
-        # TODO: 实现InternVL特定的生成逻辑
+        # TODO: 实现InternVL特定的生成逻辑  # pylint: disable=fixme
         logger.info("Generating output with InternVL...")
 
         try:

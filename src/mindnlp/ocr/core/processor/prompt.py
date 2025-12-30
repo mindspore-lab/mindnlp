@@ -4,9 +4,9 @@ Prompt构建器
 """
 
 import os
-import yaml
 from pathlib import Path
 from typing import Optional, Dict
+import yaml
 from utils.logger import get_logger
 from config.settings import get_settings
 
@@ -129,7 +129,7 @@ class PromptBuilder:
                 logger.warning(f"Template file not found: {self.template_file}, using default templates")
                 return self._get_default_templates()
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error(f"Failed to load prompt templates: {e}, using default templates")
             return self._get_default_templates()
 

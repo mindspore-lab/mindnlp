@@ -3,9 +3,9 @@
 负责批量数据的整理和padding
 """
 
+from typing import List, Tuple, Dict, Any
 import numpy as np
 import torch
-from typing import List, Tuple, Dict, Any
 from utils.logger import get_logger
 
 

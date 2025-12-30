@@ -4,10 +4,10 @@
 """
 
 import io
+from typing import Union, Dict, Tuple, Any
 import numpy as np
 import torch
 from PIL import Image
-from typing import Union, Dict, Tuple, Any
 from utils.logger import get_logger
 
 
@@ -42,6 +42,7 @@ class ImageProcessor:
             std: 归一化标准差 (R, G, B)
         """
         self.target_size = target_size
+        # pylint: disable=too-many-function-args
         self.mean = np.array(mean, dtype=np.float32).reshape(3, 1, 1)
         self.std = np.array(std, dtype=np.float32).reshape(3, 1, 1)
         logger.info(f"ImageProcessor initialized: target_size={target_size}, mean={mean}, std={std}")
@@ -179,7 +180,7 @@ class ImageProcessor:
             logger.error(f"Failed to load image: {e}")
             if isinstance(e, ValueError):
                 raise
-            raise IOError(f"Cannot load image: {str(e)}")
+            raise IOError(f"Cannot load image: {str(e)}") from e
 
     def _resize_with_padding(self, image: Image.Image) -> Tuple[Image.Image, Dict[str, Any]]:
         """

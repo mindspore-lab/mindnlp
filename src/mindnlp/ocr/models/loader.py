@@ -3,10 +3,10 @@
 根据模型名称加载对应的VLM模型
 """
 
+from utils.logger import get_logger
 from .base import VLMModelBase
 from .qwen2vl import Qwen2VLModel
 from .internvl import InternVLModel
-from utils.logger import get_logger
 
 
 logger = get_logger(__name__)

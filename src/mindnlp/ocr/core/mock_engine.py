@@ -23,7 +23,7 @@ class MockVLMOCREngine:
 
     def predict(
         self,
-        image: Union[Image.Image, np.ndarray, str],
+        _image: Union[Image.Image, np.ndarray, str],
         options: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """

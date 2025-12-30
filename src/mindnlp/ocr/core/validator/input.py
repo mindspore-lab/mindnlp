@@ -3,8 +3,8 @@
 验证输入数据的有效性
 """
 
-from PIL import Image
 import io
+from PIL import Image
 from utils.logger import get_logger
 
 
@@ -73,7 +73,7 @@ class InputValidator:
             return True
 
         except Exception as e:
-            raise ValueError(f"Invalid image data: {str(e)}")
+            raise ValueError(f"Invalid image data: {str(e)}") from e
 
     def validate_params(
         self,

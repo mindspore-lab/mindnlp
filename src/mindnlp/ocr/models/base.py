@@ -31,12 +31,12 @@ class VLMModelBase(ABC):
     @abstractmethod
     def load_model(self):
         """加载模型"""
-        ...
+        pass  # pylint: disable=unnecessary-pass
 
     @abstractmethod
     def load_tokenizer(self):
         """加载tokenizer"""
-        ...
+        pass  # pylint: disable=unnecessary-pass
 
     @abstractmethod
     def generate(self, inputs: Dict[str, Any], **kwargs):
@@ -50,7 +50,7 @@ class VLMModelBase(ABC):
         Returns:
             模型输出
         """
-        ...
+        pass  # pylint: disable=unnecessary-pass
 
     def to(self, device: str):
         """

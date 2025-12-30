@@ -26,7 +26,7 @@ def download_image_from_url(url: str, timeout: int = 10) -> bytes:
         Exception: 下载失败
     """
     try:
-        logger.info(f"Downloading image from: {url}")
+        logger.info("Downloading image from: %s", url)
         response = requests.get(url, timeout=timeout)
         response.raise_for_status()
 
@@ -34,15 +34,15 @@ def download_image_from_url(url: str, timeout: int = 10) -> bytes:
         image = Image.open(io.BytesIO(response.content))
         image.verify()
 
-        logger.info(f"Image downloaded successfully: {image.size}, {image.format}")
+        logger.info("Image downloaded successfully: %s, %s", image.size, image.format)
         return response.content
 
     except requests.RequestException as e:
-        logger.error(f"Failed to download image: {e}")
-        raise Exception(f"Failed to download image from URL: {str(e)}")
+        logger.error("Failed to download image: %s", e)
+        raise IOError(f"Failed to download image from URL: {str(e)}") from e
     except Exception as e:
-        logger.error(f"Invalid image data: {e}")
-        raise Exception(f"Invalid image data from URL: {str(e)}")
+        logger.error("Invalid image data: %s", e)
+        raise ValueError(f"Invalid image data from URL: {str(e)}") from e
 
 
 def validate_image_format(image_data: bytes) -> bool:
@@ -59,7 +59,7 @@ def validate_image_format(image_data: bytes) -> bool:
         image = Image.open(io.BytesIO(image_data))
         image.verify()
         return True
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return False
 
 

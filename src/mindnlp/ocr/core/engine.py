@@ -7,15 +7,15 @@ import time
 from typing import List
 from api.schemas.request import OCRRequest, OCRBatchRequest, OCRURLRequest
 from api.schemas.response import OCRResponse
+from models.loader import ModelLoader
+from utils.logger import get_logger
+from utils.image_utils import download_image_from_url
 from .processor.image import ImageProcessor
 from .processor.prompt import PromptBuilder
 from .parser.decoder import TokenDecoder
 from .parser.result import ResultParser
 from .parser.formatter import OutputFormatter
 from .validator.input import InputValidator
-from models.loader import ModelLoader
-from utils.logger import get_logger
-from utils.image_utils import download_image_from_url
 
 
 logger = get_logger(__name__)
@@ -85,6 +85,7 @@ class VLMOCREngine:
 
             # 3. 构建Prompt
             logger.info(f"Building prompt for task: {request.task_type}")
+            # pylint: disable=no-member
             prompt = self.prompt_builder.build_prompt(
                 task_type=request.task_type,
                 output_format=request.output_format,
@@ -126,7 +127,7 @@ class VLMOCREngine:
                 processing_time=processing_time
             )
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error(f"OCR prediction failed: {str(e)}")
             processing_time = time.time() - start_time
             return OCRResponse(

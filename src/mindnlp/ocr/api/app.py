@@ -5,11 +5,11 @@ FastAPI应用入口
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from utils.logger import get_logger
+from config.settings import get_settings
 from .routes import ocr, health
 from .middleware.error import setup_exception_handlers
 from .middleware.logging import setup_logging, add_logging_middleware
-from utils.logger import get_logger
-from config.settings import get_settings
 
 
 logger = get_logger(__name__)
@@ -20,12 +20,12 @@ _engine = None
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):  # pylint: disable=redefined-outer-name
     """
     应用生命周期管理
     启动时初始化引擎，关闭时清理资源
     """
-    global _engine
+    global _engine  # pylint: disable=global-statement
 
     # 启动时初始化
     logger.info("Initializing OCR engine...")
@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
                 device=settings.device
             )
             logger.info("OCR engine initialized successfully")
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error(f"Failed to initialize OCR engine: {e}")
         _engine = None
 
@@ -65,7 +65,7 @@ def get_engine():
     Raises:
         RuntimeError: 引擎未初始化
     """
-    global _engine
+    global _engine  # pylint: disable=global-statement
 
     # 如果引擎未初始化，尝试创建默认引擎（用于测试环境）
     if _engine is None:
@@ -76,7 +76,7 @@ def get_engine():
             logger.info("Mock OCR engine created successfully")
         except Exception as e:
             logger.error(f"Failed to create mock OCR engine: {e}")
-            raise RuntimeError("OCR Engine not initialized")
+            raise RuntimeError("OCR Engine not initialized") from e
 
     return _engine
 

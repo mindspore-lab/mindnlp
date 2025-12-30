@@ -2,11 +2,11 @@
 Qwen2-VL模型封装
 """
 
-from transformers import Qwen2VLForConditionalGeneration, AutoTokenizer, AutoProcessor
-from .base import VLMModelBase
 from typing import Any, Dict
-from utils.logger import get_logger
 import torch
+from transformers import Qwen2VLForConditionalGeneration, AutoTokenizer, AutoProcessor
+from utils.logger import get_logger
+from .base import VLMModelBase
 
 
 logger = get_logger(__name__)
