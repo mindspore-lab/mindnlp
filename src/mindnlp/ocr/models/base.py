@@ -5,7 +5,7 @@ VLM模型基类
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict
-from utils.logger import get_logger
+from mindnlp.ocr.utils.logger import get_logger
 
 
 logger = get_logger(__name__)

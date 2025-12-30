@@ -4,7 +4,7 @@ InternVL模型封装
 
 from typing import Any, Dict
 from transformers import AutoModel, AutoTokenizer
-from utils.logger import get_logger
+from mindnlp.ocr.utils.logger import get_logger
 from .base import VLMModelBase
 
 

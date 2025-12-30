@@ -7,8 +7,8 @@ import os
 from pathlib import Path
 from typing import Optional, Dict
 import yaml
-from utils.logger import get_logger
-from config.settings import get_settings
+from mindnlp.ocr.utils.logger import get_logger
+from mindnlp.ocr.config.settings import get_settings
 
 
 logger = get_logger(__name__)

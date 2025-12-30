@@ -5,11 +5,11 @@ VLM-OCR主引擎
 
 import time
 from typing import List
-from api.schemas.request import OCRRequest, OCRBatchRequest, OCRURLRequest
-from api.schemas.response import OCRResponse
-from models.loader import ModelLoader
-from utils.logger import get_logger
-from utils.image_utils import download_image_from_url
+from mindnlp.ocr.api.schemas.request import OCRRequest, OCRBatchRequest, OCRURLRequest
+from mindnlp.ocr.api.schemas.response import OCRResponse
+from mindnlp.ocr.models.loader import ModelLoader
+from mindnlp.ocr.utils.logger import get_logger
+from mindnlp.ocr.utils.image_utils import download_image_from_url
 from .processor.image import ImageProcessor
 from .processor.prompt import PromptBuilder
 from .parser.decoder import TokenDecoder

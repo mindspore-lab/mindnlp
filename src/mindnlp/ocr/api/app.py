@@ -5,8 +5,8 @@ FastAPI应用入口
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from utils.logger import get_logger
-from config.settings import get_settings
+from mindnlp.ocr.utils.logger import get_logger
+from mindnlp.ocr.config.settings import get_settings
 from .routes import ocr, health
 from .middleware.error import setup_exception_handlers
 from .middleware.logging import setup_logging, add_logging_middleware
@@ -33,12 +33,12 @@ async def lifespan(_app: FastAPI):  # pylint: disable=redefined-outer-name
         if settings.use_mock_engine:
             # 使用 Mock 引擎（快速启动）
             logger.info("Using Mock OCR engine for testing...")
-            from core.mock_engine import MockVLMOCREngine
+            from mindnlp.ocr.core.mock_engine import MockVLMOCREngine
             _engine = MockVLMOCREngine()
             logger.info("Mock OCR engine initialized successfully")
         else:
             # 使用真实引擎
-            from core.engine import VLMOCREngine
+            from mindnlp.ocr.core.engine import VLMOCREngine
             _engine = VLMOCREngine(
                 model_name=settings.default_model,
                 device=settings.device
@@ -71,7 +71,7 @@ def get_engine():
     if _engine is None:
         logger.warning("OCR engine not initialized via lifespan, creating mock engine for testing")
         try:
-            from core.mock_engine import MockVLMOCREngine
+            from mindnlp.ocr.core.mock_engine import MockVLMOCREngine
             _engine = MockVLMOCREngine()
             logger.info("Mock OCR engine created successfully")
         except Exception as e:

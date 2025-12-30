@@ -6,7 +6,7 @@
 from typing import List, Tuple, Dict, Any
 import numpy as np
 import torch
-from utils.logger import get_logger
+from mindnlp.ocr.utils.logger import get_logger
 
 
 logger = get_logger(__name__)

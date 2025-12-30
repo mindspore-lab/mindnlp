@@ -5,8 +5,8 @@ OCR预测路由
 import time
 from typing import List
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException
-from utils.logger import get_logger
-from config.settings import get_settings
+from mindnlp.ocr.utils.logger import get_logger
+from mindnlp.ocr.config.settings import get_settings
 from ..schemas.request import OCRRequest, OCRURLRequest
 from ..schemas.response import OCRResponse, BatchOCRResponse
 
@@ -194,7 +194,7 @@ async def predict_from_url(request: OCRURLRequest):
         _engine = get_engine()
 
         # 下载图像
-        from utils.image_utils import download_image_from_url
+        from mindnlp.ocr.utils.image_utils import download_image_from_url
         image_bytes = download_image_from_url(str(request.image_url))
 
         # 执行OCR

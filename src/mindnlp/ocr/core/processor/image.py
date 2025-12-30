@@ -8,7 +8,7 @@ from typing import Union, Dict, Tuple, Any
 import numpy as np
 import torch
 from PIL import Image
-from utils.logger import get_logger
+from mindnlp.ocr.utils.logger import get_logger
 
 
 logger = get_logger(__name__)
@@ -204,8 +204,7 @@ class ImageProcessor:
         scale = min(target_width / original_width, target_height / original_height)
 
         # 避免放大小图
-        if scale > 1.0:
-            scale = 1.0
+        scale = min(scale, 1.0)
 
         # 计算缩放后的尺寸
         new_width = int(original_width * scale)

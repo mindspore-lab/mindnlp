@@ -5,7 +5,7 @@ Qwen2-VL模型封装
 from typing import Any, Dict
 import torch
 from transformers import Qwen2VLForConditionalGeneration, AutoTokenizer, AutoProcessor
-from utils.logger import get_logger
+from mindnlp.ocr.utils.logger import get_logger
 from .base import VLMModelBase
 
 

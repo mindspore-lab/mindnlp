@@ -5,9 +5,9 @@ from mindtorch import ops
 from mindnlp.utils import is_triton_available
 
 if is_triton_available():
-    from triton.backends.driver import DriverBase
-    from triton.backends.nvidia.driver import CudaUtils, CudaLauncher
-    from triton.backends.compiler import GPUTarget
+    from triton.backends.driver import DriverBase  # pylint: disable=import-error
+    from triton.backends.nvidia.driver import CudaUtils, CudaLauncher  # pylint: disable=import-error
+    from triton.backends.compiler import GPUTarget  # pylint: disable=import-error
 
 class MSDriver(DriverBase):
 
@@ -46,7 +46,7 @@ class MSDriver(DriverBase):
         return True
 
     def get_benchmarker(self):
-        from triton.testing import do_bench
+        from triton.testing import do_bench  # pylint: disable=import-error
         return do_bench
 
     def get_empty_cache_for_benchmark(self):

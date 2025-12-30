@@ -3,8 +3,8 @@ MindNLP VLM-OCR 服务启动入口
 """
 
 import uvicorn
-from config.settings import get_settings
-from utils.logger import get_logger
+from mindnlp.ocr.config.settings import get_settings
+from mindnlp.ocr.utils.logger import get_logger
 
 
 logger = get_logger(__name__)
