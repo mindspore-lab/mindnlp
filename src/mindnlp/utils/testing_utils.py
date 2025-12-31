@@ -64,7 +64,7 @@ from transformers.utils.import_utils import (
 from transformers.utils.generic import strtobool
 
 if is_pytest_available():
-    from _pytest.doctest import (
+    from _pytest.doctest import (  # pylint: disable=no-name-in-module
         Module,
         _get_checker,
         _get_continue_on_failure,
