@@ -52,6 +52,45 @@ class VLMModelBase(ABC):
         """
         pass  # pylint: disable=unnecessary-pass
 
+    def prepare_inputs(self, messages: list, **kwargs):
+        """
+        准备模型输入 (可选实现)
+
+        Args:
+            messages: 消息列表
+            **kwargs: 额外参数
+
+        Returns:
+            处理后的输入
+        """
+        raise NotImplementedError("Subclass should implement prepare_inputs if needed")
+
+    def decode_output(self, generated_ids, input_ids):
+        """
+        解码生成的输出 (可选实现)
+
+        Args:
+            generated_ids: 生成的 token IDs
+            input_ids: 输入的 token IDs
+
+        Returns:
+            解码后的文本
+        """
+        raise NotImplementedError("Subclass should implement decode_output if needed")
+
+    def batch_generate(self, batch_messages: list, **kwargs):
+        """
+        批量生成推理 (可选实现)
+
+        Args:
+            batch_messages: 批量消息列表
+            **kwargs: 生成参数
+
+        Returns:
+            批量输出文本列表
+        """
+        raise NotImplementedError("Subclass should implement batch_generate if needed")
+
     def to(self, device: str):
         """
         移动模型到指定设备

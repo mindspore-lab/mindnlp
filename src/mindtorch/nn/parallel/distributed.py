@@ -1084,7 +1084,7 @@ class DistributedDataParallel(Module, Joinable):
         static_graph=False,
         delay_all_reduce_named_params=None,
         param_to_hook_all_reduce=None,
-        mixed_precision: _MixedPrecision | None = None,
+        mixed_precision: Optional[_MixedPrecision] = None,
         device_mesh=None,
         skip_all_reduce_unused_params=False,
     ):
@@ -1092,7 +1092,7 @@ class DistributedDataParallel(Module, Joinable):
         Joinable.__init__(self)
         # MindSpore does not support dynamo, so always use the default reducer
         self._use_python_reducer = False
-        self.logger: dist.Logger | None = None
+        self.logger: Optional[dist.Logger] = None
         if bool(delay_all_reduce_named_params is not None) != bool(
             param_to_hook_all_reduce is not None
         ):
@@ -1272,7 +1272,7 @@ class DistributedDataParallel(Module, Joinable):
         )
 
         # Initialize gradient buffers and register all reduce hook
-        self._delay_grad_buffer: mindtorch.Tensor | None = None
+        self._delay_grad_buffer: Optional[mindtorch.Tensor] = None
         self._delay_grad_views: list[mindtorch.Tensor] = []
         self._delay_all_reduce_all_params = False
         if len(self._delay_all_reduce_params) != 0:
@@ -2084,7 +2084,7 @@ class DistributedDataParallel(Module, Joinable):
                 treespec,
                 output_is_rref,
             ) = _tree_flatten_with_rref(output)
-            output_placeholders: list[mindtorch.Tensor | None] = [
+            output_placeholders: list[Optional[mindtorch.Tensor]] = [
                 None for _ in range(len(output_tensor_list))
             ]
             # Do not touch tensors that have no grad_fn, which can cause issues

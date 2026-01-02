@@ -119,6 +119,13 @@ def create_app() -> FastAPI:
     # 注册路由
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
     app.include_router(ocr.router, prefix="/api/v1/ocr", tags=["ocr"])
+    
+    # 添加根路径重定向
+    @app.get("/", include_in_schema=False)
+    async def root():
+        """根路径重定向到文档"""
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/api/docs")
 
     logger.info("FastAPI application created")
 

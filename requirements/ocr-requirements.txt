@@ -1,27 +1,60 @@
-fastapi>=0.109.0
-uvicorn[standard]>=0.27.0
-pydantic>=2.0.0
-python-multipart>=0.0.6
+# Qwen2-VL OCR 功能依赖配置
+# 
+# 用途：
+#   - Mock 测试：只需要基础依赖（torch, transformers, pillow, pytest）
+#   - 真实模型测试：需要完整依赖（包括 qwen-vl-utils）
+#
+# 安装方式：
+#   pip install -r requirements/ocr-requirements.txt
+#
+# 独立环境配置（推荐用于真实模型测试）：
+#   conda create -n qwen2vl_test python=3.10 -y
+#   conda activate qwen2vl_test
+#   pip install -r requirements/ocr-requirements.txt
 
-# Transformers和模型
-transformers>=4.36.0
-torch>=2.0.0
-torchvision>=0.15.0
+# ============================================================================
+# 核心依赖（必需）
+# ============================================================================
+
+# PyTorch（真实模型测试需要 2.4.0+，Mock 测试兼容 2.1.2+）
+torch>=2.4.0
+torchvision>=0.19.0
+
+# Transformers（需要 4.37.0+ 以支持 Qwen2VL）
+transformers>=4.37.0
+tokenizers>=0.15.0
+safetensors>=0.4.3
 accelerate>=0.25.0
 
 # 图像处理
 pillow>=10.0.0
-opencv-python>=4.8.0
-numpy>=1.24.0
+numpy>=1.24.0,<2.0  # PyTorch 兼容性
 
-# 工具库
-requests>=2.31.0
-pyyaml>=6.0
+# ============================================================================
+# 测试依赖（必需）
+# ============================================================================
 
-# 测试
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
-httpx>=0.26.0
 
-# 可选依赖 (根据需要安装)
-# qwen-vl-utils  # Qwen2-VL特定工具
+# ============================================================================
+# 可选依赖（真实模型测试推荐）
+# ============================================================================
+
+qwen-vl-utils  # Qwen2-VL 官方工具包
+
+# ============================================================================
+# OCR 服务依赖（API 服务需要）
+# ============================================================================
+
+# 取消注释以下依赖来启用 API 服务
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0  # Settings 配置管理
+python-dotenv>=1.0.0  # .env 文件支持
+python-multipart>=0.0.6
+opencv-python>=4.8.0
+requests>=2.31.0
+pyyaml>=6.0
+httpx>=0.26.0

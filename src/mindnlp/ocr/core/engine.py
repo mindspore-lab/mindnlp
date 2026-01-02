@@ -34,9 +34,13 @@ class VLMOCREngine:
         """
         logger.info(f"Initializing VLM-OCR Engine with model: {model_name}")
 
+        # 保存模型名称
+        self.model_name = model_name
+        
         # 加载模型
         self.model_loader = ModelLoader(model_name, device)
-        self.model = self.model_loader.load_model()
+        self.model_loader.load_model()  # 加载模型到 model_instance
+        self.model_instance = self.model_loader.model_instance  # 保存 model_instance
         self.tokenizer = self.model_loader.load_tokenizer()
 
         # 初始化组件
@@ -86,22 +90,51 @@ class VLMOCREngine:
             # 3. 构建Prompt
             logger.info(f"Building prompt for task: {request.task_type}")
             # pylint: disable=no-member
-            prompt = self.prompt_builder.build_prompt(
+            prompt = self.prompt_builder.build(
                 task_type=request.task_type,
                 output_format=request.output_format,
                 language=request.language,
                 custom_prompt=request.custom_prompt
             )
 
-            # 4. 准备模型输入
-            inputs = self._prepare_inputs(pil_image, prompt)
-
-            # 5. 模型推理
+            # 4. 将 PIL Image 转换为 data URI（qwen_vl_utils 需要）
+            import base64
+            from io import BytesIO
+            buffered = BytesIO()
+            pil_image.save(buffered, format="JPEG")
+            img_b64 = base64.b64encode(buffered.getvalue()).decode()
+            image_uri = f"data:image/jpeg;base64,{img_b64}"
+            
+            # 5. 构建消息格式并进行推理
             logger.info("Running model inference...")
-            outputs = self.model.generate(**inputs)
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "image": image_uri},
+                        {"type": "text", "text": prompt}
+                    ]
+                }
+            ]
+            
+            # 使用 model_instance 的 batch_generate 方法（已包含输入准备和解码）
+            outputs = self.model_instance.batch_generate(
+                batch_messages=[messages],
+                max_new_tokens=512
+            )
 
-            # 6. Token解码
-            decoded_text = self.token_decoder.decode(outputs[0])
+            # 6. 获取解码后的文本（batch_generate 已返回解码文本）
+            logger.info(f"Batch generate returned: {type(outputs)}, value: {outputs}")
+            
+            if outputs is None:
+                raise ValueError("Model batch_generate returned None")
+            if not isinstance(outputs, (list, tuple)):
+                raise ValueError(f"Model batch_generate returned unexpected type: {type(outputs)}")
+            if len(outputs) == 0:
+                raise ValueError("Model batch_generate returned empty list")
+                
+            decoded_text = outputs[0]
+            logger.info(f"Decoded text: {decoded_text[:100] if decoded_text else 'None'}...")
 
             # 7. 结果解析
             parsed_result = self.result_parser.parse(
@@ -118,13 +151,37 @@ class VLMOCREngine:
 
             # 构建响应
             processing_time = time.time() - start_time
+            
+            # 提取文本列表和置信度
+            texts = []
+            confidences = []
+            if isinstance(formatted_result, dict):
+                blocks = formatted_result.get('blocks')
+                if blocks is not None and isinstance(blocks, list):
+                    for block in blocks:
+                        if isinstance(block, dict):
+                            texts.append(block.get('text', ''))
+                            confidences.append(block.get('confidence', 1.0))
+                elif 'text' in formatted_result:
+                    texts = [formatted_result['text']]
+                    confidences = [1.0]
+            elif isinstance(formatted_result, str):
+                texts = [formatted_result]
+                confidences = [1.0]
+            
             return OCRResponse(
                 success=True,
-                text=formatted_result.get('text', ''),
-                blocks=formatted_result.get('blocks'),
-                format=request.output_format,
-                language=request.language,
-                processing_time=processing_time
+                texts=texts if texts else [decoded_text],
+                boxes=[],  # 目前不支持边界框
+                confidences=confidences if confidences else [1.0],
+                raw_output=decoded_text,
+                inference_time=processing_time,
+                model_name=self.model_name,
+                metadata={
+                    'format': request.output_format,
+                    'language': request.language,
+                    'task_type': request.task_type
+                }
             )
 
         except Exception as e:  # pylint: disable=broad-exception-caught
@@ -132,11 +189,17 @@ class VLMOCREngine:
             processing_time = time.time() - start_time
             return OCRResponse(
                 success=False,
-                text="",
-                format=request.output_format,
-                language=request.language,
-                processing_time=processing_time,
-                error_message=str(e)
+                texts=[],
+                boxes=[],
+                confidences=[],
+                raw_output="",
+                inference_time=processing_time,
+                model_name=self.model_name,
+                metadata={
+                    'format': request.output_format,
+                    'language': request.language
+                },
+                error=str(e)
             )
 
     def predict_batch(self, request: OCRBatchRequest) -> List[OCRResponse]:

@@ -22,6 +22,28 @@ def get_engine():
     return _get_engine()
 
 
+@router.get("/predict")
+async def predict_info():
+    """
+    OCR预测端点使用说明
+    
+    此端点需要使用 POST 方法并上传图像文件。
+    请访问 /api/docs 查看交互式文档进行测试。
+    """
+    return {
+        "message": "此端点需要使用 POST 方法上传图像",
+        "method": "POST",
+        "content_type": "multipart/form-data",
+        "parameters": {
+            "file": "图像文件 (必需)",
+            "output_format": "输出格式 (可选, 默认: text)",
+            "language": "语言 (可选, 默认: auto)",
+            "task_type": "任务类型 (可选, 默认: general)"
+        },
+        "documentation": "/api/docs"
+    }
+
+
 @router.post("/predict", response_model=OCRResponse)
 async def predict_image(
     file: UploadFile = File(...),
@@ -68,26 +90,22 @@ async def predict_image(
             confidence_threshold=confidence_threshold
         )
 
-        # 执行OCR (这里暂时返回模拟数据，等待engine.predict实现)
-        # result = engine.predict(request)
-
-        # 模拟响应
-        inference_time = time.time() - start_time
-        result = OCRResponse(
-            success=True,
-            texts=["识别的文本内容"],
-            boxes=[[10, 20, 200, 30]],
-            confidences=[0.95],
-            raw_output="识别的文本内容",
-            inference_time=inference_time,
-            model_name=settings.default_model,
-            metadata={
+        # 执行真实 OCR 推理
+        logger.info(f"Processing image with real model: {settings.default_model}")
+        result = _engine.predict(_request)
+        
+        # 如果推理成功，添加额外的元数据
+        if result.success:
+            if not result.metadata:
+                result.metadata = {}
+            result.metadata.update({
                 "language": language,
                 "format": output_format,
-                "task_type": task_type
-            }
-        )
-
+                "task_type": task_type,
+                "filename": file.filename
+            })
+        
+        logger.info(f"OCR completed in {result.inference_time:.2f}s")
         return result
 
     except HTTPException:
@@ -99,6 +117,27 @@ async def predict_image(
     except Exception as e:
         logger.error(f"OCR prediction failed: {e}")
         raise HTTPException(status_code=500, detail=f"OCR prediction failed: {str(e)}") from e
+
+
+@router.get("/predict_batch")
+async def predict_batch_info():
+    """
+    批量OCR预测端点使用说明
+    
+    此端点需要使用 POST 方法并上传多个图像文件。
+    请访问 /api/docs 查看交互式文档进行测试。
+    """
+    return {
+        "message": "此端点需要使用 POST 方法上传多个图像",
+        "method": "POST",
+        "content_type": "multipart/form-data",
+        "parameters": {
+            "files": "多个图像文件 (必需)",
+            "output_format": "输出格式 (可选, 默认: text)",
+            "language": "语言 (可选, 默认: auto)"
+        },
+        "documentation": "/api/docs"
+    }
 
 
 @router.post("/predict_batch", response_model=BatchOCRResponse)
@@ -130,32 +169,50 @@ async def predict_batch(
 
         # 处理每个图像
         results = []
-        for file in files:
-            image_bytes = await file.read()
+        logger.info(f"Processing batch of {len(files)} images with real model")
+        
+        for idx, file in enumerate(files):
+            try:
+                image_bytes = await file.read()
 
-            # 执行单张OCR
-            _request = OCRRequest(
-                image=image_bytes,
-                output_format=output_format,
-                language=language,
-                task_type=task_type,
-                confidence_threshold=confidence_threshold
-            )
-
-            # 模拟单张处理
-            single_result = OCRResponse(
-                success=True,
-                texts=["文本内容"],
-                boxes=[[10, 20, 200, 30]],
-                confidences=[0.95],
-                raw_output="文本内容",
-                inference_time=0.5,
-                model_name=settings.default_model,
-                metadata={"language": language}
-            )
-            results.append(single_result)
+                # 执行真实 OCR 推理
+                _request = OCRRequest(
+                    image=image_bytes,
+                    output_format=output_format,
+                    language=language,
+                    task_type=task_type,
+                    confidence_threshold=confidence_threshold
+                )
+                
+                logger.info(f"Processing image {idx+1}/{len(files)}: {file.filename}")
+                single_result = _engine.predict(_request)
+                
+                # 添加文件名到元数据
+                if single_result.success:
+                    if not single_result.metadata:
+                        single_result.metadata = {}
+                    single_result.metadata["filename"] = file.filename
+                
+                results.append(single_result)
+                
+            except Exception as e:
+                logger.error(f"Failed to process image {file.filename}: {e}")
+                # 为失败的图像添加错误结果
+                error_result = OCRResponse(
+                    success=False,
+                    texts=[],
+                    boxes=[],
+                    confidences=[],
+                    raw_output="",
+                    inference_time=0.0,
+                    model_name=settings.default_model,
+                    metadata={"filename": file.filename, "error": str(e)}
+                )
+                results.append(error_result)
 
         total_time = time.time() - start_time
+        successful_count = sum(1 for r in results if r.success)
+        logger.info(f"Batch processing completed: {successful_count}/{len(files)} successful in {total_time:.2f}s")
 
         return BatchOCRResponse(
             success=True,
@@ -174,6 +231,28 @@ async def predict_batch(
     except Exception as e:
         logger.error(f"Batch OCR prediction failed: {e}")
         raise HTTPException(status_code=500, detail=f"Batch OCR prediction failed: {str(e)}") from e
+
+
+@router.get("/predict_url")
+async def predict_url_info():
+    """
+    URL OCR预测端点使用说明
+    
+    此端点需要使用 POST 方法并提供图像 URL。
+    请访问 /api/docs 查看交互式文档进行测试。
+    """
+    return {
+        "message": "此端点需要使用 POST 方法提供图像 URL",
+        "method": "POST",
+        "content_type": "application/json",
+        "parameters": {
+            "image_url": "图像URL (必需)",
+            "output_format": "输出格式 (可选, 默认: text)",
+            "language": "语言 (可选, 默认: auto)",
+            "task_type": "任务类型 (可选, 默认: general)"
+        },
+        "documentation": "/api/docs"
+    }
 
 
 @router.post("/predict_url", response_model=OCRResponse)
@@ -195,9 +274,10 @@ async def predict_from_url(request: OCRURLRequest):
 
         # 下载图像
         from mindnlp.ocr.utils.image_utils import download_image_from_url
+        logger.info(f"Downloading image from URL: {request.image_url}")
         image_bytes = download_image_from_url(str(request.image_url))
 
-        # 执行OCR
+        # 构建请求并执行真实 OCR 推理
         _ocr_request = OCRRequest(
             image=image_bytes,
             output_format=request.output_format,
@@ -206,19 +286,17 @@ async def predict_from_url(request: OCRURLRequest):
             confidence_threshold=request.confidence_threshold
         )
 
-        # 模拟响应
-        inference_time = time.time() - start_time
-        result = OCRResponse(
-            success=True,
-            texts=["URL图像识别的文本"],
-            boxes=[[10, 20, 200, 30]],
-            confidences=[0.95],
-            raw_output="URL图像识别的文本",
-            inference_time=inference_time,
-            model_name=settings.default_model,
-            metadata={"source": "url"}
-        )
-
+        # 执行真实 OCR 推理
+        logger.info(f"Processing URL image with real model: {settings.default_model}")
+        result = _engine.predict(_ocr_request)
+        
+        # 添加 URL 到元数据
+        if result.success:
+            if not result.metadata:
+                result.metadata = {}
+            result.metadata["source_url"] = str(request.image_url)
+        
+        logger.info(f"URL OCR completed in {result.inference_time:.2f}s")
         return result
 
     except HTTPException:

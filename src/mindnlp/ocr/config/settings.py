@@ -5,7 +5,7 @@
 import os
 from functools import lru_cache
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic_settings import BaseSettings
 
 # 加载 .env 文件
 try:
@@ -17,7 +17,7 @@ except ImportError:
     pass  # 如果没有安装 python-dotenv，继续使用环境变量
 
 
-class Settings(BaseModel):
+class Settings(BaseSettings):
     """应用配置"""
 
     # API配置
@@ -48,6 +48,8 @@ class Settings(BaseModel):
 
     class Config:
         env_prefix = "OCR_"
+        # 允许额外的环境变量（不会报错）
+        extra = "ignore"
         env_file = ".env"
         env_file_encoding = "utf-8"
 
