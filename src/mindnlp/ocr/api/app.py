@@ -7,7 +7,7 @@ from fastapi import FastAPI  # pylint: disable=import-error
 from fastapi.middleware.cors import CORSMiddleware  # pylint: disable=import-error
 from mindnlp.ocr.utils.logger import get_logger
 from mindnlp.ocr.config.settings import get_settings
-from .routes import ocr, health
+from .routes import ocr, health, monitor
 from .middleware.error import setup_exception_handlers
 from .middleware.logging import setup_logging, add_logging_middleware
 
@@ -126,6 +126,7 @@ def create_app() -> FastAPI:
     # 注册路由
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
     app.include_router(ocr.router, prefix="/api/v1/ocr", tags=["ocr"])
+    app.include_router(monitor.router, prefix="/api/v1/monitor", tags=["monitor"])
     
     # 添加根路径重定向
     @app.get("/", include_in_schema=False)

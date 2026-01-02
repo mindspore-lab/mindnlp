@@ -4,7 +4,7 @@ VLM-OCR主引擎
 """
 
 import time
-from typing import List
+from typing import List, Optional
 from mindnlp.ocr.api.schemas.request import OCRRequest, OCRBatchRequest, OCRURLRequest
 from mindnlp.ocr.api.schemas.response import OCRResponse
 from mindnlp.ocr.models.loader import ModelLoader
@@ -17,6 +17,7 @@ from mindnlp.ocr.core.exceptions import (
     BatchProcessingError,
     ResourceNotFoundError
 )
+from mindnlp.ocr.core.monitor import get_performance_monitor
 from .processor.image import ImageProcessor
 from .processor.prompt import PromptBuilder
 from .parser.decoder import TokenDecoder
@@ -31,18 +32,28 @@ logger = get_logger(__name__)
 class VLMOCREngine:
     """VLM-OCR主引擎"""
 
-    def __init__(self, model_name: str = "Qwen/Qwen2-VL-2B-Instruct", device: str = "cuda"):
+    def __init__(self, model_name: str = "Qwen/Qwen2-VL-2B-Instruct", device: str = "cuda",
+                 enable_monitoring: bool = True):
         """
         初始化OCR引擎
 
         Args:
             model_name: 模型名称
             device: 运行设备
+            enable_monitoring: 是否启用性能监控
         """
         logger.info(f"Initializing VLM-OCR Engine with model: {model_name}")
 
         # 保存模型名称
         self.model_name = model_name
+        
+        # 性能监控
+        self.enable_monitoring = enable_monitoring
+        if enable_monitoring:
+            self.monitor = get_performance_monitor()
+            logger.info("Performance monitoring enabled")
+        else:
+            self.monitor = None
         
         # 加载模型
         self.model_loader = ModelLoader(model_name, device)
@@ -230,6 +241,14 @@ class VLMOCREngine:
             # 构建响应
             processing_time = time.time() - start_time
             
+            # 记录性能指标
+            if self.monitor:
+                self.monitor.record_inference(
+                    inference_time=processing_time,
+                    image_count=1,
+                    success=True
+                )
+            
             # 提取文本列表和置信度
             texts = []
             confidences = []
@@ -263,10 +282,28 @@ class VLMOCREngine:
             )
 
         except (ValidationError, ImageProcessingError, ModelInferenceError) as e:
+            # 记录失败的性能指标
+            processing_time = time.time() - start_time
+            if self.monitor:
+                self.monitor.record_inference(
+                    inference_time=processing_time,
+                    image_count=1,
+                    success=False,
+                    error_message=str(e)
+                )
             # 重新抛出我们自己的异常
             logger.error(f"OCR prediction failed: {e}", exc_info=True)
             raise
         except Exception as e:  # pylint: disable=broad-exception-caught
+            # 记录失败的性能指标
+            processing_time = time.time() - start_time
+            if self.monitor:
+                self.monitor.record_inference(
+                    inference_time=processing_time,
+                    image_count=1,
+                    success=False,
+                    error_message=str(e)
+                )
             # 捕获任何未预期的异常
             logger.error(f"Unexpected error during OCR prediction: {e}", exc_info=True)
             raise ModelInferenceError(
@@ -290,6 +327,7 @@ class VLMOCREngine:
             BatchProcessingError: 批量处理失败（当所有图像都失败时）
         """
         logger.info(f"Processing batch of {len(request.images)} images...")
+        batch_start_time = time.time()
         
         if not request.images:
             raise ValidationError(
@@ -329,6 +367,17 @@ class VLMOCREngine:
                     error=str(e)
                 ))
 
+        # 记录批处理性能指标
+        batch_time = time.time() - batch_start_time
+        successful_count = len(request.images) - len(errors)
+        if self.monitor:
+            self.monitor.record_inference(
+                inference_time=batch_time,
+                image_count=len(request.images),
+                success=(len(errors) == 0),
+                error_message=f"Batch: {len(errors)} failures" if errors else None
+            )
+        
         # 如果所有图像都失败，抛出批处理异常
         if len(errors) == len(request.images):
             raise BatchProcessingError(
