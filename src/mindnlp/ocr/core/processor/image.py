@@ -20,18 +20,26 @@ class ImageProcessor:
 
     功能:
     1. 支持多种图像输入格式 (bytes/PIL/numpy/路径)
-    2. 智能缩放 (保持宽高比)
-    3. 自适应 Padding (填充至目标尺寸)
-    4. 数值归一化和标准化
-    5. Tensor 转换
-    6. 记录变换信息 (用于坐标还原)
+    2. 支持多种图像格式 (JPEG, PNG, BMP, TIFF, WebP)
+    3. 图像旋转校正 (基于EXIF)
+    4. 图像质量增强 (对比度、锐化)
+    5. 智能缩放 (保持宽高比)
+    6. 自适应 Padding (填充至目标尺寸)
+    7. 数值归一化和标准化
+    8. Tensor 转换
+    9. 记录变换信息 (用于坐标还原)
     """
+
+    # 支持的图像格式
+    SUPPORTED_FORMATS = {'JPEG', 'PNG', 'BMP', 'TIFF', 'WebP', 'PPM', 'GIF'}
 
     def __init__(
         self,
         target_size: Tuple[int, int] = (448, 448),
         mean: Tuple[float, float, float] = (0.485, 0.456, 0.406),
-        std: Tuple[float, float, float] = (0.229, 0.224, 0.225)
+        std: Tuple[float, float, float] = (0.229, 0.224, 0.225),
+        auto_rotate: bool = True,
+        enhance_quality: bool = True
     ):
         """
         初始化图像处理器
@@ -40,12 +48,17 @@ class ImageProcessor:
             target_size: 目标图像尺寸 (width, height)
             mean: 归一化均值 (R, G, B)
             std: 归一化标准差 (R, G, B)
+            auto_rotate: 是否自动旋转图像 (基于EXIF)
+            enhance_quality: 是否增强图像质量
         """
         self.target_size = target_size
         # pylint: disable=too-many-function-args
         self.mean = np.array(mean, dtype=np.float32).reshape(3, 1, 1)
         self.std = np.array(std, dtype=np.float32).reshape(3, 1, 1)
-        logger.info(f"ImageProcessor initialized: target_size={target_size}, mean={mean}, std={std}")
+        self.auto_rotate = auto_rotate
+        self.enhance_quality = enhance_quality
+        logger.info(f"ImageProcessor initialized: target_size={target_size}, mean={mean}, std={std}, "
+                   f"auto_rotate={auto_rotate}, enhance_quality={enhance_quality}")
 
     def process(
         self,
@@ -72,7 +85,15 @@ class ImageProcessor:
             image = self._load_image(image_data)
             original_size = image.size  # (width, height)
 
-            # 2. 智能缩放和 Padding
+            # 2. 自动旋转校正 (基于EXIF)
+            if self.auto_rotate:
+                image = self._auto_rotate(image)
+
+            # 3. 图像质量增强
+            if self.enhance_quality:
+                image = self._enhance_quality(image)
+
+            # 4. 智能缩放和 Padding
             resized_image, padding_info = self._resize_with_padding(image)
 
             # 3. 转换为 NumPy 数组
@@ -181,6 +202,56 @@ class ImageProcessor:
             if isinstance(e, ValueError):
                 raise
             raise IOError(f"Cannot load image: {str(e)}") from e
+
+    def _auto_rotate(self, image: Image.Image) -> Image.Image:
+        """
+        基于EXIF自动旋转图像
+
+        Args:
+            image: PIL Image
+
+        Returns:
+            Image.Image: 旋转后的图像
+        """
+        try:
+            # 尝试获取EXIF方向标签
+            from PIL import ImageOps
+            # ImageOps.exif_transpose 会自动读取EXIF方向并旋转
+            rotated = ImageOps.exif_transpose(image)
+            if rotated is not None:
+                logger.debug("Image auto-rotated based on EXIF orientation")
+                return rotated
+            return image
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.debug(f"Auto-rotate failed or not needed: {e}")
+            return image
+
+    def _enhance_quality(self, image: Image.Image) -> Image.Image:
+        """
+        增强图像质量（对比度和锐化）
+
+        Args:
+            image: PIL Image
+
+        Returns:
+            Image.Image: 增强后的图像
+        """
+        try:
+            from PIL import ImageEnhance
+            
+            # 1. 自动对比度增强
+            enhancer = ImageEnhance.Contrast(image)
+            image = enhancer.enhance(1.2)  # 增强20%对比度
+            
+            # 2. 轻微锐化
+            enhancer = ImageEnhance.Sharpness(image)
+            image = enhancer.enhance(1.1)  # 增强10%锐度
+            
+            logger.debug("Image quality enhanced")
+            return image
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.debug(f"Quality enhancement failed: {e}")
+            return image
 
     def _resize_with_padding(self, image: Image.Image) -> Tuple[Image.Image, Dict[str, Any]]:
         """
