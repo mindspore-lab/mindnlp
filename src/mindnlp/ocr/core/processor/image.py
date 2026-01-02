@@ -7,8 +7,9 @@ import io
 from typing import Union, Dict, Tuple, Any
 import numpy as np
 import torch
-from PIL import Image
+from PIL import Image, ImageOps, ImageEnhance
 from mindnlp.ocr.utils.logger import get_logger
+from mindnlp.ocr.core.exceptions import ImageProcessingError, ValidationError
 
 
 logger = get_logger(__name__)
@@ -79,6 +80,10 @@ class ImageProcessor:
                 - scale: 缩放比例
                 - padding: Padding 信息 {left, top, right, bottom}
                 - offset: 图像在画布上的偏移 (x, y)
+        
+        Raises:
+            ImageProcessingError: 图像处理失败
+            ValidationError: 输入数据验证失败
         """
         try:
             # 1. 加载图像
@@ -96,22 +101,22 @@ class ImageProcessor:
             # 4. 智能缩放和 Padding
             resized_image, padding_info = self._resize_with_padding(image)
 
-            # 3. 转换为 NumPy 数组
+            # 5. 转换为 NumPy 数组
             image_array = np.array(resized_image, dtype=np.float32)
 
-            # 4. 归一化 [0, 255] -> [0, 1]
+            # 6. 归一化 [0, 255] -> [0, 1]
             image_array = image_array / 255.0
 
-            # 5. 转换维度 HWC -> CHW
+            # 7. 转换维度 HWC -> CHW
             image_array = np.transpose(image_array, (2, 0, 1))
 
-            # 6. 标准化
+            # 8. 标准化
             image_array = (image_array - self.mean) / self.std
 
-            # 7. 转换为 Tensor 并添加 batch 维度
+            # 9. 转换为 Tensor 并添加 batch 维度
             pixel_values = torch.from_numpy(image_array).unsqueeze(0)
 
-            # 8. 构建变换信息
+            # 10. 构建变换信息
             transform_info = {
                 'original_size': original_size,
                 'resized_size': padding_info['resized_size'],
@@ -125,9 +130,24 @@ class ImageProcessor:
 
             return pixel_values, transform_info
 
-        except Exception as e:
-            logger.error(f"Failed to process image: {e}")
+        except (ValidationError, ImageProcessingError):
+            # 重新抛出我们自己的异常
             raise
+        except ValueError as e:
+            # 将 ValueError 包装为 ValidationError
+            logger.error(f"Validation error during image processing: {e}")
+            raise ValidationError(
+                message=f"Invalid image data: {str(e)}",
+                field="image_data",
+                details={"original_error": str(e)}
+            ) from e
+        except Exception as e:
+            # 将其他异常包装为 ImageProcessingError
+            logger.error(f"Failed to process image: {e}", exc_info=True)
+            raise ImageProcessingError(
+                message=f"Image processing failed: {str(e)}",
+                details={"original_error": str(e), "error_type": type(e).__name__}
+            ) from e
 
     def _load_image(self, image_data: Union[bytes, str, np.ndarray, Image.Image]) -> Image.Image:
         """
@@ -140,23 +160,50 @@ class ImageProcessor:
             Image.Image: RGB 格式的 PIL Image
 
         Raises:
-            ValueError: 不支持的图像类型
-            IOError: 图像加载失败
+            ValidationError: 不支持的图像类型或无效的图像数据
+            ImageProcessingError: 图像加载失败
         """
         try:
             if isinstance(image_data, bytes):
                 # 从 bytes 加载
-                image = Image.open(io.BytesIO(image_data))
+                if not image_data:
+                    raise ValidationError(
+                        message="Empty image data: received empty bytes",
+                        field="image_data"
+                    )
+                try:
+                    image = Image.open(io.BytesIO(image_data))
+                except Exception as e:
+                    raise ImageProcessingError(
+                        message=f"Failed to decode image from bytes: {str(e)}",
+                        details={"data_length": len(image_data)}
+                    ) from e
+                    
             elif isinstance(image_data, str):
                 # 从文件路径加载
                 import os
                 if not os.path.exists(image_data):
-                    raise ValueError(f"Invalid image data: '{image_data}' is not a valid file path")
-                image = Image.open(image_data)
+                    raise ValidationError(
+                        message=f"Image file not found: {image_data}",
+                        field="image_data",
+                        value=image_data
+                    )
+                try:
+                    image = Image.open(image_data)
+                except Exception as e:
+                    raise ImageProcessingError(
+                        message=f"Failed to load image from file: {str(e)}",
+                        details={"file_path": image_data}
+                    ) from e
+                    
             elif isinstance(image_data, np.ndarray):
                 # 检查数组是否为空
                 if image_data.size == 0 or image_data.shape[0] == 0 or image_data.shape[1] == 0:
-                    raise ValueError("Empty image: array has zero dimensions")
+                    raise ValidationError(
+                        message="Empty image: numpy array has zero dimensions",
+                        field="image_data",
+                        details={"shape": str(image_data.shape)}
+                    )
 
                 # 从 numpy 数组加载
                 # 处理不同的数组形状
@@ -171,31 +218,65 @@ class ImageProcessor:
                         # RGBA
                         image = Image.fromarray(image_data.astype(np.uint8), mode='RGBA')
                     else:
-                        raise ValueError(f"Unsupported array shape: {image_data.shape}")
+                        raise ValidationError(
+                            message=f"Unsupported array shape: {image_data.shape}",
+                            field="image_data",
+                            details={"shape": str(image_data.shape), "channels": image_data.shape[2]}
+                        )
                 else:
-                    raise ValueError(f"Unsupported array shape: {image_data.shape}")
+                    raise ValidationError(
+                        message=f"Unsupported array dimensions: {len(image_data.shape)}",
+                        field="image_data",
+                        details={"shape": str(image_data.shape)}
+                    )
+                    
             elif isinstance(image_data, Image.Image):
                 # 已经是 PIL Image
                 # 检查图像是否为空
                 if image_data.size[0] == 0 or image_data.size[1] == 0:
-                    raise ValueError("Empty image: width or height is zero")
+                    raise ValidationError(
+                        message="Empty image: width or height is zero",
+                        field="image_data",
+                        details={"size": image_data.size}
+                    )
                 image = image_data
             else:
-                raise ValueError(f"Unsupported image data type: {type(image_data)}")
+                raise ValidationError(
+                    message=f"Unsupported image data type: {type(image_data).__name__}",
+                    field="image_data",
+                    value=str(type(image_data))
+                )
 
             # 统一转换为 RGB
             if image.mode != 'RGB':
-                if image.mode == 'RGBA':
-                    # RGBA -> RGB (处理透明通道)
-                    background = Image.new('RGB', image.size, (255, 255, 255))
-                    background.paste(image, mask=image.split()[3])  # 使用 alpha 通道作为 mask
-                    image = background
-                else:
-                    # 其他模式直接转换
-                    image = image.convert('RGB')
+                try:
+                    if image.mode == 'RGBA':
+                        # RGBA -> RGB (处理透明通道)
+                        background = Image.new('RGB', image.size, (255, 255, 255))
+                        background.paste(image, mask=image.split()[3])  # 使用 alpha 通道作为 mask
+                        image = background
+                    else:
+                        # 其他模式直接转换
+                        image = image.convert('RGB')
+                except Exception as e:
+                    raise ImageProcessingError(
+                        message=f"Failed to convert image to RGB: {str(e)}",
+                        details={"original_mode": image.mode, "size": image.size}
+                    ) from e
 
             logger.debug(f"Image loaded: size={image.size}, mode={image.mode}")
             return image
+
+        except (ValidationError, ImageProcessingError):
+            # 重新抛出我们自己的异常
+            raise
+        except Exception as e:
+            # 捕获任何其他未预期的异常
+            logger.error(f"Unexpected error loading image: {e}", exc_info=True)
+            raise ImageProcessingError(
+                message=f"Unexpected error during image loading: {str(e)}",
+                details={"error_type": type(e).__name__}
+            ) from e
 
         except Exception as e:
             logger.error(f"Failed to load image: {e}")

@@ -10,6 +10,13 @@ from mindnlp.ocr.api.schemas.response import OCRResponse
 from mindnlp.ocr.models.loader import ModelLoader
 from mindnlp.ocr.utils.logger import get_logger
 from mindnlp.ocr.utils.image_utils import download_image_from_url
+from mindnlp.ocr.core.exceptions import (
+    ImageProcessingError,
+    ModelInferenceError,
+    ValidationError,
+    BatchProcessingError,
+    ResourceNotFoundError
+)
 from .processor.image import ImageProcessor
 from .processor.prompt import PromptBuilder
 from .parser.decoder import TokenDecoder
@@ -62,92 +69,163 @@ class VLMOCREngine:
 
         Returns:
             OCRResponse: OCR识别结果
+
+        Raises:
+            ValidationError: 输入验证失败
+            ImageProcessingError: 图像处理失败
+            ModelInferenceError: 模型推理失败
         """
         start_time = time.time()
 
         try:
             # 1. 输入验证
-            self.input_validator.validate_image(request.image)
-            self.input_validator.validate_params(
-                output_format=request.output_format,
-                language=request.language,
-                task_type=request.task_type
-            )
+            try:
+                self.input_validator.validate_image(request.image)
+                self.input_validator.validate_params(
+                    output_format=request.output_format,
+                    language=request.language,
+                    task_type=request.task_type
+                )
+            except ValueError as e:
+                raise ValidationError(
+                    message=f"Input validation failed: {str(e)}",
+                    field="request",
+                    details={"output_format": request.output_format, "language": request.language}
+                ) from e
 
             # 2. 图像预处理
             logger.info("Processing image...")
 
             # 加载为 PIL Image (Qwen2-VL processor 需要)
-            from PIL import Image
-            import io
-            if isinstance(request.image, bytes):
-                pil_image = Image.open(io.BytesIO(request.image)).convert("RGB")
-            elif isinstance(request.image, str):
-                pil_image = Image.open(request.image).convert("RGB")
-            else:
-                pil_image = request.image
+            try:
+                from PIL import Image
+                import io
+                if isinstance(request.image, bytes):
+                    pil_image = Image.open(io.BytesIO(request.image)).convert("RGB")
+                elif isinstance(request.image, str):
+                    pil_image = Image.open(request.image).convert("RGB")
+                else:
+                    pil_image = request.image
+            except Exception as e:
+                raise ImageProcessingError(
+                    message=f"Failed to load image: {str(e)}",
+                    details={"image_type": type(request.image).__name__}
+                ) from e
 
             # 3. 构建Prompt
             logger.info(f"Building prompt for task: {request.task_type}")
             # pylint: disable=no-member
-            prompt = self.prompt_builder.build(
-                task_type=request.task_type,
-                output_format=request.output_format,
-                language=request.language,
-                custom_prompt=request.custom_prompt
-            )
+            try:
+                prompt = self.prompt_builder.build(
+                    task_type=request.task_type,
+                    output_format=request.output_format,
+                    language=request.language,
+                    custom_prompt=request.custom_prompt
+                )
+            except Exception as e:
+                raise ValidationError(
+                    message=f"Failed to build prompt: {str(e)}",
+                    field="prompt_config",
+                    details={"task_type": request.task_type, "language": request.language}
+                ) from e
 
             # 4. 将 PIL Image 转换为 data URI（qwen_vl_utils 需要）
-            import base64
-            from io import BytesIO
-            buffered = BytesIO()
-            pil_image.save(buffered, format="JPEG")
-            img_b64 = base64.b64encode(buffered.getvalue()).decode()
-            image_uri = f"data:image/jpeg;base64,{img_b64}"
+            try:
+                import base64
+                from io import BytesIO
+                buffered = BytesIO()
+                pil_image.save(buffered, format="JPEG")
+                img_b64 = base64.b64encode(buffered.getvalue()).decode()
+                image_uri = f"data:image/jpeg;base64,{img_b64}"
+            except Exception as e:
+                raise ImageProcessingError(
+                    message=f"Failed to encode image: {str(e)}",
+                    details={"image_size": pil_image.size, "mode": pil_image.mode}
+                ) from e
             
             # 5. 构建消息格式并进行推理
             logger.info("Running model inference...")
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "image", "image": image_uri},
-                        {"type": "text", "text": prompt}
-                    ]
-                }
-            ]
-            
-            # 使用 model_instance 的 batch_generate 方法（已包含输入准备和解码）
-            outputs = self.model_instance.batch_generate(
-                batch_messages=[messages],
-                max_new_tokens=512
-            )
+            try:
+                messages = [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "image", "image": image_uri},
+                            {"type": "text", "text": prompt}
+                        ]
+                    }
+                ]
+                
+                # 使用 model_instance 的 batch_generate 方法（已包含输入准备和解码）
+                outputs = self.model_instance.batch_generate(
+                    batch_messages=[messages],
+                    max_new_tokens=2048
+                )
+            except Exception as e:
+                raise ModelInferenceError(
+                    message=f"Model inference failed: {str(e)}",
+                    model_name=self.model_name,
+                    details={"error_type": type(e).__name__}
+                ) from e
 
             # 6. 获取解码后的文本（batch_generate 已返回解码文本）
             logger.info(f"Batch generate returned: {type(outputs)}, value: {outputs}")
             
-            if outputs is None:
-                raise ValueError("Model batch_generate returned None")
-            if not isinstance(outputs, (list, tuple)):
-                raise ValueError(f"Model batch_generate returned unexpected type: {type(outputs)}")
-            if len(outputs) == 0:
-                raise ValueError("Model batch_generate returned empty list")
-                
-            decoded_text = outputs[0]
-            logger.info(f"Decoded text: {decoded_text[:100] if decoded_text else 'None'}...")
+            try:
+                if outputs is None:
+                    raise ModelInferenceError(
+                        message="Model returned None",
+                        model_name=self.model_name
+                    )
+                if not isinstance(outputs, (list, tuple)):
+                    raise ModelInferenceError(
+                        message=f"Model returned unexpected type: {type(outputs)}",
+                        model_name=self.model_name,
+                        details={"output_type": type(outputs).__name__}
+                    )
+                if len(outputs) == 0:
+                    raise ModelInferenceError(
+                        message="Model returned empty output",
+                        model_name=self.model_name
+                    )
+                    
+                decoded_text = outputs[0]
+                logger.info(f"Decoded text: {decoded_text[:100] if decoded_text else 'None'}...")
+            except ModelInferenceError:
+                raise
+            except Exception as e:
+                raise ModelInferenceError(
+                    message=f"Failed to process model output: {str(e)}",
+                    model_name=self.model_name
+                ) from e
 
             # 7. 结果解析
-            parsed_result = self.result_parser.parse(
-                decoded_text,
-                output_format=request.output_format,
-                confidence_threshold=request.confidence_threshold
-            )
+            try:
+                parsed_result = self.result_parser.parse(
+                    decoded_text,
+                    output_format=request.output_format,
+                    confidence_threshold=request.confidence_threshold
+                )
+            except Exception as e:
+                logger.error(f"Result parsing failed: {e}", exc_info=True)
+                raise ModelInferenceError(
+                    message=f"Failed to parse model output: {str(e)}",
+                    model_name=self.model_name,
+                    details={"raw_output": decoded_text[:200]}
+                ) from e
 
             # 8. 格式化输出
-            formatted_result = self.output_formatter.format(
-                parsed_result,
-                output_format=request.output_format
-            )
+            try:
+                formatted_result = self.output_formatter.format(
+                    parsed_result,
+                    output_format=request.output_format
+                )
+            except Exception as e:
+                logger.error(f"Output formatting failed: {e}", exc_info=True)
+                raise ModelInferenceError(
+                    message=f"Failed to format output: {str(e)}",
+                    model_name=self.model_name
+                ) from e
 
             # 构建响应
             processing_time = time.time() - start_time
@@ -184,23 +262,18 @@ class VLMOCREngine:
                 }
             )
 
+        except (ValidationError, ImageProcessingError, ModelInferenceError) as e:
+            # 重新抛出我们自己的异常
+            logger.error(f"OCR prediction failed: {e}", exc_info=True)
+            raise
         except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.error(f"OCR prediction failed: {str(e)}")
-            processing_time = time.time() - start_time
-            return OCRResponse(
-                success=False,
-                texts=[],
-                boxes=[],
-                confidences=[],
-                raw_output="",
-                inference_time=processing_time,
+            # 捕获任何未预期的异常
+            logger.error(f"Unexpected error during OCR prediction: {e}", exc_info=True)
+            raise ModelInferenceError(
+                message=f"Unexpected error: {str(e)}",
                 model_name=self.model_name,
-                metadata={
-                    'format': request.output_format,
-                    'language': request.language
-                },
-                error=str(e)
-            )
+                details={"error_type": type(e).__name__}
+            ) from e
 
     def predict_batch(self, request: OCRBatchRequest) -> List[OCRResponse]:
         """
@@ -211,22 +284,63 @@ class VLMOCREngine:
 
         Returns:
             List[OCRResponse]: OCR识别结果列表
+
+        Raises:
+            ValidationError: 批量输入验证失败
+            BatchProcessingError: 批量处理失败（当所有图像都失败时）
         """
         logger.info(f"Processing batch of {len(request.images)} images...")
+        
+        if not request.images:
+            raise ValidationError(
+                message="Empty batch: no images provided",
+                field="images"
+            )
+
         results = []
+        errors = []
 
         for idx, image in enumerate(request.images):
             logger.info(f"Processing image {idx + 1}/{len(request.images)}")
-            single_request = OCRRequest(
-                image=image,
-                output_format=request.output_format,
-                language=request.language,
-                task_type=request.task_type,
-                confidence_threshold=request.confidence_threshold,
-                custom_prompt=request.custom_prompt
+            try:
+                single_request = OCRRequest(
+                    image=image,
+                    output_format=request.output_format,
+                    language=request.language,
+                    task_type=request.task_type,
+                    confidence_threshold=request.confidence_threshold,
+                    custom_prompt=request.custom_prompt
+                )
+                result = self.predict(single_request)
+                results.append(result)
+            except Exception as e:
+                logger.error(f"Failed to process image {idx + 1}: {e}", exc_info=True)
+                errors.append({"index": idx, "error": str(e), "error_type": type(e).__name__})
+                # 创建失败的响应
+                results.append(OCRResponse(
+                    success=False,
+                    texts=[],
+                    boxes=[],
+                    confidences=[],
+                    raw_output="",
+                    inference_time=0.0,
+                    model_name=self.model_name,
+                    metadata={"image_index": idx},
+                    error=str(e)
+                ))
+
+        # 如果所有图像都失败，抛出批处理异常
+        if len(errors) == len(request.images):
+            raise BatchProcessingError(
+                message="All images in batch failed to process",
+                total=len(request.images),
+                failed=len(errors),
+                errors=errors
             )
-            result = self.predict(single_request)
-            results.append(result)
+        
+        # 如果部分失败，记录警告但返回结果
+        if errors:
+            logger.warning(f"Batch processing completed with {len(errors)} failures out of {len(request.images)} images")
 
         return results
 
@@ -239,20 +353,62 @@ class VLMOCREngine:
 
         Returns:
             OCRResponse: OCR识别结果
+
+        Raises:
+            ValidationError: URL验证失败
+            ResourceNotFoundError: 图像下载失败
+            ImageProcessingError: 图像处理失败
+            ModelInferenceError: 模型推理失败
         """
         logger.info(f"Downloading image from URL: {request.image_url}")
-        image_bytes = download_image_from_url(str(request.image_url))
+        
+        # 验证URL格式
+        if not request.image_url:
+            raise ValidationError(
+                message="Empty image URL",
+                field="image_url"
+            )
+        
+        if not request.image_url.startswith(('http://', 'https://')):
+            raise ValidationError(
+                message=f"Invalid URL scheme: {request.image_url}",
+                field="image_url",
+                value=request.image_url
+            )
+        
+        # 下载图像
+        try:
+            image_bytes = download_image_from_url(str(request.image_url))
+        except Exception as e:
+            raise ResourceNotFoundError(
+                message=f"Failed to download image from URL: {str(e)}",
+                resource_type="image",
+                resource_path=str(request.image_url),
+                details={"error_type": type(e).__name__}
+            ) from e
 
-        single_request = OCRRequest(
-            image=image_bytes,
-            output_format=request.output_format,
-            language=request.language,
-            task_type=request.task_type,
-            confidence_threshold=request.confidence_threshold,
-            custom_prompt=request.custom_prompt
-        )
+        # 创建单个请求并处理
+        try:
+            single_request = OCRRequest(
+                image=image_bytes,
+                output_format=request.output_format,
+                language=request.language,
+                task_type=request.task_type,
+                confidence_threshold=request.confidence_threshold,
+                custom_prompt=request.custom_prompt
+            )
 
-        return self.predict(single_request)
+            return self.predict(single_request)
+        except (ValidationError, ImageProcessingError, ModelInferenceError):
+            # 重新抛出我们的异常
+            raise
+        except Exception as e:
+            # 捕获任何其他异常
+            logger.error(f"Unexpected error processing URL image: {e}", exc_info=True)
+            raise ImageProcessingError(
+                message=f"Unexpected error processing image from URL: {str(e)}",
+                details={"url": str(request.image_url), "error_type": type(e).__name__}
+            ) from e
 
     def _prepare_inputs(self, image, prompt):
         """

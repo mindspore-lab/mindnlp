@@ -7,6 +7,12 @@ from typing import List
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException  # pylint: disable=import-error
 from mindnlp.ocr.utils.logger import get_logger
 from mindnlp.ocr.config.settings import get_settings
+from mindnlp.ocr.core.exceptions import (
+    ValidationError,
+    ImageProcessingError,
+    ModelInferenceError,
+    OCRException
+)
 from ..schemas.request import OCRRequest, OCRURLRequest
 from ..schemas.response import OCRResponse, BatchOCRResponse
 
@@ -80,6 +86,13 @@ async def predict_image(
 
         # 读取图像数据
         image_bytes = await file.read()
+        
+        # 验证图像大小
+        if not image_bytes:
+            raise HTTPException(
+                status_code=400,
+                detail="Empty file uploaded"
+            )
 
         # 构建请求
         _request = OCRRequest(
@@ -92,7 +105,43 @@ async def predict_image(
 
         # 执行真实 OCR 推理
         logger.info(f"Processing image with real model: {settings.default_model}")
-        result = _engine.predict(_request)
+        try:
+            result = _engine.predict(_request)
+        except ValidationError as e:
+            logger.error(f"Validation error: {e.to_dict()}")
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": e.message,
+                    "field": e.field,
+                    "details": e.details
+                }
+            ) from e
+        except ImageProcessingError as e:
+            logger.error(f"Image processing error: {e.to_dict()}", exc_info=True)
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": e.message,
+                    "details": e.details
+                }
+            ) from e
+        except ModelInferenceError as e:
+            logger.error(f"Model inference error: {e.to_dict()}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": e.message,
+                    "model": e.model_name,
+                    "details": e.details
+                }
+            ) from e
+        except OCRException as e:
+            logger.error(f"OCR error: {e.to_dict()}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail=e.to_dict()
+            ) from e
         
         # 如果推理成功，添加额外的元数据
         if result.success:
@@ -112,11 +161,18 @@ async def predict_image(
         # 重新抛出HTTPException，不要捕获
         raise
     except RuntimeError as e:
-        logger.error(f"Engine not ready: {e}")
+        logger.error(f"Engine not ready: {e}", exc_info=True)
         raise HTTPException(status_code=503, detail=str(e)) from e
     except Exception as e:
-        logger.error(f"OCR prediction failed: {e}")
-        raise HTTPException(status_code=500, detail=f"OCR prediction failed: {str(e)}") from e
+        logger.error(f"Unexpected error in OCR prediction: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Internal server error",
+                "message": str(e),
+                "type": type(e).__name__
+            }
+        ) from e
 
 
 @router.get("/predict_batch")
@@ -164,6 +220,13 @@ async def predict_batch(
     start_time = time.time()
 
     try:
+        # 验证文件列表
+        if not files:
+            raise HTTPException(
+                status_code=400,
+                detail="No files uploaded"
+            )
+
         # 获取引擎
         _engine = get_engine()
 
@@ -173,7 +236,38 @@ async def predict_batch(
         
         for idx, file in enumerate(files):
             try:
+                # 验证文件类型
+                if file.content_type not in ["image/jpeg", "image/png", "image/jpg", "image/webp", "image/bmp"]:
+                    logger.warning(f"Skipping file {file.filename} with invalid type: {file.content_type}")
+                    results.append(OCRResponse(
+                        success=False,
+                        texts=[],
+                        boxes=[],
+                        confidences=[],
+                        raw_output="",
+                        inference_time=0.0,
+                        model_name=settings.default_model,
+                        metadata={"filename": file.filename},
+                        error=f"Invalid file type: {file.content_type}"
+                    ))
+                    continue
+                
                 image_bytes = await file.read()
+                
+                if not image_bytes:
+                    logger.warning(f"Skipping empty file {file.filename}")
+                    results.append(OCRResponse(
+                        success=False,
+                        texts=[],
+                        boxes=[],
+                        confidences=[],
+                        raw_output="",
+                        inference_time=0.0,
+                        model_name=settings.default_model,
+                        metadata={"filename": file.filename},
+                        error="Empty file"
+                    ))
+                    continue
 
                 # 执行真实 OCR 推理
                 _request = OCRRequest(
@@ -185,7 +279,22 @@ async def predict_batch(
                 )
                 
                 logger.info(f"Processing image {idx+1}/{len(files)}: {file.filename}")
-                single_result = _engine.predict(_request)
+                try:
+                    single_result = _engine.predict(_request)
+                except OCRException as e:
+                    logger.error(f"OCR error for {file.filename}: {e.to_dict()}")
+                    results.append(OCRResponse(
+                        success=False,
+                        texts=[],
+                        boxes=[],
+                        confidences=[],
+                        raw_output="",
+                        inference_time=0.0,
+                        model_name=settings.default_model,
+                        metadata={"filename": file.filename},
+                        error=e.message
+                    ))
+                    continue
                 
                 # 添加文件名到元数据
                 if single_result.success:
@@ -196,7 +305,7 @@ async def predict_batch(
                 results.append(single_result)
                 
             except Exception as e:
-                logger.error(f"Failed to process image {file.filename}: {e}")
+                logger.error(f"Failed to process image {file.filename}: {e}", exc_info=True)
                 # 为失败的图像添加错误结果
                 error_result = OCRResponse(
                     success=False,

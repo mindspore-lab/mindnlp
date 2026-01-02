@@ -39,14 +39,21 @@ async def lifespan(_app: FastAPI):  # pylint: disable=redefined-outer-name
         else:
             # 使用真实引擎
             from mindnlp.ocr.core.engine import VLMOCREngine
-            _engine = VLMOCREngine(
-                model_name=settings.default_model,
-                device=settings.device
-            )
-            logger.info("OCR engine initialized successfully")
+            from mindnlp.ocr.core.exceptions import ModelLoadingError
+            try:
+                _engine = VLMOCREngine(
+                    model_name=settings.default_model,
+                    device=settings.device
+                )
+                logger.info("OCR engine initialized successfully")
+            except ModelLoadingError as e:
+                logger.error(f"Model loading failed: {e.to_dict()}", exc_info=True)
+                _engine = None
+                raise RuntimeError(f"Failed to load OCR model: {e.message}") from e
     except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error(f"Failed to initialize OCR engine: {e}")
+        logger.error(f"Failed to initialize OCR engine: {e}", exc_info=True)
         _engine = None
+        raise
 
     yield
 

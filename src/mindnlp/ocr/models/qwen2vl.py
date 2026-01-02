@@ -9,6 +9,7 @@ import torch
 from PIL import Image
 from transformers import AutoModel, AutoTokenizer, AutoProcessor
 from mindnlp.ocr.utils.logger import get_logger
+from mindnlp.ocr.core.exceptions import ModelLoadingError, ModelInferenceError
 from .base import VLMModelBase
 
 
@@ -47,7 +48,12 @@ class Qwen2VLModel(VLMModelBase):
         self.load_tokenizer()
 
     def load_model(self):
-        """加载Qwen2-VL模型"""
+        """
+        加载Qwen2-VL模型
+        
+        Raises:
+            ModelLoadingError: 模型加载失败
+        """
         try:
             logger.info(f"Loading Qwen2-VL model: {self.model_name}")
             # Qwen2-VL 官方推荐的加载方式：
@@ -121,12 +127,42 @@ class Qwen2VLModel(VLMModelBase):
             
             logger.info(f"Qwen2-VL model loaded successfully (type: {type(self.model).__name__}, has_generate: {hasattr(self.model, 'generate')})")
             return self.model
+        except ImportError as e:
+            logger.error(f"Failed to import required modules: {e}", exc_info=True)
+            raise ModelLoadingError(
+                message=f"Missing required dependencies for {self.model_name}: {str(e)}",
+                model_name=self.model_name,
+                details={"error_type": "ImportError", "missing_module": str(e)}
+            ) from e
+        except OSError as e:
+            logger.error(f"Model files not found: {e}", exc_info=True)
+            raise ModelLoadingError(
+                message=f"Model files not found for {self.model_name}: {str(e)}",
+                model_name=self.model_name,
+                details={"error_type": "OSError", "suggestion": "Check model path or download model files"}
+            ) from e
+        except RuntimeError as e:
+            logger.error(f"Runtime error during model loading: {e}", exc_info=True)
+            raise ModelLoadingError(
+                message=f"Runtime error loading {self.model_name}: {str(e)}",
+                model_name=self.model_name,
+                details={"error_type": "RuntimeError", "device": self.device}
+            ) from e
         except Exception as e:
-            logger.error(f"Failed to load model: {e}")
-            raise
+            logger.error(f"Unexpected error loading model: {e}", exc_info=True)
+            raise ModelLoadingError(
+                message=f"Unexpected error loading {self.model_name}: {str(e)}",
+                model_name=self.model_name,
+                details={"error_type": type(e).__name__}
+            ) from e
 
     def load_processor(self):
-        """加载Qwen2-VL processor"""
+        """
+        加载Qwen2-VL processor
+        
+        Raises:
+            ModelLoadingError: Processor加载失败
+        """
         try:
             logger.info(f"Loading Qwen2-VL processor: {self.model_name}")
             
@@ -143,29 +179,66 @@ class Qwen2VLModel(VLMModelBase):
             except Exception as local_err:
                 logger.warning(f"Failed to load from local cache: {local_err}")
                 logger.info("Attempting to load processor from online...")
-                self.processor = AutoProcessor.from_pretrained(
-                    self.model_name,
-                    trust_remote_code=True,
-                    min_pixels=self.min_pixels,
-                    max_pixels=self.max_pixels
-                )
-                logger.info("Processor loaded from online")
+                try:
+                    self.processor = AutoProcessor.from_pretrained(
+                        self.model_name,
+                        trust_remote_code=True,
+                        min_pixels=self.min_pixels,
+                        max_pixels=self.max_pixels
+                    )
+                    logger.info("Processor loaded from online")
+                except Exception as online_err:
+                    raise ModelLoadingError(
+                        message=f"Failed to load processor from both local and online: {str(online_err)}",
+                        model_name=self.model_name,
+                        details={"local_error": str(local_err), "online_error": str(online_err)}
+                    ) from online_err
                 
             logger.info(f"Qwen2-VL processor loaded successfully (min_pixels={self.min_pixels}, max_pixels={self.max_pixels})")
             return self.processor
-        except Exception as e:
-            logger.error(f"Failed to load processor: {e}")
+        except ModelLoadingError:
+            # 重新抛出我们自己的异常
             raise
+        except Exception as e:
+            logger.error(f"Unexpected error loading processor: {e}", exc_info=True)
+            raise ModelLoadingError(
+                message=f"Unexpected error loading processor for {self.model_name}: {str(e)}",
+                model_name=self.model_name,
+                details={"error_type": type(e).__name__}
+            ) from e
 
     def load_tokenizer(self):
-        """加载Qwen2-VL tokenizer"""
+        """
+        加载Qwen2-VL tokenizer
+        
+        Raises:
+            ModelLoadingError: Tokenizer加载失败
+        """
         try:
             logger.info(f"Loading Qwen2-VL tokenizer: {self.model_name}")
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_name,
-                trust_remote_code=True,
-                local_files_only=True
-            )
+            try:
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    self.model_name,
+                    trust_remote_code=True,
+                    local_files_only=True
+                )
+                logger.info("Tokenizer loaded from local cache")
+            except Exception as local_err:
+                logger.warning(f"Failed to load tokenizer from local cache: {local_err}")
+                logger.info("Attempting to load tokenizer from online...")
+                try:
+                    self.tokenizer = AutoTokenizer.from_pretrained(
+                        self.model_name,
+                        trust_remote_code=True
+                    )
+                    logger.info("Tokenizer loaded from online")
+                except Exception as online_err:
+                    raise ModelLoadingError(
+                        message=f"Failed to load tokenizer from both local and online: {str(online_err)}",
+                        model_name=self.model_name,
+                        details={"local_error": str(local_err), "online_error": str(online_err)}
+                    ) from online_err
+            
             logger.info("Qwen2-VL tokenizer loaded successfully")
             return self.tokenizer
         except Exception as e:
