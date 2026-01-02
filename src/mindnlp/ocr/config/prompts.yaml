@@ -2,11 +2,11 @@
 
 # 通用OCR任务
 general:
-  zh: "请识别图像中的所有文本内容"
-  en: "Please recognize all text content in the image"
-  ja: "画像内のすべてのテキストコンテンツを認識してください"
-  ko: "이미지의 모든 텍스트 내용을 인식하십시오"
-  auto: "请识别图像中的所有文本内容"
+  zh: "请完整识别图像中的所有文字内容，逐字逐行地输出，确保不遗漏任何文字"
+  en: "Please completely recognize all text content in the image, output word by word and line by line, ensuring no text is missed"
+  ja: "画像内のすべてのテキスト内容を完全に認識し、一字一行ずつ出力してください。テキストを漏らさないようにしてください"
+  ko: "이미지의 모든 텍스트 내용을 완전히 인식하고 한 글자씩 한 줄씩 출력하여 텍스트가 누락되지 않도록 하십시오"
+  auto: "请完整识别图像中的所有文字内容，逐字逐行地输出，确保不遗漏任何文字"
 
 # 文档理解任务
 document:
@@ -34,7 +34,7 @@ formula:
 
 # 输出格式提示
 output_format:
-  text: "，以纯文本格式输出"
+  text: "。只输出识别到的所有文字，按原图顺序从上到下、从左到右排列，不要包含坐标、格式标记等其他信息"
   json: "，以JSON格式输出，包含文本内容和位置坐标"
   markdown: "，以Markdown格式输出，保持文档结构"
 

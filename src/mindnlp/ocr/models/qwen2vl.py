@@ -357,7 +357,7 @@ class Qwen2VLModel(VLMModelBase):
         # 设置默认生成参数
         do_sample = kwargs.get('do_sample', False)
         generation_config = {
-            'max_new_tokens': kwargs.get('max_new_tokens', 512),
+            'max_new_tokens': kwargs.get('max_new_tokens', 2048),  # 增加到2048以支持更长的文本
             'do_sample': do_sample,
         }
         
