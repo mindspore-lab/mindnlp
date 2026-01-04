@@ -64,13 +64,23 @@ class Qwen2VLModel(VLMModelBase):
                 
                 # 使用float16节省显存
                 if self.device != "cpu":
-                    logger.info("Using float16 precision to optimize GPU memory...")
-                    self.model = Qwen2VLForConditionalGeneration.from_pretrained(
-                        self.model_name,
-                        torch_dtype=torch.float16,
-                        device_map="auto",
-                        low_cpu_mem_usage=True
-                    )
+                    device_type = "NPU" if "npu" in self.device else "GPU"
+                    logger.info(f"Using float16 precision to optimize {device_type} memory...")
+                    # NPU设备不支持device_map="auto"，需要手动指定设备
+                    if "npu" in self.device:
+                        self.model = Qwen2VLForConditionalGeneration.from_pretrained(
+                            self.model_name,
+                            torch_dtype=torch.float16,
+                            device_map=None,
+                            low_cpu_mem_usage=True
+                        ).to(self.device)
+                    else:
+                        self.model = Qwen2VLForConditionalGeneration.from_pretrained(
+                            self.model_name,
+                            torch_dtype=torch.float16,
+                            device_map="auto",
+                            low_cpu_mem_usage=True
+                        )
                 else:
                     self.model = Qwen2VLForConditionalGeneration.from_pretrained(
                         self.model_name,
@@ -97,14 +107,25 @@ class Qwen2VLModel(VLMModelBase):
                 
                 # 使用float16优化
                 if self.device != "cpu":
-                    logger.info("Using float16 precision (trust_remote_code path)...")
-                    self.model = AutoModelForVision2Seq.from_pretrained(
-                        self.model_name,
-                        trust_remote_code=True,
-                        torch_dtype=torch.float16,
-                        device_map="auto",
-                        low_cpu_mem_usage=True
-                    )
+                    device_type = "NPU" if "npu" in self.device else "GPU"
+                    logger.info(f"Using float16 precision ({device_type}, trust_remote_code path)...")
+                    # NPU设备不支持device_map="auto"，需要手动指定设备
+                    if "npu" in self.device:
+                        self.model = AutoModelForVision2Seq.from_pretrained(
+                            self.model_name,
+                            trust_remote_code=True,
+                            torch_dtype=torch.float16,
+                            device_map=None,
+                            low_cpu_mem_usage=True
+                        ).to(self.device)
+                    else:
+                        self.model = AutoModelForVision2Seq.from_pretrained(
+                            self.model_name,
+                            trust_remote_code=True,
+                            torch_dtype=torch.float16,
+                            device_map="auto",
+                            low_cpu_mem_usage=True
+                        )
                 else:
                     self.model = AutoModelForVision2Seq.from_pretrained(
                         self.model_name,
