@@ -113,7 +113,7 @@ async def predict_image(
                 status_code=400,
                 detail={
                     "error": e.message,
-                    "field": e.field,
+                    "field": e.details.get("field") if e.details else None,
                     "details": e.details
                 }
             ) from e
@@ -132,7 +132,7 @@ async def predict_image(
                 status_code=500,
                 detail={
                     "error": e.message,
-                    "model": e.model_name,
+                    "model": e.details.get("model_name") if e.details else None,
                     "details": e.details
                 }
             ) from e

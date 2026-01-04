@@ -27,19 +27,36 @@ def download_image_from_url(url: str, timeout: int = 10) -> bytes:
     """
     try:
         logger.info("Downloading image from: %s", url)
-        response = requests.get(url, timeout=timeout)
+        response = requests.get(url, timeout=timeout, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
         response.raise_for_status()
 
+        # 检查响应内容类型
+        content_type = response.headers.get('Content-Type', '')
+        logger.info("Response Content-Type: %s, Size: %d bytes", content_type, len(response.content))
+        
         # 验证是否为有效图像
-        image = Image.open(io.BytesIO(response.content))
-        image.verify()
+        # 注意: verify() 会使 Image 对象失效，所以需要重新打开
+        try:
+            image = Image.open(io.BytesIO(response.content))
+            # 获取图像信息（这会验证图像格式）
+            image_format = image.format
+            image_size = image.size
+            logger.info("Image downloaded successfully: %s, %s", image_size, image_format)
+        except Exception as e:
+            logger.error("Failed to parse image - Content-Type: %s, Size: %d, First 100 bytes: %s",
+                        content_type, len(response.content), response.content[:100])
+            raise ValueError(f"Invalid image format (Content-Type: {content_type}): {str(e)}") from e
 
-        logger.info("Image downloaded successfully: %s, %s", image.size, image.format)
         return response.content
 
     except requests.RequestException as e:
         logger.error("Failed to download image: %s", e)
         raise IOError(f"Failed to download image from URL: {str(e)}") from e
+    except ValueError:
+        # 重新抛出图像验证错误
+        raise
     except Exception as e:
         logger.error("Invalid image data: %s", e)
         raise ValueError(f"Invalid image data from URL: {str(e)}") from e
