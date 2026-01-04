@@ -69,15 +69,13 @@ class Qwen2VLModel(VLMModelBase):
                         self.model_name,
                         torch_dtype=torch.float16,
                         device_map="auto",
-                        local_files_only=True,
                         low_cpu_mem_usage=True
                     )
                 else:
                     self.model = Qwen2VLForConditionalGeneration.from_pretrained(
                         self.model_name,
                         torch_dtype=torch.float32,
-                        device_map=None,
-                        local_files_only=True
+                        device_map=None
                     )
                 logger.info(f"Loaded with Qwen2VLForConditionalGeneration on device: {self.model.device if hasattr(self.model, 'device') else 'auto'}")
             except ImportError:
@@ -87,8 +85,7 @@ class Qwen2VLModel(VLMModelBase):
                 from transformers import AutoConfig
                 config = AutoConfig.from_pretrained(
                     self.model_name,
-                    trust_remote_code=True,
-                    local_files_only=True
+                    trust_remote_code=True
                 )
                 # 获取模型类名
                 if config.architectures:
@@ -106,7 +103,6 @@ class Qwen2VLModel(VLMModelBase):
                         trust_remote_code=True,
                         torch_dtype=torch.float16,
                         device_map="auto",
-                        local_files_only=True,
                         low_cpu_mem_usage=True
                     )
                 else:
@@ -114,8 +110,7 @@ class Qwen2VLModel(VLMModelBase):
                         self.model_name,
                         trust_remote_code=True,
                         torch_dtype=torch.float32,
-                        device_map=None,
-                        local_files_only=True
+                        device_map=None
                     )
                 logger.info(f"Loaded with AutoModelForVision2Seq on device: {self.model.device if hasattr(self.model, 'device') else 'auto'}")
             
@@ -172,8 +167,7 @@ class Qwen2VLModel(VLMModelBase):
                     self.model_name,
                     trust_remote_code=True,
                     min_pixels=self.min_pixels,
-                    max_pixels=self.max_pixels,
-                    local_files_only=True
+                    max_pixels=self.max_pixels
                 )
                 logger.info("Processor loaded from local cache")
             except Exception as local_err:
@@ -219,8 +213,7 @@ class Qwen2VLModel(VLMModelBase):
             try:
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     self.model_name,
-                    trust_remote_code=True,
-                    local_files_only=True
+                    trust_remote_code=True
                 )
                 logger.info("Tokenizer loaded from local cache")
             except Exception as local_err:

@@ -5,12 +5,66 @@ OCR API 独立启动脚本
 
 import os
 import sys
+import subprocess
 
 # 将 src 目录添加到 Python 路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.abspath(os.path.join(current_dir, '..', '..'))
 if src_dir not in sys.path:
     sys.path.insert(0, src_dir)
+
+
+def check_and_install_dependencies():
+    """检测并自动安装缺失的依赖"""
+    required_packages = {
+        'torch': 'torch>=2.4.0',
+        'torchvision': 'torchvision>=0.19.0',
+        'transformers': 'transformers>=4.37.0',
+        'fastapi': 'fastapi>=0.109.0',
+        'uvicorn': 'uvicorn[standard]>=0.27.0',
+        'PIL': 'pillow>=10.0.0',
+        'pydantic_settings': 'pydantic-settings>=2.0.0',
+        'requests': 'requests>=2.31.0',
+        'yaml': 'pyyaml>=6.0',
+    }
+    
+    missing_packages = []
+    
+    print("正在检查依赖...")
+    for package, install_name in required_packages.items():
+        try:
+            __import__(package)
+            print(f"  ✓ {package}")
+        except ImportError:
+            print(f"  ✗ {package} (缺失)")
+            missing_packages.append(install_name)
+    
+    if missing_packages:
+        print(f"\n发现 {len(missing_packages)} 个缺失的依赖包")
+        print("正在自动安装...")
+        
+        try:
+            # 使用当前 Python 解释器安装依赖
+            cmd = [sys.executable, '-m', 'pip', 'install'] + missing_packages
+            subprocess.check_call(cmd)
+            print("✓ 依赖安装完成")
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"✗ 依赖安装失败: {e}")
+            print("\n请手动安装依赖:")
+            print(f"  pip install {' '.join(missing_packages)}")
+            return False
+    else:
+        print("✓ 所有依赖已满足")
+        return True
+
+
+# 检查并安装依赖
+if not check_and_install_dependencies():
+    print("\n无法继续启动服务，请先安装依赖")
+    sys.exit(1)
+
+print("")  # 空行分隔
 
 # 设置环境变量
 os.environ['NO_PROXY'] = '*'

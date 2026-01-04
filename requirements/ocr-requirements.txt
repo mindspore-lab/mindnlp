@@ -16,9 +16,16 @@
 # 核心依赖（必需）
 # ============================================================================
 
-# PyTorch（真实模型测试需要 2.4.0+，Mock 测试兼容 2.1.2+）
+# PyTorch GPU 版本（CUDA 11.8，推荐）
+# 安装命令: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+#
+# 其他 CUDA 版本:
+# CUDA 12.1: --index-url https://download.pytorch.org/whl/cu121
+# CUDA 12.4: pip install torch torchvision torchaudio (默认最新)
+# CPU 版本: --index-url https://download.pytorch.org/whl/cpu
 torch>=2.4.0
 torchvision>=0.19.0
+torchaudio>=2.4.0
 
 # Transformers（需要 4.37.0+ 以支持 Qwen2VL）
 transformers>=4.37.0
