@@ -3810,6 +3810,29 @@ class MishFunction(Function):
 def mish(input):
     return MishFunction.apply(input)
 
+class LeakyReluFunction(Function):
+    @staticmethod
+    def forward(ctx, input, negative_slope):
+        x = input.asnumpy()
+        y = np.where(x > 0, x, negative_slope * x)
+        result = ms.Tensor.from_numpy(y)
+        ctx.save_for_backward(input)
+        ctx.negative_slope = negative_slope
+        return result
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, = ctx.saved_tensors
+        grad_input = None
+        if ctx.needs_input_grad[0]:
+            x = input.asnumpy()
+            grad = np.where(x > 0, 1.0, ctx.negative_slope)
+            grad_input = ms.Tensor.from_numpy(grad_output.asnumpy() * grad)
+        return grad_input, None
+
+def leaky_relu(input, negative_slope):
+    return LeakyReluFunction.apply(input, negative_slope)
+
 
 class NegFunction(Function):
     @staticmethod
@@ -5458,3 +5481,149 @@ def stop_gradient(input):
 
 def isfinite(input):
     return mindtorch.Tensor(np.isfinite(input.asnumpy()))
+
+class IsInfFunction(Function):
+    @staticmethod
+    def forward(ctx, input):
+        out = np.isinf(input.asnumpy())
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
+        return ms.Tensor.from_numpy(out)
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        return None
+
+def isinf(input):
+    return IsInfFunction.apply(input)
+
+class LogitFunction(Function):
+    @staticmethod
+    def forward(ctx, input, eps=None):
+        x_np = input.asnumpy()
+        if eps is not None:
+            x_np = np.clip(x_np, eps, 1.0 - eps)
+            ctx.eps = eps
+        else:
+            ctx.eps = None
+        ctx.save_for_backward(input)
+        out = np.log(x_np / (1.0 - x_np))
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
+        return ms.Tensor.from_numpy(out)
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, = ctx.saved_tensors
+        grad_input = None
+        if ctx.needs_input_grad[0]:
+            x_np = input.asnumpy()
+            grad_out_np = grad_output.asnumpy()
+            if ctx.eps is not None:
+                mask = (x_np > ctx.eps) & (x_np < 1.0 - ctx.eps)
+                grad_np = np.zeros_like(x_np, dtype=grad_out_np.dtype)
+                grad_np[mask] = grad_out_np[mask] / (x_np[mask] * (1.0 - x_np[mask]))
+            else:
+                grad_np = grad_out_np / (x_np * (1.0 - x_np))
+            if not isinstance(grad_np, np.ndarray):
+                grad_np = np.array(grad_np)
+            grad_input = ms.Tensor.from_numpy(grad_np)
+        return grad_input, None
+
+def logit(input, eps=None):
+    return LogitFunction.apply(input, eps)
+
+def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
+    # Expand to 2D conv: (N,C,L) -> (N,C,1,L), kernel (C_out,C_in/groups,K) -> (C_out,C_in/groups,1,K)
+    input_2d = expand_dims(input, 2)
+    weight_np = weight.asnumpy()
+    weight_2d = ms.Tensor.from_numpy(weight_np.reshape(weight_np.shape[0], weight_np.shape[1], 1, weight_np.shape[2]))
+    # Normalize stride, padding, dilation for 2D
+    if isinstance(stride, int):
+        stride_2d = (1, stride)
+    elif isinstance(stride, (tuple, list)):
+        stride_2d = (1, stride[0]) if len(stride) >= 1 else (1, 1)
+    else:
+        stride_2d = (1, 1)
+    if isinstance(dilation, int):
+        dilation_2d = (1, dilation)
+    elif isinstance(dilation, (tuple, list)):
+        dilation_2d = (1, dilation[0]) if len(dilation) >= 1 else (1, 1)
+    else:
+        dilation_2d = (1, 1)
+    if isinstance(padding, str):
+        padding_2d = padding
+    elif isinstance(padding, int):
+        padding_2d = (0, padding)
+    elif isinstance(padding, (tuple, list)):
+        if len(padding) == 1:
+            padding_2d = (0, padding[0])
+        elif len(padding) == 2:
+            padding_2d = (0, padding[1])
+        else:
+            padding_2d = (0, 0)
+    else:
+        padding_2d = 0
+    out_2d = conv2d(input_2d, weight_2d, bias=bias, stride=stride_2d, padding=padding_2d, dilation=dilation_2d, groups=groups, training=True)
+    out_np = out_2d.asnumpy()
+    out_1d = np.squeeze(out_np, axis=2)
+    return ms.Tensor.from_numpy(out_1d)
+
+def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1):
+    x = input.asnumpy()
+    w = weight.asnumpy()
+    N, C_in, H, W = x.shape
+    # Normalize params
+    if isinstance(stride, int):
+        stride_h, stride_w = stride, stride
+    else:
+        stride_h, stride_w = int(stride[0]), int(stride[1]) if len(stride) > 1 else int(stride[0])
+    if isinstance(padding, int):
+        pad_h, pad_w = padding, padding
+    else:
+        pad_h, pad_w = int(padding[0]), int(padding[1]) if len(padding) > 1 else int(padding[0])
+    if isinstance(output_padding, int):
+        out_pad_h, out_pad_w = output_padding, output_padding
+    else:
+        out_pad_h, out_pad_w = int(output_padding[0]), int(output_padding[1]) if len(output_padding) > 1 else int(output_padding[0])
+    if isinstance(dilation, int):
+        dil_h, dil_w = dilation, dilation
+    else:
+        dil_h, dil_w = int(dilation[0]), int(dilation[1]) if len(dilation) > 1 else int(dilation[0])
+    # Weight shape: (C_in_per_group, C_out_per_group, kH, kW)
+    C_in_per_group = w.shape[0]
+    C_out_per_group = w.shape[1]
+    kH, kW = w.shape[2], w.shape[3]
+    # Compute output dims
+    H_out = (H - 1) * stride_h - 2 * pad_h + dil_h * (kH - 1) + out_pad_h + 1
+    W_out = (W - 1) * stride_w - 2 * pad_w + dil_w * (kW - 1) + out_pad_w + 1
+    C_out = C_out_per_group * groups
+    out = np.zeros((N, C_out, H_out, W_out), dtype=x.dtype)
+    # Accumulate
+    for n in range(N):
+        for g in range(groups):
+            in_start = g * C_in_per_group
+            in_end = (g + 1) * C_in_per_group
+            out_start = g * C_out_per_group
+            out_end = (g + 1) * C_out_per_group
+            for c_in in range(in_start, in_end):
+                k_idx = c_in - in_start
+                xi = x[n, c_in]
+                for i in range(H):
+                    for j in range(W):
+                        val = xi[i, j]
+                        if val == 0:
+                            continue
+                        for kh in range(kH):
+                            out_i = i * stride_h - pad_h + kh * dil_h
+                            if out_i < 0 or out_i >= H_out:
+                                continue
+                            for kw in range(kW):
+                                out_j = j * stride_w - pad_w + kw * dil_w
+                                if out_j < 0 or out_j >= W_out:
+                                    continue
+                                out[n, out_start:out_end, out_i, out_j] += val * w[k_idx, :, kh, kw]
+    if bias is not None:
+        b = bias.asnumpy() if hasattr(bias, 'asnumpy') else np.asarray(bias)
+        out += b.reshape(1, C_out, 1, 1)
+    return ms.Tensor.from_numpy(out)
