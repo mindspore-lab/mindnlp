@@ -3377,6 +3377,20 @@ def addcmul(input, tensor1, tensor2, value=1.0):
     # addcmul(input, tensor1, tensor2, value) = input + value * tensor1 * tensor2
     return add(input, mul(mul(tensor1, tensor2), value))
 
+def addmm(input, mat1, mat2, beta, alpha):
+    """
+    Matrix multiply-and-add: beta*input + alpha*(mat1 @ mat2)
+    Supports input as 1D bias (broadcast across rows) or same shape as matmul result.
+    """
+    in_np = input.asnumpy() if hasattr(input, 'asnumpy') else np.asarray(input)
+    a = mat1.asnumpy() if hasattr(mat1, 'asnumpy') else np.asarray(mat1)
+    b = mat2.asnumpy() if hasattr(mat2, 'asnumpy') else np.asarray(mat2)
+    prod = np.matmul(a, b)
+    out = alpha * prod + beta * in_np
+    if not isinstance(out, np.ndarray):
+        out = np.array(out)
+    return ms.Tensor.from_numpy(out)
+
 def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, training=False, momentum=0.1, epsilon=1e-5):
     """
     Batch Normalization over a mini-batch of inputs.
