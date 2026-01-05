@@ -3509,6 +3509,20 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
         out = add(out, reshape(bias, affine_param_shape))
     return out
 
+def rms_norm(input, normalized_shape, weight=None, eps=1e-5):
+    """Root Mean Square Layer Norm (RMSNorm) for numpy backend.
+    normalized_shape is ignored; numpy broadcasting handles shapes.
+    """
+    if eps is None:
+        eps = 1e-5
+    x = input.asnumpy()
+    rms = np.sqrt(np.mean(x * x, axis=-1, keepdims=True) + eps)
+    y = x / rms
+    if weight is not None:
+        w = weight.asnumpy() if hasattr(weight, 'asnumpy') else np.asarray(weight)
+        y = y * w
+    return ms.Tensor.from_numpy(y)
+
 def split_tensor(tensor, split_size_or_sections, dim):
     """
     Splits a tensor into multiple sub-tensors along the specified dimension.
