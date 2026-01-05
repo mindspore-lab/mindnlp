@@ -16,17 +16,65 @@ if src_dir not in sys.path:
 
 def check_and_install_dependencies():
     """检测并自动安装缺失的依赖"""
-    required_packages = {
-        'torch': 'torch>=2.4.0',
-        'torchvision': 'torchvision>=0.19.0',
-        'transformers': 'transformers>=4.37.0',
-        'fastapi': 'fastapi>=0.109.0',
-        'uvicorn': 'uvicorn[standard]>=0.27.0',
-        'PIL': 'pillow>=10.0.0',
-        'pydantic_settings': 'pydantic-settings>=2.0.0',
-        'requests': 'requests>=2.31.0',
-        'yaml': 'pyyaml>=6.0',
-    }
+    # 检测是否安装了 torch-npu 及其版本
+    torch_npu_version = None
+    torch_installed_version = None
+    
+    try:
+        import torch_npu
+        torch_npu_version = torch_npu.__version__
+    except ImportError:
+        pass
+    
+    try:
+        import torch
+        torch_installed_version = torch.__version__
+    except ImportError:
+        pass
+    
+    # 根据 torch-npu 版本调整 torch 和 torchvision 依赖
+    if torch_npu_version:
+        print(f"检测到 torch-npu {torch_npu_version}")
+        # torch-npu 需要特定的 torch 版本，不应升级
+        if torch_installed_version:
+            # torch 已安装，使用兼容的 torchvision 版本
+            torch_major_minor = '.'.join(torch_installed_version.split('.')[:2])
+            if torch_major_minor == '2.8':
+                torchvision_spec = 'torchvision==0.23.0'  # torch 2.8.0 对应 torchvision 0.23.0
+            elif torch_major_minor == '2.9':
+                torchvision_spec = 'torchvision==0.24.1'  # torch 2.9.x 对应 torchvision 0.24.x
+            else:
+                torchvision_spec = 'torchvision>=0.19.0'
+            
+            required_packages = {
+                'transformers': 'transformers>=4.37.0',
+                'fastapi': 'fastapi>=0.109.0',
+                'uvicorn': 'uvicorn[standard]>=0.27.0',
+                'PIL': 'pillow>=10.0.0',
+                'pydantic_settings': 'pydantic-settings>=2.0.0',
+                'requests': 'requests>=2.31.0',
+                'yaml': 'pyyaml>=6.0',
+                'torchvision': torchvision_spec,
+            }
+            print(f"将使用兼容的 torchvision 版本: {torchvision_spec}")
+        else:
+            # torch 未安装，不自动安装，避免版本冲突
+            print("错误: 检测到 torch-npu 但未找到 torch，请手动安装兼容版本")
+            print(f"提示: torch-npu {torch_npu_version} 需要特定的 torch 版本")
+            return False
+    else:
+        # 没有 torch-npu，使用标准依赖
+        required_packages = {
+            'torch': 'torch>=2.4.0',
+            'torchvision': 'torchvision>=0.19.0',
+            'transformers': 'transformers>=4.37.0',
+            'fastapi': 'fastapi>=0.109.0',
+            'uvicorn': 'uvicorn[standard]>=0.27.0',
+            'PIL': 'pillow>=10.0.0',
+            'pydantic_settings': 'pydantic-settings>=2.0.0',
+            'requests': 'requests>=2.31.0',
+            'yaml': 'pyyaml>=6.0',
+        }
     
     missing_packages = []
     
