@@ -81,6 +81,9 @@ memory_format = None
 inf = float("inf")
 nan = float("nan")
 
+class OutOfMemoryError(RuntimeError):
+    """Compatibility alias for torch.OutOfMemoryError."""
+    pass
 
 from . import _C
 from ._dtype import *
