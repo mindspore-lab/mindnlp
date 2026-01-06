@@ -3866,6 +3866,8 @@ class NegFunction(Function):
     @staticmethod
     def forward(ctx, input):
         out = -input.asnumpy()
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
         result = ms.Tensor.from_numpy(out)
         return result
     
@@ -6022,3 +6024,32 @@ class RealFunction(Function):
 
 def real(input):
     return RealFunction.apply(input)
+
+class SearchSortedFunction(Function):
+    @staticmethod
+    def forward(ctx, sorted_sequence, values, sorter=None, dtype=None, right=False):
+        a = sorted_sequence.asnumpy()
+        v = values.asnumpy() if hasattr(values, 'asnumpy') else values
+        side = 'right' if right else 'left'
+        sorter_np = sorter.asnumpy() if (sorter is not None and hasattr(sorter, 'asnumpy')) else None
+        idx = np.searchsorted(a, v, side=side, sorter=sorter_np)
+        # Determine numpy dtype
+        np_dtype = np.int64
+        try:
+            from mindtorch import dtype2np
+            if dtype is not None and dtype in dtype2np:
+                np_dtype = dtype2np[dtype]
+        except Exception:
+            pass
+        if isinstance(idx, np.ndarray):
+            idx = idx.astype(np_dtype)
+        else:
+            idx = np.array(idx, dtype=np_dtype)
+        return ms.Tensor.from_numpy(idx)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return None, None, None, None, None
+
+def search_sorted(sorted_sequence, values, sorter=None, dtype=None, right=False):
+    return SearchSortedFunction.apply(sorted_sequence, values, sorter, dtype, right)
