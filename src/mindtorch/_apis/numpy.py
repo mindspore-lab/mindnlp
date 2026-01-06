@@ -5561,6 +5561,152 @@ class LogitFunction(Function):
 def logit(input, eps=None):
     return LogitFunction.apply(input, eps)
 
+class Conv3dFunction(Function):
+    @staticmethod
+    def forward(ctx, input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
+        from scipy import signal
+        x = input.asnumpy()
+        w = weight.asnumpy()
+
+        # Determine expected input channels from weight
+        C_out, C_in_per_group, kD, kH, kW = w.shape
+        expected_C_in = C_in_per_group * groups
+
+        # Normalize input to 5D (N, C, D, H, W)
+        if x.ndim == 3:
+            D, H, W = x.shape
+            if expected_C_in == 1:
+                x = x[np.newaxis, np.newaxis, :, :, :]
+            else:
+                x = np.tile(x[np.newaxis, np.newaxis, :, :, :], (1, expected_C_in, 1, 1, 1))
+            N = 1
+            squeeze_output = True
+        elif x.ndim == 4:
+            # (C, D, H, W) -> (1, C, D, H, W)
+            x = x[np.newaxis, :]
+            N = 1
+            squeeze_output = True
+        elif x.ndim == 5:
+            N = x.shape[0]
+            squeeze_output = False
+        else:
+            raise ValueError(f"conv3d: input must have 3, 4, or 5 dimensions, got {x.ndim}")
+
+        N, C_in, D, H, W = x.shape
+        if C_in != expected_C_in:
+            raise ValueError(f"conv3d: input has {C_in} channels but weight expects {expected_C_in} channels (C_in_per_group={C_in_per_group} * groups={groups})")
+
+        # Normalize stride, padding, dilation to 3-tuples
+        if isinstance(stride, int):
+            sd, sh, sw = stride, stride, stride
+        elif isinstance(stride, (tuple, list)):
+            vals = list(stride)
+            if len(vals) == 3:
+                sd, sh, sw = int(vals[0]), int(vals[1]), int(vals[2])
+            else:
+                sd, sh, sw = int(vals[-3]), int(vals[-2]), int(vals[-1])
+        else:
+            sd, sh, sw = 1, 1, 1
+
+        if isinstance(dilation, int):
+            dd, dh, dw = dilation, dilation, dilation
+        elif isinstance(dilation, (tuple, list)):
+            vals = list(dilation)
+            if len(vals) == 3:
+                dd, dh, dw = int(vals[0]), int(vals[1]), int(vals[2])
+            else:
+                dd, dh, dw = int(vals[-3]), int(vals[-2]), int(vals[-1])
+        else:
+            dd, dh, dw = 1, 1, 1
+
+        # Padding
+        if isinstance(padding, str):
+            pad_mode = padding.lower()
+            if pad_mode == 'valid':
+                pd, ph, pw = 0, 0, 0
+            elif pad_mode == 'same':
+                eff_kD = (kD - 1) * dd + 1
+                eff_kH = (kH - 1) * dh + 1
+                eff_kW = (kW - 1) * dw + 1
+                pd = np.maximum(0, (D - 1) * sd + eff_kD - D) // 2
+                ph = np.maximum(0, (H - 1) * sh + eff_kH - H) // 2
+                pw = np.maximum(0, (W - 1) * sw + eff_kW - W) // 2
+            else:
+                pd, ph, pw = 0, 0, 0
+        elif isinstance(padding, int):
+            pd = ph = pw = int(padding)
+        elif isinstance(padding, (tuple, list)):
+            vals = list(padding)
+            if len(vals) == 3:
+                pd, ph, pw = int(vals[0]), int(vals[1]), int(vals[2])
+            else:
+                pd, ph, pw = int(vals[-3]), int(vals[-2]), int(vals[-1])
+        else:
+            pd, ph, pw = 0, 0, 0
+
+        # Effective kernel sizes with dilation
+        eff_kD = (kD - 1) * dd + 1
+        eff_kH = (kH - 1) * dh + 1
+        eff_kW = (kW - 1) * dw + 1
+
+        # Pad input
+        if pd > 0 or ph > 0 or pw > 0:
+            x_padded = np.pad(x, ((0, 0), (0, 0), (pd, pd), (ph, ph), (pw, pw)), mode='constant')
+        else:
+            x_padded = x
+
+        # Output dimensions
+        D_out = (D + 2 * pd - eff_kD) // sd + 1
+        H_out = (H + 2 * ph - eff_kH) // sh + 1
+        W_out = (W + 2 * pw - eff_kW) // sw + 1
+
+        out = np.zeros((N, C_out, D_out, H_out, W_out), dtype=x.dtype)
+
+        # Convolution
+        for n in range(N):
+            for c_out in range(C_out):
+                group_id = c_out // (C_out // groups)
+                c_in_start = group_id * C_in_per_group
+                c_in_end = (group_id + 1) * C_in_per_group
+
+                conv_result = np.zeros((D_out, H_out, W_out), dtype=x.dtype)
+                for c_in_idx in range(c_in_start, c_in_end):
+                    kernel = w[c_out, c_in_idx - c_in_start]
+                    # Apply dilation to kernel
+                    if dd > 1 or dh > 1 or dw > 1:
+                        dilated_kernel = np.zeros((eff_kD, eff_kH, eff_kW), dtype=kernel.dtype)
+                        dilated_kernel[::dd, ::dh, ::dw] = kernel
+                        kernel = dilated_kernel
+                    # Flip kernel for convolution
+                    kernel_flipped = np.flip(kernel, axis=(0, 1, 2))
+                    conv_channel = signal.convolve(x_padded[n, c_in_idx], kernel_flipped, mode='valid')
+                    # Stride subsampling
+                    conv_channel = conv_channel[::sd, ::sh, ::sw]
+                    # Align to output shape (handle edge rounding)
+                    d_end = D_out if D_out <= conv_channel.shape[0] else conv_channel.shape[0]
+                    h_end = H_out if H_out <= conv_channel.shape[1] else conv_channel.shape[1]
+                    w_end = W_out if W_out <= conv_channel.shape[2] else conv_channel.shape[2]
+                    conv_result[:d_end, :h_end, :w_end] += conv_channel[:d_end, :h_end, :w_end]
+                out[n, c_out] = conv_result
+
+        # Bias
+        if bias is not None:
+            b = bias.asnumpy() if hasattr(bias, 'asnumpy') else np.asarray(bias)
+            out = out + b.reshape(1, C_out, 1, 1, 1)
+
+        # Squeeze back if needed
+        if squeeze_output:
+            out = out[0]
+        return ms.Tensor.from_numpy(out)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        # Not implementing gradients for numpy backend
+        return None, None, None, None, None, None, None
+
+def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
+    return Conv3dFunction.apply(input, weight, bias, stride, padding, dilation, groups, training)
+
 def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     # Expand to 2D conv: (N,C,L) -> (N,C,1,L), kernel (C_out,C_in/groups,K) -> (C_out,C_in/groups,1,K)
     input_2d = expand_dims(input, 2)
@@ -5655,3 +5801,49 @@ def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_paddi
         b = bias.asnumpy() if hasattr(bias, 'asnumpy') else np.asarray(bias)
         out += b.reshape(1, C_out, 1, 1)
     return ms.Tensor.from_numpy(out)
+
+class UpsampleNearest3dFunction(Function):
+    @staticmethod
+    def forward(ctx, input, output_size=None, scale_factors=None):
+        from scipy import ndimage
+        x = input.asnumpy()
+        if x.ndim != 5:
+            raise ValueError(f"upsample_nearest3d expects 5D input (N,C,D,H,W), got {x.ndim}D")
+        N, C, D, H, W = x.shape
+
+        if output_size is None:
+            if scale_factors is None:
+                raise ValueError("Either output_size or scale_factors must be provided")
+            if isinstance(scale_factors, (list, tuple)):
+                sd = float(scale_factors[0])
+                sh = float(scale_factors[1]) if len(scale_factors) > 1 else float(scale_factors[0])
+                sw = float(scale_factors[2]) if len(scale_factors) > 2 else float(scale_factors[0])
+                out_d = int(np.maximum(1, int(np.round(D * sd))))
+                out_h = int(np.maximum(1, int(np.round(H * sh))))
+                out_w = int(np.maximum(1, int(np.round(W * sw))))
+            else:
+                sd = sh = sw = float(scale_factors)
+                out_d = int(np.maximum(1, int(np.round(D * sd))))
+                out_h = int(np.maximum(1, int(np.round(H * sh))))
+                out_w = int(np.maximum(1, int(np.round(W * sw))))
+        else:
+            if not isinstance(output_size, (list, tuple)) or len(output_size) != 3:
+                raise ValueError("output_size for 3d upsample must have length 3 (D, H, W)")
+            out_d, out_h, out_w = int(output_size[0]), int(output_size[1]), int(output_size[2])
+
+        zoom_d = out_d / D
+        zoom_h = out_h / H
+        zoom_w = out_w / W
+
+        out = np.empty((N, C, out_d, out_h, out_w), dtype=x.dtype)
+        for n in range(N):
+            for c in range(C):
+                out[n, c] = ndimage.zoom(x[n, c], (zoom_d, zoom_h, zoom_w), order=0, mode='nearest')
+        return ms.Tensor.from_numpy(out)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return None, None, None
+
+def upsample_nearest3d(input, output_size=None, scale_factors=None):
+    return UpsampleNearest3dFunction.apply(input, output_size, scale_factors)
