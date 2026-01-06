@@ -33,7 +33,8 @@ class VLMOCREngine:
     """VLM-OCR主引擎"""
 
     def __init__(self, model_name: str = "Qwen/Qwen2-VL-2B-Instruct", device: str = "cuda",
-                 enable_monitoring: bool = True):
+                 enable_monitoring: bool = True, quantization_mode: str = "none",
+                 quantization_config: dict = None):
         """
         初始化OCR引擎
 
@@ -41,8 +42,10 @@ class VLMOCREngine:
             model_name: 模型名称
             device: 运行设备
             enable_monitoring: 是否启用性能监控
+            quantization_mode: 量化模式 ("none", "fp16", "int8", "int4")
+            quantization_config: 量化配置字典
         """
-        logger.info(f"Initializing VLM-OCR Engine with model: {model_name}")
+        logger.info(f"Initializing VLM-OCR Engine with model: {model_name}, quantization: {quantization_mode}")
 
         # 保存模型名称
         self.model_name = model_name
@@ -55,8 +58,13 @@ class VLMOCREngine:
         else:
             self.monitor = None
         
-        # 加载模型
-        self.model_loader = ModelLoader(model_name, device)
+        # 加载模型（传递量化参数）
+        self.model_loader = ModelLoader(
+            model_name, 
+            device, 
+            quantization_mode=quantization_mode,
+            quantization_config=quantization_config
+        )
         self.model_loader.load_model()  # 加载模型到 model_instance
         self.model_instance = self.model_loader.model_instance  # 保存 model_instance
         self.tokenizer = self.model_loader.load_tokenizer()

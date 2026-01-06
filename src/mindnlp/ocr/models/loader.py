@@ -27,18 +27,23 @@ class ModelLoader:
         # 'got': GOTOCRModel,
     }
 
-    def __init__(self, model_name: str, device: str = "cuda"):
+    def __init__(self, model_name: str, device: str = "cuda", 
+                 quantization_mode: str = "none", quantization_config: dict = None):
         """
         初始化模型加载器
 
         Args:
             model_name: 模型名称或HuggingFace model ID
             device: 运行设备
+            quantization_mode: 量化模式 ("none", "fp16", "int8", "int4")
+            quantization_config: 量化配置字典
         """
         self.model_name = model_name
         self.device = device
+        self.quantization_mode = quantization_mode
+        self.quantization_config = quantization_config or {}
         self.model_instance = None
-        logger.info(f"ModelLoader initialized with model: {model_name}")
+        logger.info(f"ModelLoader initialized with model: {model_name}, quantization: {quantization_mode}")
 
     def load_model(self) -> VLMModelBase:
         """
@@ -57,9 +62,14 @@ class ModelLoader:
             logger.warning(f"Unknown model type: {model_type}, using Qwen2VL as default")
             model_class = Qwen2VLModel
 
-        # 实例化并加载模型
+        # 实例化并加载模型（传递量化参数）
         logger.info(f"Loading model with {model_class.__name__}")
-        self.model_instance = model_class(self.model_name, self.device)
+        self.model_instance = model_class(
+            self.model_name, 
+            self.device,
+            quantization_mode=self.quantization_mode,
+            quantization_config=self.quantization_config
+        )
 
         return self.model_instance.model
 

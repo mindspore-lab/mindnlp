@@ -29,7 +29,8 @@ class Qwen2VLModel(VLMModelBase):
     """Qwen2-VL模型封装"""
 
     def __init__(self, model_name: str = "Qwen/Qwen2-VL-2B-Instruct", device: str = "cuda",
-                 min_pixels: int = 128*28*28, max_pixels: int = 512*28*28):
+                 min_pixels: int = 128*28*28, max_pixels: int = 512*28*28,
+                 quantization_mode: str = "none", quantization_config: dict = None):
         """
         初始化Qwen2-VL模型
 
@@ -38,12 +39,16 @@ class Qwen2VLModel(VLMModelBase):
             device: 运行设备
             min_pixels: 最小像素数 (用于动态分辨率)
             max_pixels: 最大像素数 (用于动态分辨率)
+            quantization_mode: 量化模式 ("none", "fp16", "int8", "int4")
+            quantization_config: 量化配置字典 (可选,覆盖默认配置)
         """
         super().__init__(model_name, device)
         self.processor = None
         self.tokenizer = None
         self.min_pixels = min_pixels
         self.max_pixels = max_pixels
+        self.quantization_mode = quantization_mode.lower()
+        self.quantization_config = quantization_config or {}
         
         # 解析本地模型路径
         self.local_model_path = self._resolve_model_path(model_name)
@@ -91,118 +96,193 @@ class Qwen2VLModel(VLMModelBase):
         # 缓存不存在,返回原始名称
         logger.warning(f"Local cache not found for {model_name}, will use hub name")
         return model_name
+    
+    def _get_quantization_config(self):
+        """
+        根据量化模式生成BitsAndBytesConfig
+        
+        Returns:
+            BitsAndBytesConfig or None: 量化配置对象
+        """
+        if self.quantization_mode == "none" or self.quantization_mode == "fp16":
+            # FP16 不使用 bitsandbytes, 直接通过 torch_dtype 指定
+            return None
+        
+        try:
+            from transformers import BitsAndBytesConfig
+        except ImportError:
+            logger.error("bitsandbytes is not installed. Please install it with: pip install bitsandbytes")
+            raise ImportError(
+                "bitsandbytes is required for INT8/INT4 quantization. "
+                "Install it with: pip install bitsandbytes"
+            )
+        
+        if self.quantization_mode == "int8":
+            # INT8 量化配置 (LLM.int8())
+            logger.info("Configuring INT8 quantization (LLM.int8())")
+            config = BitsAndBytesConfig(
+                load_in_8bit=True,
+                llm_int8_threshold=self.quantization_config.get('int8_threshold', 6.0),
+                llm_int8_skip_modules=self.quantization_config.get('int8_skip_modules', None),
+            )
+            return config
+        
+        elif self.quantization_mode == "int4":
+            # INT4 量化配置 (NF4/FP4)
+            logger.info("Configuring INT4 quantization (NF4)")
+            
+            # 解析计算数据类型
+            compute_dtype_str = self.quantization_config.get('int4_compute_dtype', 'float16')
+            if hasattr(torch, compute_dtype_str):
+                compute_dtype = getattr(torch, compute_dtype_str)
+            else:
+                logger.warning(f"Unknown compute dtype: {compute_dtype_str}, using float16")
+                compute_dtype = torch.float16
+            
+            config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=compute_dtype,
+                bnb_4bit_quant_type=self.quantization_config.get('int4_quant_type', 'nf4'),
+                bnb_4bit_use_double_quant=self.quantization_config.get('int4_use_double_quant', True),
+            )
+            return config
+        
+        else:
+            logger.warning(f"Unknown quantization mode: {self.quantization_mode}, using none")
+            return None
 
     def load_model(self):
         """
-        加载Qwen2-VL模型
+        加载Qwen2-VL模型 (支持量化)
         
         Raises:
             ModelLoadingError: 模型加载失败
         """
         try:
-            logger.info(f"Loading Qwen2-VL model: {self.model_name}")
+            logger.info(f"Loading Qwen2-VL model: {self.model_name} with quantization: {self.quantization_mode}")
+            
+            # 获取量化配置
+            quantization_config = self._get_quantization_config()
+            
+            # 确定 torch_dtype
+            if self.quantization_mode == "fp16":
+                torch_dtype = torch.float16
+                logger.info("Using FP16 precision")
+            elif self.quantization_mode in ["int8", "int4"]:
+                # bitsandbytes 量化时, torch_dtype 应该是None或与bnb_4bit_compute_dtype一致
+                torch_dtype = torch.float16  # 默认使用 float16 作为基础类型
+                logger.info(f"Using {self.quantization_mode.upper()} quantization with bitsandbytes")
+            elif self.device == "cpu":
+                torch_dtype = torch.float32
+                logger.info("Using FP32 precision (CPU)")
+            elif "npu" in self.device or "cuda" in self.device:
+                # 默认使用 FP16 优化 GPU/NPU 内存
+                torch_dtype = torch.float16
+                logger.info("Using FP16 precision by default (GPU/NPU)")
+            else:
+                torch_dtype = torch.float32
+            
             # Qwen2-VL 官方推荐的加载方式：
             # 使用 Qwen2VLForConditionalGeneration 而非 AutoModel
             try:
                 # 方法1：尝试直接导入 Qwen2VLForConditionalGeneration
                 from transformers import Qwen2VLForConditionalGeneration
                 
-                # 使用float16节省显存
-                if self.device != "cpu":
-                    device_type = "NPU" if "npu" in self.device else "GPU"
-                    logger.info(f"Using float16 precision to optimize {device_type} memory...")
-                    # NPU设备不支持device_map="auto"，需要手动指定设备
-                    if "npu" in self.device:
-                        logger.info("Setting attn_implementation='eager' for NPU (SDPA not supported)")
-                        self.model = Qwen2VLForConditionalGeneration.from_pretrained(
-                            self.local_model_path,
-                            torch_dtype=torch.float16,
-                            device_map=None,
-                            low_cpu_mem_usage=True,
-                            local_files_only=True,
-                            attn_implementation="eager",  # 关键：NPU不支持SDPA
-                            use_cache=True  # 启用 KV cache 加速推理
-                        ).to(self.device)
-                        # NPU 性能优化
-                        try:
-                            import torch_npu
-                            torch_npu.npu.set_compile_mode(jit_compile=False)  # 禁用JIT避免首次推理慢
-                            logger.info("NPU optimization: JIT compile disabled for faster first inference")
-                        except Exception as e:
-                            logger.warning(f"NPU optimization setup failed: {e}")
-                    else:
-                        self.model = Qwen2VLForConditionalGeneration.from_pretrained(
-                            self.local_model_path,
-                            torch_dtype=torch.float16,
-                            device_map="auto",
-                            low_cpu_mem_usage=True,
-                            local_files_only=True
-                        )
+                # 构建加载参数
+                load_kwargs = {
+                    "torch_dtype": torch_dtype,
+                    "low_cpu_mem_usage": True,
+                    "local_files_only": True,
+                }
+                
+                # 添加量化配置
+                if quantization_config is not None:
+                    load_kwargs["quantization_config"] = quantization_config
+                    load_kwargs["device_map"] = "auto"  # bitsandbytes 需要 device_map
+                    logger.info(f"Quantization config: {quantization_config}")
                 else:
-                    self.model = Qwen2VLForConditionalGeneration.from_pretrained(
-                        self.local_model_path,
-                        torch_dtype=torch.float32,
-                        device_map=None,
-                        local_files_only=True
-                    )
+                    # 非量化模式,手动指定设备
+                    load_kwargs["device_map"] = None
+                
+                # NPU 特殊处理
+                if "npu" in self.device:
+                    logger.info("Setting attn_implementation='eager' for NPU (SDPA not supported)")
+                    load_kwargs["attn_implementation"] = "eager"  # 关键：NPU不支持SDPA
+                    load_kwargs["use_cache"] = True  # 启用 KV cache 加速推理
+                
+                # 加载模型
+                self.model = Qwen2VLForConditionalGeneration.from_pretrained(
+                    self.local_model_path,
+                    **load_kwargs
+                )
+                
+                # 如果没有使用 device_map="auto", 手动移动到目标设备
+                if load_kwargs["device_map"] is None:
+                    self.model = self.model.to(self.device)
+                
+                # NPU 性能优化
+                if "npu" in self.device:
+                    try:
+                        import torch_npu
+                        torch_npu.npu.set_compile_mode(jit_compile=False)  # 禁用JIT避免首次推理慢
+                        logger.info("NPU optimization: JIT compile disabled for faster first inference")
+                    except Exception as e:
+                        logger.warning(f"NPU optimization setup failed: {e}")
+                
                 logger.info(f"Loaded with Qwen2VLForConditionalGeneration on device: {self.model.device if hasattr(self.model, 'device') else 'auto'}")
+                
             except ImportError:
                 # 方法2：使用 trust_remote_code 动态导入
                 logger.info("Qwen2VLForConditionalGeneration not in transformers, trying trust_remote_code...")
-                # 导入配置
-                from transformers import AutoConfig
+                from transformers import AutoConfig, AutoModelForVision2Seq
+                
                 config = AutoConfig.from_pretrained(
                     self.model_name,
                     trust_remote_code=True
                 )
-                # 获取模型类名
                 if config.architectures:
-                    model_class_name = config.architectures[0]
-                    logger.info(f"Model architecture: {model_class_name}")
+                    logger.info(f"Model architecture: {config.architectures[0]}")
                 
-                # 使用 trust_remote_code 加载完整模型
-                from transformers import AutoModelForVision2Seq
+                # 构建加载参数
+                load_kwargs = {
+                    "trust_remote_code": True,
+                    "torch_dtype": torch_dtype,
+                    "low_cpu_mem_usage": True,
+                    "local_files_only": True,
+                }
                 
-                # 使用float16优化
-                if self.device != "cpu":
-                    device_type = "NPU" if "npu" in self.device else "GPU"
-                    logger.info(f"Using float16 precision ({device_type}, trust_remote_code path)...")
-                    # NPU设备不支持device_map="auto"，需要手动指定设备
-                    if "npu" in self.device:
-                        logger.info("Setting attn_implementation='eager' for NPU (SDPA not supported)")
-                        self.model = AutoModelForVision2Seq.from_pretrained(
-                            self.local_model_path,
-                            trust_remote_code=True,
-                            torch_dtype=torch.float16,
-                            device_map=None,
-                            low_cpu_mem_usage=True,
-                            local_files_only=True,
-                            attn_implementation="eager"  # 关键：NPU不支持SDPA
-                        ).to(self.device)
-                    else:
-                        self.model = AutoModelForVision2Seq.from_pretrained(
-                            self.local_model_path,
-                            trust_remote_code=True,
-                            torch_dtype=torch.float16,
-                            device_map="auto",
-                            low_cpu_mem_usage=True,
-                            local_files_only=True
-                        )
+                # 添加量化配置
+                if quantization_config is not None:
+                    load_kwargs["quantization_config"] = quantization_config
+                    load_kwargs["device_map"] = "auto"
                 else:
-                    self.model = AutoModelForVision2Seq.from_pretrained(
-                        self.local_model_path,
-                        trust_remote_code=True,
-                        torch_dtype=torch.float32,
-                        device_map=None,
-                        local_files_only=True
-                    )
+                    load_kwargs["device_map"] = None
+                
+                # NPU 特殊处理
+                if "npu" in self.device:
+                    logger.info("Setting attn_implementation='eager' for NPU")
+                    load_kwargs["attn_implementation"] = "eager"
+                
+                self.model = AutoModelForVision2Seq.from_pretrained(
+                    self.local_model_path,
+                    **load_kwargs
+                )
+                
+                # 手动移动设备
+                if load_kwargs["device_map"] is None:
+                    self.model = self.model.to(self.device)
+                
                 logger.info(f"Loaded with AutoModelForVision2Seq on device: {self.model.device if hasattr(self.model, 'device') else 'auto'}")
             
-            # 如果使用 CPU，需要显式移动模型
-            if self.device == "cpu":
-                self.model = self.model.to("cpu").to(torch.float32)
-            
             self.model.eval()
+            
+            # 记录量化信息
+            if hasattr(self.model, 'is_loaded_in_8bit') and self.model.is_loaded_in_8bit:
+                logger.info("✅ Model successfully loaded with INT8 quantization")
+            elif hasattr(self.model, 'is_loaded_in_4bit') and self.model.is_loaded_in_4bit:
+                logger.info("✅ Model successfully loaded with INT4 quantization")
+            else:
+                logger.info(f"✅ Model successfully loaded with {self.quantization_mode.upper()} precision")
             
             logger.info(f"Qwen2-VL model loaded successfully (type: {type(self.model).__name__}, has_generate: {hasattr(self.model, 'generate')})")
             return self.model

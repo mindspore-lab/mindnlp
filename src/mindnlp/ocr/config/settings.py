@@ -45,6 +45,16 @@ class Settings(BaseSettings):
     batch_size: int = 1  # NPU 批处理大小
     use_cache: bool = True  # 启用 KV cache
 
+    # 量化配置 (Performance Optimization - Issue #2377)
+    quantization_mode: str = "none"  # 量化模式: none/fp16/int8/int4
+    # INT8 量化配置 (bitsandbytes)
+    int8_threshold: float = 6.0  # LLM.int8() 离群值检测阈值
+    int8_skip_modules: list = None  # 跳过量化的模块列表
+    # INT4 量化配置 (bitsandbytes)
+    int4_compute_dtype: str = "float16"  # INT4 计算数据类型
+    int4_quant_type: str = "nf4"  # 量化类型: fp4 或 nf4 (推荐)
+    int4_use_double_quant: bool = True  # 启用双重量化节省更多内存
+    
     # 日志配置
     log_level: str = "INFO"
 
