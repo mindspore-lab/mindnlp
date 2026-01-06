@@ -7,6 +7,7 @@ import os
 import time
 import torch
 import psutil
+import pytest
 from pathlib import Path
 from PIL import Image
 
@@ -233,7 +234,8 @@ def print_comparison_report(results):
     logger.info(f"\n{'='*80}")
 
 
-def test_accuracy(image_path: str, device: str = "npu:0"):
+@pytest.mark.skip(reason="Requires test image path - run manually with specific image")
+def test_accuracy(image_path: str = "test_image.jpg", device: str = "npu:0"):
     """
     测试不同量化模式的OCR准确率
     

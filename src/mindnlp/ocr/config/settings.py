@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     quantization_mode: str = "none"  # 量化模式: none/fp16/int8/int4
     # INT8 量化配置 (bitsandbytes)
     int8_threshold: float = 6.0  # LLM.int8() 离群值检测阈值
-    int8_skip_modules: list = None  # 跳过量化的模块列表
+    int8_skip_modules: list = []  # 跳过量化的模块列表
     # INT4 量化配置 (bitsandbytes)
     int4_compute_dtype: str = "float16"  # INT4 计算数据类型
     int4_quant_type: str = "nf4"  # 量化类型: fp4 或 nf4 (推荐)
