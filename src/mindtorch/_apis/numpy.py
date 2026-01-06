@@ -5847,3 +5847,99 @@ class UpsampleNearest3dFunction(Function):
 
 def upsample_nearest3d(input, output_size=None, scale_factors=None):
     return UpsampleNearest3dFunction.apply(input, output_size, scale_factors)
+
+class Fft2Function(Function):
+    @staticmethod
+    def forward(ctx, input, s=None, dim=(-2, -1), norm=None):
+        x = input.asnumpy()
+        axes = dim if dim is not None else (-2, -1)
+        out = np.fft.fft2(x, s=s, axes=axes, norm=norm)
+        return ms.Tensor.from_numpy(out)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return None, None, None, None
+
+def fft2(input, s=None, dim=(-2, -1), norm=None):
+    return Fft2Function.apply(input, s, dim, norm)
+
+class Ifft2Function(Function):
+    @staticmethod
+    def forward(ctx, input, s=None, dim=(-2, -1), norm=None):
+        x = input.asnumpy()
+        axes = dim if dim is not None else (-2, -1)
+        out = np.fft.ifft2(x, s=s, axes=axes, norm=norm)
+        return ms.Tensor.from_numpy(out)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return None, None, None, None
+
+def ifft2(input, s=None, dim=(-2, -1), norm=None):
+    return Ifft2Function.apply(input, s, dim, norm)
+
+class FftshiftFunction(Function):
+    @staticmethod
+    def forward(ctx, input, dim=None):
+        x = input.asnumpy()
+        if dim is None:
+            out = np.fft.fftshift(x)
+        else:
+            # Normalize dim to tuple of axes
+            if isinstance(dim, int):
+                axes = (dim,)
+            elif isinstance(dim, (list, tuple)):
+                axes = tuple(dim)
+            else:
+                axes = None
+            if axes is not None:
+                # Handle negative axes
+                axes = tuple(a if a >= 0 else x.ndim + a for a in axes)
+            out = np.fft.fftshift(x, axes=axes)
+        return ms.Tensor.from_numpy(out)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return None, None
+
+def fftshift(input, dim=None):
+    return FftshiftFunction.apply(input, dim)
+
+class IfftshiftFunction(Function):
+    @staticmethod
+    def forward(ctx, input, dim=None):
+        x = input.asnumpy()
+        if dim is None:
+            out = np.fft.ifftshift(x)
+        else:
+            if isinstance(dim, int):
+                axes = (dim,)
+            elif isinstance(dim, (list, tuple)):
+                axes = tuple(dim)
+            else:
+                axes = None
+            if axes is not None:
+                axes = tuple(a if a >= 0 else x.ndim + a for a in axes)
+            out = np.fft.ifftshift(x, axes=axes)
+        return ms.Tensor.from_numpy(out)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return None, None
+
+def ifftshift(input, dim=None):
+    return IfftshiftFunction.apply(input, dim)
+
+class RealFunction(Function):
+    @staticmethod
+    def forward(ctx, input):
+        x = input.asnumpy()
+        out = np.real(x)
+        return ms.Tensor.from_numpy(out)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return None
+
+def real(input):
+    return RealFunction.apply(input)
