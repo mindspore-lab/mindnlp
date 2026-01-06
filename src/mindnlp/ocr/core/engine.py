@@ -170,7 +170,7 @@ class VLMOCREngine:
                 # 使用 model_instance 的 batch_generate 方法（已包含输入准备和解码）
                 outputs = self.model_instance.batch_generate(
                     batch_messages=[messages],
-                    max_new_tokens=2048
+                    max_new_tokens=512
                 )
             except Exception as e:
                 raise ModelInferenceError(

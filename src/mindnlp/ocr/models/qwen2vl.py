@@ -41,11 +41,56 @@ class Qwen2VLModel(VLMModelBase):
         """
         super().__init__(model_name, device)
         self.processor = None
+        self.tokenizer = None
         self.min_pixels = min_pixels
         self.max_pixels = max_pixels
+        
+        # 解析本地模型路径
+        self.local_model_path = self._resolve_model_path(model_name)
+        
         self.load_model()
+        self.load_tokenizer()  # 先加载tokenizer,processor需要它的chat_template
         self.load_processor()
-        self.load_tokenizer()
+    
+    def _resolve_model_path(self, model_name: str) -> str:
+        """
+        解析模型路径,优先使用本地缓存的绝对路径
+        
+        Args:
+            model_name: 模型名称,如 Qwen/Qwen2-VL-2B-Instruct
+            
+        Returns:
+            str: 本地模型路径或原始模型名称
+        """
+        from pathlib import Path
+        import os
+        
+        # 如果已经是本地路径,直接返回
+        if Path(model_name).exists():
+            return model_name
+        
+        # 获取HuggingFace缓存目录
+        cache_dir = os.environ.get('HF_HOME') or os.environ.get('TRANSFORMERS_CACHE') or \
+                   Path.home() / '.cache' / 'huggingface'
+        
+        # 转换模型名称为缓存目录格式
+        model_cache_name = f"models--{model_name.replace('/', '--')}"
+        model_cache_path = Path(cache_dir) / model_cache_name
+        
+        # 检查缓存是否存在
+        if model_cache_path.exists():
+            snapshots_dir = model_cache_path / "snapshots"
+            if snapshots_dir.exists():
+                # 找到最新的快照
+                snapshot_dirs = sorted(snapshots_dir.iterdir(), key=lambda p: p.stat().st_mtime)
+                if snapshot_dirs:
+                    local_path = str(snapshot_dirs[-1])
+                    logger.info(f"Using local model path: {local_path}")
+                    return local_path
+        
+        # 缓存不存在,返回原始名称
+        logger.warning(f"Local cache not found for {model_name}, will use hub name")
+        return model_name
 
     def load_model(self):
         """
@@ -68,24 +113,37 @@ class Qwen2VLModel(VLMModelBase):
                     logger.info(f"Using float16 precision to optimize {device_type} memory...")
                     # NPU设备不支持device_map="auto"，需要手动指定设备
                     if "npu" in self.device:
+                        logger.info("Setting attn_implementation='eager' for NPU (SDPA not supported)")
                         self.model = Qwen2VLForConditionalGeneration.from_pretrained(
-                            self.model_name,
+                            self.local_model_path,
                             torch_dtype=torch.float16,
                             device_map=None,
-                            low_cpu_mem_usage=True
+                            low_cpu_mem_usage=True,
+                            local_files_only=True,
+                            attn_implementation="eager",  # 关键：NPU不支持SDPA
+                            use_cache=True  # 启用 KV cache 加速推理
                         ).to(self.device)
+                        # NPU 性能优化
+                        try:
+                            import torch_npu
+                            torch_npu.npu.set_compile_mode(jit_compile=False)  # 禁用JIT避免首次推理慢
+                            logger.info("NPU optimization: JIT compile disabled for faster first inference")
+                        except Exception as e:
+                            logger.warning(f"NPU optimization setup failed: {e}")
                     else:
                         self.model = Qwen2VLForConditionalGeneration.from_pretrained(
-                            self.model_name,
+                            self.local_model_path,
                             torch_dtype=torch.float16,
                             device_map="auto",
-                            low_cpu_mem_usage=True
+                            low_cpu_mem_usage=True,
+                            local_files_only=True
                         )
                 else:
                     self.model = Qwen2VLForConditionalGeneration.from_pretrained(
-                        self.model_name,
+                        self.local_model_path,
                         torch_dtype=torch.float32,
-                        device_map=None
+                        device_map=None,
+                        local_files_only=True
                     )
                 logger.info(f"Loaded with Qwen2VLForConditionalGeneration on device: {self.model.device if hasattr(self.model, 'device') else 'auto'}")
             except ImportError:
@@ -111,27 +169,32 @@ class Qwen2VLModel(VLMModelBase):
                     logger.info(f"Using float16 precision ({device_type}, trust_remote_code path)...")
                     # NPU设备不支持device_map="auto"，需要手动指定设备
                     if "npu" in self.device:
+                        logger.info("Setting attn_implementation='eager' for NPU (SDPA not supported)")
                         self.model = AutoModelForVision2Seq.from_pretrained(
-                            self.model_name,
+                            self.local_model_path,
                             trust_remote_code=True,
                             torch_dtype=torch.float16,
                             device_map=None,
-                            low_cpu_mem_usage=True
+                            low_cpu_mem_usage=True,
+                            local_files_only=True,
+                            attn_implementation="eager"  # 关键：NPU不支持SDPA
                         ).to(self.device)
                     else:
                         self.model = AutoModelForVision2Seq.from_pretrained(
-                            self.model_name,
+                            self.local_model_path,
                             trust_remote_code=True,
                             torch_dtype=torch.float16,
                             device_map="auto",
-                            low_cpu_mem_usage=True
+                            low_cpu_mem_usage=True,
+                            local_files_only=True
                         )
                 else:
                     self.model = AutoModelForVision2Seq.from_pretrained(
-                        self.model_name,
+                        self.local_model_path,
                         trust_remote_code=True,
                         torch_dtype=torch.float32,
-                        device_map=None
+                        device_map=None,
+                        local_files_only=True
                     )
                 logger.info(f"Loaded with AutoModelForVision2Seq on device: {self.model.device if hasattr(self.model, 'device') else 'auto'}")
             
@@ -182,32 +245,25 @@ class Qwen2VLModel(VLMModelBase):
         try:
             logger.info(f"Loading Qwen2-VL processor: {self.model_name}")
             
-            # 尝试从本地加载，如果失败则尝试在线加载
-            try:
-                self.processor = AutoProcessor.from_pretrained(
-                    self.model_name,
-                    trust_remote_code=True,
-                    min_pixels=self.min_pixels,
-                    max_pixels=self.max_pixels
-                )
-                logger.info("Processor loaded from local cache")
-            except Exception as local_err:
-                logger.warning(f"Failed to load from local cache: {local_err}")
-                logger.info("Attempting to load processor from online...")
-                try:
-                    self.processor = AutoProcessor.from_pretrained(
-                        self.model_name,
-                        trust_remote_code=True,
-                        min_pixels=self.min_pixels,
-                        max_pixels=self.max_pixels
-                    )
-                    logger.info("Processor loaded from online")
-                except Exception as online_err:
-                    raise ModelLoadingError(
-                        message=f"Failed to load processor from both local and online: {str(online_err)}",
-                        model_name=self.model_name,
-                        details={"local_error": str(local_err), "online_error": str(online_err)}
-                    ) from online_err
+            # 只从本地加载,不再尝试在线加载
+            self.processor = AutoProcessor.from_pretrained(
+                self.local_model_path,
+                trust_remote_code=True,
+                min_pixels=self.min_pixels,
+                max_pixels=self.max_pixels,
+                local_files_only=True
+            )
+            logger.info("Processor loaded from local cache")
+            
+            # 确保processor有chat_template,如果没有则从tokenizer获取
+            if not hasattr(self.processor, 'chat_template') or self.processor.chat_template is None:
+                logger.info("Processor missing chat_template, copying from tokenizer")
+                # tokenizer已经在之前加载了
+                if hasattr(self.tokenizer, 'chat_template') and self.tokenizer.chat_template:
+                    self.processor.chat_template = self.tokenizer.chat_template
+                    logger.info("Chat template copied from tokenizer to processor")
+                else:
+                    logger.warning("Tokenizer also missing chat_template")
                 
             logger.info(f"Qwen2-VL processor loaded successfully (min_pixels={self.min_pixels}, max_pixels={self.max_pixels})")
             return self.processor
@@ -231,27 +287,14 @@ class Qwen2VLModel(VLMModelBase):
         """
         try:
             logger.info(f"Loading Qwen2-VL tokenizer: {self.model_name}")
-            try:
-                self.tokenizer = AutoTokenizer.from_pretrained(
-                    self.model_name,
-                    trust_remote_code=True
-                )
-                logger.info("Tokenizer loaded from local cache")
-            except Exception as local_err:
-                logger.warning(f"Failed to load tokenizer from local cache: {local_err}")
-                logger.info("Attempting to load tokenizer from online...")
-                try:
-                    self.tokenizer = AutoTokenizer.from_pretrained(
-                        self.model_name,
-                        trust_remote_code=True
-                    )
-                    logger.info("Tokenizer loaded from online")
-                except Exception as online_err:
-                    raise ModelLoadingError(
-                        message=f"Failed to load tokenizer from both local and online: {str(online_err)}",
-                        model_name=self.model_name,
-                        details={"local_error": str(local_err), "online_error": str(online_err)}
-                    ) from online_err
+            
+            # 只从本地加载
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.local_model_path,
+                trust_remote_code=True,
+                local_files_only=True
+            )
+            logger.info("Tokenizer loaded from local cache")
             
             logger.info("Qwen2-VL tokenizer loaded successfully")
             return self.tokenizer
@@ -384,8 +427,9 @@ class Qwen2VLModel(VLMModelBase):
                 return_tensors="pt"
             )
 
-            # 4. 移动到目标设备
-            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+            # 4. 移动到目标设备（优化：使用 non_blocking 异步传输）
+            is_npu = "npu" in self.device
+            inputs = {k: v.to(self.device, non_blocking=is_npu) for k, v in inputs.items()}
 
             logger.info("Model inputs prepared successfully")
             return inputs
@@ -441,11 +485,14 @@ class Qwen2VLModel(VLMModelBase):
         Returns:
             解码后的文本列表
         """
-        # 设置默认生成参数
+        # 设置默认生成参数（OCR 优化）
         do_sample = kwargs.get('do_sample', False)
         generation_config = {
-            'max_new_tokens': kwargs.get('max_new_tokens', 2048),  # 增加到2048以支持更长的文本
+            'max_new_tokens': kwargs.get('max_new_tokens', 512),  # OCR 通常 512 足够
             'do_sample': do_sample,
+            'use_cache': True,  # 启用 KV cache
+            'num_beams': 1,  # 禁用 beam search 提升速度
+            'repetition_penalty': 1.0,  # 禁用重复惩罚提速
         }
         
         # 只在采样时添加 temperature 和 top_p
@@ -453,14 +500,22 @@ class Qwen2VLModel(VLMModelBase):
             generation_config['temperature'] = kwargs.get('temperature', 0.7)
             generation_config['top_p'] = kwargs.get('top_p', 0.9)
 
-        logger.info(f"Generating output with Qwen2-VL (max_new_tokens={generation_config['max_new_tokens']}, do_sample={do_sample})...")
+        logger.info(f"Generating output with Qwen2-VL (max_new_tokens={generation_config['max_new_tokens']}, do_sample={do_sample}, use_cache=True)...")
 
         try:
+            # NPU 推理优化：减少同步开销
+            if "npu" in self.device:
+                torch.npu.synchronize()  # 确保输入已传输完成
+            
             with torch.no_grad():
                 generated_ids = self.model.generate(
                     **inputs,
                     **generation_config
                 )
+            
+            # NPU 推理完成后同步
+            if "npu" in self.device:
+                torch.npu.synchronize()
 
             logger.info("Generation completed, decoding...")
 
@@ -535,14 +590,18 @@ class Qwen2VLModel(VLMModelBase):
                 return_tensors="pt"
             )
 
-            # 移动到目标设备
-            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+            # 移动到目标设备（优化：异步传输）
+            is_npu = "npu" in self.device
+            inputs = {k: v.to(self.device, non_blocking=is_npu) for k, v in inputs.items()}
 
-            # 3. 生成
+            # 3. 生成（优化配置）
             do_sample = kwargs.get('do_sample', False)
             generation_config = {
                 'max_new_tokens': kwargs.get('max_new_tokens', 512),
                 'do_sample': do_sample,
+                'use_cache': True,
+                'num_beams': 1,
+                'repetition_penalty': 1.0,
             }
             
             # 只在采样时添加 temperature 和 top_p
@@ -550,11 +609,19 @@ class Qwen2VLModel(VLMModelBase):
                 generation_config['temperature'] = kwargs.get('temperature', 0.7)
                 generation_config['top_p'] = kwargs.get('top_p', 0.9)
 
+            # NPU 优化：减少同步
+            if "npu" in self.device:
+                torch.npu.synchronize()
+            
             with torch.no_grad():
                 generated_ids = self.model.generate(
                     **inputs,
                     **generation_config
                 )
+            
+            # NPU 优化：推理完成后同步
+            if "npu" in self.device:
+                torch.npu.synchronize()
 
             # 4. 解码输出
             output_text = self.decode_output(generated_ids, inputs['input_ids'])

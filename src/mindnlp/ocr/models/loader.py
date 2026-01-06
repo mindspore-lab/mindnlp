@@ -7,6 +7,7 @@ from mindnlp.ocr.utils.logger import get_logger
 from .base import VLMModelBase
 from .qwen2vl import Qwen2VLModel
 from .internvl import InternVLModel
+# from .got_ocr import GOTOCRModel  # TODO: 待实现
 
 
 logger = get_logger(__name__)
@@ -21,6 +22,9 @@ class ModelLoader:
         'qwen2vl': Qwen2VLModel,
         'qwen': Qwen2VLModel,
         'internvl': InternVLModel,
+        # 'got-ocr': GOTOCRModel,  # TODO: 待实现
+        # 'got_ocr': GOTOCRModel,
+        # 'got': GOTOCRModel,
     }
 
     def __init__(self, model_name: str, device: str = "cuda"):
@@ -83,7 +87,9 @@ class ModelLoader:
         """
         model_name_lower = model_name.lower()
 
-        if 'qwen' in model_name_lower:
+        if 'got' in model_name_lower and 'ocr' in model_name_lower:
+            return 'got-ocr'
+        elif 'qwen' in model_name_lower:
             return 'qwen2-vl'
         elif 'internvl' in model_name_lower:
             return 'internvl'
