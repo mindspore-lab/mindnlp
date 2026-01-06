@@ -5339,6 +5339,8 @@ def linalg_qr(input_x, mode):
 
 
 def max_pool2d(input, kernel_size, stride=1, padding=0, dilation=1, ceil_mode=False, return_indices=False):
+
+
     """
     Applies a 2D max pooling over an input signal composed of several input planes.
     
@@ -5473,6 +5475,83 @@ def max_pool2d(input, kernel_size, stride=1, padding=0, dilation=1, ceil_mode=Fa
         indices_tensor = ms.Tensor.from_numpy(indices)
         return result, indices_tensor
     return result
+
+
+class AvgPool2dFunction(Function):
+    @staticmethod
+    def forward(ctx, input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=None):
+        x = input.asnumpy()
+        if x.ndim != 4:
+            raise ValueError(f"avg_pool2d expects 4D input, got {x.ndim}D")
+        N, C, H, W = x.shape
+
+        # Normalize params
+        if isinstance(kernel_size, (int, numbers.Number)):
+            kh, kw = int(kernel_size), int(kernel_size)
+        else:
+            kh, kw = int(kernel_size[0]), int(kernel_size[1])
+
+        if stride is None:
+            sh, sw = kh, kw
+        elif isinstance(stride, (int, numbers.Number)):
+            sh, sw = int(stride), int(stride)
+        else:
+            sh, sw = int(stride[0]), int(stride[1])
+
+        if isinstance(padding, (int, numbers.Number)):
+            ph, pw = int(padding), int(padding)
+        else:
+            ph, pw = int(padding[0]), int(padding[1])
+
+        H_eff = H + 2 * ph
+        W_eff = W + 2 * pw
+        if ceil_mode:
+            out_h = int(np.ceil((H_eff - kh) / sh)) + 1
+            out_w = int(np.ceil((W_eff - kw) / sw)) + 1
+        else:
+            out_h = int(np.floor((H_eff - kh) / sh)) + 1
+            out_w = int(np.floor((W_eff - kw) / sw)) + 1
+        if (out_h - 1) * sh >= H_eff - kh + 1:
+            out_h -= 1
+        if (out_w - 1) * sw >= W_eff - kw + 1:
+            out_w -= 1
+
+        # Pad input
+        if ph > 0 or pw > 0:
+            x_pad = np.pad(x, ((0, 0), (0, 0), (ph, ph), (pw, pw)), mode='constant', constant_values=0)
+        else:
+            x_pad = x
+
+        mask_pad = None
+        if not count_include_pad:
+            ones = np.ones_like(x, dtype=np.float32)
+            mask_pad = np.pad(ones, ((0, 0), (0, 0), (ph, ph), (pw, pw)), mode='constant', constant_values=0)
+
+        denom_const = kh * kw if divisor_override is None else int(divisor_override)
+        out = np.zeros((N, C, out_h, out_w), dtype=x.dtype)
+        for i in range(out_h):
+            h_start = i * sh
+            h_end = h_start + kh
+            for j in range(out_w):
+                w_start = j * sw
+                w_end = w_start + kw
+                window = x_pad[:, :, h_start:h_end, w_start:w_end]
+                sum_vals = window.sum(axis=(2, 3))
+                if count_include_pad:
+                    denom = denom_const
+                else:
+                    denom = mask_pad[:, :, h_start:h_end, w_start:w_end].sum(axis=(2, 3))
+                    denom = np.maximum(denom, 1)
+                out[:, :, i, j] = sum_vals / denom
+
+        return ms.Tensor.from_numpy(out)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return None, None, None, None, None, None, None
+
+def avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=None):
+    return AvgPool2dFunction.apply(input, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
 
 
 def _get_unfold_indices(input_shape, dimension, size, step):
