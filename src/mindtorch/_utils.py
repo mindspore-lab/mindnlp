@@ -155,7 +155,8 @@ class ExceptionWrapper:
         raise exception
 
 def set_device_address(tensor):
-    mindtorch._prims.cpu.tensor_shape_cpu(tensor)
+    # No-op for numpy/CPU backend; touching shape ensures metadata is materialized
+    _ = tensor.shape
 
 
 def _type(self, dtype=None, non_blocking=False, **kwargs):
