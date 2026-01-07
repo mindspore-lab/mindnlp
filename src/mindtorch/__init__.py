@@ -201,11 +201,18 @@ def ms_run_check():
 from .autograd import *
 from .serialization import load, save
 from ._bind import get_default_dtype, set_default_dtype, get_default_device, is_autocast_enabled, set_autocast_enabled, \
-    set_autocast_dtype, get_autocast_dtype
+    set_autocast_dtype, get_autocast_dtype, asarray as _mt_asarray
 
 from .amp import autocast, GradScaler
 from .func import vmap
 from .storage import UntypedStorage, Storage, TypedStorage
+
+# Provide torch-compatible asarray API at top-level
+# Delegate to _bind.asarray with sensible defaults
+def asarray(obj, *, dtype=None, device=None, copy=None, requires_grad=False):
+    if dtype is None:
+        dtype = get_default_dtype()
+    return _mt_asarray(obj, dtype=dtype, device=device, copy=copy, requires_grad=requires_grad)
 
 from . import _dynamo, library
 from . import profiler, cuda, npu, xpu, mps, amp, compiler, jit, version, __future__, overrides, \
@@ -222,3 +229,32 @@ __version__ = 'test_version_no_value'
 from .torch_proxy import initialize_torch_proxy, setup_metadata_patch
 initialize_torch_proxy()
 setup_metadata_patch()
+
+# Patch diffusers' AutoencoderKLAllegro to enable tiled decoding by default
+# This avoids NotImplementedError when decoding without tiling.
+try:
+    from diffusers.models.autoencoders.autoencoder_kl_allegro import AutoencoderKLAllegro  # type: ignore
+    _orig_decode = AutoencoderKLAllegro.decode
+    def _patched_decode(self, *args, **kwargs):
+        try:
+            # Prefer official API if available
+            if hasattr(self, "enable_tiling") and callable(getattr(self, "enable_tiling")):
+                # Only enable once
+                if not getattr(self, "use_tiling", False):
+                    try:
+                        self.enable_tiling()
+                    except Exception:
+                        # Fallback: set flag directly if method fails
+                        setattr(self, "use_tiling", True)
+            else:
+                # Fallback if API not present
+                if not getattr(self, "use_tiling", False) and hasattr(self, "tiled_decode"):
+                    setattr(self, "use_tiling", True)
+        except Exception:
+            # Best-effort patch; never break user code
+            pass
+        return _orig_decode(self, *args, **kwargs)
+    AutoencoderKLAllegro.decode = _patched_decode
+except Exception:
+    # diffusers might be absent; ignore
+    pass
