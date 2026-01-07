@@ -264,8 +264,6 @@ class TensorPlaceHolder:
 
     def __getitem__(self, slices):
         slices = self._convert_numpy_slices(slices)
-        # if 0 in self.shape:
-        #     return self
         if isinstance(slices, tuple):
             new_slices = ()
             for s in slices:
@@ -278,6 +276,13 @@ class TensorPlaceHolder:
 
         out = execute('getitem', self, slices)
         return out
+
+    # Support storage-style view(dtype=...) used by safetensors loading
+    def view(self, *shape, **kwargs):
+        dtype = kwargs.pop('dtype', None)
+        if dtype is not None and (len(shape) == 0 or (len(shape) == 1 and shape[0] in ((), None))):
+            return ops.cast(self, dtype)
+        return self.reshape(*shape)
 
     def __setitem__(self, slices, value):
         slices = self._convert_numpy_slices(slices)
@@ -2523,7 +2528,10 @@ class TensorPlaceHolder:
 
 
     # Tensor.view
-    def view(self, *shape):
+    def view(self, *shape, **kwargs):
+        dtype = kwargs.pop('dtype', None)
+        if dtype is not None and (len(shape) == 0 or (len(shape) == 1 and shape[0] in ((), None))):
+            return ops.cast(self, dtype)
         return self.reshape(*shape)
 
     # Tensor.view_as
