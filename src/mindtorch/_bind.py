@@ -1,4 +1,5 @@
 import ctypes
+import numpy as np
 from typing import Any
 from ._dtype import *
 from ._C import device as device_
@@ -162,12 +163,43 @@ class finfo:
         return str(self._dtype)
 
 def asarray(obj: Any, *, dtype, device=None, copy = None, requires_grad = False):
-    data = obj.data.view(mindtorch.dtype2np[dtype])
+    # Import mindtorch lazily to avoid circular import issues
+    import mindtorch  # noqa: F401
+    dtype_np = mindtorch.dtype2np[dtype]
+    data = None
+    try:
+        # Prefer raw pointer + nbytes to build correct element count
+        if hasattr(obj, 'data_ptr') and hasattr(obj, 'nbytes'):
+            ptr = obj.data_ptr()
+            nbytes = obj.nbytes()
+            byte_arr = np.ctypeslib.as_array((ctypes.c_byte * nbytes).from_address(ptr), shape=(nbytes,))
+            itemsize = np.dtype(dtype_np).itemsize
+            elem_count = nbytes // itemsize
+            data = byte_arr.view(dtype_np)[:elem_count]
+        elif hasattr(obj, 'data') and isinstance(obj.data, np.ndarray):
+            # Fallback from existing numpy buffer
+            buf = obj.data
+            if buf.dtype == dtype_np:
+                data = buf
+            else:
+                # Reinterpret via bytes to avoid copies when possible
+                byte_arr = buf.view(np.uint8)
+                itemsize = np.dtype(dtype_np).itemsize
+                elem_count = byte_arr.size // itemsize
+                data = byte_arr.view(dtype_np)[:elem_count]
+        else:
+            data = np.asarray(obj, dtype=dtype_np)
+    except Exception:
+        # Last resort
+        data = np.asarray(obj, dtype=dtype_np)
     out = mindtorch.Tensor(data)
     mindtorch._utils.set_device_address(out)
     return out
 
-def view(self, dtype):
+def view(self, dtype=None, **kwargs):
+    import mindtorch  # noqa: F401
+    if dtype is None and 'dtype' in kwargs:
+        dtype = kwargs['dtype']
     data_ptr = self.data_ptr()
     nbytes = self.nbytes
     data = np.ctypeslib.as_array((ctypes.c_byte * nbytes).from_address(data_ptr), shape=(nbytes,))
