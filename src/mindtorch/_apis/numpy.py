@@ -3571,6 +3571,8 @@ class SinFunction(Function):
     @staticmethod
     def forward(ctx, input):
         out = np.sin(input.asnumpy())
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
         result = ms.Tensor.from_numpy(out)
         ctx.save_for_backward(input)
         return result
@@ -3594,6 +3596,8 @@ class CosFunction(Function):
     @staticmethod
     def forward(ctx, input):
         out = np.cos(input.asnumpy())
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
         result = ms.Tensor.from_numpy(out)
         ctx.save_for_backward(input)
         return result
@@ -6053,3 +6057,57 @@ class SearchSortedFunction(Function):
 
 def search_sorted(sorted_sequence, values, sorter=None, dtype=None, right=False):
     return SearchSortedFunction.apply(sorted_sequence, values, sorter, dtype, right)
+
+class PixelUnshuffleFunction(Function):
+    @staticmethod
+    def forward(ctx, input, downscale_factor):
+        x = input.asnumpy()
+        if x.ndim != 4:
+            raise ValueError(f"pixel_unshuffle expects 4D input (N,C,H,W), got {x.ndim}D")
+        N, C, H, W = x.shape
+        r = int(downscale_factor)
+        if r <= 0:
+            raise ValueError("downscale_factor must be > 0")
+        if (H % r) != 0 or (W % r) != 0:
+            raise ValueError("pixel_unshuffle: H and W must be divisible by downscale_factor")
+        h_out, w_out = H // r, W // r
+        x = x.reshape(N, C, h_out, r, w_out, r)
+        x = np.transpose(x, (0, 1, 3, 5, 2, 4))
+        out = x.reshape(N, C * r * r, h_out, w_out)
+        return ms.Tensor.from_numpy(out)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return None, None
+
+def pixel_unshuffle(input, downscale_factor):
+    return PixelUnshuffleFunction.apply(input, downscale_factor)
+
+class PixelShuffleFunction(Function):
+    @staticmethod
+    def forward(ctx, input, upscale_factor):
+        x = input.asnumpy()
+        if x.ndim != 4:
+            raise ValueError(f"pixel_shuffle expects 4D input (N,C,H,W), got {x.ndim}D")
+        N, C, H, W = x.shape
+        r = int(upscale_factor)
+        if r <= 0:
+            raise ValueError("upscale_factor must be > 0")
+        r2 = r * r
+        if (C % r2) != 0:
+            raise ValueError("pixel_shuffle: channels must be divisible by upscale_factor^2")
+        c_out = C // r2
+        # (N, C, H, W) -> (N, c_out, r, r, H, W)
+        x = x.reshape(N, c_out, r, r, H, W)
+        # -> (N, c_out, H, r, W, r)
+        x = np.transpose(x, (0, 1, 4, 2, 5, 3))
+        # -> (N, c_out, H*r, W*r)
+        out = x.reshape(N, c_out, H * r, W * r)
+        return ms.Tensor.from_numpy(out)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return None, None
+
+def pixel_shuffle(input, upscale_factor):
+    return PixelShuffleFunction.apply(input, upscale_factor)
