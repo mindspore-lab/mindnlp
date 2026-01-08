@@ -206,5 +206,4 @@ def view(self, dtype=None, **kwargs):
     data = data.view(mindtorch.dtype2np[dtype])
     assert data_ptr == data.ctypes.data
     out = mindtorch.Tensor(data)
-    mindtorch._utils.set_device_address(out)
     return out
