@@ -157,13 +157,6 @@ def prod(input, dim=None, keepdim=False, *, dtype=None):
     return execute('prod', input, dim, keepdim, dtype)
 
 # quantile
-def quantile(input, q, dim=None, keepdim=False, *, interpolation='linear', ignore_nan=False):
-    try:
-        return execute('quantile', input, q, dim, keepdim, interpolation, ignore_nan)
-    except RuntimeError:
-        # 后端未实现时回退到 numpy 实现
-        from mindtorch._apis import numpy as _np_api
-        return _np_api.quantile(input, q, dim, keepdim, interpolation, ignore_nan)
 
 # nanquantile
 
@@ -431,6 +424,6 @@ def count_nonzero(input, dim=-1):
 
 __all__ = ['all', 'amax', 'amin', 'aminmax', 'any', 'argmax', 'argmin', 'count_nonzero',
            'logsumexp', 'max', 'mean', 'median', 'min', 'nansum',
-           'norm', 'prod', 'quantile', 'std', 'std_mean', 'sum', 'unique', 'unique_consecutive',
+           'norm', 'prod', 'std', 'std_mean', 'sum', 'unique', 'unique_consecutive',
            'var', 'var_mean']
  
