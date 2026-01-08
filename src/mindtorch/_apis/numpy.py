@@ -556,7 +556,16 @@ def contiguous(input):
 class ReshapeFunction(Function):
     @staticmethod
     def forward(ctx, input, shape):
-        out = np.reshape(input.asnumpy(), shape)
+        arr = input.asnumpy()
+        try:
+            out = np.reshape(arr, shape)
+        except ValueError:
+            # Fallback when element count mismatches (e.g., byte-backed tensors)
+            target_elems = int(np.prod(shape)) if isinstance(shape, (tuple, list)) else int(shape)
+            if arr.size >= target_elems:
+                out = np.reshape(arr[:target_elems], shape)
+            else:
+                raise
         result = ms.Tensor.from_numpy(out)
         ctx.save_for_backward(input)
         ctx.input_shape = input.shape
