@@ -575,6 +575,48 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corne
         f" (got {mode})"
     )
 
+
+def upsample_trilinear3d_impl(input, output_size, scale_factors, align_corners):
+    """
+    Trilinear upsample for 5D input (N, C, D, H, W) using scipy.ndimage.zoom with order=1.
+    align_corners is ignored to avoid forced conversions; behavior matches bilinear2d path.
+    """
+    from scipy import ndimage
+    import numpy as np
+
+    x = input.asnumpy()
+    if x.ndim != 5:
+        raise ValueError(f"upsample_trilinear3d_impl expects 5D input, got {x.ndim}D")
+    N, C, D, H, W = x.shape
+
+    if output_size is None:
+        if scale_factors is None:
+            raise ValueError("Either output_size or scale_factors must be provided")
+        if isinstance(scale_factors, (list, tuple)):
+            sd = float(scale_factors[0])
+            sh = float(scale_factors[1]) if len(scale_factors) > 1 else float(scale_factors[0])
+            sw = float(scale_factors[2]) if len(scale_factors) > 2 else float(scale_factors[0])
+        else:
+            sd = sh = sw = float(scale_factors)
+        out_d = int(max(1, int(round(D * sd))))
+        out_h = int(max(1, int(round(H * sh))))
+        out_w = int(max(1, int(round(W * sw))))
+    else:
+        if not isinstance(output_size, (list, tuple)) or len(output_size) != 3:
+            raise ValueError("output_size for 3d upsample must have length 3 (D, H, W)")
+        out_d, out_h, out_w = int(output_size[0]), int(output_size[1]), int(output_size[2])
+
+    zoom_d = out_d / D
+    zoom_h = out_h / H
+    zoom_w = out_w / W
+
+    out = np.empty((N, C, out_d, out_h, out_w), dtype=x.dtype)
+    for n in range(N):
+        for c in range(C):
+            out[n, c] = ndimage.zoom(x[n, c], (zoom_d, zoom_h, zoom_w), order=1, mode='nearest')
+
+    return mindtorch.Tensor(out)
+
 def normalize(input, p=2.0, dim=1, eps=1e-6):
     r"""
     Normalize a tensor along a specified dimension.
