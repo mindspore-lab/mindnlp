@@ -277,13 +277,6 @@ class TensorPlaceHolder:
         out = execute('getitem', self, slices)
         return out
 
-    # Support storage-style view(dtype=...) used by safetensors loading
-    def view(self, *shape, **kwargs):
-        dtype = kwargs.pop('dtype', None)
-        if dtype is not None and (len(shape) == 0 or (len(shape) == 1 and shape[0] in ((), None))):
-            return ops.cast(self, dtype)
-        return self.reshape(*shape)
-
     def __setitem__(self, slices, value):
         slices = self._convert_numpy_slices(slices)
         if isinstance(value, float):
@@ -2683,3 +2676,4 @@ def enable_mindspore_patch():
 def _rebuild_from_type_v2(func, new_type, args, state):
     ret = func(*args)
     return ret
+
