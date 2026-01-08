@@ -327,6 +327,50 @@ def clamp_scalar(input, min, max):
     return ClampScalarFunction.apply(input, min, max)
 
 
+class ClampTensorFunction(Function):
+    @staticmethod
+    def forward(ctx, input, min_val, max_val):
+        x = input.asnumpy()
+        a_min = None if min_val is None else (min_val.asnumpy() if hasattr(min_val, 'asnumpy') else min_val)
+        a_max = None if max_val is None else (max_val.asnumpy() if hasattr(max_val, 'asnumpy') else max_val)
+        out = np.clip(x, a_min, a_max)
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
+        result = ms.Tensor.from_numpy(out)
+        # save tensors for backward
+        saved_min = min_val if hasattr(min_val, 'asnumpy') else None
+        saved_max = max_val if hasattr(max_val, 'asnumpy') else None
+        ctx.save_for_backward(input, saved_min, saved_max)
+        ctx.has_min = min_val is not None
+        ctx.has_max = max_val is not None
+        return result
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, min_t, max_t = ctx.saved_tensors
+        grad_input = None
+        if ctx.needs_input_grad[0]:
+            x = input.asnumpy()
+            go = grad_output.asnumpy()
+            mask = np.ones_like(x, dtype=bool)
+            if ctx.has_min:
+                a_min = min_t.asnumpy() if (min_t is not None and hasattr(min_t, 'asnumpy')) else None
+                if a_min is not None:
+                    mask &= x > a_min
+            if ctx.has_max:
+                a_max = max_t.asnumpy() if (max_t is not None and hasattr(max_t, 'asnumpy')) else None
+                if a_max is not None:
+                    mask &= x < a_max
+            grad_np = go * mask
+            if not isinstance(grad_np, np.ndarray):
+                grad_np = np.array(grad_np)
+            grad_input = ms.Tensor.from_numpy(grad_np)
+        return grad_input, None, None
+
+def clamp_tensor(input, min, max):
+    return ClampTensorFunction.apply(input, min, max)
+
+
 class ReluFunction(Function):
     @staticmethod
     def forward(ctx, input):
@@ -5603,6 +5647,41 @@ def stop_gradient(input):
 
 def isfinite(input):
     return mindtorch.Tensor(np.isfinite(input.asnumpy()))
+
+
+class QuantileFunction(Function):
+    @staticmethod
+    def forward(ctx, input, q, dim=None, keepdim=False, interpolation='linear', ignore_nan=False):
+        x = input.asnumpy()
+        # q can be scalar, list/ndarray, or tensor
+        if hasattr(q, 'asnumpy'):
+            q_np = q.asnumpy()
+        else:
+            q_np = np.asarray(q)
+
+        # Choose quantile/nanquantile according to ignore_nan
+        quantile_fn = np.nanquantile if ignore_nan else np.quantile
+
+        # Call with proper keyword depending on numpy version
+        # Prefer method=; fall back to interpolation=
+        try:
+            res = quantile_fn(x, q_np, axis=dim, method=interpolation, keepdims=keepdim)
+        except TypeError:
+            res = quantile_fn(x, q_np, axis=dim, interpolation=interpolation, keepdims=keepdim)
+
+        # Ensure ndarray
+        if not isinstance(res, np.ndarray):
+            res = np.array(res)
+        # 不做不必要的类型强转，保持 numpy 的返回 dtype
+        return ms.Tensor.from_numpy(res)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        # quantile is not generally differentiable
+        return None, None, None, None, None, None
+
+def quantile(input, q, dim=None, keepdim=False, interpolation='linear', ignore_nan=False):
+    return QuantileFunction.apply(input, q, dim, keepdim, interpolation, ignore_nan)
 
 class IsInfFunction(Function):
     @staticmethod
