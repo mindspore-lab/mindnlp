@@ -27,10 +27,15 @@ async def lifespan(_app: FastAPI):  # pylint: disable=redefined-outer-name
     """
     global _engine  # pylint: disable=global-statement
 
+    # 清除settings缓存以重新读取环境变量
+    get_settings.cache_clear()
+    # 重新获取settings
+    fresh_settings = get_settings()
+    
     # 启动时初始化
     logger.info("Initializing OCR engine...")
     try:
-        if settings.use_mock_engine:
+        if fresh_settings.use_mock_engine:
             # 使用 Mock 引擎（快速启动）
             logger.info("Using Mock OCR engine for testing...")
             from mindnlp.ocr.core.mock_engine import MockVLMOCREngine
@@ -42,8 +47,9 @@ async def lifespan(_app: FastAPI):  # pylint: disable=redefined-outer-name
             from mindnlp.ocr.core.exceptions import ModelLoadingError
             try:
                 _engine = VLMOCREngine(
-                    model_name=settings.default_model,
-                    device=settings.device
+                    model_name=fresh_settings.default_model,
+                    device=fresh_settings.device,
+                    lora_weights_path=fresh_settings.lora_weights_path
                 )
                 logger.info("OCR engine initialized successfully")
             except ModelLoadingError as e:

@@ -28,7 +28,8 @@ class ModelLoader:
     }
 
     def __init__(self, model_name: str, device: str = "cuda", 
-                 quantization_mode: str = "none", quantization_config: dict = None):
+                 quantization_mode: str = "none", quantization_config: dict = None,
+                 lora_weights_path: str = None):
         """
         初始化模型加载器
 
@@ -37,13 +38,15 @@ class ModelLoader:
             device: 运行设备
             quantization_mode: 量化模式 ("none", "fp16", "int8", "int4")
             quantization_config: 量化配置字典
+            lora_weights_path: LoRA权重路径 (可选，用于加载微调模型)
         """
         self.model_name = model_name
         self.device = device
         self.quantization_mode = quantization_mode
         self.quantization_config = quantization_config or {}
+        self.lora_weights_path = lora_weights_path
         self.model_instance = None
-        logger.info(f"ModelLoader initialized with model: {model_name}, quantization: {quantization_mode}")
+        logger.info(f"ModelLoader initialized with model: {model_name}, quantization: {quantization_mode}, lora: {lora_weights_path}")
 
     def load_model(self) -> VLMModelBase:
         """
@@ -68,7 +71,8 @@ class ModelLoader:
             self.model_name, 
             self.device,
             quantization_mode=self.quantization_mode,
-            quantization_config=self.quantization_config
+            quantization_config=self.quantization_config,
+            lora_weights_path=self.lora_weights_path
         )
 
         return self.model_instance.model

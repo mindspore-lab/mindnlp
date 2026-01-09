@@ -56,7 +56,8 @@ async def predict_image(
     output_format: str = Form("text"),
     language: str = Form("auto"),
     task_type: str = Form("general"),
-    confidence_threshold: float = Form(0.0)
+    confidence_threshold: float = Form(0.0),
+    model: str = Form(None)
 ):
     """
     单张图像OCR预测
@@ -67,6 +68,7 @@ async def predict_image(
         language: 语言设置 (auto/zh/en/ja/ko)
         task_type: 任务类型 (general/document/table/formula)
         confidence_threshold: 置信度阈值
+        model: 指定模型 (2b/7b/留空使用默认)
 
     Returns:
         OCRResponse: OCR识别结果
@@ -81,8 +83,18 @@ async def predict_image(
                 detail=f"Invalid file type: {file.content_type}. Only image files are allowed."
             )
 
-        # 获取引擎
-        _engine = get_engine()
+        # 获取多模型管理器
+        model_manager = get_engine()
+        
+        # 根据请求选择模型
+        if model:
+            logger.info(f"Switching to model: {model}")
+            _engine = model_manager.get_engine(model)
+            current_model = model_manager.get_current_model()
+            logger.info(f"Using model: {current_model}")
+        else:
+            _engine = model_manager.get_engine()
+            current_model = model_manager.get_current_model()
 
         # 读取图像数据
         image_bytes = await file.read()

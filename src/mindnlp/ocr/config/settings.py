@@ -5,6 +5,7 @@
 import os
 from functools import lru_cache
 from pathlib import Path
+from typing import Optional
 from pydantic_settings import BaseSettings
 
 # 加载 .env 文件
@@ -28,6 +29,7 @@ class Settings(BaseSettings):
     # 模型配置
     default_model: str = "Qwen/Qwen2-VL-7B-Instruct"  # 使用7B模型提高精度
     device: str = "npu:0"
+    lora_weights_path: Optional[str] = None  # LoRA权重路径，用于加载微调模型
 
     @property
     def use_mock_engine(self) -> bool:

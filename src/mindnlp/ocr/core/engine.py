@@ -34,7 +34,7 @@ class VLMOCREngine:
 
     def __init__(self, model_name: str = "Qwen/Qwen2-VL-2B-Instruct", device: str = "cuda",
                  enable_monitoring: bool = True, quantization_mode: str = "none",
-                 quantization_config: dict = None):
+                 quantization_config: dict = None, lora_weights_path: str = None):
         """
         初始化OCR引擎
 
@@ -44,8 +44,9 @@ class VLMOCREngine:
             enable_monitoring: 是否启用性能监控
             quantization_mode: 量化模式 ("none", "fp16", "int8", "int4")
             quantization_config: 量化配置字典
+            lora_weights_path: LoRA权重路径 (可选，用于加载微调模型)
         """
-        logger.info(f"Initializing VLM-OCR Engine with model: {model_name}, quantization: {quantization_mode}")
+        logger.info(f"Initializing VLM-OCR Engine with model: {model_name}, quantization: {quantization_mode}, lora: {lora_weights_path}")
 
         # 保存模型名称
         self.model_name = model_name
@@ -58,12 +59,13 @@ class VLMOCREngine:
         else:
             self.monitor = None
         
-        # 加载模型（传递量化参数）
+        # 加载模型（传递量化参数和LoRA路径）
         self.model_loader = ModelLoader(
             model_name, 
             device, 
             quantization_mode=quantization_mode,
-            quantization_config=quantization_config
+            quantization_config=quantization_config,
+            lora_weights_path=lora_weights_path
         )
         self.model_loader.load_model()  # 加载模型到 model_instance
         self.model_instance = self.model_loader.model_instance  # 保存 model_instance

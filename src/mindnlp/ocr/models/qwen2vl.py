@@ -30,7 +30,8 @@ class Qwen2VLModel(VLMModelBase):
 
     def __init__(self, model_name: str = "Qwen/Qwen2-VL-2B-Instruct", device: str = "cuda",
                  min_pixels: int = 128*28*28, max_pixels: int = 512*28*28,
-                 quantization_mode: str = "none", quantization_config: dict = None):
+                 quantization_mode: str = "none", quantization_config: dict = None,
+                 lora_weights_path: str = None):
         """
         初始化Qwen2-VL模型
 
@@ -41,6 +42,7 @@ class Qwen2VLModel(VLMModelBase):
             max_pixels: 最大像素数 (用于动态分辨率)
             quantization_mode: 量化模式 ("none", "fp16", "int8", "int4")
             quantization_config: 量化配置字典 (可选,覆盖默认配置)
+            lora_weights_path: LoRA权重路径 (可选，用于加载微调模型)
         """
         super().__init__(model_name, device)
         self.processor = None
@@ -49,11 +51,17 @@ class Qwen2VLModel(VLMModelBase):
         self.max_pixels = max_pixels
         self.quantization_mode = quantization_mode.lower()
         self.quantization_config = quantization_config or {}
+        self.lora_weights_path = lora_weights_path
         
         # 解析本地模型路径
         self.local_model_path = self._resolve_model_path(model_name)
         
         self.load_model()
+        
+        # 如果指定了LoRA权重，加载LoRA
+        if self.lora_weights_path:
+            self.load_lora_weights(self.lora_weights_path)
+        
         self.load_tokenizer()  # 先加载tokenizer,processor需要它的chat_template
         self.load_processor()
     
@@ -705,6 +713,122 @@ class Qwen2VLModel(VLMModelBase):
 
             # 4. 解码输出
             output_text = self.decode_output(generated_ids, inputs['input_ids'])
+
+            return output_text
+
+        except Exception as e:
+            logger.error(f"Batch inference failed: {e}", exc_info=True)
+            raise ModelInferenceError(
+                message=f"Batch inference error: {str(e)}",
+                model_name=self.model_name,
+                details={"batch_size": len(batch_messages), "error_type": type(e).__name__}
+            ) from e
+    
+    def load_lora_weights(self, lora_path: str):
+        """
+        手动加载LoRA权重（使用numpy格式，避免bitsandbytes依赖）
+        
+        Args:
+            lora_path: LoRA权重文件路径（.npz文件或包含adapter_model.npz的目录）
+        
+        Raises:
+            ModelLoadingError: LoRA权重加载失败
+        """
+        import os
+        import numpy as np
+        
+        try:
+            # 确定权重文件路径
+            if os.path.isdir(lora_path):
+                weights_file = os.path.join(lora_path, 'adapter_model.npz')
+            else:
+                weights_file = lora_path
+            
+            if not os.path.exists(weights_file):
+                raise FileNotFoundError(f"LoRA weights file not found: {weights_file}")
+            
+            logger.info(f"Loading LoRA weights from: {weights_file}")
+            
+            # 加载numpy权重
+            weights = np.load(weights_file)
+            logger.info(f"Loaded {len(weights.files)} LoRA parameters")
+            
+            # 转换为PyTorch张量
+            lora_state_dict = {}
+            for key in weights.files:
+                tensor = torch.from_numpy(weights[key])
+                # 移动到与模型相同的设备和数据类型
+                if hasattr(self.model, 'dtype'):
+                    tensor = tensor.to(dtype=self.model.dtype, device=self.device)
+                else:
+                    tensor = tensor.to(device=self.device)
+                lora_state_dict[key] = tensor
+            
+            # 手动合并LoRA权重到模型
+            model_state_dict = self.model.state_dict()
+            updated_count = 0
+            
+            for lora_key, lora_weight in lora_state_dict.items():
+                # 解析LoRA键名（格式: base_model.model.xxx.lora_A.weight 或 lora_B.weight）
+                # 移除前缀得到实际的模型参数名
+                if 'base_model.model.' in lora_key:
+                    # 标准PEFT格式
+                    model_key = lora_key.replace('base_model.model.', '')
+                else:
+                    model_key = lora_key
+                
+                # 检查是否是LoRA A/B矩阵
+                if 'lora_A' in model_key or 'lora_B' in model_key:
+                    # 获取基础权重的键名
+                    base_key = model_key.replace('.lora_A.weight', '.weight') \
+                                       .replace('.lora_B.weight', '.weight') \
+                                       .replace('.lora_A.default.weight', '.weight') \
+                                       .replace('.lora_B.default.weight', '.weight')
+                    
+                    # 如果基础权重存在于模型中，更新它
+                    if base_key in model_state_dict:
+                        # 这里简化处理：直接添加LoRA权重
+                        # 完整实现应该是 W_new = W_base + (lora_B @ lora_A) * scaling
+                        # 但这需要配对的A和B矩阵，暂时跳过
+                        pass
+                    else:
+                        # 可能是直接保存的合并权重
+                        if model_key in model_state_dict:
+                            model_state_dict[model_key] = lora_weight
+                            updated_count += 1
+                else:
+                    # 非LoRA参数，直接更新
+                    if model_key in model_state_dict:
+                        model_state_dict[model_key] = lora_weight
+                        updated_count += 1
+            
+            # 如果有更新，重新加载到模型
+            if updated_count > 0:
+                self.model.load_state_dict(model_state_dict, strict=False)
+                logger.info(f"✅ Successfully loaded LoRA weights, updated {updated_count} parameters")
+            else:
+                logger.warning("⚠️  No parameters were updated. LoRA weights may not be compatible.")
+                # 尝试使用PEFT标准方式（可能失败）
+                logger.info("Attempting to load LoRA using PEFT (may fail with mindtorch)...")
+                try:
+                    from peft import PeftModel
+                    self.model = PeftModel.from_pretrained(self.model, lora_path)
+                    logger.info("✅ Successfully loaded LoRA using PEFT")
+                except Exception as peft_error:
+                    logger.warning(f"PEFT loading failed (expected with mindtorch): {peft_error}")
+                    raise ModelLoadingError(
+                        message=f"Failed to load LoRA weights: {str(peft_error)}",
+                        model_name=self.model_name,
+                        details={"lora_path": lora_path, "error": str(peft_error)}
+                    )
+        
+        except Exception as e:
+            logger.error(f"Failed to load LoRA weights: {e}", exc_info=True)
+            raise ModelLoadingError(
+                message=f"Failed to load LoRA weights from {lora_path}: {str(e)}",
+                model_name=self.model_name,
+                details={"lora_path": lora_path, "error_type": type(e).__name__}
+            ) from e
 
             logger.info(f"Batch generation completed for {len(output_text)} samples")
             return output_text

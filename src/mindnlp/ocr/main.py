@@ -218,6 +218,8 @@ def main():
     print(f"  - Port: {settings.api_port}")
     print(f"  - 设备: {settings.device}")
     print(f"  - 模型: {settings.default_model}")
+    if settings.lora_weights_path:
+        print(f"  - LoRA权重: {settings.lora_weights_path}")
     print(f"  - Mock模式: {settings.use_mock_engine}")
     print(f"\n📚 API 文档地址 (推荐使用):")
     print(f"  - Swagger UI:  http://localhost:{settings.api_port}/api/docs")

@@ -286,7 +286,19 @@ def safe_load_file(filename, device = 'cpu'):
 
 
 def _tobytes(tensor, name):
-    return tensor.tobytes()
+    # mindtorch.Tensor 需要先转换为 numpy
+    if hasattr(tensor, 'cpu') and hasattr(tensor, 'numpy'):
+        # mindtorch.Tensor 或 torch.Tensor
+        try:
+            # 尝试转换为 numpy，然后转为字节
+            return tensor.cpu().numpy().tobytes()
+        except:
+            pass
+    # 标准 PyTorch tensor 有 tobytes() 方法
+    if hasattr(tensor, 'tobytes'):
+        return tensor.tobytes()
+    # 回退：通过 numpy
+    return tensor.cpu().numpy().tobytes()
 
 
 @register_safetensors_patch(">=0.0.0", priority=10,

@@ -14,15 +14,25 @@ logger = get_logger(__name__)
 class InternVLModel(VLMModelBase):
     """InternVL模型封装"""
 
-    def __init__(self, model_name: str = "OpenGVLab/InternVL-Chat-V1-5", device: str = "cuda"):
+    def __init__(self, model_name: str = "OpenGVLab/InternVL-Chat-V1-5", device: str = "cuda",
+                 quantization_mode: str = "none", quantization_config: dict = None,
+                 lora_weights_path: str = None):
         """
         初始化InternVL模型
 
         Args:
             model_name: 模型名称
             device: 运行设备
+            quantization_mode: 量化模式 (未实现)
+            quantization_config: 量化配置 (未实现)
+            lora_weights_path: LoRA权重路径 (未实现)
         """
         super().__init__(model_name, device)
+        self.quantization_mode = quantization_mode
+        self.quantization_config = quantization_config or {}
+        self.lora_weights_path = lora_weights_path
+        if lora_weights_path:
+            logger.warning("LoRA loading not yet implemented for InternVL")
         self.load_model()
         self.load_tokenizer()
 
