@@ -83,18 +83,12 @@ async def predict_image(
                 detail=f"Invalid file type: {file.content_type}. Only image files are allowed."
             )
 
-        # 获取多模型管理器
-        model_manager = get_engine()
+        # 获取OCR引擎
+        _engine = get_engine()
         
-        # 根据请求选择模型
+        # 当前版本暂不支持动态切换模型
         if model:
-            logger.info(f"Switching to model: {model}")
-            _engine = model_manager.get_engine(model)
-            current_model = model_manager.get_current_model()
-            logger.info(f"Using model: {current_model}")
-        else:
-            _engine = model_manager.get_engine()
-            current_model = model_manager.get_current_model()
+            logger.info(f"Model parameter ignored (using default engine): {model}")
 
         # 读取图像数据
         image_bytes = await file.read()
