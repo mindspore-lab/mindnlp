@@ -605,15 +605,15 @@ def log_softmax(input, axis, dtype):
 def scatter(input, dim, index, src):
     return legacy.tensor_scatter_elements(input, index, src, dim, "none")
 
-def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, training=False, momentum=0.1, epsilon=1e-5):
+def batch_norm(input, weight, bias, running_mean=None, running_var=None, training=False, momentum=0.1, epsilon=1e-5):
     input_ndim = input.ndim
     if input_ndim == 2:
-        return legacy.batch_norm(input, weight, bias, running_mean, runnning_var, training, epsilon, momentum, 'NCHW')
+        return legacy.batch_norm(input, weight, bias, running_mean, running_var, training, epsilon, momentum, 'NCHW')
     else:
         input = transpose_view(input, 1, -1)
         input_shape = input.shape
         input = reshape(input, (-1, input.shape[-1]))
-        outs = legacy.batch_norm(input, weight, bias, running_mean, runnning_var, training, epsilon, momentum, 'NCHW')
+        outs = legacy.batch_norm(input, weight, bias, running_mean, running_var, training, epsilon, momentum, 'NCHW')
         out = reshape(outs[0], (*input_shape[:-1], -1))
         out = transpose_view(out, 1, -1)
 
