@@ -456,7 +456,45 @@ class CastFunction(Function):
             return input
         if hasattr(dtype, 'dtype'):
             dtype = dtype.dtype
-        out = input.asnumpy().astype(mindtorch.dtype2np[dtype])
+        np_in = input.asnumpy()
+        # Special-case: bfloat16 -> float16 via float32 to avoid ml_dtypes unsafe cast
+        if input.dtype == ms.bfloat16 and dtype == ms.float16:
+            out = np_in.astype(np.float32).astype(np.float16)
+            result = ms.Tensor.from_numpy(out)
+            ctx.save_for_backward(input)
+            ctx.original_dtype = input.dtype
+            return result
+        np_target = mindtorch.dtype2np.get(dtype, None)
+        # If target numpy dtype resolves to the same as input numpy dtype, skip casting
+        if np_target is not None and np_in.dtype == np_target:
+            out = np_in.copy()
+        else:
+            try:
+                if np_target is None:
+                    # Fallback: map common float types by name
+                    s = str(dtype).lower()
+                    if 'float16' in s:
+                        np_target = np.float16
+                    elif 'float32' in s:
+                        np_target = np.float32
+                    elif 'float64' in s:
+                        np_target = np.float64
+                    else:
+                        np_target = np_in.dtype
+                out = np_in.astype(np_target)
+            except TypeError:
+                # Handle bfloat16 casting quirks or identical target
+                if np_in.dtype.name == 'bfloat16' and np_target == np.float16:
+                    out = np_in.astype(np.float32).astype(np.float16)
+                elif np_target == np_in.dtype:
+                    out = np_in.copy()
+                else:
+                    # Last resort: cast via float32 when both are float-like
+                    if np_in.dtype.kind == 'f':
+                        mid = np_in.astype(np.float32)
+                        out = mid.astype(np_target)
+                    else:
+                        out = np_in.astype(np_target, copy=True)
         result = ms.Tensor.from_numpy(out)
         ctx.save_for_backward(input)
         ctx.original_dtype = input.dtype
@@ -468,10 +506,26 @@ class CastFunction(Function):
         grad_input = None
         if ctx.needs_input_grad[0]:
             # Cast gradient back to original dtype
-            grad_input = grad_output.asnumpy().astype(mindtorch.dtype2np[ctx.original_dtype])
-            if not isinstance(grad_input, np.ndarray):
-                grad_input = np.array(grad_input)
-            grad_input = ms.Tensor.from_numpy(grad_input)
+            np_grad = grad_output.asnumpy()
+            target_np = mindtorch.dtype2np.get(ctx.original_dtype, None)
+            try:
+                if target_np is None:
+                    # Fallback to identity
+                    casted = np_grad
+                else:
+                    # Special-case bf16 conversion via fp32
+                    if target_np is not None and np_grad.dtype.name == 'bfloat16' and target_np == np.float16:
+                        casted = np_grad.astype(np.float32).astype(target_np)
+                    else:
+                        casted = np_grad.astype(target_np)
+            except TypeError:
+                if target_np == np_grad.dtype:
+                    casted = np_grad.copy()
+                elif np_grad.dtype.kind == 'f':
+                    casted = np_grad.astype(np.float32).astype(target_np)
+                else:
+                    casted = np_grad.astype(target_np, copy=True)
+            grad_input = ms.Tensor.from_numpy(casted)
         return grad_input, None
 
 def cast(input, dtype):
