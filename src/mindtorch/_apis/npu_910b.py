@@ -232,7 +232,17 @@ def dense(input, weight, bias=None):
         Tensor: The result of the dense operation.
     """
     if ENABLE_PYBOOST:
-        return pyboost.dense_op(input, weight, bias)
+        in_dtype = input.dtype
+        wt_dtype = weight.dtype
+        # Align dtypes for Ascend dense
+        if in_dtype != wt_dtype:
+            input = cast(input, wt_dtype)
+        if bias is not None and bias.dtype != wt_dtype:
+            bias = cast(bias, wt_dtype)
+        out = pyboost.dense_op(input, weight, bias)
+        if out.dtype != in_dtype:
+            out = cast(out, in_dtype)
+        return out
     return legacy.dense(input, weight, bias)
 
 def transpose_view(input, dim0, dim1):
@@ -1496,8 +1506,13 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if bias is None:
         bias = zeros([input.shape[1]], dtype=input.dtype)
     if ENABLE_PYBOOST:
+        # Ascend requires input/weight/bias to have same dtype
+        if weight.dtype != input.dtype:
+            weight = cast(weight, input.dtype)
+        if bias.dtype != input.dtype:
+            bias = cast(bias, input.dtype)
         return pyboost.group_norm_op(input, num_groups, weight, bias, eps)[0]
-    return legacy.group_norm(input, num_groups, eps, affine)[0]
+    return legacy.group_norm(input, num_groups, eps, None)[0]
 
 def nllloss_2d(input, target, weight, reduction='mean', ignore_index=-100):
     if ENABLE_PYBOOST:
