@@ -456,7 +456,45 @@ class CastFunction(Function):
             return input
         if hasattr(dtype, 'dtype'):
             dtype = dtype.dtype
-        out = input.asnumpy().astype(mindtorch.dtype2np[dtype])
+        np_in = input.asnumpy()
+        # Special-case: bfloat16 -> float16 via float32 to avoid ml_dtypes unsafe cast
+        if input.dtype == ms.bfloat16 and dtype == ms.float16:
+            out = np_in.astype(np.float32).astype(np.float16)
+            result = ms.Tensor.from_numpy(out)
+            ctx.save_for_backward(input)
+            ctx.original_dtype = input.dtype
+            return result
+        np_target = mindtorch.dtype2np.get(dtype, None)
+        # If target numpy dtype resolves to the same as input numpy dtype, skip casting
+        if np_target is not None and np_in.dtype == np_target:
+            out = np_in.copy()
+        else:
+            try:
+                if np_target is None:
+                    # Fallback: map common float types by name
+                    s = str(dtype).lower()
+                    if 'float16' in s:
+                        np_target = np.float16
+                    elif 'float32' in s:
+                        np_target = np.float32
+                    elif 'float64' in s:
+                        np_target = np.float64
+                    else:
+                        np_target = np_in.dtype
+                out = np_in.astype(np_target)
+            except TypeError:
+                # Handle bfloat16 casting quirks or identical target
+                if np_in.dtype.name == 'bfloat16' and np_target == np.float16:
+                    out = np_in.astype(np.float32).astype(np.float16)
+                elif np_target == np_in.dtype:
+                    out = np_in.copy()
+                else:
+                    # Last resort: cast via float32 when both are float-like
+                    if np_in.dtype.kind == 'f':
+                        mid = np_in.astype(np.float32)
+                        out = mid.astype(np_target)
+                    else:
+                        out = np_in.astype(np_target, copy=True)
         result = ms.Tensor.from_numpy(out)
         ctx.save_for_backward(input)
         ctx.original_dtype = input.dtype
@@ -468,10 +506,26 @@ class CastFunction(Function):
         grad_input = None
         if ctx.needs_input_grad[0]:
             # Cast gradient back to original dtype
-            grad_input = grad_output.asnumpy().astype(mindtorch.dtype2np[ctx.original_dtype])
-            if not isinstance(grad_input, np.ndarray):
-                grad_input = np.array(grad_input)
-            grad_input = ms.Tensor.from_numpy(grad_input)
+            np_grad = grad_output.asnumpy()
+            target_np = mindtorch.dtype2np.get(ctx.original_dtype, None)
+            try:
+                if target_np is None:
+                    # Fallback to identity
+                    casted = np_grad
+                else:
+                    # Special-case bf16 conversion via fp32
+                    if target_np is not None and np_grad.dtype.name == 'bfloat16' and target_np == np.float16:
+                        casted = np_grad.astype(np.float32).astype(target_np)
+                    else:
+                        casted = np_grad.astype(target_np)
+            except TypeError:
+                if target_np == np_grad.dtype:
+                    casted = np_grad.copy()
+                elif np_grad.dtype.kind == 'f':
+                    casted = np_grad.astype(np.float32).astype(target_np)
+                else:
+                    casted = np_grad.astype(target_np, copy=True)
+            grad_input = ms.Tensor.from_numpy(casted)
         return grad_input, None
 
 def cast(input, dtype):
@@ -2027,50 +2081,53 @@ def sort_ext(input, dim, descending, stable):
     return sort(input, dim, descending, stable)
 
 
+class SortFunction(Function):
+    @staticmethod
+    def forward(ctx, input, dim, descending, stable):
+        x = input.asnumpy() if hasattr(input, 'asnumpy') else np.asarray(input)
+        axis = dim
+        # Choose argsort kind for stability
+        kind = 'stable' if stable else None
+        if axis is None:
+            idx = np.argsort(x, axis=None, kind=kind)
+            val = np.sort(x, axis=None, kind=kind)
+            ctx.axis = None
+        else:
+            idx = np.argsort(x, axis=axis, kind=kind)
+            if descending:
+                idx = np.flip(idx, axis=axis)
+            val = np.take_along_axis(x, idx, axis=axis)
+            ctx.axis = axis
+        # Save inverse permutation for backward
+        ctx.save_for_backward(input)
+        ctx.idx = idx
+        ctx.descending = descending
+        return ms.Tensor.from_numpy(val), ms.Tensor.from_numpy(idx.astype(np.int64))
+
+    @staticmethod
+    def backward(ctx, grad_values, grad_indices):
+        # Only propagate gradients for values; indices are non-differentiable
+        grad_input = None
+        if ctx.needs_input_grad[0] and grad_values is not None:
+            g = grad_values.asnumpy() if hasattr(grad_values, 'asnumpy') else np.asarray(grad_values)
+            axis = ctx.axis
+            idx = ctx.idx
+            if axis is None:
+                # Flatten then scatter back
+                flat_grad = g.reshape(-1)
+                flat_input = (ctx.saved_tensors[0].asnumpy()).reshape(-1)
+                inv = np.empty_like(idx)
+                inv[idx] = np.arange(idx.size)
+                flat_grad_input = np.take(flat_grad, inv, axis=0)
+                grad_input_np = flat_grad_input.reshape(flat_input.shape)
+            else:
+                inv = np.argsort(idx, axis=axis)
+                grad_input_np = np.take_along_axis(g, inv, axis=axis)
+            grad_input = ms.Tensor.from_numpy(grad_input_np)
+        return grad_input, None, None, None
+
 def sort(input, dim, descending, stable):
-    """
-    Sorts the elements of the input tensor along a given dimension.
-    
-    Args:
-        input: Input tensor
-        dim: The dimension to sort along
-        descending: If True, sort in descending order
-        stable: If True, use stable sorting algorithm
-    
-    Returns:
-        Tuple of (values, indices) where:
-        - values: Sorted tensor
-        - indices: Indices of the sorted elements
-    """
-    # INSERT_YOUR_CODE
-    # Use numpy implementation to perform sort
-    input_np = input.asnumpy() if hasattr(input, 'asnumpy') else np.asarray(input)
-
-    # numpy.sort always returns ascending, so for descending sort, negate, sort ascending, then re-negate, or flip.
-    # We need the indices too, so use np.argsort for indices and indexing to get sorted values.
-
-    # Ensure axis is an int and handle None (default is to flatten if None)
-    axis = dim
-    if axis is None:
-        # Flatten input
-        flat_values = np.sort(input_np, axis=None)
-        flat_indices = np.argsort(input_np, axis=None)
-        values = ms.Tensor.from_numpy(flat_values)
-        indices = ms.Tensor.from_numpy(flat_indices.astype(np.int64))
-        return values, indices
-
-    # When descending, sort ascending then reverse results on that axis
-    if descending:
-        sort_indices = np.argsort(input_np, axis=axis)
-        sort_indices = np.flip(sort_indices, axis=axis)
-    else:
-        sort_indices = np.argsort(input_np, axis=axis)
-
-    # np.take_along_axis to gather sorted values along the axis
-    sorted_values = np.take_along_axis(input_np, sort_indices, axis=axis)
-    values = ms.Tensor.from_numpy(sorted_values)
-    indices = ms.Tensor.from_numpy(sort_indices.astype(np.int64))
-    return values, indices
+    return SortFunction.apply(input, dim, descending, stable)
 
 
 class RoundFunction(Function):
@@ -5049,108 +5106,113 @@ def log_softmax(input, dim=-1, dtype=None):
     return ms.Tensor.from_numpy(out)
 
 
-def nllloss(input, target, weight=None, reduction='mean', ignore_index=-100):
-    # INSERT_YOUR_CODE
-    input_np = input.asnumpy()
-    target_np = target.asnumpy()
-
-    # If weight is provided, convert to numpy array
-    if weight is not None:
-        weight_np = weight.asnumpy()
-    else:
-        weight_np = None
-
-    # input: (N, C, ...) or (C, ...) if unbatched
-    # target: (N, ...) or (...), class indices
-
-    # flatten input and target if necessary
-    input_shape = input_np.shape
-    target_shape = target_np.shape
-
-    # For multi-dimensional, reshape as needed
-    n_classes = input_shape[1] if len(input_shape) > 1 else input_shape[0]
-
-    # Broadcast target to flattened indices where possible
-    if input_np.ndim > 2:
-        # For shape (N, C, d1, d2, ...)
-        n = input_np.shape[0]
-        c = input_np.shape[1]
-        rest = input_np.shape[2:]
-        input_flat = input_np.reshape(n, c, -1)
-        target_flat = target_np.reshape(n, -1)
-        out_shape = target_np.shape
-    elif input_np.ndim == 2:
-        n = input_np.shape[0]
-        c = input_np.shape[1]
-        input_flat = input_np
-        target_flat = target_np
-        out_shape = target_np.shape
-    else:
-        # (C,), target is scalar
-        input_flat = input_np[None, :]
-        target_flat = np.expand_dims(target_np, axis=0)
-        out_shape = ()
-        n = 1
-
-    # Get value at the class index, use ignore_index to mask
-    if ignore_index is not None:
-        mask = (target_flat != ignore_index)
-    else:
-        mask = np.ones_like(target_flat, dtype=bool)
-
-    # For each sample, select the log-prob for the true class.
-    # Set to 0 if ignore_index, these will be ignored in reduction
-    nll = np.zeros_like(target_flat, dtype=input_np.dtype)
-    for ix in np.ndindex(target_flat.shape):
-        tgt = target_flat[ix]
-        if mask[ix]:
-            if tgt < 0 or tgt >= n_classes:
-                # Index out of bounds, set as 0 (or could raise)
-                nll[ix] = 0.
-            else:
-                if input_flat.shape == target_flat.shape:
-                    # Rare, input is (d0, d1, ...)
-                    nll[ix] = -input_flat[ix + (tgt,)]
-                elif input_flat.ndim == 2:
-                    # input_flat (N, C), target_flat (N,)
-                    nll[ix] = -input_flat[ix[0], tgt]
-                elif input_flat.ndim == 3:
-                    # input_flat (N, C, d), target_flat (N, d)
-                    nll[ix] = -input_flat[ix[0], tgt, ix[1]]
-                else:
-                    # fallback
-                    nll[ix] = -input_flat[ix[0], tgt]
-        # else: nll[ix] = 0. (already zero)
-
-    # Apply weighting if needed
-    if weight_np is not None:
-        # Broadcast weights by target (for each position)
-        wt = np.zeros_like(target_flat, dtype=input_np.dtype)
-        for ix in np.ndindex(target_flat.shape):
-            tgt = target_flat[ix]
-            if mask[ix] and tgt >= 0 and tgt < len(weight_np):
-                wt[ix] = weight_np[tgt]
-            else:
-                wt[ix] = 0
-        nll = nll * wt
-        total_weight = np.sum(wt[mask])
-    else:
-        total_weight = np.sum(mask)
-
-    # Apply reduction
-    if reduction == 'none':
-        result_np = nll.reshape(out_shape)
-    elif reduction == 'sum':
-        result_np = np.sum(nll)
-    else:  # 'mean' or default
-        if total_weight > 0:
-            result_np = np.sum(nll) / total_weight
+class NLLLossFunction(Function):
+    @staticmethod
+    def forward(ctx, input, target, weight=None, reduction='mean', ignore_index=-100):
+        x = input.asnumpy()
+        t = target.asnumpy()
+        w = weight.asnumpy() if weight is not None else None
+        input_shape = x.shape
+        n_classes = input_shape[1] if x.ndim > 1 else input_shape[0]
+        if x.ndim > 2:
+            n = x.shape[0]
+            c = x.shape[1]
+            x_flat = x.reshape(n, c, -1)
+            t_flat = t.reshape(n, -1)
+            out_shape = t.shape
+        elif x.ndim == 2:
+            x_flat = x
+            t_flat = t
+            out_shape = t.shape
         else:
-            result_np = np.sum(nll)  # Avoid div/0, matches torch.nn.functional nll_loss
+            x_flat = x[None, :]
+            t_flat = np.expand_dims(t, axis=0)
+            out_shape = ()
+        mask = (t_flat != ignore_index) if ignore_index is not None else np.ones_like(t_flat, dtype=bool)
+        nll = np.zeros_like(t_flat, dtype=x.dtype)
+        for ix in np.ndindex(t_flat.shape):
+            tgt = t_flat[ix]
+            if mask[ix] and 0 <= tgt < n_classes:
+                if x_flat.ndim == 2:
+                    nll[ix] = -x_flat[ix[0], tgt]
+                elif x_flat.ndim == 3:
+                    nll[ix] = -x_flat[ix[0], tgt, ix[1]]
+                else:
+                    nll[ix] = -x_flat[ix[0], tgt]
+        if w is not None:
+            wt = np.zeros_like(t_flat, dtype=x.dtype)
+            for ix in np.ndindex(t_flat.shape):
+                tgt = t_flat[ix]
+                wt[ix] = w[tgt] if mask[ix] and 0 <= tgt < len(w) else 0
+            nll = nll * wt
+            total_weight = np.sum(wt[mask])
+        else:
+            total_weight = np.sum(mask)
+        if reduction == 'none':
+            res = nll.reshape(out_shape)
+        elif reduction == 'sum':
+            res = np.sum(nll)
+        else:
+            res = np.sum(nll) / total_weight if total_weight > 0 else np.sum(nll)
+        ctx.save_for_backward(input, target, weight)
+        ctx.reduction = reduction
+        ctx.ignore_index = ignore_index
+        ctx.total_weight = total_weight
+        ctx.input_shape = input_shape
+        return ms.Tensor.from_numpy(np.array(res))
 
-    # Convert back to tensor
-    result = ms.Tensor.from_numpy(np.array(result_np))
-    return result
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, target, weight = ctx.saved_tensors
+        x = input.asnumpy()
+        t = target.asnumpy()
+        w = weight.asnumpy() if weight is not None else None
+        grad_input = None
+        if ctx.needs_input_grad[0]:
+            # Initialize gradient w.r.t input
+            g = np.zeros_like(x)
+            if x.ndim > 2:
+                n, c = x.shape[0], x.shape[1]
+                t_flat = t.reshape(n, -1)
+                for ix in np.ndindex(t_flat.shape):
+                    i, j = ix
+                    tgt = t_flat[ix]
+                    if tgt == ctx.ignore_index:
+                        continue
+                    coeff = -1.0
+                    if w is not None and 0 <= tgt < len(w):
+                        coeff *= w[tgt]
+                    if ctx.reduction == 'mean' and ctx.total_weight > 0:
+                        coeff /= ctx.total_weight
+                    g[i, tgt, j] += coeff
+            elif x.ndim == 2:
+                for i in range(x.shape[0]):
+                    tgt = t[i]
+                    if tgt == ctx.ignore_index:
+                        continue
+                    coeff = -1.0
+                    if w is not None and 0 <= tgt < len(w):
+                        coeff *= w[tgt]
+                    if ctx.reduction == 'mean' and ctx.total_weight > 0:
+                        coeff /= ctx.total_weight
+                    g[i, tgt] += coeff
+            else:
+                tgt = int(t)
+                if tgt != ctx.ignore_index:
+                    coeff = -1.0
+                    if w is not None and 0 <= tgt < len(w):
+                        coeff *= w[tgt]
+                    if ctx.reduction == 'mean' and ctx.total_weight > 0:
+                        coeff /= ctx.total_weight
+                    g[tgt] += coeff
+            # Multiply by upstream grad (scalar or broadcast)
+            go = grad_output.asnumpy()
+            grad_input_np = g * (go if np.ndim(go) > 0 else np.array(go))
+            grad_input = ms.Tensor.from_numpy(grad_input_np)
+        return grad_input, None, None, None, None
+
+def nllloss(input, target, weight=None, reduction='mean', ignore_index=-100):
+    return NLLLossFunction.apply(input, target, weight, reduction, ignore_index)
 
 
 def diag_ext(input, diagonal):
