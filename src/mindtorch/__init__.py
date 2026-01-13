@@ -258,3 +258,31 @@ try:
 except Exception:
     # diffusers might be absent; ignore
     pass
+
+# Patch diffusers' get_timestep_embedding to accept 2D inputs by flattening
+try:
+    import diffusers.models.embeddings as _emb_mod  # type: ignore
+    _orig_get_timestep_embedding = _emb_mod.get_timestep_embedding
+    def _patched_get_timestep_embedding(timesteps, embedding_dim, flip_sin_to_cos=False,
+                                        downscale_freq_shift=1, scale=1, max_period=10000):
+        try:
+            # Ensure 1D timesteps as expected by diffusers implementation
+            if hasattr(timesteps, 'shape') and len(timesteps.shape) != 1:
+                # Prefer squeezing singleton last dim, else flatten
+                try:
+                    if timesteps.shape[-1] == 1:
+                        timesteps = timesteps.squeeze(-1)
+                    else:
+                        timesteps = timesteps.reshape(-1)
+                except Exception:
+                    timesteps = timesteps.reshape(-1)
+        except Exception:
+            # Best-effort: leave as is if any issue
+            pass
+        return _orig_get_timestep_embedding(
+            timesteps, embedding_dim, flip_sin_to_cos, downscale_freq_shift, scale, max_period
+        )
+    _emb_mod.get_timestep_embedding = _patched_get_timestep_embedding
+except Exception:
+    # diffusers might be absent; ignore
+    pass
