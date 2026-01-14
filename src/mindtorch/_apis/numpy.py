@@ -22,7 +22,6 @@ class EmptyFunction(Function):
 def empty(size, dtype):
     return EmptyFunction.apply(size, dtype)
 
-
 class NewEmptyFunction(Function):
     @staticmethod
     def forward(ctx, input, size, dtype, device):
@@ -42,7 +41,6 @@ class NewEmptyFunction(Function):
 def new_empty(input, size, dtype, device):
     return NewEmptyFunction.apply(input, size, dtype, device)
 
-
 class OnesFunction(Function):
     @staticmethod
     def forward(ctx, size, dtype):
@@ -58,7 +56,6 @@ class OnesFunction(Function):
 def ones(size, dtype):
     return OnesFunction.apply(size, dtype)
 
-
 class ZerosFunction(Function):
     @staticmethod
     def forward(ctx, size, dtype):
@@ -71,7 +68,6 @@ class ZerosFunction(Function):
 
 def zeros(size, dtype):
     return ZerosFunction.apply(size, dtype)
-
 
 class ArangeFunction(Function):
     @staticmethod
@@ -87,7 +83,6 @@ class ArangeFunction(Function):
 
 def arange(start, end, step, dtype):
     return ArangeFunction.apply(start, end, step, dtype)
-
 
 class LinspaceFunction(Function):
     @staticmethod
@@ -4105,7 +4100,6 @@ class SqrtFunction(Function):
 def sqrt(input):
     return SqrtFunction.apply(input)
 
-
 class TransposeViewFunction(Function):
     @staticmethod
     def forward(ctx, input, dim0, dim1):
@@ -4239,7 +4233,6 @@ class GreaterFunction(Function):
 
 def greater(input, other):
     return GreaterFunction.apply(input, other)
-
 
 def linalg_vector_norm(input, p, dim, keepdim, dtype):
     out = np.linalg.norm(input.asnumpy(), p, dim, keepdim)
@@ -4843,7 +4836,7 @@ def layer_norm_ext(input, normalized_shape, weight=None, bias=None, eps=1e-5):
     mean = np.mean(input, axis=axes, keepdims=True)
     var = np.var(input, axis=axes, keepdims=True)
     
-    # 标准化: (x - mean) / sqrt(var + eps)
+    # 标准化
     normalized = (input - mean) / np.sqrt(var + eps)
     
     # 应用可学习的缩放和平移参数 (gamma 和 beta)
