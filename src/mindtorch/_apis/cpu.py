@@ -102,6 +102,9 @@ def arange(start, end, step, dtype):
     return mindtorch.Tensor.from_numpy(np.arange(start, end, step, mindtorch.dtype2np[dtype]))
 
 def broadcast_to(input, shape):
+    # Handle scalar values by converting them to tensors first
+    if not isinstance(input, mindtorch.Tensor):
+        input = mindtorch.tensor(input)
     return legacy.broadcast_to(input, shape)
 
 def zeros(shape, dtype):
@@ -213,6 +216,9 @@ def cumsum(self, dim, dtype):
     return legacy.cum_sum(self, dim, False, False)
 
 def reduce_any(input, axis, keepdims):
+    # When axis is None, reduce over all dimensions
+    if axis is None:
+        axis = tuple(range(input.ndim))
     return legacy.reduce_any(input, axis, keepdims)
 
 def concat(tensors, axis):
