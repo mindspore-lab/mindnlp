@@ -23,16 +23,35 @@ api_map = {
     'CPU': cpu,
 }
 
+# Normalize device type to lowercase for consistent tensor.init values
+DEVICE_NORMALIZE = {
+    'CPU': 'cpu',
+    'GPU': 'cuda',
+    'Ascend': 'npu',
+    'Meta': 'meta',
+}
+
+def normalize_device(device_type):
+    """Normalize device type to lowercase for consistent tensor.init values."""
+    return DEVICE_NORMALIZE.get(device_type, device_type)
+
 DISPATCH_WHITE_LIST = ['inplace_zero', 'inplace_fill_scalar']
 SKIP_NAN_CHECK = ['empty', 'empty_like']
 
+# Debug flag to trace function calls
+DEBUG_TRACE = False
+DEBUG_ALL_OPS = False  # Set True to trace all operations
+
 def ensure_output(outs, device_type):
+    # Normalize device_type to lowercase for consistent tensor.init values
+    normalized_device = normalize_device(device_type)
     if isinstance(outs, (tuple, list)):
         for out in outs:
             if isinstance(out, mindtorch.Tensor):
-                out.init = device_type
+                out.init = normalized_device
+
     else:
-        outs.init = device_type
+        outs.init = normalized_device
     return outs
 
 if ENABLE_DISPATCH:
@@ -50,6 +69,8 @@ if ENABLE_DISPATCH:
         if device_type is None:
             device_type = DEVICE_TARGET
 
+
+
         func = getattr(api_map[device_type], func_name, None)
         if func is None:
             raise RuntimeError(
@@ -57,6 +78,25 @@ if ENABLE_DISPATCH:
             )
         outs = func(*args, **kwargs)
         outs = ensure_output(outs, device_type)
+
+        # Debug trace for function calls
+        if DEBUG_TRACE and ('inplace' in func_name or DEBUG_ALL_OPS):
+            # arg_shapes = [getattr(a, 'shape', None) for a in args[:3]]
+            # print(f"[TRACE] {func_name} on {device_type}, shapes: {arg_shapes}")
+            def hook(grad):
+                print(func_name)
+            if isinstance(outs, tuple):
+                for out in outs:
+                    try:
+                        out.register_hook(hook)
+                    except:
+                        pass
+            else:
+                try:
+                    outs.register_hook(hook)
+                except:
+                    pass
+
         if CAPTURE_INF_NAN:
             if func_name in SKIP_NAN_CHECK:
                 pass
@@ -84,6 +124,11 @@ else:
 
         if device_type is None or device_type not in ('meta', 'Meta'):
             device_type = DEVICE_TARGET
+
+        # Debug trace for function calls
+        if DEBUG_TRACE and ('inplace' in func_name or DEBUG_ALL_OPS):
+            arg_shapes = [getattr(a, 'shape', None) for a in args[:3]]
+            print(f"[TRACE] {func_name} on {device_type}, shapes: {arg_shapes}")
 
         func = getattr(api_map[device_type], func_name, None)
         if func is None:
