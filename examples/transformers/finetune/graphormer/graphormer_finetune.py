@@ -11,11 +11,11 @@ import mindspore
 from mindspore.dataset import text, GeneratorDataset, transforms
 from mindspore import nn, ops, context
 
-from mindhf.engine import Trainer, Evaluator
-from mindhf.engine.callbacks import CheckpointCallback, BestModelCallback
-from mindhf.metrics import Accuracy
-from mindhf import load_dataset
-from mindhf.transformers import (
+from mindnlp.engine import Trainer, Evaluator
+from mindnlp.engine.callbacks import CheckpointCallback, BestModelCallback
+from mindnlp.metrics import Accuracy
+from mindnlp import load_dataset
+from mindnlp.transformers import (
     GraphormerForGraphClassification,
     GraphormerDataCollator
 )

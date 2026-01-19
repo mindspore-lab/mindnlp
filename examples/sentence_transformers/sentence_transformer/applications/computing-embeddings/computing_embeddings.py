@@ -4,7 +4,7 @@ generate sentence embeddings for a given list of sentences.
 """
 
 import logging
-import mindhf
+import mindnlp
 import numpy as np
 
 from sentence_transformers import LoggingHandler, SentenceTransformer

@@ -1,6 +1,6 @@
 import mindspore
 from mindspore.communication import init
-from mindhf.transformers import Qwen2MoeForCausalLM, AutoTokenizer
+from mindnlp.transformers import Qwen2MoeForCausalLM, AutoTokenizer
 
 model_path = '/home/lvyufeng/lvyufeng/mindnlp/.mindnlp/model/Qwen/Qwen1.5-MoE-A2.7B'
 

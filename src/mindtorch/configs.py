@@ -1,5 +1,5 @@
 import os
-from packaging import version
+import warnings
 import mindspore
 from mindspore._c_expression import MSContext # pylint: disable=no-name-in-module, import-error
 
@@ -11,6 +11,11 @@ ON_A2 = SOC in ['ascend910b', 'ascend910_93']
 ON_ORANGE_PI = '310b' in SOC
 DEFAULT_DTYPE = mindspore.float32
 FLASH_ATTN_MASK_VALID = int(os.environ.get('FLASH_ATTN_MASK_VALID', 1))
+
+if ON_A1 or DEVICE_TARGET == 'GPU':
+    warnings.warn('MindSpore on GPU/910A do not support bfloat16, use float16 instead.')
+    mindspore.bfloat16 = mindspore.float16
+    # mindspore.common.dtype.bfloat16 = mindspore.float16
 
 
 def strtobool(val):
@@ -43,8 +48,8 @@ def parse_flag_from_env(key, default=False):
     return _value
 
 # OP backend select
-ENABLE_DISPATCH = parse_flag_from_env('ENABLE_DISPATCH', False)
+ENABLE_DISPATCH = parse_flag_from_env('ENABLE_DISPATCH', True)
 ENABLE_PYBOOST = parse_flag_from_env('ENABLE_PYBOOST', True)
-CPU_USE_NUMPY_OP = parse_flag_from_env('CPU_USE_NUMPY', False)
+CPU_USE_NUMPY_OP = parse_flag_from_env('CPU_USE_NUMPY', DEVICE_TARGET != 'CPU')
 ENABLE_FLASH_ATTENTION = parse_flag_from_env('ENABLE_FLASH_ATTENTION', False)
 CAPTURE_INF_NAN = parse_flag_from_env('CAPTURE_INF_NAN', False)

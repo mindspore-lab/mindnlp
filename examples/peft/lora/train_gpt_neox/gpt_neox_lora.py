@@ -21,13 +21,13 @@ import argparse
 import mindspore
 from mindspore import ops
 from mindspore.amp import StaticLossScaler
-from mindhf.dataset import load_dataset
-from mindhf.transformers.models.gpt_neox import (
+from mindnlp.dataset import load_dataset
+from mindnlp.transformers.models.gpt_neox import (
     GPTNeoXForCausalLM,
 )
-from mindhf.engine import TrainingArguments, Trainer
-from mindhf.transformers import AutoTokenizer
-from mindhf.peft import (
+from mindnlp.engine import TrainingArguments, Trainer
+from mindnlp.transformers import AutoTokenizer
+from mindnlp.peft import (
     get_peft_model,
     LoraConfig,
     TaskType,

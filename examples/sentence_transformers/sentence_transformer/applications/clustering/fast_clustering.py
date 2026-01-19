@@ -15,7 +15,7 @@ In this example, we download a large set of questions from Quora and then find s
 import csv
 import os
 import time
-import mindhf
+import mindnlp
 from sentence_transformers import SentenceTransformer, util
 
 # Model for computing sentence embeddings. We use one trained for similar questions detection

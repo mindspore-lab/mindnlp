@@ -21,7 +21,7 @@ def as_strided(self, size, stride, storage_offset=None):
 # from_numpy
 def from_numpy(ndarray):
     out = mindtorch.Tensor.from_numpy(ndarray)
-    out._from_numpy = True
+    out.init = 'cpu'
     return out
 
 # frombuffer
@@ -58,6 +58,8 @@ def zeros(*size, out=None, dtype=None, layout=None, device=None, requires_grad=F
 
 # zeros_like
 def zeros_like(input, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=None):
+    if device is not None:
+        device = check_device(device)
     return execute('zeros_like', input, dtype, device=device)
 
 # ones
@@ -86,8 +88,8 @@ def ones(*size, out=None, dtype=None, layout=None, device=None, requires_grad=Fa
 
 # ones_like
 def ones_like(input, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=None):
-    if isinstance(device, str):
-        device = mindtorch.device(device)
+    if device is not None:
+        device = check_device(device)
     return execute('ones_like', input, dtype, device=device)
 
 # arange
@@ -105,7 +107,10 @@ def arange(start=0, end=None, step=1, *, out=None, dtype=None, layout=None, devi
     start = start.item() if isinstance(start, (mindtorch.Tensor, np.integer)) else start
     end = end.item() if isinstance(end, (mindtorch.Tensor, np.integer)) else end
     step = step.item() if isinstance(step, (mindtorch.Tensor, np.integer)) else step
-    step = type(start)(step)
+    # 保持步长精度，避免将浮点步长强制转为整数导致为0
+    step = float(step)
+    if step == 0:
+        raise ValueError("arange step must not be zero")
 
     output = execute('arange', start, end, step, dtype, device=device)
     if out is None:
@@ -185,7 +190,7 @@ def empty_like(input, *, dtype=None, layout=None, device=None, requires_grad=Fal
 # full
 def full(size, fill_value, *, out=None, dtype=None, layout=None, device=None, requires_grad=False):
     if dtype is None:
-        dtype = get_default_dtype()
+        dtype = mindtorch.py2dtype[type(fill_value)]
     device = check_device(device)
     if not isinstance(device, str):
         device = device.type
@@ -203,6 +208,8 @@ def full(size, fill_value, *, out=None, dtype=None, layout=None, device=None, re
 
 # full_like
 def full_like(input, fill_value, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=None):
+    if device is not None:
+        device = check_device(device)
     return execute('full_like', input, fill_value, dtype=dtype)
 
 # quantize_per_tensor

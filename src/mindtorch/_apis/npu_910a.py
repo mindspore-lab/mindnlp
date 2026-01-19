@@ -674,8 +674,8 @@ def randint(low, high, shape, generator, dtype):
     
 def nllloss(input, target, weight, reduction, ingore_index):
     if ENABLE_PYBOOST:
-        return pyboost.nllloss_impl(input, target, weight, reduction, ingore_index)
-    return legacy.nll_loss(input, target, weight, reduction, ingore_index)
+        return pyboost.nllloss_impl(input, target, weight, reduction, ingore_index)[0]
+    return legacy.nll_loss(input, target, weight, reduction, ingore_index)[0]
 
 def clamp_scalar(value, min_value, max_value):
     if ENABLE_PYBOOST:
@@ -694,6 +694,8 @@ def cumsum(self, dim, dtype):
     return legacy.cum_sum(self, dim, False, False)
 
 def reduce_any(input, axis, keepdims):
+    if axis is None:
+        axis = ()
     if ENABLE_PYBOOST:
         return pyboost.reduce_any_impl(input, axis, keepdims)
     return legacy.reduce_any(input, axis, keepdims)
@@ -898,6 +900,7 @@ def bitwise_or_scalar(input, other):
 def bitwise_not(input):
     return pyboost.bitwise_not_op(input)
 
+py_max = max
 def max(input):
     if ENABLE_PYBOOST:
         return pyboost.max_op(input)
@@ -1023,6 +1026,7 @@ def index_select(input, dim, index):
         return pyboost.index_select_op(input, dim, index)
     return legacy.gather(input, index, dim, 0)
 
+py_min = min
 def min(input):
     if ENABLE_PYBOOST:
         return pyboost.min_op(input)
@@ -1049,15 +1053,15 @@ def flatten(input, start_dim, end_dim):
     input_shape[start_dim:end_dim] = [-1]
     return legacy.reshape(input, tuple(input_shape))
 
-def conv2d_padding(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
-    if ENABLE_PYBOOST:
-        return pyboost.conv2d_padding_op(input, weight, bias, stride, padding, dilation, groups)
-    return conv2d_legacy(input, weight, bias, stride, padding, dilation, groups)
+def conv2d_padding(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1, training=True):
+    if training:
+        return conv2d_legacy(input, weight, bias, stride, padding, dilation, groups)
+    return pyboost.conv2d_padding_op(input, weight, bias, stride, padding, dilation, groups)
 
-def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
-    if ENABLE_PYBOOST:
-        return pyboost.conv2d_ext_op(input, weight, bias, stride, padding, dilation, groups)
-    return conv2d_legacy(input, weight, bias, stride, padding, dilation, groups)
+def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1, training=True):
+    if training:
+        return conv2d_legacy(input, weight, bias, stride, padding, dilation, groups)
+    return pyboost.conv2d_ext_op(input, weight, bias, stride, padding, dilation, groups)
 
 def conv2d_legacy(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
     pad_mode = 'pad'
@@ -1247,10 +1251,10 @@ def roll(input, shifts, axis):
         return pyboost.roll_impl(input, shifts, axis)
     return legacy.roll(input, shifts, axis)
 
-def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    if ENABLE_PYBOOST:
-        return pyboost.conv1d_ext_op(input, weight, bias, stride, padding, dilation, groups)
-    return conv1d_legacy(input, weight, bias, stride, padding, dilation, groups)
+def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
+    if training:
+        return conv1d_legacy(input, weight, bias, stride, padding, dilation, groups)
+    return pyboost.conv1d_ext_op(input, weight, bias, stride, padding, dilation, groups)
 
 def conv1d_legacy(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     pad_mode = 'pad'
@@ -1285,10 +1289,10 @@ def conv1d_legacy(input, weight, bias=None, stride=1, padding=0, dilation=1, gro
     output = squeeze(output, 2)
     return output
 
-def conv1d_padding(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    if ENABLE_PYBOOST:
-        return pyboost.conv1d_padding_op(input, weight, bias, stride, padding, dilation, groups)
-    return conv1d_legacy(input, weight, bias, stride, padding, dilation, groups)
+def conv1d_padding(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
+    if training:
+        return conv1d_legacy(input, weight, bias, stride, padding, dilation, groups)
+    return pyboost.conv1d_padding_op(input, weight, bias, stride, padding, dilation, groups)
 
 def square(input):
     if ENABLE_PYBOOST:
@@ -1489,6 +1493,10 @@ def _cal_dilation(dilation, nd):
 
 def max_pool2d(input, kernel_size, stride=1, padding=0, dilation=1, ceil_mode=False, return_indices=False):
     # out, indices = legacy.max_pool_with_argmax_v2(input, kernel_size, stride, padding, dilation, ceil_mode)
+    if isinstance(kernel_size, list):
+        kernel_size = tuple(kernel_size)
+    if isinstance(stride, list):
+        stride = tuple(stride)
     out, indices = legacy.max_pool_with_indices(input, kernel_size, stride, padding, dilation, ceil_mode)
     if return_indices:
         return out, indices
@@ -1505,12 +1513,12 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if bias is None:
         bias = zeros([input.shape[1]], dtype=input.dtype)
 
-    return pyboost.group_norm_op(input, num_groups, weight, bias, eps)
+    return pyboost.group_norm_op(input, num_groups, weight, bias, eps)[0]
 
 def nllloss_2d(input, target, weight, reduction='mean', ignore_index=-100):
     if ENABLE_PYBOOST:
-        return pyboost.nllloss_2d_op(input, target, weight, reduction, ignore_index)
-    return legacy.nll_loss(input, target, weight, ignore_index, reduction)
+        return pyboost.nllloss_2d_op(input, target, weight, reduction, ignore_index)[0]
+    return legacy.nll_loss(input, target, weight, ignore_index, reduction)[0]
 
 def inplace_relu(input):
     if ENABLE_PYBOOST:
@@ -1712,36 +1720,36 @@ def adaptive_avg_pool1d(input, output_size):
         return pyboost.adaptive_avg_pool1d_op(input, output_size)
     return legacy.adaptive_avg_pool1d(input, output_size)
 
-def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    if ENABLE_PYBOOST:
-        return pyboost.conv3d_ext_op(input, weight, bias, stride, padding, dilation, groups)
-    pad_mode = 'pad'
-    pad = padding
-    if isinstance(padding, (tuple, list)):
-        pad = (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2])
-    elif isinstance(padding, int):
-        pad = (padding,) * 6
-    if not isinstance(padding, (int, tuple, list)):
-        pad_mode = padding
-        pad = (0,) * 6
+def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
+    if training:
+        pad_mode = 'pad'
+        pad = padding
+        if isinstance(padding, (tuple, list)):
+            pad = (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2])
+        elif isinstance(padding, int):
+            pad = (padding,) * 6
+        if not isinstance(padding, (int, tuple, list)):
+            pad_mode = padding
+            pad = (0,) * 6
 
-    out_channels = weight.shape[0]
-    kernel_size = weight.shape[2:]
+        out_channels = weight.shape[0]
+        kernel_size = weight.shape[2:]
 
-    output = legacy.conv3_d(input, weight,
-                            out_channels,
-                            kernel_size,
-                            1,
-                            pad_mode,
-                            pad,
-                            tuple(stride),
-                            dilation,
-                            groups,
-                            "NCDHW")
-                            
-    if bias is not None:
-        output = legacy.bias_add(output, bias, 'NCHW')
-    return output
+        output = legacy.conv3_d(input, weight,
+                                out_channels,
+                                kernel_size,
+                                1,
+                                pad_mode,
+                                pad,
+                                tuple(stride),
+                                dilation,
+                                groups,
+                                "NCDHW")
+                                
+        if bias is not None:
+            output = legacy.bias_add(output, bias, 'NCHW')
+        return output
+    return pyboost.conv3d_ext_op(input, weight, bias, stride, padding, dilation, groups)
 
 
 def outer(input, other):
@@ -1943,10 +1951,10 @@ def bucketize(input, boundaries, right=False):
         boundaries = boundaries.tolist()
     
     if not boundaries:
-        return zeros_like(input)
+        return zeros_like(input, mindspore.int64)
     epsilon_ = 0. if right else 1.e-6
     boundaries = [boundary + epsilon_ for boundary in boundaries]
-    return legacy.bucketize(input, boundaries)
+    return cast(legacy.bucketize(input, boundaries), mindspore.int64)
 
 def inplace_fill_diagonal(input, fill_value, wrap):
     if ENABLE_PYBOOST:
@@ -2014,11 +2022,15 @@ def linalg_qr(input_x, mode):
     return legacy.qr(input_x, full_matrices)
 
 def bernoulli(input, generator):
-    seed, offset = generator._step(12)
-    if ENABLE_PYBOOST:
-        return pyboost.bernoulli_ext_op(input, seed, offset)
     uniform = rand_like(input, generator, input.dtype)
     result = cast(less(uniform, input), input.dtype)
+    return result
+
+def inplace_bernoulli(input, p, generator):
+    if generator is None:
+        generator = default_generator
+    uniform = rand_like(input, generator, input.dtype)
+    result = cast(less(uniform, p), input.dtype)
     return result
 
 def multinomial(input, num_samples, replacement, generator):
@@ -2103,8 +2115,8 @@ def repeat_interleave_int(input_tensor, repeats, dim, output_size):
         for i in range(dim_size):
             repeat_count = repeats_tensor[i].item()
             if repeat_count > 0:
-                index[current_pos:current_pos + repeat_count] = i
-            current_pos += repeat_count
+                setitem(index, (py_slice(current_pos, add(current_pos, repeat_count))), i)
+            current_pos = add(current_pos, repeat_count)
 
         output = index_select(input_tensor, dim, index)
 
@@ -2457,7 +2469,7 @@ def custom_circular_pad(x, pad):
         
         # 生成循环索引: (index - left_pad) mod size
         index = fmod_scalar(add(arange(0, new_size, 1, mindspore.int64), new_size - left_pad), size)
-        index = (index + x.shape[dim]) % x.shape[dim]
+        index = fmod_scalar(add(index, x.shape[dim]), x.shape[dim])
         x = index_select(x, dim, index)
 
     return x
@@ -2530,7 +2542,7 @@ def _get_unfold_indices(input_shape, dimension, size, step):
 
 def unfold(input, dimension, size, step):
     _indices, _dimension = _get_unfold_indices(input.shape, dimension, size, step)
-    indices = mindspore.tensor(_indices)
+    indices = mindspore.tensor(_indices, dtype=mindspore.int64)
     output = gather(input, indices, _dimension, 0)
     output = transpose_view(output, _dimension + 1, -1)
     return output
@@ -2544,6 +2556,12 @@ def dist_comm_all_reduce(input, op_type, group):
 def dist_comm_gather(input, gather_list, rank_size, dst, rank_id, group):
     return pyboost.dist_comm_gather_op(input, gather_list, rank_size, dst, rank_id, group)
 
+def dist_comm_all_gather(tensor_list, tensor, rank_size, group):
+    return pyboost.dist_comm_all_gather_op(tensor_list, tensor, rank_size, group)
+
+def dist_comm_broadcast(input, src, rank_id, group):
+    return pyboost.dist_comm_broadcast_op(input, src, rank_id, group)
+
 def inplace_random(input, from_val=0, to_val=None, generator=None):
     seed, offset = generator._step(12)
     return pyboost.inplace_random_op(input, from_val, to_val, seed, offset)
@@ -2555,6 +2573,8 @@ def raw_adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, be
     return legacy.adam(param, exp_avg, exp_avg_sq, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad, False, False)
 
 def inplace_sub(input, other):
+    if isinstance(other, numbers.Number):
+        other = mindspore.Tensor(other)
     return pyboost.inplace_sub_ext_op(input, other)
 
 def depend(*args):
@@ -2582,3 +2602,95 @@ def ifftn(input, s, dim, norm):
 
 def fftn(input, s, dim, norm):
     return pyboost.fftn_op(input, s, dim, norm)
+
+def selu(input):
+    """SELU activation: scale * elu(x, alpha) where alpha=1.67326324, scale=1.05070098"""
+    SELU_ALPHA = 1.67326324
+    SELU_SCALE = 1.05070098
+    if ENABLE_PYBOOST:
+        return pyboost.mul_op(legacy.elu(input, SELU_ALPHA), SELU_SCALE)
+    return legacy.mul(legacy.elu(input, SELU_ALPHA), SELU_SCALE)
+
+def celu(input, alpha):
+    """CELU activation: max(0, x) + min(0, alpha * (exp(x/alpha) - 1))"""
+    if alpha == 0:
+        raise ZeroDivisionError("ZeroDivisionError: alpha cannot be 0 for CELU")
+    return elu(input, alpha)
+
+def hardsigmoid(input):
+    """Hardsigmoid activation: clamp((x + 3) / 6, 0, 1)"""
+    x_plus_3 = add(input, 3.0)
+    x_div_6 = div(x_plus_3, 6.0)
+    return clamp_scalar(x_div_6, 0.0, 1.0)
+
+def fast_gelu(x):
+    """Fast GELU approximation"""
+    return gelu(x, approximate='tanh')
+
+def swiglu(x, dim=-1):
+    """Swish-Gated Linear Unit: swish(x[..., :d]) * x[..., d:] where d = x.shape[dim] // 2"""
+    split_size = x.shape[dim] // 2
+    x1, x2 = legacy.split(x, split_size, dim)
+    if ENABLE_PYBOOST:
+        return pyboost.mul_op(silu(x1), x2)
+    return legacy.mul(silu(x1), x2)
+
+def rotary_position_embedding(x, cos, sin, mode=0):
+    """Rotary Position Embedding"""
+    return pyboost.rotary_position_embedding_op(x, cos, sin, mode)
+
+def diagonal(input, offset=0, dim1=-2, dim2=-1):
+    # diagonal with pyboost, but no direct api; use other functions in this file
+
+    # Normalize dims so they are positive
+    ndims = input.ndim
+    dim1_ = dim1 if dim1 >= 0 else ndims + dim1
+    dim2_ = dim2 if dim2 >= 0 else ndims + dim2
+
+    # Move dim1 and dim2 to the last two axes
+    axes = list(range(ndims))
+    d1, d2 = sorted([dim1_, dim2_])
+    rest = [i for i in axes if i not in (d1, d2)]
+    perm = rest + [d1, d2]
+    input_perm = permute(input, tuple(perm))
+
+    shape = input_perm.shape
+    n, m = shape[-2], shape[-1]
+
+    # Compute indices for diagonal extraction
+    if offset >= 0:
+        diag_size = py_min(n, m - offset)
+        i = arange(0, diag_size, 1, dtype=mindspore.int64)
+        j = arange(offset, offset + diag_size, 1, dtype=mindspore.int64)
+    else:
+        diag_size = py_min(n + offset, m)
+        i = arange(-offset, -offset + diag_size, 1, dtype=mindspore.int64)
+        j = arange(0, diag_size, 1, dtype=mindspore.int64)
+
+    # Expand to the batch shape for gather_nd
+    batch_shape = shape[:-2]
+    if batch_shape:
+        # Create a meshgrid for batch indices
+        mesh = [arange(0, s, 1, dtype=mindspore.int64) for s in batch_shape]
+        grids = meshgrid(mesh, 'ij')  # each shape: batch_shape
+        # Flatten
+        flat_grids = [reshape(g, (-1,)) for g in grids]
+        flat_batch_indices = stack(flat_grids, -1)  # (num_batch, num_batch_dims)
+
+        # For each batch index, concat with (i, j)
+        num_batch = flat_batch_indices.shape[0]
+        ij = stack([i, j], -1)  # (diag_size, 2)
+        ij = broadcast_to(expand_dims(ij, 0), (num_batch, diag_size, 2))  # (num_batch, diag_size, 2)
+        batch_idx = broadcast_to(expand_dims(flat_batch_indices, 1), (num_batch, diag_size, len(batch_shape)))  # (num_batch, diag_size, num_batch_dims)
+        gather_idx = concat([batch_idx, ij], -1)  # (num_batch, diag_size, num_batch_dims+2)
+        # Reshape to (?, num_dims)
+        gather_idx = reshape(gather_idx, (-1, len(batch_shape)+2))
+    else:
+        gather_idx = stack([i, j], -1)
+
+    out = gather_nd(input_perm, gather_idx)
+    if batch_shape:
+        out = reshape(out, batch_shape + (diag_size,))
+    return out
+
+    

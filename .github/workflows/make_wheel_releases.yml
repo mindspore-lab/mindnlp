@@ -29,7 +29,7 @@ jobs:
     - name: Upload file
       uses: actions/upload-artifact@v4
       with: 
-        name: mindhf-whl
+        name: mindnlp-whl
         path: dist/*
 
     - name: Release and Upload Assets

@@ -8,7 +8,7 @@ import numpy as np
 from tqdm import tqdm
 import os
 from PIL import Image
-from mindhf.transformers import CLIPModel, CLIPTokenizer, BertGenerationTokenizer
+from mindnlp.transformers import CLIPModel, CLIPTokenizer, BertGenerationTokenizer
 from mindspore import ops
 import glob
 

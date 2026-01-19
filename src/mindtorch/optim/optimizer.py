@@ -876,29 +876,29 @@ class Optimizer:
         else:
             per_device_and_dtype_grads = None
 
-        with mindtorch.autograd.profiler.record_function(self._zero_grad_profile_name):
-            for group in self.param_groups:
-                for p in group["params"]:
-                    if p.grad is not None:
-                        if set_to_none:
-                            p.grad = None
+        # with mindtorch.autograd.profiler.record_function(self._zero_grad_profile_name):
+        for group in self.param_groups:
+            for p in group["params"]:
+                if p.grad is not None:
+                    if set_to_none:
+                        p.grad = None
+                    else:
+                        if p.grad.grad_fn is not None:
+                            p.grad.detach_()
                         else:
-                            if p.grad.grad_fn is not None:
-                                p.grad.detach_()
-                            else:
-                                p.grad.requires_grad_(False)
-                            if not foreach or p.grad.is_sparse:
-                                p.grad.zero_()
-                            else:
-                                assert per_device_and_dtype_grads is not None
-                                per_device_and_dtype_grads[p.grad.device][
-                                    p.grad.dtype
-                                ].append(p.grad)
-            if foreach:
-                assert per_device_and_dtype_grads is not None
-                for per_dtype_grads in per_device_and_dtype_grads.values():
-                    for grads in per_dtype_grads.values():
-                        mindtorch._foreach_zero_(grads)
+                            p.grad.requires_grad_(False)
+                        if not foreach or p.grad.is_sparse:
+                            p.grad.zero_()
+                        else:
+                            assert per_device_and_dtype_grads is not None
+                            per_device_and_dtype_grads[p.grad.device][
+                                p.grad.dtype
+                            ].append(p.grad)
+        if foreach:
+            assert per_device_and_dtype_grads is not None
+            for per_dtype_grads in per_device_and_dtype_grads.values():
+                for grads in per_dtype_grads.values():
+                    mindtorch._foreach_zero_(grads)
 
     @overload
     def step(self, closure: None = None) -> None: ...

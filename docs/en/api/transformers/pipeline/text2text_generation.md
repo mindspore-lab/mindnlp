@@ -1,1 +1,0 @@
-:::mindnlp.transformers.pipelines.text2text_generation.Text2TextGenerationPipeline

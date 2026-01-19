@@ -2,12 +2,12 @@ import sys
 import pytest
 import mindspore
 
-from mindhf.core import ops
-from mindhf.utils.testing_utils import require_mindspore_gpu
-from mindhf.utils import is_triton_available
+from mindnlp.core import ops
+from mindnlp.utils.testing_utils import require_mindspore_gpu
+from mindnlp.utils import is_triton_available
 
 if is_triton_available():
-    from mindhf.triton import MSDriver
+    from mindnlp.triton import MSDriver
     import triton
     import triton.language as tl
 

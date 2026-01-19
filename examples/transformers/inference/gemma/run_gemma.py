@@ -1,4 +1,4 @@
-from mindhf.transformers import AutoTokenizer, AutoModelForCausalLM
+from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
 
 hf_token = 'your_huggingface_access_token'
 

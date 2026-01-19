@@ -17,7 +17,7 @@ import gzip
 import json
 import os
 import time
-import mindhf
+import mindnlp
 
 import torch
 

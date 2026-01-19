@@ -8,9 +8,10 @@ from mindspore._c_expression import Cell_
 from .grad_mode import no_grad
 
 try:
-    from mindspore import _Function as Function
+    from mindspore import _Function
+    has_function = True
 except:
-    Function = None
+    has_function = False
 
 import mindtorch
 
@@ -83,7 +84,20 @@ def grad(fn, params_or_argnums=None, has_aux=False):
     return grad_f
 
 
-if Function is None:
+if has_function:
+    class Function(_Function):
+        @classmethod
+        def apply(cls, *args, **kwargs):
+            init = args[0].init
+            outs = super().apply(*args, **kwargs)
+
+            if isinstance(outs, (tuple, list)):
+                for out in outs:
+                    out.init = init
+            else:
+                outs.init = init
+            return outs
+else:
     class Function(Cell_):
         def __init__(self):
             super().__init__(str(self.__class__)[8:-2])

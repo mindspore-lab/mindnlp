@@ -6,11 +6,131 @@ import mindspore
 import mindtorch
 from .._op_prim.cpu import legacy, pyboost
 
+# Lazy import for Function to avoid circular import
+_Function = None
+
+def _get_function_class():
+    """Lazy import of Function class to avoid circular import."""
+    global _Function
+    if _Function is None:
+        from ..autograd.function import Function
+        _Function = Function
+    return _Function
+
+# Custom Getitem Function with NumPy-based backward
+class GetitemFunction:
+    """Custom getitem with NumPy-based backward to avoid MindSpore InplaceCopy issues."""
+
+    _instance = None
+
+    @classmethod
+    def apply(cls, input_tensor, slice_spec):
+        """Apply getitem with custom backward."""
+        Function = _get_function_class()
+
+        # Create a dynamic class that inherits from Function
+        class _GetitemOp(Function):
+            @staticmethod
+            def forward(ctx, input_tensor, slice_spec):
+                """Forward pass: perform getitem using NumPy."""
+                # Convert to numpy for slicing
+                input_np = input_tensor.asnumpy()
+
+                # Store info for backward
+                ctx.save_for_backward(input_tensor)
+                ctx.slice_spec = slice_spec
+                ctx.input_shape = tuple(input_tensor.shape)
+                ctx.input_dtype = input_tensor.dtype
+
+                # Perform slicing in numpy
+                result_np = input_np[slice_spec]
+
+                # Handle scalar results (numpy scalar types)
+                if not isinstance(result_np, np.ndarray):
+                    # Convert numpy scalar to Python scalar, then to tensor
+                    if hasattr(result_np, 'item'):
+                        result_np = result_np.item()
+                    result = mindtorch.tensor(result_np, dtype=input_tensor.dtype)
+                elif result_np.ndim == 0:
+                    # 0-dimensional array - convert to scalar first
+                    result = mindtorch.tensor(result_np.item(), dtype=input_tensor.dtype)
+                else:
+                    # Regular array result
+                    result = mindtorch.tensor(result_np, dtype=input_tensor.dtype)
+
+                result.init = input_tensor.init
+                return result
+
+            @staticmethod
+            def backward(ctx, grad_output):
+                """Backward pass: scatter gradients using NumPy."""
+                input_shape = ctx.input_shape
+                input_dtype = ctx.input_dtype
+                slice_spec = ctx.slice_spec
+
+                # Create zero gradient tensor with input shape
+                grad_input_np = np.zeros(input_shape, dtype=mindtorch.dtype2np[input_dtype])
+
+                # Get gradient as numpy
+                grad_output_np = grad_output.asnumpy()
+
+                # Scatter gradient to the sliced positions
+                # Use numpy's advanced indexing for assignment
+                grad_input_np[slice_spec] = grad_output_np
+
+                # Convert back to mindtorch tensor
+                grad_input = mindtorch.tensor(grad_input_np, dtype=input_dtype)
+                grad_input.init = grad_output.init
+
+                return grad_input, None  # None for slice_spec gradient
+
+        return _GetitemOp.apply(input_tensor, slice_spec)
+
 def empty(size, dtype):
     return pyboost.empty_op(size, dtype=dtype, device='CPU')
 
 def empty_like(input, dtype):
     return pyboost.empty_like_op(input, dtype, device='CPU')
+
+def new_empty(input, size, dtype, device):
+    """
+    Create a new empty tensor with the same type as input tensor.
+    
+    Args:
+        input: The input tensor to base the type on
+        size: The size of the new tensor
+        dtype: Optional dtype (if None, use input's dtype)
+        device: Optional device (if None, use input's device or 'CPU')
+    
+    Returns:
+        A new empty tensor with the specified size and dtype/device
+    """
+    # Use input's dtype if dtype is None
+    if dtype is None:
+        dtype = input.dtype
+    
+    # Use input's device if device is None, or default to 'CPU'
+    if device is None:
+        # Try to get device from input, default to 'CPU'
+        if hasattr(input, 'device') and hasattr(input.device, 'type'):
+            device_str = input.device.type
+            if device_str.lower() == 'cpu':
+                device_str = 'CPU'
+        else:
+            device_str = 'CPU'
+    else:
+        # Convert device to string if it's a device object
+        if hasattr(device, 'type'):
+            device_str = device.type
+            if device_str.lower() == 'cpu':
+                device_str = 'CPU'
+        else:
+            device_str = str(device)
+            if device_str.lower() == 'cpu':
+                device_str = 'CPU'
+    
+    # Create empty tensor using pyboost
+    return pyboost.empty_op(size, dtype=dtype, device=device_str)
 
 def inplace_normal(input, mean, std, generator_):
     out = np.random.normal(mean, std, input.shape).astype(mindtorch.dtype2np[input.dtype])
@@ -24,6 +144,18 @@ def select_ext_view(input, dim, index):
 def inplace_copy(input, value):
     # return pyboost.inplace_copy_op(input, value)
     input.data = value
+    return input
+
+def raw_sgd(param, grad, lr, dampening, weight_decay, nesterov, accum, momentum, stat):
+    """SGD optimizer step for CPU."""
+    return legacy.sgd(param, grad, lr, accum, momentum, stat, dampening, weight_decay, nesterov)
+
+def inplace_index_add(input, dim, index, source, alpha):
+    """Inplace index add operation."""
+    if alpha != 1:
+        source = mul(alpha, source)
+    out = legacy.index_add(input, cast(index, mindspore.int32), source, dim, True, True)
+    inplace_copy(input, out)
     return input
 
 
@@ -46,13 +178,25 @@ def zeros_like(input, dtype):
         return legacy.zeros_like(input)
     return legacy.cast(legacy.zeros_like(input), dtype)
 
+def full_like(input, fill_value, dtype=None):
+    if dtype is None:
+        dtype = input.dtype
+    size = input.shape
+    if isinstance(fill_value, numbers.Number):
+        return fill_scalar(size, fill_value, dtype)
+    else:
+        return fill_tensor(size, fill_value, dtype)
+
 def tensor_shape(input):
     return legacy.tensor_shape(input)
 
-def arange(start, end, step, dtype):
+def arange(start, end, step, dtype=mindspore.int64):
     return mindtorch.Tensor.from_numpy(np.arange(start, end, step, mindtorch.dtype2np[dtype]))
 
 def broadcast_to(input, shape):
+    # Handle scalar values by converting them to tensors first
+    if not isinstance(input, mindtorch.Tensor):
+        input = mindtorch.tensor(input)
     return legacy.broadcast_to(input, shape)
 
 def zeros(shape, dtype):
@@ -159,11 +303,20 @@ def pad_v3(input, new_pad, mode, value=None, contiguous=True):
 def cumsum(self, dim, dtype):
     if self.shape[dim] == 0:
         return mindspore.tensor([], dtype=self.dtype)
+    # MindSpore's CumSum doesn't support bool, cast to int32 first
+    if self.dtype == mindspore.bool_:
+        result = legacy.cum_sum(cast(self, mindspore.int32), dim, False, False)
+        if dtype is not None:
+            return cast(result, dtype)
+        return result
     if self.dtype == mindspore.int64:
         return cast(legacy.cum_sum(cast(self, mindspore.int32), dim, False, False), mindspore.int64)
     return legacy.cum_sum(self, dim, False, False)
 
 def reduce_any(input, axis, keepdims):
+    # When axis is None, reduce over all dimensions
+    if axis is None:
+        axis = tuple(range(input.ndim))
     return legacy.reduce_any(input, axis, keepdims)
 
 def concat(tensors, axis):
@@ -404,7 +557,7 @@ def sum(input, dim, keepdim, dtype):
         return legacy.reduce_sum(input, dim, keepdim, False)
     return legacy.reduce_sum(input.astype(dtype), dim, keepdim, False)
 
-def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1):
+def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, groups=1, training=True):
     pad_mode = 'pad'
     pad = padding
     if isinstance(padding, (tuple, list)):
@@ -437,7 +590,7 @@ def conv2d(input, weight, bias=None, stride=1, padding='valid', dilation=1, grou
         output = legacy.bias_add(output, bias, "NCHW")
     return output
 
-def conv2d_padding(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv2d_padding(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     return conv2d(input, weight, bias, stride, padding, dilation, groups)
 
 def pow_tensor_scalar(input, scalar):
@@ -477,6 +630,30 @@ def tensor_scatter_update(input, indices, updates):
 
 def isinf(input):
     return legacy.is_inf(input)
+
+def isin(input, test_elements, assume_unique=False, invert=False):
+    """
+    Checks if elements of input tensor are in test_elements.
+
+    Args:
+        input (Tensor): The input tensor.
+        test_elements (Tensor): The tensor to test against.
+        assume_unique (bool): If True, assumes that test_elements contains unique elements.
+        invert (bool): If True, inverts the result.
+
+    Returns:
+        Tensor: The tensor with boolean values indicating whether elements are in test_elements.
+    """
+    input_shape = input.shape
+    input = expand_dims(reshape(input, (-1,)), -1)
+    if not isinstance(test_elements, numbers.Number):
+        test_elements = reshape(test_elements, (-1,))
+    included = eq(input, test_elements)
+    # ops.reduce_sum only supports float
+    res = cast(sum(included, -1, False, None), mindtorch.bool_)
+    if invert:
+        res = logical_not(res)
+    return reshape(res, input_shape)
 
 def gelu(input, approximate):
     if approximate == 'none':
@@ -556,15 +733,15 @@ def log_softmax(input, axis, dtype):
 def scatter(input, dim, index, src):
     return legacy.tensor_scatter_elements(input, index, src, dim, "none")
 
-def batch_norm(input, weight, bias, running_mean=None, runnning_var=None, training=False, momentum=0.1, epsilon=1e-5):
+def batch_norm(input, weight, bias, running_mean=None, running_var=None, training=False, momentum=0.1, epsilon=1e-5):
     input_ndim = input.ndim
     if input_ndim == 2:
-        return legacy.batch_norm(input, weight, bias, running_mean, runnning_var, training, epsilon, momentum, 'NCHW')
+        return legacy.batch_norm(input, weight, bias, running_mean, running_var, training, epsilon, momentum, 'NCHW')
     else:
         input = transpose_view(input, 1, -1)
         input_shape = input.shape
         input = reshape(input, (-1, input.shape[-1]))
-        outs = legacy.batch_norm(input, weight, bias, running_mean, runnning_var, training, epsilon, momentum, 'NCHW')
+        outs = legacy.batch_norm(input, weight, bias, running_mean, running_var, training, epsilon, momentum, 'NCHW')
         out = reshape(outs[0], (*input_shape[:-1], -1))
         out = transpose_view(out, 1, -1)
 
@@ -587,7 +764,8 @@ def dropout(input, p, training=True):
     """
     if not training or p==0:
         return input
-    return legacy.dropout(input, 1-p, 0, 0)
+    # MindSpore's dropout returns (output, mask), extract only output
+    return legacy.dropout(input, 1-p, 0, 0)[0]
 
 def split_tensor(input, split_size_or_sections, dim):
     num = input.shape[dim] // split_size_or_sections
@@ -597,13 +775,20 @@ def bmm(input_x, input_y):
     return legacy.batch_mat_mul(input_x, input_y, False, False)
 
 def nllloss(input, target, weight, reduction, ingore_index):
-    return legacy.nll_loss(input, target, weight, reduction, ingore_index)
+    result = legacy.nll_loss(input, target, weight, reduction, ingore_index)
+    # MindSpore NLLLoss returns a tuple (loss, total_weight), extract just the loss
+    if isinstance(result, tuple):
+        return result[0]
+    return result
 
 def nllloss_2d(input, target, weight, reduction, ingore_index):
     input = reshape(transpose_view(input, 1, -1), (-1, input.shape[1]))
     target = reshape(target, (-1,))
-    out = legacy.nll_loss(input, target, weight, reduction, ingore_index)
-    return out
+    result = legacy.nll_loss(input, target, weight, reduction, ingore_index)
+    # MindSpore NLLLoss returns a tuple (loss, total_weight), extract just the loss
+    if isinstance(result, tuple):
+        return result[0]
+    return result
 
 
 def binary_cross_entropy_with_logits(input, target, weight, posWeight, reduction):
@@ -936,6 +1121,17 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
 
     return pyboost.group_norm_op(input, num_groups, weight, bias, eps)
 
+def repeat_kv(hidden_states, n_rep: int):
+    """
+    This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
+    num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)
+    """
+    batch, num_key_value_heads, slen, head_dim = hidden_states.shape
+    if n_rep == 1:
+        return hidden_states
+    hidden_states = broadcast_to(expand_dims(hidden_states, 2), (batch, num_key_value_heads, n_rep, slen, head_dim))
+    return reshape(hidden_states, (batch, num_key_value_heads * n_rep, slen, head_dim))
+
 def sdpa(query, key, value, attn_mask=None, dropout_p=0.0,
         is_causal=False, scale=None, enable_gqa=False):
     L, S = query.shape[-2], key.shape[-2]
@@ -999,6 +1195,21 @@ def softplus(input, beta=1, threshold=20):
 
 def gather_nd(input, indices):
     return legacy.gather_nd(input, indices)
+
+def _get_unfold_indices(input_shape, dimension, size, step):
+    if dimension < 0:
+        dimension += len(input_shape)
+    indices = []
+    for i in range(0, input_shape[dimension] - size + 1, step):
+        indices.append(list(range(i, i + size)))
+    return indices, dimension
+
+def unfold(input, dimension, size, step):
+    _indices, _dimension = _get_unfold_indices(input.shape, dimension, size, step)
+    indices = mindspore.tensor(_indices)
+    output = gather(input, indices, _dimension, 0)
+    output = transpose_view(output, _dimension + 1, -1)
+    return output
 
 def unique_consecutive(input, return_inverse, return_counts, dim):
     return legacy.unique_consecutive(input, return_inverse, return_counts, dim)
@@ -1330,7 +1541,9 @@ def dropout2d(input_x, p):
     return legacy.dropout2_d(input_x, p)
 
 def linalg_qr(input_x, mode):
-    full_matrices = 'mode' == 'complete'
+    # mode can be 'reduced', 'complete', or 'r'
+    # For 'complete', use full_matrices=True; for 'reduced' or 'r', use full_matrices=False
+    full_matrices = mode == 'complete'
     return legacy.qr(input_x, full_matrices)
 
 def diag(input, diagonal):
@@ -1598,33 +1811,6 @@ def _process_multi_dim_index(self, indexes, remain_indexes, indexed_dims):
             self_viewed, self, index, dim, indexed_dims, i, remain_indexes, self_viewed_shape)
     return self_viewed, remain_indexes
 
-
-def getitem(self, index):
-    """Handle tensor getitem"""
-    if isinstance(index, bool):
-        self_viewed = expand_dims(self, 0)
-        index_for_bool = tensor_1d if index else empty_tensor_1d
-        return index(self_viewed, [index_for_bool])
-    if isinstance(index, int):
-        return _do_select(self, 0, index, 0, list(self.shape))
-    if isinstance(index, py_slice):
-        result = _do_slice(self, 0, index, list(self.shape))
-        return result
-    if index is None:
-        return expand_dims(self, 0)
-    if isinstance(index, type(...)):
-        return self
-    indexes = _wrap_index_to_tuple(index)
-    indexed_dims = _count_indexed_dims(indexes)
-    if self.ndim < indexed_dims:
-        raise IndexError(f"too many indices for tensor with dimension size {self.ndim}")
-    remain_indexes = []
-    self_viewed, remain_indexes = _process_multi_dim_index(self, indexes, remain_indexes, indexed_dims)
-    if not remain_indexes:
-        return self_viewed
-
-    out = legacy_getitem(self_viewed, tuple(remain_indexes) if len(remain_indexes) > 1 else remain_indexes[0])
-    return out
 
 
 _SLICE_ERROR = (
@@ -1960,23 +2146,52 @@ def _as_spec_tuple(slice_spec):
             return tuple(slice_spec)
     return (slice_spec,)
 
-def legacy_getitem(self, slice_spec):
+def getitem(self, slice_spec):
+    """Getitem with NumPy-based backward to avoid MindSpore InplaceCopy issues."""
+    # Handle boolean indexing
     if (
         isinstance(slice_spec, bool)
         or (
             isinstance(slice_spec, mindtorch.Tensor)
             and slice_spec.dtype == mindtorch.bool
         )
-    ):  
+    ):
         if self.shape == slice_spec.shape:
             return masked_select(self, slice_spec)
         slice_spec = non_zero_ext(slice_spec)
 
+    # Use NumPy-based GetitemFunction for proper backward support
+    # Convert slice_spec to a format compatible with NumPy
     if not isinstance(slice_spec, tuple):
         slice_spec = _as_spec_tuple(slice_spec)
 
-    result_t = _slice_helper(self, slice_spec)
-    return result_t
+    # Convert mindtorch tensors in slice_spec to numpy for indexing
+    numpy_slice_spec = _convert_slice_spec_to_numpy(slice_spec)
+
+    # Use custom GetitemFunction with NumPy-based backward
+    return GetitemFunction.apply(self, numpy_slice_spec)
+
+
+def _convert_slice_spec_to_numpy(slice_spec):
+    """Convert slice_spec to numpy-compatible format."""
+    if not isinstance(slice_spec, tuple):
+        slice_spec = (slice_spec,)
+
+    result = []
+    for s in slice_spec:
+        if isinstance(s, mindtorch.Tensor):
+            # Convert tensor indices to numpy
+            result.append(s.asnumpy())
+        elif isinstance(s, py_slice):
+            result.append(s)
+        elif s is None or s is Ellipsis:
+            result.append(s)
+        elif isinstance(s, (int, np.integer)):
+            result.append(int(s))
+        else:
+            result.append(s)
+
+    return tuple(result) if len(result) > 1 else result[0]
 
 def setitem(a, slice_spec, updates):
     """Implementation of ndarray._with_index_*."""
@@ -2060,8 +2275,8 @@ def strided_slice_manual(x, begin, end, strides, begin_mask=0, end_mask=0,
 
     # Step 2: generate indices for scatter update
     ranges = [arange(b, e, s) for b, e, s in zip(full_begin, full_end, full_strides)]
-    mesh = meshgrid(*ranges, indexing='ij')
-    indices = stack(mesh, dim=-1)
+    mesh = meshgrid(ranges, 'ij')
+    indices = stack(mesh, -1)
     indices = reshape(indices, [-1, ndim])
 
     x_updated = gather_nd(x, indices)
@@ -2167,5 +2382,107 @@ def strided_slice_update(x, begin, end, strides, updates,
 def mish(input):
     return legacy.mish(input)
 
+def selu(input):
+    """SELU activation: scale * elu(x, alpha) where alpha=1.67326324, scale=1.05070098"""
+    SELU_ALPHA = 1.67326324
+    SELU_SCALE = 1.05070098
+    return legacy.mul(legacy.elu(input, SELU_ALPHA), SELU_SCALE)
+
+def celu(input, alpha):
+    """CELU activation: max(0, x) + min(0, alpha * (exp(x/alpha) - 1))"""
+    if alpha == 0:
+        raise ZeroDivisionError("ZeroDivisionError: alpha cannot be 0 for CELU")
+    return legacy.elu(input, alpha)
+
+def hardsigmoid(input):
+    """Hardsigmoid activation: clamp((x + 3) / 6, 0, 1)"""
+    x_plus_3 = legacy.add(input, 3.0)
+    x_div_6 = legacy.div(x_plus_3, 6.0)
+    return clamp_scalar(x_div_6, 0.0, 1.0)
+
+def fast_gelu(x):
+    """Fast GELU approximation"""
+    return gelu(x, approximate='tanh')
+
+def swiglu(x, dim=-1):
+    """Swish-Gated Linear Unit: swish(x[..., :d]) * x[..., d:] where d = x.shape[dim] // 2"""
+    split_size = x.shape[dim] // 2
+    x1, x2 = legacy.split(x, split_size, dim)
+    return legacy.mul(silu(x1), x2)
+
 def upsample_nearest3d(input, output_size, scale_factors):
     return pyboost.upsample_nearest3d_op(input, output_size, scale_factors)
+
+def multinomial(input, num_samples, replacement=False, generator=None):
+    """
+    Draws samples from a multinomial distribution.
+
+    Arguments:
+        input (Tensor): the input tensor containing probabilities or unnormalized log probabilities (must be non-negative, not necessarily summing to one)
+        num_samples (int): number of samples to draw
+        replacement (bool): whether to draw with replacement or not
+        generator (Generator, optional): a pseudorandom number generator for sampling
+
+    Returns:
+        Tensor: samples drawn from each row of input (or from the input if 1d)
+    """
+    # Validate input shape: must be 1d or 2d
+    input_shape = input.shape
+    input_ndim = len(input_shape)
+    if input_ndim not in (1, 2):
+        raise RuntimeError(f"multinomial only supports 1D or 2D input, got input of shape {input_shape}")
+
+    # Validate non-negativity
+    if (input < 0).any():
+        raise RuntimeError("Multinomial probabilities must be non-negative, but got negative probabilities.")
+
+    # Validate probabilities
+    if (sum(input, -1, False, None) == 0).any():
+        raise RuntimeError("Multinomial probabilities sum to zero for some rows.")
+
+    if input_ndim == 1:
+        batch_size = 1
+        prob_size = input_shape[0]
+    else:
+        batch_size, prob_size = input_shape
+
+    if not replacement and num_samples > prob_size:
+        raise RuntimeError(
+            "multinomial() cannot sample more elements than there are probabilities "
+            "when 'replacement=False'"
+        )
+
+    # Normalize probabilities along the last dimension
+    input_sum = sum(input, dim=-1, keepdim=True, dtype=None)
+    probs = div(input, input_sum)
+
+    # Handle sampling
+    seed, offset = None, None
+    if generator is not None:
+        seed, offset = generator._step(12)  # pylint: disable=protected-access
+
+    if replacement:
+        return legacy.multinomial(probs, num_samples, seed, offset, mindspore.int64)
+    else:
+        # Without replacement: use Gumbel-max trick, matching torch.multinomial
+        def gumbel(shape, generator, dtype):
+            # Uniform in (0,1); avoid 0 for log
+            uniform = rand(shape, generator, dtype)
+            eps = 1e-10
+            uniform = maximum(uniform, eps)
+            return -log(-log(uniform))
+
+        # Gumbel + log_prob
+        if input_ndim == 1:
+            logits = log(probs)
+            g = gumbel(logits.shape, generator, logits.dtype)
+            y = logits + g
+            # largest=True for topk to get max
+            _, indices = topk(y, num_samples, dim=-1, largest=True, sorted=True)
+            return cast(indices, mindspore.int64)
+        else:
+            logits = log(probs)
+            g = gumbel(logits.shape, generator, logits.dtype)
+            y = logits + g
+            _, indices = topk(y, num_samples, dim=-1, largest=True, sorted=True)
+            return cast(indices, mindspore.int64)

@@ -11,7 +11,7 @@ Colab example: https://colab.research.google.com/drive/12hfBveGHRsxhPIUMmJYrll2l
 
 import json
 import os
-import mindhf
+import mindnlp
 
 from sentence_transformers import SentenceTransformer, util
 

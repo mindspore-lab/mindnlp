@@ -1,5 +1,5 @@
 import mindspore
-from mindhf.transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
+from mindnlp.transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 # Initialize the model and tokenizer
 model_name = "jetmoe/jetmoe-8b-chat"
 tokenizer = AutoTokenizer.from_pretrained(model_name)

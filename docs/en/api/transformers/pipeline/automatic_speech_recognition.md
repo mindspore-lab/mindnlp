@@ -1,1 +1,0 @@
-:::mindnlp.transformers.pipelines.automatic_speech_recognition.AutomaticSpeechRecognitionPipeline

@@ -26,7 +26,7 @@ return the closest questions in the corpus (questions in the corpus are mainly i
 import csv
 import os
 import time
-import mindhf
+import mindnlp
 
 import tqdm.autonotebook
 from elasticsearch import Elasticsearch, helpers

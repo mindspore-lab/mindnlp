@@ -1,1 +1,0 @@
-:::mindnlp.transformers.models.bert_japanese.tokenization_bert_japanese.BertJapaneseTokenizer

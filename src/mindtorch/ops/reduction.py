@@ -38,8 +38,6 @@ def all(input, dim=None, keepdim=False, *, dtype=None, **kwargs):
 
 # any
 def any(input, dim=None, keepdim=False):
-    if dim is None:
-        dim = ()
     return execute('reduce_any', input, dim, keepdim)
 
 # max

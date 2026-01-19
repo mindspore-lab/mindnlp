@@ -35,8 +35,10 @@ datamodel_code_generator
 einops
 transformers
 peft
-diffusers
+diffusers==0.35.2
 timeout_decorator
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch
 ftfy
 requests_mock
+torchvision

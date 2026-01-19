@@ -34,21 +34,21 @@ import numpy as np
 from parameterized import parameterized
 from requests.exceptions import HTTPError
 
-import mindhf
-from mindhf.core.nn import Parameter
-from mindhf.engine import (
+import mindnlp
+from mindnlp.core.nn import Parameter
+from mindnlp.engine import (
     IntervalStrategy,
     TrainerCallback,
     TrainingArguments
 )
-from mindhf.transformers import (
+from mindnlp.transformers import (
     AutoTokenizer,
     PretrainedConfig,
 )
-from mindhf.common.optimization import get_polynomial_decay_schedule_with_warmup
-from mindhf.utils import is_mindspore_available, logging
-from mindhf.core.serialization import safe_load_file, safe_save_file, load_checkpoint
-from mindhf.utils.testing_utils import (
+from mindnlp.common.optimization import get_polynomial_decay_schedule_with_warmup
+from mindnlp.utils import is_mindspore_available, logging
+from mindnlp.core.serialization import safe_load_file, safe_save_file, load_checkpoint
+from mindnlp.utils.testing_utils import (
     # ENDPOINT_STAGING,
     # TOKEN,
     # USER,
@@ -64,13 +64,13 @@ from mindhf.utils.testing_utils import (
     require_mindspore,
     slow,
 )
-from mindhf.transformers.tokenization_utils_base import PreTrainedTokenizerBase
-from mindhf.engine.utils import PREFIX_CHECKPOINT_DIR, get_last_checkpoint
-from mindhf.engine.train_args import OptimizerNames
-from mindhf.utils import (
+from mindnlp.transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from mindnlp.engine.utils import PREFIX_CHECKPOINT_DIR, get_last_checkpoint
+from mindnlp.engine.train_args import OptimizerNames
+from mindnlp.utils import (
     is_safetensors_available,
 )
-from mindhf.configs import (
+from mindnlp.configs import (
     SAFE_WEIGHTS_INDEX_NAME,
     SAFE_WEIGHTS_NAME,
     WEIGHTS_INDEX_NAME,
@@ -79,16 +79,16 @@ from mindhf.configs import (
 
 if is_mindspore_available():
     import mindspore
-    from mindhf.core import nn, ops, optim
-    from mindhf.core.serialization import load_checkpoint, save_checkpoint
-    from mindhf.core.nn import functional as F
+    from mindnlp.core import nn, ops, optim
+    from mindnlp.core.serialization import load_checkpoint, save_checkpoint
+    from mindnlp.core.nn import functional as F
     from mindspore.dataset import GeneratorDataset
 
     # import transformers.optimization
-    from mindhf.engine.callbacks import (
+    from mindnlp.engine.callbacks import (
         EarlyStoppingCallback
     )
-    from mindhf.transformers import (
+    from mindnlp.transformers import (
         AutoModelForCausalLM,
         AutoModelForSequenceClassification,
         # GlueDataset,
@@ -98,8 +98,8 @@ if is_mindspore_available():
         # LineByLineTextDataset,
         PreTrainedModel,
     )
-    from mindhf.engine import Trainer, TrainerState
-    # from mindhf.transformers.modeling_utils import unwrap_model
+    from mindnlp.engine import Trainer, TrainerState
+    # from mindnlp.transformers.modeling_utils import unwrap_model
 
 PATH_SAMPLE_TEXT = f"{get_tests_dir()}/fixtures/sample_text.txt"
 

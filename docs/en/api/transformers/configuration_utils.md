@@ -1,1 +1,0 @@
-:::mindnlp.transformers.configuration_utils.PretrainedConfig

@@ -1,1 +1,0 @@
-:::mindnlp.transformers.generation.stopping_criteria

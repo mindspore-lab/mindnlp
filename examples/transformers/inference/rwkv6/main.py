@@ -20,9 +20,9 @@
 import time
 import mindspore
 from mindspore import ops
-from mindhf.experimental.rwkv6.modeling_rwkv6 import RWKV_RNN
-from mindhf.experimental.rwkv6.tokenizer_rwkv6 import RWKV_TOKENIZER
-from mindhf.experimental.rwkv6.sampler_rwkv6 import sample_logits
+from mindnlp.experimental.rwkv6.modeling_rwkv6 import RWKV_RNN
+from mindnlp.experimental.rwkv6.tokenizer_rwkv6 import RWKV_TOKENIZER
+from mindnlp.experimental.rwkv6.sampler_rwkv6 import sample_logits
 
 if __name__ == '__main__':
     args = {

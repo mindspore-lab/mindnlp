@@ -5,12 +5,12 @@
 
 
 import mindspore
-from mindhf.transformers import AutoModelForSeq2SeqLM
-from mindhf.peft import get_peft_model, LoraConfig, TaskType
-from mindhf.core import ops
+from mindnlp.transformers import AutoModelForSeq2SeqLM
+from mindnlp.peft import get_peft_model, LoraConfig, TaskType
+from mindnlp.core import ops
 
-from mindhf.transformers import AutoTokenizer
-from mindhf.transformers.optimization import get_linear_schedule_with_warmup
+from mindnlp.transformers import AutoTokenizer
+from mindnlp.transformers.optimization import get_linear_schedule_with_warmup
 from tqdm import tqdm
 from datasets import load_dataset
 
@@ -92,7 +92,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
 
 
 import numpy as np
-from mindhf.dataset import BaseMapFunction
+from mindnlp.dataset import BaseMapFunction
 from threading import Lock
 lock = Lock()
 
@@ -130,7 +130,7 @@ next(train_dataset.create_dict_iterator())
 # In[ ]:
 
 
-from mindhf.core import optim
+from mindnlp.core import optim
 # optimizer and lr scheduler
 optimizer = optim.AdamW(model.trainable_params(), lr=lr)
 lr_scheduler = get_linear_schedule_with_warmup(
@@ -143,7 +143,7 @@ lr_scheduler = get_linear_schedule_with_warmup(
 # In[ ]:
 
 
-from mindhf.core import value_and_grad
+from mindnlp.core import value_and_grad
 # training and evaluation
 def forward_fn(**batch):
     outputs = model(**batch)
@@ -228,7 +228,7 @@ get_ipython().system('du -h $ckpt')
 # In[ ]:
 
 
-from mindhf.peft import PeftModel, PeftConfig
+from mindnlp.peft import PeftModel, PeftConfig
 
 peft_model_id = f"{model_name_or_path}_{peft_config.peft_type}_{peft_config.task_type}"
 

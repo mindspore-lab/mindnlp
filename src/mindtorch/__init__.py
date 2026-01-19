@@ -32,6 +32,8 @@ from mindspore.runtime import Stream
 from mindspore.common.api import _pynative_executor
 from mindspore._c_expression import MSContext # pylint: disable=no-name-in-module, import-error
 
+_pynative_executor.set_grad_flag(True)
+
 # for huawei cloud modelarts
 if 'RANK_TABLE_FILE' in os.environ:
     del os.environ['RANK_TABLE_FILE']
@@ -79,6 +81,9 @@ memory_format = None
 inf = float("inf")
 nan = float("nan")
 
+class OutOfMemoryError(RuntimeError):
+    """Compatibility alias for torch.OutOfMemoryError."""
+    pass
 
 from . import _C
 from ._dtype import *
@@ -129,6 +134,21 @@ def is_grad_enabled():
 
 def set_grad_enabled(enable_grad):
     return _pynative_executor.set_enable_grad(enable_grad)
+
+def is_same_size(tensor1, tensor2):
+    """
+    Check if two tensors have the same size.
+    
+    Args:
+        tensor1: First tensor
+        tensor2: Second tensor
+    
+    Returns:
+        bool: True if both tensors have the same shape, False otherwise
+    """
+    if not isinstance(tensor1, Tensor) or not isinstance(tensor2, Tensor):
+        return False
+    return tensor1.shape == tensor2.shape
 
 def typename(obj: _Any, /) -> str:
     """
@@ -181,17 +201,27 @@ def ms_run_check():
 from .autograd import *
 from .serialization import load, save
 from ._bind import get_default_dtype, set_default_dtype, get_default_device, is_autocast_enabled, set_autocast_enabled, \
-    set_autocast_dtype, get_autocast_dtype
+    set_autocast_dtype, get_autocast_dtype, asarray as _mt_asarray
 
 from .amp import autocast, GradScaler
 from .func import vmap
 from .storage import UntypedStorage, Storage, TypedStorage
 
+# Provide torch-compatible asarray API at top-level
+# Delegate to _bind.asarray with sensible defaults
+def asarray(obj, *, dtype=None, device=None, copy=None, requires_grad=False):
+    if dtype is None:
+        dtype = get_default_dtype()
+    return _mt_asarray(obj, dtype=dtype, device=device, copy=copy, requires_grad=requires_grad)
+
 from . import _dynamo, library
 from . import profiler, cuda, npu, xpu, mps, amp, compiler, jit, version, __future__, overrides, \
-    return_types, linalg, fx, backends, nn, fft, _jit_internal, utils, optim, testing, _ops
+    return_types, linalg, fx, backends, nn, fft, _jit_internal, utils, optim, testing, _ops, accelerator, special
 from ._lowrank import svd_lowrank
 from .random import get_rng_state, initial_seed, manual_seed, seed, set_rng_state
+
+if mindspore.get_context('device_target') == 'Ascend':
+    cuda = npu
 
 __version__ = 'test_version_no_value'
 
@@ -199,3 +229,60 @@ __version__ = 'test_version_no_value'
 from .torch_proxy import initialize_torch_proxy, setup_metadata_patch
 initialize_torch_proxy()
 setup_metadata_patch()
+
+# Patch diffusers' AutoencoderKLAllegro to enable tiled decoding by default
+# This avoids NotImplementedError when decoding without tiling.
+try:
+    from diffusers.models.autoencoders.autoencoder_kl_allegro import AutoencoderKLAllegro  # type: ignore
+    _orig_decode = AutoencoderKLAllegro.decode
+    def _patched_decode(self, *args, **kwargs):
+        try:
+            # Prefer official API if available
+            if hasattr(self, "enable_tiling") and callable(getattr(self, "enable_tiling")):
+                # Only enable once
+                if not getattr(self, "use_tiling", False):
+                    try:
+                        self.enable_tiling()
+                    except Exception:
+                        # Fallback: set flag directly if method fails
+                        setattr(self, "use_tiling", True)
+            else:
+                # Fallback if API not present
+                if not getattr(self, "use_tiling", False) and hasattr(self, "tiled_decode"):
+                    setattr(self, "use_tiling", True)
+        except Exception:
+            # Best-effort patch; never break user code
+            pass
+        return _orig_decode(self, *args, **kwargs)
+    AutoencoderKLAllegro.decode = _patched_decode
+except Exception:
+    # diffusers might be absent; ignore
+    pass
+
+# Patch diffusers' get_timestep_embedding to accept 2D inputs by flattening
+try:
+    import diffusers.models.embeddings as _emb_mod  # type: ignore
+    _orig_get_timestep_embedding = _emb_mod.get_timestep_embedding
+    def _patched_get_timestep_embedding(timesteps, embedding_dim, flip_sin_to_cos=False,
+                                        downscale_freq_shift=1, scale=1, max_period=10000):
+        try:
+            # Ensure 1D timesteps as expected by diffusers implementation
+            if hasattr(timesteps, 'shape') and len(timesteps.shape) != 1:
+                # Prefer squeezing singleton last dim, else flatten
+                try:
+                    if timesteps.shape[-1] == 1:
+                        timesteps = timesteps.squeeze(-1)
+                    else:
+                        timesteps = timesteps.reshape(-1)
+                except Exception:
+                    timesteps = timesteps.reshape(-1)
+        except Exception:
+            # Best-effort: leave as is if any issue
+            pass
+        return _orig_get_timestep_embedding(
+            timesteps, embedding_dim, flip_sin_to_cos, downscale_freq_shift, scale, max_period
+        )
+    _emb_mod.get_timestep_embedding = _patched_get_timestep_embedding
+except Exception:
+    # diffusers might be absent; ignore
+    pass

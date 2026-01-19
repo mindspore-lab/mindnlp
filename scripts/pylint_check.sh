@@ -12,5 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# Set PYTHONPATH to include src directory
+export PYTHONPATH="${PYTHONPATH:+${PYTHONPATH}:}src"
+
 NUM_CORES=$(nproc)
-pylint --jobs=$NUM_CORES --rcfile=.github/pylint.conf src/mindhf src/mindnlp
+pylint --jobs=$NUM_CORES --rcfile=.github/pylint.conf src/mindnlp
