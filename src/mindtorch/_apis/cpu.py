@@ -58,7 +58,8 @@ class GetitemFunction:
                     # Regular array result
                     result = mindtorch.tensor(result_np, dtype=input_tensor.dtype)
 
-                result.init = input_tensor.init
+                # Don't copy init attribute - the new tensor already has its own init
+                # Copying init causes shape mismatch between wrapper and underlying tensor
                 return result
 
             @staticmethod
@@ -80,7 +81,7 @@ class GetitemFunction:
 
                 # Convert back to mindtorch tensor
                 grad_input = mindtorch.tensor(grad_input_np, dtype=input_dtype)
-                grad_input.init = grad_output.init
+                # Don't copy init attribute - the new tensor already has its own init
 
                 return grad_input, None  # None for slice_spec gradient
 
@@ -143,7 +144,11 @@ def select_ext_view(input, dim, index):
 
 def inplace_copy(input, value):
     # return pyboost.inplace_copy_op(input, value)
+    # Preserve init attribute to maintain device information
+    init_attr = getattr(input, 'init', None)
     input.data = value
+    if init_attr is not None:
+        input.init = init_attr
     return input
 
 def raw_sgd(param, grad, lr, dampening, weight_decay, nesterov, accum, momentum, stat):
@@ -320,6 +325,10 @@ def reduce_any(input, axis, keepdims):
     return legacy.reduce_any(input, axis, keepdims)
 
 def concat(tensors, axis):
+    # Cast all tensors to the same dtype (use the first tensor's dtype)
+    if len(tensors) > 1:
+        first_dtype = tensors[0].dtype
+        tensors = tuple(t.to(first_dtype) if t.dtype != first_dtype else t for t in tensors)
     return legacy.concat(tensors, axis)
 
 def numpy_to_tensor_overwrite(np_array, tensor):
@@ -626,6 +635,9 @@ def logical_not(input):
     return legacy.logical_not(input)
 
 def tensor_scatter_update(input, indices, updates):
+    # Cast updates to input dtype to avoid type mismatch
+    if hasattr(input, 'dtype') and hasattr(updates, 'dtype') and input.dtype != updates.dtype:
+        updates = updates.to(input.dtype)
     return legacy.tensor_scatter_update(input, indices, updates)
 
 def isinf(input):
@@ -768,6 +780,10 @@ def dropout(input, p, training=True):
     return legacy.dropout(input, 1-p, 0, 0)[0]
 
 def split_tensor(input, split_size_or_sections, dim):
+    # If split_size_or_sections is a list/tuple, use split_with_size
+    if isinstance(split_size_or_sections, (list, tuple)):
+        return split_with_size(input, split_size_or_sections, dim)
+    # Otherwise, it is an integer specifying the chunk size
     num = input.shape[dim] // split_size_or_sections
     return legacy.split(input, dim, num)
 
@@ -836,7 +852,7 @@ def avg_pool1d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
     elif isinstance(padding, tuple):
         if len(padding) != 1:
             raise ValueError("For avg_pool1d, padding should be int or tuple of length 1.")
-        padding = (0, 0, 0, 0, padding[0], padding[1])
+        padding = (0, 0, 0, 0, padding[0], padding[0])
     else:
         raise TypeError("For avg_pool1d, padding should be int or tuple of length 1.")
 
@@ -1491,7 +1507,10 @@ def log2(input):
 
 def bucketize(input, boundaries, right=False):
     epsilon_ = 0. if right else 1.e-6
-    boundaries = [boundary + epsilon_ for boundary in boundaries]
+    # Convert tensor boundaries to list of floats
+    if hasattr(boundaries, 'tolist'):
+        boundaries = boundaries.tolist()
+    boundaries = [float(boundary) + epsilon_ for boundary in boundaries]
     return legacy.bucketize(input, boundaries)
 
 def col2im(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
@@ -2139,7 +2158,7 @@ def _as_spec_tuple(slice_spec):
     if isinstance(slice_spec, (list, tuple)):
         is_index = True
         for s in slice_spec:
-            if s is None or s is Ellipsis or isinstance(s, (list, tuple, slice)):
+            if s is None or s is Ellipsis or isinstance(s, (list, tuple, py_slice)):
                 is_index = False
                 break
         if not is_index:
@@ -2231,7 +2250,10 @@ def strided_slice_manual(x, begin, end, strides, begin_mask=0, end_mask=0,
         # ellipsis_mask
         if i < len(begin) and ((ellipsis_mask >> i) & 1):
             remaining_dims = ndim - dim - (len(begin) - i - 1)
-            shrink_axis_mask = shrink_axis_mask << remaining_dims - 1
+            # Shift shrink_axis_mask to account for expanded ellipsis dimensions
+            # Only shift if there are dimensions after the ellipsis
+            if remaining_dims > 1:
+                shrink_axis_mask = shrink_axis_mask << (remaining_dims - 1)
             for _ in range(remaining_dims):
                 full_begin.append(0)
                 full_end.append(x_shape[dim])
@@ -2303,7 +2325,10 @@ def strided_slice_update(x, begin, end, strides, updates,
         # ellipsis_mask
         if i < len(begin) and ((ellipsis_mask >> i) & 1):
             remaining_dims = ndim - dim - (len(begin) - i - 1)
-            shrink_axis_mask = shrink_axis_mask << remaining_dims - 1
+            # Shift shrink_axis_mask to account for expanded ellipsis dimensions
+            # Only shift if there are dimensions after the ellipsis
+            if remaining_dims > 1:
+                shrink_axis_mask = shrink_axis_mask << (remaining_dims - 1)
             for _ in range(remaining_dims):
                 full_begin.append(0)
                 full_end.append(x_shape[dim])
