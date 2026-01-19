@@ -138,3 +138,29 @@ else:
         @classmethod
         def apply(cls, *args, **kwargs):
             return cls()(*args, **kwargs)
+
+
+class FunctionCtx:
+    def save_for_backward(self, *tensors: mindtorch.Tensor):
+        r"""Save given tensors for a future call to :func:`~Function.backward`."""
+        self.to_save = tensors
+
+    def save_for_forward(self, *tensors: mindtorch.Tensor):
+        r"""Save given tensors for a future call to :func:`~Function.jvp`."""
+        self.saved_for_forward = tensors
+
+    def mark_dirty(self, *args: mindtorch.Tensor):
+        r"""Mark given tensors as modified in an in-place operation."""
+        self.dirty_tensors = args
+
+    def mark_non_differentiable(self, *args: mindtorch.Tensor):
+        r"""Mark outputs as non-differentiable."""
+        self.non_differentiable = args
+
+    def set_materialize_grads(self, value: bool):
+        r"""Set whether to materialize grad tensors. Default is ``True``."""
+        self.materialize_grads = value
+
+
+# DO NOT USE: This is only defined to be able to load old serialized models
+_ContextMethodMixin = FunctionCtx

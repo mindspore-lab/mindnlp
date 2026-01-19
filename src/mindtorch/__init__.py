@@ -215,7 +215,7 @@ def asarray(obj, *, dtype=None, device=None, copy=None, requires_grad=False):
     return _mt_asarray(obj, dtype=dtype, device=device, copy=copy, requires_grad=requires_grad)
 
 from . import _dynamo, library
-from . import profiler, cuda, npu, xpu, mps, amp, compiler, jit, version, __future__, overrides, \
+from . import profiler, cuda, npu, xpu, mps, cpu, amp, compiler, jit, version, __future__, overrides, \
     return_types, linalg, fx, backends, nn, fft, _jit_internal, utils, optim, testing, _ops, accelerator, special
 from ._lowrank import svd_lowrank
 from .random import get_rng_state, initial_seed, manual_seed, seed, set_rng_state
@@ -229,60 +229,3 @@ __version__ = 'test_version_no_value'
 from .torch_proxy import initialize_torch_proxy, setup_metadata_patch
 initialize_torch_proxy()
 setup_metadata_patch()
-
-# Patch diffusers' AutoencoderKLAllegro to enable tiled decoding by default
-# This avoids NotImplementedError when decoding without tiling.
-try:
-    from diffusers.models.autoencoders.autoencoder_kl_allegro import AutoencoderKLAllegro  # type: ignore
-    _orig_decode = AutoencoderKLAllegro.decode
-    def _patched_decode(self, *args, **kwargs):
-        try:
-            # Prefer official API if available
-            if hasattr(self, "enable_tiling") and callable(getattr(self, "enable_tiling")):
-                # Only enable once
-                if not getattr(self, "use_tiling", False):
-                    try:
-                        self.enable_tiling()
-                    except Exception:
-                        # Fallback: set flag directly if method fails
-                        setattr(self, "use_tiling", True)
-            else:
-                # Fallback if API not present
-                if not getattr(self, "use_tiling", False) and hasattr(self, "tiled_decode"):
-                    setattr(self, "use_tiling", True)
-        except Exception:
-            # Best-effort patch; never break user code
-            pass
-        return _orig_decode(self, *args, **kwargs)
-    AutoencoderKLAllegro.decode = _patched_decode
-except Exception:
-    # diffusers might be absent; ignore
-    pass
-
-# Patch diffusers' get_timestep_embedding to accept 2D inputs by flattening
-try:
-    import diffusers.models.embeddings as _emb_mod  # type: ignore
-    _orig_get_timestep_embedding = _emb_mod.get_timestep_embedding
-    def _patched_get_timestep_embedding(timesteps, embedding_dim, flip_sin_to_cos=False,
-                                        downscale_freq_shift=1, scale=1, max_period=10000):
-        try:
-            # Ensure 1D timesteps as expected by diffusers implementation
-            if hasattr(timesteps, 'shape') and len(timesteps.shape) != 1:
-                # Prefer squeezing singleton last dim, else flatten
-                try:
-                    if timesteps.shape[-1] == 1:
-                        timesteps = timesteps.squeeze(-1)
-                    else:
-                        timesteps = timesteps.reshape(-1)
-                except Exception:
-                    timesteps = timesteps.reshape(-1)
-        except Exception:
-            # Best-effort: leave as is if any issue
-            pass
-        return _orig_get_timestep_embedding(
-            timesteps, embedding_dim, flip_sin_to_cos, downscale_freq_shift, scale, max_period
-        )
-    _emb_mod.get_timestep_embedding = _patched_get_timestep_embedding
-except Exception:
-    # diffusers might be absent; ignore
-    pass

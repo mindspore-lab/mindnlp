@@ -146,6 +146,10 @@ def as_strided_manual(self, size, stride, storage_offset=None):
     out = gather(reshape(self, (-1,)), input_indices, 0, 0)
     return out
 
+def inplace_sub(input, other):
+    return inplace_copy(input, legacy.sub(input, other))
+
+
 
 def embedding(input, weight, padding_idx, max_norm, norm_type, scale_grad_by_freq):
     """
@@ -1287,7 +1291,7 @@ def roll(input, shifts, axis):
         return pyboost.roll_impl(input, shifts, axis)
     return legacy.roll(input, shifts, axis)
 
-def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     if ENABLE_PYBOOST and not ON_ORANGE_PI:
         return pyboost.conv1d_ext_op(input, weight, bias, stride, padding, dilation, groups)
     return conv1d_legacy(input, weight, bias, stride, padding, dilation, groups)
@@ -1679,7 +1683,7 @@ def adaptive_avg_pool1d(input, output_size):
         return pyboost.adaptive_avg_pool1d_op(input, output_size)
     return legacy.adaptive_avg_pool1d(input, output_size)
 
-def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     if ENABLE_PYBOOST and not ON_ORANGE_PI:
         return pyboost.conv3d_ext_op(input, weight, bias, stride, padding, dilation, groups)
     pad_mode = 'pad'

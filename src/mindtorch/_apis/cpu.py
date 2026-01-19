@@ -58,7 +58,8 @@ class GetitemFunction:
                     # Regular array result
                     result = mindtorch.tensor(result_np, dtype=input_tensor.dtype)
 
-                result.init = input_tensor.init
+                # Don't copy init attribute - the new tensor already has its own init
+                # Copying init causes shape mismatch between wrapper and underlying tensor
                 return result
 
             @staticmethod
@@ -80,7 +81,7 @@ class GetitemFunction:
 
                 # Convert back to mindtorch tensor
                 grad_input = mindtorch.tensor(grad_input_np, dtype=input_dtype)
-                grad_input.init = grad_output.init
+                # Don't copy init attribute - the new tensor already has its own init
 
                 return grad_input, None  # None for slice_spec gradient
 
@@ -143,8 +144,16 @@ def select_ext_view(input, dim, index):
 
 def inplace_copy(input, value):
     # return pyboost.inplace_copy_op(input, value)
+    # Preserve init attribute to maintain device information
+    init_attr = getattr(input, 'init', None)
     input.data = value
+    if init_attr is not None:
+        input.init = init_attr
     return input
+
+def inplace_sub(input, other):
+    return inplace_copy(input, legacy.sub(input, other))
+
 
 def raw_sgd(param, grad, lr, dampening, weight_decay, nesterov, accum, momentum, stat):
     """SGD optimizer step for CPU."""
@@ -226,8 +235,42 @@ def abs(input):
 def identity(input):
     return legacy.identity(input)
 
+class CloneFunction:
+    """Custom clone with NumPy-based backward to avoid Clone kernel unregistered error."""
+
+    @classmethod
+    def apply(cls, input_tensor):
+        """Apply clone with custom backward."""
+        Function = _get_function_class()
+
+        # Create a dynamic class that inherits from Function
+        class _CloneOp(Function):
+            @staticmethod
+            def forward(ctx, input_tensor):
+                """Forward pass: create a copy using NumPy to avoid MindSpore Clone kernel."""
+                # Use numpy copy to completely bypass MindSpore kernel system
+                input_np = input_tensor.asnumpy()
+                out_np = np.copy(input_np)
+                result = mindspore.Tensor.from_numpy(out_np)
+                return result
+
+            @staticmethod
+            def backward(ctx, grad_output):
+                """Backward pass: clone's gradient is simply passed through."""
+                # Clone's backward simply passes through the gradient
+                # Use numpy to avoid Clone kernel
+                if ctx.needs_input_grad[0]:
+                    grad_np = grad_output.asnumpy()
+                    if not isinstance(grad_np, np.ndarray):
+                        grad_np = np.array(grad_np)
+                    grad_input = mindspore.Tensor.from_numpy(grad_np)
+                    return grad_input
+                return None
+
+        return _CloneOp.apply(input_tensor)
+
 def clone(input):
-    return cast(legacy.mul(input, 1), input.dtype)
+    return CloneFunction.apply(input)
 
 py_max = max
 def max(input):
@@ -320,6 +363,10 @@ def reduce_any(input, axis, keepdims):
     return legacy.reduce_any(input, axis, keepdims)
 
 def concat(tensors, axis):
+    # Cast all tensors to the same dtype (use the first tensor's dtype)
+    if len(tensors) > 1:
+        first_dtype = tensors[0].dtype
+        tensors = tuple(t.to(first_dtype) if t.dtype != first_dtype else t for t in tensors)
     return legacy.concat(tensors, axis)
 
 def numpy_to_tensor_overwrite(np_array, tensor):
@@ -626,9 +673,18 @@ def logical_not(input):
     return legacy.logical_not(input)
 
 def tensor_scatter_update(input, indices, updates):
+    # Cast updates to input dtype to avoid type mismatch
+    if hasattr(input, 'dtype') and hasattr(updates, 'dtype') and input.dtype != updates.dtype:
+        updates = updates.to(input.dtype)
     return legacy.tensor_scatter_update(input, indices, updates)
 
 def isinf(input):
+    # IsInf only supports float types, convert integer tensors to float
+    if input.dtype in (mindtorch.int8, mindtorch.int16, mindtorch.int32, mindtorch.int64, 
+                       mindtorch.uint8, mindtorch.uint16, mindtorch.uint32, mindtorch.uint64):
+        # Integer tensors cannot have inf values, return all False
+        result = legacy.zeros_like(input)
+        return cast(result, mindtorch.bool)
     return legacy.is_inf(input)
 
 def isin(input, test_elements, assume_unique=False, invert=False):
@@ -768,6 +824,10 @@ def dropout(input, p, training=True):
     return legacy.dropout(input, 1-p, 0, 0)[0]
 
 def split_tensor(input, split_size_or_sections, dim):
+    # If split_size_or_sections is a list/tuple, use split_with_size
+    if isinstance(split_size_or_sections, (list, tuple)):
+        return split_with_size(input, split_size_or_sections, dim)
+    # Otherwise, it is an integer specifying the chunk size
     num = input.shape[dim] // split_size_or_sections
     return legacy.split(input, dim, num)
 
@@ -836,7 +896,7 @@ def avg_pool1d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
     elif isinstance(padding, tuple):
         if len(padding) != 1:
             raise ValueError("For avg_pool1d, padding should be int or tuple of length 1.")
-        padding = (0, 0, 0, 0, padding[0], padding[1])
+        padding = (0, 0, 0, 0, padding[0], padding[0])
     else:
         raise TypeError("For avg_pool1d, padding should be int or tuple of length 1.")
 
@@ -845,10 +905,17 @@ def avg_pool1d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
             raise ValueError("For avg_pool1d, stride should be int or tuple of length 1.")
         stride = stride[0]
 
-    input = expand_dims(input, 2)
-    input = expand_dims(input, 2)
-    input = legacy.avg_pool3_d(input, (1, 1, kernel_size), (1, 1, stride), 'pad', padding, ceil_mode, count_include_pad, 0, 'NCDHW')
-    input = squeeze(input, (2, 3))
+    if input.ndim == 3:
+        input = expand_dims(input, 2)
+        input = expand_dims(input, 2)
+        input = legacy.avg_pool3_d(input, (1, 1, kernel_size[0]), (1, 1, stride), 'pad', padding, ceil_mode, count_include_pad, 0, 'NCDHW')
+        input = squeeze(input, (2, 3))
+    elif input.ndim == 2:
+        input = expand_dims(input, 1)
+        input = expand_dims(input, 1)
+        input = expand_dims(input, 1)
+        input = legacy.avg_pool3_d(input, (1, 1, kernel_size[0]), (1, 1, stride), 'pad', padding, ceil_mode, count_include_pad, 0, 'NCDHW')
+        input = squeeze(input, (1, 2, 3))
     return input
 
 def fmod_scalar(input, other):
@@ -858,7 +925,7 @@ def fmod_tensor(input, other):
     return legacy.floor_mod(input, other)
 
 
-def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     pad_mode = 'pad'
     pad = padding
     if isinstance(padding, tuple):
@@ -1113,6 +1180,10 @@ def repeat_interleave_int(input_tensor, repeats, dim, output_size):
 
     return output
 
+def repeat_interleave_tensor(input, repeats, dim, output_size):
+    return repeat_interleave_int(input, repeats, dim, output_size)
+
+
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if weight is None:
         weight = ones([input.shape[1]], dtype=input.dtype)
@@ -1243,7 +1314,7 @@ def upsample_nearest2d(input, output_size, scale_factors):
 def upsample_bicubic2d(input, size=None, scale_factor=None, align_corners=False):
     return legacy.resize_bicubic(input, size, align_corners, not align_corners)
 
-def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     pad_mode = 'pad'
     pad = padding
     if isinstance(padding, (tuple, list)):
@@ -1491,7 +1562,10 @@ def log2(input):
 
 def bucketize(input, boundaries, right=False):
     epsilon_ = 0. if right else 1.e-6
-    boundaries = [boundary + epsilon_ for boundary in boundaries]
+    # Convert tensor boundaries to list of floats
+    if hasattr(boundaries, 'tolist'):
+        boundaries = boundaries.tolist()
+    boundaries = [float(boundary) + epsilon_ for boundary in boundaries]
     return legacy.bucketize(input, boundaries)
 
 def col2im(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
@@ -1832,6 +1906,9 @@ def _as_index(idx, need_scalar=True):
         if idx.ndim > 1:
             raise NotImplementedError('Need rank 1 for bool index %s' % idx)
         idx = non_zero_ext(idx)
+        # non_zero_ext returns a tuple, get the first element
+        if isinstance(idx, tuple):
+            idx = idx[0]
         idx = idx.reshape(-1)
 
     if need_scalar and idx.ndim not in (None, 0):
@@ -2139,7 +2216,7 @@ def _as_spec_tuple(slice_spec):
     if isinstance(slice_spec, (list, tuple)):
         is_index = True
         for s in slice_spec:
-            if s is None or s is Ellipsis or isinstance(s, (list, tuple, slice)):
+            if s is None or s is Ellipsis or isinstance(s, (list, tuple, py_slice)):
                 is_index = False
                 break
         if not is_index:
@@ -2231,7 +2308,10 @@ def strided_slice_manual(x, begin, end, strides, begin_mask=0, end_mask=0,
         # ellipsis_mask
         if i < len(begin) and ((ellipsis_mask >> i) & 1):
             remaining_dims = ndim - dim - (len(begin) - i - 1)
-            shrink_axis_mask = shrink_axis_mask << remaining_dims - 1
+            # Shift shrink_axis_mask to account for expanded ellipsis dimensions
+            # Only shift if there are dimensions after the ellipsis
+            if remaining_dims > 1:
+                shrink_axis_mask = shrink_axis_mask << (remaining_dims - 1)
             for _ in range(remaining_dims):
                 full_begin.append(0)
                 full_end.append(x_shape[dim])
@@ -2303,7 +2383,10 @@ def strided_slice_update(x, begin, end, strides, updates,
         # ellipsis_mask
         if i < len(begin) and ((ellipsis_mask >> i) & 1):
             remaining_dims = ndim - dim - (len(begin) - i - 1)
-            shrink_axis_mask = shrink_axis_mask << remaining_dims - 1
+            # Shift shrink_axis_mask to account for expanded ellipsis dimensions
+            # Only shift if there are dimensions after the ellipsis
+            if remaining_dims > 1:
+                shrink_axis_mask = shrink_axis_mask << (remaining_dims - 1)
             for _ in range(remaining_dims):
                 full_begin.append(0)
                 full_end.append(x_shape[dim])
