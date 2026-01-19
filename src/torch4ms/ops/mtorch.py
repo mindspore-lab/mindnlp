@@ -16,13 +16,14 @@ from torch4ms.ops import op_base, mappings
 import torch4ms.tensor
 from torch4ms.view import View, NarrowInfo
 import torch.utils._pytree as pytree
+from torch4ms.ops.maten import _aten_convolution
 
 
 def register_function(torch_func, **kwargs):
     return functools.partial(register_torch_function_op, torch_func, **kwargs)
 
 
-@register_function(torch.as_tensor, is_jax_function=False, needs_env=True)
+@register_function(torch.as_tensor, is_mindspore_function=False, needs_env=True)
 @op_base.convert_dtype(
     use_default_dtype=False
 )  # Attempt to infer type from elements
@@ -45,7 +46,7 @@ def _tensor(data, *, dtype=None, **kwargs):
         bool: mnp.bool_,
         int: mnp.int64,
         float: mnp.float32,
-        complex: mnp.complex64,
+        complex: ms.complex64,
     }
     if not dtype:
         # MindSpore不直接支持tree_leaves，使用numpy替代
@@ -66,7 +67,7 @@ def _aten_allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
 def _torch_angle(input):
     if input.dtype.name == "int64":
         input = input.astype(mnp.dtype("float32"))
-    return mnp.angle(input)
+    return ms.ops.angle(input)
 
 
 @register_function(torch.argsort)
@@ -75,7 +76,7 @@ def _torch_argsort(input, dim=-1, descending=False, stable=False):
     if input.ndim == 0:
         expanded = True
         input = mnp.expand_dims(input, 0)
-    res = mnp.argsort(input, axis=dim, descending=descending)
+    res = ms.ops.argsort(input, axis=dim, descending=descending)
     # MindSpore的argsort目前不支持stable参数
     if expanded:
         res = res.squeeze()
@@ -103,7 +104,7 @@ def _einsum(equation, *operands):
 
     assert isinstance(equation, str), "Only accept str equation"
     filtered_operands = get_params(*operands)
-    return mnp.einsum(equation, *filtered_operands)
+    return ms.ops.einsum(equation, *filtered_operands)
 
 
 def _sdpa_reference(
@@ -197,12 +198,12 @@ def pad(tensor, pad, mode="constant", value=None):
 
 @register_function(
     torch.nn.functional.scaled_dot_product_attention,
-    is_jax_function=False,
+    is_mindspore_function=False,
     needs_env=True,
 )
 @register_function(
     torch.ops.aten.scaled_dot_product_attention,
-    is_jax_function=False,
+    is_mindspore_function=False,
     needs_env=True,
 )
 def scaled_dot_product_attention(
@@ -224,7 +225,7 @@ def scaled_dot_product_attention(
 
 @register_function(
     torch.Tensor.__getitem__,
-    is_jax_function=False,
+    is_mindspore_function=False,
     is_view_op=True
 )
 def getitem(self, indexes):
@@ -233,6 +234,163 @@ def getitem(self, indexes):
         indexes = (indexes,)
     elif isinstance(indexes, list):
         indexes = tuple(indexes)
+
+    # 检查 self 的类型并获取环境
+    from torch4ms import default_env
+    
+    # 优先检查是否有 _env 和 _elem 属性（torch4ms.Tensor 的特征）
+    # 这必须在 isinstance 检查之前，因为可能存在类型检查的问题
+    if hasattr(self, '_env') and hasattr(self, '_elem'):
+        # 很可能是 torch4ms.Tensor
+        try:
+            if isinstance(self, torch4ms.tensor.Tensor):
+                env = self._env
+                elem = self._elem
+                parent = self  # torch4ms.Tensor 可以直接作为 parent
+            else:
+                # 有 _env 和 _elem 但不是 torch4ms.Tensor 类型，可能是 View 等
+                env = self._env
+                elem = self._elem
+                if isinstance(elem, ms.Tensor):
+                    parent = torch4ms.tensor.Tensor(elem, env)
+                else:
+                    parent = self
+        except:
+            # 如果类型检查失败，直接使用属性
+            env = self._env
+            elem = self._elem
+            if isinstance(elem, ms.Tensor):
+                parent = torch4ms.tensor.Tensor(elem, env)
+            else:
+                parent = self
+    # 检查是否是 torch4ms.Tensor（类型检查）
+    elif isinstance(self, torch4ms.tensor.Tensor):
+        env = self._env
+        elem = self._elem
+        parent = self  # torch4ms.Tensor 可以直接作为 parent
+    # 检查是否是 MindSpore Tensor
+    elif isinstance(self, ms.Tensor):
+        env = default_env()
+        parent = torch4ms.tensor.Tensor(self, env)
+        elem = self
+    # 检查是否是普通的 PyTorch Tensor（但不是 torch4ms.Tensor）
+    # 注意：需要先检查是否有 _env 属性，因为 torch4ms.Tensor 可能有 _env
+    elif hasattr(self, '_env') and hasattr(self, '_elem'):
+        # 如果有 _env 和 _elem，很可能是 torch4ms.Tensor 但没有被正确识别
+        # 或者可能是 View 等其他类型
+        env = self._env
+        elem = self._elem
+        if isinstance(self, torch4ms.tensor.Tensor):
+            parent = self
+        elif isinstance(elem, ms.Tensor):
+            parent = torch4ms.tensor.Tensor(elem, env)
+        else:
+            # 如果 _elem 不是 ms.Tensor，尝试转换
+            try:
+                if isinstance(elem, np.ndarray):
+                    elem = ms.Tensor(elem)
+                else:
+                    elem = ms.Tensor(elem)
+                parent = torch4ms.tensor.Tensor(elem, env)
+            except:
+                parent = self
+    elif isinstance(self, torch.Tensor):
+        # 如果是 PyTorch Tensor（但不是 torch4ms.Tensor），需要获取其底层数据
+        env = default_env()
+        # 如果 self 有 _elem 属性（可能是 View 或其他包装类型），使用它
+        if hasattr(self, '_elem'):
+            elem = self._elem
+            if isinstance(elem, ms.Tensor):
+                parent = torch4ms.tensor.Tensor(elem, env)
+            else:
+                # 转换为 MindSpore Tensor
+                try:
+                    # 确保获取的是 numpy 数组，而不是 torch4ms.Tensor
+                    if hasattr(self, 'numpy'):
+                        np_array = self.numpy()
+                        # 如果返回的是 torch4ms.Tensor，使用其 numpy() 方法
+                        if isinstance(np_array, torch4ms.tensor.Tensor):
+                            np_array = np_array.numpy()
+                        elif not isinstance(np_array, np.ndarray):
+                            # 如果不是 numpy 数组，尝试转换
+                            np_array = np.array(np_array)
+                        elem = ms.Tensor(np_array)
+                    else:
+                        np_array = self.detach().cpu().numpy()
+                        elem = ms.Tensor(np_array)
+                    parent = torch4ms.tensor.Tensor(elem, env)
+                except:
+                    # 如果转换失败，尝试使用 _elem
+                    if isinstance(elem, (np.ndarray, list)):
+                        elem = ms.Tensor(elem)
+                        parent = torch4ms.tensor.Tensor(elem, env)
+                    else:
+                        raise
+        else:
+            # 直接转换 PyTorch Tensor 到 MindSpore Tensor
+            try:
+                # 确保获取的是 numpy 数组，而不是 torch4ms.Tensor
+                if hasattr(self, 'numpy'):
+                    np_array = self.numpy()
+                    # 如果返回的是 torch4ms.Tensor，使用其 numpy() 方法
+                    if isinstance(np_array, torch4ms.tensor.Tensor):
+                        np_array = np_array.numpy()
+                    elif not isinstance(np_array, np.ndarray):
+                        # 如果不是 numpy 数组，尝试转换
+                        np_array = np.array(np_array)
+                    elem = ms.Tensor(np_array)
+                else:
+                    np_array = self.detach().cpu().numpy()
+                    elem = ms.Tensor(np_array)
+                parent = torch4ms.tensor.Tensor(elem, env)
+            except Exception as e:
+                # 如果转换失败，可能是 torch4ms.Tensor 但没有被正确识别
+                # 尝试检查是否有 _env 属性
+                if hasattr(self, '_env'):
+                    env = self._env
+                    elem = getattr(self, '_elem', None)
+                    if elem is not None:
+                        parent = torch4ms.tensor.Tensor(elem, env) if not isinstance(self, torch4ms.tensor.Tensor) else self
+                    else:
+                        raise
+                else:
+                    raise
+    else:
+        # 如果是其他类型（可能是 View），尝试获取环境
+        if hasattr(self, '_env'):
+            env = self._env
+            elem = getattr(self, '_elem', None)
+            if elem is not None:
+                parent = self if hasattr(self, 'ms') else torch4ms.tensor.Tensor(elem, env)
+            else:
+                parent = self
+        elif hasattr(self, 'env'):
+            env = self.env
+            elem = getattr(self, '_elem', None)
+            if elem is not None and isinstance(elem, ms.Tensor):
+                parent = self if hasattr(self, 'ms') else torch4ms.tensor.Tensor(elem, env)
+            else:
+                parent = self
+        else:
+            # 最后尝试从默认环境获取并转换为 torch4ms.Tensor
+            from torch4ms import default_env
+            env = default_env()
+            if isinstance(self, ms.Tensor):
+                parent = torch4ms.tensor.Tensor(self, env)
+                elem = self
+            else:
+                # 尝试获取 _elem 或直接转换
+                elem = getattr(self, '_elem', self)
+                if isinstance(elem, ms.Tensor):
+                    parent = torch4ms.tensor.Tensor(elem, env)
+                else:
+                    # 如果无法确定，尝试转换
+                    try:
+                        elem = ms.Tensor(self.numpy() if hasattr(self, 'numpy') else self.detach().cpu().numpy())
+                        parent = torch4ms.tensor.Tensor(elem, env)
+                    except:
+                        parent = self
+                        elem = self
 
     def is_narrow_slicing():
         tensor_free = not pytree.tree_any(
@@ -245,10 +403,34 @@ def getitem(self, indexes):
         return tensor_free and list_free
 
     if is_narrow_slicing():
-        return View(self, view_info=NarrowInfo(indexes), env=self._env)
+        # 确保 parent 有 ms() 方法，否则转换为 torch4ms.Tensor
+        if not hasattr(parent, 'ms') or not callable(getattr(parent, 'ms', None)):
+            # 如果 parent 没有 ms() 方法，尝试获取其底层数据并创建 torch4ms.Tensor
+            if hasattr(parent, '_elem') and isinstance(parent._elem, ms.Tensor):
+                parent = torch4ms.tensor.Tensor(parent._elem, env)
+            elif isinstance(parent, torch.Tensor):
+                try:
+                    if hasattr(parent, 'numpy'):
+                        elem = ms.Tensor(parent.numpy())
+                    else:
+                        elem = ms.Tensor(parent.detach().cpu().numpy())
+                    parent = torch4ms.tensor.Tensor(elem, env)
+                except:
+                    # 如果转换失败，尝试其他方式
+                    if hasattr(parent, '_elem'):
+                        elem = parent._elem
+                        if isinstance(elem, ms.Tensor):
+                            parent = torch4ms.tensor.Tensor(elem, env)
+                        else:
+                            elem = ms.Tensor(elem)
+                            parent = torch4ms.tensor.Tensor(elem, env)
+                    else:
+                        elem = ms.Tensor(parent)
+                        parent = torch4ms.tensor.Tensor(elem, env)
+        return View(parent, view_info=NarrowInfo(indexes), env=env)
 
-    indexes = self._env.t2ms_iso(indexes)
-    return torch4ms.tensor.Tensor(self._elem[indexes], self._env)
+    indexes = env.t2ms_iso(indexes)
+    return torch4ms.tensor.Tensor(elem[indexes], env)
 
 
 @register_function(torch.corrcoef)
@@ -258,7 +440,7 @@ def _corrcoef(x):
     return mnp.corrcoef(x)
 
 
-@register_function(torch.sparse.mm, is_jax_function=False)
+@register_function(torch.sparse.mm, is_mindspore_function=False)
 def _sparse_mm(mat1, mat2, reduce="sum"):
     return torch.mm(mat1, mat2)
 
@@ -280,7 +462,7 @@ def _ones(*size: int, dtype=None, **kwargs):
     return mnp.ones(size, dtype=dtype)
 
 
-@register_function(torch.zeros, is_jax_function=False)
+@register_function(torch.zeros, is_mindspore_function=False)
 def _zeros(*size: int, dtype=None, **kwargs):
     if len(size) == 1 and isinstance(size[0], collections.abc.Iterable):
         size = size[0]
@@ -308,7 +490,7 @@ def empty(*size: Sequence[int], dtype=None, **kwargs):
     return mnp.empty(size, dtype=dtype)
 
 
-@register_function(torch.arange, is_jax_function=False)
+@register_function(torch.arange, is_mindspore_function=False)
 def arange(
     start,
     end=None,
@@ -328,7 +510,7 @@ def arange(
     return mnp.arange(start, end, step, dtype=dtype)
 
 
-@register_function(torch.empty_strided, is_jax_function=False)
+@register_function(torch.empty_strided, is_mindspore_function=False)
 def empty_strided(
     size,
     stride,
@@ -348,7 +530,7 @@ def unravel_index(indices, shape):
     return mnp.unravel_index(indices, shape)
 
 
-@register_function(torch.rand, is_jax_function=False, needs_env=True)
+@register_function(torch.rand, is_mindspore_function=False, needs_env=True)
 def rand(*size, **kwargs):
     if len(size) == 1 and isinstance(size[0], collections.abc.Iterable):
         size = size[0]
@@ -356,7 +538,7 @@ def rand(*size, **kwargs):
     return ms.ops.uniform((size,), low=0.0, high=1.0, dtype=kwargs.get('dtype', ms.float32))
 
 
-@register_function(torch.randn, is_jax_function=False, needs_env=True)
+@register_function(torch.randn, is_mindspore_function=False, needs_env=True)
 def randn(
     *size,
     generator=None,
@@ -368,13 +550,32 @@ def randn(
     pin_memory=False,
     env=None,
 ):
-    if len(size) == 1 and isinstance(size[0], collections.abc.Iterable):
-        size = size[0]
+    # 处理size参数：确保它是一个包含整数的元组
+    if not size:
+        shape = (1,)
+    elif len(size) == 1 and isinstance(size[0], (list, tuple)):
+        # 如果传入的是单个列表或元组，如 torch.randn((2, 3))
+        shape = tuple(int(x) for x in size[0])
+    else:
+        # 如果传入的是多个参数，如 torch.randn(2, 3)
+        shape = tuple(int(x) for x in size)
     # MindSpore equivalent of normal random sampling
-    return ms.ops.normal((size,), mean=0.0, stddev=1.0, dtype=dtype or ms.float32)
+    tensor = ms.ops.normal(shape=shape, mean=0.0, stddev=1.0)
+    if dtype is not None:
+        # 将PyTorch的dtype转换为MindSpore的dtype
+        ms_dtype = mappings.t2ms_dtype(dtype) if isinstance(dtype, torch.dtype) else dtype
+        tensor = tensor.astype(ms_dtype)
+
+    # 将 MindSpore Tensor 包装为 torch4ms Tensor，便于后续算子分发与运算
+    if env is not None:
+        # 使用环境提供的同构转换接口，保持行为一致
+        return env.ms2t_iso(tensor)
+
+    # 退化路径：环境缺失时直接返回原始 MindSpore Tensor（保持向后兼容）
+    return tensor
 
 
-@register_function(torch.randint, is_jax_function=False, needs_env=True)
+@register_function(torch.randint, is_mindspore_function=False, needs_env=True)
 def randint(*args, **kwargs):
     # For MindSpore implementation, we'll use uniform and cast to integer
     # This is a simplified implementation
@@ -396,7 +597,7 @@ def randint(*args, **kwargs):
 
 @register_function(torch.logdet)
 def logdet(input):
-    return mnp.logdet(input)
+    return ms.ops.logdet(input)
 
 
 @register_function(torch.linalg.slogdet)
@@ -469,8 +670,6 @@ def lu(A, **kwargs):
     # Return a flag indicating success
     info = mnp.array(0, dtype=ms.int32)
     return lu, pivots, info
-    return lu, _pivots, info
-    return lu, _pivots
 
 
 @register_function(torch.lu_solve)
@@ -506,13 +705,13 @@ def linalg_tensorsolve(A, b, dims=None):
 
 @register_function(torch.nn.functional.linear)
 def functional_linear(self, weights, bias=None):
-    res = mnp.einsum("...a,ba->...b", self, weights)
+    res = ms.ops.einsum("...a,ba->...b", self, weights)
     if bias is not None:
         res += bias
     return res
 
 
-@register_function(torch.nn.functional.interpolate, is_jax_function=False)
+@register_function(torch.nn.functional.interpolate, is_mindspore_function=False)
 def functional_interpolate(
     input,
     size: Tuple[int, int],
@@ -565,7 +764,7 @@ def functional_interpolate(
         )
 
 
-@register_function(torch.Tensor.repeat_interleave, is_jax_function=False)
+@register_function(torch.Tensor.repeat_interleave, is_mindspore_function=False)
 def torch_Tensor_repeat_interleave(
     self, repeats, dim=None, *, output_size=None
 ):
@@ -585,7 +784,7 @@ def torch_Tensor_repeat_interleave(
     return result
 
 
-@register_function(torch.nn.functional.max_pool2d, is_jax_function=False)
+@register_function(torch.nn.functional.max_pool2d, is_mindspore_function=False)
 def _functional_max_pool2d(
     input,
     kernel_size,
@@ -603,7 +802,7 @@ def _functional_max_pool2d(
         stride = (stride, stride)
     
     # Use MindSpore's MaxPool2D operation
-    max_pool = mops.MaxPool2D(
+    max_pool = ms.ops.MaxPool2D(
         kernel_size=kernel_size,
         stride=stride,
         pad_mode='pad' if padding > 0 else 'valid',
@@ -628,3 +827,120 @@ def _functional_max_pool2d(
         return output, indices
     
     return output
+
+
+@register_function(torch.nn.functional.conv1d)
+def functional_conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+    """
+    将 torch.nn.functional.conv1d 转换为 aten.convolution
+    参考 torchax 的实现方式，直接调用已注册的 _aten_convolution 函数来避免类型检查错误
+    """
+    # 确保参数格式正确
+    if isinstance(stride, int):
+        stride = (stride,)
+    elif not isinstance(stride, (tuple, list)):
+        stride = (stride,)
+    else:
+        stride = tuple(stride)
+    
+    if isinstance(padding, int):
+        padding = (padding,)
+    elif not isinstance(padding, (tuple, list)):
+        padding = (padding,)
+    else:
+        padding = tuple(padding)
+    
+    if isinstance(dilation, int):
+        dilation = (dilation,)
+    elif not isinstance(dilation, (tuple, list)):
+        dilation = (dilation,)
+    else:
+        dilation = tuple(dilation)
+    
+    # 参考 torchax 的实现，直接调用已注册的 _aten_convolution 函数
+    # 这样可以避免 PyTorch 的类型检查器检查参数类型
+    # 注意：aten.convolution 的参数顺序是: input, weight, bias, stride, padding, dilation, transposed, output_padding, groups
+    result = _aten_convolution(input, weight, bias, stride, padding, dilation, False, (), groups)
+    
+    # 将结果转换回 torch4ms.Tensor（如果输入是 torch4ms.Tensor）
+    if isinstance(input, torch4ms.tensor.Tensor):
+        return input._env.ms2t_iso(result)
+    return result
+
+
+@register_function(torch.nn.functional.conv2d)
+def functional_conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+    """
+    将 torch.nn.functional.conv2d 转换为 aten.convolution
+    参考 torchax 的实现方式，直接调用已注册的 _aten_convolution 函数来避免类型检查错误
+    """
+    # 确保参数格式正确
+    if isinstance(stride, int):
+        stride = (stride, stride)
+    elif not isinstance(stride, (tuple, list)):
+        stride = (stride, stride)
+    else:
+        stride = tuple(stride)
+    
+    if isinstance(padding, int):
+        padding = (padding, padding)
+    elif not isinstance(padding, (tuple, list)):
+        padding = (padding, padding)
+    else:
+        padding = tuple(padding)
+    
+    if isinstance(dilation, int):
+        dilation = (dilation, dilation)
+    elif not isinstance(dilation, (tuple, list)):
+        dilation = (dilation, dilation)
+    else:
+        dilation = tuple(dilation)
+    
+    # 参考 torchax 的实现，直接调用已注册的 _aten_convolution 函数
+    # 这样可以避免 PyTorch 的类型检查器检查参数类型
+    # 注意：aten.convolution 的参数顺序是: input, weight, bias, stride, padding, dilation, transposed, output_padding, groups
+    result = _aten_convolution(input, weight, bias, stride, padding, dilation, False, (), groups)
+    
+    # 将结果转换回 torch4ms.Tensor（如果输入是 torch4ms.Tensor）
+    if isinstance(input, torch4ms.tensor.Tensor):
+        return input._env.ms2t_iso(result)
+    return result
+
+
+@register_function(torch.nn.functional.conv3d)
+def functional_conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+    """
+    将 torch.nn.functional.conv3d 转换为 aten.convolution
+    参考 torchax 的实现方式，直接调用已注册的 _aten_convolution 函数来避免类型检查错误
+    """
+    # 确保参数格式正确
+    if isinstance(stride, int):
+        stride = (stride, stride, stride)
+    elif not isinstance(stride, (tuple, list)):
+        stride = (stride, stride, stride)
+    else:
+        stride = tuple(stride)
+    
+    if isinstance(padding, int):
+        padding = (padding, padding, padding)
+    elif not isinstance(padding, (tuple, list)):
+        padding = (padding, padding, padding)
+    else:
+        padding = tuple(padding)
+    
+    if isinstance(dilation, int):
+        dilation = (dilation, dilation, dilation)
+    elif not isinstance(dilation, (tuple, list)):
+        dilation = (dilation, dilation, dilation)
+    else:
+        dilation = tuple(dilation)
+    
+    # 参考 torchax 的实现，直接调用已注册的 _aten_convolution 函数
+    # 这样可以避免 PyTorch 的类型检查器检查参数类型
+    # 注意：aten.convolution 的参数顺序是: input, weight, bias, stride, padding, dilation, transposed, output_padding, groups
+    result = _aten_convolution(input, weight, bias, stride, padding, dilation, False, (), groups)
+    
+    # 将结果转换回 torch4ms.Tensor（如果输入是 torch4ms.Tensor）
+    if isinstance(input, torch4ms.tensor.Tensor):
+        return input._env.ms2t_iso(result)
+    return result
