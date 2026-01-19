@@ -1,6 +1,6 @@
 import dataclasses
 import logging
-from torch4ms.types import JaxCallable, TorchCallable
+from torch4ms.types import MSCallable, TorchCallable
 
 from typing import Union, Dict
 
@@ -8,8 +8,8 @@ from typing import Union, Dict
 @dataclasses.dataclass
 class Operator:
   torch_op: TorchCallable
-  func: Union[TorchCallable, JaxCallable]
-  is_jax_function: bool
+  func: Union[TorchCallable, MSCallable]
+  is_mindspore_function: bool
   is_user_defined: bool
   needs_env: bool
   is_view_op: bool
@@ -21,14 +21,14 @@ all_torch_functions: Dict[TorchCallable, Operator] = {}
 
 def register_torch_dispatch_op(aten_op,
                                impl_callable,
-                               is_jax_function=True,
+                               is_mindspore_function=True,
                                is_user_defined=False,
                                needs_env=False,
                                is_view_op=False):
   op = Operator(
       aten_op,
       impl_callable,
-      is_jax_function=is_jax_function,
+      is_mindspore_function=is_mindspore_function,
       is_user_defined=is_user_defined,
       needs_env=needs_env,
       is_view_op=is_view_op)
@@ -40,14 +40,14 @@ def register_torch_dispatch_op(aten_op,
 
 def register_torch_function_op(torch_func,
                                impl_callable,
-                               is_jax_function=True,
+                               is_mindspore_function=True,
                                is_user_defined=False,
                                needs_env=False,
                                is_view_op=False):
   op = Operator(
       torch_func,
       impl_callable,
-      is_jax_function=is_jax_function,
+      is_mindspore_function=is_mindspore_function,
       is_user_defined=is_user_defined,
       needs_env=needs_env,
       is_view_op=is_view_op)

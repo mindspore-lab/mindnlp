@@ -82,7 +82,7 @@ def convert_dtype(use_default_dtype: bool = True):
   return decorator
 
 
-def maybe_convert_constant_dtype(val: Optional[types.MsValue],
+def maybe_convert_constant_dtype(val: Optional[types.MSValue],
                                  dtype: Optional[ms.Type]):
   """Optionally converts scalar constant's dtype using `numpy`"""
   if val and dtype:
@@ -92,7 +92,7 @@ def maybe_convert_constant_dtype(val: Optional[types.MsValue],
   return val
 
 
-def promote_int_input(f: Callable[Concatenate[ms.Tensor, P], types.MsValue]):
+def promote_int_input(f: Callable[Concatenate[ms.Tensor, P], types.MSValue]):
   """If the first argument is an int tensor, promote it to float32."""
 
   @functools.wraps(f)

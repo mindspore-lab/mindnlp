@@ -1,6 +1,5 @@
 import dataclasses
 
-
 @dataclasses.dataclass
 class Configuration:
   debug_print_each_op: bool = False
@@ -10,12 +9,12 @@ class Configuration:
 
   use_int32_for_index: bool = False
 
-  # normally, math between CPU torch.Tensor with torchax.Tensor is not
+  # normally, math between CPU torch.Tensor with torch4ms.Tensor is not
   # allowed. However, if that torch.Tensor happens to be scalar, then we
   # can use scalar * tensor math to handle it
   allow_mixed_math_with_scalar_tensor: bool = True
 
-  # If true, we will convert Views into torchax.Tensors eagerly
+  # If true, we will convert Views into torch4ms.Tensors eagerly
   force_materialize_views: bool = False
 
   # Use DLPack for converting mindspore.Tensor <-> and torch.Tensor

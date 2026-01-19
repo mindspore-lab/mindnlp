@@ -144,7 +144,26 @@ def patch_tensor_constructors():
                 op_name_str = func.__name__
                 result = env._handle_tensor_constructor(op_name_str, args, kwargs, force_mindspore=True)
                 return result
-            return func(*args, **kwargs)
+            
+            # 如果不在mindspore设备上下文中，尝试调用原始函数
+            # 如果遇到类型转换错误，说明在dispatch上下文中，使用dispatch机制处理
+            try:
+                result = func(*args, **kwargs)
+                # 检查返回结果是否是torch4ms.Tensor
+                if isinstance(result, tensor.Tensor):
+                    return result
+                return result
+            except RuntimeError as e:
+                # 如果PyTorch试图转换torch4ms.Tensor导致错误，使用dispatch机制处理
+                error_msg = str(e)
+                if "Unable to cast" in error_msg and "torch4ms.Tensor" in error_msg:
+                    # 在dispatch上下文中，使用环境处理
+                    env = default_env()
+                    op_name_str = func.__name__
+                    result = env._handle_tensor_constructor(op_name_str, args, kwargs, force_mindspore=True)
+                    return result
+                # 其他RuntimeError继续抛出
+                raise
         return wrapper
     
     # 应用补丁
