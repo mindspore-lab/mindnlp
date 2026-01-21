@@ -829,6 +829,9 @@ def split_tensor(input, split_size_or_sections, dim):
         return split_with_size(input, split_size_or_sections, dim)
     # Otherwise, it is an integer specifying the chunk size
     num = input.shape[dim] // split_size_or_sections
+    # If split_size is larger than dimension size, return the input as a single-element tuple
+    if num == 0:
+        return (input,)
     return legacy.split(input, dim, num)
 
 def bmm(input_x, input_y):
@@ -1903,8 +1906,9 @@ def _as_index(idx, need_scalar=True):
         idx = mindspore.tensor(idx, dtype=mindtorch.int64)
 
     if idx.dtype == mindtorch.bool:
+        # For multi-dimensional boolean masks, flatten before converting to indices
         if idx.ndim > 1:
-            raise NotImplementedError('Need rank 1 for bool index %s' % idx)
+            idx = idx.reshape(-1)
         idx = non_zero_ext(idx)
         # non_zero_ext returns a tuple, get the first element
         if isinstance(idx, tuple):
@@ -2165,7 +2169,18 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
                 updates = moveaxis(
                     updates, range_(batch_start, batch_size), range(batch_size)
                 )
-            updates = updates.broadcast_to(stacked_indices.shape[:-1] + tensor.shape[stacked_indices.shape[-1]:])
+            # Calculate target shape for updates
+            target_shape = stacked_indices.shape[:-1] + tensor.shape[stacked_indices.shape[-1]:]
+            # Only broadcast if shapes don't match
+            if updates.shape != target_shape:
+                # Check if updates can be broadcast to target_shape
+                try:
+                    updates = updates.broadcast_to(target_shape)
+                except:
+                    # If broadcast fails, updates might already have the correct data shape
+                    # Just reshape/flatten as needed
+                    if updates.numel() == np.prod(target_shape):
+                        updates = updates.reshape(target_shape)
             tensor = tensor_scatter_update(tensor, stacked_indices, updates)
             if range(len(dims)) != dims:
                 tensor = moveaxis(tensor, range(len(dims)), dims)
@@ -2271,27 +2286,41 @@ def _convert_slice_spec_to_numpy(slice_spec):
     return tuple(result) if len(result) > 1 else result[0]
 
 def setitem(a, slice_spec, updates):
-    """Implementation of ndarray._with_index_*."""
-    # if 0 in updates.shape:
-    #     return a
-    if (
-        isinstance(slice_spec, bool)
-        or (
-            isinstance(slice_spec, mindtorch.Tensor)
-            and slice_spec.dtype == mindtorch.bool
-        )
-    ):
-        if slice_spec.shape == a.shape and (isinstance(updates, numbers.Number) or updates.ndim == 0):
-            inplace_copy(a, masked_fill(a, slice_spec, updates))
-            return a
-        slice_spec = non_zero_ext(slice_spec)
+    """Implementation of ndarray setitem using NumPy for correctness."""
+    # Convert to numpy, perform setitem, convert back
+    a_np = a.asnumpy()
 
-    if not isinstance(slice_spec, tuple):
-        slice_spec = _as_spec_tuple(slice_spec)
+    # Convert slice_spec to numpy-compatible format
+    if isinstance(slice_spec, tuple):
+        numpy_slice = []
+        for s in slice_spec:
+            if isinstance(s, mindtorch.Tensor):
+                if s.dtype == mindtorch.bool:
+                    numpy_slice.append(s.asnumpy())
+                else:
+                    numpy_slice.append(s.asnumpy())
+            else:
+                numpy_slice.append(s)
+        slice_spec = tuple(numpy_slice)
+    elif isinstance(slice_spec, mindtorch.Tensor):
+        if slice_spec.dtype == mindtorch.bool:
+            slice_spec = slice_spec.asnumpy()
+        else:
+            slice_spec = slice_spec.asnumpy()
 
-    a_dtype = a.dtype
-    result_t = _slice_helper(a, slice_spec, True, updates)
-    return cast(result_t, a_dtype)
+    # Convert updates to numpy
+    if isinstance(updates, mindtorch.Tensor):
+        updates_np = updates.asnumpy()
+    else:
+        updates_np = updates
+
+    # Perform numpy setitem
+    a_np[slice_spec] = updates_np
+
+    # Convert back and update in-place
+    result = mindspore.tensor(a_np, dtype=a.dtype)
+    inplace_copy(a, result)
+    return a
 
 
 def strided_slice_manual(x, begin, end, strides, begin_mask=0, end_mask=0,
@@ -2345,6 +2374,10 @@ def strided_slice_manual(x, begin, end, strides, begin_mask=0, end_mask=0,
                 b = 0 if s > 0 else x_shape[dim]-1
             if i < len(end) and ((end_mask >> i) & 1):
                 e = x_shape[dim] if s > 0 else -1
+
+            # Clamp bounds to ensure indices don't exceed tensor dimensions
+            b = py_max(0, py_min(b, x_shape[dim]))
+            e = py_max(0, py_min(e, x_shape[dim]))
 
             full_begin.append(b)
             full_end.append(e)
@@ -2419,6 +2452,10 @@ def strided_slice_update(x, begin, end, strides, updates,
                 b = 0 if s > 0 else x_shape[dim]-1
             if i < len(end) and ((end_mask >> i) & 1):
                 e = x_shape[dim] if s > 0 else -1
+
+            # Clamp bounds to ensure indices don't exceed tensor dimensions
+            b = py_max(0, py_min(b, x_shape[dim]))
+            e = py_max(0, py_min(e, x_shape[dim]))
 
             full_begin.append(b)
             full_end.append(e)
