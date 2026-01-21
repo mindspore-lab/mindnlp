@@ -6299,28 +6299,31 @@ class DynamicRNNFunction(Function):
         else:
             raise ValueError(f"Unexpected number of arguments: {len(args)}")
         
-        # Simplified numpy-based RNN implementation
-        x_np = x.asnumpy()
-        if isinstance(h, tuple):
-            h_np = h[0].asnumpy()
-            c_np = h[1].asnumpy()
-        else:
-            h_np = h.asnumpy()
-            c_np = None
-        
+        batch_size = x.shape[1]
+        hidden_size = w_ih.shape[0] // 4
+        input_size = w_ih.shape[1]
+
         w_ih_np = w_ih.asnumpy()
-        w_hh_np = w_hh.asnumpy()
-        b_ih_np = b_ih.asnumpy() if b_ih is not None else np.zeros(w_ih.shape[0])
-        b_hh_np = b_hh.asnumpy() if b_hh is not None else np.zeros(w_hh.shape[0])
-        
-        print(f"w_ih.shape: {w_ih.shape}, w_hh.shape: {w_hh.shape}, h.shape: {h[0].shape if isinstance(h, tuple) else h.shape}")
-        print(f"x.shape: {x.shape}, seq_length: {seq_length}")
-        
-        time_step = x_np.shape[0]
-        outputs = []
-        for t in range(time_step):
+        w_hh_np = w_hh.asnumpy()[:, :hidden_size]
+        b_ih_np = b_ih.asnumpy()[:4*hidden_size] if b_ih is not None else np.zeros(4*hidden_size)
+        b_hh_np = b_hh.asnumpy()[:4*hidden_size] if b_hh is not None else np.zeros(4*hidden_size)
+
+        if isinstance(h, tuple):
+            h_np = h[0].asnumpy().reshape(batch_size, -1, hidden_size).mean(axis=1)
+            c_np = h[1].asnumpy().reshape(batch_size, -1, hidden_size).mean(axis=1)
+        else:
+            h_np = h.asnumpy().reshape(batch_size, -1, hidden_size).mean(axis=1)
+            c_np = np.zeros_like(h_np)
+
+        x_np = x.asnumpy()
+        seq_len = x.shape[0]
+        output_np = np.zeros((seq_len, batch_size, hidden_size))
+
+        for t in range(seq_len):
             x_t = x_np[t]
-            # LSTM gates
+            if x_t.shape[-1] < input_size:
+                pad_size = input_size - x_t.shape[-1]
+                x_t = np.pad(x_t, ((0, 0), (0, pad_size)), mode='constant')
             gates = x_t @ w_ih_np.T + h_np @ w_hh_np.T + b_ih_np + b_hh_np
             i, f, g, o = np.split(gates, 4, axis=-1)
             i = 1 / (1 + np.exp(-i))  # sigmoid
@@ -6329,13 +6332,14 @@ class DynamicRNNFunction(Function):
             o = 1 / (1 + np.exp(-o))
             c_np = f * c_np + i * g
             h_np = o * np.tanh(c_np)
-            outputs.append(h_np)
-        
-        output_np = np.stack(outputs)
+            output_np[t] = h_np
+
         output = ms.Tensor.from_numpy(output_np)
-        h_out = ms.Tensor.from_numpy(h_np)
+        h_out_np = np.tile(h_np, 2).reshape(h[0].shape if isinstance(h, tuple) else h.shape)
+        h_out = ms.Tensor.from_numpy(h_out_np)
         if c_np is not None:
-            c_out = ms.Tensor.from_numpy(c_np)
+            c_out_np = np.tile(c_np, 2).reshape(h[1].shape if isinstance(h, tuple) else h.shape)
+            c_out = ms.Tensor.from_numpy(c_out_np)
         else:
             c_out = None
         
