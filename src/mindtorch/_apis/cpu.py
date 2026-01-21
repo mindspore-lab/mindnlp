@@ -151,6 +151,10 @@ def inplace_copy(input, value):
         input.init = init_attr
     return input
 
+def inplace_sub(input, other):
+    return inplace_copy(input, legacy.sub(input, other))
+
+
 def raw_sgd(param, grad, lr, dampening, weight_decay, nesterov, accum, momentum, stat):
     """SGD optimizer step for CPU."""
     return legacy.sgd(param, grad, lr, accum, momentum, stat, dampening, weight_decay, nesterov)
@@ -231,8 +235,42 @@ def abs(input):
 def identity(input):
     return legacy.identity(input)
 
+class CloneFunction:
+    """Custom clone with NumPy-based backward to avoid Clone kernel unregistered error."""
+
+    @classmethod
+    def apply(cls, input_tensor):
+        """Apply clone with custom backward."""
+        Function = _get_function_class()
+
+        # Create a dynamic class that inherits from Function
+        class _CloneOp(Function):
+            @staticmethod
+            def forward(ctx, input_tensor):
+                """Forward pass: create a copy using NumPy to avoid MindSpore Clone kernel."""
+                # Use numpy copy to completely bypass MindSpore kernel system
+                input_np = input_tensor.asnumpy()
+                out_np = np.copy(input_np)
+                result = mindspore.Tensor.from_numpy(out_np)
+                return result
+
+            @staticmethod
+            def backward(ctx, grad_output):
+                """Backward pass: clone's gradient is simply passed through."""
+                # Clone's backward simply passes through the gradient
+                # Use numpy to avoid Clone kernel
+                if ctx.needs_input_grad[0]:
+                    grad_np = grad_output.asnumpy()
+                    if not isinstance(grad_np, np.ndarray):
+                        grad_np = np.array(grad_np)
+                    grad_input = mindspore.Tensor.from_numpy(grad_np)
+                    return grad_input
+                return None
+
+        return _CloneOp.apply(input_tensor)
+
 def clone(input):
-    return cast(legacy.mul(input, 1), input.dtype)
+    return CloneFunction.apply(input)
 
 py_max = max
 def max(input):
@@ -641,6 +679,12 @@ def tensor_scatter_update(input, indices, updates):
     return legacy.tensor_scatter_update(input, indices, updates)
 
 def isinf(input):
+    # IsInf only supports float types, convert integer tensors to float
+    if input.dtype in (mindtorch.int8, mindtorch.int16, mindtorch.int32, mindtorch.int64, 
+                       mindtorch.uint8, mindtorch.uint16, mindtorch.uint32, mindtorch.uint64):
+        # Integer tensors cannot have inf values, return all False
+        result = legacy.zeros_like(input)
+        return cast(result, mindtorch.bool)
     return legacy.is_inf(input)
 
 def isin(input, test_elements, assume_unique=False, invert=False):
@@ -785,6 +829,9 @@ def split_tensor(input, split_size_or_sections, dim):
         return split_with_size(input, split_size_or_sections, dim)
     # Otherwise, it is an integer specifying the chunk size
     num = input.shape[dim] // split_size_or_sections
+    # If split_size is larger than dimension size, return the input as a single-element tuple
+    if num == 0:
+        return (input,)
     return legacy.split(input, dim, num)
 
 def bmm(input_x, input_y):
@@ -861,10 +908,17 @@ def avg_pool1d(input, kernel_size, stride=None, padding=0, ceil_mode=False, coun
             raise ValueError("For avg_pool1d, stride should be int or tuple of length 1.")
         stride = stride[0]
 
-    input = expand_dims(input, 2)
-    input = expand_dims(input, 2)
-    input = legacy.avg_pool3_d(input, (1, 1, kernel_size), (1, 1, stride), 'pad', padding, ceil_mode, count_include_pad, 0, 'NCDHW')
-    input = squeeze(input, (2, 3))
+    if input.ndim == 3:
+        input = expand_dims(input, 2)
+        input = expand_dims(input, 2)
+        input = legacy.avg_pool3_d(input, (1, 1, kernel_size[0]), (1, 1, stride), 'pad', padding, ceil_mode, count_include_pad, 0, 'NCDHW')
+        input = squeeze(input, (2, 3))
+    elif input.ndim == 2:
+        input = expand_dims(input, 1)
+        input = expand_dims(input, 1)
+        input = expand_dims(input, 1)
+        input = legacy.avg_pool3_d(input, (1, 1, kernel_size[0]), (1, 1, stride), 'pad', padding, ceil_mode, count_include_pad, 0, 'NCDHW')
+        input = squeeze(input, (1, 2, 3))
     return input
 
 def fmod_scalar(input, other):
@@ -874,7 +928,7 @@ def fmod_tensor(input, other):
     return legacy.floor_mod(input, other)
 
 
-def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     pad_mode = 'pad'
     pad = padding
     if isinstance(padding, tuple):
@@ -1129,6 +1183,10 @@ def repeat_interleave_int(input_tensor, repeats, dim, output_size):
 
     return output
 
+def repeat_interleave_tensor(input, repeats, dim, output_size):
+    return repeat_interleave_int(input, repeats, dim, output_size)
+
+
 def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if weight is None:
         weight = ones([input.shape[1]], dtype=input.dtype)
@@ -1259,7 +1317,7 @@ def upsample_nearest2d(input, output_size, scale_factors):
 def upsample_bicubic2d(input, size=None, scale_factor=None, align_corners=False):
     return legacy.resize_bicubic(input, size, align_corners, not align_corners)
 
-def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+def conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1, training=True):
     pad_mode = 'pad'
     pad = padding
     if isinstance(padding, (tuple, list)):
@@ -1848,9 +1906,13 @@ def _as_index(idx, need_scalar=True):
         idx = mindspore.tensor(idx, dtype=mindtorch.int64)
 
     if idx.dtype == mindtorch.bool:
+        # For multi-dimensional boolean masks, flatten before converting to indices
         if idx.ndim > 1:
-            raise NotImplementedError('Need rank 1 for bool index %s' % idx)
+            idx = idx.reshape(-1)
         idx = non_zero_ext(idx)
+        # non_zero_ext returns a tuple, get the first element
+        if isinstance(idx, tuple):
+            idx = idx[0]
         idx = idx.reshape(-1)
 
     if need_scalar and idx.ndim not in (None, 0):
@@ -2107,7 +2169,18 @@ def _slice_helper(tensor, slice_spec, do_update=False, updates=None):
                 updates = moveaxis(
                     updates, range_(batch_start, batch_size), range(batch_size)
                 )
-            updates = updates.broadcast_to(stacked_indices.shape[:-1] + tensor.shape[stacked_indices.shape[-1]:])
+            # Calculate target shape for updates
+            target_shape = stacked_indices.shape[:-1] + tensor.shape[stacked_indices.shape[-1]:]
+            # Only broadcast if shapes don't match
+            if updates.shape != target_shape:
+                # Check if updates can be broadcast to target_shape
+                try:
+                    updates = updates.broadcast_to(target_shape)
+                except:
+                    # If broadcast fails, updates might already have the correct data shape
+                    # Just reshape/flatten as needed
+                    if updates.numel() == np.prod(target_shape):
+                        updates = updates.reshape(target_shape)
             tensor = tensor_scatter_update(tensor, stacked_indices, updates)
             if range(len(dims)) != dims:
                 tensor = moveaxis(tensor, range(len(dims)), dims)
@@ -2213,27 +2286,41 @@ def _convert_slice_spec_to_numpy(slice_spec):
     return tuple(result) if len(result) > 1 else result[0]
 
 def setitem(a, slice_spec, updates):
-    """Implementation of ndarray._with_index_*."""
-    # if 0 in updates.shape:
-    #     return a
-    if (
-        isinstance(slice_spec, bool)
-        or (
-            isinstance(slice_spec, mindtorch.Tensor)
-            and slice_spec.dtype == mindtorch.bool
-        )
-    ):
-        if slice_spec.shape == a.shape and (isinstance(updates, numbers.Number) or updates.ndim == 0):
-            inplace_copy(a, masked_fill(a, slice_spec, updates))
-            return a
-        slice_spec = non_zero_ext(slice_spec)
+    """Implementation of ndarray setitem using NumPy for correctness."""
+    # Convert to numpy, perform setitem, convert back
+    a_np = a.asnumpy()
 
-    if not isinstance(slice_spec, tuple):
-        slice_spec = _as_spec_tuple(slice_spec)
+    # Convert slice_spec to numpy-compatible format
+    if isinstance(slice_spec, tuple):
+        numpy_slice = []
+        for s in slice_spec:
+            if isinstance(s, mindtorch.Tensor):
+                if s.dtype == mindtorch.bool:
+                    numpy_slice.append(s.asnumpy())
+                else:
+                    numpy_slice.append(s.asnumpy())
+            else:
+                numpy_slice.append(s)
+        slice_spec = tuple(numpy_slice)
+    elif isinstance(slice_spec, mindtorch.Tensor):
+        if slice_spec.dtype == mindtorch.bool:
+            slice_spec = slice_spec.asnumpy()
+        else:
+            slice_spec = slice_spec.asnumpy()
 
-    a_dtype = a.dtype
-    result_t = _slice_helper(a, slice_spec, True, updates)
-    return cast(result_t, a_dtype)
+    # Convert updates to numpy
+    if isinstance(updates, mindtorch.Tensor):
+        updates_np = updates.asnumpy()
+    else:
+        updates_np = updates
+
+    # Perform numpy setitem
+    a_np[slice_spec] = updates_np
+
+    # Convert back and update in-place
+    result = mindspore.tensor(a_np, dtype=a.dtype)
+    inplace_copy(a, result)
+    return a
 
 
 def strided_slice_manual(x, begin, end, strides, begin_mask=0, end_mask=0,
@@ -2287,6 +2374,10 @@ def strided_slice_manual(x, begin, end, strides, begin_mask=0, end_mask=0,
                 b = 0 if s > 0 else x_shape[dim]-1
             if i < len(end) and ((end_mask >> i) & 1):
                 e = x_shape[dim] if s > 0 else -1
+
+            # Clamp bounds to ensure indices don't exceed tensor dimensions
+            b = py_max(0, py_min(b, x_shape[dim]))
+            e = py_max(0, py_min(e, x_shape[dim]))
 
             full_begin.append(b)
             full_end.append(e)
@@ -2361,6 +2452,10 @@ def strided_slice_update(x, begin, end, strides, updates,
                 b = 0 if s > 0 else x_shape[dim]-1
             if i < len(end) and ((end_mask >> i) & 1):
                 e = x_shape[dim] if s > 0 else -1
+
+            # Clamp bounds to ensure indices don't exceed tensor dimensions
+            b = py_max(0, py_min(b, x_shape[dim]))
+            e = py_max(0, py_min(e, x_shape[dim]))
 
             full_begin.append(b)
             full_end.append(e)
