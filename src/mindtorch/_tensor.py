@@ -929,9 +929,11 @@ class TensorPlaceHolder:
 
     @property
     def data(self):
-        # Return self to ensure inplace operations on .data affect the original tensor
-        # This matches PyTorch behavior where tensor.data shares storage with tensor
-        return self
+        if self.is_meta:
+            return self
+        out = super(Tensor, self).data
+        out.init = self.init
+        return out
 
     @data.setter
     def data(self, new_value):
