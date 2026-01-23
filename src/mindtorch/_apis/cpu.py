@@ -789,7 +789,67 @@ def log_softmax(input, axis, dtype):
 def scatter(input, dim, index, src):
     return legacy.tensor_scatter_elements(input, index, src, dim, "none")
 
+def scatter_reduce(input, dim, index, src, reduce, include_self=True):
+    """Scatter reduce operation with support for sum, amax, amin, mean, prod."""
+    if reduce == 'sum':
+        return legacy.tensor_scatter_elements(input, index, src, dim, "add")
+
+    # Use numpy-based implementation for other reduce operations
+    input_np = input.asnumpy().copy()
+    index_np = index.asnumpy()
+    src_np = src.asnumpy()
+
+    # Get shape info
+    ndim = input_np.ndim
+
+    # Create index arrays for advanced indexing
+    shape = index_np.shape
+    indices = [np.arange(s).reshape((1,) * i + (s,) + (1,) * (ndim - i - 1)) for i, s in enumerate(shape)]
+    indices = [np.broadcast_to(idx, shape) for idx in indices]
+    indices[dim] = index_np
+
+    if reduce == 'amax':
+        if include_self:
+            np.maximum.at(input_np, tuple(indices), src_np)
+        else:
+            fill_val = np.finfo(input_np.dtype).min if np.issubdtype(input_np.dtype, np.floating) else np.iinfo(input_np.dtype).min
+            input_np.fill(fill_val)
+            np.maximum.at(input_np, tuple(indices), src_np)
+    elif reduce == 'amin':
+        if include_self:
+            np.minimum.at(input_np, tuple(indices), src_np)
+        else:
+            fill_val = np.finfo(input_np.dtype).max if np.issubdtype(input_np.dtype, np.floating) else np.iinfo(input_np.dtype).max
+            input_np.fill(fill_val)
+            np.minimum.at(input_np, tuple(indices), src_np)
+    elif reduce == 'mean':
+        count = np.ones_like(input_np) if include_self else np.zeros_like(input_np)
+        np.add.at(input_np, tuple(indices), src_np)
+        np.add.at(count, tuple(indices), 1)
+        input_np = np.divide(input_np, count, where=count > 0, out=input_np)
+    elif reduce == 'prod':
+        if include_self:
+            np.multiply.at(input_np, tuple(indices), src_np)
+        else:
+            input_np.fill(1)
+            np.multiply.at(input_np, tuple(indices), src_np)
+    else:
+        raise ValueError(f'do not support reduce: {reduce}')
+
+    return mindtorch.tensor(input_np, dtype=input.dtype, device=input.device)
+
 def batch_norm(input, weight, bias, running_mean=None, running_var=None, training=False, momentum=0.1, epsilon=1e-5):
+    num_features = input.shape[1]
+    # Handle None values - create default tensors when affine=False or track_running_stats=False
+    if weight is None:
+        weight = mindtorch.ones(num_features, dtype=input.dtype, device=input.device)
+    if bias is None:
+        bias = mindtorch.zeros(num_features, dtype=input.dtype, device=input.device)
+    if running_mean is None:
+        running_mean = mindtorch.zeros(num_features, dtype=input.dtype, device=input.device)
+    if running_var is None:
+        running_var = mindtorch.ones(num_features, dtype=input.dtype, device=input.device)
+
     input_ndim = input.ndim
     if input_ndim == 2:
         return legacy.batch_norm(input, weight, bias, running_mean, running_var, training, epsilon, momentum, 'NCHW')
@@ -1193,7 +1253,8 @@ def group_norm(input, num_groups, weight=None, bias=None, eps=1e-5):
     if bias is None:
         bias = zeros([input.shape[1]], dtype=input.dtype)
 
-    return pyboost.group_norm_op(input, num_groups, weight, bias, eps)
+    # pyboost.group_norm_op returns (output, mean, var), we only need output
+    return pyboost.group_norm_op(input, num_groups, weight, bias, eps)[0]
 
 def repeat_kv(hidden_states, n_rep: int):
     """
