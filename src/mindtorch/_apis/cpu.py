@@ -1448,6 +1448,11 @@ def view_as_complex(input):
     real_part, imag_part = chunk(input, 2, -1)
     return legacy.complex(squeeze(real_part, -1), squeeze(imag_part, -1))
 
+def view_as_real(input):
+    real_part = expand_dims(real(input), -1)
+    imag_part = expand_dims(imag(input), -1)
+    return concat((real_part, imag_part), -1)
+
 def cdist(x1, x2, p):
     return legacy.cdist(x1, x2, float(p))
 
@@ -1532,7 +1537,12 @@ def pixel_unshuffle(x, downscale_factor):
 
     return x
 
-def rms_norm(input, weight, eps=1e-5):
+def rms_norm(input, normalized_shape, weight, eps=1e-5):
+    if eps is None:
+        eps = mindtorch.finfo(input.dtype).eps
+    if weight is None:
+        weight = ones(normalized_shape, dtype=input.dtype)
+
     input_dtype = input.dtype
     input = cast(input, mindspore.float32)
     variance = mean(pow(input, 2), -1, True, None)
