@@ -4050,6 +4050,38 @@ def neg(input):
     return NegFunction.apply(input)
 
 
+class EluFunction(Function):
+    @staticmethod
+    def forward(ctx, input, alpha=1.0):
+        x_np = input.asnumpy()
+        # ELU: x if x>0 else alpha*(exp(x)-1)
+        out = np.where(x_np > 0, x_np, alpha * (np.exp(x_np) - 1))
+        if not isinstance(out, np.ndarray):
+            out = np.array(out)
+        result = ms.Tensor.from_numpy(out)
+        ctx.save_for_backward(input)
+        ctx.alpha = alpha
+        return result
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, = ctx.saved_tensors
+        grad_input = None
+        if ctx.needs_input_grad[0]:
+            x_np = input.asnumpy()
+            go = grad_output.asnumpy()
+            # derivative: 1 for x>0, else alpha*exp(x)
+            grad_np = np.where(x_np > 0, go, go * (ctx.alpha * np.exp(x_np)))
+            if not isinstance(grad_np, np.ndarray):
+                grad_np = np.array(grad_np)
+            grad_input = ms.Tensor.from_numpy(grad_np)
+        return grad_input, None
+
+
+def elu(input, alpha=1.0):
+    return EluFunction.apply(input, alpha)
+
+
 def divmod(input, other, rounding_mode):
     if not isinstance(input, numbers.Number):
         input = input.asnumpy()
