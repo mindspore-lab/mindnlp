@@ -1486,6 +1486,13 @@ def scatter_value(input, dim, index, src, reduce='none'):
         src = fill_scalar(index.shape, src, dtype=input.dtype)
     return legacy.tensor_scatter_elements(input, index, src, dim, reduce)
 
+def inplace_scatter_value(input, dim, index, src, reduce='none'):
+    """In-place scatter with scalar or tensor value."""
+    if isinstance(src, numbers.Number):
+        src = fill_scalar(index.shape, src, dtype=input.dtype)
+    result = legacy.tensor_scatter_elements(input, index, src, dim, reduce)
+    return inplace_copy(input, result)
+
 def pixel_shuffle(input, upscale_factor):
     idx = input.shape
     length = input.ndim
@@ -1559,9 +1566,9 @@ def grid_sampler_2d(input, grid, mode='bilinear', padding_mode='zeros', align_co
 def l1_loss(input, target, reduction='mean'):
     loss = abs(sub(input, target))
     if reduction == 'mean':
-        return mean(loss, (), False, False)
+        return mean(loss, (), False, None)
     elif reduction == 'sum':
-        return sum(loss, (), False, False)
+        return sum(loss, (), False, None)
     return loss
 
 def leaky_relu(input, negative_slope):
