@@ -385,47 +385,65 @@ def t2t_overwrite(input, other):
 
 
 def inplace_random(input, from_val=0, to_val=None, generator=None):
+    # Handle meta tensors - they don't have real data
+    if hasattr(input, 'is_meta') and input.is_meta:
+        return input
+
     # 选择随机数生成器
     rng = np.random
     arr = input.numpy()
-    if np.issubdtype(arr.dtype, np.floating):
+
+    # Handle dtype that might be a type class instead of numpy dtype
+    dtype = arr.dtype
+    if isinstance(dtype, type):
+        if dtype == float or (hasattr(np, 'floating') and issubclass(dtype, np.floating) if isinstance(dtype, type) else False):
+            dtype = np.float64
+        elif dtype == int or (hasattr(np, 'integer') and issubclass(dtype, np.integer) if isinstance(dtype, type) else False):
+            dtype = np.int64
+        elif dtype == bool:
+            dtype = np.bool_
+        else:
+            dtype = np.float64
+        arr = arr.astype(dtype)
+
+    if np.issubdtype(dtype, np.floating):
         # 浮点类型处理
         if to_val is None:
             # 默认 [0, 1) 均匀分布
-            rnd = rng.random(size=arr.shape).astype(arr.dtype)
+            rnd = rng.random(size=arr.shape).astype(dtype)
         else:
-            rnd = (from_val + (to_val - from_val) * rng.random(size=arr.shape)).astype(arr.dtype)
+            rnd = (from_val + (to_val - from_val) * rng.random(size=arr.shape)).astype(dtype)
             
-    elif np.issubdtype(arr.dtype, np.integer):
+    elif np.issubdtype(dtype, np.integer):
         # 整数类型处理
         from_int = int(from_val)
-        
+
         if to_val is None:
             # 默认范围 [0, dtype.max]
-            max_val = np.iinfo(arr.dtype).max
-            rnd = rng.randint(0, max_val + 1, size=arr.shape).astype(arr.dtype)
+            max_val = np.iinfo(dtype).max
+            rnd = rng.randint(0, max_val + 1, size=arr.shape).astype(dtype)
         else:
             # 指定范围 [from_int, to_val)
             to_int = int(to_val)
-            
+
             # 验证参数有效性
             if from_int >= to_int:
                 raise ValueError(f"Empty range for integers: from={from_int} >= to={to_int}")
-                
+
             # 处理整数边界问题
-            dtype_min = np.iinfo(arr.dtype).min
-            dtype_max = np.iinfo(arr.dtype).max
+            dtype_min = np.iinfo(dtype).min
+            dtype_max = np.iinfo(dtype).max
             from_int = np.clip(from_int, dtype_min, dtype_max)
             to_int = np.clip(to_int, dtype_min + 1, dtype_max + 1)
-            
-            rnd = rng.randint(from_int, to_int, size=arr.shape).astype(arr.dtype)
-            
-    elif arr.dtype == bool:
+
+            rnd = rng.randint(from_int, to_int, size=arr.shape).astype(dtype)
+
+    elif dtype == bool or dtype == np.bool_:
         # 布尔类型处理 (忽略 from_val/to_val)
         rnd = rng.random(size=arr.shape) > 0.5
-    
+
     else:
-        raise TypeError(f"Unsupported data type: {arr.dtype}")
+        raise TypeError(f"Unsupported data type: {dtype}")
     
     numpy_to_tensor_overwrite(rnd, input)
 
@@ -2485,6 +2503,22 @@ def strided_slice_update(x, begin, end, strides, updates,
                          shrink_axis_mask=0):
     x_shape = x.shape
     ndim = len(x_shape)
+
+    # Handle scalar tensor (0-dimensional) - just update the value directly
+    if ndim == 0:
+        # For scalar tensors, we just need to update the entire value
+        # Use numpy to avoid MindSpore internal issues with scalar tensor assignment
+        x_np = x.asnumpy()
+        if isinstance(updates, mindtorch.Tensor):
+            updates_np = updates.asnumpy()
+            if updates_np.ndim > 0:
+                updates_np = updates_np.flatten()[0]
+        else:
+            updates_np = updates
+        x_np[()] = updates_np  # Update scalar numpy array
+        result = mindspore.tensor(x_np, dtype=x.dtype)
+        inplace_copy(x, result)
+        return x
 
     full_begin, full_end, full_strides = [], [], []
     dim = 0  # 当前 x 的维度

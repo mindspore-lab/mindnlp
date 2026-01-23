@@ -94,6 +94,7 @@ python tests/run_test.py -vs {test_file_path}
 - **ONLY** modify source code in `./src/mindnlp/` or `./src/mindtorch/`
 - **ALWAYS** re-run tests after making fixes
 - **ALWAYS** activate conda environment before running tests
+- **ALWAYS** run tests sequentially (one model at a time), not in parallel, to avoid resource conflicts and ensure accurate error diagnosis
 
 ---
 
