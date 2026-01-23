@@ -2525,6 +2525,9 @@ class TensorPlaceHolder:
         dtype = kwargs.pop('dtype', None)
         if dtype is not None and (len(shape) == 0 or (len(shape) == 1 and shape[0] in ((), None))):
             return ops.cast(self, dtype)
+        # Check if first positional argument is a dtype (for tensor.view(torch.float32) pattern)
+        if len(shape) == 1 and isinstance(shape[0], mindspore.common.dtype.Type):
+            return ops.cast(self, shape[0])
         return self.reshape(*shape)
 
     # Tensor.view_as

@@ -76,6 +76,21 @@ gh pr create --title "Title" --body "Description" --base master --repo mindspore
 - **Always confirm destructive operations** with user
 - **Always check git status** before and after operations
 
+## PR Rules
+
+### One Commit Per PR (MANDATORY)
+- **Each PR must contain exactly ONE commit**
+- Before creating a PR, squash all commits into a single commit
+- Use `git reset --soft ms/master && git commit` to squash
+- This keeps the git history clean and makes code review easier
+
+### PR Creation Workflow
+1. Fetch and rebase onto upstream: `git fetch ms && git rebase ms/master`
+2. If multiple commits exist, squash them: `git reset --soft ms/master && git commit -m "message"`
+3. Create feature branch: `git checkout -b fix-{description}`
+4. Push to origin: `git push origin {branch} -u`
+5. Create PR: `gh pr create --repo mindspore-lab/mindnlp`
+
 ## Workflow Examples
 
 ### Example 1: Push Changes and Sync with Upstream
