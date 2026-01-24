@@ -5,6 +5,7 @@ KV Cache 和 Flash Attention 性能基准测试
 
 import argparse
 import json
+import logging
 import time
 from pathlib import Path
 from typing import Dict, List, Any
@@ -17,9 +18,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from mindnlp.ocr.models.qwen2vl import Qwen2VLModel
 from mindnlp.ocr.utils.cache_manager import CacheConfig
-from mindnlp.ocr.utils.logger import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 
 def create_test_image(width: int = 800, height: int = 600) -> Image.Image:
