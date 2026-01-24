@@ -1471,6 +1471,10 @@ def view_as_real(input):
     imag_part = expand_dims(imag(input), -1)
     return concat((real_part, imag_part), -1)
 
+def cross(input, other, dim):
+    """Compute the cross product of two tensors."""
+    return legacy.cross(input, other, dim)
+
 def cdist(x1, x2, p):
     return legacy.cdist(x1, x2, float(p))
 
@@ -1799,16 +1803,44 @@ def custom_circular_pad(x, pad):
     return x
 
 
-def _reflection_pad(input, pad):
-    """reflection pad"""
-    out = input
+def _reflection_pad_numpy(input, pad):
+    """NumPy-based reflection padding fallback when MindSpore kernel is not registered"""
+    np_input = input.numpy()
+    ndim = np_input.ndim
+
+    # PyTorch pad format: (left, right) for 1D, (left, right, top, bottom) for 2D, etc.
+    # NumPy pad format: [(before_1, after_1), (before_2, after_2), ...]
     if len(pad) == 2:
-        out = pyboost.reflection_pad_1d_op(input, pad)
+        # 1D padding - applies to last dimension
+        pad_width = [(0, 0)] * (ndim - 1) + [(pad[0], pad[1])]
     elif len(pad) == 4:
-        out = pyboost.reflection_pad_2d_op(input, pad)
+        # 2D padding - applies to last two dimensions
+        pad_width = [(0, 0)] * (ndim - 2) + [(pad[2], pad[3]), (pad[0], pad[1])]
+    elif len(pad) == 6:
+        # 3D padding - applies to last three dimensions
+        pad_width = [(0, 0)] * (ndim - 3) + [(pad[4], pad[5]), (pad[2], pad[3]), (pad[0], pad[1])]
     else:
-        out = pyboost.reflection_pad_3d_op(input, pad)
-    return out
+        raise ValueError(f"Unsupported pad length: {len(pad)}")
+
+    np_output = np.pad(np_input, pad_width, mode='reflect')
+    return mindtorch.tensor(np_output, dtype=input.dtype)
+
+
+def _reflection_pad(input, pad):
+    """reflection pad with NumPy fallback for unregistered kernels"""
+    try:
+        out = input
+        if len(pad) == 2:
+            out = pyboost.reflection_pad_1d_op(input, pad)
+        elif len(pad) == 4:
+            out = pyboost.reflection_pad_2d_op(input, pad)
+        else:
+            out = pyboost.reflection_pad_3d_op(input, pad)
+        return out
+    except RuntimeError as e:
+        if "unregistered" in str(e):
+            return _reflection_pad_numpy(input, pad)
+        raise
 
 def pad(input, pad, mode='constant', value=None):
     if isinstance(pad, tuple):

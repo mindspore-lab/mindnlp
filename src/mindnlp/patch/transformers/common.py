@@ -74,3 +74,22 @@ def patch_common_features():
     # Patch cache utils
     transformers.cache_utils.DynamicLayer.update = dynamic_layer_update
     transformers.cache_utils.DynamicSlidingWindowLayer.update = dynamic_sliding_window_layer_update
+
+    # Patch id_tensor_storage to properly identify shared tensors in MindTorch
+    # This is critical for saving models with tied weights using safetensors
+    def id_tensor_storage(tensor):
+        """
+        Return a unique identifier for the storage of a tensor.
+        For MindTorch tensors, we use data_ptr() to identify the storage.
+        This ensures that tied weights (tensors sharing the same underlying data)
+        return the same identifier.
+        """
+        try:
+            return tensor.data_ptr()
+        except (AttributeError, RuntimeError):
+            return id(tensor)
+
+    if hasattr(transformers, 'pytorch_utils'):
+        transformers.pytorch_utils.id_tensor_storage = id_tensor_storage
+    if hasattr(transformers.modeling_utils, 'id_tensor_storage'):
+        transformers.modeling_utils.id_tensor_storage = id_tensor_storage
