@@ -186,6 +186,39 @@ The test runner:
 - Always pull before pushing
 - Report conflicts, don't auto-resolve
 
+### For Pull Request Creation (MANDATORY)
+When asked to create a PR, **ALWAYS** follow these steps in order:
+
+1. **Rebase onto upstream ms/master**:
+   ```bash
+   git fetch ms
+   git rebase ms/master
+   ```
+
+2. **Squash all commits into ONE single commit**:
+   ```bash
+   # If multiple commits exist, squash them
+   git rebase -i ms/master
+   # Or reset and recommit
+   git reset --soft ms/master
+   git commit -m "commit message"
+   ```
+
+3. **Push to origin with force (after rebase)**:
+   ```bash
+   git push -u origin <branch-name> --force-with-lease
+   ```
+
+4. **Create PR to ms remote**:
+   ```bash
+   gh pr create --repo mindspore-lab/mindnlp --base master --head lvyufeng:<branch-name>
+   ```
+
+**Key Rules**:
+- Each PR must contain exactly ONE commit
+- The commit must be rebased on top of the latest ms/master
+- Use `--force-with-lease` after rebasing to update the branch safely
+
 ## Hooks
 
 ### Pre-Tool Hooks
