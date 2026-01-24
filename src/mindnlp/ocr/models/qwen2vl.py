@@ -170,9 +170,11 @@ class Qwen2VLModel(VLMModelBase):
                 local_files_only=False
             )
             
-            # NPU 特殊配置
+            # NPU 特殊配置：强制使用 eager attention（NPU 不支持 SDPA）
             if "npu" in self.device:
                 logger.info("Configuring for NPU...")
+                config._attn_implementation = "eager"  # 关键：NPU不支持SDPA
+                logger.info("Set attn_implementation='eager' for NPU compatibility")
             
             # 直接在目标设备上创建空模型
             with torch.device(self.device):
