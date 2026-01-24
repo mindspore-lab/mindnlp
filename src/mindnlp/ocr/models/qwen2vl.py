@@ -184,12 +184,10 @@ class Qwen2VLModel(VLMModelBase):
                 torch.set_default_dtype(torch.float16)
                 logger.info("Set attn_implementation='eager' and default_dtype=float16 for NPU compatibility")
             
-            # 直接在目标设备上创建空模型，使用 torch_dtype 参数
+            # 直接在目标设备上创建空模型
             with torch.device(self.device):
-                self.model = Qwen2VLForConditionalGeneration(config, torch_dtype=torch_dtype)
-            
-            # NPU: 确保所有参数都是 FP16
-            if "npu" in self.device:
+                self.model = Qwen2VLForConditionalGeneration(config)
+                # 立即转换为目标精度
                 self.model = self.model.to(dtype=torch_dtype)
             
             logger.info(f"Empty model created on {self.device}")
