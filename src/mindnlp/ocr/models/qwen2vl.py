@@ -10,11 +10,19 @@ from typing import Any, Dict, List, Union
 import torch
 from PIL import Image
 from transformers import AutoModel, AutoTokenizer, AutoProcessor
-from mindnlp.ocr.core.exceptions import ModelLoadingError, ModelInferenceError
 from mindnlp.ocr.utils.cache_manager import (
     KVCacheManager, CacheConfig, get_optimal_cache_config, detect_flash_attention_support
 )
 from .base import VLMModelBase
+
+# Define custom exceptions locally
+class ModelLoadingError(Exception):
+    """模型加载错误"""
+    pass
+
+class ModelInferenceError(Exception):
+    """模型推理错误"""
+    pass
 
 
 logger = logging.getLogger(__name__)

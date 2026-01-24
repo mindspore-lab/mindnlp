@@ -5,6 +5,7 @@ KV Cache 对比测试
 
 import argparse
 import json
+import logging
 import time
 from pathlib import Path
 from typing import Dict, Any
@@ -13,7 +14,6 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from mindnlp.ocr.utils.cache_manager import CacheConfig
-from mindnlp.ocr.utils.logger import get_logger
 from benchmark_kv_cache import (
     create_test_image,
     benchmark_single_inference,
@@ -22,7 +22,8 @@ from benchmark_kv_cache import (
     measure_memory_usage
 )
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 
 def run_comparison_benchmark(model_path: str,
