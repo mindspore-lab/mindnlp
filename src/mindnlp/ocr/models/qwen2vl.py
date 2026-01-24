@@ -190,9 +190,24 @@ class Qwen2VLModel(VLMModelBase):
                 logger.info("Set default_dtype=float16 for NPU (BF16 not supported)")
             
             # 创建空模型（不使用 torch.device context manager，因为它可能重置 dtype）
-            self.model = Qwen2VLForConditionalGeneration(config).to(self.device)
-            # 确保所有参数都是目标精度
-            self.model = self.model.to(dtype=torch_dtype)
+            self.model = Qwen2VLForConditionalGeneration(config)
+            
+            # NPU: 处理 BF16 参数（NPU 不支持直接 BF16→FP16 转换）
+            if "npu" in self.device:
+                logger.info("Converting BF16 parameters to FP16 for NPU compatibility...")
+                # 先转到 CPU FP32（避免 NPU 上的 BF16 转换错误），然后再转到 NPU FP16
+                for name, param in self.model.named_parameters():
+                    if param.dtype == torch.bfloat16:
+                        logger.debug(f"Converting BF16 parameter: {name}")
+                        param.data = param.data.to('cpu', dtype=torch.float32).to(self.device, dtype=torch_dtype)
+                for name, buf in self.model.named_buffers():
+                    if buf.dtype == torch.bfloat16:
+                        logger.debug(f"Converting BF16 buffer: {name}")
+                        buf.data = buf.data.to('cpu', dtype=torch.float32).to(self.device, dtype=torch_dtype)
+                logger.info("BF16 conversion completed")
+            
+            # 移动到目标设备并转换精度
+            self.model = self.model.to(self.device, dtype=torch_dtype)
             
             # NPU: 保持 FP16 为默认 dtype（不恢复），确保后续加载也使用 FP16
             if "npu" in self.device:
