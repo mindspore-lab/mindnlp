@@ -180,21 +180,17 @@ class Qwen2VLModel(VLMModelBase):
             if "npu" in self.device:
                 logger.info("Configuring for NPU...")
                 config._attn_implementation = "eager"  # 关键：NPU不支持SDPA
-                config.torch_dtype = torch.float16  # 关键：NPU不支持BF16，强制FP16
-                # 设置默认 dtype 为 float16 防止 transformers 使用 BF16
-                import os
-                os.environ['TRANSFORMERS_DEFAULT_DTYPE'] = 'float16'
+                # 设置全局默认 dtype 为 float16，防止 transformers 默认使用 BF16
                 torch.set_default_dtype(torch.float16)
-                logger.info("Set attn_implementation='eager' and torch_dtype=float16 for NPU compatibility")
+                logger.info("Set attn_implementation='eager' and default_dtype=float16 for NPU compatibility")
             
-            # 直接在目标设备上创建空模型
+            # 直接在目标设备上创建空模型，使用 torch_dtype 参数
             with torch.device(self.device):
-                self.model = Qwen2VLForConditionalGeneration(config)
-                self.model = self.model.to(dtype=torch_dtype)
+                self.model = Qwen2VLForConditionalGeneration(config, torch_dtype=torch_dtype)
             
-            # 恢复默认 dtype
+            # NPU: 确保所有参数都是 FP16
             if "npu" in self.device:
-                torch.set_default_dtype(torch.float32)
+                self.model = self.model.to(dtype=torch_dtype)
             
             logger.info(f"Empty model created on {self.device}")
             
