@@ -18,14 +18,16 @@ from .base import VLMModelBase
 # Define custom exceptions locally
 class ModelLoadingError(Exception):
     """模型加载错误"""
-    def __init__(self, message="Model loading failed"):
+    def __init__(self, message="Model loading failed", **kwargs):
         self.message = message
+        self.details = kwargs
         super().__init__(self.message)
 
 class ModelInferenceError(Exception):
     """模型推理错误"""
-    def __init__(self, message="Model inference failed"):
+    def __init__(self, message="Model inference failed", **kwargs):
         self.message = message
+        self.details = kwargs
         super().__init__(self.message)
 
 
@@ -179,12 +181,20 @@ class Qwen2VLModel(VLMModelBase):
                 logger.info("Configuring for NPU...")
                 config._attn_implementation = "eager"  # 关键：NPU不支持SDPA
                 config.torch_dtype = torch.float16  # 关键：NPU不支持BF16，强制FP16
+                # 设置默认 dtype 为 float16 防止 transformers 使用 BF16
+                import os
+                os.environ['TRANSFORMERS_DEFAULT_DTYPE'] = 'float16'
+                torch.set_default_dtype(torch.float16)
                 logger.info("Set attn_implementation='eager' and torch_dtype=float16 for NPU compatibility")
             
             # 直接在目标设备上创建空模型
             with torch.device(self.device):
                 self.model = Qwen2VLForConditionalGeneration(config)
                 self.model = self.model.to(dtype=torch_dtype)
+            
+            # 恢复默认 dtype
+            if "npu" in self.device:
+                torch.set_default_dtype(torch.float32)
             
             logger.info(f"Empty model created on {self.device}")
             
