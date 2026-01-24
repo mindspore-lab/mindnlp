@@ -1,10 +1,11 @@
 site_name: MindNLP Docs
 repo_url: https://github.com/mindspore-lab/mindnlp
 repo_name: mindspore-lab/mindnlp
-copyright: Copyright &copy; 2022 - 2024 MindSpore Lab and CQU NLP Team.
+copyright: Copyright &copy; 2022 - 2025 MindSpore Lab and CQU NLP Team.
 
 nav:
   - Home: index.md
+  - Quick Start: quick_start.md
   - Tutorials:
       - Quick Start: tutorials/quick_start.md
       - Data Preprocess: tutorials/data_preprocess.md
@@ -152,6 +153,7 @@ plugins:
           name: 中文
           nav_translations:
             Home: 主页
+            Quick Start: 快速开始
             Tutorials: 教程
             Supported Models: 模型列表
             Notes: 说明
