@@ -757,7 +757,7 @@ class Qwen2VLModel(VLMModelBase):
             else:
                 image_inputs, video_inputs = self._builtin_process_vision_info(messages)
 
-            logger.debug(f"Processed {len(image_inputs)} images and {len(video_inputs)} videos")
+            logger.debug(f"Processed {len(image_inputs) if image_inputs else 0} images and {len(video_inputs) if video_inputs else 0} videos")
 
             # 3. 准备输入
             inputs = self.processor(
