@@ -3,13 +3,13 @@ Qwen2-VL模型封装
 """
 
 import base64
+import logging
 import os
 from io import BytesIO
 from typing import Any, Dict, List, Union
 import torch
 from PIL import Image
 from transformers import AutoModel, AutoTokenizer, AutoProcessor
-from mindnlp.ocr.utils.logger import get_logger
 from mindnlp.ocr.core.exceptions import ModelLoadingError, ModelInferenceError
 from mindnlp.ocr.utils.cache_manager import (
     KVCacheManager, CacheConfig, get_optimal_cache_config, detect_flash_attention_support
@@ -17,7 +17,7 @@ from mindnlp.ocr.utils.cache_manager import (
 from .base import VLMModelBase
 
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 # 尝试导入 qwen_vl_utils，如果不存在则使用内置实现
 try:
