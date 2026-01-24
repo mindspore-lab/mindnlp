@@ -103,14 +103,33 @@ def check_model_exists(model_name: str) -> bool:
     """检查模型是否已下载到本地
     
     Args:
-        model_name: 模型名称，如 Qwen/Qwen2-VL-2B-Instruct
+        model_name: 模型名称，如 Qwen/Qwen2-VL-2B-Instruct，或本地路径
         
     Returns:
         bool: 模型是否存在
     """
     from pathlib import Path
     
-    # 获取 HuggingFace 缓存目录
+    # 如果是本地路径（绝对路径或包含 .npz）
+    if os.path.isabs(model_name) or model_name.endswith('.npz'):
+        model_path = Path(model_name)
+        
+        # 检查 NPZ 文件或包含 adapter_model.npz 的目录
+        if model_path.is_file() and model_path.suffix == '.npz':
+            return True
+        elif model_path.is_dir():
+            npz_file = model_path / 'adapter_model.npz'
+            if npz_file.exists():
+                print(f"✅ 找到 NPZ 模型文件: {npz_file}")
+                return True
+            # 检查是否是标准 HuggingFace 模型目录
+            config_file = model_path / 'config.json'
+            if config_file.exists():
+                return True
+        
+        return False
+    
+    # HuggingFace 模型名称（如 Qwen/Qwen2-VL-7B-Instruct）
     cache_dir = os.environ.get('HF_HOME') or os.environ.get('TRANSFORMERS_CACHE') or \
                 Path.home() / '.cache' / 'huggingface'
     

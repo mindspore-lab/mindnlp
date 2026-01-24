@@ -178,9 +178,19 @@ class VLMOCREngine:
                 ]
                 
                 # 使用 model_instance 的 batch_generate 方法（已包含输入准备和解码）
+                # 推理加速优化：根据任务类型动态调整 max_new_tokens
+                task_type = request.task_type.lower() if request.task_type else "general"
+                if task_type in ["general", "simple"]:
+                    max_tokens = 128  # 简单OCR使用128（4x加速）
+                elif task_type in ["document", "table"]:
+                    max_tokens = 256  # 复杂文档使用256（2x加速）
+                else:
+                    max_tokens = 512  # 其他任务保持512
+                
                 outputs = self.model_instance.batch_generate(
                     batch_messages=[messages],
-                    max_new_tokens=512
+                    max_new_tokens=max_tokens,
+                    do_sample=False,     # 禁用采样，使用贪婪解码（更快）
                 )
             except Exception as e:
                 raise ModelInferenceError(

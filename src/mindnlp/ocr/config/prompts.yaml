@@ -10,11 +10,11 @@ general:
 
 # 文档理解任务
 document:
-  zh: "请解析文档的结构和内容，保持原有格式"
-  en: "Please parse the document structure and content, maintaining the original format"
-  ja: "ドキュメントの構造と内容を解析し、元の形式を維持してください"
-  ko: "문서의 구조와 내용을 분석하고 원래 형식을 유지하십시오"
-  auto: "请解析文档的结构和内容，保持原有格式"
+  zh: "请准确识别图像中的所有文字内容。严格按照原图的排版逐行识别，每一行文字单独输出，不要将不同行的内容合并在一起。注意保持换行关系，确保不遗漏任何文字"
+  en: "Please accurately recognize all text content in the image. Strictly recognize line by line according to the original layout, output each line of text separately, do not merge content from different lines together. Pay attention to maintaining line breaks, ensuring no text is missed"
+  ja: "画像内のすべてのテキスト内容を正確に認識してください。元のレイアウトに従って厳密に1行ずつ認識し、各行のテキストを個別に出力し、異なる行の内容を一緒にマージしないでください。改行関係を維持することに注意し、テキストが漏れないようにしてください"
+  ko: "이미지의 모든 텍스트 내용을 정확하게 인식하십시오. 원본 레이아웃에 따라 엄격하게 한 줄씩 인식하고 각 줄의 텍스트를 개별적으로 출력하며 다른 줄의 내용을 함께 병합하지 마십시오. 줄 바꿈 관계를 유지하는 데 주의하여 텍스트가 누락되지 않도록 하십시오"
+  auto: "请准确识别图像中的所有文字内容。严格按照原图的排版逐行识别，每一行文字单独输出，不要将不同行的内容合并在一起。注意保持换行关系，确保不遗漏任何文字"
 
 # 表格识别任务
 table:

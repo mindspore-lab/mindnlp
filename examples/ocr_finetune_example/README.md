@@ -1,12 +1,24 @@
-# OCR Fine-tuning Example
+# OCR Fine-tuning Examples
 
-本目录包含 Qwen2-VL OCR 模型微调的示例代码和数据。
+本目录包含 Qwen2-VL OCR 模型微调的完整示例。
 
-## 文件说明
+## 📚 文件说明
 
-- `finetune_example.py`: 完整的微调示例代码,包含 LoRA、QLoRA、评估和推理
+- `finetune_example.py`: 完整的微调示例代码，包含 LoRA、QLoRA、全参数微调、评估和推理
 - `sample_data.json`: 示例训练数据 (3个样本)
 - `README.md`: 本文件
+
+## 🎯 功能特性
+
+本示例实现了 [Issue #2379](https://github.com/mindspore-lab/mindnlp/issues/2379) 的所有要求：
+
+- ✅ LoRA 微调实现
+- ✅ QLoRA 微调实现（低资源场景）
+- ✅ 全参数微调实现
+- ✅ 模型评估和对比流程
+- ✅ 场景特定评估（表格、公式、手写体）
+- ✅ 数据集准备工具
+- ✅ 详细的最佳实践文档
 
 ## 快速开始
 

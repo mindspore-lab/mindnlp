@@ -667,7 +667,7 @@ def train_lora(
 def load_lora_model(
     base_model_path: str,
     lora_path: str,
-    device: str = "cuda",
+    device: str = None,
 ):
     """
     加载 LoRA 微调后的模型
@@ -675,11 +675,30 @@ def load_lora_model(
     Args:
         base_model_path: 基础模型路径
         lora_path: LoRA 权重路径
-        device: 设备
+        device: 设备 (None表示自动检测)
         
     Returns:
         (model, processor)
     """
+    # 自动检测设备
+    if device is None:
+        try:
+            import torch_npu
+            if torch.npu.is_available():
+                device = "npu:0"
+                logger.info("Detected NPU device")
+        except ImportError:
+            pass
+        
+        if device is None:
+            if torch.cuda.is_available():
+                device = "cuda"
+                logger.info("Detected CUDA device")
+            else:
+                device = "cpu"
+                logger.info("Using CPU device")
+    
+    logger.info(f"Using device: {device}")
     logger.info(f"Loading base model from {base_model_path}")
     
     # 加载 processor
@@ -688,18 +707,78 @@ def load_lora_model(
         trust_remote_code=True
     )
     
-    # 加载基础模型
+    # 加载基础模型 (禁用device_map避免meta tensor问题)
+    logger.info("Loading base model...")
     base_model = Qwen2VLForConditionalGeneration.from_pretrained(
         base_model_path,
         torch_dtype=torch.float16,
+        low_cpu_mem_usage=False,  # 禁用低内存模式,确保所有权重都加载
+        attn_implementation="eager",  # 使用传统attention实现,NPU不支持SDPA
         trust_remote_code=True
     )
     
     # 加载 LoRA 权重
     logger.info(f"Loading LoRA weights from {lora_path}")
-    model = PeftModel.from_pretrained(base_model, lora_path)
+    from pathlib import Path
+    import numpy as np
+    import os
     
-    # 移动到设备
+    lora_path = Path(lora_path).resolve()
+    
+    # 检查是否是.npz格式的权重（MindSpore格式）
+    adapter_file = lora_path / "adapter_model.npz"
+    if adapter_file.exists():
+        logger.info("Loading MindSpore format (.npz) LoRA weights")
+        # 为基础模型添加LoRA配置
+        from peft import LoraConfig, get_peft_model
+        import json
+        
+        # 读取adapter配置
+        config_file = lora_path / "adapter_config.json"
+        with open(config_file) as f:
+            adapter_config = json.load(f)
+        
+        # 创建LoRA配置
+        lora_config = LoraConfig(
+            r=adapter_config.get("r", 8),
+            lora_alpha=adapter_config.get("lora_alpha", 16),
+            target_modules=adapter_config.get("target_modules", ["q_proj", "v_proj"]),
+            lora_dropout=adapter_config.get("lora_dropout", 0.1),
+            bias=adapter_config.get("bias", "none"),
+            task_type=adapter_config.get("task_type", "CAUSAL_LM"),
+        )
+        
+        # 将基础模型转换为PEFT模型(在CPU上)
+        logger.info("Creating PEFT model...")
+        model = get_peft_model(base_model, lora_config)
+        
+        # 加载.npz权重
+        logger.info("Loading weights from .npz file...")
+        weights = np.load(str(adapter_file))
+        state_dict = {}
+        for key in weights.files:
+            # 转换numpy数组为torch tensor
+            tensor = torch.from_numpy(weights[key])
+            state_dict[key] = tensor
+        
+        # 加载权重到模型(使用assign=True直接替换meta tensors)
+        missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False, assign=True)
+        logger.info(f"Loaded {len(state_dict)} weight tensors")
+        if missing_keys:
+            logger.warning(f"Missing keys: {len(missing_keys)} keys not found in checkpoint")
+        if unexpected_keys:
+            logger.warning(f"Unexpected keys: {len(unexpected_keys)} keys in checkpoint not used")
+    else:
+        # 标准PEFT格式
+        logger.info("Loading standard PEFT format LoRA weights")
+        model = PeftModel.from_pretrained(
+            base_model, 
+            str(lora_path),
+            is_trainable=False
+        )
+    
+    # 现在移动到目标设备
+    logger.info(f"Moving model to device: {device}")
     model = model.to(device)
     model.eval()
     
