@@ -18,11 +18,15 @@ from .base import VLMModelBase
 # Define custom exceptions locally
 class ModelLoadingError(Exception):
     """模型加载错误"""
-    pass
+    def __init__(self, message="Model loading failed"):
+        self.message = message
+        super().__init__(self.message)
 
 class ModelInferenceError(Exception):
     """模型推理错误"""
-    pass
+    def __init__(self, message="Model inference failed"):
+        self.message = message
+        super().__init__(self.message)
 
 
 logger = logging.getLogger(__name__)
@@ -170,11 +174,12 @@ class Qwen2VLModel(VLMModelBase):
                 local_files_only=False
             )
             
-            # NPU 特殊配置：强制使用 eager attention（NPU 不支持 SDPA）
+            # NPU 特殊配置：强制使用 eager attention（NPU 不支持 SDPA）和 FP16（不支持 BF16）
             if "npu" in self.device:
                 logger.info("Configuring for NPU...")
                 config._attn_implementation = "eager"  # 关键：NPU不支持SDPA
-                logger.info("Set attn_implementation='eager' for NPU compatibility")
+                config.torch_dtype = torch.float16  # 关键：NPU不支持BF16，强制FP16
+                logger.info("Set attn_implementation='eager' and torch_dtype=float16 for NPU compatibility")
             
             # 直接在目标设备上创建空模型
             with torch.device(self.device):
