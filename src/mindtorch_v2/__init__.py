@@ -33,6 +33,12 @@ from ._functional import (
     sum, mean, max, min, prod, argmax, argmin,
     eq, ne, gt, lt, ge, le,
 )
+from ._autograd import (
+    is_grad_enabled,
+    set_grad_enabled,
+    no_grad,
+    enable_grad,
+)
 
 # Import backends to register ops
 from ._backends import cpu
